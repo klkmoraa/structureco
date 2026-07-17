@@ -1,5 +1,18 @@
 # Matriz de QA — línea base de Fase 1
 
+## Entrada de Fase 3 - Slice 3.0, 2026-07-17
+
+| Capa | Cobertura | Resultado |
+| --- | --- | --- |
+| `npm.cmd run verify` | lint, 41 archivos, 233 pruebas y build | **PASS** |
+| `npm.cmd run qa:phase2` | 117 checks y 14 filas ES/EN | **PASS**, 0 fallos, consola limpia |
+| `npm.cmd run qa` | Chromium heredado funcional | **PASS**, consola y page errors vacíos |
+| `npm.cmd run qa:webkit` | iPhone 13 e iPad Pro 11 | **PASS** |
+| Browser integrado | nueve viewports, Light/Dark, listo/analizado, selección M2 | **PASS funcional / baseline visual abierto** |
+| Frontera protegida | engine, workers, data, portable, types | Baseline SHA registrado; diff final exigido en cero |
+
+Hallazgos visuales de entrada: ToolRail plano, agrupación dependiente de separadores, chrome sin zonas seguras explícitas, capas mezcladas con settings persistentes, labels sin prioridad/LOD/colisión y selección verde confundible con acción de producto. Todos son alcance de Fase 3; no se detectó falla matemática.
+
 ## Cierre de Fase 2 - 2026-07-17
 
 | Capa | Cobertura | Resultado final |

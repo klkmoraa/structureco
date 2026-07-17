@@ -101,3 +101,44 @@
 - Decisión: fijar el ancho de Analizar en 148 px wide y 124 px compact, manteniendo 44 px en tablet/móvil.
 - Motivo: el QA detectó contraste insuficiente en estados claros y crecimiento del botón con el copy inglés `Calculating…`.
 - Evidencia: warning 5.84:1, error 5.90:1 y ancho 148 px antes/durante loading.
+
+## D-016 - Referencias visuales de Fase 3
+
+- Estado: aceptada.
+- Decisión: las páginas 22, 24, 26, 27, 29, 30, 31, 32, 33 y 35 del PDF rector son la fuente visual aprobada.
+- Consecuencia: no se generan conceptos alternativos; la implementación se compara directamente contra esas diez referencias.
+
+## D-017 - Capas como estado efímero de UI
+
+- Estado: aceptada.
+- Decisión: las capas de modelo, cargas, cotas, IDs, resultados, labels, ayuda y diagnóstico viven en `WorkspaceShell` durante la sesión.
+- Control: no se agregan a `ProjectModel`, `ProjectSettings`, schema, migraciones ni persistencia.
+
+## D-018 - Registro único de herramientas
+
+- Estado: aceptada.
+- Decisión: consolidar ids, shortcut, grupo, prioridad y presentación en un registro UI consumido por ToolBar y shortcuts del canvas.
+- Control: se conservan exactamente las 12 herramientas y teclas existentes; no se agrega dependencia ni shortcut.
+
+## D-019 - Eliminar sigue siendo contextual
+
+- Estado: aceptada.
+- Decisión: Eliminar permanece en el grupo Editar/More y `Delete`/`Backspace` sigue operando sobre la selección.
+- Motivo: preserva recuperación por undo y evita elevar una acción destructiva al dock primario.
+
+## D-020 - Decluttering determinista
+
+- Estado: aceptada.
+- Decisión: resolver labels en coordenadas de pantalla con prioridad estable, LOD por escala, lista fija de offsets, reserva de zonas y leader line.
+- Control: P0 selección/acción y P1 nodos/apoyos nunca se ocultan; el algoritmo no lee ni altera resultados matemáticos.
+
+## D-021 - Baseline real de Fase 3
+
+- Estado: aceptada.
+- Decisión: partir de `38d714e0473938c737e6841dbfcc796e9917e9ca`, no del hash esperado por el PDF.
+- Motivo: la diferencia corresponde sólo a documentación final de Fase 2; conservarla evita perder trazabilidad y no cambia código productivo.
+
+## D-022 - Cobertura de stylus
+
+- Estado: limitación documentada.
+- Decisión: verificar `pointerType='pen'` mediante pruebas de Pointer Events y mantener paridad con mouse; no afirmar validación en hardware físico.

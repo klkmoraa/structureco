@@ -1,5 +1,30 @@
 # Changelog UX/UI
 
+## 2026-07-17 - Fase 3, Slice 3.0
+
+### Preparado
+
+- PDF rector de 56 páginas leído, renderizado y auditado visualmente.
+- Diez referencias aprobadas identificadas para herramientas, canvas, capas, labels, selección y gestos.
+- Rama `phase/3-canvas-tools`, baseline real y frontera protegida registrados.
+- Plan de slices 3.1-3.8, decisiones y ledger inicial creados.
+
+### Evidencia
+
+- Doce capturas before que cubren los nueve viewports obligatorios, Light/Dark, listo/analizado y selección de miembro.
+- Manifiesto por archivo con viewport, raster, bytes y SHA-256.
+- Contact sheet revisado visualmente.
+
+### Validado
+
+- `verify`: 41 archivos, 233 pruebas y build aprobados.
+- `qa:phase2`: 117 checks; `qa` Chromium y `qa:webkit` aprobados sin errores.
+
+### No cambiado
+
+- Ningún archivo bajo `src/`.
+- Motor, workers, dominio, schema, migraciones, persistencia, importación/exportación, fórmulas, signos, unidades y precisión.
+
 ## 2026-07-17 - Fase 2, entrega final
 
 ### Entregado

@@ -9,7 +9,8 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 | Fase 0 - gobierno | No acreditada en el repositorio | No se encontraron artefactos formales previos de gobierno visual. | Riesgo heredado registrado. |
 | Fase 1 - auditoría y línea base | **APROBADA** | Inventario, auditoría renderizada, recorridos, línea base, backlog, decisiones, reporte PDF y 12 capturas aceptados como referencia oficial. | Aprobada por el propietario mediante el documento rector de Fase 2, fechado 2026-07-17. |
 | Fase 2 - fundaciones UI y responsive | **COMPLETADA Y ENTREGADA** | Gates 2.1-2.7, implementación, evidencia e informe PDF cerrados. | Correo con adjunto verificado en Gmail; no avanzar a Fase 3. |
-| Fase 3 y posteriores | No iniciadas | Sin autorización. | No iniciar automáticamente. |
+| Fase 3 - canvas, herramientas y selección | **EN EJECUCIÓN** | Slice 3.0 cerrado: PDF, baseline, referencias, evidencia y plan registrados. | Continuar por slices 3.1-3.8; quedar lista para revisión. |
+| Fase 4 y posteriores | No iniciadas | Sin autorización en esta ejecución. | No iniciar automáticamente. |
 
 ## Cierre heredado de Fase 1
 
@@ -51,4 +52,15 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 
 ## Estado de la compuerta
 
-**FASE 2 COMPLETADA Y ENTREGADA.** Todos los gates técnicos y visuales están aprobados, el informe fue enviado y verificado, y el motor matemático permanece intacto. La Fase 3 no fue iniciada.
+**FASE 3 AUTORIZADA Y EN EJECUCIÓN.** El Slice 3.0 cerró sin cambios productivos: 56 páginas inspeccionadas, referencias aprobadas identificadas, baseline técnico aprobado, nueve viewports capturados y frontera matemática protegida. La Fase 4 no fue iniciada.
+
+## Estado del Slice 3.0
+
+- [x] PDF rector leído completamente y renderizado en 56 páginas.
+- [x] Diez referencias visuales aprobadas inspeccionadas.
+- [x] Rama `phase/3-canvas-tools` creada desde `38d714e`.
+- [x] `verify`, `qa:phase2`, `qa` y `qa:webkit` aprobados antes de editar producto.
+- [x] Nueve viewports obligatorios cubiertos; Light/Dark, listo/analizado y selección incluidos.
+- [x] Inventario protegido registrado con SHA-256 `78e02e099cf152f2205928bf6e732fdfb10c17d885c61b5c0deb64d478cbdafa`.
+- [x] Supuestos, decisiones, arquitectura y gates 3.1-3.8 documentados.
+- [x] Cero archivos bajo `src/` modificados en Slice 3.0.
