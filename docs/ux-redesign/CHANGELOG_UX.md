@@ -1,5 +1,25 @@
 # Changelog UX/UI
 
+## 2026-07-17 - Fase 2, Slice 2.4
+
+### Cambiado
+
+- TopBar reorganizada en Documento, Contexto y Acciones.
+- Guardado se integra en Documento; historial pasa a Acciones.
+- Idioma, tema y utilidades secundarias se concentran en un overflow disponible a cualquier ancho.
+- Caso, modo, unidades, export e historial se mueven progresivamente antes de colisionar.
+
+### Validado
+
+- Nueve viewports de 390 a 1536 px: cero intersecciones, cero elementos fuera del header y cero overflow horizontal.
+- Nombre largo y copys ES/EN sin colisión.
+- Overflow dentro del viewport, focus ring de 3 px, Escape y retorno de foco.
+- `npm.cmd run verify`: 40 archivos, 230 pruebas y build aprobados.
+
+### No cambiado
+
+- Payload de Analizar, semántica de historial, exportación o estado del proyecto.
+
 ## 2026-07-17 - Fase 2, Slice 2.3
 
 ### Cambiado

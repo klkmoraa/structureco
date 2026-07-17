@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
 import { createDefaultProject } from './data/defaultProject';
@@ -35,6 +35,11 @@ const renderExampleApp = async (user: ReturnType<typeof userEvent.setup>) => {
   const result = render(<App />);
   await openWorkspace(user);
   return result;
+};
+
+const openUtilityMenu = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(screen.getByRole('button', { name: /más acciones/i }));
+  return screen.findByRole('dialog', { name: /más acciones/i });
 };
 
 describe('structureCo app shell', () => {
@@ -139,7 +144,8 @@ describe('structureCo app shell', () => {
     const user = userEvent.setup();
     render(<App />);
     await openWorkspace(user);
-    const button = screen.getByRole('button', { name: /cambiar tema/i });
+    const menu = await openUtilityMenu(user);
+    const button = within(menu).getByRole('button', { name: /tema oscuro/i });
     await user.click(button);
     expect(document.documentElement.dataset.theme).toBe('dark');
   });
@@ -148,10 +154,11 @@ describe('structureCo app shell', () => {
     const user = userEvent.setup();
     render(<App />);
     await openWorkspace(user);
-    await user.selectOptions(screen.getAllByRole('combobox', { name: /idioma/i })[0], 'en');
+    const menu = await openUtilityMenu(user);
+    await user.selectOptions(within(menu).getByRole('combobox', { name: /idioma/i }), 'en');
 
     expect(screen.getByRole('button', { name: /^analyze$/i })).toBeTruthy();
-    expect(screen.getByRole('combobox', { name: /load case or combination/i })).toBeTruthy();
+    expect(screen.getAllByRole('combobox', { name: /load case or combination/i }).length).toBeGreaterThan(0);
     await waitFor(() => {
       const saved = JSON.parse(localStorage.getItem('structureCo.project') ?? '{}');
       expect(saved.settings?.language).toBe('en');
@@ -211,7 +218,8 @@ describe('structureCo app shell', () => {
     await user.type(name, 'Marco principal');
     await user.tab();
     expect(screen.getByTestId('diagram-chart')).toBeTruthy();
-    await user.selectOptions(screen.getAllByRole('combobox', { name: /idioma/i })[0], 'en');
+    const menu = await openUtilityMenu(user);
+    await user.selectOptions(within(menu).getByRole('combobox', { name: /idioma/i }), 'en');
     expect(screen.getByTestId('diagram-chart')).toBeTruthy();
   });
 

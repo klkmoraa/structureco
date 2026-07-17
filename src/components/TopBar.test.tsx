@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultProject } from '../data/defaultProject';
@@ -67,5 +67,31 @@ describe('TopBar portable export', () => {
       'application/pdf',
       expect.stringContaining('memoria de cálculo'),
     );
+  });
+});
+
+describe('TopBar information architecture', () => {
+  it('groups document, context, and actions without losing secondary controls', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<ProjectProvider><TopBar /></ProjectProvider>);
+
+    expect(container.querySelector('[data-topbar-zone="document"]')).not.toBeNull();
+    expect(container.querySelector('[data-topbar-zone="context"]')).not.toBeNull();
+    expect(container.querySelector('[data-topbar-zone="actions"]')).not.toBeNull();
+
+    const projectName = screen.getByRole('textbox', { name: 'Nombre del proyecto' });
+    expect(projectName.getAttribute('title')).toBe(projectName.getAttribute('value'));
+
+    const moreButton = screen.getByRole('button', { name: 'Más acciones' });
+    await user.click(moreButton);
+
+    const dialog = screen.getByRole('dialog', { name: 'Más acciones' });
+    expect(within(dialog).getByRole('combobox', { name: 'Unidades' })).toBeTruthy();
+    expect(within(dialog).getByRole('combobox', { name: 'Idioma' })).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: 'Tema oscuro' })).toBeTruthy();
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(document.activeElement).toBe(moreButton));
+    expect(moreButton.getAttribute('aria-expanded')).toBe('false');
   });
 });

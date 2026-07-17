@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
+  Check,
   ChevronDown,
   CloudOff,
   Download,
@@ -166,40 +167,48 @@ export const TopBar = ({ onOpenHome }: { onOpenHome?: () => void }) => {
 
   return (
     <header ref={topbarRef} className="topbar">
-      <div className="brand-block">
+      <div className="brand-block topbar-zone topbar-document-zone" data-topbar-zone="document">
         <button className="brand-mark brand-home-button" type="button" aria-label="Ir al inicio" onClick={onOpenHome}>
           <BrandMark size={34} />
         </button>
         <div className="top-divider" />
-        <div className="project-name">
+        <div className="document-identity">
           <span className="brand-name">structureCo</span>
-          <span className="project-separator">/</span>
-          <input
-            ref={projectNameRef}
-            aria-label={t('project.name')}
-            value={projectNameDraft}
-            onChange={(event) => setProjectNameDraft(event.target.value)}
-            onBlur={commitProjectName}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') projectNameRef.current?.blur();
-              if (event.key === 'Escape') {
-                setProjectNameDraft(project.name);
-                projectNameRef.current?.blur();
-              }
-            }}
-          />
-          <button
-            ref={projectMenuButtonRef}
-            className="project-menu-toggle"
-            type="button"
-            aria-label={t('project.openExamples')}
-            aria-expanded={showProjectMenu}
-            aria-haspopup="menu"
-            onClick={toggleProjectMenu}
-          >
-            <ChevronDown size={15} />
-          </button>
+          <div className="project-name">
+            <input
+              ref={projectNameRef}
+              aria-label={t('project.name')}
+              title={projectNameDraft}
+              value={projectNameDraft}
+              onChange={(event) => setProjectNameDraft(event.target.value)}
+              onBlur={commitProjectName}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') projectNameRef.current?.blur();
+                if (event.key === 'Escape') {
+                  setProjectNameDraft(project.name);
+                  projectNameRef.current?.blur();
+                }
+              }}
+            />
+            <button
+              ref={projectMenuButtonRef}
+              className="project-menu-toggle"
+              type="button"
+              aria-label={t('project.openExamples')}
+              aria-expanded={showProjectMenu}
+              aria-haspopup="menu"
+              onClick={toggleProjectMenu}
+            >
+              <ChevronDown size={15} />
+            </button>
+          </div>
         </div>
+        <span
+          className={`autosave-state${storageIssue ? ' has-issue' : ''}`}
+          role="status"
+          aria-live="polite"
+          title={storageIssue ? (storageMessage ?? t(storageIssue === 'recovered' ? 'storage.recovered' : 'storage.failed')) : t('storage.local')}
+        >{storageIssue ? <CloudOff size={14} /> : <Check size={14} />} <span>{storageIssue ? '⚠' : t('storage.local')}</span></span>
         {showProjectMenu ? (
           <div className="popover project-menu" role="menu" aria-label={t('project.openExamples')} onKeyDown={onMenuKeyDown}>
             <button role="menuitem" onClick={() => { replaceProject(createBlankProject()); setShowProjectMenu(false); }}>
@@ -215,18 +224,7 @@ export const TopBar = ({ onOpenHome }: { onOpenHome?: () => void }) => {
         ) : null}
       </div>
 
-      <div className="history-controls" aria-label={t('history.label')}>
-        <button className="icon-button" onClick={undo} disabled={!canUndo} title={t('history.undo')}><Undo2 size={19} /></button>
-        <button className="icon-button" onClick={redo} disabled={!canRedo} title={t('history.redo')}><Redo2 size={19} /></button>
-        <span
-          className="autosave-state"
-          role="status"
-          aria-live="polite"
-          title={storageIssue ? (storageMessage ?? t(storageIssue === 'recovered' ? 'storage.recovered' : 'storage.failed')) : t('storage.local')}
-        ><CloudOff size={14} /> {storageIssue ? '⚠' : t('storage.local')}</span>
-      </div>
-
-      <div className="top-actions">
+      <div className="topbar-zone topbar-context-zone" data-topbar-zone="context" aria-label={t('analysis.caseOrCombination')}>
         <select
           className="compact-select combination-select"
           aria-label={t('analysis.caseOrCombination')}
@@ -246,7 +244,7 @@ export const TopBar = ({ onOpenHome }: { onOpenHome?: () => void }) => {
           <option value="complete">{t('analysis.modeComplete')}</option>
         </select>
         <select
-          className="compact-select"
+          className="compact-select units-select"
           aria-label={t('units.label')}
           value={project.settings.units}
           onChange={(event) => updateProjectView((draft) => ({
@@ -259,23 +257,13 @@ export const TopBar = ({ onOpenHome }: { onOpenHome?: () => void }) => {
           <option value="kgf-m">kgf · m</option>
           <option value="kip-ft">kip · ft</option>
         </select>
-        <select
-          className="compact-select language-select"
-          aria-label={t('language.label')}
-          value={language}
-          onChange={(event) => updateProjectView((draft) => ({
-            ...draft,
-            settings: { ...draft.settings, language: event.target.value as 'es' | 'en' },
-          }))}
-        >
-          <option value="es">ES</option>
-          <option value="en">EN</option>
-        </select>
-        <button className="theme-switch" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label={t('theme.change')}>
-          <Sun size={16} />
-          <span className={theme === 'dark' ? 'switch-track active' : 'switch-track'}><span /></span>
-          <Moon size={16} />
-        </button>
+      </div>
+
+      <div className="top-actions topbar-zone topbar-actions-zone" data-topbar-zone="actions">
+        <div className="history-controls" aria-label={t('history.label')}>
+          <button className="icon-button" onClick={undo} disabled={!canUndo} title={t('history.undo')} aria-label={t('history.undo')}><Undo2 size={19} /></button>
+          <button className="icon-button" onClick={redo} disabled={!canRedo} title={t('history.redo')} aria-label={t('history.redo')}><Redo2 size={19} /></button>
+        </div>
         <div className="export-wrap">
           <button ref={exportMenuButtonRef} className="icon-button" title={t('export.label')} aria-label={t('export.label')} aria-expanded={showExportMenu} aria-haspopup="menu" onClick={toggleExportMenu}><Download size={19} /></button>
           {showExportMenu ? (
@@ -289,17 +277,17 @@ export const TopBar = ({ onOpenHome }: { onOpenHome?: () => void }) => {
             </div>
           ) : null}
         </div>
-        <div className="mobile-actions-wrap">
-          <button ref={mobileMenuButtonRef} className="icon-button mobile-more-button" aria-label={t('actions.more')} aria-expanded={showMobileMenu} aria-haspopup="dialog" onClick={toggleMobileMenu}><MoreHorizontal size={20} /></button>
+        <div className="mobile-actions-wrap utility-actions-wrap">
+          <button ref={mobileMenuButtonRef} className="icon-button mobile-more-button utility-more-button" aria-label={t('actions.more')} aria-expanded={showMobileMenu} aria-haspopup="dialog" onClick={toggleMobileMenu}><MoreHorizontal size={20} /></button>
           {showMobileMenu ? (
-            <div className="popover mobile-actions-menu" role="dialog" aria-label={t('actions.more')}>
-              <div className="mobile-history-actions" role="group" aria-label={t('history.label')}>
+            <div className="popover mobile-actions-menu utility-actions-menu" role="dialog" aria-label={t('actions.more')}>
+              <div className="mobile-history-actions overflow-history" role="group" aria-label={t('history.label')}>
                 <button onClick={undo} disabled={!canUndo}><Undo2 size={17} /> {t('history.undo')}</button>
                 <button onClick={redo} disabled={!canRedo}><Redo2 size={17} /> {t('history.redo')}</button>
               </div>
-              <label className="mobile-menu-field"><span>{t('analysis.caseOrCombination')}</span><select value={selectedCombinationId} onChange={(event) => setSelectedCombinationId(event.target.value)}><option value="">{t('analysis.activeCases')}</option>{project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}</select></label>
-              <label className="mobile-menu-field"><span>{t('analysis.mode')}</span><select value={project.settings.calculationMode ?? 'complete'} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } }))}><option value="classroom">{t('analysis.modeClassroom')}</option><option value="complete">{t('analysis.modeComplete')}</option></select></label>
-              <label className="mobile-menu-field"><span>{t('units.label')}</span><select value={project.settings.units} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units } }))}><option value="kN-m">kN · m</option><option value="N-mm">N · mm</option><option value="kgf-m">kgf · m</option><option value="kip-ft">kip · ft</option></select></label>
+              <label className="mobile-menu-field overflow-case"><span>{t('analysis.caseOrCombination')}</span><select value={selectedCombinationId} onChange={(event) => setSelectedCombinationId(event.target.value)}><option value="">{t('analysis.activeCases')}</option>{project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}</select></label>
+              <label className="mobile-menu-field overflow-mode"><span>{t('analysis.mode')}</span><select value={project.settings.calculationMode ?? 'complete'} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } }))}><option value="classroom">{t('analysis.modeClassroom')}</option><option value="complete">{t('analysis.modeComplete')}</option></select></label>
+              <label className="mobile-menu-field overflow-units"><span>{t('units.label')}</span><select value={project.settings.units} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units } }))}><option value="kN-m">kN · m</option><option value="N-mm">N · mm</option><option value="kgf-m">kgf · m</option><option value="kip-ft">kip · ft</option></select></label>
               <label className="mobile-menu-field"><span>{t('language.label')}</span><select value={language} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, language: event.target.value as 'es' | 'en' } }))}><option value="es">{t('language.es')}</option><option value="en">{t('language.en')}</option></select></label>
               <button onClick={() => { setTheme(theme === 'light' ? 'dark' : 'light'); setShowMobileMenu(false); }}>{theme === 'light' ? <Moon size={17} /> : <Sun size={17} />} {theme === 'light' ? t('theme.dark') : t('theme.light')}</button>
               <button onClick={() => { exportProjectJson(project); setShowMobileMenu(false); }}><Save size={16} /> {t('export.json')}</button>
