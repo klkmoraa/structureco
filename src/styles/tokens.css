@@ -28,6 +28,7 @@
   --sc-color-focus: var(--sc-blue-500);
   --sc-color-info: var(--sc-blue-500);
   --sc-color-selection: #dce9ff;
+  --sc-color-selection-stroke: var(--sc-blue-500);
   --sc-color-state-success: #1c9560;
   --sc-color-state-warning: var(--sc-amber-500);
   --sc-color-state-error: var(--sc-red-500);
@@ -122,6 +123,8 @@
   --accent-soft: color-mix(in srgb, var(--sc-color-action-primary) 10%, var(--sc-color-surface-1));
   --accent-foreground: var(--sc-color-action-foreground);
   --focus: var(--sc-color-focus);
+  --selection: var(--sc-color-selection-stroke);
+  --selection-soft: var(--sc-color-selection);
   --axial: var(--sc-color-technical-axial);
   --shear: var(--sc-color-technical-shear);
   --moment: var(--sc-color-technical-moment);
@@ -169,6 +172,7 @@
   --sc-color-focus: #6ea0ff;
   --sc-color-info: #6ea0ff;
   --sc-color-selection: #18385e;
+  --sc-color-selection-stroke: #78a8ff;
   --sc-color-state-success: #45c98a;
   --sc-color-state-warning: #f0aa3c;
   --sc-color-state-error: #f26b6b;

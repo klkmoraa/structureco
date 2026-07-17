@@ -10,7 +10,7 @@
 | Capas de información | PDF p. 27 | Visibilidad distribuida en ProjectSettings y resultTab | Control UI-only de sesión; modelo siempre visible. | Implementado; QA final pendiente |
 | Prioridad/LOD | PDF pp. 29-30 | Labels directos por boolean y escala fija | P0/P1 persistentes; secundarios adaptados a cámara. | Implementado; QA final pendiente |
 | Colisión/leader lines | PDF p. 31 | Sin resolución de colisión | Layout determinista, sin colisiones P0/P1. | Implementado; QA final pendiente |
-| Selección | PDF pp. 32-33 | Verde de producto y grosor/drop shadow | Azul semántico + geometría específica por objeto. | Abierto |
+| Selección | PDF pp. 32-33 | Verde de producto y grosor/drop shadow | Azul semántico + geometría específica por objeto. | Implementado; QA final pendiente |
 | Gestos | PDF p. 35 | Mouse/touch/pinch ya funcionales | Paridad conservada y pruebas pen/teclado. | Abierto |
 
 Las capturas de entrada fueron inspeccionadas directamente mediante un contact sheet y vistas individuales. El cierre se realizará contra las mismas diez referencias y la misma matriz de viewports.

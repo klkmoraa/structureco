@@ -54,6 +54,18 @@ Hallazgos visuales de entrada: ToolRail plano, agrupación dependiente de separa
 | Accesibilidad | Los objetos mantienen `aria-label`; reacciones conservan descripción SVG no visual. |
 | Regresión | `npm.cmd run verify`: 46 archivos, 252 pruebas, build PASS. |
 
+### Gate 3.5 - feedback de selección
+
+| Control | Resultado |
+| --- | --- |
+| Semántica | Selección azul separada de acción verde y de colores técnicos. |
+| Miembro | Halo azul de 10 px + geometría base visible; label P0 azul. |
+| Nodo/apoyo | Anillo, cruceta y marco discontinuo; no depende sólo de color. |
+| Carga | Halo azul superpuesto; flechas distribuidas mantienen verde técnico. |
+| Multi | Envolvente, cuatro handles y contador ES/EN; clipping al viewport probado. |
+| Temas | Browser 430 Light/Dark inspeccionado; token #2867e8 / #78a8ff. |
+| Regresión | `npm.cmd run verify`: 47 archivos, 256 pruebas, build PASS. |
+
 ## Cierre de Fase 2 - 2026-07-17
 
 | Capa | Cobertura | Resultado final |

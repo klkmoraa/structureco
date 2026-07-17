@@ -1,5 +1,25 @@
 # Changelog UX/UI
 
+## 2026-07-17 - Fase 3, Slice 3.5
+
+### Cambiado
+
+- Selección del canvas separada del verde de producto mediante roles azules `--selection` y `--selection-soft` para Light/Dark.
+- Miembros con halo geométrico; nodos con anillo y cruceta; apoyos con marco; cargas con halo azul sin perder su color técnico.
+- Multiselección con envolvente discontinua, cuatro handles y contador localizado ES/EN.
+- Inspector, marquee y labels P0 alineados al mismo rol semántico de selección.
+
+### Validado
+
+- Cuatro pruebas puras cubren los cinco tipos de selección, conteo multi, envolvente, handles y clipping.
+- 47 archivos y 256 pruebas aprobadas; lint y build limpios.
+- Browser 430×932: carga, miembro, nodo/apoyo y multiselección inspeccionados en Light; multiselección también en Dark.
+- La carga distribuida conservó verde técnico mientras el halo y label seleccionados se renderizaron azules.
+
+### No cambiado
+
+- Selección de dominio, handlers, filtros, undo/redo, edición, cálculo, datos o persistencia.
+
 ## 2026-07-17 - Fase 3, Slice 3.4
 
 ### Añadido

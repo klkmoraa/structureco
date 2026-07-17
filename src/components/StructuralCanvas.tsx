@@ -40,6 +40,7 @@ import { cameraToFitBounds, canvasSafeInsetsFor, canvasSafeRect } from './canvas
 import { CanvasLayers } from './CanvasLayers';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { layoutSmartLabels, smartLabelDetailForScale, type SmartLabelCandidate } from './labelLayout';
+import { buildCanvasSelectionVisualState, selectionEnvelopeForPoints, selectionEnvelopeHandles } from './selectionVisuals';
 
 type Camera = CanvasCamera;
 
@@ -233,6 +234,7 @@ export const StructuralCanvas = ({
   const momentLabel = unitLabel(units, 'moment');
   const distributedLabel = unitLabel(units, 'distributedForce');
   const selectedCombination = project.combinations.find((item) => item.id === selectedCombinationId) ?? null;
+  const selectionVisualState = useMemo(() => buildCanvasSelectionVisualState(selection), [selection]);
   const loadPlacementInstruction = activeTool === 'pointLoad'
     ? t('canvas.placePointLoad')
     : activeTool === 'distributedLoad'
@@ -1482,12 +1484,14 @@ export const StructuralCanvas = ({
   const renderSupport = (node: NodeModel) => {
     if (node.support.type === 'none') return null;
     const p = toScreen(node.x, node.y);
+    const selected = selectionVisualState.nodeIds.includes(node.id);
     if (node.support.type === 'fixed') {
-      return <g key={node.id} className="support-symbol" transform={`translate(${p.x} ${p.y})`}><line x1="-15" y1="8" x2="15" y2="8" strokeWidth="3" />{[-12, -6, 0, 6, 12].map((x) => <line key={x} x1={x} y1="8" x2={x - 5} y2="15" />)}</g>;
+      return <g key={node.id} className={`support-symbol${selected ? ' selected' : ''}`} transform={`translate(${p.x} ${p.y})`}>{selected ? <rect className="support-selection-frame" x="-21" y="-5" width="42" height="25" rx="6" /> : null}<line x1="-15" y1="8" x2="15" y2="8" strokeWidth="3" />{[-12, -6, 0, 6, 12].map((x) => <line key={x} x1={x} y1="8" x2={x - 5} y2="15" />)}</g>;
     }
     const rotation = node.support.type === 'roller' ? (node.support.angleDeg ?? 90) - 90 : 0;
     return (
-      <g key={node.id} className="support-symbol" transform={`translate(${p.x} ${p.y}) rotate(${rotation})`}>
+      <g key={node.id} className={`support-symbol${selected ? ' selected' : ''}`} transform={`translate(${p.x} ${p.y}) rotate(${rotation})`}>
+        {selected ? <rect className="support-selection-frame" x="-21" y="-5" width="42" height="42" rx="7" /> : null}
         <path d="M 0 5 L -12 22 L 12 22 Z" fill="none" strokeWidth="1.8" />
         {node.support.type === 'roller' ? <><circle cx="-6" cy="26" r="3" fill="none" /><circle cx="6" cy="26" r="3" fill="none" /><line x1="-16" y1="31" x2="16" y2="31" /></> : <line x1="-16" y1="24" x2="16" y2="24" />}
       </g>
@@ -1540,7 +1544,7 @@ export const StructuralCanvas = ({
     if (!node) return null;
     const p = toScreen(node.x, node.y);
     const magnitude = Math.hypot(load.fx, load.fy);
-    const selected = selection?.kind === 'nodalLoad' && selection.id === load.id;
+    const selected = selectionVisualState.nodalLoadId === load.id;
     if (magnitude > 1e-9) {
       const ux = load.fx / magnitude; const uy = -load.fy / magnitude;
       const length = 54;
@@ -1548,6 +1552,7 @@ export const StructuralCanvas = ({
       const end = { x: p.x - ux * 8, y: p.y - uy * 8 };
       return (
         <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="nodalLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-label={`Carga puntual ${load.id} en ${load.nodeId}, ${toDisplay(magnitude, units, 'force').toFixed(2)} ${forceLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'nodalLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'nodalLoad', id: load.id })}>
+          {selected ? <line className="load-selection-halo" x1={start.x} y1={start.y} x2={end.x} y2={end.y} /> : null}
           <line className="load-hit" x1={start.x} y1={start.y} x2={end.x} y2={end.y} />
           {arrowPath(start.x, start.y, end.x, end.y)}
         </g>
@@ -1556,6 +1561,7 @@ export const StructuralCanvas = ({
     if (Math.abs(load.mz) > 1e-9) {
       const momentPath = `M ${p.x - 20} ${p.y - 8} A 22 22 0 1 1 ${p.x + 17} ${p.y - 14}`;
       return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="nodalLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-label={`Momento ${load.id} en ${load.nodeId}, ${toDisplay(load.mz, units, 'moment').toFixed(2)} ${momentLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'nodalLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'nodalLoad', id: load.id })}>
+        {selected ? <path className="load-selection-halo" d={momentPath} /> : null}
         <path className="load-hit" d={momentPath} />
         <path d={momentPath} fill="none" markerEnd="url(#arrow-purple)" />
       </g>;
@@ -1567,7 +1573,7 @@ export const StructuralCanvas = ({
     const member = memberMap.get(load.memberId); if (!member) return null;
     const ni = nodeMap.get(member.i)!; const nj = nodeMap.get(member.j)!;
     const dx = nj.x - ni.x; const dy = nj.y - ni.y; const L = Math.hypot(dx, dy);
-    const selected = selection?.kind === 'memberLoad' && selection.id === load.id;
+    const selected = selectionVisualState.memberLoadId === load.id;
     if (load.type === 'point') {
       const r = grossRatioFromFlexible(member, load.position ?? 0.5); const base = toScreen(ni.x + dx * r, ni.y + dy * r);
       const px = load.px ?? 0; const py = load.py ?? 0; const mag = Math.hypot(px, py) || 1;
@@ -1576,7 +1582,7 @@ export const StructuralCanvas = ({
       const ux = gx / mag; const uy = -gy / mag;
       const start = { x: base.x - ux * 52, y: base.y - uy * 52 };
       const end = { x: base.x - ux * 7, y: base.y - uy * 7 };
-      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-label={`Carga puntual ${load.id} en ${load.memberId}, ${toDisplay(mag, units, 'force').toFixed(2)} ${forceLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}><line className="load-hit" x1={start.x} y1={start.y} x2={end.x} y2={end.y} />{arrowPath(start.x, start.y, end.x, end.y)}</g>;
+      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-label={`Carga puntual ${load.id} en ${load.memberId}, ${toDisplay(mag, units, 'force').toFixed(2)} ${forceLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <line className="load-selection-halo" x1={start.x} y1={start.y} x2={end.x} y2={end.y} /> : null}<line className="load-hit" x1={start.x} y1={start.y} x2={end.x} y2={end.y} />{arrowPath(start.x, start.y, end.x, end.y)}</g>;
     }
     if (load.type === 'moment') {
       const r = grossRatioFromFlexible(member, load.position ?? 0.5);
@@ -1585,7 +1591,7 @@ export const StructuralCanvas = ({
       const path = clockwise
         ? `M ${base.x - 22} ${base.y - 3} A 23 23 0 1 0 ${base.x + 18} ${base.y - 13}`
         : `M ${base.x + 22} ${base.y - 3} A 23 23 0 1 1 ${base.x - 18} ${base.y - 13}`;
-      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-label={`Momento ${load.id} en ${load.memberId}, ${toDisplay(load.moment ?? 0, units, 'moment').toFixed(2)} ${momentLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}><path className="load-hit" d={path} /><path d={path} markerEnd="url(#arrow-purple)" /></g>;
+      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-label={`Momento ${load.id} en ${load.memberId}, ${toDisplay(load.moment ?? 0, units, 'moment').toFixed(2)} ${momentLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <path className="load-selection-halo" d={path} /> : null}<path className="load-hit" d={path} /><path d={path} markerEnd="url(#arrow-purple)" /></g>;
     }
     const visibleLoadedLength = L * camera.scale * Math.abs(load.end - load.start);
     const count = Math.max(3, Math.min(9, Math.round(visibleLoadedLength / 34) + 1));
@@ -1609,12 +1615,12 @@ export const StructuralCanvas = ({
     const hitEndRatio = grossRatioFromFlexible(member, load.end);
     const hitStart = toScreen(ni.x + dx * hitStartRatio, ni.y + dy * hitStartRatio);
     const hitEnd = toScreen(ni.x + dx * hitEndRatio, ni.y + dy * hitEndRatio);
-    return <g key={load.id} className={`distributed-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-label={`Carga distribuida ${load.id} en ${load.memberId}, ${toDisplay(average, units, 'distributedForce').toFixed(2)} ${distributedLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}><line className="load-hit" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} />{arrows}</g>;
+    return <g key={load.id} className={`distributed-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-label={`Carga distribuida ${load.id} en ${load.memberId}, ${toDisplay(average, units, 'distributedForce').toFixed(2)} ${distributedLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <line className="load-selection-halo" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} /> : null}<line className="load-hit" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} />{arrows}</g>;
   };
 
   const smartLabelCandidates: SmartLabelCandidate[] = [];
-  const selectedNodeIds = selection?.kind === 'multi' ? selection.nodeIds : selection?.kind === 'node' ? [selection.id] : [];
-  const selectedMemberIds = selection?.kind === 'multi' ? selection.memberIds : selection?.kind === 'member' ? [selection.id] : [];
+  const selectedNodeIds = selectionVisualState.nodeIds;
+  const selectedMemberIds = selectionVisualState.memberIds;
 
   for (const node of project.nodes) {
     const selected = selectedNodeIds.includes(node.id);
@@ -1668,7 +1674,7 @@ export const StructuralCanvas = ({
     for (const load of project.nodalLoads) {
       const node = nodeMap.get(load.nodeId);
       if (!node) continue;
-      const selected = selection?.kind === 'nodalLoad' && selection.id === load.id;
+      const selected = selectionVisualState.nodalLoadId === load.id;
       if (!selected && !layers.labels) continue;
       const point = toScreen(node.x, node.y);
       const magnitude = Math.hypot(load.fx, load.fy);
@@ -1706,7 +1712,7 @@ export const StructuralCanvas = ({
       const dy = nj.y - ni.y;
       const length = Math.hypot(dx, dy);
       if (length <= 1e-12) continue;
-      const selected = selection?.kind === 'memberLoad' && selection.id === load.id;
+      const selected = selectionVisualState.memberLoadId === load.id;
       if (!selected && !layers.labels) continue;
       const priority = selected ? 0 as const : 1 as const;
       const tone = selected ? 'selection' as const : load.type === 'distributed' ? 'shear' as const : load.type === 'moment' ? 'moment' as const : 'force' as const;
@@ -1846,6 +1852,19 @@ export const StructuralCanvas = ({
   }
 
   const placedSmartLabels = layoutSmartLabels(smartLabelCandidates, canvasSafeRect(size), camera.scale);
+  const multiSelectionPoints = selectionVisualState.kind === 'multi' ? [
+    ...selectionVisualState.nodeIds.flatMap((nodeId) => {
+      const node = nodeMap.get(nodeId);
+      return node ? [toScreen(node.x, node.y)] : [];
+    }),
+    ...selectionVisualState.memberIds.flatMap((memberId) => {
+      const member = memberMap.get(memberId);
+      const ni = member ? nodeMap.get(member.i) : undefined;
+      const nj = member ? nodeMap.get(member.j) : undefined;
+      return ni && nj ? [toScreen(ni.x, ni.y), toScreen(nj.x, nj.y)] : [];
+    }),
+  ] : [];
+  const multiSelectionEnvelope = selectionEnvelopeForPoints(multiSelectionPoints, { x: 0, y: 0, width: size.width, height: size.height }, 22);
 
   return (
     <div className="canvas-host" ref={hostRef}>
@@ -1911,8 +1930,7 @@ export const StructuralCanvas = ({
           {project.members.map((member) => {
             const ni = nodeMap.get(member.i); const nj = nodeMap.get(member.j); if (!ni || !nj) return null;
             const a = toScreen(ni.x, ni.y); const b = toScreen(nj.x, nj.y);
-            const selected = (selection?.kind === 'member' && selection.id === member.id)
-              || (selection?.kind === 'multi' && selection.memberIds.includes(member.id));
+            const selected = selectedMemberIds.includes(member.id);
             const learningHighlighted = learningFocus?.memberIds.includes(member.id) ?? false;
             return (
               <g
@@ -1935,6 +1953,7 @@ export const StructuralCanvas = ({
                 onPointerMove={(event) => showCut(event, member)}
                 onPointerLeave={() => setCut((current) => current?.pinned ? current : null)}
               >
+                {selected ? <line className="member-selection-halo" x1={a.x} y1={a.y} x2={b.x} y2={b.y} /> : null}
                 <line className="member-hit" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
                 <line className="member-line" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
                 {member.type === 'frame' && ((member.rigidOffsetI ?? 0) > 0 || (member.rigidOffsetJ ?? 0) > 0) ? (() => {
@@ -1966,8 +1985,7 @@ export const StructuralCanvas = ({
         <g className="node-layer">
           {project.nodes.map((node) => {
             const p = toScreen(node.x, node.y);
-            const selected = (selection?.kind === 'node' && selection.id === node.id)
-              || (selection?.kind === 'multi' && selection.nodeIds.includes(node.id));
+            const selected = selectedNodeIds.includes(node.id);
             const start = memberStart === node.id;
             const learningHighlighted = learningFocus?.nodeIds.includes(node.id) ?? false;
             return (
@@ -1989,6 +2007,7 @@ export const StructuralCanvas = ({
                   }
                 }}
               >
+                {selected ? <><circle className="node-selection-halo" cx={p.x} cy={p.y} r="14" /><path className="node-selection-cross" d={`M ${p.x - 18} ${p.y} H ${p.x + 18} M ${p.x} ${p.y - 18} V ${p.y + 18}`} /></> : null}
                 <circle className="node-hit" cx={p.x} cy={p.y} r="20" />
                 <circle className="node-dot" cx={p.x} cy={p.y} r="7" />
                 {node.internalHinge ? <circle className="internal-hinge-symbol" cx={p.x} cy={p.y} r="11" /> : null}
@@ -1996,6 +2015,15 @@ export const StructuralCanvas = ({
             );
           })}
         </g>
+
+        {multiSelectionEnvelope ? <g className="multi-selection-envelope" data-multi-selection-envelope data-selection-count={selectionVisualState.count} aria-hidden="true">
+          <rect className="multi-selection-frame" x={multiSelectionEnvelope.x} y={multiSelectionEnvelope.y} width={multiSelectionEnvelope.width} height={multiSelectionEnvelope.height} rx="8" />
+          {selectionEnvelopeHandles(multiSelectionEnvelope).map((handle, index) => <rect key={index} className="multi-selection-handle" x={handle.x - 4} y={handle.y - 4} width="8" height="8" rx="2" />)}
+          <g className="multi-selection-badge" transform={`translate(${Math.min(Math.max(8, multiSelectionEnvelope.x + 8), Math.max(8, size.width - 142))} ${multiSelectionEnvelope.y >= 34 ? multiSelectionEnvelope.y - 28 : multiSelectionEnvelope.y + 8})`}>
+            <rect width="134" height="22" rx="7" />
+            <text x="9" y="15">{t('inspector.selectedCount', { count: selectionVisualState.count })}</text>
+          </g>
+        </g> : null}
 
         <g className="smart-label-layer" data-label-detail={smartLabelDetailForScale(camera.scale)} aria-hidden="true">
           {placedSmartLabels.map((label) => {

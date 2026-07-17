@@ -143,3 +143,10 @@
 
 - Estado: limitación documentada.
 - Decisión: verificar `pointerType='pen'` mediante pruebas de Pointer Events y mantener paridad con mouse; no afirmar validación en hardware físico.
+
+## D-023 - Selección azul con redundancia geométrica
+
+- Estado: aceptada y ejecutada en Slice 3.5.
+- Decisión: reservar verde para acción/producto, azul para selección/foco y mantener colores técnicos en cargas y resultados.
+- Control: la selección no depende sólo del color; usa halo, anillo/cruceta, marco o envolvente según el objeto.
+- Evidencia: carga, miembro, nodo/apoyo y multi revisados en Light; multi revisado también en Dark.

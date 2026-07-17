@@ -72,3 +72,5 @@ Alcance autorizado: presentaci처n, interacci처n y accesibilidad; el motor matem�
 - [x] Gate 3.3: 45 archivos, 247 pruebas; modelo fijo y toggles/restablecimiento verificados en Browser.
 - [x] Slice 3.4: labels P0-P3, LOD, colisi처n determinista y leader lines en zona segura.
 - [x] Gate 3.4: 46 archivos, 252 pruebas; layout denso y Browser 1440/430 aprobados.
+- [x] Slice 3.5: selecci처n azul por objeto y envolvente de multiselecci처n.
+- [x] Gate 3.5: 47 archivos, 256 pruebas; carga/miembro/nodo/apoyo/multi Light y multi Dark aprobados.

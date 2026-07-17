@@ -74,6 +74,7 @@ El documento `structureCo_Fase_3_Instrucciones_ULTRA_Detalladas_para_Codex.pdf` 
 - Separar selección azul de verde de producto y colores técnicos.
 - Dar feedback específico a miembro, nodo, apoyo, carga y multiselección.
 - Gate: selección visible en Light/Dark y no dependiente sólo del color.
+- Estado: **implementado**; feedback geométrico por objeto y revisión Browser Light/Dark aprobados.
 
 ### 3.6 - Gestos, responsive y accesibilidad
 
