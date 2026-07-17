@@ -75,9 +75,14 @@
 
 ## D-012 - Ausencia de repositorio Git
 
-- Estado: decisión bloqueante abierta.
+- Estado: resuelta y ejecutada con autorización explícita del propietario.
 - Evidencia: `git rev-parse --show-toplevel` falla; `structureCo/.git` no existe y `Structure/.git` es un directorio vacío.
-- Recomendación: inicializar Git en `structureCo`, registrar un commit baseline y crear `phase/2-ui-foundations` antes de editar `src/`.
-- Alternativa: continuar sin Git mediante manifiestos SHA-256 antes/después, con menor capacidad de rollback y revisión.
-- Consecuencia: no comienza el Slice 2.1 hasta que el propietario elija una opción.
+- Decisión ejecutada: repositorio inicializado en `structureCo`, baseline registrado en `85f671d968426502d9d41425b86ca6abde1fd2bf` y rama `phase/2-ui-foundations` creada antes de editar `src/`.
+- Consecuencia: la trazabilidad, el rollback y los commits por slice quedan disponibles.
 
+## D-013 - Fundaciones visuales semánticas
+
+- Estado: aceptada y ejecutada en Slice 2.1.
+- Decisión: separar paleta primitiva, roles semánticos, roles técnicos, escalas de layout/control y aliases de migración en `src/styles/tokens.css`.
+- Motivo: impedir que marca, selección, éxito, error y magnitudes estructurales compartan color por accidente.
+- Control: no se añadieron fuentes remotas ni dependencias; la pila local/sistema permanece.

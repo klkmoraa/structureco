@@ -1,5 +1,23 @@
 # Changelog UX/UI
 
+## 2026-07-17 - Fase 2, Slice 2.1
+
+### Añadido
+
+- Repositorio Git local, commit baseline `85f671d` y rama `phase/2-ui-foundations`.
+- Capa `src/styles/tokens.css` con primitives, roles semánticos, magnitudes técnicas, spacing, radius, elevation, tipografía, controles, layout, motion y z-index.
+- Documentación de tokens y política de aliases incrementales.
+
+### Validado
+
+- Light/Dark definidos desde una fuente semántica común.
+- Marca, selección, estados y magnitudes técnicas separados.
+- `npm.cmd run verify`: 40 archivos, 229 pruebas y build aprobados.
+
+### No cambiado
+
+- Motor, workers, datos, schema, persistencia, importación/exportación y fixtures.
+
 ## 2026-07-17 - Fase 2, Slice 2.0
 
 ### Aprobado

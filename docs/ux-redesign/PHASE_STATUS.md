@@ -8,7 +8,7 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 | --- | --- | --- | --- |
 | Fase 0 - gobierno | No acreditada en el repositorio | No se encontraron artefactos formales previos de gobierno visual. | Riesgo heredado registrado. |
 | Fase 1 - auditoría y línea base | **APROBADA** | Inventario, auditoría renderizada, recorridos, línea base, backlog, decisiones, reporte PDF y 12 capturas aceptados como referencia oficial. | Aprobada por el propietario mediante el documento rector de Fase 2, fechado 2026-07-17. |
-| Fase 2 - fundaciones UI y responsive | **EN EJECUCIÓN - Slice 2.0** | Especificación leída, baseline técnico aprobado y siete vistas P0 capturadas. Ningún cambio productivo en `src/`. | Bloqueada antes de código hasta aprobar el plan y resolver la ausencia de Git. |
+| Fase 2 - fundaciones UI y responsive | **EN EJECUCIÓN - Slice 2.2** | Baseline Git protegido y Slice 2.1 de tokens/fundamentos aprobado. | Continuar por slices; no avanzar a Fase 3. |
 | Fase 3 y posteriores | No iniciadas | Sin autorización. | No iniciar automáticamente. |
 
 ## Cierre heredado de Fase 1
@@ -28,10 +28,11 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 - [x] Baseline repetido: `verify`, QA Chromium y QA WebKit aprobados.
 - [x] Siete capturas P0 creadas con nombres deterministas.
 - [x] Supuestos, mapa de archivos y plan por slices documentados.
-- [ ] Rama/worktree de Fase 2: no disponible porque la raíz no contiene un repositorio Git válido y el `.git` del directorio padre está vacío.
-- [ ] Aprobación explícita del plan y decisión sobre inicializar Git.
+- [x] Repositorio inicializado, baseline `85f671d` y rama `phase/2-ui-foundations` activos.
+- [x] Plan completo y opción A aprobados explícitamente por el propietario.
+- [x] Slice 2.1: tokens semánticos, Light/Dark, tipografía, layout, motion y aliases documentados.
+- [x] Gate 2.1: `npm.cmd run verify` aprobado con 40 archivos y 229 pruebas.
 
 ## Estado de la compuerta
 
-**SLICE 2.0 LISTO PARA DECISIÓN.** No se modificará `src/` hasta que el propietario elija cómo resolver la trazabilidad Git y apruebe el plan de [`phases/phase-02-plan.md`](phases/phase-02-plan.md).
-
+**SLICE 2.1 APROBADO.** La ejecución continúa en Slice 2.2 sobre la rama dedicada; el motor matemático permanece intacto.

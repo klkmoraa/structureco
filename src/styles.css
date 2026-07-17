@@ -1,83 +1,19 @@
+@import './styles/tokens.css';
+
 :root {
-  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
-  color: #17211b;
-  background: #f4f7f5;
+  font-family: var(--sc-font-ui);
+  color: var(--sc-color-text-primary);
+  background: var(--sc-color-bg-app);
+  color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --app-bg: #f4f7f5;
-  --surface: #ffffff;
-  --surface-2: #f0f5f2;
-  --surface-3: #e8f0eb;
-  --canvas-bg: #ffffff;
-  --text: #17211b;
-  --muted: #66736b;
-  --muted-strong: #445249;
-  --subtle: #647168;
-  --border: #d6e0d9;
-  --border-soft: #e8eee9;
-  --shadow: 0 14px 40px rgba(25, 55, 39, 0.09);
-  --accent: #157a55;
-  --accent-hover: #0b6b47;
-  --accent-soft: #eaf6ef;
-  --accent-foreground: #ffffff;
-  --focus: #2fb878;
-  --axial: #0e7490;
-  --shear: #2f8f59;
-  --moment: #d1493f;
-  --force: #8b5bb4;
-  --dimension: #9b7418;
-  --axis: #b85b2b;
-  --deformed: #2f9ca7;
-  --warning: #c67a00;
-  --error: #d54b4b;
-  --danger: var(--error);
-  --success: #21835a;
-  --grid: #e9efeb;
-  --member: #17211b;
-  --node-fill: #ffffff;
-  --radius-lg: 16px;
-  --radius-md: 11px;
-  --radius-sm: 8px;
-  --topbar-h: 66px;
-  --toolbar-w: 164px;
-  --inspector-w: 320px;
-  color-scheme: light;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "cv02" 1, "cv03" 1;
 }
 
 :root[data-theme='dark'] {
-  color: #edf4ef;
-  background: #090d0b;
-  --app-bg: #090d0b;
-  --surface: #111713;
-  --surface-2: #17201b;
-  --surface-3: #202c25;
-  --canvas-bg: #0c110e;
-  --text: #edf4ef;
-  --muted: #a4b1a8;
-  --muted-strong: #c1ccc4;
-  --subtle: #95a49a;
-  --border: #2b3930;
-  --border-soft: #202c25;
-  --shadow: 0 18px 52px rgba(0, 0, 0, 0.46);
-  --accent: #43d17a;
-  --accent-hover: #58dd91;
-  --accent-soft: #153b2b;
-  --accent-foreground: #07130c;
-  --focus: #66e3a2;
-  --axial: #40b8cf;
-  --shear: #58cf83;
-  --moment: #ff7168;
-  --force: #c58ce3;
-  --dimension: #e7bd55;
-  --axis: #ed8b58;
-  --deformed: #65cbd1;
-  --warning: #f0b94c;
-  --error: #ff7168;
-  --danger: var(--error);
-  --success: #58d48a;
-  --grid: #1c2821;
-  --member: #edf4ef;
-  --node-fill: #0c110e;
+  color: var(--sc-color-text-primary);
+  background: var(--sc-color-bg-app);
   color-scheme: dark;
 }
 
@@ -1112,13 +1048,6 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 }
 
 /* Native motion and interaction layer ------------------------------------- */
-:root {
-  --motion-fast:140ms;
-  --motion-standard:220ms;
-  --motion-slow:360ms;
-  --ease-native:cubic-bezier(.22,1,.36,1);
-  --ease-press:cubic-bezier(.2,.8,.2,1);
-}
 
 html { -webkit-tap-highlight-color:transparent; }
 #root { overflow:clip; }

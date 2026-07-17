@@ -1,18 +1,18 @@
 # Plan de ejecución - Fase 2
 
 Fecha: 2026-07-17  
-Estado: Slice 2.0 listo para decisión; `src/` sin modificaciones.
+Estado: opción A aprobada; baseline Git creado y ejecución por slices en curso.
 
 ## Preguntas de Fase 2
 
-### 1. Bloqueante - trazabilidad Git
+### 1. Resuelta - trazabilidad Git
 
-**Pregunta:** ¿autorizas inicializar un repositorio Git dentro de `structureCo`, registrar el estado actual como commit baseline y crear la rama `phase/2-ui-foundations` antes de comenzar los cambios productivos?
+**Respuesta del propietario:** sí, opción A autorizada; Codex ejecutará la fase completa de extremo a extremo.
 
 - Contexto observado: `git rev-parse` falla; no existe `structureCo/.git`; el `.git` del directorio padre está vacío y no contiene metadata utilizable.
 - Opción A - recomendada: inicializar Git, commit baseline y rama dedicada. Permite diff, rollback, commits por slice y reporte inicial/final.
 - Opción B: no inicializar Git y continuar con manifiestos SHA-256 y lista explícita de archivos. Conserva trazabilidad parcial, pero no ofrece rollback ni revisión por commits.
-- Consecuencia de no decidir: no puede cumplirse el gate 2.0 ni comenzar el Slice 2.1.
+- Ejecución: commit baseline `85f671d968426502d9d41425b86ca6abde1fd2bf`; rama `phase/2-ui-foundations`.
 
 ## Supuestos explícitos no bloqueantes
 
@@ -108,4 +108,3 @@ Archivos nuevos sólo si reducen acoplamiento y quedan justificados:
 ## Definición de terminado
 
 La Fase 2 sólo podrá marcarse lista para revisión cuando todos los gates cuantitativos pasen, las acciones existentes sigan accesibles, no haya cambios matemáticos y el reporte/correo estén confirmados. No se iniciará Fase 3 automáticamente.
-
