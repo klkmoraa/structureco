@@ -1,0 +1,35 @@
+import { describe, expect, it } from 'vitest';
+import { createEditorLayerState, editorLayerReducer } from './editorLayers';
+
+describe('editor layer state', () => {
+  it('starts with every presentation layer visible', () => {
+    expect(createEditorLayerState()).toEqual({
+      model: true,
+      loads: true,
+      dimensions: true,
+      ids: true,
+      results: true,
+      labels: true,
+      help: true,
+      diagnostics: true,
+    });
+  });
+
+  it('toggles presentation layers without allowing the model to disappear', () => {
+    const initial = createEditorLayerState();
+    const withoutLoads = editorLayerReducer(initial, { type: 'toggle', layer: 'loads' });
+    expect(withoutLoads.loads).toBe(false);
+    expect(withoutLoads.model).toBe(true);
+    expect(editorLayerReducer(withoutLoads, { type: 'toggle', layer: 'model' })).toBe(withoutLoads);
+    expect(editorLayerReducer(withoutLoads, { type: 'set', layer: 'model', visible: false })).toBe(withoutLoads);
+  });
+
+  it('resets all ephemeral choices to the documented defaults', () => {
+    const changed = editorLayerReducer(
+      editorLayerReducer(createEditorLayerState(), { type: 'toggle', layer: 'labels' }),
+      { type: 'toggle', layer: 'results' },
+    );
+    expect(editorLayerReducer(changed, { type: 'reset' })).toEqual(createEditorLayerState());
+  });
+});
+

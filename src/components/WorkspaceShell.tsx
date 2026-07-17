@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import { Inspector } from './Inspector';
 import { ResultsPanel } from './ResultsPanel';
@@ -6,12 +6,18 @@ import { StructuralCanvas } from './StructuralCanvas';
 import { ToolBar } from './ToolBar';
 import { TopBar } from './TopBar';
 import { useI18n } from '../i18n/useI18n';
+import { createEditorLayerState, editorLayerReducer } from './editorLayers';
 
 export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => void; projectId: string }) => {
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
+  const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createEditorLayerState);
   const inspectorToggleRef = useRef<HTMLButtonElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
+
+  useEffect(() => {
+    dispatchEditorLayers({ type: 'reset' });
+  }, [projectId]);
 
   const closeMobileInspector = () => {
     setMobileInspectorOpen(false);
@@ -41,7 +47,7 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
     <div className="workspace">
       <ToolBar />
       <main className="center-stage">
-        <StructuralCanvas onRequestInspector={() => {
+        <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => {
           if (window.matchMedia('(max-width: 1023px)').matches) openMobileInspector();
         }} />
         <ResultsPanel />

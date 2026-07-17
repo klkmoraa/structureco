@@ -33,6 +33,16 @@ Hallazgos visuales de entrada: ToolRail plano, agrupación dependiente de separa
 | Móvil | Corrección iterada de overlap coordenadas/cámara; inspección 390 y 430 PASS. |
 | Regresión | `npm.cmd run verify`: 43 archivos, 242 pruebas, build PASS. |
 
+### Gate 3.3 - capas UI-only
+
+| Control | Resultado |
+| --- | --- |
+| Estado | Reducer local con ocho capas; reset por proyecto; tests PASS. |
+| Invariante | Modelo no se puede apagar y los tres miembros permanecen visibles. |
+| Cargas | Browser: 5 botones coincidentes antes, 2 del chrome al ocultar, 5 al restablecer. |
+| Responsive | Panel completo y scrolleable en 1024 y 430 sin invadir dock/resultados. |
+| Regresión | `npm.cmd run verify`: 45 archivos, 247 pruebas, build PASS. |
+
 ## Cierre de Fase 2 - 2026-07-17
 
 | Capa | Cobertura | Resultado final |

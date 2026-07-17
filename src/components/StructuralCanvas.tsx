@@ -37,6 +37,8 @@ import {
 } from './canvasInteraction';
 import { toolFromShortcut } from './toolRegistry';
 import { cameraToFitBounds, canvasSafeInsetsFor } from './canvasChrome';
+import { CanvasLayers } from './CanvasLayers';
+import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 
 type Camera = CanvasCamera;
 
@@ -130,7 +132,15 @@ const arrowPath = (x1: number, y1: number, x2: number, y2: number) => (
   <line x1={x1} y1={y1} x2={x2} y2={y2} markerEnd="url(#arrow-purple)" />
 );
 
-export const StructuralCanvas = ({ onRequestInspector }: { onRequestInspector?: () => void }) => {
+export const StructuralCanvas = ({
+  onRequestInspector,
+  layers,
+  dispatchLayers,
+}: {
+  onRequestInspector?: () => void;
+  layers: EditorLayerState;
+  dispatchLayers: (action: EditorLayerAction) => void;
+}) => {
   const {
     project,
     analysis,
@@ -229,6 +239,7 @@ export const StructuralCanvas = ({ onRequestInspector }: { onRequestInspector?: 
       : activeTool === 'moment'
         ? t('canvas.placeMoment')
         : null;
+  const loadsLayerVisible = layers.loads || loadPlacementInstruction !== null;
   const cutEquilibrium = useMemo(() => {
     if (!cut?.point || !analysis?.success) return null;
     const memberResult = resultMap.get(cut.memberId);
@@ -1697,10 +1708,10 @@ export const StructuralCanvas = ({ onRequestInspector }: { onRequestInspector?: 
           return <g className="member-preview" pointerEvents="none"><line x1={start.x} y1={start.y} x2={end.x} y2={end.y} /><text x={(start.x + end.x) / 2} y={(start.y + end.y) / 2 - 10}>{toDisplay(Math.hypot(snapPreview.x - startNode.x, snapPreview.y - startNode.y), units, 'length').toFixed(3)} {lengthLabel}</text></g>;
         })() : null}
 
-        <g className="diagram-layer">{project.members.map(diagramPath)}{project.members.map(diagramLabels)}</g>
-        {resultsAllowed && resultTab === 'deformed' && analysis?.success ? <g className="deformed-layer">{project.members.map((member) => <path key={member.id} d={deformedPath(member)} />)}</g> : null}
-        {renderResultCursor()}
-        {renderMechanism()}
+        {layers.results ? <g className="diagram-layer">{project.members.map(diagramPath)}{layers.labels ? project.members.map(diagramLabels) : null}</g> : null}
+        {layers.results && resultsAllowed && resultTab === 'deformed' && analysis?.success ? <g className="deformed-layer">{project.members.map((member) => <path key={member.id} d={deformedPath(member)} />)}</g> : null}
+        {layers.results ? renderResultCursor() : null}
+        {layers.diagnostics ? renderMechanism() : null}
 
         <g className="member-layer">
           {project.members.map((member) => {
@@ -1740,9 +1751,9 @@ export const StructuralCanvas = ({ onRequestInspector }: { onRequestInspector?: 
                   const faceJ = toScreen(nj.x - (nj.x - ni.x) * tj, nj.y - (nj.y - ni.y) * tj);
                   return <g className="rigid-zone-layer"><line x1={a.x} y1={a.y} x2={faceI.x} y2={faceI.y} /><line x1={faceJ.x} y1={faceJ.y} x2={b.x} y2={b.y} /><circle cx={faceI.x} cy={faceI.y} r="3" /><circle cx={faceJ.x} cy={faceJ.y} r="3" /></g>;
                 })() : null}
-                {project.settings.showMemberLabels ? <text className="member-label" x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 9}>{member.id}</text> : null}
-                {activeTool === 'dimension' || project.settings.showLocalAxes || project.settings.showDimensions ? <text className="dimension-label" x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 + 21}>{toDisplay(Math.hypot(nj.x - ni.x, nj.y - ni.y), units, 'length').toFixed(3)} {lengthLabel}</text> : null}
-                {project.settings.showLocalAxes ? (() => {
+                {layers.labels && layers.ids && project.settings.showMemberLabels ? <text className="member-label" x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 9}>{member.id}</text> : null}
+                {activeTool === 'dimension' || (layers.labels && layers.dimensions && (project.settings.showLocalAxes || project.settings.showDimensions)) ? <text className="dimension-label" x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 + 21}>{toDisplay(Math.hypot(nj.x - ni.x, nj.y - ni.y), units, 'length').toFixed(3)} {lengthLabel}</text> : null}
+                {layers.dimensions && project.settings.showLocalAxes ? (() => {
                   const mx = (a.x + b.x) / 2; const my = (a.y + b.y) / 2;
                   const length = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y));
                   const ux = (b.x - a.x) / length; const uy = (b.y - a.y) / length;
@@ -1754,11 +1765,11 @@ export const StructuralCanvas = ({ onRequestInspector }: { onRequestInspector?: 
           })}
         </g>
 
-        {renderInfluenceOverlay()}
+        {layers.results ? renderInfluenceOverlay() : null}
 
-        <g className="reaction-layer">{project.nodes.map(renderReaction)}</g>
+        {layers.results ? <g className="reaction-layer">{project.nodes.map(renderReaction)}</g> : null}
         <g className="support-layer">{project.nodes.map(renderSupport)}</g>
-        {project.settings.showLoads && resultTab !== 'influence' ? <g className="load-layer">{project.memberLoads.map(renderMemberLoad)}{project.nodalLoads.map(renderNodalLoad)}</g> : null}
+        {loadsLayerVisible && project.settings.showLoads && resultTab !== 'influence' ? <g className={`load-layer${layers.labels ? '' : ' labels-hidden'}`}>{project.memberLoads.map(renderMemberLoad)}{project.nodalLoads.map(renderNodalLoad)}</g> : null}
 
         <g className="node-layer">
           {project.nodes.map((node) => {
@@ -1789,7 +1800,7 @@ export const StructuralCanvas = ({ onRequestInspector }: { onRequestInspector?: 
                 <circle className="node-hit" cx={p.x} cy={p.y} r="20" />
                 <circle className="node-dot" cx={p.x} cy={p.y} r="7" />
                 {node.internalHinge ? <circle className="internal-hinge-symbol" cx={p.x} cy={p.y} r="11" /> : null}
-                {project.settings.showNodeLabels ? <text x={p.x - 10} y={p.y - 12}>{node.id.replace('N', '')}</text> : null}
+                {layers.labels && layers.ids && project.settings.showNodeLabels ? <text x={p.x - 10} y={p.y - 12}>{node.id.replace('N', '')}</text> : null}
               </g>
             );
           })}
@@ -1808,12 +1819,13 @@ export const StructuralCanvas = ({ onRequestInspector }: { onRequestInspector?: 
 
       <div className={`canvas-mode-badge${loadPlacementInstruction ? ' placing-load' : ''}`} role="status" aria-live="polite" data-canvas-chrome="mode">
         <strong>{t(toolLabelKeys[activeTool])}</strong>
-        {loadPlacementInstruction ? <span className="canvas-action-instruction">{loadPlacementInstruction}</span> : <>
+        {loadPlacementInstruction ? <span className="canvas-action-instruction">{loadPlacementInstruction}</span> : layers.help ? <>
           <span className="desktop-gesture-hint">{t('canvas.gestureDesktop')}</span>
           <span className="touch-gesture-hint">{t('canvas.gestureTouch')}</span>
-        </>}
+        </> : null}
         {loadPlacementInstruction ? <button type="button" aria-label={t('canvas.cancelPlacement')} onClick={() => setActiveTool('select')}><X size={14} /></button> : null}
       </div>
+      <CanvasLayers layers={layers} dispatch={dispatchLayers} />
       <div className="canvas-view-chips" role="status" aria-label={t('canvas.viewStatus')} data-canvas-chrome="view-status">
         <span className={project.settings.snap ? 'active' : ''}>{project.settings.snap ? t('canvas.snapOn') : t('canvas.snapOff')}</span>
         <span className={project.settings.showGrid ? 'active' : ''}>{project.settings.showGrid ? t('canvas.gridOn') : t('canvas.gridOff')}</span>
@@ -1830,7 +1842,7 @@ export const StructuralCanvas = ({ onRequestInspector }: { onRequestInspector?: 
         <span className="canvas-scale-output">{t('canvas.scale')} {(camera.scale / 85).toFixed(2)}×</span>
       </div>
       {canvasFeedback ? <div className="canvas-feedback" role="alert">{canvasFeedback}</div> : null}
-      {resultsAllowed && analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <div className={`canvas-result-legend ${resultTab}`} aria-label="Convención del diagrama" data-canvas-chrome="result-legend"><strong>{resultTab === 'axial' ? 'N · axial' : resultTab === 'shear' ? 'V · cortante' : 'M · momento'}</strong><span><i /> Curva exacta · escala {project.settings.diagramScaleMode === 'individual' ? 'por miembro' : 'común'}</span><small>Se dibuja hacia {project.settings.diagramSide === 'positive' ? '+y' : '−y'} local · valores positivos mantienen el color y el trazo</small></div> : null}
+      {layers.results && layers.labels && resultsAllowed && analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <div className={`canvas-result-legend ${resultTab}`} aria-label="Convención del diagrama" data-canvas-chrome="result-legend"><strong>{resultTab === 'axial' ? 'N · axial' : resultTab === 'shear' ? 'V · cortante' : 'M · momento'}</strong><span><i /> Curva exacta · escala {project.settings.diagramScaleMode === 'individual' ? 'por miembro' : 'común'}</span><small>Se dibuja hacia {project.settings.diagramSide === 'positive' ? '+y' : '−y'} local · valores positivos mantienen el color y el trazo</small></div> : null}
       {memberStart ? <div className="canvas-hint" role="status"><span>Toca el nodo destino</span><button type="button" onClick={() => setMemberStart(null)} aria-label="Cancelar creación de miembro"><X size={14} /></button></div> : null}
       {activeTool === 'node' || (activeTool === 'member' && memberStart) ? <form className="quick-entry-bar" aria-label="Entrada numérica CAD" onSubmit={(event) => { event.preventDefault(); submitQuickEntry(); }}><div className="quick-entry-heading"><strong>{activeTool === 'node' ? 'Nodo por coordenadas' : 'Extremo del miembro'}</strong>{activeTool === 'member' ? <div className="quick-entry-mode"><button type="button" aria-pressed={quickEntryMode === 'delta'} onClick={() => setQuickEntryMode('delta')}>ΔX · ΔY</button><button type="button" aria-pressed={quickEntryMode === 'polar'} onClick={() => setQuickEntryMode('polar')}>L · ∠</button></div> : null}</div><label><span>{activeTool === 'node' ? 'X' : quickEntryMode === 'delta' ? 'ΔX' : 'L'}</span><input type="number" inputMode="decimal" step="any" value={quickEntry.first} onChange={(event) => setQuickEntry((current) => ({ ...current, first: event.target.value }))} /><small>{lengthLabel}</small></label><label><span>{activeTool === 'node' ? 'Y' : quickEntryMode === 'delta' ? 'ΔY' : '∠'}</span><input type="number" inputMode="decimal" step="any" value={quickEntry.second} onChange={(event) => setQuickEntry((current) => ({ ...current, second: event.target.value }))} /><small>{activeTool === 'member' && quickEntryMode === 'polar' ? '°' : lengthLabel}</small></label><button type="submit">{activeTool === 'node' ? 'Crear nodo' : 'Crear miembro'}</button>{quickEntryError ? <span className="quick-entry-error" role="alert">{quickEntryError}</span> : null}</form> : null}
       {cycleIndicator ? <div className="selection-cycle-indicator" style={{ left: cycleIndicator.x + 12, top: cycleIndicator.y + 12 }} role="status">{cycleIndicator.index}/{cycleIndicator.total} · Alt para recorrer</div> : null}

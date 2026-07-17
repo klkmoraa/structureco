@@ -1,5 +1,27 @@
 # Changelog UX/UI
 
+## 2026-07-17 - Fase 3, Slice 3.3
+
+### Añadido
+
+- Estado efímero para Modelo, Cargas, Cotas/ejes, Identificadores, Resultados, Etiquetas, Ayuda y Diagnóstico.
+- Panel de capas accesible con switches, Escape, cierre exterior, retorno de foco y restablecimiento.
+- Modelo bloqueado como siempre visible; elecciones reiniciadas al cambiar de proyecto.
+
+### Integrado
+
+- Cargas, IDs, cotas, ejes, overlays de resultados, labels, ayuda y mecanismo consumen únicamente gates de presentación.
+- Herramientas activas conservan información crítica aunque una capa secundaria esté oculta.
+
+### Validado
+
+- 45 archivos y 247 pruebas aprobadas; reducer y panel cubiertos unitariamente.
+- Browser 1024 y 430: ocho switches, modelo fijo, cargas 5 -> 2 controles chrome -> 5 al restablecer, tres miembros siempre presentes.
+
+### No cambiado
+
+- `ProjectModel`, `ProjectSettings`, schema, migraciones, persistencia, solver o resultados.
+
 ## 2026-07-17 - Fase 3, Slice 3.2
 
 ### Cambiado
