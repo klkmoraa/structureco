@@ -93,3 +93,11 @@
 - Decisión: mostrar seis estados visuales a partir de `analysis`, `isAnalyzing`, severidades existentes y una memoria transitoria por `project.id`.
 - Motivo: comunicar disponibilidad y vigencia del resultado sin duplicar ni reinterpretar el cálculo.
 - Control: el componente no llama al solver, no persiste estado y sólo dirige warning/error al tab Avisos existente.
+
+## D-015 - Cierre de contraste y loading
+
+- Estado: aceptada y ejecutada durante Slice 2.7.
+- Decisión: conservar los tonos base aprobados de warning/error y añadir roles de primer plano más oscuros sólo para texto pequeño en Light.
+- Decisión: fijar el ancho de Analizar en 148 px wide y 124 px compact, manteniendo 44 px en tablet/móvil.
+- Motivo: el QA detectó contraste insuficiente en estados claros y crecimiento del botón con el copy inglés `Calculating…`.
+- Evidencia: warning 5.84:1, error 5.90:1 y ancho 148 px antes/durante loading.

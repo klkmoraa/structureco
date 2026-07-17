@@ -11,7 +11,8 @@
     "test": "vitest run",
     "verify": "npm run lint && npm test && npm run build",
     "qa": "npm run build && node qa.mjs",
-    "qa:webkit": "npm run build && node qa-webkit.mjs"
+    "qa:webkit": "npm run build && node qa-webkit.mjs",
+    "qa:phase2": "npm run build && node qa-phase2.mjs"
   },
   "dependencies": {
     "fflate": "^0.8.3",

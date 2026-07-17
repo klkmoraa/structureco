@@ -1,5 +1,30 @@
 # Changelog UX/UI
 
+## 2026-07-17 - Fase 2, Slice 2.7
+
+### Añadido
+
+- `qa-phase2.mjs` con 117 checks geométricos, de estados, contraste, foco, reduced motion y zoom 200 %.
+- 13 capturas after y métricas JSON reproducibles.
+- Captura controlada de loading real, retrasando únicamente la entrega del mensaje del worker en la página de QA.
+
+### Ajustado por QA
+
+- Ancho estable de Analizar en ES/EN durante loading.
+- Roles de primer plano AA para warning/error en Light.
+- Padding móvil corregido para que controles de 44 px permanezcan dentro del header en landscape/zoom.
+- QA Chromium actualizado para acceder a idioma y tema desde el overflow vigente.
+
+### Validado
+
+- `qa:phase2`: 117/117; Chromium heredado: 63/63; WebKit iPhone/iPad: PASS.
+- Cero errores de consola o página.
+- Comparación visual directa contra referencias A-E aprobada.
+
+### No cambiado
+
+- Motor, workers productivos, fórmulas, precisión, signos, unidades, schema, persistencia y fixtures.
+
 ## 2026-07-17 - Fase 2, Slice 2.6
 
 ### Consolidado

@@ -1,15 +1,22 @@
 # Fidelity ledger
 
-## Fase 2 - estado inicial
+## Fase 2 - cierre comparativo
 
-| Punto | Evidencia aprobada | Evidencia baseline | Mismatch que debe resolver la fase | Estado |
+| Punto | Evidencia aprobada | Evidencia final | Resultado | Estado |
 | --- | --- | --- | --- | --- |
-| Jerarquía TopBar | Referencia A, PDF p. 27 | `before-topbar-1440x900.png` | Controles se intersecan y no existen zonas estables. | Abierto - P0. |
-| Color semántico | Referencia B, PDF p. 28 | Temas actuales de Fase 1 | Verde mezcla marca, selección, éxito y técnica. | Abierto - P1 dentro de fundamentos. |
-| Targets/foco | Referencia C, PDF p. 29 | Tablet/móvil before | Controles frecuentes de 36-43 px en baseline histórico. | Abierto - P0. |
-| Desktop/tablet | Referencia D, PDF p. 30 | `before-topbar-1194x834.png`, `before-tablet-834x1194.png` | 1194 permanece en desktop comprimido y colisiona. | Abierto - P0. |
-| Header móvil | Referencia E, PDF p. 31 | `before-mobile-430x932.png`, `before-mobile-390x844.png` | Header ya es mínimo, pero falta sistema común y estado global explícito. | Abierto. |
-| Tipografía técnica | Referencias B-C | Capturas analizadas | Existen labels/resultados críticos de 8-11 px. | Abierto - P0. |
+| Jerarquía TopBar | Referencia A, PDF p. 27 | `after-topbar-1536x960-light-ready.jpg`, `after-topbar-1280x800-dark-stale.jpg` | Documento, Contexto y Acciones son regiones estables; estado y Analizar permanecen visibles. | **Cerrado.** |
+| Color semántico | Referencia B, PDF p. 28 | `tokens.css`, capturas Light/Dark | Marca, acción, estados y magnitudes técnicas usan roles separados. | **Cerrado.** |
+| Targets/foco | Referencia C, PDF p. 29 | `after-focus-overflow-1194x834.jpg`, métricas JSON | Foco de 3 px, retorno con Escape, targets touch de 44 x 44 px y contrastes AA. | **Cerrado.** |
+| Desktop/tablet | Referencia D, PDF p. 30 | `after-topbar-1194x834-light-resolved.jpg`, `after-tablet-834x1194-light-ready.jpg` | Breakpoint por contenido a 1023 px; shell cambia composición sin perder canvas o estado. | **Cerrado.** |
+| Header móvil | Referencia E, PDF p. 31 | `after-mobile-430x932-light-error.jpg`, `after-mobile-390x844-dark-aula.jpg` | Documento mínimo, estado, overflow y Analizar caben; dock inferior conserva tareas primarias. | **Cerrado.** |
+| Tipografía técnica | Referencias B-C | `phase2-metrics.json` | Escaneo renderizado de superficies críticas: mínimo 12 px, cero muestras inferiores. | **Cerrado.** |
 
-Cada slice añadirá referencia, captura renderizada, corrección aplicada o desviación justificada. El gate final exige inspección directa de la referencia aprobada y la última captura mediante revisión visual.
+## Desviaciones deliberadas
 
+- Las referencias son especificación de intención, no mockups literales. La implementación mantiene una TopBar clara en Light y oscura en Dark en vez de imponer una barra verde sólida en ambos temas.
+- El producto real conserva canvas, inspector y resultados existentes; la Fase 2 cambia su composición, no rediseña sus contenidos internos.
+- El label completo del estado se muestra en wide; en compacto queda icono + tooltip/nombre accesible para proteger el ancho útil.
+
+## Revisión visual final
+
+Las cinco referencias 27-31 y las capturas finales fueron inspeccionadas directamente. No se observan colisiones, texto crítico ilegible, controles cortados ni desviaciones funcionales. La jerarquía, adaptación y accesibilidad coinciden con la intención aprobada.

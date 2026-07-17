@@ -32,6 +32,8 @@
   --sc-color-state-warning: var(--sc-amber-500);
   --sc-color-state-error: var(--sc-red-500);
   --sc-color-state-info: var(--sc-blue-500);
+  --sc-color-state-warning-foreground: #8a4f00;
+  --sc-color-state-error-foreground: #a92f2f;
   --sc-color-aula: var(--sc-violet-500);
 
   /* Technical roles remain independent from product/state semantics. */
@@ -171,6 +173,8 @@
   --sc-color-state-warning: #f0aa3c;
   --sc-color-state-error: #f26b6b;
   --sc-color-state-info: #6ea0ff;
+  --sc-color-state-warning-foreground: var(--sc-color-state-warning);
+  --sc-color-state-error-foreground: var(--sc-color-state-error);
   --sc-color-aula: #9a83f0;
   --sc-color-technical-load: #ff825c;
   --sc-color-technical-axial: #51bdd2;

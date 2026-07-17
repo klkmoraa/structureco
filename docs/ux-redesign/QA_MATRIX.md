@@ -1,5 +1,27 @@
 # Matriz de QA — línea base de Fase 1
 
+## Cierre de Fase 2 - 2026-07-17
+
+| Capa | Cobertura | Resultado final |
+| --- | --- | --- |
+| `npm.cmd run verify` | lint, 41 archivos de prueba, 233 pruebas y build | **PASS** |
+| `npm.cmd run qa:phase2` | 117 checks, 14 filas ES/EN, nueve viewports, estados, contraste, foco, reduced motion y zoom 200 % | **PASS**, 0 fallos, 0 console errors, 0 page errors |
+| `npm.cmd run qa` | 63 checks Chromium: canvas, resultados, gestos, mecanismo, influencia, móvil y ejemplo educativo | **PASS**, consola limpia |
+| `npm.cmd run qa:webkit` | iPhone 13 e iPad Pro 11: importación, viewport, scroll y targets | **PASS**, 0 errores |
+| Browser in-app | estados reales, overflow/foco y 13 capturas finales | **PASS** |
+
+Resultados cuantitativos:
+
+- Intersecciones visibles en la TopBar: 0 en 390, 430, 834, 1024, 1194, 1280, 1366, 1440 y 1536 px.
+- Controles fuera del header: 0; overflow horizontal: 0 px.
+- Targets frecuentes en 390/430/834: al menos 44 x 44 px.
+- Texto crítico renderizado: mínimo 12 px.
+- Contraste Light del indicador: listo 4.77:1, warning 5.84:1 y error 5.90:1.
+- Loading: botón Analizar 148 px antes/durante en wide; estado `calculating` capturado realmente.
+- Zoom 200 %: equivalentes CSS 683 x 384 y 417 x 597 sin colisión, salida del header u overflow.
+
+Evidencia reproducible: `evidence/phase-02/after/phase2-metrics.json`.
+
 ## Revalidación de entrada - Fase 2, Slice 2.0
 
 | Capa | Resultado 2026-07-17 | Evidencia |

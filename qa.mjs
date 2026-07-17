@@ -39,6 +39,17 @@ async function loadCleanApp(page) {
   await page.reload({ waitUntil: 'networkidle' });
 }
 
+async function setOverflowSelect(page, moreName, fieldName, value) {
+  await page.getByRole('button', { name: moreName, exact: true }).click();
+  await page.locator('.utility-actions-menu').getByLabel(fieldName).selectOption(value);
+  await page.keyboard.press('Escape');
+}
+
+async function toggleThemeFromOverflow(page, moreName, themeName) {
+  await page.getByRole('button', { name: moreName, exact: true }).click();
+  await page.locator('.utility-actions-menu').getByRole('button', { name: themeName, exact: true }).click();
+}
+
 async function verifyWelcomeMobileScroll(page, cdp, { width, height }) {
   const key = `welcome${width}x${height}`;
   const welcome = page.locator('.welcome-screen');
@@ -137,10 +148,10 @@ async function desktop() {
   out.checks.shearChart = await page.locator('.diagram-chart.shear').isVisible();
   await page.getByRole('tab', { name: 'Aprender', exact: true }).click();
   out.checks.learningSteps = await page.locator('.learning-steps details').count();
-  await page.getByLabel('Idioma').selectOption('en');
+  await setOverflowSelect(page, 'Más acciones', 'Idioma', 'en');
   out.checks.languageEnglish = await page.getByRole('button', { name: 'Analyze', exact: true }).isVisible()
     && await page.getByRole('tab', { name: 'Shear', exact: true }).isVisible();
-  await page.getByLabel('Language').selectOption('es');
+  await setOverflowSelect(page, 'More actions', 'Language', 'es');
   await page.locator('.desktop-tool-list').getByTitle('Seleccionar (V)').click();
   await page.locator('.member-object').nth(0).evaluate((element) => element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 })));
   await page.locator('.member-object').nth(1).evaluate((element) => element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, shiftKey: true })));
@@ -155,7 +166,7 @@ async function desktop() {
   out.checks.memberSplit = await page.locator('.member-object').count() === membersBeforeSplit + 1;
   await page.getByLabel('Unidades').selectOption('N-mm');
   out.checks.unitChanged = await page.getByLabel('Unidades').inputValue() === 'N-mm';
-  await page.getByLabel('Cambiar tema').click();
+  await toggleThemeFromOverflow(page, 'Más acciones', 'Tema oscuro');
   out.checks.darkTheme = await page.evaluate(() => document.documentElement.dataset.theme === 'dark');
 
   // Rebuild the current example with only one pin to exercise a true rigid-body mechanism.

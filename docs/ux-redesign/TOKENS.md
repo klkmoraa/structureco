@@ -32,6 +32,8 @@ Implementación: `src/styles/tokens.css`.
 
 Los roles axial, cortante, momento, deformada, reacción, dimensión y ejes tienen tokens técnicos propios. Ningún estado reutiliza esos tokens como fuente de verdad semántica.
 
+Advertencia y error conservan sus tonos base aprobados para superficies y acentos. Cuando funcionan como texto pequeño sobre una superficie clara usan roles de primer plano específicos (`#8A4F00` y `#A92F2F`) para sostener contraste AA; en Dark reutilizan los tonos luminosos del estado.
+
 ## Escalas
 
 - Espacio: 4, 8, 12, 16, 20, 24, 32 y 40 px.
