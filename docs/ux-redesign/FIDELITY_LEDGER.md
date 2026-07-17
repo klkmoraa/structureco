@@ -8,8 +8,8 @@
 | Rail/dock responsive | PDF p. 24 | 164 px wide, 76 px compact, dock de seis | Expandido >=1440, compacto 1024-1439, dock <=1023. | Implementado; QA final pendiente |
 | Chrome y safe zones | PDF p. 26 | Badges/controles/status en esquinas sin reserva común | Zonas explícitas sin solapar modelo, labels o dock. | Implementado; QA final pendiente |
 | Capas de información | PDF p. 27 | Visibilidad distribuida en ProjectSettings y resultTab | Control UI-only de sesión; modelo siempre visible. | Implementado; QA final pendiente |
-| Prioridad/LOD | PDF pp. 29-30 | Labels directos por boolean y escala fija | P0/P1 persistentes; secundarios adaptados a cámara. | Abierto |
-| Colisión/leader lines | PDF p. 31 | Sin resolución de colisión | Layout determinista, sin colisiones P0/P1. | Abierto |
+| Prioridad/LOD | PDF pp. 29-30 | Labels directos por boolean y escala fija | P0/P1 persistentes; secundarios adaptados a cámara. | Implementado; QA final pendiente |
+| Colisión/leader lines | PDF p. 31 | Sin resolución de colisión | Layout determinista, sin colisiones P0/P1. | Implementado; QA final pendiente |
 | Selección | PDF pp. 32-33 | Verde de producto y grosor/drop shadow | Azul semántico + geometría específica por objeto. | Abierto |
 | Gestos | PDF p. 35 | Mouse/touch/pinch ya funcionales | Paridad conservada y pruebas pen/teclado. | Abierto |
 

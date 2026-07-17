@@ -165,6 +165,25 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .member-object.rigid .member-line { stroke: var(--axis); stroke-width: 5; }
 .member-label, .dimension-label { font-size: 11px; fill: var(--muted); paint-order: stroke; stroke: var(--canvas-bg); stroke-width: 4px; }
 .dimension-label { fill: var(--dimension); }
+.smart-label-layer { pointer-events:none; }
+.smart-label { color:var(--muted); }
+.smart-label rect {
+  fill:color-mix(in srgb,var(--surface) 91%,transparent);
+  stroke:color-mix(in srgb,currentColor 34%,var(--border));
+  stroke-width:1;
+  vector-effect:non-scaling-stroke;
+}
+.smart-label text { fill:currentColor; font-size:10px; font-weight:680; letter-spacing:.01em; }
+.smart-label.priority-0 text,.smart-label.priority-1 text { font-weight:760; }
+.smart-label.priority-3 { opacity:.88; }
+.smart-label-leader { stroke:currentColor; stroke-width:1; stroke-dasharray:3 3; opacity:.62; vector-effect:non-scaling-stroke; }
+.smart-label.tone-selection { color:var(--focus); }
+.smart-label.tone-selection rect { fill:color-mix(in srgb,var(--focus) 10%,var(--surface)); stroke-width:1.5; }
+.smart-label.tone-force { color:var(--force); }
+.smart-label.tone-shear { color:var(--shear); }
+.smart-label.tone-moment { color:var(--moment); }
+.smart-label.tone-dimension { color:var(--dimension); }
+.smart-label.tone-axial { color:var(--axial); }
 .node-object { cursor: pointer; }
 .node-object .node-hit { fill:transparent; stroke:transparent; pointer-events:all; }
 .node-object .node-dot { fill: var(--node-fill); stroke: var(--member); stroke-width: 2; transition: .15s; pointer-events:none; }
@@ -1489,7 +1508,6 @@ button:not(:disabled):active,.welcome-option:active,.selection-card:active {
 }
 
 /* Phase 3: session-only information layers ------------------------------- */
-.load-layer.labels-hidden text { display:none; }
 .canvas-view-chips { right:62px; }
 .canvas-layer-trigger {
   position:absolute;

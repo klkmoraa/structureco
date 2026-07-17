@@ -43,6 +43,17 @@ Hallazgos visuales de entrada: ToolRail plano, agrupación dependiente de separa
 | Responsive | Panel completo y scrolleable en 1024 y 430 sin invadir dock/resultados. |
 | Regresión | `npm.cmd run verify`: 45 archivos, 247 pruebas, build PASS. |
 
+### Gate 3.4 - etiquetas y decluttering
+
+| Control | Resultado |
+| --- | --- |
+| Prioridad/LOD | P0-P3 y umbrales essential/standard/detailed cubiertos por pruebas puras. |
+| Determinismo | El resultado no depende del orden de entrada; ocho P0/P1 coincidentes se colocan sin solaparse. |
+| Zona segura | Labels limitados por `canvasSafeRect`; Browser 1440 y 430 sin overflow. |
+| Semántica | Cargas, diagramas, reacciones, cotas y selección conservan roles de color independientes. |
+| Accesibilidad | Los objetos mantienen `aria-label`; reacciones conservan descripción SVG no visual. |
+| Regresión | `npm.cmd run verify`: 46 archivos, 252 pruebas, build PASS. |
+
 ## Cierre de Fase 2 - 2026-07-17
 
 | Capa | Cobertura | Resultado final |

@@ -1,5 +1,29 @@
 # Changelog UX/UI
 
+## 2026-07-17 - Fase 3, Slice 3.4
+
+### Añadido
+
+- Motor de presentación `labelLayout.ts` con prioridades P0-P3, LOD por escala, offsets deterministas, zona segura y leader lines.
+- Etiquetas unificadas para nodos, miembros, cotas, cargas nodales/de miembro, reacciones y valores críticos de diagramas.
+- Metadatos de QA `data-smart-label`, prioridad y nivel de detalle renderizado.
+
+### Integrado
+
+- Las etiquetas seleccionadas son P0 y permanecen disponibles aunque las capas secundarias estén ocultas.
+- Nodos y valores de carga/reacción son P1; cotas e IDs de miembro ceden por zoom/espacio; detalles de resultados son P2/P3.
+- Los textos de reacción mantienen una descripción SVG accesible mientras su presentación visible pasa al layout común.
+
+### Validado
+
+- Cinco pruebas puras cubren LOD, orden independiente de entrada, ocho P0/P1 densas sin colisión, saturación y leader line.
+- Browser integrado 1440×900 y 430×932: labels dentro del safe rect, cero overflow horizontal y composición inspeccionada visualmente.
+- La regresión detectada por el test de texto accesible de reacciones fue corregida antes del cierre del gate.
+
+### No cambiado
+
+- Solver, resultados numéricos, unidades, signos, precisión, schema, persistencia o contratos protegidos.
+
 ## 2026-07-17 - Fase 3, Slice 3.3
 
 ### Añadido

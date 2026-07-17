@@ -70,3 +70,5 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 - [x] Gate 3.2: 43 archivos, 242 pruebas y Browser 1440/430/390 sin overlap visible.
 - [x] Slice 3.3: ocho capas de información UI-only y panel responsive.
 - [x] Gate 3.3: 45 archivos, 247 pruebas; modelo fijo y toggles/restablecimiento verificados en Browser.
+- [x] Slice 3.4: labels P0-P3, LOD, colisión determinista y leader lines en zona segura.
+- [x] Gate 3.4: 46 archivos, 252 pruebas; layout denso y Browser 1440/430 aprobados.

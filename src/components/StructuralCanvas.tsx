@@ -36,9 +36,10 @@ import {
   type ScreenPoint,
 } from './canvasInteraction';
 import { toolFromShortcut } from './toolRegistry';
-import { cameraToFitBounds, canvasSafeInsetsFor } from './canvasChrome';
+import { cameraToFitBounds, canvasSafeInsetsFor, canvasSafeRect } from './canvasChrome';
 import { CanvasLayers } from './CanvasLayers';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
+import { layoutSmartLabels, smartLabelDetailForScale, type SmartLabelCandidate } from './labelLayout';
 
 type Camera = CanvasCamera;
 
@@ -1297,46 +1298,6 @@ export const StructuralCanvas = ({
     </g>;
   };
 
-  const diagramLabels = (member: MemberModel) => {
-    const result = resultMap.get(member.id);
-    const ni = nodeMap.get(member.i);
-    const nj = nodeMap.get(member.j);
-    if (!resultsAllowed || !project.settings.showResultOverlay || !project.settings.showResultValues || !result || !ni || !nj || !['axial', 'shear', 'moment'].includes(resultTab)) return null;
-    const key = resultTab as DiagramQuantity;
-    const diagramPixelScale = diagramPixelScaleFor(result);
-    const dx = nj.x - ni.x;
-    const dy = nj.y - ni.y;
-    const L = Math.hypot(dx, dy);
-    if (L <= 1e-12) return null;
-    const tx = dx / L;
-    const ty = dy / L;
-    const side = project.settings.diagramSide === 'negative' ? -1 : 1;
-    const nx = -ty * side;
-    const ny = tx * side;
-    const quantity = key === 'moment' ? 'moment' as const : 'force' as const;
-    const unit = key === 'moment' ? momentLabel : forceLabel;
-    const candidates = result.criticalPoints
-      .filter((point) => point.quantity === key && ['maximum', 'minimum', 'end', 'jump'].includes(point.kind))
-      .filter((point, index, all) => all.findIndex((candidate) => Math.abs(candidate.x - point.x) <= Math.max(1, L) * 1e-7 && Math.abs(candidate.value - point.value) <= Math.max(1, Math.abs(point.value)) * 1e-7) === index)
-      .sort((a, b) => {
-        const priority = (kind: typeof a.kind) => kind === 'maximum' || kind === 'minimum' ? 0 : kind === 'jump' ? 1 : 2;
-        return priority(a.kind) - priority(b.kind) || a.x - b.x;
-      })
-      .slice(0, size.width < 520 ? 2 : 6);
-    return <g key={`values-${member.id}`} className={`diagram-value-layer ${key}`}>{candidates.map((point, index) => {
-      const grossX = (result.startOffset ?? 0) + point.x;
-      const baseX = ni.x + tx * grossX;
-      const baseY = ni.y + ty * grossX;
-      const offsetModel = (point.value * diagramPixelScale) / camera.scale;
-      const screen = toScreen(baseX + nx * offsetModel, baseY + ny * offsetModel);
-      const outward = point.value * side >= 0 ? 1 : -1;
-      return <g key={`${member.id}-${point.kind}-${point.x}-${index}`} transform={`translate(${screen.x} ${screen.y})`}>
-        <circle r="2.8" />
-        <text x={nx * outward * 9} y={-ny * outward * 9 - 4} textAnchor={Math.abs(nx) < 0.35 ? 'middle' : nx * outward > 0 ? 'start' : 'end'}>{toDisplay(point.value, units, quantity).toFixed(2)} {unit}</text>
-      </g>;
-    })}</g>;
-  };
-
   const deformedPath = (member: MemberModel) => {
     const result = resultMap.get(member.id);
     const ni = nodeMap.get(member.i); const nj = nodeMap.get(member.j);
@@ -1539,20 +1500,21 @@ export const StructuralCanvas = ({
     if (!result) return null;
     const p = toScreen(node.x, node.y);
     const elements = [];
+    const descriptions: string[] = [];
     if (Math.abs(result.rx) > 1e-8) {
       const direction = Math.sign(result.rx);
       const length = 52;
+      descriptions.push(`Rx = ${toDisplay(result.rx, units, 'force').toFixed(3)} ${forceLabel}`);
       elements.push(
         <line key="rx" data-reaction-component="rx" x1={p.x - direction * length} y1={p.y} x2={p.x - direction * 8} y2={p.y} markerEnd="url(#arrow-blue)" />,
-        <text key="rx-label" data-reaction-component="rx" x={p.x - direction * (length + 12)} y={p.y - 10} textAnchor="middle">Rx = {toDisplay(result.rx, units, 'force').toFixed(3)} {forceLabel}</text>,
       );
     }
     if (Math.abs(result.ry) > 1e-8) {
       const screenDirection = -Math.sign(result.ry);
       const length = 52;
+      descriptions.push(`Ry = ${toDisplay(result.ry, units, 'force').toFixed(3)} ${forceLabel}`);
       elements.push(
         <line key="ry" data-reaction-component="ry" x1={p.x} y1={p.y - screenDirection * length} x2={p.x} y2={p.y - screenDirection * 8} markerEnd="url(#arrow-blue)" />,
-        <text key="ry-label" data-reaction-component="ry" x={p.x + 10} y={p.y - screenDirection * (length + 12)} textAnchor="start">Ry = {toDisplay(result.ry, units, 'force').toFixed(3)} {forceLabel}</text>,
       );
     }
     if (Math.abs(result.rm) > 1e-8) {
@@ -1560,9 +1522,10 @@ export const StructuralCanvas = ({
       const path = clockwise
         ? `M ${p.x - 22} ${p.y - 3} A 23 23 0 1 0 ${p.x + 18} ${p.y - 13}`
         : `M ${p.x + 22} ${p.y - 3} A 23 23 0 1 1 ${p.x - 18} ${p.y - 13}`;
-      elements.push(<path key="moment" d={path} markerEnd="url(#arrow-blue)" />, <text key="moment-label" x={p.x} y={p.y - 36} textAnchor="middle">Mᵣ = {toDisplay(result.rm, units, 'moment').toFixed(3)} {momentLabel}</text>);
+      descriptions.push(`Mᵣ = ${toDisplay(result.rm, units, 'moment').toFixed(3)} ${momentLabel}`);
+      elements.push(<path key="moment" d={path} markerEnd="url(#arrow-blue)" />);
     }
-    return elements.length ? <g key={node.id} className="reaction-symbol" data-node-id={node.id}>{elements}</g> : null;
+    return elements.length ? <g key={node.id} className="reaction-symbol" data-node-id={node.id}><title>{descriptions.join(' · ')}</title>{elements}</g> : null;
   };
 
   const handleLoadKeyDown = (event: ReactKeyboardEvent<SVGGElement>, target: Selection) => {
@@ -1587,7 +1550,6 @@ export const StructuralCanvas = ({
         <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="nodalLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-label={`Carga puntual ${load.id} en ${load.nodeId}, ${toDisplay(magnitude, units, 'force').toFixed(2)} ${forceLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'nodalLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'nodalLoad', id: load.id })}>
           <line className="load-hit" x1={start.x} y1={start.y} x2={end.x} y2={end.y} />
           {arrowPath(start.x, start.y, end.x, end.y)}
-          <text x={p.x - ux * (length + 8)} y={p.y - uy * (length + 8) - 5} textAnchor="middle">P = {toDisplay(magnitude, units, 'force').toFixed(2)} {forceLabel}</text>
         </g>
       );
     }
@@ -1596,7 +1558,6 @@ export const StructuralCanvas = ({
       return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="nodalLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-label={`Momento ${load.id} en ${load.nodeId}, ${toDisplay(load.mz, units, 'moment').toFixed(2)} ${momentLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'nodalLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'nodalLoad', id: load.id })}>
         <path className="load-hit" d={momentPath} />
         <path d={momentPath} fill="none" markerEnd="url(#arrow-purple)" />
-        <text x={p.x} y={p.y - 33} textAnchor="middle">M = {toDisplay(load.mz, units, 'moment').toFixed(2)} {momentLabel}</text>
       </g>;
     }
     return null;
@@ -1615,7 +1576,7 @@ export const StructuralCanvas = ({
       const ux = gx / mag; const uy = -gy / mag;
       const start = { x: base.x - ux * 52, y: base.y - uy * 52 };
       const end = { x: base.x - ux * 7, y: base.y - uy * 7 };
-      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-label={`Carga puntual ${load.id} en ${load.memberId}, ${toDisplay(mag, units, 'force').toFixed(2)} ${forceLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}><line className="load-hit" x1={start.x} y1={start.y} x2={end.x} y2={end.y} />{arrowPath(start.x, start.y, end.x, end.y)}<text x={base.x - ux * 60} y={base.y - uy * 60 - 5} textAnchor="middle">P = {toDisplay(mag, units, 'force').toFixed(2)} {forceLabel}</text></g>;
+      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-label={`Carga puntual ${load.id} en ${load.memberId}, ${toDisplay(mag, units, 'force').toFixed(2)} ${forceLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}><line className="load-hit" x1={start.x} y1={start.y} x2={end.x} y2={end.y} />{arrowPath(start.x, start.y, end.x, end.y)}</g>;
     }
     if (load.type === 'moment') {
       const r = grossRatioFromFlexible(member, load.position ?? 0.5);
@@ -1624,12 +1585,11 @@ export const StructuralCanvas = ({
       const path = clockwise
         ? `M ${base.x - 22} ${base.y - 3} A 23 23 0 1 0 ${base.x + 18} ${base.y - 13}`
         : `M ${base.x + 22} ${base.y - 3} A 23 23 0 1 1 ${base.x - 18} ${base.y - 13}`;
-      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-label={`Momento ${load.id} en ${load.memberId}, ${toDisplay(load.moment ?? 0, units, 'moment').toFixed(2)} ${momentLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}><path className="load-hit" d={path} /><path d={path} markerEnd="url(#arrow-purple)" /><text x={base.x} y={base.y - 34} textAnchor="middle">M = {toDisplay(load.moment ?? 0, units, 'moment').toFixed(2)} {momentLabel}</text></g>;
+      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-label={`Momento ${load.id} en ${load.memberId}, ${toDisplay(load.moment ?? 0, units, 'moment').toFixed(2)} ${momentLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}><path className="load-hit" d={path} /><path d={path} markerEnd="url(#arrow-purple)" /></g>;
     }
     const visibleLoadedLength = L * camera.scale * Math.abs(load.end - load.start);
     const count = Math.max(3, Math.min(9, Math.round(visibleLoadedLength / 34) + 1));
     const arrows = [];
-    let labelPoint = { x: 0, y: 0 };
     for (let i = 0; i < count; i += 1) {
       const flexibleRatio = load.start + (load.end - load.start) * (i / (count - 1));
       const r = grossRatioFromFlexible(member, flexibleRatio);
@@ -1641,7 +1601,6 @@ export const StructuralCanvas = ({
       const mag = Math.hypot(gx, gy) || 1; const ux = gx / mag; const uy = -gy / mag;
       const length = 33 + 12 * (mag / Math.max(Math.abs(load.qyStart ?? 0), Math.abs(load.qyEnd ?? 0), Math.abs(load.qxStart ?? 0), Math.abs(load.qxEnd ?? 0), 1));
       arrows.push(<line key={i} x1={base.x - ux * length} y1={base.y - uy * length} x2={base.x - ux * 5} y2={base.y - uy * 5} markerEnd="url(#arrow-green)" />);
-      if (i === Math.floor(count / 2)) labelPoint = { x: base.x - ux * (length + 9), y: base.y - uy * (length + 9) };
     }
     const qStartMagnitude = Math.hypot(load.qxStart ?? 0, load.qyStart ?? 0);
     const qEndMagnitude = Math.hypot(load.qxEnd ?? load.qxStart ?? 0, load.qyEnd ?? load.qyStart ?? 0);
@@ -1650,8 +1609,243 @@ export const StructuralCanvas = ({
     const hitEndRatio = grossRatioFromFlexible(member, load.end);
     const hitStart = toScreen(ni.x + dx * hitStartRatio, ni.y + dy * hitStartRatio);
     const hitEnd = toScreen(ni.x + dx * hitEndRatio, ni.y + dy * hitEndRatio);
-    return <g key={load.id} className={`distributed-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-label={`Carga distribuida ${load.id} en ${load.memberId}, ${toDisplay(average, units, 'distributedForce').toFixed(2)} ${distributedLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}><line className="load-hit" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} />{arrows}<text x={labelPoint.x} y={labelPoint.y - 5} textAnchor="middle">w = {toDisplay(average, units, 'distributedForce').toFixed(2)} {distributedLabel}</text></g>;
+    return <g key={load.id} className={`distributed-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-label={`Carga distribuida ${load.id} en ${load.memberId}, ${toDisplay(average, units, 'distributedForce').toFixed(2)} ${distributedLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}><line className="load-hit" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} />{arrows}</g>;
   };
+
+  const smartLabelCandidates: SmartLabelCandidate[] = [];
+  const selectedNodeIds = selection?.kind === 'multi' ? selection.nodeIds : selection?.kind === 'node' ? [selection.id] : [];
+  const selectedMemberIds = selection?.kind === 'multi' ? selection.memberIds : selection?.kind === 'member' ? [selection.id] : [];
+
+  for (const node of project.nodes) {
+    const selected = selectedNodeIds.includes(node.id);
+    if (!selected && !(layers.labels && layers.ids && project.settings.showNodeLabels)) continue;
+    const anchor = toScreen(node.x, node.y);
+    smartLabelCandidates.push({
+      id: `node:${node.id}`,
+      text: node.id,
+      anchor,
+      priority: selected ? 0 : 1,
+      tone: selected ? 'selection' : 'neutral',
+      preferredOffset: { x: -22, y: -22 },
+      forceVisible: selected,
+    });
+  }
+
+  for (const member of project.members) {
+    const ni = nodeMap.get(member.i);
+    const nj = nodeMap.get(member.j);
+    if (!ni || !nj) continue;
+    const a = toScreen(ni.x, ni.y);
+    const b = toScreen(nj.x, nj.y);
+    const anchor = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const selected = selectedMemberIds.includes(member.id);
+    if (selected || (layers.labels && layers.ids && project.settings.showMemberLabels)) {
+      smartLabelCandidates.push({
+        id: `member:${member.id}`,
+        text: member.id,
+        anchor,
+        priority: selected ? 0 : 2,
+        tone: selected ? 'selection' : 'neutral',
+        preferredOffset: { x: 0, y: -21 },
+        forceVisible: selected,
+      });
+    }
+    const dimensionToolActive = activeTool === 'dimension';
+    if (dimensionToolActive || (layers.labels && layers.dimensions && (project.settings.showLocalAxes || project.settings.showDimensions))) {
+      smartLabelCandidates.push({
+        id: `dimension:${member.id}`,
+        text: `${toDisplay(Math.hypot(nj.x - ni.x, nj.y - ni.y), units, 'length').toFixed(3)} ${lengthLabel}`,
+        anchor,
+        priority: dimensionToolActive ? 1 : 2,
+        tone: 'dimension',
+        preferredOffset: { x: 0, y: 24 },
+        forceVisible: dimensionToolActive,
+      });
+    }
+  }
+
+  if (loadsLayerVisible && project.settings.showLoads && resultTab !== 'influence') {
+    for (const load of project.nodalLoads) {
+      const node = nodeMap.get(load.nodeId);
+      if (!node) continue;
+      const selected = selection?.kind === 'nodalLoad' && selection.id === load.id;
+      if (!selected && !layers.labels) continue;
+      const point = toScreen(node.x, node.y);
+      const magnitude = Math.hypot(load.fx, load.fy);
+      if (magnitude > 1e-9) {
+        const ux = load.fx / magnitude;
+        const uy = -load.fy / magnitude;
+        smartLabelCandidates.push({
+          id: `nodal-load:${load.id}`,
+          text: `P = ${toDisplay(magnitude, units, 'force').toFixed(2)} ${forceLabel}`,
+          anchor: { x: point.x - ux * 62, y: point.y - uy * 62 - 5 },
+          priority: selected ? 0 : 1,
+          tone: selected ? 'selection' : 'force',
+          preferredOffset: { x: 0, y: 0 },
+          forceVisible: selected,
+        });
+      } else if (Math.abs(load.mz) > 1e-9) {
+        smartLabelCandidates.push({
+          id: `nodal-moment:${load.id}`,
+          text: `M = ${toDisplay(load.mz, units, 'moment').toFixed(2)} ${momentLabel}`,
+          anchor: { x: point.x, y: point.y - 38 },
+          priority: selected ? 0 : 1,
+          tone: selected ? 'selection' : 'moment',
+          preferredOffset: { x: 0, y: 0 },
+          forceVisible: selected,
+        });
+      }
+    }
+
+    for (const load of project.memberLoads) {
+      const member = memberMap.get(load.memberId);
+      const ni = member ? nodeMap.get(member.i) : undefined;
+      const nj = member ? nodeMap.get(member.j) : undefined;
+      if (!member || !ni || !nj) continue;
+      const dx = nj.x - ni.x;
+      const dy = nj.y - ni.y;
+      const length = Math.hypot(dx, dy);
+      if (length <= 1e-12) continue;
+      const selected = selection?.kind === 'memberLoad' && selection.id === load.id;
+      if (!selected && !layers.labels) continue;
+      const priority = selected ? 0 as const : 1 as const;
+      const tone = selected ? 'selection' as const : load.type === 'distributed' ? 'shear' as const : load.type === 'moment' ? 'moment' as const : 'force' as const;
+      if (load.type === 'point') {
+        const ratio = grossRatioFromFlexible(member, load.position ?? 0.5);
+        const base = toScreen(ni.x + dx * ratio, ni.y + dy * ratio);
+        const px = load.px ?? 0;
+        const py = load.py ?? 0;
+        const magnitude = Math.hypot(px, py) || 1;
+        let gx = px;
+        let gy = py;
+        if (load.coordinateSystem === 'local') {
+          const c = dx / length;
+          const s = dy / length;
+          gx = c * px - s * py;
+          gy = s * px + c * py;
+        }
+        const ux = gx / magnitude;
+        const uy = -gy / magnitude;
+        smartLabelCandidates.push({
+          id: `member-point-load:${load.id}`,
+          text: `P = ${toDisplay(magnitude, units, 'force').toFixed(2)} ${forceLabel}`,
+          anchor: { x: base.x - ux * 60, y: base.y - uy * 60 - 5 },
+          priority,
+          tone,
+          preferredOffset: { x: 0, y: 0 },
+          forceVisible: selected,
+        });
+      } else if (load.type === 'moment') {
+        const ratio = grossRatioFromFlexible(member, load.position ?? 0.5);
+        const base = toScreen(ni.x + dx * ratio, ni.y + dy * ratio);
+        smartLabelCandidates.push({
+          id: `member-moment:${load.id}`,
+          text: `M = ${toDisplay(load.moment ?? 0, units, 'moment').toFixed(2)} ${momentLabel}`,
+          anchor: { x: base.x, y: base.y - 38 },
+          priority,
+          tone,
+          preferredOffset: { x: 0, y: 0 },
+          forceVisible: selected,
+        });
+      } else {
+        const ratio = grossRatioFromFlexible(member, (load.start + load.end) / 2);
+        const base = toScreen(ni.x + dx * ratio, ni.y + dy * ratio);
+        const qx = ((load.qxStart ?? 0) + (load.qxEnd ?? load.qxStart ?? 0)) / 2;
+        const qy = ((load.qyStart ?? 0) + (load.qyEnd ?? load.qyStart ?? 0)) / 2;
+        let gx = qx;
+        let gy = qy;
+        if (load.coordinateSystem === 'local') {
+          const c = dx / length;
+          const s = dy / length;
+          gx = c * qx - s * qy;
+          gy = s * qx + c * qy;
+        }
+        const magnitude = Math.hypot(gx, gy) || 1;
+        const ux = gx / magnitude;
+        const uy = -gy / magnitude;
+        const maximum = Math.max(Math.abs(load.qyStart ?? 0), Math.abs(load.qyEnd ?? 0), Math.abs(load.qxStart ?? 0), Math.abs(load.qxEnd ?? 0), 1);
+        const arrowLength = 33 + 12 * (magnitude / maximum);
+        const startMagnitude = Math.hypot(load.qxStart ?? 0, load.qyStart ?? 0);
+        const endMagnitude = Math.hypot(load.qxEnd ?? load.qxStart ?? 0, load.qyEnd ?? load.qyStart ?? 0);
+        const average = (startMagnitude + endMagnitude) / 2;
+        smartLabelCandidates.push({
+          id: `distributed-load:${load.id}`,
+          text: `w = ${toDisplay(average, units, 'distributedForce').toFixed(2)} ${distributedLabel}`,
+          anchor: { x: base.x - ux * (arrowLength + 9), y: base.y - uy * (arrowLength + 9) - 5 },
+          priority,
+          tone,
+          preferredOffset: { x: 0, y: 0 },
+          forceVisible: selected,
+        });
+      }
+    }
+  }
+
+  if (layers.results && layers.labels && resultsAllowed && project.settings.showResultValues && analysis?.success) {
+    if (resultTab === 'reactions') {
+      for (const node of project.nodes) {
+        const result = nodeResultMap.get(node.id);
+        if (!result) continue;
+        const point = toScreen(node.x, node.y);
+        if (Math.abs(result.rx) > 1e-8) {
+          const direction = Math.sign(result.rx);
+          smartLabelCandidates.push({ id: `reaction:${node.id}:rx`, text: `Rx = ${toDisplay(result.rx, units, 'force').toFixed(3)} ${forceLabel}`, anchor: { x: point.x - direction * 64, y: point.y - 10 }, priority: 1, tone: 'axial', preferredOffset: { x: 0, y: 0 } });
+        }
+        if (Math.abs(result.ry) > 1e-8) {
+          const screenDirection = -Math.sign(result.ry);
+          smartLabelCandidates.push({ id: `reaction:${node.id}:ry`, text: `Ry = ${toDisplay(result.ry, units, 'force').toFixed(3)} ${forceLabel}`, anchor: { x: point.x + 10, y: point.y - screenDirection * 64 }, priority: 1, tone: 'axial', preferredOffset: { x: 0, y: 0 } });
+        }
+        if (Math.abs(result.rm) > 1e-8) {
+          smartLabelCandidates.push({ id: `reaction:${node.id}:rm`, text: `Mᵣ = ${toDisplay(result.rm, units, 'moment').toFixed(3)} ${momentLabel}`, anchor: { x: point.x, y: point.y - 38 }, priority: 1, tone: 'moment', preferredOffset: { x: 0, y: 0 } });
+        }
+      }
+    } else if (['axial', 'shear', 'moment'].includes(resultTab) && project.settings.showResultOverlay) {
+      const quantity = resultTab as DiagramQuantity;
+      const side = project.settings.diagramSide === 'negative' ? -1 : 1;
+      for (const member of project.members) {
+        const result = resultMap.get(member.id);
+        const ni = nodeMap.get(member.i);
+        const nj = nodeMap.get(member.j);
+        if (!result || !ni || !nj) continue;
+        const dx = nj.x - ni.x;
+        const dy = nj.y - ni.y;
+        const length = Math.hypot(dx, dy);
+        if (length <= 1e-12) continue;
+        const tx = dx / length;
+        const ty = dy / length;
+        const nx = -ty * side;
+        const ny = tx * side;
+        const quantityUnit = quantity === 'moment' ? momentLabel : forceLabel;
+        const displayQuantity = quantity === 'moment' ? 'moment' as const : 'force' as const;
+        const points = result.criticalPoints
+          .filter((point) => point.quantity === quantity && ['maximum', 'minimum', 'end', 'jump'].includes(point.kind))
+          .filter((point, index, all) => all.findIndex((candidate) => Math.abs(candidate.x - point.x) <= Math.max(1, length) * 1e-7 && Math.abs(candidate.value - point.value) <= Math.max(1, Math.abs(point.value)) * 1e-7) === index)
+          .sort((first, second) => {
+            const rank = (kind: typeof first.kind) => kind === 'maximum' || kind === 'minimum' ? 0 : kind === 'jump' ? 1 : 2;
+            return rank(first.kind) - rank(second.kind) || first.x - second.x;
+          })
+          .slice(0, size.width < 520 ? 2 : 6);
+        for (const [index, point] of points.entries()) {
+          const grossX = (result.startOffset ?? 0) + point.x;
+          const baseX = ni.x + tx * grossX;
+          const baseY = ni.y + ty * grossX;
+          const offsetModel = point.value * diagramPixelScaleFor(result) / camera.scale;
+          const anchor = toScreen(baseX + nx * offsetModel, baseY + ny * offsetModel);
+          const outward = point.value * side >= 0 ? 1 : -1;
+          smartLabelCandidates.push({
+            id: `result:${member.id}:${quantity}:${point.kind}:${index}`,
+            text: `${quantity === 'axial' ? 'N' : quantity === 'shear' ? 'V' : 'M'} = ${toDisplay(point.value, units, displayQuantity).toFixed(2)} ${quantityUnit}`,
+            anchor,
+            priority: point.kind === 'maximum' || point.kind === 'minimum' ? 2 : 3,
+            tone: quantity,
+            preferredOffset: { x: nx * outward * 28, y: -ny * outward * 28 - 6 },
+          });
+        }
+      }
+    }
+  }
+
+  const placedSmartLabels = layoutSmartLabels(smartLabelCandidates, canvasSafeRect(size), camera.scale);
 
   return (
     <div className="canvas-host" ref={hostRef}>
@@ -1708,7 +1902,7 @@ export const StructuralCanvas = ({
           return <g className="member-preview" pointerEvents="none"><line x1={start.x} y1={start.y} x2={end.x} y2={end.y} /><text x={(start.x + end.x) / 2} y={(start.y + end.y) / 2 - 10}>{toDisplay(Math.hypot(snapPreview.x - startNode.x, snapPreview.y - startNode.y), units, 'length').toFixed(3)} {lengthLabel}</text></g>;
         })() : null}
 
-        {layers.results ? <g className="diagram-layer">{project.members.map(diagramPath)}{layers.labels ? project.members.map(diagramLabels) : null}</g> : null}
+        {layers.results ? <g className="diagram-layer">{project.members.map(diagramPath)}</g> : null}
         {layers.results && resultsAllowed && resultTab === 'deformed' && analysis?.success ? <g className="deformed-layer">{project.members.map((member) => <path key={member.id} d={deformedPath(member)} />)}</g> : null}
         {layers.results ? renderResultCursor() : null}
         {layers.diagnostics ? renderMechanism() : null}
@@ -1751,8 +1945,6 @@ export const StructuralCanvas = ({
                   const faceJ = toScreen(nj.x - (nj.x - ni.x) * tj, nj.y - (nj.y - ni.y) * tj);
                   return <g className="rigid-zone-layer"><line x1={a.x} y1={a.y} x2={faceI.x} y2={faceI.y} /><line x1={faceJ.x} y1={faceJ.y} x2={b.x} y2={b.y} /><circle cx={faceI.x} cy={faceI.y} r="3" /><circle cx={faceJ.x} cy={faceJ.y} r="3" /></g>;
                 })() : null}
-                {layers.labels && layers.ids && project.settings.showMemberLabels ? <text className="member-label" x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 9}>{member.id}</text> : null}
-                {activeTool === 'dimension' || (layers.labels && layers.dimensions && (project.settings.showLocalAxes || project.settings.showDimensions)) ? <text className="dimension-label" x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 + 21}>{toDisplay(Math.hypot(nj.x - ni.x, nj.y - ni.y), units, 'length').toFixed(3)} {lengthLabel}</text> : null}
                 {layers.dimensions && project.settings.showLocalAxes ? (() => {
                   const mx = (a.x + b.x) / 2; const my = (a.y + b.y) / 2;
                   const length = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y));
@@ -1769,7 +1961,7 @@ export const StructuralCanvas = ({
 
         {layers.results ? <g className="reaction-layer">{project.nodes.map(renderReaction)}</g> : null}
         <g className="support-layer">{project.nodes.map(renderSupport)}</g>
-        {loadsLayerVisible && project.settings.showLoads && resultTab !== 'influence' ? <g className={`load-layer${layers.labels ? '' : ' labels-hidden'}`}>{project.memberLoads.map(renderMemberLoad)}{project.nodalLoads.map(renderNodalLoad)}</g> : null}
+        {loadsLayerVisible && project.settings.showLoads && resultTab !== 'influence' ? <g className="load-layer">{project.memberLoads.map(renderMemberLoad)}{project.nodalLoads.map(renderNodalLoad)}</g> : null}
 
         <g className="node-layer">
           {project.nodes.map((node) => {
@@ -1800,9 +1992,20 @@ export const StructuralCanvas = ({
                 <circle className="node-hit" cx={p.x} cy={p.y} r="20" />
                 <circle className="node-dot" cx={p.x} cy={p.y} r="7" />
                 {node.internalHinge ? <circle className="internal-hinge-symbol" cx={p.x} cy={p.y} r="11" /> : null}
-                {layers.labels && layers.ids && project.settings.showNodeLabels ? <text x={p.x - 10} y={p.y - 12}>{node.id.replace('N', '')}</text> : null}
               </g>
             );
+          })}
+        </g>
+
+        <g className="smart-label-layer" data-label-detail={smartLabelDetailForScale(camera.scale)} aria-hidden="true">
+          {placedSmartLabels.map((label) => {
+            const centerX = label.rect.x + label.rect.width / 2;
+            const centerY = label.rect.y + label.rect.height / 2;
+            return <g key={label.id} className={`smart-label priority-${label.priority} tone-${label.tone ?? 'neutral'}`} data-smart-label={label.id} data-label-priority={label.priority}>
+              {label.leader ? <line className="smart-label-leader" x1={label.anchor.x} y1={label.anchor.y} x2={centerX} y2={centerY} /> : null}
+              <rect x={label.rect.x} y={label.rect.y} width={label.rect.width} height={label.rect.height} rx="6" />
+              <text x={label.rect.x + 8} y={label.rect.y + 15}>{label.text}</text>
+            </g>;
           })}
         </g>
 

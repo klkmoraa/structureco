@@ -67,6 +67,7 @@ El documento `structureCo_Fase_3_Instrucciones_ULTRA_Detalladas_para_Codex.pdf` 
 - P0 selección/acción y P1 nodos/apoyos nunca se ocultan.
 - LOD por escala, resolución determinista y leader line cuando sea necesario.
 - Gate: cero colisiones P0/P1 en escenarios densos y tests puros.
+- Estado: **implementado**; cinco pruebas puras y revisión Browser 1440/430 aprobadas.
 
 ### 3.5 - Feedback de selección
 
@@ -100,4 +101,3 @@ El documento `structureCo_Fase_3_Instrucciones_ULTRA_Detalladas_para_Codex.pdf` 
 - Temas, idiomas, modos, touch, WebKit y zoom 200 % aprobados.
 - Cero cambios en rutas protegidas y mismos contratos/resultados matemáticos.
 - Informe `structureCo_Informe_Completo_Fase_3.pdf` generado y revisado.
-

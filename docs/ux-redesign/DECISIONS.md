@@ -128,9 +128,10 @@
 
 ## D-020 - Decluttering determinista
 
-- Estado: aceptada.
+- Estado: aceptada y ejecutada en Slice 3.4.
 - Decisión: resolver labels en coordenadas de pantalla con prioridad estable, LOD por escala, lista fija de offsets, reserva de zonas y leader line.
 - Control: P0 selección/acción y P1 nodos/apoyos nunca se ocultan; el algoritmo no lee ni altera resultados matemáticos.
+- Evidencia: cinco pruebas puras, 252 pruebas totales y revisión visual directa en 1440×900 y 430×932.
 
 ## D-021 - Baseline real de Fase 3
 
