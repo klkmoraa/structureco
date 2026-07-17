@@ -157,3 +157,10 @@
 - Estado: aceptada y ejecutada en Slice 3.6.
 - Decisión: exponer atajos en ARIA, conservar objetos SVG como botones, Enter/Espacio para seleccionar y Escape para cancelar/limpiar.
 - Control: foco azul con cambio de grosor/glow, targets táctiles >=44 px y reduced motion sin transición perceptible.
+
+## D-025 - Contrato de QA para geometría y labels separados
+
+- Estado: aceptada y ejecutada en Slice 3.7.
+- Decisión: las reacciones conservan su geometría SVG y descripción accesible; los valores visibles se validan en la capa común de labels P1.
+- Motivo: una línea SVG vertical puede tener un `DOMRect` de ancho cero aunque su stroke sea visible. La Fase 3 separó deliberadamente geometría y texto para aplicar decluttering.
+- Control: el QA exige geometría adjunta, label P1 visible y valores esperados; no se cambian reacciones, unidades ni resultados.

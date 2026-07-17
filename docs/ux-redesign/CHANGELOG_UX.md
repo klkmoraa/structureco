@@ -1,5 +1,28 @@
 # Changelog UX/UI
 
+## 2026-07-17 - Fase 3, Slice 3.7
+
+### Añadido
+
+- `qa-phase3.mjs` con 125 comprobaciones para herramientas, chrome, zonas seguras, capas, labels, selección, teclado, touch, pen, zoom 200 % y WebKit.
+- Matriz final de nueve viewports y 19 capturas reproducibles con manifiesto, tamaño y SHA-256 por archivo.
+- Cobertura visual adicional para Light/Dark, Completo/Aula, ES/EN, listo/analizado, capas abiertas y cinco tipos de selección.
+
+### Ajustado por QA
+
+- El recorrido Chromium heredado reconoce la separación de Fase 3 entre geometría SVG de reacciones y labels P1 decluttered; continúa comprobando los valores visibles de 2.500 kip.
+
+### Validado
+
+- `npm.cmd run verify`: 47 archivos, 258 pruebas y build aprobados.
+- `npm.cmd run qa:phase3`: 125/125 checks, nueve filas, 19 capturas, cero errores de consola o página.
+- `npm.cmd run qa:phase2`: 117/117; `npm.cmd run qa`: 63/63; WebKit iPhone 13/iPad Pro 11: PASS.
+- Cero overflow horizontal, colisiones P0/P1, intersecciones de chrome o cambios en la frontera protegida.
+
+### No cambiado
+
+- Motor, workers, datos, fórmulas, signos, unidades, precisión, schema, migraciones, persistencia y contratos portables.
+
 ## 2026-07-17 - Fase 3, Slice 3.6
 
 ### Añadido

@@ -79,6 +79,20 @@ Hallazgos visuales de entrada: ToolRail plano, agrupación dependiente de separa
 | Responsive | 834×1194 sin overflow; dock visible con targets de 135×54 px en el entorno inspeccionado. |
 | Regresión | `npm.cmd run verify`: 47 archivos, 258 pruebas, build PASS. |
 
+### Gate 3.7 - QA integral y evidencia final
+
+| Control | Resultado |
+| --- | --- |
+| Fase 3 | `qa:phase3`: **125/125**, nueve viewports, 19 capturas, cero consola/page errors. |
+| Geometría | Cero overflow horizontal, colisiones P0/P1, intersecciones de chrome y targets touch inferiores a 44 px. |
+| Variantes | Light/Dark, Completo/Aula, ES/EN, listo/analizado, capas y nodo/apoyo/miembro/carga/multi. |
+| Entrada | Mouse, teclado, touch, pen emulado, reduced motion y zoom 200 % aprobados. |
+| Regresión | `verify`: 258/258; Fase 2: 117/117; Chromium: 63/63; WebKit iPhone/iPad: PASS. |
+| Contrato visual | QA heredado actualizado para consultar labels P1 separados de la geometría SVG; valores 2.500 kip confirmados. |
+| Frontera | Cero diferencias en engine, workers, data, portable y `types.ts` contra el baseline. |
+
+Evidencia reproducible: `evidence/phase-03/after/phase3-metrics.json` y `phase3-after-manifest.json`.
+
 ## Cierre de Fase 2 - 2026-07-17
 
 | Capa | Cobertura | Resultado final |

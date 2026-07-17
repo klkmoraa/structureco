@@ -358,8 +358,12 @@ async function educationalExample() {
   await page.getByRole('button', { name: 'Analizar', exact: true }).click();
   await page.locator('.result-summary').waitFor({ state: 'visible' });
   await page.getByRole('tab', { name: 'Reacciones', exact: true }).click();
-  await page.locator('.reaction-symbol').first().waitFor({ state: 'visible' });
-  const reactionLabels = await page.locator('.reaction-symbol text').allTextContents();
+  // Phase 3 separates the stroked reaction geometry from its decluttered value
+  // labels. A vertical SVG line has a zero-width DOMRect even though its stroke
+  // is rendered, so assert the geometry is attached and the P1 labels are visible.
+  await page.locator('.reaction-symbol').first().waitFor({ state: 'attached' });
+  await page.locator('[data-smart-label^="reaction:"] text').first().waitFor({ state: 'visible' });
+  const reactionLabels = await page.locator('[data-smart-label^="reaction:"] text').allTextContents();
   out.checks.hibbelerReactions = reactionLabels.filter((label) => label.includes('2.500 kip')).length === 2;
   await page.getByRole('tab', { name: 'Momento', exact: true }).click();
   await page.locator('.diagram-chart.moment').waitFor({ state: 'visible' });

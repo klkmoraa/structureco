@@ -12,7 +12,8 @@
     "verify": "npm run lint && npm test && npm run build",
     "qa": "npm run build && node qa.mjs",
     "qa:webkit": "npm run build && node qa-webkit.mjs",
-    "qa:phase2": "npm run build && node qa-phase2.mjs"
+    "qa:phase2": "npm run build && node qa-phase2.mjs",
+    "qa:phase3": "npm run build && node qa-phase3.mjs"
   },
   "dependencies": {
     "fflate": "^0.8.3",

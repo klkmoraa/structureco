@@ -9,7 +9,7 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 | Fase 0 - gobierno | No acreditada en el repositorio | No se encontraron artefactos formales previos de gobierno visual. | Riesgo heredado registrado. |
 | Fase 1 - auditoría y línea base | **APROBADA** | Inventario, auditoría renderizada, recorridos, línea base, backlog, decisiones, reporte PDF y 12 capturas aceptados como referencia oficial. | Aprobada por el propietario mediante el documento rector de Fase 2, fechado 2026-07-17. |
 | Fase 2 - fundaciones UI y responsive | **COMPLETADA Y ENTREGADA** | Gates 2.1-2.7, implementación, evidencia e informe PDF cerrados. | Correo con adjunto verificado en Gmail; no avanzar a Fase 3. |
-| Fase 3 - canvas, herramientas y selección | **EN EJECUCIÓN** | Slice 3.0 cerrado: PDF, baseline, referencias, evidencia y plan registrados. | Continuar por slices 3.1-3.8; quedar lista para revisión. |
+| Fase 3 - canvas, herramientas y selección | **EN CIERRE DOCUMENTAL** | Slices 3.0-3.7 implementados y aprobados; informe final en preparación. | Cerrar Slice 3.8 y quedar lista para revisión. |
 | Fase 4 y posteriores | No iniciadas | Sin autorización en esta ejecución. | No iniciar automáticamente. |
 
 ## Cierre heredado de Fase 1
@@ -52,7 +52,7 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 
 ## Estado de la compuerta
 
-**FASE 3 AUTORIZADA Y EN EJECUCIÓN.** El Slice 3.0 cerró sin cambios productivos: 56 páginas inspeccionadas, referencias aprobadas identificadas, baseline técnico aprobado, nueve viewports capturados y frontera matemática protegida. La Fase 4 no fue iniciada.
+**FASE 3 AUTORIZADA Y EN CIERRE DOCUMENTAL.** Los gates técnicos 3.0-3.7 están aprobados; sólo resta generar, renderizar e inspeccionar el informe final. La Fase 4 no fue iniciada.
 
 ## Estado del Slice 3.0
 
@@ -76,3 +76,7 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 - [x] Gate 3.5: 47 archivos, 256 pruebas; carga/miembro/nodo/apoyo/multi Light y multi Dark aprobados.
 - [x] Slice 3.6: paridad mouse/touch/pen, teclado, foco, targets y reduced motion.
 - [x] Gate 3.6: 47 archivos, 258 pruebas; Browser 834 sin overflow y shortcut H aprobado.
+- [x] Slice 3.7: QA integral, matriz final y evidencia after reproducible.
+- [x] Gate 3.7: 125/125 Fase 3, 117/117 Fase 2, 63/63 Chromium, WebKit PASS y consola limpia.
+- [x] Frontera protegida sin diferencias respecto a `38d714e`; SHA-256 de baseline `78e02e099cf152f2205928bf6e732fdfb10c17d885c61b5c0deb64d478cbdafa` preservado por identidad de archivos.
+- [ ] Slice 3.8: informe PDF completo, renderizado, inspección visual y SHA-256 final.

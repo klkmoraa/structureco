@@ -88,6 +88,7 @@ El documento `structureCo_Fase_3_Instrucciones_ULTRA_Detalladas_para_Codex.pdf` 
 - `verify`, `qa:phase3`, `qa`, `qa:webkit`.
 - ES/EN, Light/Dark, Completo/Aula, nueve viewports, estados y selección.
 - Gate: cero errores, cero protected diff y comparativa visual aprobada.
+- Estado: **cerrado**; 125 checks de Fase 3, regresiones heredadas, WebKit y 19 capturas aprobados.
 
 ### 3.8 - Evidencia e informe
 
