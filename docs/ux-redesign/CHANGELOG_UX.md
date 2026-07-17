@@ -1,5 +1,24 @@
 # Changelog UX/UI
 
+## 2026-07-17 - Fase 2, Slice 2.2
+
+### Cambiado
+
+- Piso legible de 12 px para texto técnico, resultados, warnings y metadatos críticos.
+- Controles y menús a 14 px; números tabulares conservados.
+- Targets de TopBar, cámara e inspector a 44 x 44 px en tablet/móvil.
+- Focus ring semántico azul y ancho estable del botón Analizar durante loading.
+
+### Validado
+
+- Browser 834 x 1194: ocho controles frecuentes medidos en 44 x 44 px, cero overlaps y cero overflow horizontal.
+- Menú secundario dentro del viewport, foco visible y retorno al trigger con Escape.
+- `npm.cmd run verify`: 40 archivos, 229 pruebas y build aprobados.
+
+### No cambiado
+
+- Valores, precisión, unidades y contratos matemáticos.
+
 ## 2026-07-17 - Fase 2, Slice 2.1
 
 ### Añadido

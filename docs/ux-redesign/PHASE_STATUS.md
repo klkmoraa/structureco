@@ -8,7 +8,7 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 | --- | --- | --- | --- |
 | Fase 0 - gobierno | No acreditada en el repositorio | No se encontraron artefactos formales previos de gobierno visual. | Riesgo heredado registrado. |
 | Fase 1 - auditoría y línea base | **APROBADA** | Inventario, auditoría renderizada, recorridos, línea base, backlog, decisiones, reporte PDF y 12 capturas aceptados como referencia oficial. | Aprobada por el propietario mediante el documento rector de Fase 2, fechado 2026-07-17. |
-| Fase 2 - fundaciones UI y responsive | **EN EJECUCIÓN - Slice 2.2** | Baseline Git protegido y Slice 2.1 de tokens/fundamentos aprobado. | Continuar por slices; no avanzar a Fase 3. |
+| Fase 2 - fundaciones UI y responsive | **EN EJECUCIÓN - Slice 2.3** | Baseline Git protegido; gates 2.1 y 2.2 aprobados. | Continuar con App Shell responsive; no avanzar a Fase 3. |
 | Fase 3 y posteriores | No iniciadas | Sin autorización. | No iniciar automáticamente. |
 
 ## Cierre heredado de Fase 1
@@ -32,7 +32,9 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 - [x] Plan completo y opción A aprobados explícitamente por el propietario.
 - [x] Slice 2.1: tokens semánticos, Light/Dark, tipografía, layout, motion y aliases documentados.
 - [x] Gate 2.1: `npm.cmd run verify` aprobado con 40 archivos y 229 pruebas.
+- [x] Slice 2.2: texto crítico >=12 px, controles 14 px y targets frecuentes 44 x 44 px en tablet/móvil.
+- [x] Gate 2.2: Browser 834 x 1194 sin overlaps/overflow, foco visible y retorno correcto; `verify` aprobado.
 
 ## Estado de la compuerta
 
-**SLICE 2.1 APROBADO.** La ejecución continúa en Slice 2.2 sobre la rama dedicada; el motor matemático permanece intacto.
+**SLICE 2.2 APROBADO.** La ejecución continúa en Slice 2.3 sobre la rama dedicada; el motor matemático permanece intacto.
