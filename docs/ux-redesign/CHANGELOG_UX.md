@@ -1,5 +1,25 @@
 # Changelog UX/UI
 
+## 2026-07-17 - Fase 3, Slice 3.1
+
+### Cambiado
+
+- Registro único para las 12 herramientas, sus 11 teclas de activación y `Delete`/`Backspace` contextual.
+- ToolRail agrupado en Navegar, Crear, Cargas, Anotar e inspeccionar y Editar.
+- Rail expandido desde 1440 px, compacto entre 1024 y 1439 px y dock inferior hasta 1023 px.
+- Sheet Más agrupado por intención; cinco destinos frecuentes más acceso a Más en el dock.
+- Estado activo usa verde de producto; la acción Eliminar conserva advertencia roja cuando está inactiva.
+
+### Validado
+
+- 42 archivos y 238 pruebas aprobadas; lint y build limpios.
+- Browser: grupos accesibles, rail wide/compact, dock y sheet Más verificados en 1536, 1366 y 390 px.
+- Las 12 herramientas, todos los shortcuts y el comportamiento Aula avanzado permanecen accesibles.
+
+### No cambiado
+
+- Handlers de herramienta, undo/redo, selección, edición, motor, datos, schema o persistencia.
+
 ## 2026-07-17 - Fase 3, Slice 3.0
 
 ### Preparado

@@ -1226,3 +1226,123 @@ button:not(:disabled):active,.welcome-option:active,.selection-card:active {
     min-height:var(--sc-control-height-touch);
   }
 }
+
+/* Phase 3: tool rail and dock --------------------------------------------- */
+.desktop-tool-list {
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.tool-group { display:grid; gap:4px; }
+.tool-group-heading {
+  margin:0;
+  padding:0 9px;
+  color:var(--subtle);
+  font-size:10px;
+  font-weight:750;
+  line-height:18px;
+  letter-spacing:.075em;
+  text-transform:uppercase;
+}
+.tool-group-actions { display:grid; gap:2px; }
+.tool-button {
+  --tool-color:var(--muted);
+  min-height:46px;
+  border-radius:10px;
+  grid-template-columns:30px minmax(0,1fr) auto;
+  padding-inline:9px;
+}
+.tool-button svg { color:var(--tool-color); }
+.tool-button:hover { background:var(--surface-2); }
+.tool-button.active {
+  --tool-color:var(--accent);
+  color:var(--accent);
+  background:var(--accent-soft);
+  box-shadow:inset 3px 0 0 var(--accent),inset 0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent);
+}
+.tool-button.destructive:not(.active) { --tool-color:var(--error); }
+.tool-button.destructive.active {
+  --tool-color:var(--accent);
+  color:var(--accent);
+}
+.tool-pointLoad,.tool-distributedLoad,.tool-moment,.tool-dimension,.tool-delete { --tool-color:var(--muted); }
+.tool-delete.destructive:not(.active) { --tool-color:var(--error); }
+.tool-node,.tool-pointLoad,.tool-dimension { margin-top:0; box-shadow:none; }
+.tool-node.active,.tool-pointLoad.active,.tool-dimension.active {
+  box-shadow:inset 3px 0 0 var(--accent),inset 0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent);
+}
+.desktop-advanced-toggle { margin-top:2px; }
+.selection-tip { padding:8px 9px; }
+
+@media (min-width:1440px) {
+  :root { --toolbar-w:var(--sc-layout-rail); }
+  .toolbar { padding:10px 9px; }
+}
+
+@media (min-width:1024px) and (max-width:1439px) {
+  :root { --toolbar-w:var(--sc-layout-rail-compact); }
+  .toolbar { padding:8px; gap:2px; }
+  .desktop-tool-list { gap:5px; }
+  .tool-group { gap:3px; }
+  .tool-group + .tool-group { padding-top:5px; border-top:1px solid var(--border-soft); }
+  .tool-group-heading {
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+  }
+  .tool-group-actions { gap:1px; }
+  .tool-button {
+    min-height:43px;
+    height:43px;
+    grid-template-columns:1fr;
+    justify-items:center;
+    padding:4px;
+  }
+  .tool-button span,.tool-button kbd { display:none; }
+  .tool-button.active,
+  .tool-node.active,.tool-pointLoad.active,.tool-dimension.active {
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 24%,var(--border));
+  }
+  .selection-tip { justify-content:center; }
+  .selection-tip span { display:none; }
+}
+
+@media (max-width:1023px) {
+  .desktop-tool-list { display:none; }
+  .mobile-tool-dock .tool-button,
+  .mobile-tool-dock .tool-button.active,
+  .mobile-tool-dock .tool-node.active,
+  .mobile-tool-dock .tool-pointLoad.active,
+  .mobile-tool-dock .tool-dimension.active {
+    box-shadow:none;
+  }
+  .mobile-tool-dock .tool-button.active {
+    --tool-color:var(--accent);
+    color:var(--accent);
+    background:var(--accent-soft);
+    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 18%,transparent);
+  }
+  .mobile-tool-dock .tool-button.destructive:not(.active) { --tool-color:var(--error); }
+  .mobile-tool-palette-list { gap:10px; }
+  .mobile-palette-group { display:grid; gap:6px; }
+  .mobile-palette-group + .mobile-palette-group { padding-top:9px; border-top:1px solid var(--border-soft); }
+  .mobile-palette-group h3 {
+    margin:0;
+    padding:0 4px;
+    color:var(--subtle);
+    font-size:10px;
+    font-weight:750;
+    line-height:18px;
+    letter-spacing:.075em;
+    text-transform:uppercase;
+  }
+  .mobile-palette-tool { --tool-color:var(--muted); }
+  .mobile-palette-tool.active { --tool-color:var(--accent); }
+  .mobile-palette-tool.destructive:not(.active) { --tool-color:var(--error); }
+}

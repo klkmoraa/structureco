@@ -28,6 +28,17 @@ beforeEach(() => localStorage.clear());
 afterEach(() => cleanup());
 
 describe('ToolBar mobile action sheets', () => {
+  it('groups every desktop tool by intention without losing actions', () => {
+    renderToolBar();
+
+    expect(within(screen.getByRole('group', { name: /navegar/i })).getAllByRole('button')).toHaveLength(2);
+    expect(within(screen.getByRole('group', { name: /^crear$/i })).getAllByRole('button')).toHaveLength(3);
+    expect(within(screen.getByRole('group', { name: /^cargas$/i })).getAllByRole('button')).toHaveLength(3);
+    expect(within(screen.getByRole('group', { name: /anotar e inspeccionar/i })).getAllByRole('button')).toHaveLength(2);
+    expect(within(screen.getByRole('group', { name: /^editar$/i })).getAllByRole('button')).toHaveLength(2);
+    expect(document.querySelectorAll('[data-tool-id]')).toHaveLength(16);
+  });
+
   it('opens the portaled load sheet and selects a point load', async () => {
     const user = userEvent.setup();
     const { container } = renderToolBar();
@@ -55,6 +66,9 @@ describe('ToolBar mobile action sheets', () => {
 
     const moreMenu = screen.getByRole('menu', { name: /más herramientas/i });
     const menu = within(moreMenu);
+    expect(within(menu.getByRole('group', { name: /navegar/i })).getAllByRole('menuitemradio')).toHaveLength(1);
+    expect(within(menu.getByRole('group', { name: /anotar e inspeccionar/i })).getAllByRole('menuitemradio')).toHaveLength(2);
+    expect(within(menu.getByRole('group', { name: /^editar$/i })).getAllByRole('menuitemradio')).toHaveLength(2);
     const pan = menu.getByRole('menuitemradio', { name: /^desplazar\./i });
     expect(menu.getByRole('menuitemradio', { name: /^cota\./i })).toBeTruthy();
     expect(menu.getByRole('menuitemradio', { name: /^dividir miembro\./i })).toBeTruthy();

@@ -64,3 +64,5 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 - [x] Inventario protegido registrado con SHA-256 `78e02e099cf152f2205928bf6e732fdfb10c17d885c61b5c0deb64d478cbdafa`.
 - [x] Supuestos, decisiones, arquitectura y gates 3.1-3.8 documentados.
 - [x] Cero archivos bajo `src/` modificados en Slice 3.0.
+- [x] Slice 3.1: registro único, ToolRail agrupado, rail wide/compact y dock/sheets responsive.
+- [x] Gate 3.1: 42 archivos, 238 pruebas, lint/build y Browser 1536/1366/390 aprobados.

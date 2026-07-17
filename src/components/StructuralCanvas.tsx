@@ -35,6 +35,7 @@ import {
   type ModelPoint,
   type ScreenPoint,
 } from './canvasInteraction';
+import { toolFromShortcut } from './toolRegistry';
 
 type Camera = CanvasCamera;
 
@@ -1114,13 +1115,10 @@ export const StructuralCanvas = ({ onRequestInspector }: { onRequestInspector?: 
         setSelection(duplicated);
         return;
       }
-      const shortcuts: Record<string, Tool> = {
-        v: 'select', h: 'pan', n: 'node', m: 'member', s: 'support', p: 'pointLoad',
-        d: 'distributedLoad', o: 'moment', c: 'dimension', b: 'split', x: 'cut',
-      };
-      if (key in shortcuts && !command && !event.altKey) {
+      const shortcutTool = toolFromShortcut(key);
+      if (shortcutTool && !command && !event.altKey) {
         event.preventDefault();
-        setActiveTool(shortcuts[key]);
+        setActiveTool(shortcutTool);
       }
       if (event.key === 'Escape') {
         cancelActiveInteraction();

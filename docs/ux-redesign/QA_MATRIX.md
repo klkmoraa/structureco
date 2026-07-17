@@ -13,6 +13,16 @@
 
 Hallazgos visuales de entrada: ToolRail plano, agrupación dependiente de separadores, chrome sin zonas seguras explícitas, capas mezcladas con settings persistentes, labels sin prioridad/LOD/colisión y selección verde confundible con acción de producto. Todos son alcance de Fase 3; no se detectó falla matemática.
 
+### Gate 3.1 - registro y ToolRail/ToolDock
+
+| Control | Resultado |
+| --- | --- |
+| Registro | 12 ids únicos, 11 teclas únicas y Delete contextual; tests puros PASS. |
+| Agrupación | 2 Navegar, 3 Crear, 3 Cargas, 2 Inspeccionar y 2 Editar. |
+| Responsive | 1536 expandido, 1366 compacto y 390 dock + sheet; inspección Browser PASS. |
+| Accesibilidad | grupos nombrados, `aria-pressed`, `menuitemradio`, Escape y retorno de foco conservados. |
+| Regresión | `npm.cmd run verify`: 42 archivos, 238 pruebas, build PASS. |
+
 ## Cierre de Fase 2 - 2026-07-17
 
 | Capa | Cobertura | Resultado final |
