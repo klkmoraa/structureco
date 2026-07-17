@@ -4,16 +4,19 @@
 
 | Punto | Referencia aprobada | Baseline | Criterio de cierre | Estado |
 | --- | --- | --- | --- | --- |
-| Agrupación por intención | PDF p. 22 | Rail plano con separadores visuales | Grupos nombrados y orden estable sin perder herramientas. | **Cerrado.** 12 herramientas y 11 shortcuts preservados. |
-| Rail/dock responsive | PDF p. 24 | 164 px wide, 76 px compact, dock de seis | Expandido >=1440, compacto 1024-1439, dock <=1023. | **Cerrado.** Nueve viewports aprobados. |
+| Canvas first | PDF p. 22 | Chrome y rail restan área útil sin reserva común | Modelo al centro y zonas de control compactas. | **Cerrado.** Safe rect y nueve viewports aprobados. |
+| Agrupación por intención | PDF p. 24 | Rail plano con separadores visuales | Grupos nombrados y orden estable sin perder herramientas. | **Cerrado.** 12 herramientas y 11 shortcuts preservados. |
+| Rail/dock responsive | PDF pp. 22, 31-32 | 164 px wide, 76 px compact, dock de seis | Expandido >=1440, compacto 1024-1439, dock <=1023. | **Cerrado.** Desktop, tablet y móvil aprobados. |
 | Chrome y safe zones | PDF p. 26 | Badges/controles/status en esquinas sin reserva común | Zonas explícitas sin solapar modelo, labels o dock. | **Cerrado.** Cero intersecciones de chrome. |
 | Capas de información | PDF p. 27 | Visibilidad distribuida en ProjectSettings y resultTab | Control UI-only de sesión; modelo siempre visible. | **Cerrado.** Ocho capas efímeras; modelo bloqueado. |
-| Prioridad/LOD | PDF pp. 29-30 | Labels directos por boolean y escala fija | P0/P1 persistentes; secundarios adaptados a cámara. | **Cerrado.** P0-P3 y tres niveles LOD probados. |
-| Colisión/leader lines | PDF p. 31 | Sin resolución de colisión | Layout determinista, sin colisiones P0/P1. | **Cerrado.** Cero colisiones P0/P1 en la matriz final. |
-| Selección | PDF pp. 32-33 | Verde de producto y grosor/drop shadow | Azul semántico + geometría específica por objeto. | **Cerrado.** Cinco tipos y Light/Dark cubiertos. |
-| Gestos | PDF p. 35 | Mouse/touch/pinch ya funcionales | Paridad conservada y pruebas pen/teclado. | **Cerrado.** Chromium, WebKit, touch, pen emulado y teclado PASS. |
+| Prioridad/LOD/colisiones | PDF p. 29 | Labels directos por boolean y escala fija | P0/P1 persistentes; secundarios adaptados a cámara y sin colisión. | **Cerrado.** P0-P3, tres LOD y leaders probados. |
+| Selección | PDF p. 30 | Verde de producto y grosor/drop shadow | Azul semántico + geometría específica por objeto. | **Cerrado.** Cinco tipos y Light/Dark cubiertos. |
+| Desktop/tablet/móvil | PDF pp. 31-32 | Composición responsive existente | Misma lógica, canvas prioritario y dock alcanzable. | **Cerrado.** Chromium y WebKit aprobados. |
+| Gestos y accesibilidad | PDF pp. 33, 35 | Mouse/touch/pinch ya funcionales | Paridad, targets, foco, reduced motion y pen/teclado. | **Cerrado.** Entrada y preferencias PASS. |
 
 Las capturas before y las 19 capturas after fueron inspeccionadas mediante contact sheets y vistas individuales. Las referencias se aplicaron como especificación de intención: se preservó el lenguaje visual del producto y no se copiaron como mockups literales.
+
+La correspondencia de páginas se revalidó contra los títulos renderizados del PDF rector antes del cierre. El informe final muestra cada referencia completa con su descripción correcta y SHA-256.
 
 ## Fase 2 - cierre comparativo
 

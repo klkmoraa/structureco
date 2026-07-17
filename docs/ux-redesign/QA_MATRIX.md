@@ -93,6 +93,17 @@ Hallazgos visuales de entrada: ToolRail plano, agrupación dependiente de separa
 
 Evidencia reproducible: `evidence/phase-03/after/phase3-metrics.json` y `phase3-after-manifest.json`.
 
+### Gate 3.8 - informe y cierre
+
+| Control | Resultado |
+| --- | --- |
+| Contenido | 58 páginas; 10 referencias, 12 capturas before y 19 after embebidas. |
+| Integridad | Extracción de texto confirma 12/12 y 19/19 nombres de capturas y frase de cierre. |
+| Render | 58/58 páginas rasterizadas; dos contact sheets y vistas representativas inspeccionadas. |
+| Correcciones | Altura de anexos verticales ajustada; cero páginas de spill, vacías, recortadas o deformadas. |
+| PDF | 9,908,217 bytes; SHA-256 `9fa863032d95bd1498e7558ca4da97c4b5902fa9469086c60f4935f9dfd42bb9`. |
+| Compuerta | **Fase 3 completada y lista para revisión. Fase 4 no iniciada.** |
+
 ## Cierre de Fase 2 - 2026-07-17
 
 | Capa | Cobertura | Resultado final |

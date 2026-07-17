@@ -9,7 +9,7 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 | Fase 0 - gobierno | No acreditada en el repositorio | No se encontraron artefactos formales previos de gobierno visual. | Riesgo heredado registrado. |
 | Fase 1 - auditoría y línea base | **APROBADA** | Inventario, auditoría renderizada, recorridos, línea base, backlog, decisiones, reporte PDF y 12 capturas aceptados como referencia oficial. | Aprobada por el propietario mediante el documento rector de Fase 2, fechado 2026-07-17. |
 | Fase 2 - fundaciones UI y responsive | **COMPLETADA Y ENTREGADA** | Gates 2.1-2.7, implementación, evidencia e informe PDF cerrados. | Correo con adjunto verificado en Gmail; no avanzar a Fase 3. |
-| Fase 3 - canvas, herramientas y selección | **EN CIERRE DOCUMENTAL** | Slices 3.0-3.7 implementados y aprobados; informe final en preparación. | Cerrar Slice 3.8 y quedar lista para revisión. |
+| Fase 3 - canvas, herramientas y selección | **COMPLETADA Y LISTA PARA REVISIÓN** | Slices 3.0-3.8, implementación, QA, evidencia e informe PDF cerrados. | Revisión del propietario; no iniciar Fase 4 sin autorización. |
 | Fase 4 y posteriores | No iniciadas | Sin autorización en esta ejecución. | No iniciar automáticamente. |
 
 ## Cierre heredado de Fase 1
@@ -52,7 +52,7 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 
 ## Estado de la compuerta
 
-**FASE 3 AUTORIZADA Y EN CIERRE DOCUMENTAL.** Los gates técnicos 3.0-3.7 están aprobados; sólo resta generar, renderizar e inspeccionar el informe final. La Fase 4 no fue iniciada.
+**FASE 3 COMPLETADA Y LISTA PARA REVISIÓN.** Los gates 3.0-3.8 están aprobados; el informe final fue generado, rasterizado e inspeccionado. La Fase 4 no fue iniciada.
 
 ## Estado del Slice 3.0
 
@@ -79,4 +79,7 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 - [x] Slice 3.7: QA integral, matriz final y evidencia after reproducible.
 - [x] Gate 3.7: 125/125 Fase 3, 117/117 Fase 2, 63/63 Chromium, WebKit PASS y consola limpia.
 - [x] Frontera protegida sin diferencias respecto a `38d714e`; SHA-256 de baseline `78e02e099cf152f2205928bf6e732fdfb10c17d885c61b5c0deb64d478cbdafa` preservado por identidad de archivos.
-- [ ] Slice 3.8: informe PDF completo, renderizado, inspección visual y SHA-256 final.
+- [x] Slice 3.8: informe PDF completo, renderizado, inspección visual y SHA-256 final.
+- [x] Informe de 58 páginas con 10 referencias, 12 capturas before y 19 after.
+- [x] PDF final: 9,908,217 bytes; SHA-256 `9fa863032d95bd1498e7558ca4da97c4b5902fa9469086c60f4935f9dfd42bb9`.
+- [x] Fase 4 no iniciada.

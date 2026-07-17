@@ -1,7 +1,7 @@
 # Plan de ejecución - Fase 3
 
 Fecha: 2026-07-17  
-Estado: autorizada y en ejecución por slices atómicos.
+Estado: **completada y lista para revisión**.
 
 ## Fuente de verdad visual
 
@@ -9,16 +9,16 @@ El documento `structureCo_Fase_3_Instrucciones_ULTRA_Detalladas_para_Codex.pdf` 
 
 | Referencia | Dirección aplicada |
 | --- | --- |
-| p. 22 | ToolRail agrupado por intención. |
-| p. 24 | Rail expandido, rail compacto y dock responsive. |
+| p. 22 | Canvas first: modelo al centro y más área útil. |
+| p. 24 | Herramientas agrupadas por intención. |
 | p. 26 | Chrome discreto y zonas seguras del canvas. |
 | p. 27 | Capas de información como estado UI. |
-| p. 29 | Jerarquía y prioridad de etiquetas. |
-| p. 30 | LOD dependiente de escala de cámara. |
-| p. 31 | Resolución de colisiones y leader lines. |
-| p. 32 | Selección visual independiente del color técnico. |
-| p. 33 | Feedback para nodo, miembro, apoyo, carga y multiselección. |
-| p. 35 | Paridad mouse, teclado, touch y stylus. |
+| p. 29 | Etiquetas inteligentes: prioridad, zoom, decluttering y colisiones. |
+| p. 30 | Estados de selección por objeto y multiselección. |
+| p. 31 | Adaptación consistente entre desktop y tablet. |
+| p. 32 | Experiencia móvil canvas-first con dock inferior. |
+| p. 33 | Gestos e interacción para mouse, teclado, touch, pinch y stylus. |
+| p. 35 | Accesibilidad, targets, foco, rendimiento y estabilidad responsive. |
 
 ## Arquitectura prevista
 
@@ -95,6 +95,7 @@ El documento `structureCo_Fase_3_Instrucciones_ULTRA_Detalladas_para_Codex.pdf` 
 - Capturas before/after, manifiestos, changelog, ledger y PDF completo.
 - Renderizar e inspeccionar el PDF y calcular SHA-256.
 - Gate: “Fase 3 completada y lista para revisión”. No iniciar Fase 4.
+- Estado: **cerrado**; informe de 58 páginas renderizado e inspeccionado, SHA-256 registrado.
 
 ## Definición de terminado
 

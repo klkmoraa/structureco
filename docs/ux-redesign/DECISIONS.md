@@ -164,3 +164,10 @@
 - Decisión: las reacciones conservan su geometría SVG y descripción accesible; los valores visibles se validan en la capa común de labels P1.
 - Motivo: una línea SVG vertical puede tener un `DOMRect` de ancho cero aunque su stroke sea visible. La Fase 3 separó deliberadamente geometría y texto para aplicar decluttering.
 - Control: el QA exige geometría adjunta, label P1 visible y valores esperados; no se cambian reacciones, unidades ni resultados.
+
+## D-026 - Correspondencia visual verificada por título renderizado
+
+- Estado: aceptada y ejecutada en Slice 3.8.
+- Decisión: describir las diez referencias según el título y contenido visible de cada página renderizada, no sólo por un índice resumido previo.
+- Motivo: la inspección final detectó descripciones desplazadas en las páginas 30-35 aunque los números de página fuente eran correctos.
+- Control: plan, ledger e informe se corrigieron; las páginas 22, 24, 26, 27, 29, 30, 31, 32, 33 y 35 se revisaron individualmente antes del hash final.
