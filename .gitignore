@@ -1,0 +1,12 @@
+node_modules/
+dist/
+qa-artifacts/
+output/
+tmp/
+.vite-qa.log
+.env
+.env.*
+*.zip
+
+# Local Netlify folder
+.netlify

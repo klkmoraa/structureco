@@ -1,0 +1,71 @@
+// @vitest-environment jsdom
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createDefaultProject } from '../data/defaultProject';
+import { PROJECT_STORAGE_KEY } from '../data/projectStorage';
+import { ProjectProvider } from '../store/ProjectContext';
+import { TopBar } from './TopBar';
+
+const portableMocks = vi.hoisted(() => ({
+  createCalculationReport: vi.fn(),
+  createPortableBundle: vi.fn(),
+  shareOrDownloadPortableBytes: vi.fn(),
+}));
+
+vi.mock('../utils/portable', () => ({
+  ...portableMocks,
+  STRUCTURECO_BUNDLE_MIME: 'application/vnd.structureco.bundle+zip',
+}));
+
+beforeEach(() => {
+  localStorage.clear();
+  localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(createDefaultProject()));
+  portableMocks.createCalculationReport.mockResolvedValue({
+    bytes: new Uint8Array([1, 2, 3]),
+    filename: 'memoria-structureco.pdf',
+    payload: {},
+  });
+  portableMocks.shareOrDownloadPortableBytes.mockResolvedValue('downloaded');
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: vi.fn().mockReturnValue({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }),
+  });
+  window.requestAnimationFrame = (callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 0);
+  window.cancelAnimationFrame = (handle: number) => window.clearTimeout(handle);
+});
+
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
+
+describe('TopBar portable export', () => {
+  it('keeps the PDF option enabled before the user runs Analysis', async () => {
+    const user = userEvent.setup();
+    render(<ProjectProvider><TopBar /></ProjectProvider>);
+
+    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
+    const pdfButton = screen.getByRole('button', { name: 'PDF completo reimportable' }) as HTMLButtonElement;
+
+    expect(pdfButton.disabled).toBe(false);
+  });
+
+  it('analyzes the current project and generates the PDF from one click', async () => {
+    const user = userEvent.setup();
+    render(<ProjectProvider><TopBar /></ProjectProvider>);
+
+    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
+    await user.click(screen.getByRole('button', { name: 'PDF completo reimportable' }));
+
+    await waitFor(() => expect(portableMocks.createCalculationReport).toHaveBeenCalledOnce());
+    const [, generatedAnalysis] = portableMocks.createCalculationReport.mock.calls[0];
+    expect(generatedAnalysis.success).toBe(true);
+    expect(portableMocks.shareOrDownloadPortableBytes).toHaveBeenCalledWith(
+      new Uint8Array([1, 2, 3]),
+      'memoria-structureco.pdf',
+      'application/pdf',
+      expect.stringContaining('memoria de cálculo'),
+    );
+  });
+});
