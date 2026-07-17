@@ -23,6 +23,16 @@ Hallazgos visuales de entrada: ToolRail plano, agrupación dependiente de separa
 | Accesibilidad | grupos nombrados, `aria-pressed`, `menuitemradio`, Escape y retorno de foco conservados. |
 | Regresión | `npm.cmd run verify`: 42 archivos, 238 pruebas, build PASS. |
 
+### Gate 3.2 - chrome y zonas seguras
+
+| Control | Resultado |
+| --- | --- |
+| Safe rect | Insets deterministas para <=480, <=1023 y desktop; tests PASS. |
+| Fit visual | Modelo centrado dentro del área sin chrome; cargas completas en 430 px. |
+| HUD | Modo, cámara, escala, coordenadas y status con nombres accesibles. |
+| Móvil | Corrección iterada de overlap coordenadas/cámara; inspección 390 y 430 PASS. |
+| Regresión | `npm.cmd run verify`: 43 archivos, 242 pruebas, build PASS. |
+
 ## Cierre de Fase 2 - 2026-07-17
 
 | Capa | Cobertura | Resultado final |

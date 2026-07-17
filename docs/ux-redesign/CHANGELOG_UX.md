@@ -1,5 +1,25 @@
 # Changelog UX/UI
 
+## 2026-07-17 - Fase 3, Slice 3.2
+
+### Cambiado
+
+- Zonas seguras explícitas para modo activo, status de vista, coordenadas, cámara y contenido técnico.
+- `Ajustar a vista` usa el rectángulo libre de chrome y reserva espacio para flechas/textos de carga.
+- Cámara agrupada horizontalmente abajo a la derecha; escala centrada y ejes globales aislados abajo a la izquierda.
+- Readout de coordenadas de cursor en desktop/pen sin rerenderizar el canvas durante el movimiento.
+- HUD móvil reducido: touch hint, escala y cámara sin solapamientos; chips secundarios ocultos en teléfonos estrechos.
+
+### Validado
+
+- Tests puros de insets/fit y pruebas de interacción existentes: PASS.
+- 43 archivos, 242 pruebas, lint y build aprobados.
+- Browser 1440, 430 y 390: modelo/cargas completos, chrome discreto y sin overlap visible.
+
+### No cambiado
+
+- Geometría del modelo, resultados, unidades, ProjectSettings, persistencia o motor.
+
 ## 2026-07-17 - Fase 3, Slice 3.1
 
 ### Cambiado

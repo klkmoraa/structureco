@@ -6,7 +6,7 @@
 | --- | --- | --- | --- | --- |
 | Agrupación por intención | PDF p. 22 | Rail plano con separadores visuales | Grupos nombrados y orden estable sin perder herramientas. | Implementado; QA final pendiente |
 | Rail/dock responsive | PDF p. 24 | 164 px wide, 76 px compact, dock de seis | Expandido >=1440, compacto 1024-1439, dock <=1023. | Implementado; QA final pendiente |
-| Chrome y safe zones | PDF p. 26 | Badges/controles/status en esquinas sin reserva común | Zonas explícitas sin solapar modelo, labels o dock. | Abierto |
+| Chrome y safe zones | PDF p. 26 | Badges/controles/status en esquinas sin reserva común | Zonas explícitas sin solapar modelo, labels o dock. | Implementado; QA final pendiente |
 | Capas de información | PDF p. 27 | Visibilidad distribuida en ProjectSettings y resultTab | Control UI-only de sesión; modelo siempre visible. | Abierto |
 | Prioridad/LOD | PDF pp. 29-30 | Labels directos por boolean y escala fija | P0/P1 persistentes; secundarios adaptados a cámara. | Abierto |
 | Colisión/leader lines | PDF p. 31 | Sin resolución de colisión | Layout determinista, sin colisiones P0/P1. | Abierto |

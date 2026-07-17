@@ -36,6 +36,7 @@ import {
   type ScreenPoint,
 } from './canvasInteraction';
 import { toolFromShortcut } from './toolRegistry';
+import { cameraToFitBounds, canvasSafeInsetsFor } from './canvasChrome';
 
 type Camera = CanvasCamera;
 
@@ -153,6 +154,7 @@ export const StructuralCanvas = ({ onRequestInspector }: { onRequestInspector?: 
   const { t } = useI18n();
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const coordinateReadoutRef = useRef<HTMLOutputElement>(null);
   const [size, setSize] = useState<Size>({ width: 1000, height: 640 });
   const [canvasMeasured, setCanvasMeasured] = useState(false);
   const [camera, setCamera] = useState<Camera>({ scale: 85, x: 260, y: 500 });
@@ -327,6 +329,12 @@ export const StructuralCanvas = ({ onRequestInspector }: { onRequestInspector?: 
     return { x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) };
   }, []);
 
+  const updateCoordinateReadout = useCallback((clientX: number, clientY: number, pointerType: string) => {
+    if (pointerType === 'touch' || !coordinateReadoutRef.current) return;
+    const point = screenToModelPoint(localScreenPoint(clientX, clientY), cameraRef.current);
+    coordinateReadoutRef.current.textContent = `X ${toDisplay(point.x, units, 'length').toFixed(3)} · Y ${toDisplay(point.y, units, 'length').toFixed(3)} ${lengthLabel}`;
+  }, [lengthLabel, localScreenPoint, units]);
+
   const fitModel = useCallback(() => {
     if (!project.nodes.length || !size.width || !size.height) return;
     const xs = project.nodes.map((node) => node.x);
@@ -335,14 +343,12 @@ export const StructuralCanvas = ({ onRequestInspector }: { onRequestInspector?: 
     const maxX = Math.max(...xs);
     const minY = Math.min(...ys);
     const maxY = Math.max(...ys);
-    const spanX = Math.max(2, maxX - minX);
-    const spanY = Math.max(2, maxY - minY);
-    const scale = clamp(Math.min((size.width - 180) / spanX, (size.height - 160) / spanY), 24, 150);
-    updateCamera({
-      scale,
-      x: size.width / 2 - ((minX + maxX) / 2) * scale,
-      y: size.height / 2 + ((minY + maxY) / 2) * scale,
-    });
+    const viewport = { width: size.width, height: size.height };
+    updateCamera(cameraToFitBounds(
+      { minX, maxX, minY, maxY },
+      viewport,
+      canvasSafeInsetsFor(viewport),
+    ));
   }, [project.nodes, size, updateCamera]);
 
   useEffect(() => {
@@ -957,6 +963,7 @@ export const StructuralCanvas = ({ onRequestInspector }: { onRequestInspector?: 
 
   const handlePointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
     const client = { x: event.clientX, y: event.clientY };
+    updateCoordinateReadout(event.clientX, event.clientY, event.pointerType);
     if (event.pointerType === 'touch') activePointersRef.current.set(event.pointerId, client);
     const current = interactionRef.current;
     if (current.kind === 'idle' && (activeTool === 'node' || activeTool === 'member')) {
@@ -1656,7 +1663,10 @@ export const StructuralCanvas = ({ onRequestInspector }: { onRequestInspector?: 
           else if (current.kind === 'pinch' && current.pointerIds.includes(event.pointerId)) finishPointer(event, true);
         }}
         onContextMenu={(event) => event.preventDefault()}
-        onPointerLeave={() => { if (interactionRef.current.kind === 'idle') setSnapPreview(null); }}
+        onPointerLeave={() => {
+          if (interactionRef.current.kind === 'idle') setSnapPreview(null);
+          if (coordinateReadoutRef.current) coordinateReadoutRef.current.textContent = `X — · Y — ${lengthLabel}`;
+        }}
       >
         <title>{t('canvas.workspace')}</title>
         <defs>
@@ -1796,7 +1806,7 @@ export const StructuralCanvas = ({ onRequestInspector }: { onRequestInspector?: 
         </g>
       </svg>
 
-      <div className={`canvas-mode-badge${loadPlacementInstruction ? ' placing-load' : ''}`} role="status" aria-live="polite">
+      <div className={`canvas-mode-badge${loadPlacementInstruction ? ' placing-load' : ''}`} role="status" aria-live="polite" data-canvas-chrome="mode">
         <strong>{t(toolLabelKeys[activeTool])}</strong>
         {loadPlacementInstruction ? <span className="canvas-action-instruction">{loadPlacementInstruction}</span> : <>
           <span className="desktop-gesture-hint">{t('canvas.gestureDesktop')}</span>
@@ -1804,14 +1814,23 @@ export const StructuralCanvas = ({ onRequestInspector }: { onRequestInspector?: 
         </>}
         {loadPlacementInstruction ? <button type="button" aria-label={t('canvas.cancelPlacement')} onClick={() => setActiveTool('select')}><X size={14} /></button> : null}
       </div>
-      <div className="canvas-controls">
+      <div className="canvas-view-chips" role="status" aria-label={t('canvas.viewStatus')} data-canvas-chrome="view-status">
+        <span className={project.settings.snap ? 'active' : ''}>{project.settings.snap ? t('canvas.snapOn') : t('canvas.snapOff')}</span>
+        <span className={project.settings.showGrid ? 'active' : ''}>{project.settings.showGrid ? t('canvas.gridOn') : t('canvas.gridOff')}</span>
+      </div>
+      <div className="canvas-controls" role="group" aria-label={t('canvas.viewControls')} data-canvas-chrome="camera">
         <button aria-label={t('canvas.zoomIn')} title={t('canvas.zoomIn')} onClick={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1.15))}><Plus size={18} /></button>
         <button aria-label={t('canvas.zoomOut')} title={t('canvas.zoomOut')} onClick={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1 / 1.15))}><Minus size={18} /></button>
         <button aria-label={t('canvas.fit')} title={t('canvas.fit')} onClick={fitModel}><LocateFixed size={18} /></button>
       </div>
-      <div className="canvas-status"><Crosshair size={14} /> Escala {(camera.scale / 85).toFixed(2)}× · Cuadrícula {toDisplay(project.settings.gridSize, units, 'length').toFixed(3)} {lengthLabel}</div>
+      <div className="canvas-status" data-canvas-chrome="coordinates">
+        <Crosshair size={14} aria-hidden="true" />
+        <output ref={coordinateReadoutRef} className="canvas-coordinate-output" aria-label={t('canvas.coordinates')}>X — · Y — {lengthLabel}</output>
+        <span className="canvas-status-divider" aria-hidden="true">·</span>
+        <span className="canvas-scale-output">{t('canvas.scale')} {(camera.scale / 85).toFixed(2)}×</span>
+      </div>
       {canvasFeedback ? <div className="canvas-feedback" role="alert">{canvasFeedback}</div> : null}
-      {resultsAllowed && analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <div className={`canvas-result-legend ${resultTab}`} aria-label="Convención del diagrama"><strong>{resultTab === 'axial' ? 'N · axial' : resultTab === 'shear' ? 'V · cortante' : 'M · momento'}</strong><span><i /> Curva exacta · escala {project.settings.diagramScaleMode === 'individual' ? 'por miembro' : 'común'}</span><small>Se dibuja hacia {project.settings.diagramSide === 'positive' ? '+y' : '−y'} local · valores positivos mantienen el color y el trazo</small></div> : null}
+      {resultsAllowed && analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <div className={`canvas-result-legend ${resultTab}`} aria-label="Convención del diagrama" data-canvas-chrome="result-legend"><strong>{resultTab === 'axial' ? 'N · axial' : resultTab === 'shear' ? 'V · cortante' : 'M · momento'}</strong><span><i /> Curva exacta · escala {project.settings.diagramScaleMode === 'individual' ? 'por miembro' : 'común'}</span><small>Se dibuja hacia {project.settings.diagramSide === 'positive' ? '+y' : '−y'} local · valores positivos mantienen el color y el trazo</small></div> : null}
       {memberStart ? <div className="canvas-hint" role="status"><span>Toca el nodo destino</span><button type="button" onClick={() => setMemberStart(null)} aria-label="Cancelar creación de miembro"><X size={14} /></button></div> : null}
       {activeTool === 'node' || (activeTool === 'member' && memberStart) ? <form className="quick-entry-bar" aria-label="Entrada numérica CAD" onSubmit={(event) => { event.preventDefault(); submitQuickEntry(); }}><div className="quick-entry-heading"><strong>{activeTool === 'node' ? 'Nodo por coordenadas' : 'Extremo del miembro'}</strong>{activeTool === 'member' ? <div className="quick-entry-mode"><button type="button" aria-pressed={quickEntryMode === 'delta'} onClick={() => setQuickEntryMode('delta')}>ΔX · ΔY</button><button type="button" aria-pressed={quickEntryMode === 'polar'} onClick={() => setQuickEntryMode('polar')}>L · ∠</button></div> : null}</div><label><span>{activeTool === 'node' ? 'X' : quickEntryMode === 'delta' ? 'ΔX' : 'L'}</span><input type="number" inputMode="decimal" step="any" value={quickEntry.first} onChange={(event) => setQuickEntry((current) => ({ ...current, first: event.target.value }))} /><small>{lengthLabel}</small></label><label><span>{activeTool === 'node' ? 'Y' : quickEntryMode === 'delta' ? 'ΔY' : '∠'}</span><input type="number" inputMode="decimal" step="any" value={quickEntry.second} onChange={(event) => setQuickEntry((current) => ({ ...current, second: event.target.value }))} /><small>{activeTool === 'member' && quickEntryMode === 'polar' ? '°' : lengthLabel}</small></label><button type="submit">{activeTool === 'node' ? 'Crear nodo' : 'Crear miembro'}</button>{quickEntryError ? <span className="quick-entry-error" role="alert">{quickEntryError}</span> : null}</form> : null}
       {cycleIndicator ? <div className="selection-cycle-indicator" style={{ left: cycleIndicator.x + 12, top: cycleIndicator.y + 12 }} role="status">{cycleIndicator.index}/{cycleIndicator.total} · Alt para recorrer</div> : null}
