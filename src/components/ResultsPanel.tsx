@@ -26,7 +26,7 @@ const tabs: Array<{ id: ResultTab; labelKey: TranslationKey; color?: string }> =
   { id: 'issues', labelKey: 'results.issues' },
 ];
 
-const MOBILE_RESULTS_QUERY = '(max-width: 960px)';
+const MOBILE_RESULTS_QUERY = '(max-width: 1023px)';
 const isMobileResultsViewport = () => typeof window !== 'undefined' && Boolean(window.matchMedia?.(MOBILE_RESULTS_QUERY).matches);
 
 export const ResultsPanel = () => {

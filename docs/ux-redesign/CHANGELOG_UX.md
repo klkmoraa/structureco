@@ -1,5 +1,25 @@
 # Changelog UX/UI
 
+## 2026-07-17 - Fase 2, Slice 2.3
+
+### Cambiado
+
+- Breakpoint funcional tablet ampliado a 1023 px en shell, dock, resultados e inspector.
+- Rango 1024-1279 usa rail compacto de 76 px e inspector de 290 px.
+- Utilidades secundarias pasan al overflow antes de comprimir el canvas.
+
+### Validado
+
+- 1194, 1024, 834 y 390 px: cero intersecciones y cero overflow horizontal.
+- Canvas útil en 1194 x 834: 828 x 414 px.
+- Selección M2 y análisis resuelto conservados durante todos los cambios de viewport.
+- Drawer de inspector con fondo inert, cierre correcto y retorno de foco.
+- `npm.cmd run verify`: 40 archivos, 229 pruebas y build aprobados.
+
+### No cambiado
+
+- Estado matemático, cálculo, resultados, selección y persistencia.
+
 ## 2026-07-17 - Fase 2, Slice 2.2
 
 ### Cambiado

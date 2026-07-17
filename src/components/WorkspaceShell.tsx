@@ -42,7 +42,7 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
       <ToolBar />
       <main className="center-stage">
         <StructuralCanvas onRequestInspector={() => {
-          if (window.matchMedia('(max-width: 960px)').matches) openMobileInspector();
+          if (window.matchMedia('(max-width: 1023px)').matches) openMobileInspector();
         }} />
         <ResultsPanel />
       </main>

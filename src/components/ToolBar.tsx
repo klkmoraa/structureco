@@ -161,7 +161,7 @@ export const ToolBar = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mobileMenu]);
   useEffect(() => {
-    const query = window.matchMedia?.('(max-width: 960px)');
+    const query = window.matchMedia?.('(max-width: 1023px)');
     if (!query) return undefined;
     const onChange = (event: MediaQueryListEvent) => {
       if (!event.matches) setMobileMenu(null);
