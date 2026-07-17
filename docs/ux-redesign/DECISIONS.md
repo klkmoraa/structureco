@@ -86,3 +86,10 @@
 - Decisión: separar paleta primitiva, roles semánticos, roles técnicos, escalas de layout/control y aliases de migración en `src/styles/tokens.css`.
 - Motivo: impedir que marca, selección, éxito, error y magnitudes estructurales compartan color por accidente.
 - Control: no se añadieron fuentes remotas ni dependencias; la pila local/sistema permanece.
+
+## D-014 - Estado global derivado
+
+- Estado: aceptada y ejecutada en Slice 2.5.
+- Decisión: mostrar seis estados visuales a partir de `analysis`, `isAnalyzing`, severidades existentes y una memoria transitoria por `project.id`.
+- Motivo: comunicar disponibilidad y vigencia del resultado sin duplicar ni reinterpretar el cálculo.
+- Control: el componente no llama al solver, no persiste estado y sólo dirige warning/error al tab Avisos existente.

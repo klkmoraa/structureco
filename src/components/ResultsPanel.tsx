@@ -71,8 +71,13 @@ export const ResultsPanel = () => {
   }, [analysis, isMobile]);
   useEffect(() => {
     const collapse = () => setMobileExpanded(false);
+    const expand = () => setMobileExpanded(true);
     window.addEventListener('structureco:collapse-mobile-results', collapse);
-    return () => window.removeEventListener('structureco:collapse-mobile-results', collapse);
+    window.addEventListener('structureco:expand-mobile-results', expand);
+    return () => {
+      window.removeEventListener('structureco:collapse-mobile-results', collapse);
+      window.removeEventListener('structureco:expand-mobile-results', expand);
+    };
   }, []);
   useEffect(() => () => {
     if (resizeFrameRef.current !== null) window.cancelAnimationFrame(resizeFrameRef.current);

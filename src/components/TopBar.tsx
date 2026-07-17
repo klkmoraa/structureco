@@ -21,6 +21,7 @@ import { createBlankProject, exampleProjects } from '../data/defaultProject';
 import { useI18n } from '../i18n/useI18n';
 import { useProject } from '../store/ProjectContext';
 import { exportProjectJson } from '../utils/export';
+import { AnalysisStatus } from './AnalysisStatus';
 import { BrandMark } from './BrandMark';
 
 const PortableImportCenter = lazy(() => import('./PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
@@ -40,6 +41,7 @@ export const TopBar = ({ onOpenHome }: { onOpenHome?: () => void }) => {
     updateProjectView,
     replaceProject,
     setTheme,
+    setResultTab,
     undo,
     redo,
     analyze,
@@ -264,6 +266,15 @@ export const TopBar = ({ onOpenHome }: { onOpenHome?: () => void }) => {
           <button className="icon-button" onClick={undo} disabled={!canUndo} title={t('history.undo')} aria-label={t('history.undo')}><Undo2 size={19} /></button>
           <button className="icon-button" onClick={redo} disabled={!canRedo} title={t('history.redo')} aria-label={t('history.redo')}><Redo2 size={19} /></button>
         </div>
+        <AnalysisStatus
+          projectId={project.id}
+          analysis={analysis}
+          isAnalyzing={isAnalyzing}
+          onOpenIssues={() => {
+            setResultTab('issues');
+            window.dispatchEvent(new CustomEvent('structureco:expand-mobile-results'));
+          }}
+        />
         <div className="export-wrap">
           <button ref={exportMenuButtonRef} className="icon-button" title={t('export.label')} aria-label={t('export.label')} aria-expanded={showExportMenu} aria-haspopup="menu" onClick={toggleExportMenu}><Download size={19} /></button>
           {showExportMenu ? (

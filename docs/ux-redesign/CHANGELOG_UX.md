@@ -1,5 +1,24 @@
 # Changelog UX/UI
 
+## 2026-07-17 - Fase 2, Slice 2.5
+
+### Añadido
+
+- Indicador global del análisis con estados listo, calculando, actualizado, desactualizado, advertencia y error.
+- Acceso directo desde warning/error al tab Avisos, incluida expansión del panel móvil.
+- Traducciones ES/EN y pruebas unitarias de precedencia, ciclo por proyecto y acción accesible.
+
+### Validado
+
+- Estados reales listo, actualizado, desactualizado y error en Browser.
+- Nueve viewports de 390 a 1536 px sin intersecciones, elementos fuera del header u overflow horizontal.
+- Targets 44 x 44 px en 390, 430 y 834 px.
+- `npm.cmd run verify`: 41 archivos, 233 pruebas y build aprobados.
+
+### No cambiado
+
+- Solver, workers, fórmulas, contratos, signos, unidades, precisión, persistencia o resultados.
+
 ## 2026-07-17 - Fase 2, Slice 2.4
 
 ### Cambiado
