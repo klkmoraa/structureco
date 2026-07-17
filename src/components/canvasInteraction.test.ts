@@ -3,6 +3,7 @@ import {
   cameraForPinch,
   cameraForViewportResize,
   cameraFromAnchor,
+  canvasPointerProfile,
   dragThreshold,
   midpoint,
   movedPastThreshold,
@@ -73,6 +74,13 @@ describe('canvas interaction geometry', () => {
     expect(pendingDragIntent('pen', 'select', 'node')).toBe('node-drag');
     expect(pendingDragIntent('mouse', 'select', 'member')).toBe('pan');
     expect(pendingDragIntent('mouse', 'node', 'node')).toBe('pan');
+  });
+
+  it('defines explicit mouse, touch, and stylus parity without claiming hardware validation', () => {
+    expect(canvasPointerProfile('mouse')).toEqual({ kind: 'mouse', dragThreshold: 3, canDragNode: true, usesLongPress: false, showsCoordinates: true, minimumHitTarget: 24 });
+    expect(canvasPointerProfile('touch')).toEqual({ kind: 'touch', dragThreshold: 9, canDragNode: false, usesLongPress: true, showsCoordinates: false, minimumHitTarget: 44 });
+    expect(canvasPointerProfile('pen')).toEqual({ kind: 'pen', dragThreshold: 5, canDragNode: true, usesLongPress: false, showsCoordinates: true, minimumHitTarget: 32 });
+    expect(canvasPointerProfile('')).toMatchObject({ kind: 'mouse', canDragNode: true });
   });
 
   it('reserves long-press for touch selection instead of intercepting creation tools', () => {

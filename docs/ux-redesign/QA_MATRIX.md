@@ -66,6 +66,19 @@ Hallazgos visuales de entrada: ToolRail plano, agrupación dependiente de separa
 | Temas | Browser 430 Light/Dark inspeccionado; token #2867e8 / #78a8ff. |
 | Regresión | `npm.cmd run verify`: 47 archivos, 256 pruebas, build PASS. |
 
+### Gate 3.6 - gestos, responsive y accesibilidad
+
+| Control | Resultado |
+| --- | --- |
+| Mouse | Pan, rueda anclada, drag de nodo y selección por caja conservados. |
+| Touch | Pan de un dedo, pinch, long-press y hit areas de 44 px preservados. |
+| Pen | Perfil Pointer Events: drag preciso, coordenadas, umbral 5 px; sin afirmación de hardware. |
+| Teclado | Enter/Espacio, Escape y shortcut H cubiertos por test; H ejercitado en Browser. |
+| ARIA/foco | Descripción y shortcuts expuestos; foco azul con redundancia geométrica. |
+| Preferencias | Browser reportó reduced motion activo y transición efectiva de 0.001 ms. |
+| Responsive | 834×1194 sin overflow; dock visible con targets de 135×54 px en el entorno inspeccionado. |
+| Regresión | `npm.cmd run verify`: 47 archivos, 258 pruebas, build PASS. |
+
 ## Cierre de Fase 2 - 2026-07-17
 
 | Capa | Cobertura | Resultado final |

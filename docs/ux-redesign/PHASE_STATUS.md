@@ -74,3 +74,5 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 - [x] Gate 3.4: 46 archivos, 252 pruebas; layout denso y Browser 1440/430 aprobados.
 - [x] Slice 3.5: selección azul por objeto y envolvente de multiselección.
 - [x] Gate 3.5: 47 archivos, 256 pruebas; carga/miembro/nodo/apoyo/multi Light y multi Dark aprobados.
+- [x] Slice 3.6: paridad mouse/touch/pen, teclado, foco, targets y reduced motion.
+- [x] Gate 3.6: 47 archivos, 258 pruebas; Browser 834 sin overflow y shortcut H aprobado.

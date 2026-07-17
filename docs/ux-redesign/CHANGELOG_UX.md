@@ -1,5 +1,29 @@
 # Changelog UX/UI
 
+## 2026-07-17 - Fase 3, Slice 3.6
+
+### Añadido
+
+- Perfil explícito de entrada para mouse, touch y pen con umbral, arrastre, long-press, coordenadas y target mínimo.
+- Descripción accesible del canvas, `aria-keyshortcuts` globales y Enter/Espacio para cada objeto estructural.
+- Foco geométrico azul para canvas, miembros, nodos y cargas; utilidad `.sr-only` faltante.
+
+### Ajustado
+
+- Targets del dock de tableta elevados a 44×44 px.
+- Hit area de miembros elevada a 44 px bajo `pointer: coarse`; nodos y cargas mantienen piso táctil equivalente.
+- Las preferencias `prefers-reduced-motion` eliminan transiciones perceptibles también en el flujo actualizado.
+
+### Validado
+
+- 47 archivos y 258 pruebas aprobadas, incluyendo shortcut H, selección por Enter, Escape y perfil pen.
+- Browser 834×1194: cero overflow, targets visibles >=54 px en el dock, atajos ARIA y reduced motion efectivo a 0.001 ms.
+- Shortcut H ejercitado realmente en Browser; el modo cambió a Desplazar.
+
+### Limitación declarada
+
+- Pen se valida mediante Pointer Events y pruebas deterministas; no se afirma cobertura con stylus físico.
+
 ## 2026-07-17 - Fase 3, Slice 3.5
 
 ### Cambiado

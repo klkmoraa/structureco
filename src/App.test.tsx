@@ -208,6 +208,27 @@ describe('structureCo app shell', () => {
     await waitFor(() => expect(container.querySelectorAll('.member-object').length).toBe(initial + 2));
   });
 
+  it('exposes canvas shortcuts and selects structural objects from the keyboard', async () => {
+    const user = userEvent.setup();
+    const { container } = await renderExampleApp(user);
+    const canvas = screen.getByRole('application', { name: /área de trabajo estructural/i });
+    const member = screen.getByRole('button', { name: /miembro M1, de N1 a N3/i });
+
+    expect(canvas.getAttribute('data-pointer-support')).toBe('mouse touch pen');
+    expect(canvas.getAttribute('aria-keyshortcuts')).toContain('Delete');
+    expect(member.getAttribute('aria-keyshortcuts')).toBe('Enter Space');
+
+    fireEvent.keyDown(member, { key: 'Enter', code: 'Enter' });
+    expect(member.getAttribute('aria-pressed')).toBe('true');
+    expect(container.querySelector('[data-structure-id="M1"] .member-selection-halo')).toBeTruthy();
+
+    fireEvent.keyDown(window, { key: 'Escape', code: 'Escape' });
+    expect(member.getAttribute('aria-pressed')).toBe('false');
+
+    fireEvent.keyDown(canvas, { key: 'h', code: 'KeyH' });
+    expect(screen.getByRole('button', { name: /desplazar \(H\)/i }).getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('renames a project without invalidating completed analysis', async () => {
     const user = userEvent.setup();
     await renderExampleApp(user);

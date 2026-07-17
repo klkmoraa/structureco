@@ -24,6 +24,7 @@ button, input, select, textarea { font: inherit; color: inherit; font-size:var(-
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .42; }
 :where(button, input, select, textarea, summary):focus-visible { outline: 3px solid color-mix(in srgb, var(--focus) 62%, transparent); outline-offset: 2px; }
+.sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
 
 .app-shell { height: 100%; height: 100dvh; background: var(--app-bg); color: var(--text); display: flex; flex-direction: column; }
 .welcome-screen { height:100%; min-height:0; overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:auto; -webkit-overflow-scrolling:touch; touch-action:pan-y; color:var(--text); background-color:var(--app-bg); background-image:linear-gradient(var(--border-soft) 1px,transparent 1px),linear-gradient(90deg,var(--border-soft) 1px,transparent 1px); background-size:76px 76px; display:flex; flex-direction:column; }
@@ -127,7 +128,7 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .canvas-host { min-height: 180px; flex: 1 1 auto; position: relative; overflow: hidden; background: var(--canvas-bg); }
 .structural-canvas { width: 100%; height: 100%; display: block; touch-action: none; cursor: default; }
 .structural-canvas { user-select:none; -webkit-user-select:none; overscroll-behavior:contain; }
-.structural-canvas:focus-visible { outline:3px solid color-mix(in srgb,var(--accent) 48%,transparent); outline-offset:-3px; }
+.structural-canvas:focus-visible { outline:3px solid color-mix(in srgb,var(--focus) 58%,transparent); outline-offset:-3px; }
 .structural-canvas.tool-node, .structural-canvas.tool-member, .structural-canvas.tool-support, .structural-canvas.tool-pointLoad, .structural-canvas.tool-distributedLoad, .structural-canvas.tool-moment, .structural-canvas.tool-dimension, .structural-canvas.tool-cut { cursor: crosshair; }
 .structural-canvas.tool-pan,.structural-canvas.space-pan-ready,.structural-canvas.tool-pan [data-structure-object],.structural-canvas.space-pan-ready [data-structure-object] { cursor:grab; }
 .structural-canvas.interaction-pan,.structural-canvas.interaction-pinch,.structural-canvas.interaction-pan [data-structure-object],.structural-canvas.interaction-pinch [data-structure-object] { cursor:grabbing; }
@@ -137,6 +138,8 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .member-object { cursor: pointer; }
 .member-object:hover:not(.selected) .member-line { stroke: var(--accent); }
 .member-object.selected .member-line { stroke: var(--member); stroke-width: 3.6; }
+.member-object:focus-visible { outline:none; }
+.member-object:focus-visible .member-line { stroke:var(--focus); stroke-width:5; filter:drop-shadow(0 0 4px color-mix(in srgb,var(--focus) 58%,transparent)); }
 .member-selection-halo { stroke:var(--selection); stroke-width:10; stroke-linecap:round; opacity:.34; pointer-events:none; vector-effect:non-scaling-stroke; }
 .member-object.learning-highlight .member-line { stroke: var(--axis); stroke-width: 5; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--axis) 65%, transparent)); }
 .rigid-zone-layer line { stroke: var(--axis); stroke-width: 7; stroke-linecap: butt; pointer-events: none; }
@@ -193,6 +196,8 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .node-object .internal-hinge-symbol { fill: var(--canvas-bg); stroke: var(--axis); stroke-width: 2; stroke-dasharray: 2 2; pointer-events: none; }
 .node-object:hover:not(.selected) .node-dot { stroke: var(--accent); stroke-width: 3; r: 8px; }
 .node-object.selected .node-dot { fill:var(--canvas-bg); stroke:var(--selection); stroke-width:3; r:8px; }
+.node-object:focus-visible { outline:none; }
+.node-object:focus-visible .node-dot { stroke:var(--focus); stroke-width:4; r:9px; filter:drop-shadow(0 0 4px color-mix(in srgb,var(--focus) 58%,transparent)); }
 .node-object.learning-highlight .node-dot { fill: var(--axis); stroke: var(--canvas-bg); stroke-width: 3; r: 10px; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--axis) 70%, transparent)); }
 .node-object.member-start .node-dot { fill: var(--accent-soft); stroke: var(--accent); r: 10px; }
 .node-object text { font-size: 12px; font-weight: 600; fill: var(--text); paint-order: stroke; stroke: var(--canvas-bg); stroke-width: 4px; }
@@ -434,7 +439,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .analyze-button span { display:none; }
   .workspace { grid-template-columns: 1fr; grid-template-rows:minmax(0,1fr) auto; }
   .toolbar { position:absolute; z-index:25; left:10px; right:10px; bottom:calc(30px + env(safe-area-inset-bottom)); height:52px; border:1px solid var(--border); border-radius:13px; box-shadow:var(--shadow); flex-direction:row; gap:2px; padding:4px; overflow-x:auto; overflow-y:hidden; background:color-mix(in srgb,var(--surface) 92%,transparent); backdrop-filter:blur(16px); }
-  .tool-button { min-width:44px; width:44px; height:42px; min-height:42px; }
+  .tool-button { min-width:44px; width:44px; height:44px; min-height:44px; }
   .toolbar .tool-button svg { width:19px; height:19px; }
   .toolbar-spacer,.selection-tip { display:none; }
   .center-stage { grid-column:1; grid-row:1 / span 2; }
@@ -525,7 +530,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .number-control,.select-field select { min-height:var(--sc-control-height-touch); }
   .desktop-gesture-hint { display:none; }
   .touch-gesture-hint { display:inline; }
-  .member-hit { stroke-width:30; }
+  .member-hit { stroke-width:44; }
   .load-hit { stroke-width:44!important; }
   .node-object .node-hit { r:22px; }
   .canvas-controls button { width:44px; height:44px; }

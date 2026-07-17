@@ -81,6 +81,7 @@ El documento `structureCo_Fase_3_Instrucciones_ULTRA_Detalladas_para_Codex.pdf` 
 - Mouse, rueda, teclado, touch, pinch y pointer pen conservados.
 - Foco, aria, targets de 44 px, reduced motion y zoom 200 %.
 - Gate: tests de interacción y QA touch/WebKit.
+- Estado: **implementación cerrada**; QA integral WebKit/zoom 200 % se repite en Slice 3.7.
 
 ### 3.7 - QA integral
 

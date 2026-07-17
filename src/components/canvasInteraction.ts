@@ -19,6 +19,15 @@ export interface ViewportSize {
   height: number;
 }
 
+export interface CanvasPointerProfile {
+  kind: 'mouse' | 'touch' | 'pen';
+  dragThreshold: number;
+  canDragNode: boolean;
+  usesLongPress: boolean;
+  showsCoordinates: boolean;
+  minimumHitTarget: number;
+}
+
 export const MIN_CAMERA_SCALE = 15;
 export const MAX_CAMERA_SCALE = 260;
 
@@ -75,6 +84,12 @@ export const cameraForViewportResize = (
   y: camera.y + (current.height - previous.height) / 2,
 });
 
+export const canvasPointerProfile = (pointerType: string): CanvasPointerProfile => {
+  if (pointerType === 'touch') return { kind: 'touch', dragThreshold: 9, canDragNode: false, usesLongPress: true, showsCoordinates: false, minimumHitTarget: 44 };
+  if (pointerType === 'pen') return { kind: 'pen', dragThreshold: 5, canDragNode: true, usesLongPress: false, showsCoordinates: true, minimumHitTarget: 32 };
+  return { kind: 'mouse', dragThreshold: 3, canDragNode: true, usesLongPress: false, showsCoordinates: true, minimumHitTarget: 24 };
+};
+
 /**
  * Touch selection reserves one-finger drags for panning. Moving model geometry
  * on a touch screen must happen through an explicit editing control.
@@ -84,14 +99,14 @@ export const pendingDragIntent = (
   tool: string,
   targetKind: string,
 ): 'pan' | 'node-drag' =>
-  pointerType === 'touch' || tool !== 'select' || targetKind !== 'node' ? 'pan' : 'node-drag';
+  !canvasPointerProfile(pointerType).canDragNode || tool !== 'select' || targetKind !== 'node' ? 'pan' : 'node-drag';
 
 /** Long-press opens details only while selecting; creation tools own the gesture. */
 export const shouldArmLongPress = (
   pointerType: string,
   tool: string,
   targetKind: string,
-): boolean => pointerType === 'touch' && tool === 'select' && targetKind !== 'background';
+): boolean => canvasPointerProfile(pointerType).usesLongPress && tool === 'select' && targetKind !== 'background';
 
 export const midpoint = (first: ScreenPoint, second: ScreenPoint): ScreenPoint => ({
   x: (first.x + second.x) / 2,
@@ -121,9 +136,7 @@ export const cameraForPinch = (
 };
 
 export const dragThreshold = (pointerType: string): number => {
-  if (pointerType === 'touch') return 9;
-  if (pointerType === 'pen') return 5;
-  return 3;
+  return canvasPointerProfile(pointerType).dragThreshold;
 };
 
 export const movedPastThreshold = (

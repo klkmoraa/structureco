@@ -75,6 +75,7 @@ const ToolButton = ({
     role={menuItem ? 'menuitemradio' : undefined}
     aria-checked={menuItem ? active : undefined}
     aria-pressed={menuItem ? undefined : active}
+    aria-keyshortcuts={definition.activationKey?.toUpperCase() ?? 'Delete Backspace'}
     data-tool-id={id}
     data-tool-group={definition.group}
   >
@@ -103,6 +104,7 @@ const PaletteToolButton = ({
     aria-label={`${label}. ${detail}`}
     role="menuitemradio"
     aria-checked={active}
+    aria-keyshortcuts={definition.activationKey?.toUpperCase() ?? 'Delete Backspace'}
     data-tool-id={definition.id}
     data-tool-group={definition.group}
   >
