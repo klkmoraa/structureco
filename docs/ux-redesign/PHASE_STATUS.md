@@ -8,7 +8,7 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 | --- | --- | --- | --- |
 | Fase 0 - gobierno | No acreditada en el repositorio | No se encontraron artefactos formales previos de gobierno visual. | Riesgo heredado registrado. |
 | Fase 1 - auditoría y línea base | **APROBADA** | Inventario, auditoría renderizada, recorridos, línea base, backlog, decisiones, reporte PDF y 12 capturas aceptados como referencia oficial. | Aprobada por el propietario mediante el documento rector de Fase 2, fechado 2026-07-17. |
-| Fase 2 - fundaciones UI y responsive | **EN EJECUCIÓN - Slice 2.6** | Gates 2.1-2.5 aprobados; shell, TopBar y estado global estables. | Consolidar CSS tocado y cerrar QA; no avanzar a Fase 3. |
+| Fase 2 - fundaciones UI y responsive | **EN EJECUCIÓN - Slice 2.7** | Gates 2.1-2.6 aprobados; implementación visual cerrada. | Ejecutar QA integral, evidencias, informe y entrega; no avanzar a Fase 3. |
 | Fase 3 y posteriores | No iniciadas | Sin autorización. | No iniciar automáticamente. |
 
 ## Cierre heredado de Fase 1
@@ -40,7 +40,9 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 - [x] Gate 2.4: nueve viewports, ES/EN y nombre largo sin intersecciones; teclado/touch/foco aprobados.
 - [x] Slice 2.5: estado global derivado, accesible y accionable para advertencia/error.
 - [x] Gate 2.5: seis estados cubiertos, navegación móvil a Avisos y nueve viewports sin colisiones.
+- [x] Slice 2.6: CSS tocado consolidado y selectores obsoletos retirados.
+- [x] Gate 2.6: lint limpio, build, Light/Dark y nueve viewports aprobados.
 
 ## Estado de la compuerta
 
-**SLICE 2.5 APROBADO.** La ejecución continúa en Slice 2.6 sobre la rama dedicada; el motor matemático permanece intacto.
+**SLICE 2.6 APROBADO.** La ejecución continúa en Slice 2.7 (QA y evidencias) sobre la rama dedicada; el motor matemático permanece intacto.

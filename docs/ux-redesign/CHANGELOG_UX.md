@@ -1,5 +1,23 @@
 # Changelog UX/UI
 
+## 2026-07-17 - Fase 2, Slice 2.6
+
+### Consolidado
+
+- Declaraciones visuales de TopBar y controles reunificadas en su bloque principal.
+- Selectores huérfanos del antiguo switch de tema eliminados.
+- Popovers alineados con tokens de stacking, radio, spacing, borde y sombra.
+
+### Validado
+
+- Lint sin warnings y build aprobado.
+- Tokens Light/Dark comprobados en Browser.
+- Matriz de nueve viewports repetida sin intersecciones, salidas del header u overflow horizontal.
+
+### No cambiado
+
+- Ningún archivo de motor, dominio, datos, persistencia, importación/exportación o fixtures.
+
 ## 2026-07-17 - Fase 2, Slice 2.5
 
 ### Añadido
