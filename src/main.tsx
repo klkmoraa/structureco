@@ -1,9 +1,12 @@
-import { StrictMode } from 'react';
+import { StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+const root = createRoot(document.getElementById('root')!);
+const render = (content: ReactNode) => root.render(<StrictMode>{content}</StrictMode>);
+
+if (import.meta.env.DEV && window.location.pathname === '/__components') {
+  void import('./ui/ComponentLab').then(({ ComponentLab }) => render(<ComponentLab />));
+} else {
+  render(<App />);
+}
