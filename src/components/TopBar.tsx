@@ -8,9 +8,12 @@ import {
   FileText,
   FilePlus2,
   FolderOpen,
-  LoaderCircle,
+  Maximize2,
+  Minimize2,
   Moon,
   MoreHorizontal,
+  PanelRightClose,
+  PanelRightOpen,
   Play,
   Redo2,
   Save,
@@ -23,10 +26,18 @@ import { useProject } from '../store/ProjectContext';
 import { exportProjectJson } from '../utils/export';
 import { AnalysisStatus } from './AnalysisStatus';
 import { BrandMark } from './BrandMark';
+import { Button, IconButton } from '../ui/controls';
 
 const PortableImportCenter = lazy(() => import('./PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
 
-export const TopBar = ({ onOpenHome }: { onOpenHome?: () => void }) => {
+export interface TopBarLayoutActions {
+  inspectorCollapsed: boolean;
+  fullCanvas: boolean;
+  onToggleInspector: () => void;
+  onToggleFullCanvas: () => void;
+}
+
+export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void; layoutActions?: TopBarLayoutActions }) => {
   const {
     project,
     analysis,
@@ -263,8 +274,8 @@ export const TopBar = ({ onOpenHome }: { onOpenHome?: () => void }) => {
 
       <div className="top-actions topbar-zone topbar-actions-zone" data-topbar-zone="actions">
         <div className="history-controls" aria-label={t('history.label')}>
-          <button className="icon-button" onClick={undo} disabled={!canUndo} title={t('history.undo')} aria-label={t('history.undo')}><Undo2 size={19} /></button>
-          <button className="icon-button" onClick={redo} disabled={!canRedo} title={t('history.redo')} aria-label={t('history.redo')}><Redo2 size={19} /></button>
+          <IconButton className="icon-button" label={t('history.undo')} onClick={undo} disabled={!canUndo} title={t('history.undo')}><Undo2 size={19} /></IconButton>
+          <IconButton className="icon-button" label={t('history.redo')} onClick={redo} disabled={!canRedo} title={t('history.redo')}><Redo2 size={19} /></IconButton>
         </div>
         <AnalysisStatus
           projectId={project.id}
@@ -276,7 +287,7 @@ export const TopBar = ({ onOpenHome }: { onOpenHome?: () => void }) => {
           }}
         />
         <div className="export-wrap">
-          <button ref={exportMenuButtonRef} className="icon-button" title={t('export.label')} aria-label={t('export.label')} aria-expanded={showExportMenu} aria-haspopup="menu" onClick={toggleExportMenu}><Download size={19} /></button>
+          <IconButton ref={exportMenuButtonRef} className="icon-button" label={t('export.label')} title={t('export.label')} aria-expanded={showExportMenu} aria-haspopup="menu" onClick={toggleExportMenu}><Download size={19} /></IconButton>
           {showExportMenu ? (
             <div className="popover export-menu" role="menu" aria-label={t('export.label')} onKeyDown={onMenuKeyDown}>
               <button role="menuitem" onClick={() => { exportProjectJson(project); setShowExportMenu(false); }}><Save size={16} /> {t('export.projectJson')}</button>
@@ -289,7 +300,7 @@ export const TopBar = ({ onOpenHome }: { onOpenHome?: () => void }) => {
           ) : null}
         </div>
         <div className="mobile-actions-wrap utility-actions-wrap">
-          <button ref={mobileMenuButtonRef} className="icon-button mobile-more-button utility-more-button" aria-label={t('actions.more')} aria-expanded={showMobileMenu} aria-haspopup="dialog" onClick={toggleMobileMenu}><MoreHorizontal size={20} /></button>
+          <IconButton ref={mobileMenuButtonRef} className="icon-button mobile-more-button utility-more-button" label={t('actions.more')} aria-expanded={showMobileMenu} aria-haspopup="dialog" onClick={toggleMobileMenu}><MoreHorizontal size={20} /></IconButton>
           {showMobileMenu ? (
             <div className="popover mobile-actions-menu utility-actions-menu" role="dialog" aria-label={t('actions.more')}>
               <div className="mobile-history-actions overflow-history" role="group" aria-label={t('history.label')}>
@@ -301,6 +312,16 @@ export const TopBar = ({ onOpenHome }: { onOpenHome?: () => void }) => {
               <label className="mobile-menu-field overflow-units"><span>{t('units.label')}</span><select value={project.settings.units} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units } }))}><option value="kN-m">kN · m</option><option value="N-mm">N · mm</option><option value="kgf-m">kgf · m</option><option value="kip-ft">kip · ft</option></select></label>
               <label className="mobile-menu-field"><span>{t('language.label')}</span><select value={language} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, language: event.target.value as 'es' | 'en' } }))}><option value="es">{t('language.es')}</option><option value="en">{t('language.en')}</option></select></label>
               <button onClick={() => { setTheme(theme === 'light' ? 'dark' : 'light'); setShowMobileMenu(false); }}>{theme === 'light' ? <Moon size={17} /> : <Sun size={17} />} {theme === 'light' ? t('theme.dark') : t('theme.light')}</button>
+              {layoutActions ? <div className="overflow-layout-actions" role="group" aria-label={t('shell.viewLayout')}>
+                <button onClick={() => { layoutActions.onToggleInspector(); setShowMobileMenu(false); }}>
+                  {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? <PanelRightOpen size={17} /> : <PanelRightClose size={17} />}
+                  {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? t('shell.showInspector') : t('shell.hideInspector')}
+                </button>
+                <button onClick={() => { layoutActions.onToggleFullCanvas(); setShowMobileMenu(false); }}>
+                  {layoutActions.fullCanvas ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
+                  {layoutActions.fullCanvas ? t('shell.exitFullCanvas') : t('shell.fullCanvas')}
+                </button>
+              </div> : null}
               <button onClick={() => { exportProjectJson(project); setShowMobileMenu(false); }}><Save size={16} /> {t('export.json')}</button>
               <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
               <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
@@ -312,9 +333,16 @@ export const TopBar = ({ onOpenHome }: { onOpenHome?: () => void }) => {
             </div>
           ) : null}
         </div>
-        <button className={`analyze-button${isAnalyzing ? ' analyzing' : ''}`} onClick={analyze} disabled={isAnalyzing} aria-busy={isAnalyzing} aria-label={isAnalyzing ? t('analysis.runningLabel') : t('analysis.run')}>
-          {isAnalyzing ? <LoaderCircle className="spin" size={17} /> : <Play size={17} fill="currentColor" />} <span>{isAnalyzing ? t('analysis.running') : t('analysis.run')}</span>
-        </button>
+        <Button
+          className={`analyze-button${isAnalyzing ? ' analyzing' : ''}`}
+          variant="primary"
+          size="touch"
+          onClick={analyze}
+          loading={isAnalyzing}
+          loadingLabel={t('analysis.runningLabel')}
+          leadingIcon={<Play size={17} fill="currentColor" />}
+          aria-label={isAnalyzing ? t('analysis.runningLabel') : t('analysis.run')}
+        >{isAnalyzing ? t('analysis.running') : t('analysis.run')}</Button>
       </div>
       {exportError && showExportMenu ? <div className="portable-export-error desktop" role="alert">{exportError}</div> : null}
       {importCenterOpen ? <Suspense fallback={null}><PortableImportCenter

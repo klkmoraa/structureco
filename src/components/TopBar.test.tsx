@@ -94,4 +94,24 @@ describe('TopBar information architecture', () => {
     await waitFor(() => expect(document.activeElement).toBe(moreButton));
     expect(moreButton.getAttribute('aria-expanded')).toBe('false');
   });
+
+  it('keeps visual layout commands inside the grouped secondary menu', async () => {
+    const user = userEvent.setup();
+    const onToggleInspector = vi.fn();
+    const onToggleFullCanvas = vi.fn();
+    render(<ProjectProvider><TopBar layoutActions={{
+      inspectorCollapsed: false,
+      fullCanvas: false,
+      onToggleInspector,
+      onToggleFullCanvas,
+    }} /></ProjectProvider>);
+
+    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
+    await user.click(screen.getByRole('button', { name: 'Ocultar inspector' }));
+    expect(onToggleInspector).toHaveBeenCalledOnce();
+
+    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
+    await user.click(screen.getByRole('button', { name: 'Mesa de trabajo completa' }));
+    expect(onToggleFullCanvas).toHaveBeenCalledOnce();
+  });
 });
