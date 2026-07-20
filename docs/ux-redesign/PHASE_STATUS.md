@@ -52,7 +52,7 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 
 ## Estado de la compuerta
 
-**FASE 3 APROBADA TÉCNICAMENTE; ALINEACIÓN CROMÁTICA FINAL EJECUTADA.** Los gates 3.0-3.8 y la correspondencia herramienta/canvas están aprobados. La Fase 4 no fue iniciada.
+**FASE 3 COMPLETADA Y LISTA PARA REVISIÓN.** Los gates 3.0-3.8 están aprobados; el informe final fue generado, rasterizado e inspeccionado. La Fase 4 no fue iniciada.
 
 ## Estado del Slice 3.0
 
@@ -83,8 +83,3 @@ Alcance autorizado: presentación, interacción y accesibilidad; el motor matem�
 - [x] Informe de 58 páginas con 10 referencias, 12 capturas before y 19 after.
 - [x] PDF final: 9,908,217 bytes; SHA-256 `9fa863032d95bd1498e7558ca4da97c4b5902fa9469086c60f4935f9dfd42bb9`.
 - [x] Fase 4 no iniciada.
-- [x] Corrección obligatoria: colores de herramientas alineados con la mesa de trabajo sin alterar la organización aprobada.
-- [x] Rail expandido/compacto, ToolDock, sheets y selector secundario coinciden con el canvas en Light/Dark.
-- [x] Hover, active, focus y disabled conservan el color propio del icono; selección/foco mantienen azul exclusivo.
-- [x] Handlers, IDs, atajos, agrupación, capas, selección, persistencia, scripts de QA y motor preservados.
-- [x] Regresión posterior a la corrección: 258/258, Fase 3 125/125, Fase 2 117/117, Chromium 63/63 y WebKit PASS.

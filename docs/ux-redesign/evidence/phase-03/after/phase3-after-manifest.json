@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-20T03:10:23.198Z",
+  "generatedAt": "2026-07-17T21:31:56.109Z",
   "screenshots": [
     {
       "file": "phase3_after_390x844_light_complete_ready.png",
@@ -13,8 +13,8 @@
         "analysis": "ready",
         "selection": "none"
       },
-      "bytes": 35263,
-      "sha256": "6592fd67e0375dedcc3685bc3004f74807086e3a431c17e4cac926e5dae2a736",
+      "bytes": 36592,
+      "sha256": "cd4357e2e78d24f2c12ef04bc78953170fa5b2ea1eae161f0912c4eac550855a",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_390x844_light_complete_ready.png"
     },
     {
@@ -29,8 +29,8 @@
         "analysis": "ready",
         "selection": "none"
       },
-      "bytes": 39673,
-      "sha256": "709923d50d1f9342be29e18459288a6a442eb67e7f7bffb830913fb3fb82066b",
+      "bytes": 39636,
+      "sha256": "7772a6ccb1475d93a578e5442e0d46a95314c3e8670fd1d5ef27bf356ba88aa0",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_430x932_light_complete_ready.png"
     },
     {
@@ -45,8 +45,8 @@
         "analysis": "ready",
         "selection": "none"
       },
-      "bytes": 47874,
-      "sha256": "e3a20eaa44d2635fb6da65309c66ef99711d67b2ae09a7c1a1dc3647d9ebe014",
+      "bytes": 48139,
+      "sha256": "16665d9ec28719fb1974d16e4e1ef9b71f45138481887971f482dd5185ed5b3a",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_834x1194_light_complete_ready.png"
     },
     {
@@ -62,7 +62,7 @@
         "selection": "none"
       },
       "bytes": 50775,
-      "sha256": "2f5fb205634b8a77b008253f613f129091128b3342eb4299093c61dd6acaacb3",
+      "sha256": "a195be1c5e56b755b06852819f066806ea96494bc2df1bec64fae21e51d90b5f",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1024x768_light_complete_ready.png"
     },
     {
@@ -77,8 +77,8 @@
         "analysis": "ready",
         "selection": "none"
       },
-      "bytes": 54475,
-      "sha256": "9fb2652f240a893f749cdeed685798a3959cd200a0737a05eeea9c3b5baa5804",
+      "bytes": 54476,
+      "sha256": "558649af437ab80a8320d0ee1aa5a7017134fedba0ec09a777a4c6a3609d8a03",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1194x834_light_complete_ready.png"
     },
     {
@@ -93,8 +93,8 @@
         "analysis": "ready",
         "selection": "none"
       },
-      "bytes": 52889,
-      "sha256": "ccd8c923c970079ae8fd8f734cf159b1d6a62b98aa9d1761e0acdb19d957e12c",
+      "bytes": 52906,
+      "sha256": "ad7718e5223eb310132b3caafe7a634eccd7b74a38573e8a71ca9ccb85a970e3",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1280x800_light_complete_ready.png"
     },
     {
@@ -109,8 +109,8 @@
         "analysis": "ready",
         "selection": "none"
       },
-      "bytes": 53776,
-      "sha256": "f2759ab45e8ba50a79915164cce13c335ba2f595ea5b63ac95950f391028f9b5",
+      "bytes": 53854,
+      "sha256": "2b34c2b077e354c444976a55a2f99623f76a8fea93ab86eeb461f83c78f6cc52",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1366x768_light_complete_ready.png"
     },
     {
@@ -125,8 +125,8 @@
         "analysis": "ready",
         "selection": "none"
       },
-      "bytes": 61290,
-      "sha256": "97bed775e5fb94345c6116a23dbb54919e01b2177b08767a980cce85503ddaa6",
+      "bytes": 61514,
+      "sha256": "6a10fe7045a46db45a0f3939d09056b5bc4e928a863fe6ad14f0af3a6267f20c",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1440x900_light_complete_ready.png"
     },
     {
@@ -141,8 +141,8 @@
         "analysis": "ready",
         "selection": "none"
       },
-      "bytes": 61811,
-      "sha256": "c41962e6f3a38e1d89c8293a2c952d92c757cdd92e6c32e9b4fca84739d8a371",
+      "bytes": 61943,
+      "sha256": "fdc23ee451aa678b556cad6aba21a37254f31db96bbcd59cbf36e68fc307b116",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1536x960_light_complete_ready.png"
     },
     {
@@ -157,8 +157,8 @@
         "analysis": "ready",
         "selection": "member"
       },
-      "bytes": 72434,
-      "sha256": "03f4d7a83f28b9440c194f0802cc3d024baf6f00025c702c51069c699fa1bd76",
+      "bytes": 72424,
+      "sha256": "7a6a31a07f1803ecfdc63c82eee37cac735015a189dc541b8a33d211074acb20",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1440x900_light_complete_member-selected.png"
     },
     {
@@ -173,8 +173,8 @@
         "analysis": "ready",
         "selection": "node-support"
       },
-      "bytes": 39937,
-      "sha256": "0b12bdf1670db84f1c71756073f0487a7b802bbe64bee7ea3994e9225636c2ed",
+      "bytes": 39402,
+      "sha256": "c47a0414fbfd82c0a4a933abb534314973dffaf25bda3d7c5eaed4e104cdb6a6",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_430x932_light_complete_node-support-selected.png"
     },
     {
@@ -189,8 +189,8 @@
         "analysis": "ready",
         "selection": "load"
       },
-      "bytes": 56167,
-      "sha256": "0b5de593d09b22c2e26c8c68bebe74c1879134da3e772490c7ccf233d17f1798",
+      "bytes": 55948,
+      "sha256": "e2cbf91c88cddb8e82effcb87088eba3e8519eea7aa0fcd2b5347326ac4aed68",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1366x768_dark_complete_load-selected.png"
     },
     {
@@ -205,8 +205,8 @@
         "analysis": "ready",
         "selection": "multi"
       },
-      "bytes": 56137,
-      "sha256": "488f435ff6e0de3671456af0af1503fc3c19c441439f8fc4814a17be516ccf0b",
+      "bytes": 56318,
+      "sha256": "d9274d2141460a86e8909c7606e4f06dff6eaab7532e8264fc81e08c31afd006",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1024x768_light_complete_multi-selected.png"
     },
     {
@@ -222,8 +222,8 @@
         "selection": "multi",
         "panel": "layers"
       },
-      "bytes": 72527,
-      "sha256": "f0bfb13f1d0dd4ee66e95d2144fcaef0fa0460855dddc99a9f47bdf2da6b3af8",
+      "bytes": 72027,
+      "sha256": "57dc1ae759fa34cf99662d83227384323d2593588b589297f3286f1b15b39aa0",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_834x1194_light_complete_layers-open.png"
     },
     {
@@ -238,8 +238,8 @@
         "analysis": "resolved",
         "result": "moment"
       },
-      "bytes": 97805,
-      "sha256": "9932079087276f37f030a96f45ac517f4b8c7f923c06658d93154eeae87cca91",
+      "bytes": 97597,
+      "sha256": "15830ab40504b4a6877895040cc3626038c362585e218f6c6f9c92f8f3f77dde",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1440x900_light_complete_analyzed-moment.png"
     },
     {
@@ -254,8 +254,8 @@
         "mode": "complete",
         "analysis": "resolved"
       },
-      "bytes": 88299,
-      "sha256": "ce7c5be8cf578ed85a655e461eb3f41ce8be9e36644ff3f55e391741febeb93e",
+      "bytes": 86989,
+      "sha256": "1d2e638620dfa8ab8ea9b6021f8575c18ca79a55bf13c241dc35433cfb53cc8c",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_1280x800_light_complete_english-analyzed.png"
     },
     {
@@ -270,8 +270,8 @@
         "mode": "classroom",
         "analysis": "resolved"
       },
-      "bytes": 30756,
-      "sha256": "005328d21937ccc55ad216672545a1958863d3cb48c0de2fa7b9341b65030b6c",
+      "bytes": 30474,
+      "sha256": "fc58bee9f8954d191401f64f12bebd69a1ad55923affaff80e64b8c7fecf5d3a",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_390x844_dark_aula_analyzed.png"
     },
     {
@@ -286,8 +286,8 @@
         "mode": "complete",
         "selection": "member"
       },
-      "bytes": 46874,
-      "sha256": "9b3915d7955f8c8bf06078e16f7a8ce3832208325fe10c3115a6d13a07ec9768",
+      "bytes": 46830,
+      "sha256": "cd15884b9dbc57d133ab30a6187a690d0f55ba6a29e938cc008ce45bb7d72a95",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_webkit_430x932_light_member-selected.png"
     },
     {
@@ -302,8 +302,8 @@
         "mode": "complete",
         "selection": "member"
       },
-      "bytes": 55556,
-      "sha256": "02dad50346ffb754f413d9ce19a8a2977f196382c8fa7e266041e8787f9aa5d7",
+      "bytes": 55532,
+      "sha256": "06649b941a5e413afb1ffeee5bd462c2c48173659b95e8eefc87bc904fedca29",
       "path": "docs/ux-redesign/evidence/phase-03/after/phase3_after_webkit_834x1194_light_member-selected.png"
     }
   ]
