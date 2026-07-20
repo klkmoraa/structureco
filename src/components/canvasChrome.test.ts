@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { screenToModelPoint } from './canvasInteraction';
-import { cameraToFitBounds, canvasSafeInsetsFor, canvasSafeRect } from './canvasChrome';
+import { cameraToFitBounds, canvasSafeInsetsFor, canvasSafeRect } from './canvasChromeGeometry';
 
 describe('canvas chrome safe zones', () => {
   it('reserves compact edge zones without collapsing narrow canvases', () => {

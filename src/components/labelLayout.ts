@@ -1,4 +1,4 @@
-import type { CanvasSafeRect } from './canvasChrome';
+import type { CanvasSafeRect } from './canvasChromeGeometry';
 
 export type SmartLabelPriority = 0 | 1 | 2 | 3;
 export type SmartLabelTone = 'neutral' | 'selection' | 'force' | 'shear' | 'moment' | 'dimension' | 'axial';

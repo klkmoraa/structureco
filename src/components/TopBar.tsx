@@ -12,6 +12,8 @@ import {
   Minimize2,
   Moon,
   MoreHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
   Play,
@@ -33,8 +35,10 @@ const PortableImportCenter = lazy(() => import('./PortableImportCenter').then((m
 export interface TopBarLayoutActions {
   inspectorCollapsed: boolean;
   fullCanvas: boolean;
+  toolRailCompact: boolean;
   onToggleInspector: () => void;
   onToggleFullCanvas: () => void;
+  onToggleToolRail: () => void;
 }
 
 export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void; layoutActions?: TopBarLayoutActions }) => {
@@ -320,6 +324,10 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
                 <button onClick={() => { layoutActions.onToggleFullCanvas(); setShowMobileMenu(false); }}>
                   {layoutActions.fullCanvas ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
                   {layoutActions.fullCanvas ? t('shell.exitFullCanvas') : t('shell.fullCanvas')}
+                </button>
+                <button className="overflow-toolrail-action" onClick={() => { layoutActions.onToggleToolRail(); setShowMobileMenu(false); }}>
+                  {layoutActions.toolRailCompact ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
+                  {layoutActions.toolRailCompact ? t('shell.expandToolRail') : t('shell.compactToolRail')}
                 </button>
               </div> : null}
               <button onClick={() => { exportProjectJson(project); setShowMobileMenu(false); }}><Save size={16} /> {t('export.json')}</button>

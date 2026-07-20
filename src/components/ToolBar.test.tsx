@@ -28,6 +28,19 @@ beforeEach(() => localStorage.clear());
 afterEach(() => cleanup());
 
 describe('ToolBar mobile action sheets', () => {
+  it('offers an explicit compact desktop rail without changing tool identity', () => {
+    const { container } = render(
+      <ProjectProvider>
+        <ToolBar compact />
+        <ActiveToolStatus />
+      </ProjectProvider>,
+    );
+    expect(container.querySelector('[data-tool-rail="compact"]')).toBeTruthy();
+    expect(container.querySelectorAll('.desktop-tool-list .sc-tool-button.is-compact')).toHaveLength(12);
+    expect(container.querySelector('[data-tool-id="pointLoad"]')?.getAttribute('aria-keyshortcuts')).toBe('P');
+    expect(container.querySelector('[data-tool-id="delete"]')?.getAttribute('aria-keyshortcuts')).toBe('Delete Backspace');
+  });
+
   it('groups every desktop tool by intention without losing actions', () => {
     renderToolBar();
 

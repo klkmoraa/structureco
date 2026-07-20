@@ -21,6 +21,7 @@ import { createPortal } from 'react-dom';
 import { useI18n } from '../i18n/useI18n';
 import { useProject } from '../store/ProjectContext';
 import type { Tool } from '../types';
+import { ToolButton as EditorToolButton, type ToolTone } from '../ui/editor';
 import { STRUCTURAL_TOOL_IDS, StructuralToolIcon } from './StructuralToolIcon';
 import {
   TOOL_GROUPS,
@@ -51,10 +52,26 @@ const ToolGlyph = ({ definition, size = 22 }: { definition: ToolDefinition; size
     : <Icon size={size} strokeWidth={1.8} />;
 };
 
-const ToolButton = ({
+const toolTones: Record<Tool, ToolTone> = {
+  select: 'navigation',
+  pan: 'navigation',
+  node: 'structure',
+  member: 'structure',
+  support: 'structure',
+  pointLoad: 'load',
+  distributedLoad: 'distributed',
+  moment: 'moment',
+  dimension: 'dimension',
+  split: 'structure',
+  cut: 'cut',
+  delete: 'destructive',
+};
+
+const RegisteredToolButton = ({
   definition,
   label,
   active,
+  compact = false,
   className = '',
   onSelect,
   menuItem = false,
@@ -62,27 +79,28 @@ const ToolButton = ({
   definition: ToolDefinition;
   label: string;
   active: boolean;
+  compact?: boolean;
   className?: string;
   onSelect: (tool: Tool) => void;
   menuItem?: boolean;
 }) => {
   const { id, shortcut } = definition;
-  return <button
+  return <EditorToolButton
     className={`tool-button tool-${id}${active ? ' active' : ''}${definition.destructive ? ' destructive' : ''}${className ? ` ${className}` : ''}`}
+    label={label}
+    icon={<ToolGlyph definition={definition} />}
+    shortcut={shortcut}
+    keyShortcut={definition.activationKey?.toUpperCase() ?? 'Delete Backspace'}
+    tone={toolTones[id]}
+    active={active}
+    compact={compact}
     onClick={() => onSelect(id)}
     title={`${label} (${shortcut})`}
-    aria-label={`${label} (${shortcut})`}
     role={menuItem ? 'menuitemradio' : undefined}
     aria-checked={menuItem ? active : undefined}
-    aria-pressed={menuItem ? undefined : active}
-    aria-keyshortcuts={definition.activationKey?.toUpperCase() ?? 'Delete Backspace'}
     data-tool-id={id}
     data-tool-group={definition.group}
-  >
-    <ToolGlyph definition={definition} />
-    <span>{label}</span>
-    <kbd>{shortcut}</kbd>
-  </button>;
+  />;
 };
 
 const PaletteToolButton = ({
@@ -115,7 +133,11 @@ const PaletteToolButton = ({
   </button>
 );
 
-export const ToolBar = () => {
+export interface ToolBarProps {
+  compact?: boolean;
+}
+
+export const ToolBar = ({ compact = false }: ToolBarProps) => {
   const { activeTool, setActiveTool, project } = useProject();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [mobileMenu, setMobileMenu] = useState<'loads' | 'more' | null>(null);
@@ -212,7 +234,7 @@ export const ToolBar = () => {
 
   return (
     <>
-      <aside className={`toolbar${mobileMenu ? ' mobile-menu-open' : ''}`} aria-label={t('toolbar.label')}>
+      <aside className={`toolbar tool-rail${compact ? ' is-compact' : ''}${mobileMenu ? ' mobile-menu-open' : ''}`} aria-label={t('toolbar.label')} data-tool-rail={compact ? 'compact' : 'expanded'}>
         <div className="desktop-tool-list">
           {TOOL_GROUPS.map((group) => {
             const groupTools = toolsInGroup(group.id, visibleTools);
@@ -221,11 +243,12 @@ export const ToolBar = () => {
             return <section key={group.id} className={`tool-group tool-group-${group.id}`} role="group" aria-labelledby={headingId}>
               <h2 id={headingId} className="tool-group-heading">{t(group.labelKey)}</h2>
               <div className="tool-group-actions">
-                {groupTools.map((definition) => <ToolButton
+                {groupTools.map((definition) => <RegisteredToolButton
                   key={definition.id}
                   definition={definition}
                   label={t(definition.labelKey)}
                   active={activeTool === definition.id}
+                  compact={compact}
                   onSelect={selectTool}
                 />)}
               </div>
@@ -243,7 +266,7 @@ export const ToolBar = () => {
         <div className="selection-tip"><BoxSelect size={18} /><span>{t('toolbar.tip')}</span></div>
 
         <nav className="mobile-tool-dock" aria-label={t('toolbar.primary')}>
-          {mobilePrimaryTools.map((definition) => <ToolButton
+          {mobilePrimaryTools.map((definition) => <RegisteredToolButton
             key={definition.id}
             definition={definition}
             label={t(definition.labelKey)}

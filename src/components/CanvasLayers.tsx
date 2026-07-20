@@ -13,6 +13,7 @@ import {
 import { useEffect, useId, useRef, useState, type Dispatch } from 'react';
 import type { TranslationKey } from '../i18n/catalogs';
 import { useI18n } from '../i18n/useI18n';
+import { LayerToggle } from '../ui/editor';
 import type { EditorLayerAction, EditorLayerId, EditorLayerState } from './editorLayers';
 
 interface LayerDefinition {
@@ -98,25 +99,20 @@ export const CanvasLayers = ({
       <div className="canvas-layer-list">
         {layerDefinitions.map(({ id, labelKey, detailKey, icon: Icon }) => {
           const fixed = id === 'model';
-          return <button
+          return <LayerToggle
             key={id}
-            type="button"
             className="canvas-layer-row"
-            role="switch"
-            aria-checked={layers[id]}
-            aria-describedby={`${panelId}-${id}-detail`}
+            label={t(labelKey)}
+            description={t(detailKey)}
+            icon={<Icon size={18} />}
+            checked={layers[id]}
             disabled={fixed}
-            onClick={() => dispatch({ type: 'toggle', layer: id })}
+            onCheckedChange={() => dispatch({ type: 'toggle', layer: id })}
             data-layer-id={id}
-          >
-            <span className="canvas-layer-icon" aria-hidden="true"><Icon size={18} /></span>
-            <span className="canvas-layer-copy"><strong>{t(labelKey)}</strong><small id={`${panelId}-${id}-detail`}>{t(detailKey)}</small></span>
-            <span className="canvas-layer-switch" aria-hidden="true"><i /></span>
-          </button>;
+          />;
         })}
       </div>
       <button type="button" className="canvas-layer-reset" onClick={() => dispatch({ type: 'reset' })}>{t('canvas.layersReset')}</button>
     </section> : null}
   </>;
 };
-

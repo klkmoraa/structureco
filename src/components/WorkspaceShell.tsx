@@ -3,25 +3,23 @@ import { SlidersHorizontal } from 'lucide-react';
 import { Inspector } from './Inspector';
 import { ResultsPanel } from './ResultsPanel';
 import { StructuralCanvas } from './StructuralCanvas';
-import { ToolBar } from './ToolBar';
+import { ToolRail } from './ToolRail';
 import { TopBar } from './TopBar';
 import { useI18n } from '../i18n/useI18n';
-import { createEditorLayerState, editorLayerReducer } from './editorLayers';
+import { createPersistedEditorLayerState, editorLayerReducer, persistEditorLayerState } from './editorLayers';
 import { AppShellLayout } from '../shell/AppShellLayout';
 import { useWorkspaceLayoutPreferences } from '../shell/useWorkspaceLayoutPreferences';
 import '../ui/ui.css';
 
 export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => void; projectId: string }) => {
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
-  const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createEditorLayerState);
+  const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
   const inspectorToggleRef = useRef<HTMLButtonElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
   const { preferences: layout, setPreference, togglePreference } = useWorkspaceLayoutPreferences();
 
-  useEffect(() => {
-    dispatchEditorLayers({ type: 'reset' });
-  }, [projectId]);
+  useEffect(() => persistEditorLayerState(editorLayers), [editorLayers]);
 
   const closeMobileInspector = () => {
     setMobileInspectorOpen(false);
@@ -58,6 +56,7 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
       layoutActions={{
         inspectorCollapsed: layout.inspectorCollapsed,
         fullCanvas: layout.fullCanvas,
+        toolRailCompact: layout.toolRailCompact,
         onToggleInspector: () => {
           setMobileInspectorOpen(false);
           if (layout.fullCanvas) {
@@ -71,9 +70,10 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
           setMobileInspectorOpen(false);
           togglePreference('fullCanvas');
         },
+        onToggleToolRail: () => togglePreference('toolRailCompact'),
       }}
     />}
-    toolRail={<ToolBar />}
+    toolRail={<ToolRail compact={layout.toolRailCompact} />}
     workspace={<>
         <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => {
           if (window.matchMedia('(max-width: 1023px)').matches) openMobileInspector();

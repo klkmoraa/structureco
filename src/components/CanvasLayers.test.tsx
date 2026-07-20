@@ -23,7 +23,7 @@ beforeEach(() => localStorage.clear());
 afterEach(() => cleanup());
 
 describe('CanvasLayers', () => {
-  it('keeps the model fixed and toggles session-only presentation layers', async () => {
+  it('keeps the model fixed and toggles presentation-only layers', async () => {
     const user = userEvent.setup();
     render(<ProjectProvider><Harness /></ProjectProvider>);
     await user.click(screen.getByRole('button', { name: /capas de información/i }));

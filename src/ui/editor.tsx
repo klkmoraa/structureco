@@ -14,6 +14,7 @@ export interface ToolButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
   label: string;
   icon: ReactNode;
   shortcut?: string;
+  keyShortcut?: string;
   detail?: string;
   active?: boolean;
   loading?: boolean;
@@ -26,6 +27,7 @@ export const ToolButton = forwardRef<HTMLButtonElement, ToolButtonProps>(functio
   label,
   icon,
   shortcut,
+  keyShortcut,
   detail,
   active = false,
   loading = false,
@@ -35,17 +37,19 @@ export const ToolButton = forwardRef<HTMLButtonElement, ToolButtonProps>(functio
   className = '',
   disabled,
   type = 'button',
+  role,
   ...props
 }, ref) {
   return <button
     {...props}
     ref={ref}
     type={type}
+    role={role}
     className={`sc-tool-button sc-tool-button--${tone}${active ? ' is-active' : ''}${compact ? ' is-compact' : ''}${loading ? ' is-loading' : ''}${className ? ` ${className}` : ''}`}
     aria-label={shortcut ? `${label} (${shortcut})` : label}
-    aria-pressed={active}
+    aria-pressed={role === 'menuitemradio' || role === 'radio' ? undefined : active}
     aria-busy={loading || undefined}
-    aria-keyshortcuts={shortcut}
+    aria-keyshortcuts={keyShortcut ?? shortcut}
     disabled={disabled || loading}
   >
     <span className="sc-tool-button__icon" aria-hidden="true">{loading ? <Spinner size="sm" label={loadingLabel} decorative /> : icon}</span>

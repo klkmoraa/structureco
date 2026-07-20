@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import { Crosshair, LocateFixed, Minus, Plus, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useProject } from '../store/ProjectContext';
 import type { DiagramPoint, DiagramQuantity, MemberLoad, MemberModel, NodeModel, Selection, Tool } from '../types';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../engine/diagram';
@@ -37,9 +37,9 @@ import {
   type ScreenPoint,
 } from './canvasInteraction';
 import { toolFromShortcut } from './toolRegistry';
-import { cameraToFitBounds, canvasSafeInsetsFor, canvasSafeRect } from './canvasChrome';
-import { CanvasLayers } from './CanvasLayers';
+import { cameraToFitBounds, canvasSafeInsetsFor, canvasSafeRect } from './canvasChromeGeometry';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
+import { CanvasChrome } from './CanvasChrome';
 import { layoutSmartLabels, smartLabelDetailForScale, type SmartLabelCandidate } from './labelLayout';
 import { buildCanvasSelectionVisualState, selectionEnvelopeForPoints, selectionEnvelopeHandles } from './selectionVisuals';
 
@@ -1844,6 +1844,7 @@ export const StructuralCanvas = ({
             text: `${quantity === 'axial' ? 'N' : quantity === 'shear' ? 'V' : 'M'} = ${toDisplay(point.value, units, displayQuantity).toFixed(2)} ${quantityUnit}`,
             anchor,
             priority: point.kind === 'maximum' || point.kind === 'minimum' ? 2 : 3,
+            forceVisible: point.kind === 'maximum' || point.kind === 'minimum',
             tone: quantity,
             preferredOffset: { x: nx * outward * 28, y: -ny * outward * 28 - 6 },
           });
@@ -2055,30 +2056,22 @@ export const StructuralCanvas = ({
         </g>
       </svg>
 
-      <div className={`canvas-mode-badge${loadPlacementInstruction ? ' placing-load' : ''}`} role="status" aria-live="polite" data-canvas-chrome="mode">
-        <strong>{t(toolLabelKeys[activeTool])}</strong>
-        {loadPlacementInstruction ? <span className="canvas-action-instruction">{loadPlacementInstruction}</span> : layers.help ? <>
-          <span className="desktop-gesture-hint">{t('canvas.gestureDesktop')}</span>
-          <span className="touch-gesture-hint">{t('canvas.gestureTouch')}</span>
-        </> : null}
-        {loadPlacementInstruction ? <button type="button" aria-label={t('canvas.cancelPlacement')} onClick={() => setActiveTool('select')}><X size={14} /></button> : null}
-      </div>
-      <CanvasLayers layers={layers} dispatch={dispatchLayers} />
-      <div className="canvas-view-chips" role="status" aria-label={t('canvas.viewStatus')} data-canvas-chrome="view-status">
-        <span className={project.settings.snap ? 'active' : ''}>{project.settings.snap ? t('canvas.snapOn') : t('canvas.snapOff')}</span>
-        <span className={project.settings.showGrid ? 'active' : ''}>{project.settings.showGrid ? t('canvas.gridOn') : t('canvas.gridOff')}</span>
-      </div>
-      <div className="canvas-controls" role="group" aria-label={t('canvas.viewControls')} data-canvas-chrome="camera">
-        <button aria-label={t('canvas.zoomIn')} title={t('canvas.zoomIn')} onClick={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1.15))}><Plus size={18} /></button>
-        <button aria-label={t('canvas.zoomOut')} title={t('canvas.zoomOut')} onClick={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1 / 1.15))}><Minus size={18} /></button>
-        <button aria-label={t('canvas.fit')} title={t('canvas.fit')} onClick={fitModel}><LocateFixed size={18} /></button>
-      </div>
-      <div className="canvas-status" data-canvas-chrome="coordinates">
-        <Crosshair size={14} aria-hidden="true" />
-        <output ref={coordinateReadoutRef} className="canvas-coordinate-output" aria-label={t('canvas.coordinates')}>X — · Y — {lengthLabel}</output>
-        <span className="canvas-status-divider" aria-hidden="true">·</span>
-        <span className="canvas-scale-output">{t('canvas.scale')} {(camera.scale / 85).toFixed(2)}×</span>
-      </div>
+      <CanvasChrome
+        modeLabel={t(toolLabelKeys[activeTool])}
+        placementInstruction={loadPlacementInstruction}
+        showHelp={layers.help}
+        layers={layers}
+        dispatchLayers={dispatchLayers}
+        snapEnabled={project.settings.snap}
+        gridEnabled={project.settings.showGrid}
+        coordinateReadoutRef={coordinateReadoutRef}
+        lengthLabel={lengthLabel}
+        scale={camera.scale}
+        onCancelPlacement={() => setActiveTool('select')}
+        onZoomIn={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1.15))}
+        onZoomOut={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1 / 1.15))}
+        onFit={fitModel}
+      />
       {canvasFeedback ? <div className="canvas-feedback" role="alert">{canvasFeedback}</div> : null}
       {layers.results && layers.labels && resultsAllowed && analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <div className={`canvas-result-legend ${resultTab}`} aria-label="Convención del diagrama" data-canvas-chrome="result-legend"><strong>{resultTab === 'axial' ? 'N · axial' : resultTab === 'shear' ? 'V · cortante' : 'M · momento'}</strong><span><i /> Curva exacta · escala {project.settings.diagramScaleMode === 'individual' ? 'por miembro' : 'común'}</span><small>Se dibuja hacia {project.settings.diagramSide === 'positive' ? '+y' : '−y'} local · valores positivos mantienen el color y el trazo</small></div> : null}
       {memberStart ? <div className="canvas-hint" role="status"><span>Toca el nodo destino</span><button type="button" onClick={() => setMemberStart(null)} aria-label="Cancelar creación de miembro"><X size={14} /></button></div> : null}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createEditorLayerState, editorLayerReducer } from './editorLayers';
+import { createEditorLayerState, editorLayerReducer, parseEditorLayerState } from './editorLayers';
 
 describe('editor layer state', () => {
   it('starts with every presentation layer visible', () => {
@@ -31,5 +31,14 @@ describe('editor layer state', () => {
     );
     expect(editorLayerReducer(changed, { type: 'reset' })).toEqual(createEditorLayerState());
   });
-});
 
+  it('restores only validated presentation values and always protects the model', () => {
+    expect(parseEditorLayerState('{invalid')).toEqual(createEditorLayerState());
+    expect(parseEditorLayerState(JSON.stringify({ model: false, loads: false, labels: true }))).toMatchObject({
+      model: true,
+      loads: false,
+      labels: true,
+      results: true,
+    });
+  });
+});

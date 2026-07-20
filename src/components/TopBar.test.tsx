@@ -99,11 +99,14 @@ describe('TopBar information architecture', () => {
     const user = userEvent.setup();
     const onToggleInspector = vi.fn();
     const onToggleFullCanvas = vi.fn();
+    const onToggleToolRail = vi.fn();
     render(<ProjectProvider><TopBar layoutActions={{
       inspectorCollapsed: false,
       fullCanvas: false,
+      toolRailCompact: false,
       onToggleInspector,
       onToggleFullCanvas,
+      onToggleToolRail,
     }} /></ProjectProvider>);
 
     await user.click(screen.getByRole('button', { name: 'Más acciones' }));
@@ -113,5 +116,9 @@ describe('TopBar information architecture', () => {
     await user.click(screen.getByRole('button', { name: 'Más acciones' }));
     await user.click(screen.getByRole('button', { name: 'Mesa de trabajo completa' }));
     expect(onToggleFullCanvas).toHaveBeenCalledOnce();
+
+    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
+    await user.click(screen.getByRole('button', { name: 'Contraer herramientas' }));
+    expect(onToggleToolRail).toHaveBeenCalledOnce();
   });
 });

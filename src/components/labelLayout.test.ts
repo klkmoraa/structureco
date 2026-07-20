@@ -56,4 +56,17 @@ describe('smart label layout', () => {
     expect(placed[0].leader).toBe(false);
     expect(placed[1].leader).toBe(true);
   });
+
+  it('keeps a forced critical value visible below its normal detail threshold', () => {
+    const placed = layoutSmartLabels([{
+      id: 'critical-maximum',
+      text: 'M = 42.00 kN·m',
+      anchor: { x: 260, y: 160 },
+      priority: 2,
+      minScale: 120,
+      forceVisible: true,
+    }], bounds, 32);
+    expect(placed).toHaveLength(1);
+    expect(placed[0].id).toBe('critical-maximum');
+  });
 });

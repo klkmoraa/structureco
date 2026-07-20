@@ -410,7 +410,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 @media (max-width: 1279px) {
   :root { --toolbar-w: var(--sc-layout-rail-compact); --inspector-w: var(--sc-layout-inspector-compact); }
   .tool-button { grid-template-columns: 1fr; justify-items:center; min-height:52px; padding:5px; }
-  .tool-button span,.tool-button kbd,.selection-tip span { display:none; }
+  .tool-button > span:not(.sc-tool-button__icon),.tool-button kbd,.selection-tip span { display:none; }
   .selection-tip { justify-content:center; }
   .topbar { grid-template-columns:minmax(250px,1fr) minmax(132px,max-content) minmax(220px,1fr); gap:var(--sc-space-2); }
   .history-controls { display:none; }
@@ -890,7 +890,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
     box-shadow:none;
   }
   .mobile-tool-dock .tool-button svg { width:21px; height:21px; flex:0 0 auto; }
-  .mobile-tool-dock .tool-button span { display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; font-size:var(--sc-font-size-label); line-height:1.05; font-weight:650; white-space:nowrap; }
+  .mobile-tool-dock .tool-button > span:not(.sc-tool-button__icon) { display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; font-size:var(--sc-font-size-label); line-height:1.05; font-weight:650; white-space:nowrap; }
   .mobile-tool-dock .tool-button kbd { display:none; }
   .mobile-tool-dock .tool-button.active {
     color:var(--accent);
@@ -1097,7 +1097,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
   }
   .mobile-tool-dock { grid-template-columns:1fr; align-content:center; gap:2px; }
   .mobile-tool-dock .tool-button { height:48px; min-height:48px; }
-  .mobile-tool-dock .tool-button span { display:none; }
+  .mobile-tool-dock .tool-button > span:not(.sc-tool-button__icon) { display:none; }
   .mobile-tool-sheet-backdrop { inset:var(--topbar-h) 0 0 60px; }
   .mobile-tool-palette {
     left:68px;
@@ -1191,7 +1191,7 @@ button:not(:disabled):active,.welcome-option:active,.selection-card:active {
     transition-delay:0s;
   }
   .mobile-inspector-close { width:44px!important; height:44px!important; }
-  .mobile-tool-dock .tool-button span { font-size:var(--sc-font-size-label); }
+  .mobile-tool-dock .tool-button > span:not(.sc-tool-button__icon) { font-size:var(--sc-font-size-label); }
   .mobile-tool-palette,.canvas-mode-badge,.mobile-inspector-toggle { backdrop-filter:none; background:var(--surface); }
 }
 
@@ -1347,7 +1347,7 @@ button:not(:disabled):active,.welcome-option:active,.selection-card:active {
     justify-items:center;
     padding:4px;
   }
-  .tool-button span,.tool-button kbd { display:none; }
+  .tool-button > span:not(.sc-tool-button__icon),.tool-button kbd { display:none; }
   .tool-button.active,
   .tool-node.active,.tool-pointLoad.active,.tool-dimension.active {
     box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 24%,var(--border));
@@ -1731,4 +1731,53 @@ button:not(:disabled):active,.welcome-option:active,.selection-card:active {
 
 @media print {
   .app-shell-skip-link { display:none!important; }
+}
+
+/* Phase 7: canvas-first rail and component-library adapters ------------- */
+.tool-rail .sc-tool-button__icon svg { color:var(--tool-color,var(--sc-tool-color)); }
+.tool-rail .sc-tool-button__copy strong { color:var(--text); font-size:13px; font-weight:520; }
+.tool-rail:not(.is-compact) .sc-tool-button__copy strong {
+  display:-webkit-box;
+  overflow:hidden;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  white-space:normal;
+  line-height:1.18;
+}
+.tool-rail .sc-tool-button.is-active .sc-tool-button__copy strong { color:var(--tool-color,var(--sc-tool-color)); }
+.canvas-controls .sc-icon-button { border-radius:0; }
+.canvas-layer-row.sc-layer-toggle { grid-template-columns:36px minmax(0,1fr) 34px; }
+.canvas-layer-row .sc-layer-toggle__icon { width:34px; height:34px; }
+.canvas-layer-row .sc-layer-toggle__copy strong { font-size:12px; line-height:1.2; }
+.canvas-layer-row .sc-layer-toggle__copy small { font-size:10px; line-height:1.28; }
+.canvas-layer-row.sc-layer-toggle.is-checked .sc-layer-toggle__icon { color:var(--accent); background:var(--accent-soft); }
+
+@media (min-width:1440px) {
+  .app-shell[data-tool-rail-compact='true']:not([data-full-canvas='true']) .workspace {
+    grid-template-columns:var(--sc-layout-rail-compact) minmax(0,1fr) var(--inspector-w);
+  }
+  .app-shell[data-tool-rail-compact='true'][data-inspector-collapsed='true'] .workspace {
+    grid-template-columns:var(--sc-layout-rail-compact) minmax(0,1fr);
+  }
+  .tool-rail.is-compact { padding:8px; gap:2px; }
+  .tool-rail.is-compact .tool-group { gap:3px; }
+  .tool-rail.is-compact .tool-group + .tool-group { padding-top:5px; border-top:1px solid var(--border-soft); }
+  .tool-rail.is-compact .tool-group-heading {
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+  }
+  .tool-rail.is-compact .tool-group-actions { justify-items:center; gap:1px; }
+  .tool-rail.is-compact .selection-tip { justify-content:center; }
+  .tool-rail.is-compact .selection-tip span { display:none; }
+}
+
+@media (max-width:1439px) {
+  .overflow-toolrail-action { display:none!important; }
 }
