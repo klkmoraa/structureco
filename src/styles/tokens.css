@@ -1,5 +1,7 @@
 :root {
-  /* Primitive palette */
+  /* Primitive palette. Raw values are never consumed by components directly. */
+  --sc-white: #ffffff;
+  --sc-black: #000000;
   --sc-green-700: #05523e;
   --sc-green-600: #06684d;
   --sc-green-500: #087a5b;
@@ -12,9 +14,9 @@
   /* Semantic color roles - light */
   --sc-color-bg-app: #f3f5f4;
   --sc-color-bg-canvas: #f8faf9;
-  --sc-color-surface-1: #ffffff;
+  --sc-color-surface-1: var(--sc-white);
   --sc-color-surface-2: #edf1ef;
-  --sc-color-surface-elevated: #ffffff;
+  --sc-color-surface-elevated: var(--sc-white);
   --sc-color-text-primary: #17201c;
   --sc-color-text-secondary: #5f6c66;
   --sc-color-text-muted: #6f7b75;
@@ -24,7 +26,7 @@
   --sc-color-action-primary: var(--sc-green-500);
   --sc-color-action-hover: var(--sc-green-600);
   --sc-color-action-pressed: var(--sc-green-700);
-  --sc-color-action-foreground: #ffffff;
+  --sc-color-action-foreground: var(--sc-white);
   --sc-color-focus: var(--sc-blue-500);
   --sc-color-info: var(--sc-blue-500);
   --sc-color-selection: #dce9ff;
@@ -36,6 +38,15 @@
   --sc-color-state-warning-foreground: #8a4f00;
   --sc-color-state-error-foreground: #a92f2f;
   --sc-color-aula: var(--sc-violet-500);
+
+  /* Canvas/document roles are explicit so themes are not produced by inversion. */
+  --sc-color-canvas-grid: #e6ebe8;
+  --sc-color-canvas-grid-strong: #d7deda;
+  --sc-color-canvas-member: #17201c;
+  --sc-color-canvas-node-fill: #f8faf9;
+  --sc-color-overlay-soft: rgba(4, 11, 7, 0.28);
+  --sc-color-overlay-sheet: rgba(2, 10, 6, 0.34);
+  --sc-color-overlay-strong: rgba(5, 18, 11, 0.58);
 
   /* Technical roles remain independent from product/state semantics. */
   --sc-color-technical-load: var(--sc-orange-500);
@@ -67,17 +78,38 @@
   --sc-space-7: 32px;
   --sc-space-8: 40px;
 
+  /* Optical and interaction sizes */
+  --sc-size-icon-sm: 16px;
+  --sc-size-icon-md: 20px;
+  --sc-size-icon-lg: 24px;
+  --sc-size-icon-tool: 22px;
+  --sc-size-target-pointer: 36px;
+  --sc-size-target-touch: 44px;
+
   /* Shape and elevation */
+  --sc-border-width: 1px;
+  --sc-border-width-strong: 2px;
+  --sc-focus-ring-width: 3px;
+  --sc-focus-ring-width-compact: 2px;
+  --sc-focus-ring-offset: 2px;
   --sc-radius-sm: 8px;
   --sc-radius-md: 10px;
   --sc-radius-lg: 14px;
   --sc-radius-sheet: 20px;
+  --sc-shadow-raised: 0 4px 14px rgba(0, 0, 0, 0.06);
   --sc-shadow-floating: 0 14px 40px rgba(20, 48, 34, 0.11);
   --sc-shadow-modal: 0 24px 72px rgba(12, 31, 22, 0.24);
 
   /* Typography */
   --sc-font-ui: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --sc-font-heading: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --sc-font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --sc-font-weight-regular: 400;
+  --sc-font-weight-medium: 550;
+  --sc-font-weight-semibold: 650;
+  --sc-font-weight-bold: 750;
+  --sc-font-weight-heavy: 800;
+  --sc-font-size-caption: 10px;
   --sc-font-size-technical: 12px;
   --sc-font-size-label: 12px;
   --sc-font-size-body: 14px;
@@ -85,8 +117,14 @@
   --sc-font-size-panel: 17px;
   --sc-font-size-screen: 26px;
   --sc-line-height-tight: 1.2;
+  --sc-line-height-compact: 1.35;
   --sc-line-height-body: 1.5;
   --sc-line-height-control: 1.25;
+  --sc-tracking-tight: -0.025em;
+  --sc-tracking-control: -0.008em;
+  --sc-tracking-technical: 0.01em;
+  --sc-numeric-variant: tabular-nums lining-nums;
+  --sc-numeric-features: "tnum" 1, "lnum" 1, "cv02" 1, "cv03" 1, "cv04" 1, "cv11" 1;
 
   /* Controls and application layout */
   --sc-control-height-sm: 36px;
@@ -101,18 +139,34 @@
   --sc-layout-gutter: 18px;
 
   /* Motion and stacking */
+  --sc-motion-press: 70ms;
   --sc-motion-fast: 140ms;
+  --sc-motion-control: 160ms;
   --sc-motion-standard: 220ms;
   --sc-motion-slow: 360ms;
+  --sc-motion-loading: 800ms;
   --sc-ease-standard: cubic-bezier(.22, 1, .36, 1);
+  --sc-ease-enter: cubic-bezier(.22, 1, .36, 1);
+  --sc-ease-exit: cubic-bezier(.4, 0, 1, 1);
   --sc-ease-press: cubic-bezier(.2, .8, .2, 1);
+  --sc-transition-control:
+    background-color var(--sc-motion-control) var(--sc-ease-standard),
+    border-color var(--sc-motion-control) var(--sc-ease-standard),
+    color var(--sc-motion-control) var(--sc-ease-standard),
+    box-shadow var(--sc-motion-control) var(--sc-ease-standard),
+    transform var(--sc-motion-control) var(--sc-ease-standard);
+  --sc-transition-theme:
+    background-color var(--sc-motion-standard) var(--sc-ease-standard),
+    border-color var(--sc-motion-standard) var(--sc-ease-standard),
+    color var(--sc-motion-fast) var(--sc-ease-standard);
   --sc-z-base: 0;
   --sc-z-panel: 10;
   --sc-z-sticky: 20;
   --sc-z-topbar: 30;
   --sc-z-drawer: 60;
+  --sc-z-sheet: 70;
   --sc-z-popover: 80;
-  --sc-z-modal: 100;
+  --sc-z-modal: 1200;
 
   /* Temporary aliases keep the existing UI migratable by role. */
   --app-bg: var(--sc-color-bg-app);
@@ -147,9 +201,10 @@
   --error: var(--sc-color-state-error);
   --danger: var(--sc-color-state-error);
   --success: var(--sc-color-state-success);
-  --grid: var(--sc-color-border-soft);
-  --member: var(--sc-color-text-primary);
-  --node-fill: var(--sc-color-bg-canvas);
+  --grid: var(--sc-color-canvas-grid);
+  --grid-strong: var(--sc-color-canvas-grid-strong);
+  --member: var(--sc-color-canvas-member);
+  --node-fill: var(--sc-color-canvas-node-fill);
   --radius-sm: var(--sc-radius-sm);
   --radius-md: var(--sc-radius-md);
   --radius-lg: var(--sc-radius-lg);
@@ -157,9 +212,14 @@
   --toolbar-w: var(--sc-layout-rail);
   --inspector-w: var(--sc-layout-inspector);
   --motion-fast: var(--sc-motion-fast);
+  --motion-control: var(--sc-motion-control);
+  --motion-press: var(--sc-motion-press);
   --motion-standard: var(--sc-motion-standard);
   --motion-slow: var(--sc-motion-slow);
+  --motion-loading: var(--sc-motion-loading);
   --ease-native: var(--sc-ease-standard);
+  --ease-enter: var(--sc-ease-enter);
+  --ease-exit: var(--sc-ease-exit);
   --ease-press: var(--sc-ease-press);
 }
 
@@ -190,6 +250,13 @@
   --sc-color-state-warning-foreground: var(--sc-color-state-warning);
   --sc-color-state-error-foreground: var(--sc-color-state-error);
   --sc-color-aula: #9a83f0;
+  --sc-color-canvas-grid: #222b27;
+  --sc-color-canvas-grid-strong: #2c3632;
+  --sc-color-canvas-member: #f2f6f4;
+  --sc-color-canvas-node-fill: #0a0e0d;
+  --sc-color-overlay-soft: rgba(0, 0, 0, 0.34);
+  --sc-color-overlay-sheet: rgba(0, 0, 0, 0.46);
+  --sc-color-overlay-strong: rgba(0, 0, 0, 0.68);
   --sc-color-technical-load: #ff825c;
   --sc-color-technical-axial: #51bdd2;
   --sc-color-technical-shear: #58cf83;
@@ -198,6 +265,18 @@
   --sc-color-technical-reaction: #78a8ff;
   --sc-color-technical-dimension: #e7bd55;
   --sc-color-technical-axis: #ed8b58;
+  --sc-shadow-raised: 0 6px 18px rgba(0, 0, 0, 0.32);
   --sc-shadow-floating: 0 18px 52px rgba(0, 0, 0, 0.46);
   --sc-shadow-modal: 0 28px 86px rgba(0, 0, 0, 0.62);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --sc-motion-press: 0.001ms;
+    --sc-motion-fast: 0.001ms;
+    --sc-motion-control: 0.001ms;
+    --sc-motion-standard: 0.001ms;
+    --sc-motion-slow: 0.001ms;
+    --sc-motion-loading: 0.001ms;
+  }
 }
