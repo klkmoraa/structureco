@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import { Inspector } from './Inspector';
 import { ResultsPanel } from './ResultsPanel';
@@ -15,21 +15,42 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
   const inspectorToggleRef = useRef<HTMLButtonElement>(null);
+  const inspectorReturnFocusRef = useRef<HTMLElement | null>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
   const { preferences: layout, setPreference, togglePreference } = useWorkspaceLayoutPreferences();
 
   useEffect(() => persistEditorLayerState(editorLayers), [editorLayers]);
 
-  const closeMobileInspector = () => {
+  const closeMobileInspector = useCallback(() => {
     setMobileInspectorOpen(false);
-    window.requestAnimationFrame(() => inspectorToggleRef.current?.focus());
-  };
+    window.requestAnimationFrame(() => {
+      const remembered = inspectorReturnFocusRef.current;
+      const returnTarget = remembered?.isConnected ? remembered : inspectorToggleRef.current;
+      returnTarget?.focus({ preventScroll: true });
+    });
+  }, []);
 
-  const openMobileInspector = () => {
+  const openMobileInspector = useCallback(() => {
+    const activeElement = document.activeElement;
+    inspectorReturnFocusRef.current = activeElement instanceof HTMLElement
+      && activeElement !== document.body
+      && activeElement !== document.documentElement
+      ? activeElement
+      : inspectorToggleRef.current;
     window.dispatchEvent(new CustomEvent('structureco:collapse-mobile-results'));
     setMobileInspectorOpen(true);
-  };
+  }, []);
+
+  useEffect(() => {
+    const desktop = window.matchMedia?.('(min-width: 1024px)');
+    if (!desktop) return undefined;
+    const syncBreakpoint = () => {
+      if (desktop.matches) setMobileInspectorOpen(false);
+    };
+    desktop.addEventListener?.('change', syncBreakpoint);
+    return () => desktop.removeEventListener?.('change', syncBreakpoint);
+  }, []);
 
   useEffect(() => {
     if (!mobileInspectorOpen) return undefined;
@@ -87,7 +108,8 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
         className="mobile-inspector-toggle"
         onClick={openMobileInspector}
         aria-label={t('inspector.open')}
-        aria-expanded="false"
+        aria-expanded={mobileInspectorOpen}
+        aria-controls="workspace-inspector"
       >
         <SlidersHorizontal size={20} />
       </button> : null}

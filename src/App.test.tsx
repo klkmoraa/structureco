@@ -255,5 +255,8 @@ describe('structureCo app shell', () => {
     await screen.findByRole('dialog', { name: /inspector/i });
     await user.keyboard('{Delete}');
     expect(container.querySelectorAll('.member-object')).toHaveLength(before);
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /inspector/i })).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(container.querySelector('.mobile-inspector-toggle')));
   });
 });
