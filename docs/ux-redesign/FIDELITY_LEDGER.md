@@ -6,6 +6,7 @@
 | --- | --- | --- | --- | --- |
 | Canvas first | PDF p. 22 | Chrome y rail restan área útil sin reserva común | Modelo al centro y zonas de control compactas. | **Cerrado.** Safe rect y nueve viewports aprobados. |
 | Agrupación por intención | PDF p. 24 | Rail plano con separadores visuales | Grupos nombrados y orden estable sin perder herramientas. | **Cerrado.** 12 herramientas y 11 shortcuts preservados. |
+| Correspondencia cromática herramienta/canvas | Corrección final del propietario, 2026-07-19 | Los iconos no coincidían con los objetos visibles en la mesa de trabajo | Cada herramienta hereda el rol de su objeto: modelo, fuerza, distribuida, momento, cota, sección o eliminación; azul sólo para selección/foco. | **Cerrado.** Valores calculados y capturas Light/Dark aprobados. |
 | Rail/dock responsive | PDF pp. 22, 31-32 | 164 px wide, 76 px compact, dock de seis | Expandido >=1440, compacto 1024-1439, dock <=1023. | **Cerrado.** Desktop, tablet y móvil aprobados. |
 | Chrome y safe zones | PDF p. 26 | Badges/controles/status en esquinas sin reserva común | Zonas explícitas sin solapar modelo, labels o dock. | **Cerrado.** Cero intersecciones de chrome. |
 | Capas de información | PDF p. 27 | Visibilidad distribuida en ProjectSettings y resultTab | Control UI-only de sesión; modelo siempre visible. | **Cerrado.** Ocho capas efímeras; modelo bloqueado. |

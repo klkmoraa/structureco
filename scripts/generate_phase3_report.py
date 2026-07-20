@@ -335,7 +335,7 @@ def build_report(output: Path) -> None:
 
     story.append(PageBreak())
     section(story, "1. Resumen ejecutivo")
-    story.append(p("La Fase 3 reorganiza las herramientas por intención, reserva zonas seguras para el chrome, incorpora ocho capas efímeras, un layout determinista de labels P0-P3 y feedback azul específico para cada selección. También formaliza paridad de mouse, teclado, touch y pen emulado sin cambiar datos ni cálculo."))
+    story.append(p("La Fase 3 reorganiza las herramientas por intención, reserva zonas seguras para el chrome, incorpora ocho capas efímeras, un layout determinista de labels P0-P3 y feedback azul específico para cada selección. El cierre alineó además cada icono con el color del objeto que representa en la mesa de trabajo, sin cambiar organización, handlers, datos ni cálculo."))
     cards = Table([[
         status_card("Pruebas", "258/258", "47 archivos · 0 fallos"),
         status_card("QA Fase 3", "125/125", "9 viewports · 19 capturas"),
@@ -348,6 +348,7 @@ def build_report(output: Path) -> None:
         "Las 12 herramientas y sus 11 teclas de activación permanecen disponibles; Delete/Backspace sigue siendo contextual.",
         "Los nueve viewports entre 390 y 1536 px tienen cero overflow horizontal, cero colisiones P0/P1 y cero intersecciones de chrome.",
         "Selección de miembro, nodo, apoyo, carga y multiselección usa azul + geometría redundante, conservando los colores técnicos.",
+        "La identificación de herramientas refleja los roles de modelo, fuerza, carga distribuida, momento, cota, sección y eliminación en rail, dock, sheets, Light/Dark y todos sus estados.",
         "Light/Dark, Completo/Aula, ES/EN, listo/analizado, reduced motion, zoom 200 % y WebKit quedaron cubiertos.",
         "El estado de capas es sólo de sesión; ProjectModel, ProjectSettings, schema y persistencia no reciben campos nuevos.",
     ]:
@@ -479,6 +480,24 @@ def build_report(output: Path) -> None:
     story.append(styled_table(decision_rows, [52 * mm, 73 * mm, 49 * mm]))
     story.append(p("Ajuste surgido de QA", "h2"))
     story.append(p("El QA Chromium heredado trataba un `<g>` con línea vertical como elemento oculto porque su `DOMRect` tiene ancho cero. La Fase 3 separa correctamente la geometría de reacción y los labels decluttered; el recorrido se actualizó para exigir geometría adjunta, label P1 visible y dos valores de 2.500 kip. No se cambió ningún resultado."))
+    story.append(p("Alineación cromática final con la mesa de trabajo", "h2"))
+    story.append(p("La revisión técnica aprobó agrupación, responsive, capas, labels, selección y accesibilidad, y después solicitó que los iconos coincidieran con los objetos visibles en el canvas. La corrección se limitó a tokens, estilos y clases visuales; no cambió handlers, IDs, atajos, agrupación, selección, persistencia ni QA."))
+    palette_rows = [[p("Herramienta", "table_header"), p("Color conservado", "table_header"), p("Superficies/estados", "table_header")]]
+    for tool, tone in [
+        ("Seleccionar y desplazar", "Gris neutro"),
+        ("Nodo, miembro y apoyo", "Grafito del modelo"),
+        ("Carga puntual", "Naranja de fuerzas"),
+        ("Carga distribuida", "Verde"),
+        ("Momento", "Rojo/coral"),
+        ("Cota", "Amarillo ocre"),
+        ("Dividir miembro", "Grafito del modelo"),
+        ("Corte", "Naranja de eje/sección"),
+        ("Eliminar", "Rojo"),
+    ]:
+        palette_rows.append([table_cell(tool, True), table_cell(tone), table_cell("Rail wide/compact · dock · sheets · Light/Dark · hover/active/focus/disabled")])
+    story.append(styled_table(palette_rows, [58 * mm, 34 * mm, 82 * mm]))
+    story.append(Spacer(1, 4 * mm))
+    story.append(p("El estado activo usa fondo o borde verde suave sin recolorear el icono. El foco visible permanece azul; disabled conserva el tono con opacidad. La inspección de estilos calculados confirmó todos los valores y cero errores de consola."))
 
     story.append(PageBreak())
     section(story, "7. Resultados finales de pruebas y QA")

@@ -47,6 +47,16 @@
   --sc-color-technical-dimension: #8d6c19;
   --sc-color-technical-axis: #a9552d;
 
+  /* Tool identification mirrors the canvas. Selection/focus stay blue. */
+  --sc-color-tool-navigation: var(--sc-color-text-secondary);
+  --sc-color-tool-structure: var(--sc-color-text-primary);
+  --sc-color-tool-point-load: var(--sc-color-technical-load);
+  --sc-color-tool-distributed-load: var(--sc-color-technical-shear);
+  --sc-color-tool-moment: var(--sc-color-technical-moment);
+  --sc-color-tool-dimension: var(--sc-color-technical-dimension);
+  --sc-color-tool-cut: var(--sc-color-technical-axis);
+  --sc-color-tool-destructive: var(--sc-color-state-error);
+
   /* Primitive spacing */
   --sc-space-1: 4px;
   --sc-space-2: 8px;

@@ -417,3 +417,23 @@
 - `docs/ux-redesign/`.
 - Capturas dentro de `docs/ux-redesign/evidence/baseline/`.
 - Salidas existentes de `qa-artifacts/` y `dist/` fueron regeneradas por los comandos de validación; no son cambios de lógica.
+# 2026-07-19 - Fase 3, alineación cromática final con el canvas
+
+### Corregido
+
+- Alineada la identificación cromática del ToolRail expandido/compacto, ToolDock, sheets móviles y selector secundario de cargas con los objetos visibles en la mesa de trabajo.
+- Seleccionar y desplazar usan gris neutro; nodo, miembro, apoyo y dividir miembro el grafito del modelo; carga puntual el naranja de fuerzas; carga distribuida verde; momento coral; cota amarillo ocre; corte el naranja de ejes/sección; eliminar rojo.
+- El estado activo conserva el color propio del icono y usa únicamente fondo/borde verde suave; el foco conserva el azul semántico.
+- Hover, active, focus y disabled fueron comprobados en Light y Dark sin convertir el sistema en monocromático.
+
+### Validado
+
+- `npm.cmd run verify`: 47 archivos, 258/258 pruebas y build PASS.
+- `npm.cmd run qa:phase3`: 125/125, 9 viewports, 19 capturas y consola limpia.
+- `npm.cmd run qa:phase2`: 117/117; `npm.cmd run qa`: 63/63; WebKit iPhone/iPad PASS.
+- Colores calculados verificados en rail expandido, rail compacto, dock, sheets y menú secundario.
+
+### No cambiado
+
+- Handlers, IDs, atajos, agrupación, capas, selección, persistencia y scripts de QA.
+- Motor, workers, datos, schema, contratos portables, unidades, signos, precisión y fixtures.

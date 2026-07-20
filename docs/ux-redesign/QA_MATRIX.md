@@ -23,6 +23,17 @@ Hallazgos visuales de entrada: ToolRail plano, agrupación dependiente de separa
 | Accesibilidad | grupos nombrados, `aria-pressed`, `menuitemradio`, Escape y retorno de foco conservados. |
 | Regresión | `npm.cmd run verify`: 42 archivos, 238 pruebas, build PASS. |
 
+#### Corrección visual obligatoria de cierre - 2026-07-19
+
+| Control | Resultado |
+| --- | --- |
+| Correspondencia canvas | Navegación neutra; estructura/dividir grafito; puntual naranja; distribuida verde; momento coral; cota amarillo ocre; corte naranja de eje/sección; eliminar rojo. |
+| Superficies | Rail expandido, rail compacto, ToolDock, sheets y selector secundario de cargas verificados. |
+| Estados | Hover conserva tono; active usa fondo/borde verde sin recolorear icono; foco azul; disabled conserva tono con opacidad. |
+| Temas | Valores calculados correctos en Light y Dark. |
+| Frontera | Sin cambios en handlers, IDs, atajos, agrupación, capas, selección, persistencia, QA ni motor. |
+| Regresión final | 258/258 tests; Fase 3 125/125; Fase 2 117/117; Chromium 63/63; WebKit PASS. |
+
 ### Gate 3.2 - chrome y zonas seguras
 
 | Control | Resultado |

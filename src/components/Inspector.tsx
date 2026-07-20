@@ -339,7 +339,7 @@ const LoadsPanel = ({ activeTool, onChooseTool, selectedCombinationId, setSelect
       <h3>Añadir una carga</h3>
       <p>Elige un tipo y después toca el nodo o miembro en el lienzo.</p>
       <div className="load-tool-grid">
-        {loadToolOptions.map(({ tool, label, detail, icon: Icon }) => <button key={tool} aria-pressed={activeTool === tool} className={activeTool === tool ? 'active' : ''} onClick={() => onChooseTool(tool)}><Icon size={18} /><strong>{label}</strong><small>{detail}</small></button>)}
+        {loadToolOptions.map(({ tool, label, detail, icon: Icon }) => <button key={tool} aria-pressed={activeTool === tool} className={`tool-${tool}${activeTool === tool ? ' active' : ''}`} onClick={() => onChooseTool(tool)}><Icon size={18} /><strong>{label}</strong><small>{detail}</small></button>)}
       </div>
     </section>
     <section className="inspector-section"><div className="section-heading"><h3>Casos de carga</h3><button className="mini-button" aria-label="Añadir caso de carga" onClick={() => updateProject((draft) => { let index = 1; while (draft.loadCases.some((item) => item.id === `LC${index}`)) index += 1; const id = `LC${index}`; draft.loadCases.push({ id, name: `Caso ${index}`, category: 'other', active: true }); return draft; })}><Plus size={15} /></button></div>

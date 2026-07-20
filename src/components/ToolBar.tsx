@@ -253,7 +253,7 @@ export const ToolBar = () => {
           />)}
           <button
             ref={loadMenuButtonRef}
-            className={`mobile-tool-group tool-button${loadGroupHighlighted ? ' active' : ''}`}
+            className={`mobile-tool-group tool-button tool-pointLoad${loadGroupHighlighted ? ' active' : ''}`}
             aria-label={t('toolbar.loads')}
             aria-expanded={mobileMenu === 'loads'}
             aria-haspopup="menu"
