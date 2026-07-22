@@ -73,6 +73,7 @@ const selections: Array<{ label: string; value: Selection }> = [
 const InspectorHarness = ({ modal = false, onClose }: { modal?: boolean; onClose?: () => void }) => {
   const {
     project,
+    analysis,
     selection,
     setSelection,
     analyze,
@@ -105,6 +106,7 @@ const InspectorHarness = ({ modal = false, onClose }: { modal?: boolean; onClose
       <output aria-label="N3 Y almacenada">{String(nodeN3?.y)}</output>
       <output aria-label="N4 X almacenada">{String(nodeN4?.x)}</output>
       <output aria-label="M1 E almacenado">{String(memberM1?.E)}</output>
+      <output aria-label="Issues de análisis">{analysis?.issues.map((issue) => issue.id).join(',') ?? ''}</output>
       <Inspector modal={modal} onClose={onClose} />
     </div>
   </ClassroomSessionProvider>;
@@ -181,6 +183,31 @@ describe('Inspector selection variants', () => {
     expect((screen.getByRole('combobox', { name: 'Apoyo' }) as HTMLSelectElement).value).toBe('pin');
   });
 
+  it('covers roller, custom, and fixed support presentation through the existing handler', async () => {
+    const user = userEvent.setup();
+    const project = createInspectorProject();
+    const node = project.nodes.find((item) => item.id === 'N1');
+    if (node) node.support = { type: 'roller', angleDeg: 37.125 };
+    renderInspector(project);
+
+    await user.click(screen.getByRole('button', { name: 'Seleccionar apoyo N1' }));
+    const support = screen.getByRole('combobox', { name: 'Apoyo' });
+    expect((support as HTMLSelectElement).value).toBe('roller');
+    expect((screen.getByRole('textbox', { name: 'Normal' }) as HTMLInputElement).value).toBe('37.13');
+    expectDescribedUnit(screen.getByRole('textbox', { name: 'Normal' }), '°');
+
+    await user.selectOptions(support, 'custom');
+    const restraints = screen.getByRole('group', { name: 'Grados de libertad restringidos' });
+    const ux = within(restraints).getByRole('checkbox', { name: 'Ux' });
+    expect((ux as HTMLInputElement).checked).toBe(false);
+    await user.click(ux);
+    expect((ux as HTMLInputElement).checked).toBe(true);
+
+    await user.selectOptions(support, 'fixed');
+    expect(screen.queryByRole('group', { name: 'Grados de libertad restringidos' })).toBeNull();
+    expect(screen.queryByRole('textbox', { name: 'Normal' })).toBeNull();
+  });
+
   it('renders editable and derived member properties, and clearly locks a rigid link', async () => {
     const user = userEvent.setup();
     renderInspector();
@@ -239,6 +266,24 @@ describe('Inspector selection variants', () => {
     expect(within(selectionSummary()).getByText('ML3')).toBeTruthy();
     expectDescribedUnit(screen.getByRole('textbox', { name: 'Posición' }), 'x/L');
     expectDescribedUnit(screen.getByRole('textbox', { name: 'M' }), 'kN·m');
+  });
+
+  it('identifies a mixed nodal load without changing its force or moment contracts', async () => {
+    const user = userEvent.setup();
+    const project = createInspectorProject();
+    const load = project.nodalLoads.find((item) => item.id === 'NL1');
+    if (load) {
+      load.fx = 4.25;
+      load.mz = 3.5;
+    }
+    renderInspector(project);
+
+    await user.click(screen.getByRole('button', { name: 'Seleccionar carga nodal NL1' }));
+    expect(within(selectionSummary()).getByText('Carga nodal mixta')).toBeTruthy();
+    expect((screen.getByRole('textbox', { name: 'Horizontal Fx' }) as HTMLInputElement).value).toBe('4.25');
+    expect((screen.getByRole('textbox', { name: 'Momento Mz' }) as HTMLInputElement).value).toBe('3.5');
+    expectDescribedUnit(screen.getByRole('textbox', { name: 'Horizontal Fx' }), 'kN');
+    expectDescribedUnit(screen.getByRole('textbox', { name: 'Momento Mz' }), 'kN·m');
   });
 
   it('makes multiple selection read-only and explains why bulk editing is locked', async () => {
@@ -407,12 +452,35 @@ describe('Inspector advanced, locked, and validation states', () => {
     await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
     await user.click(screen.getByRole('button', { name: 'Analizar fixture' }));
 
-    const issues = await screen.findByRole('region', { name: 'Validaciones del objeto' });
+    const issues = await screen.findByRole('region', { name: 'Validaciones del objeto' }, { timeout: 5000 });
     expect(within(issues).getByRole('heading', { name: 'Validación del análisis' })).toBeTruthy();
     const alert = within(issues).getByRole('alert');
     expect(alert.textContent).toContain('Módulo elástico inválido');
     expect(alert.textContent).toContain('E del miembro M1 debe ser mayor que cero.');
   });
+
+  it('projects the existing distributed-load interval validation without duplicating it in the form', async () => {
+    const user = userEvent.setup();
+    renderInspector();
+
+    await user.click(screen.getByRole('button', { name: 'Seleccionar carga distribuida ML1' }));
+    const start = screen.getByRole('textbox', { name: 'Desde' });
+    const end = screen.getByRole('textbox', { name: 'Hasta' });
+    await user.clear(start);
+    await user.type(start, '0.8');
+    await user.keyboard('{Enter}');
+    await user.clear(end);
+    await user.type(end, '0.2');
+    await user.keyboard('{Enter}');
+    expect(screen.queryByRole('region', { name: 'Validaciones del objeto' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Analizar fixture' }));
+    await waitFor(() => expect(screen.getByLabelText('Issues de análisis').textContent).toContain('distributed-domain-ML1'), { timeout: 5000 });
+
+    const issues = await screen.findByRole('region', { name: 'Validaciones del objeto' }, { timeout: 5000 });
+    const alert = within(issues).getByRole('alert');
+    expect(alert.textContent).toContain('Dominio de carga inválido');
+    expect(alert.textContent).toContain('0 ≤ inicio < fin ≤ 1');
+  }, 10_000);
 
   it('uses dialog semantics, traps keyboard focus, and closes safely with Escape in modal mode', async () => {
     const user = userEvent.setup();
@@ -450,6 +518,30 @@ describe('Inspector advanced, locked, and validation states', () => {
 
     await user.keyboard('{Shift>}{Tab}{/Shift}');
     expect(document.activeElement).toBe(lastSummary);
+    await user.tab();
+    expect(document.activeElement).toBe(loadsTab);
+  });
+
+  it('includes controls inside an open details element in the modal focus loop', async () => {
+    const user = userEvent.setup();
+    renderInspector(createInspectorProject(), { modal: true, onClose: vi.fn() });
+
+    const inspectorTab = screen.getByRole('tab', { name: 'Inspector' });
+    await waitFor(() => expect(document.activeElement).toBe(inspectorTab));
+    await user.keyboard('{ArrowRight}');
+    const loadsTab = screen.getByRole('tab', { name: 'Cargas' });
+    const details = [...document.querySelectorAll<HTMLDetailsElement>('details')].at(-1);
+    const summary = details?.querySelector<HTMLElement>('summary');
+    expect(details).toBeTruthy();
+    expect(summary).toBeTruthy();
+    await user.click(summary as HTMLElement);
+    expect(details?.open).toBe(true);
+    const lastInput = [...(details?.querySelectorAll<HTMLElement>('input:not([disabled])') ?? [])].at(-1);
+    expect(lastInput).toBeTruthy();
+
+    loadsTab.focus();
+    await user.keyboard('{Shift>}{Tab}{/Shift}');
+    expect(document.activeElement).toBe(lastInput);
     await user.tab();
     expect(document.activeElement).toBe(loadsTab);
   });
