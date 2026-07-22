@@ -112,7 +112,7 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .workspace { min-height: 0; flex: 1; display: grid; grid-template-columns: var(--toolbar-w) minmax(0, 1fr) var(--inspector-w); position:relative; isolation:isolate; }
 .toolbar { border-right: 1px solid var(--border); background: var(--surface); padding: 12px 10px; display: flex; flex-direction: column; gap: 4px; min-height: 0; z-index: 10; overflow-y:auto; overscroll-behavior:contain; }
 .desktop-tool-list { display:contents; }
-.mobile-tool-dock,.mobile-tool-palette,.mobile-tool-sheet-backdrop,.results-mobile-toggle { display:none; }
+.mobile-tool-dock,.mobile-tool-palette,.mobile-tool-sheet-backdrop,.results-mobile-toggle,.results-sheet-backdrop { display:none; }
 .tool-button { min-height: 56px; width: 100%; border: 0; background: transparent; border-radius: 8px; display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 7px; text-align: left; padding: 0 11px; color: var(--text); }
 .tool-button svg { color: currentColor; }
 .tool-button span { font-size: 13px; }
@@ -1973,4 +1973,74 @@ button:not(:disabled):active,.welcome-option:active,.selection-card:active {
 
 @media (prefers-reduced-motion:reduce) {
   .inspector-panel { transition:none!important; }
+}
+
+/* Phase 9: analytical results center -------------------------------------- */
+.results-commandbar {
+  min-height:52px;
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:7px 16px 7px 20px;
+  border-bottom:1px solid var(--border-soft);
+  background:color-mix(in srgb,var(--surface) 96%,var(--accent-soft));
+}
+.results-commandbar__context { min-width:0; display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:baseline; gap:5px 10px; }
+.results-commandbar__context>span { grid-column:1/-1; color:var(--muted); font-size:9px!important; font-weight:750; letter-spacing:.06em; text-transform:uppercase; }
+.results-commandbar__context strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; }
+.results-commandbar__context small { display:inline-flex; align-items:center; gap:5px; color:var(--muted); white-space:nowrap; }
+.results-commandbar__context small::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--subtle); }
+.results-commandbar__context small.is-resolved::before { background:var(--success); }
+.results-commandbar__context small.is-warning::before { background:var(--warning); }
+.results-mode-control { flex:0 0 auto; display:flex; gap:3px; padding:3px; border:1px solid var(--border-soft); border-radius:10px; background:var(--surface-2); }
+.results-mode-control button { min-height:30px; padding:0 9px; border:0; border-radius:7px; background:transparent; color:var(--muted); font-size:10px!important; }
+.results-mode-control button[aria-pressed='true'] { background:var(--surface); color:var(--text); box-shadow:0 1px 4px rgba(14,37,24,.1); font-weight:700; }
+@media (min-width:1024px) {
+  .results-panel.results-mode-focused { height:72dvh!important; max-height:72dvh; z-index:8; box-shadow:0 -18px 46px rgba(17,39,27,.15); }
+  .results-panel.results-mode-focused:focus { outline:0; }
+  .results-panel.results-mode-focused:focus-visible { box-shadow:0 -18px 46px rgba(17,39,27,.15),0 0 0 3px var(--selection-soft); }
+}
+.results-panel.results-mode-compact .results-commandbar { min-height:42px; padding-block:4px; }
+.results-panel.results-mode-compact .results-commandbar__context>span,
+.results-panel.results-mode-compact .result-tab-family__label { display:none; }
+.results-panel.results-mode-compact .result-tabs { height:43px; flex-basis:43px; }
+.results-panel.results-mode-compact .result-tabs button { height:43px; }
+.result-tabs { height:60px; flex-basis:60px; align-items:stretch; gap:10px; padding-inline:16px; }
+.result-tab-family { flex:0 0 auto; display:grid; grid-template-rows:17px minmax(0,1fr); align-items:stretch; border-right:1px solid var(--border-soft); padding:3px 10px 0 0; }
+.result-tab-family:last-child { border-right:0; padding-right:0; }
+.result-tab-family__label { align-self:center; padding-left:9px; color:var(--subtle); font-size:8px!important; font-weight:750; letter-spacing:.05em; text-transform:uppercase; }
+.result-tab-family>div { display:flex; align-items:stretch; }
+.result-tabs button { height:40px; padding-inline:10px; }
+.results-table caption { padding:8px 10px; text-align:left; color:var(--muted); background:var(--surface-2); border-bottom:1px solid var(--border-soft); }
+.results-table tbody tr[aria-selected='true'] { background:var(--selection-soft); }
+.result-object-link { min-width:42px; border:0; border-radius:7px; padding:5px 7px; background:transparent; color:var(--text); font:inherit; font-weight:750; text-align:left; }
+.result-object-link:hover,.result-object-link[aria-pressed='true'] { color:var(--selection); background:color-mix(in srgb,var(--selection) 10%,transparent); }
+
+@media (max-width:1023px) {
+  .results-sheet-backdrop { display:block; position:absolute; inset:0; z-index:7; border:0; background:rgba(7,18,13,.36); backdrop-filter:blur(1px); }
+  .results-panel:not(.mobile-collapsed) { position:absolute; inset:auto 0 0; z-index:8; width:100%; border-radius:14px 14px 0 0; box-shadow:0 -18px 48px rgba(8,24,16,.22); }
+  .results-commandbar { min-height:46px; padding:5px 12px; }
+  .results-mode-control { display:none; }
+  .results-commandbar__context { width:100%; grid-template-columns:minmax(0,1fr) auto; }
+  .results-commandbar__context>span { display:none; }
+  .results-commandbar__context strong { font-size:12px; }
+  .results-panel.mobile-collapsed .results-commandbar { display:none; }
+  .result-tabs { height:54px; flex-basis:54px; gap:7px; padding-inline:10px; }
+  .result-tab-family { grid-template-rows:14px minmax(0,1fr); padding-right:7px; }
+  .result-tab-family__label { padding-left:7px; font-size:7px!important; }
+  .result-tabs button { min-width:68px; height:44px; padding-inline:9px; }
+}
+
+@media (max-width:700px) {
+  .results-commandbar__context small { display:none; }
+  .result-tabs { height:50px; flex-basis:50px; }
+  .result-tab-family { display:flex; padding-top:0; }
+  .result-tab-family__label { display:none; }
+  .result-tabs button { height:50px; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .results-panel { transition:none!important; }
 }

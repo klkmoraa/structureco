@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { AlertCircle, Check, ChevronDown, ChevronUp, CircleDotDashed, GripHorizontal } from 'lucide-react';
 import { useProject, type ResultTab } from '../store/ProjectContext';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../engine/diagram';
@@ -13,6 +13,7 @@ import { ResultSummary } from './ResultSummary';
 import { useClassroomSession } from '../store/ClassroomSessionContext';
 import { deriveClassroomProgress } from '../education/classroomProgress';
 import { InfluenceLineView } from './InfluenceLineView';
+import { formatResultNumber } from './results/resultFormatting';
 
 const tabs: Array<{ id: ResultTab; labelKey: TranslationKey; color?: string }> = [
   { id: 'summary', labelKey: 'results.summary' },
@@ -26,6 +27,42 @@ const tabs: Array<{ id: ResultTab; labelKey: TranslationKey; color?: string }> =
   { id: 'issues', labelKey: 'results.issues' },
 ];
 
+type ResultsPanelMode = 'compact' | 'expanded' | 'focused';
+
+const RESULTS_MODE_STORAGE_KEY = 'structureCo.results.mode.v1';
+const resultFamilies: Array<{ id: string; labelKey: TranslationKey; tabs: ResultTab[] }> = [
+  { id: 'state', labelKey: 'results.familyState', tabs: ['summary', 'reactions'] },
+  { id: 'forces', labelKey: 'results.familyForces', tabs: ['axial', 'shear', 'moment'] },
+  { id: 'shape', labelKey: 'results.familyShape', tabs: ['deformed'] },
+  { id: 'advanced', labelKey: 'results.familyAdvanced', tabs: ['influence'] },
+  { id: 'understand', labelKey: 'results.familyUnderstand', tabs: ['learn'] },
+  { id: 'warnings', labelKey: 'results.familyWarnings', tabs: ['issues'] },
+];
+
+const resultsFocusableSelector = [
+  'button:not([disabled]):not([tabindex="-1"])',
+  'input:not([disabled]):not([tabindex="-1"])',
+  'select:not([disabled]):not([tabindex="-1"])',
+  'textarea:not([disabled]):not([tabindex="-1"])',
+  'a[href]:not([tabindex="-1"])',
+  'summary',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
+const getResultsFocusable = (panel: HTMLElement | null) => [
+  ...(panel?.querySelectorAll<HTMLElement>(resultsFocusableSelector) ?? []),
+].filter((element) => {
+  if (element.closest('[hidden], [aria-hidden="true"], [inert]')) return false;
+  const closedDetails = element.closest('details:not([open])');
+  return !closedDetails || element.tagName === 'SUMMARY';
+});
+
+const readResultsMode = (): ResultsPanelMode => {
+  if (typeof window === 'undefined') return 'expanded';
+  const stored = window.localStorage.getItem(RESULTS_MODE_STORAGE_KEY);
+  return stored === 'compact' || stored === 'focused' || stored === 'expanded' ? stored : 'expanded';
+};
+
 const MOBILE_RESULTS_QUERY = '(max-width: 1023px)';
 const isMobileResultsViewport = () => typeof window !== 'undefined' && Boolean(window.matchMedia?.(MOBILE_RESULTS_QUERY).matches);
 
@@ -36,19 +73,73 @@ export const ResultsPanel = () => {
   const [drag, setDrag] = useState<{ y: number; height: number } | null>(null);
   const [isMobile, setIsMobile] = useState(isMobileResultsViewport);
   const [mobileExpanded, setMobileExpanded] = useState(() => !isMobileResultsViewport());
+  const [panelMode, setPanelMode] = useState<ResultsPanelMode>(readResultsMode);
   const previousAnalysisRef = useRef(analysis);
   const resizeFrameRef = useRef<number | null>(null);
   const pendingHeightRef = useRef<number | null>(null);
-  const selectedMemberId = selection?.kind === 'member' ? selection.id : selection?.kind === 'multi' ? selection.memberIds[0] : project.members.find((member) => member.type !== 'rigid')?.id;
-  const memberResult = analysis?.memberResults.find((result) => result.memberId === selectedMemberId) ?? analysis?.memberResults[0];
+  const panelRef = useRef<HTMLElement>(null);
+  const focusedLauncherRef = useRef<HTMLButtonElement | null>(null);
+  const previousPanelModeRef = useRef<ResultsPanelMode>('expanded');
+  const mobileToggleRef = useRef<HTMLButtonElement>(null);
+  const mobileReturnFocusRef = useRef<HTMLElement | null>(null);
+  const resultContext = useMemo(() => {
+    if (selection?.kind === 'member') return { memberId: selection.id, label: t('results.contextMember', { id: selection.id }) };
+    if (selection?.kind === 'multi') {
+      const memberId = selection.memberIds.find((id) => analysis?.memberResults.some((result) => result.memberId === id));
+      return { memberId, label: t('results.contextMulti', { count: selection.nodeIds.length + selection.memberIds.length }) };
+    }
+    if (selection?.kind === 'memberLoad') {
+      const load = project.memberLoads.find((item) => item.id === selection.id);
+      return { memberId: load?.memberId, label: load
+        ? t('results.contextMemberLoad', { loadId: load.id, memberId: load.memberId })
+        : t('results.contextLoad', { id: selection.id }) };
+    }
+    if (selection?.kind === 'nodalLoad') {
+      const load = project.nodalLoads.find((item) => item.id === selection.id);
+      return { memberId: undefined, label: load
+        ? t('results.contextNodalLoad', { loadId: load.id, nodeId: load.nodeId })
+        : t('results.contextLoad', { id: selection.id }) };
+    }
+    if (selection?.kind === 'node') return { memberId: undefined, label: t('results.contextNode', { id: selection.id }) };
+    const first = analysis?.memberResults[0]?.memberId ?? project.members.find((member) => member.type !== 'rigid')?.id;
+    return { memberId: first, label: t('results.contextGlobal') };
+  }, [analysis?.memberResults, project.memberLoads, project.members, project.nodalLoads, selection, t]);
+  const selectedMemberId = resultContext.memberId;
+  const memberResult = selectedMemberId ? analysis?.memberResults.find((result) => result.memberId === selectedMemberId) : undefined;
   const classroomMode = project.settings.calculationMode === 'classroom';
   const { resultsVisible, hideResults } = useClassroomSession();
   const resultsAllowed = !classroomMode || resultsVisible;
   const availableTabs = classroomMode ? tabs.filter((tab) => tab.id !== 'deformed') : tabs;
   const activeTab = availableTabs.find((tab) => tab.id === resultTab) ?? availableTabs[0];
+  const visibleFamilies = resultFamilies.map((family) => ({
+    ...family,
+    tabs: family.tabs.map((id) => availableTabs.find((tab) => tab.id === id)).filter((tab): tab is (typeof tabs)[number] => Boolean(tab)),
+  })).filter((family) => family.tabs.length > 0);
+  const analysisState = isAnalyzing
+    ? t('results.stateAnalyzing')
+    : !analysis
+      ? t('results.stateReady')
+      : analysis.success
+        ? t('results.stateResolved')
+        : t('results.stateReview');
   const mobileResultLabel = analysis
-    ? `${t(activeTab.labelKey)}${selectedMemberId ? ` · ${selectedMemberId}` : ''}`
-    : 'Resultados';
+    ? `${t(activeTab.labelKey)} · ${resultContext.label}`
+    : t('results.outputs');
+  const rememberMobileLauncher = useCallback((candidate: EventTarget | null) => {
+    mobileReturnFocusRef.current = candidate instanceof HTMLElement
+      && candidate !== document.body
+      && candidate !== document.documentElement
+      ? candidate
+      : mobileToggleRef.current;
+  }, []);
+  const closeMobileResults = useCallback(() => {
+    setMobileExpanded(false);
+    window.requestAnimationFrame(() => {
+      const remembered = mobileReturnFocusRef.current;
+      const returnTarget = remembered?.isConnected ? remembered : mobileToggleRef.current;
+      returnTarget?.focus({ preventScroll: true });
+    });
+  }, []);
   useEffect(() => {
     if (classroomMode && resultTab === 'deformed') setResultTab('moment');
   }, [classroomMode, resultTab, setResultTab]);
@@ -66,22 +157,87 @@ export const ResultsPanel = () => {
     return () => query.removeEventListener('change', update);
   }, []);
   useEffect(() => {
-    if (isMobile && analysis && analysis !== previousAnalysisRef.current) setMobileExpanded(true);
+    if (isMobile && analysis && analysis !== previousAnalysisRef.current) {
+      rememberMobileLauncher(document.activeElement);
+      setMobileExpanded(true);
+    }
     previousAnalysisRef.current = analysis;
-  }, [analysis, isMobile]);
+  }, [analysis, isMobile, rememberMobileLauncher]);
   useEffect(() => {
-    const collapse = () => setMobileExpanded(false);
-    const expand = () => setMobileExpanded(true);
+    const collapse = () => closeMobileResults();
+    const expand = () => {
+      rememberMobileLauncher(document.activeElement);
+      setMobileExpanded(true);
+      window.requestAnimationFrame(() => panelRef.current?.focus({ preventScroll: true }));
+    };
     window.addEventListener('structureco:collapse-mobile-results', collapse);
     window.addEventListener('structureco:expand-mobile-results', expand);
     return () => {
       window.removeEventListener('structureco:collapse-mobile-results', collapse);
       window.removeEventListener('structureco:expand-mobile-results', expand);
     };
-  }, []);
+  }, [closeMobileResults, rememberMobileLauncher]);
   useEffect(() => () => {
     if (resizeFrameRef.current !== null) window.cancelAnimationFrame(resizeFrameRef.current);
   }, []);
+  useEffect(() => {
+    window.localStorage.setItem(RESULTS_MODE_STORAGE_KEY, panelMode);
+    if (isMobile) return;
+    if (panelMode === 'compact') setHeight(190);
+    else if (panelMode === 'expanded') setHeight((current) => Math.max(current, 320));
+    else setHeight(window.innerHeight * 0.72);
+  }, [isMobile, panelMode]);
+  useEffect(() => {
+    if (isMobile && panelMode === 'focused') setPanelMode('expanded');
+  }, [isMobile, panelMode]);
+  useEffect(() => {
+    if (!isMobile || !mobileExpanded) return undefined;
+    const panel = panelRef.current;
+    const previousOverflow = document.body.style.overflow;
+    const inactive = document.querySelectorAll<HTMLElement>('.app-shell-skip-link, .topbar, .toolbar, .inspector-panel, .mobile-inspector-toggle, .canvas-host');
+    inactive.forEach((element) => {
+      element.inert = true;
+      element.setAttribute('aria-hidden', 'true');
+    });
+    document.body.style.overflow = 'hidden';
+    const focusFrame = window.requestAnimationFrame(() => {
+      if (!panel?.contains(document.activeElement)) mobileToggleRef.current?.focus({ preventScroll: true });
+    });
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeMobileResults();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = getResultsFocusable(panel);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        panel?.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === panel || !panel?.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === panel || !panel?.contains(document.activeElement))) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      inactive.forEach((element) => {
+        element.inert = false;
+        element.removeAttribute('aria-hidden');
+      });
+    };
+  }, [closeMobileResults, isMobile, mobileExpanded]);
 
   const scheduleHeight = (next: number) => {
     pendingHeightRef.current = next;
@@ -97,10 +253,50 @@ export const ResultsPanel = () => {
     scheduleHeight(Math.max(150, Math.min(window.innerHeight * 0.72, drag.height + drag.y - event.clientY)));
   };
   const resizeBy = (delta: number) => setHeight((current) => Math.max(150, Math.min(window.innerHeight * 0.72, current + delta)));
+  const choosePanelMode = (next: ResultsPanelMode, launcher: HTMLButtonElement) => {
+    if (next === 'focused' && panelMode !== 'focused') {
+      previousPanelModeRef.current = panelMode;
+      focusedLauncherRef.current = launcher;
+      setPanelMode('focused');
+      window.requestAnimationFrame(() => panelRef.current?.focus());
+      return;
+    }
+    setPanelMode(next);
+  };
+  const leaveFocusedMode = () => {
+    if (panelMode !== 'focused') return;
+    setPanelMode(previousPanelModeRef.current === 'focused' ? 'expanded' : previousPanelModeRef.current);
+    window.requestAnimationFrame(() => focusedLauncherRef.current?.focus());
+  };
 
-  return (
-    <section className={`results-panel${isMobile && !mobileExpanded ? ' mobile-collapsed' : ''}`} aria-label={t('results.panel')} style={{ height: isMobile && !mobileExpanded ? 54 : height }} onPointerMove={onPointerMove} onPointerUp={() => setDrag(null)} onPointerCancel={() => setDrag(null)}>
-      <button className="results-mobile-toggle" type="button" aria-expanded={mobileExpanded} aria-controls="results-content" onClick={() => setMobileExpanded((current) => !current)}>
+  return <>
+    {isMobile && mobileExpanded ? <button className="results-sheet-backdrop" type="button" aria-hidden="true" tabIndex={-1} onClick={closeMobileResults} /> : null}
+    <section
+      ref={panelRef}
+      className={`results-panel results-mode-${panelMode}${isMobile && !mobileExpanded ? ' mobile-collapsed' : ''}`}
+      aria-label={t('results.panel')}
+      role={isMobile && mobileExpanded ? 'dialog' : undefined}
+      aria-modal={isMobile && mobileExpanded ? true : undefined}
+      data-results-mode={panelMode}
+      tabIndex={-1}
+      style={{ height: isMobile && !mobileExpanded ? 54 : height }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && panelMode === 'focused') {
+          event.preventDefault();
+          leaveFocusedMode();
+        }
+      }}
+      onPointerMove={onPointerMove}
+      onPointerUp={() => setDrag(null)}
+      onPointerCancel={() => setDrag(null)}
+    >
+      <button ref={mobileToggleRef} className="results-mobile-toggle" type="button" aria-expanded={mobileExpanded} aria-controls="results-content" onClick={(event) => {
+        if (mobileExpanded) closeMobileResults();
+        else {
+          rememberMobileLauncher(event.currentTarget);
+          setMobileExpanded(true);
+        }
+      }}>
         <i className={activeTab.color ?? ''} aria-hidden="true" />
         <strong>{mobileResultLabel}</strong>
         <ChevronUp className={`results-toggle-chevron${mobileExpanded ? ' expanded' : ''}`} size={19} />
@@ -119,23 +315,44 @@ export const ResultsPanel = () => {
           if (event.key === 'Home') { event.preventDefault(); setHeight(150); }
           if (event.key === 'End') { event.preventDefault(); setHeight(window.innerHeight * 0.72); }
         }}
-        onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); setDrag({ y: event.clientY, height }); }}
+        onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); setPanelMode('expanded'); setDrag({ y: event.clientY, height }); }}
       ><GripHorizontal size={22} /></button>
+      <header className="results-commandbar">
+        <div className="results-commandbar__context">
+          <span>{t('results.center')}</span>
+          <strong>{resultContext.label}</strong>
+          <small role="status" aria-live="polite" aria-atomic="true" className={analysis?.success ? 'is-resolved' : analysis && !analysis.success ? 'is-warning' : ''}>{analysisState}</small>
+        </div>
+        <div className="results-mode-control" role="group" aria-label={t('results.modeGroup')}>
+          {(['compact', 'expanded', 'focused'] as const).map((mode) => <button
+            key={mode}
+            type="button"
+            aria-pressed={panelMode === mode}
+            onClick={(event) => panelMode === 'focused' && mode === 'focused' ? leaveFocusedMode() : choosePanelMode(mode, event.currentTarget)}
+          >{mode === 'compact' ? t('results.modeCompact') : mode === 'expanded' ? t('results.modeExpanded') : panelMode === 'focused' ? t('results.modeExitFocus') : t('results.modeFocus')}</button>)}
+        </div>
+      </header>
       <nav className="result-tabs" role="tablist" aria-label={t('results.panel')}>
-        {availableTabs.map((tab, index) => <button key={tab.id} data-result-tab={tab.id} role="tab" aria-selected={resultTab === tab.id} aria-controls="results-content" tabIndex={resultTab === tab.id ? 0 : -1} className={`${resultTab === tab.id ? 'active' : ''} ${tab.color ?? ''}`} onClick={() => setResultTab(tab.id)} onKeyDown={(event) => {
-          let nextIndex = index;
-          if (event.key === 'ArrowLeft') nextIndex = (index - 1 + availableTabs.length) % availableTabs.length;
-          else if (event.key === 'ArrowRight') nextIndex = (index + 1) % availableTabs.length;
-          else if (event.key === 'Home') nextIndex = 0;
-          else if (event.key === 'End') nextIndex = availableTabs.length - 1;
-          else return;
-          event.preventDefault();
-          const next = availableTabs[nextIndex];
-          setResultTab(next.id);
-          window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-result-tab="${next.id}"]`)?.focus());
-        }}>{t(tab.labelKey)}{tab.id === 'issues' && analysis?.issues.length ? <span className="issue-count">{analysis.issues.length}</span> : null}</button>)}
+        {visibleFamilies.map((family) => <div className="result-tab-family" role="presentation" key={family.id}>
+          <span id={`result-family-${family.id}`} className="result-tab-family__label">{t(family.labelKey)}</span>
+          <div role="presentation">{family.tabs.map((tab) => {
+            const index = availableTabs.findIndex((item) => item.id === tab.id);
+            return <button id={`result-tab-${tab.id}`} key={tab.id} data-result-tab={tab.id} role="tab" aria-selected={resultTab === tab.id} aria-describedby={`result-family-${family.id}`} aria-controls="results-content" tabIndex={resultTab === tab.id ? 0 : -1} className={`${resultTab === tab.id ? 'active' : ''} ${tab.color ?? ''}`} onClick={() => setResultTab(tab.id)} onKeyDown={(event) => {
+              let nextIndex = index;
+              if (event.key === 'ArrowLeft') nextIndex = (index - 1 + availableTabs.length) % availableTabs.length;
+              else if (event.key === 'ArrowRight') nextIndex = (index + 1) % availableTabs.length;
+              else if (event.key === 'Home') nextIndex = 0;
+              else if (event.key === 'End') nextIndex = availableTabs.length - 1;
+              else return;
+              event.preventDefault();
+              const next = availableTabs[nextIndex];
+              setResultTab(next.id);
+              window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-result-tab="${next.id}"]`)?.focus());
+            }}>{t(tab.labelKey)}{tab.id === 'issues' && analysis?.issues.length ? <span className="issue-count">{analysis.issues.length}</span> : null}</button>;
+          })}</div>
+        </div>)}
       </nav>
-      <div id="results-content" className="results-body" role="tabpanel" aria-live="polite" aria-busy={isAnalyzing}>
+      <div id="results-content" className="results-body" role="tabpanel" aria-labelledby={`result-tab-${activeTab.id}`} aria-busy={isAnalyzing}>
         {analysis?.success && classroomMode && resultsVisible ? <button className="hide-classroom-results" onClick={hideResults}>Ocultar resultados</button> : null}
         {!analysis ? <EmptyResults onAnalyze={analyze} /> : null}
         {analysis && !analysis.success && resultTab !== 'issues' ? <FailedResults onOpenIssues={() => setResultTab('issues')} /> : null}
@@ -149,7 +366,7 @@ export const ResultsPanel = () => {
         {analysis && resultTab === 'issues' ? <IssuesView /> : null}
       </div>
     </section>
-  );
+  </>;
 };
 
 const ClassroomResultGate = ({ memberId }: { memberId: string }) => {
@@ -179,14 +396,30 @@ const EmptyResults = ({ onAnalyze }: { onAnalyze: () => void }) => {
 const FailedResults = ({ onOpenIssues }: { onOpenIssues: () => void }) => { const { t } = useI18n(); return <div className="failed-results"><AlertCircle size={28} /><div><strong>{t('results.failedTitle')}</strong><p>{t('results.failedBody')}</p></div><button onClick={onOpenIssues}>{t('results.openIssues')}</button></div>; };
 
 const ReactionTable = () => {
-  const { analysis, project } = useProject();
+  const { analysis, project, selection, setSelection } = useProject();
   const { t } = useI18n();
   const units = project.settings.units;
   const lengthUnit = unitLabel(units, 'length');
   const forceUnit = unitLabel(units, 'force');
   const momentUnit = unitLabel(units, 'moment');
   const classroom = project.settings.calculationMode === 'classroom';
-  return <div className="table-wrap">{classroom ? <div className="classroom-result-note"><strong>Modo Aula</strong><span>Se muestran reacciones y esfuerzos. Las propiedades automáticas solo afectan estructuras hiperestáticas.</span></div> : null}<table className="results-table"><thead><tr><th>{t('results.node')}</th>{classroom ? null : <><th>Ux ({lengthUnit})</th><th>Uy ({lengthUnit})</th><th>Rz (rad)</th></>}<th>Rx ({forceUnit})</th><th>Ry ({forceUnit})</th><th>Mz ({momentUnit})</th></tr></thead><tbody>{analysis?.nodeResults.map((result) => <tr key={result.nodeId}><td><strong>{result.nodeId}</strong></td>{classroom ? null : <><td>{toDisplay(result.ux, units, 'length').toExponential(3)}</td><td>{toDisplay(result.uy, units, 'length').toExponential(3)}</td><td>{result.rz.toExponential(3)}</td></>}<td>{toDisplay(result.rx, units, 'force').toFixed(3)}</td><td>{toDisplay(result.ry, units, 'force').toFixed(3)}</td><td>{toDisplay(result.rm, units, 'moment').toFixed(3)}</td></tr>)}</tbody></table></div>;
+  return <div className="table-wrap">
+    {classroom ? <div className="classroom-result-note"><strong>Modo Aula</strong><span>Se muestran reacciones y esfuerzos. Las propiedades automáticas solo afectan estructuras hiperestáticas.</span></div> : null}
+    <table className="results-table">
+      <caption>{t('results.reactionCaption')}</caption>
+      <thead><tr><th scope="col">{t('results.node')}</th>{classroom ? null : <><th scope="col">Ux ({lengthUnit})</th><th scope="col">Uy ({lengthUnit})</th><th scope="col">Rz (rad)</th></>}<th scope="col">Rx ({forceUnit})</th><th scope="col">Ry ({forceUnit})</th><th scope="col">Mz ({momentUnit})</th></tr></thead>
+      <tbody>{analysis?.nodeResults.map((result) => {
+        const selected = selection?.kind === 'node' && selection.id === result.nodeId;
+        return <tr key={result.nodeId} aria-selected={selected || undefined}>
+          <th scope="row"><button type="button" className="result-object-link" aria-pressed={selected} onClick={() => setSelection({ kind: 'node', id: result.nodeId })}>{result.nodeId}<span className="sr-only"> · {t('results.locateModel')}</span></button></th>
+          {classroom ? null : <><td>{formatResultNumber(toDisplay(result.ux, units, 'length'))}</td><td>{formatResultNumber(toDisplay(result.uy, units, 'length'))}</td><td>{formatResultNumber(result.rz)}</td></>}
+          <td>{formatResultNumber(toDisplay(result.rx, units, 'force'))}</td>
+          <td>{formatResultNumber(toDisplay(result.ry, units, 'force'))}</td>
+          <td>{formatResultNumber(toDisplay(result.rm, units, 'moment'))}</td>
+        </tr>;
+      })}</tbody>
+    </table>
+  </div>;
 };
 
 const DiagramView = ({ type, memberResult, memberId }: { type: DiagramQuantity; memberResult: MemberResult | undefined; memberId: string }) => {

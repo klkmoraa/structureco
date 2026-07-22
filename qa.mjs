@@ -337,6 +337,8 @@ async function mobile() {
   await page.getByRole('tab', { name: 'Momento', exact: true }).click();
   await page.locator('.diagram-chart.moment').waitFor({ state: 'visible' });
   const membersBeforeModalShortcut = await page.locator('.member-object').count();
+  await page.getByRole('dialog', { name: 'Resultados del análisis' }).press('Escape');
+  await page.locator('.results-panel.mobile-collapsed').waitFor({ state: 'visible' });
   await page.getByLabel('Abrir inspector').click();
   out.checks.mobileInspector = await page.locator('.inspector-panel.mobile-open').isVisible();
   await page.getByRole('dialog', { name: 'Inspector' }).getByRole('tab', { name: 'Inspector' }).press('Delete');
@@ -356,7 +358,9 @@ async function educationalExample() {
   await page.locator('.project-menu button').filter({ hasText: 'Hibbeler · carga tributaria Fig. 2–11' }).click();
   out.checks.hibbelerProjectLoaded = await page.getByLabel('Nombre del proyecto').inputValue() === 'Hibbeler · carga tributaria Fig. 2–11';
   await page.getByRole('button', { name: 'Analizar', exact: true }).click();
-  await page.locator('.result-summary').waitFor({ state: 'visible' });
+  await page.locator('.results-commandbar__context small.is-resolved').waitFor({ state: 'visible' });
+  await page.getByRole('tab', { name: 'Resumen', exact: true }).click();
+  await page.getByRole('region', { name: 'Resumen global de resultados', exact: true }).waitFor({ state: 'visible' });
   await page.getByRole('tab', { name: 'Reacciones', exact: true }).click();
   // Phase 3 separates the stroked reaction geometry from its decluttered value
   // labels. A vertical SVG line has a zero-width DOMRect even though its stroke
