@@ -70,7 +70,7 @@ const selections: Array<{ label: string; value: Selection }> = [
   },
 ];
 
-const InspectorHarness = ({ modal = false, onClose }: { modal?: boolean; onClose?: () => void }) => {
+const InspectorHarness = ({ modal = false, onClose, onDesktopWidthChange, desktopWidth }: { modal?: boolean; onClose?: () => void; onDesktopWidthChange?: (width: number) => void; desktopWidth?: number }) => {
   const {
     project,
     analysis,
@@ -107,14 +107,14 @@ const InspectorHarness = ({ modal = false, onClose }: { modal?: boolean; onClose
       <output aria-label="N4 X almacenada">{String(nodeN4?.x)}</output>
       <output aria-label="M1 E almacenado">{String(memberM1?.E)}</output>
       <output aria-label="Issues de análisis">{analysis?.issues.map((issue) => issue.id).join(',') ?? ''}</output>
-      <Inspector modal={modal} onClose={onClose} />
+      <Inspector desktopWidth={desktopWidth} modal={modal} onClose={onClose} onDesktopWidthChange={onDesktopWidthChange} />
     </div>
   </ClassroomSessionProvider>;
 };
 
 const renderInspector = (
   project: ProjectModel = createInspectorProject(),
-  props: { modal?: boolean; onClose?: () => void } = {},
+  props: { modal?: boolean; onClose?: () => void; onDesktopWidthChange?: (width: number) => void; desktopWidth?: number } = {},
 ) => {
   localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
   return render(<ProjectProvider><InspectorHarness {...props} /></ProjectProvider>);
@@ -481,6 +481,23 @@ describe('Inspector advanced, locked, and validation states', () => {
     expect(alert.textContent).toContain('Dominio de carga inválido');
     expect(alert.textContent).toContain('0 ≤ inicio < fin ≤ 1');
   }, 10_000);
+
+  it('resizes the persistent desktop inspector by keyboard without touching project history', async () => {
+    const user = userEvent.setup();
+    const onDesktopWidthChange = vi.fn();
+    renderInspector(createInspectorProject(), { desktopWidth: 320, onDesktopWidthChange });
+
+    const handle = screen.getByRole('separator', { name: 'Redimensionar inspector' });
+    expect(handle.getAttribute('aria-valuenow')).toBe('320');
+    handle.focus();
+    await user.keyboard('{ArrowLeft}');
+    expect(onDesktopWidthChange).toHaveBeenLastCalledWith(336);
+    await user.keyboard('{Shift>}{ArrowRight}{/Shift}');
+    expect(onDesktopWidthChange).toHaveBeenLastCalledWith(280);
+    await user.keyboard('{End}');
+    expect(onDesktopWidthChange).toHaveBeenLastCalledWith(480);
+    expect(screen.getByLabelText('Puede deshacer').textContent).toBe('false');
+  });
 
   it('uses dialog semantics, traps keyboard focus, and closes safely with Escape in modal mode', async () => {
     const user = userEvent.setup();

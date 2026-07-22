@@ -6,12 +6,23 @@ export interface WorkspaceLayoutPreferences {
   inspectorCollapsed: boolean;
   fullCanvas: boolean;
   toolRailCompact: boolean;
+  inspectorWidth: number;
 }
+
+export const MIN_INSPECTOR_WIDTH = 280;
+export const MAX_INSPECTOR_WIDTH = 480;
+export const DEFAULT_INSPECTOR_WIDTH = 320;
+
+export const clampInspectorWidth = (value: number) => Math.min(
+  MAX_INSPECTOR_WIDTH,
+  Math.max(MIN_INSPECTOR_WIDTH, Math.round(value)),
+);
 
 const DEFAULT_PREFERENCES: WorkspaceLayoutPreferences = {
   inspectorCollapsed: false,
   fullCanvas: false,
   toolRailCompact: false,
+  inspectorWidth: DEFAULT_INSPECTOR_WIDTH,
 };
 
 const readPreferences = (): WorkspaceLayoutPreferences => {
@@ -22,6 +33,9 @@ const readPreferences = (): WorkspaceLayoutPreferences => {
       inspectorCollapsed: typeof stored.inspectorCollapsed === 'boolean' ? stored.inspectorCollapsed : false,
       fullCanvas: typeof stored.fullCanvas === 'boolean' ? stored.fullCanvas : false,
       toolRailCompact: typeof stored.toolRailCompact === 'boolean' ? stored.toolRailCompact : false,
+      inspectorWidth: typeof stored.inspectorWidth === 'number' && Number.isFinite(stored.inspectorWidth)
+        ? clampInspectorWidth(stored.inspectorWidth)
+        : DEFAULT_INSPECTOR_WIDTH,
     };
   } catch {
     return DEFAULT_PREFERENCES;
@@ -42,7 +56,10 @@ export const useWorkspaceLayoutPreferences = () => {
   const setPreference = useCallback(<Key extends keyof WorkspaceLayoutPreferences>(
     key: Key,
     value: WorkspaceLayoutPreferences[Key],
-  ) => setPreferences((current) => ({ ...current, [key]: value })), []);
+  ) => setPreferences((current) => ({
+    ...current,
+    [key]: key === 'inspectorWidth' ? clampInspectorWidth(value as number) : value,
+  })), []);
 
   const togglePreference = useCallback((key: keyof WorkspaceLayoutPreferences) => {
     setPreferences((current) => ({ ...current, [key]: !current[key] }));
@@ -50,4 +67,3 @@ export const useWorkspaceLayoutPreferences = () => {
 
   return { preferences, setPreference, togglePreference };
 };
-

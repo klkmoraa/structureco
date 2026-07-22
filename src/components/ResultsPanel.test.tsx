@@ -202,6 +202,28 @@ describe('Results analytical center', () => {
     expect(document.activeElement).toBe(screen.getByRole('button', { name: /Aprender ·/ }));
   }, 10_000);
 
+  it('falls back to the results launcher when the remembered Inspector control becomes hidden', async () => {
+    const user = userEvent.setup();
+    window.matchMedia = mockMatchMedia(true);
+    renderResults();
+    const hiddenInspector = document.createElement('aside');
+    hiddenInspector.className = 'inspector-panel mobile-open';
+    const inspectorControl = document.createElement('button');
+    inspectorControl.textContent = 'Control del Inspector';
+    hiddenInspector.append(inspectorControl);
+    document.body.append(hiddenInspector);
+    inspectorControl.focus();
+
+    window.dispatchEvent(new CustomEvent('structureco:expand-mobile-results'));
+    await screen.findByRole('dialog', { name: /Resultados del an/ });
+    hiddenInspector.classList.remove('mobile-open');
+    await user.keyboard('{Escape}');
+
+    const launcher = screen.getByRole('button', { name: 'Resultados' });
+    await waitFor(() => expect(document.activeElement).toBe(launcher));
+    hiddenInspector.remove();
+  });
+
   it('requires a base-unit prediction, compares real results, and preserves the attempt across units and modes', async () => {
     const user = userEvent.setup();
     const project = createSimpleBeamExercise();

@@ -56,6 +56,12 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
   }, []);
 
   useEffect(() => {
+    const yieldInspectorToResults = () => setMobileInspectorOpen(false);
+    window.addEventListener('structureco:expand-mobile-results', yieldInspectorToResults);
+    return () => window.removeEventListener('structureco:expand-mobile-results', yieldInspectorToResults);
+  }, []);
+
+  useEffect(() => {
     if (!mobileInspectorOpen) return undefined;
     const background = shellRef.current?.querySelectorAll<HTMLElement>('.topbar, .toolbar, .center-stage');
     background?.forEach((element) => {
@@ -68,11 +74,31 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
     });
   }, [mobileInspectorOpen]);
 
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    const shell = shellRef.current;
+    if (!viewport || !shell) return undefined;
+    const syncViewport = () => {
+      const bottom = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      shell.style.setProperty('--sc-visual-viewport-height', `${viewport.height}px`);
+      shell.style.setProperty('--sc-visual-viewport-top', `${viewport.offsetTop}px`);
+      shell.style.setProperty('--sc-visual-viewport-bottom', `${bottom}px`);
+    };
+    syncViewport();
+    viewport.addEventListener('resize', syncViewport);
+    viewport.addEventListener('scroll', syncViewport);
+    return () => {
+      viewport.removeEventListener('resize', syncViewport);
+      viewport.removeEventListener('scroll', syncViewport);
+    };
+  }, []);
+
   return <AppShellLayout
     ref={shellRef}
     projectId={projectId}
     skipLabel={t('shell.skipToCanvas')}
     inspectorCollapsed={layout.inspectorCollapsed}
+    inspectorWidth={layout.inspectorWidth}
     fullCanvas={layout.fullCanvas}
     toolRailCompact={layout.toolRailCompact}
     topBar={<TopBar
@@ -106,7 +132,13 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
         <ResultsPanel />
       </>}
     backdrop={mobileInspectorOpen ? <button className="mobile-inspector-backdrop" aria-hidden="true" tabIndex={-1} onClick={closeMobileInspector} /> : null}
-    inspector={<Inspector className={mobileInspectorOpen ? 'mobile-open' : ''} modal={mobileInspectorOpen} onClose={closeMobileInspector} />}
+    inspector={<Inspector
+      className={mobileInspectorOpen ? 'mobile-open' : ''}
+      desktopWidth={layout.inspectorWidth}
+      modal={mobileInspectorOpen}
+      onClose={closeMobileInspector}
+      onDesktopWidthChange={(width) => setPreference('inspectorWidth', width)}
+    />}
     floatingActions={!mobileInspectorOpen ? <button
         ref={inspectorToggleRef}
         className="mobile-inspector-toggle"

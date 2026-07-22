@@ -1269,8 +1269,8 @@ button:not(:disabled):active,.welcome-option:active,.selection-card:active {
 }
 
 @media (pointer:coarse) {
-  .results-panel button,
-  .inspector-panel button,
+  .results-panel :is(button,input,select),
+  .inspector-panel :is(button,input,select),
   .quick-entry-bar button,
   .import-center-dialog button,
   .canvas-hint button,
@@ -2060,6 +2060,80 @@ button:not(:disabled):active,.welcome-option:active,.selection-card:active {
 
 @media (prefers-reduced-motion:reduce) {
   .results-panel { transition:none!important; }
+}
+
+/* Phase 11: responsive multidispositivo y experiencia tactil ------------- */
+@media (min-width:1024px) {
+  .inspector-panel { position:relative; }
+}
+.inspector-resize-handle {
+  position:absolute;
+  z-index:3;
+  inset:0 auto 0 -7px;
+  width:14px;
+  min-width:14px;
+  height:100%;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:var(--muted);
+  cursor:col-resize;
+  touch-action:none;
+}
+.inspector-resize-handle::before {
+  content:"";
+  position:absolute;
+  top:50%;
+  left:6px;
+  width:3px;
+  height:54px;
+  border-radius:3px;
+  background:var(--border);
+  transform:translateY(-50%);
+}
+.inspector-resize-handle:hover::before,
+.inspector-resize-handle:focus-visible::before { background:var(--accent); }
+.inspector-resize-handle:focus-visible { outline:3px solid color-mix(in srgb,var(--focus) 62%,transparent); outline-offset:-3px; }
+
+@media (max-width:1023px) {
+  .inspector-resize-handle { display:none; }
+}
+
+@media (max-width:700px) {
+  .app-shell:has(.results-panel[role='dialog']:not(.mobile-collapsed)) .workspace { z-index:calc(var(--sc-z-modal) + 1); }
+  .results-sheet-backdrop { position:fixed; inset:0; z-index:calc(var(--sc-z-modal) - 1); }
+  .results-panel:not(.mobile-collapsed) {
+    position:fixed;
+    z-index:var(--sc-z-modal);
+    inset:var(--sc-visual-viewport-top,0px) 0 auto;
+    width:100%;
+    height:var(--sc-visual-viewport-height,100dvh)!important;
+    min-height:0;
+    max-height:none;
+    border:0;
+    border-radius:0;
+    box-shadow:none;
+  }
+  .results-panel:not(.mobile-collapsed) .results-mobile-toggle {
+    height:calc(54px + env(safe-area-inset-top));
+    min-height:calc(54px + env(safe-area-inset-top));
+    padding-top:env(safe-area-inset-top);
+  }
+  .results-panel:not(.mobile-collapsed) .results-body {
+    padding-bottom:max(18px,env(safe-area-inset-bottom));
+    scroll-padding-bottom:max(24px,env(safe-area-inset-bottom));
+  }
+  .mobile-inspector-toggle {
+    top:auto;
+    bottom:calc(72px + env(safe-area-inset-bottom));
+  }
+  .inspector-panel.mobile-open {
+    position:fixed;
+    bottom:var(--sc-visual-viewport-bottom,0px);
+    height:min(78dvh,720px,calc(var(--sc-visual-viewport-height,100dvh) - 8px));
+    max-height:calc(var(--sc-visual-viewport-height,100dvh) - 8px);
+  }
 }
 
 @media (max-width:1023px) {

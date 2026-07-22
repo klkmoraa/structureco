@@ -160,7 +160,8 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
 
   const selectTool = (tool: Tool) => {
     setActiveTool(tool);
-    setMobileMenu(null);
+    if (mobileMenu) closeMobileMenu();
+    else setMobileMenu(null);
   };
 
   const closeMobileMenu = (restoreFocus = true) => {
@@ -174,16 +175,44 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
 
   useEffect(() => {
     if (!mobileMenu) return undefined;
+    const palette = paletteRef.current;
+    const background = document.querySelector<HTMLElement>('.app-shell');
+    if (background) {
+      background.inert = true;
+      background.setAttribute('aria-hidden', 'true');
+    }
     const focusFrame = window.requestAnimationFrame(() => paletteRef.current?.querySelector<HTMLButtonElement>('.mobile-palette-tool')?.focus());
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      event.preventDefault();
-      closeMobileMenu();
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeMobileMenu();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = [...(palette?.querySelectorAll<HTMLButtonElement>('button:not([disabled])') ?? [])];
+      if (!focusable.length) {
+        event.preventDefault();
+        palette?.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !palette?.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !palette?.contains(document.activeElement))) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', onKeyDown);
     return () => {
       window.cancelAnimationFrame(focusFrame);
       document.removeEventListener('keydown', onKeyDown);
+      if (background) {
+        background.inert = false;
+        background.removeAttribute('aria-hidden');
+      }
     };
     // closeMobileMenu intentionally captures the currently open sheet.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -203,20 +232,22 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
   const paletteDescription = mobileMenu === 'loads' ? t('toolbar.loadSheetDescription') : t('toolbar.moreSheetDescription');
   const paletteGroups = TOOL_GROUPS.filter((group) => mobilePaletteTools.some((tool) => tool.group === group.id));
   const mobilePalette = mobileMenu && typeof document !== 'undefined' ? createPortal(<>
-    <div className="mobile-tool-sheet-backdrop" aria-hidden="true" onPointerDown={() => closeMobileMenu(false)} />
+    <button type="button" className="mobile-tool-sheet-backdrop" aria-hidden="true" tabIndex={-1} onPointerDown={() => closeMobileMenu()} />
     <section
       ref={paletteRef}
       className={`mobile-tool-palette mobile-tool-palette-${mobileMenu}`}
-      role="menu"
+      role="dialog"
+      aria-modal="true"
       aria-label={paletteTitle}
       aria-describedby="mobile-tool-palette-description"
+      tabIndex={-1}
     >
       <div className="mobile-tool-palette-handle" aria-hidden="true" />
       <header className="mobile-tool-palette-header">
         <div><strong>{paletteTitle}</strong><span id="mobile-tool-palette-description">{paletteDescription}</span></div>
         <button type="button" className="mobile-tool-palette-close" onClick={() => closeMobileMenu()}>{t('toolbar.close')}</button>
       </header>
-      <div className="mobile-tool-palette-list">
+      <div className="mobile-tool-palette-list" role="menu" aria-label={paletteTitle}>
         {paletteGroups.map((group) => <div key={group.id} className="mobile-palette-group" role="group" aria-label={t(group.labelKey)}>
           <h3>{t(group.labelKey)}</h3>
           {toolsInGroup(group.id, mobilePaletteTools).map((definition) => <PaletteToolButton
@@ -279,7 +310,7 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
             className={`mobile-tool-group tool-button tool-pointLoad${loadGroupHighlighted ? ' active' : ''}`}
             aria-label={t('toolbar.loads')}
             aria-expanded={mobileMenu === 'loads'}
-            aria-haspopup="menu"
+            aria-haspopup="dialog"
             onClick={() => setMobileMenu((current) => current === 'loads' ? null : 'loads')}
           >
             <StructuralToolIcon tool="pointLoad" />
@@ -290,7 +321,7 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
             className={`mobile-tool-group tool-button${moreGroupHighlighted ? ' active' : ''}`}
             aria-label={t('toolbar.more')}
             aria-expanded={mobileMenu === 'more'}
-            aria-haspopup="menu"
+            aria-haspopup="dialog"
             onClick={() => setMobileMenu((current) => current === 'more' ? null : 'more')}
           >
             <MoreHorizontal size={22} strokeWidth={1.8} />

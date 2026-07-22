@@ -142,7 +142,9 @@ export const ResultsPanel = () => {
     setMobileExpanded(false);
     window.requestAnimationFrame(() => {
       const remembered = mobileReturnFocusRef.current;
-      const returnTarget = remembered?.isConnected ? remembered : mobileToggleRef.current;
+      const rememberedUnavailable = !remembered?.isConnected
+        || Boolean(remembered.closest('.inspector-panel:not(.mobile-open), [inert], [aria-hidden="true"]'));
+      const returnTarget = rememberedUnavailable ? mobileToggleRef.current : remembered;
       returnTarget?.focus({ preventScroll: true });
     });
   }, []);
@@ -206,7 +208,7 @@ export const ResultsPanel = () => {
     if (!isMobile || !mobileExpanded) return undefined;
     const panel = panelRef.current;
     const previousOverflow = document.body.style.overflow;
-    const inactive = document.querySelectorAll<HTMLElement>('.app-shell-skip-link, .topbar, .toolbar, .inspector-panel, .mobile-inspector-toggle, .canvas-host');
+    const inactive = document.querySelectorAll<HTMLElement>('.app-shell-skip-link, .topbar, .toolbar, .inspector-panel, .mobile-inspector-toggle, .canvas-host, .classroom-workspace-journey');
     inactive.forEach((element) => {
       element.inert = true;
       element.setAttribute('aria-hidden', 'true');

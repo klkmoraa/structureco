@@ -1,4 +1,4 @@
-import { forwardRef, type ReactNode } from 'react';
+import { forwardRef, type CSSProperties, type ReactNode } from 'react';
 
 export interface AppShellLayoutProps {
   projectId: string;
@@ -13,6 +13,7 @@ export interface AppShellLayoutProps {
   inspectorCollapsed?: boolean;
   fullCanvas?: boolean;
   toolRailCompact?: boolean;
+  inspectorWidth?: number;
 }
 
 /**
@@ -33,6 +34,7 @@ export const AppShellLayout = forwardRef<HTMLDivElement, AppShellLayoutProps>(fu
   inspectorCollapsed = false,
   fullCanvas = false,
   toolRailCompact = false,
+  inspectorWidth,
 }, ref) {
   return <div
     ref={ref}
@@ -41,6 +43,7 @@ export const AppShellLayout = forwardRef<HTMLDivElement, AppShellLayoutProps>(fu
     data-inspector-collapsed={inspectorCollapsed || undefined}
     data-full-canvas={fullCanvas || undefined}
     data-tool-rail-compact={toolRailCompact || undefined}
+    style={inspectorWidth === undefined ? undefined : { '--inspector-w': `${inspectorWidth}px` } as CSSProperties}
   >
     <a className="app-shell-skip-link" href="#workspace-canvas">{skipLabel}</a>
     {topBar}
@@ -56,4 +59,3 @@ export const AppShellLayout = forwardRef<HTMLDivElement, AppShellLayoutProps>(fu
     {footer}
   </div>;
 });
-

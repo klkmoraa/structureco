@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { ChevronRight, CircleHelp, MoveDown, Plus, RotateCcw, Sigma, X } from 'lucide-react';
 import { fromDisplay, toDisplay, unitLabel, type UnitQuantity } from '../engine/units';
 import { useI18n } from '../i18n/useI18n';
@@ -6,6 +6,7 @@ import { useProject } from '../store/ProjectContext';
 import type { Tool } from '../types';
 import { InspectorNumericField } from './inspector/InspectorNumericField';
 import { InspectorProperties } from './inspector/InspectorProperties';
+import { MAX_INSPECTOR_WIDTH, MIN_INSPECTOR_WIDTH, clampInspectorWidth } from '../shell/useWorkspaceLayoutPreferences';
 
 const NumberField = ({
   label,
@@ -65,11 +66,24 @@ const getFocusableElements = (panel: HTMLElement | null) => [
   return !closedDetails || element.tagName === 'SUMMARY';
 });
 
-export const Inspector = ({ className = '', modal = false, onClose }: { className?: string; modal?: boolean; onClose?: () => void }) => {
+export const Inspector = ({
+  className = '',
+  desktopWidth = 320,
+  modal = false,
+  onClose,
+  onDesktopWidthChange,
+}: {
+  className?: string;
+  desktopWidth?: number;
+  modal?: boolean;
+  onClose?: () => void;
+  onDesktopWidthChange?: (width: number) => void;
+}) => {
   const { selection, activeTool, setActiveTool, selectedCombinationId, setSelectedCombinationId } = useProject();
   const { t } = useI18n();
   const [tab, setTab] = useState<'inspector' | 'loads' | 'display'>('inspector');
   const panelRef = useRef<HTMLElement>(null);
+  const [resizeOrigin, setResizeOrigin] = useState<{ clientX: number; width: number } | null>(null);
 
   useEffect(() => {
     if (selection) setTab('inspector');
@@ -118,6 +132,28 @@ export const Inspector = ({ className = '', modal = false, onClose }: { classNam
     onClose?.();
   };
 
+  const resizeFromPointer = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!resizeOrigin || !onDesktopWidthChange) return;
+    onDesktopWidthChange(clampInspectorWidth(resizeOrigin.width + resizeOrigin.clientX - event.clientX));
+  };
+
+  const resizeFromKeyboard = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    if (!onDesktopWidthChange) return;
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      onDesktopWidthChange(clampInspectorWidth(desktopWidth + (event.shiftKey ? 48 : 16)));
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      onDesktopWidthChange(clampInspectorWidth(desktopWidth - (event.shiftKey ? 48 : 16)));
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      onDesktopWidthChange(MIN_INSPECTOR_WIDTH);
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      onDesktopWidthChange(MAX_INSPECTOR_WIDTH);
+    }
+  };
+
   const inspectorTabs = ['inspector', 'loads', 'display'] as const;
   const onTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number) => {
     let nextIndex = index;
@@ -142,6 +178,24 @@ export const Inspector = ({ className = '', modal = false, onClose }: { classNam
       aria-label={t('inspector.tab')}
       tabIndex={modal ? -1 : undefined}
     >
+      {!modal && onDesktopWidthChange ? <button
+        type="button"
+        className="inspector-resize-handle"
+        role="separator"
+        aria-label={t('inspector.resize')}
+        aria-orientation="vertical"
+        aria-valuemin={MIN_INSPECTOR_WIDTH}
+        aria-valuemax={MAX_INSPECTOR_WIDTH}
+        aria-valuenow={desktopWidth}
+        onKeyDown={resizeFromKeyboard}
+        onPointerDown={(event) => {
+          event.currentTarget.setPointerCapture(event.pointerId);
+          setResizeOrigin({ clientX: event.clientX, width: desktopWidth });
+        }}
+        onPointerMove={resizeFromPointer}
+        onPointerUp={() => setResizeOrigin(null)}
+        onPointerCancel={() => setResizeOrigin(null)}
+      /> : null}
       <div className="inspector-tabs" role="tablist" aria-label={t('inspector.tab')}>
         <button id="inspector-tab-inspector" type="button" role="tab" aria-controls="inspector-tabpanel" aria-selected={tab === 'inspector'} tabIndex={tab === 'inspector' ? 0 : -1} className={tab === 'inspector' ? 'active' : ''} onClick={() => setTab('inspector')} onKeyDown={(event) => onTabKeyDown(event, 0)}>{t('inspector.tab')}</button>
         <button id="inspector-tab-loads" type="button" role="tab" aria-controls="inspector-tabpanel" aria-selected={tab === 'loads'} tabIndex={tab === 'loads' ? 0 : -1} className={tab === 'loads' ? 'active' : ''} onClick={() => setTab('loads')} onKeyDown={(event) => onTabKeyDown(event, 1)}>{t('inspector.loadsTab')}</button>
