@@ -4,8 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultProject } from '../data/defaultProject';
 import { PROJECT_STORAGE_KEY } from '../data/projectStorage';
+import { ClassroomSessionProvider } from '../store/ClassroomSessionContext';
 import { ProjectProvider } from '../store/ProjectContext';
 import { TopBar } from './TopBar';
+
+const TopBarHarness = ({ children }: { children: React.ReactNode }) => <ProjectProvider><ClassroomSessionProvider projectId="topbar-test">{children}</ClassroomSessionProvider></ProjectProvider>;
 
 const portableMocks = vi.hoisted(() => ({
   createCalculationReport: vi.fn(),
@@ -43,7 +46,7 @@ afterEach(() => {
 describe('TopBar portable export', () => {
   it('keeps the PDF option enabled before the user runs Analysis', async () => {
     const user = userEvent.setup();
-    render(<ProjectProvider><TopBar /></ProjectProvider>);
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
 
     await user.click(screen.getByRole('button', { name: 'Más acciones' }));
     const pdfButton = screen.getByRole('button', { name: 'PDF completo reimportable' }) as HTMLButtonElement;
@@ -53,7 +56,7 @@ describe('TopBar portable export', () => {
 
   it('analyzes the current project and generates the PDF from one click', async () => {
     const user = userEvent.setup();
-    render(<ProjectProvider><TopBar /></ProjectProvider>);
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
 
     await user.click(screen.getByRole('button', { name: 'Más acciones' }));
     await user.click(screen.getByRole('button', { name: 'PDF completo reimportable' }));
@@ -73,7 +76,7 @@ describe('TopBar portable export', () => {
 describe('TopBar information architecture', () => {
   it('groups document, context, and actions without losing secondary controls', async () => {
     const user = userEvent.setup();
-    const { container } = render(<ProjectProvider><TopBar /></ProjectProvider>);
+    const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);
 
     expect(container.querySelector('[data-topbar-zone="document"]')).not.toBeNull();
     expect(container.querySelector('[data-topbar-zone="context"]')).not.toBeNull();
@@ -100,14 +103,14 @@ describe('TopBar information architecture', () => {
     const onToggleInspector = vi.fn();
     const onToggleFullCanvas = vi.fn();
     const onToggleToolRail = vi.fn();
-    render(<ProjectProvider><TopBar layoutActions={{
+    render(<TopBarHarness><TopBar layoutActions={{
       inspectorCollapsed: false,
       fullCanvas: false,
       toolRailCompact: false,
       onToggleInspector,
       onToggleFullCanvas,
       onToggleToolRail,
-    }} /></ProjectProvider>);
+    }} /></TopBarHarness>);
 
     await user.click(screen.getByRole('button', { name: 'Más acciones' }));
     await user.click(screen.getByRole('button', { name: 'Ocultar inspector' }));

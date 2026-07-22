@@ -13,7 +13,7 @@ const WorkspaceShell = lazy(loadWorkspaceShell);
 
 const AppShell = () => {
   const [screen, setScreen] = useState<'welcome' | 'workspace'>('welcome');
-  const { project } = useProject();
+  const { project, analysis } = useProject();
   const { t } = useI18n();
 
   useEffect(() => {
@@ -36,10 +36,10 @@ const AppShell = () => {
   };
 
   if (screen === 'welcome') {
-    return <ClassroomSessionProvider projectId={project.id}><WelcomeScreen onOpenWorkspace={() => navigate('workspace')} onPreloadWorkspace={() => { void loadWorkspaceShell(); }} /></ClassroomSessionProvider>;
+    return <ClassroomSessionProvider projectId={project.id} analysisAvailable={analysis?.success === true}><WelcomeScreen onOpenWorkspace={() => navigate('workspace')} onPreloadWorkspace={() => { void loadWorkspaceShell(); }} /></ClassroomSessionProvider>;
   }
 
-  return <ClassroomSessionProvider projectId={project.id}>
+  return <ClassroomSessionProvider projectId={project.id} analysisAvailable={analysis?.success === true}>
     <Suspense fallback={<div className="workspace-loading" role="status" aria-label={t('workspace.loading')}><BrandMark size={42} /><LoaderCircle className="spin" size={22} /></div>}>
       <WorkspaceShell projectId={project.id} onOpenHome={() => navigate('welcome')} />
     </Suspense>

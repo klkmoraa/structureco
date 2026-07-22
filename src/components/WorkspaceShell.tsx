@@ -5,7 +5,9 @@ import { ResultsPanel } from './ResultsPanel';
 import { StructuralCanvas } from './StructuralCanvas';
 import { ToolRail } from './ToolRail';
 import { TopBar } from './TopBar';
+import { ClassroomGuide } from './ClassroomGuide';
 import { useI18n } from '../i18n/useI18n';
+import { useProject } from '../store/ProjectContext';
 import { createPersistedEditorLayerState, editorLayerReducer, persistEditorLayerState } from './editorLayers';
 import { AppShellLayout } from '../shell/AppShellLayout';
 import { useWorkspaceLayoutPreferences } from '../shell/useWorkspaceLayoutPreferences';
@@ -18,6 +20,7 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
   const inspectorReturnFocusRef = useRef<HTMLElement | null>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
+  const { project, analysis, setActiveTool, analyze } = useProject();
   const { preferences: layout, setPreference, togglePreference } = useWorkspaceLayoutPreferences();
 
   useEffect(() => persistEditorLayerState(editorLayers), [editorLayers]);
@@ -96,6 +99,7 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
     />}
     toolRail={<ToolRail compact={layout.toolRailCompact} />}
     workspace={<>
+        {project.settings.calculationMode === 'classroom' ? <ClassroomGuide className="classroom-workspace-journey" project={project} analysis={analysis} onChooseTool={setActiveTool} onAnalyze={analyze} /> : null}
         <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => {
           if (window.matchMedia('(max-width: 1023px)').matches) openMobileInspector();
         }} />

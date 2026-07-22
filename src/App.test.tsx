@@ -130,12 +130,15 @@ describe('structureCo app shell', () => {
     expect(await screen.findByDisplayValue('Viga simplemente apoyada')).toBeTruthy();
     expect(screen.getAllByText(/modo aula/i).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: /^analizar$/i }));
+    expect(await screen.findByRole('heading', { name: /tu hipótesis antes del cálculo/i })).toBeTruthy();
+    expect(screen.queryByText(/decide cuándo ver la solución/i)).toBeNull();
+    await user.selectOptions(screen.getByRole('combobox', { name: /signo esperado/i }), 'negative');
+    await user.type(screen.getByRole('spinbutton', { name: /magnitud estimada/i }), '20');
+    await user.click(screen.getByRole('button', { name: /continuar al análisis/i }));
     await waitFor(() => expect(screen.getByText(/decide cuándo ver la solución/i)).toBeTruthy(), { timeout: 2500 });
     expect(screen.queryByText(/resumen global/i)).toBeNull();
 
-    await user.click(screen.getByRole('button', { name: /hacer una predicción/i }));
-    await user.type(screen.getByRole('spinbutton', { name: /n estimado/i }), '20');
-    await user.click(screen.getByRole('button', { name: /revelar y comparar/i }));
+    await user.click(screen.getAllByRole('button', { name: /revelar y comparar/i }).at(-1)!);
     await waitFor(() => expect(screen.getByText(/resumen global/i)).toBeTruthy());
     expect(screen.getByText(/tu predicción frente al resultado/i)).toBeTruthy();
   });

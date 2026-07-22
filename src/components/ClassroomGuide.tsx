@@ -1,60 +1,29 @@
-import type { CSSProperties } from 'react';
-import { deriveClassroomProgress, type ClassroomProgress, type ClassroomProgressStep } from '../education/classroomProgress';
+import { useId } from 'react';
+import { Check, ChevronRight, Lightbulb, TriangleAlert } from 'lucide-react';
+import { deriveClassroomJourney, type ClassroomJourney, type ClassroomJourneyStepId } from '../education/classroomJourney';
+import { useI18n } from '../i18n/useI18n';
+import { useClassroomSession } from '../store/ClassroomSessionContext';
 import type { AnalysisResult, ProjectModel, Tool } from '../types';
+import type { TranslationKey } from '../i18n/catalogs';
 
 export interface ClassroomGuideProps {
   project: ProjectModel;
   analysis?: AnalysisResult | null;
-  progress?: ClassroomProgress;
+  progress?: ClassroomJourney;
   compact?: boolean;
   className?: string;
   onChooseTool?: (tool: Tool) => void;
   onAnalyze?: () => void;
 }
 
-const styles: Record<string, CSSProperties> = {
-  root: {
-    display: 'grid',
-    gap: 12,
-    padding: 14,
-    border: '1px solid color-mix(in srgb, var(--accent) 24%, var(--border))',
-    borderRadius: 14,
-    background: 'var(--surface, #fff)',
-    color: 'var(--text, #18202a)',
-  },
-  heading: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 },
-  eyebrow: { margin: 0, color: 'var(--accent)', fontSize: 11, fontWeight: 750, letterSpacing: '.04em', textTransform: 'uppercase' },
-  title: { margin: '3px 0 0', fontSize: 16, lineHeight: 1.2 },
-  count: { color: 'var(--muted, #667085)', fontSize: 11, whiteSpace: 'nowrap' },
-  progress: { width: '100%', height: 5, accentColor: 'var(--accent)' },
-  list: { display: 'grid', gap: 7, margin: 0, padding: 0, listStyle: 'none' },
-  step: { display: 'grid', gridTemplateColumns: '28px minmax(0, 1fr)', gap: 9, alignItems: 'start', padding: 9, borderRadius: 10 },
-  marker: { width: 26, height: 26, display: 'grid', placeItems: 'center', borderRadius: 13, fontSize: 11, fontWeight: 800 },
-  stepTitle: { display: 'block', fontSize: 12, lineHeight: 1.25 },
-  description: { display: 'block', marginTop: 3, color: 'var(--muted, #667085)', fontSize: 10, lineHeight: 1.45 },
-  action: { minHeight: 38, justifySelf: 'start', marginTop: 8, padding: '0 13px', border: 0, borderRadius: 9, background: 'var(--accent)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' },
+const stepCopy: Record<ClassroomJourneyStepId, { title: TranslationKey; description: TranslationKey; action: TranslationKey }> = {
+  build: { title: 'classroom.buildTitle', description: 'classroom.buildBody', action: 'classroom.buildAction' },
+  define: { title: 'classroom.defineTitle', description: 'classroom.defineBody', action: 'classroom.defineAction' },
+  predict: { title: 'classroom.predictTitle', description: 'classroom.predictBody', action: 'classroom.predictAction' },
+  analyze: { title: 'classroom.analyzeTitle', description: 'classroom.analyzeBody', action: 'classroom.analyzeAction' },
+  compare: { title: 'classroom.compareTitle', description: 'classroom.compareBody', action: 'classroom.compareAction' },
+  conclude: { title: 'classroom.concludeTitle', description: 'classroom.concludeBody', action: 'classroom.concludeAction' },
 };
-
-const stepBackground = (step: ClassroomProgressStep): CSSProperties => ({
-  ...styles.step,
-  background: step.state === 'current'
-    ? 'color-mix(in srgb, var(--accent) 8%, transparent)'
-    : step.state === 'attention'
-      ? 'color-mix(in srgb, var(--warning, #f79009) 10%, transparent)'
-      : 'transparent',
-});
-
-const markerStyle = (step: ClassroomProgressStep): CSSProperties => ({
-  ...styles.marker,
-  color: step.complete ? '#fff' : step.state === 'attention' ? 'var(--warning, #b54708)' : 'var(--muted, #667085)',
-  background: step.complete
-    ? 'var(--success, #16865b)'
-    : step.state === 'current'
-      ? 'color-mix(in srgb, var(--accent) 16%, var(--surface))'
-      : step.state === 'attention'
-        ? 'color-mix(in srgb, var(--warning, #f79009) 18%, var(--surface, #fff))'
-        : 'var(--surface-2, #f2f4f7)',
-});
 
 export const ClassroomGuide = ({
   project,
@@ -65,51 +34,72 @@ export const ClassroomGuide = ({
   onChooseTool,
   onAnalyze,
 }: ClassroomGuideProps) => {
-  const progress = suppliedProgress ?? deriveClassroomProgress(project, analysis);
+  const { t } = useI18n();
+  const session = useClassroomSession();
+  const conclusionId = useId();
+  const progress = suppliedProgress ?? deriveClassroomJourney(project, analysis, {
+    hasPredictions: session.hasPredictions,
+    analysisRequested: session.analysisRequested,
+    resultsVisible: session.resultsVisible,
+    conclusion: session.conclusion,
+  });
   const visibleSteps = compact ? [progress.currentStep] : progress.steps;
-  const runAction = (step: ClassroomProgressStep) => {
+
+  const runAction = (stepId: ClassroomJourneyStepId) => {
+    const step = progress.steps.find((candidate) => candidate.id === stepId);
+    if (!step) return;
     if (step.action.kind === 'tool') onChooseTool?.(step.action.tool);
-    else onAnalyze?.();
+    else if (step.action.kind === 'predict') {
+      session.startPredicting();
+      window.dispatchEvent(new CustomEvent('structureco:expand-mobile-results'));
+      window.requestAnimationFrame(() => document.getElementById('classroom-prediction-title')?.focus());
+    } else if (step.action.kind === 'analyze') {
+      if (session.hasPredictions) {
+        session.markAnalysisRequested();
+        onAnalyze?.();
+      }
+      else session.startPredicting();
+    } else if (step.action.kind === 'compare') {
+      session.revealResults();
+      window.dispatchEvent(new CustomEvent('structureco:expand-mobile-results'));
+    } else {
+      window.requestAnimationFrame(() => document.getElementById(conclusionId)?.focus());
+    }
   };
 
-  return (
-    <section className={className} style={styles.root} aria-labelledby="classroom-guide-title">
-      <div style={styles.heading}>
-        <div>
-          <p style={styles.eyebrow}>Modo Aula</p>
-          <h2 id="classroom-guide-title" style={styles.title}>Construye y comprueba</h2>
-        </div>
-        <span style={styles.count}>{progress.completedSteps} de {progress.steps.length}</span>
+  return <section className={`classroom-journey${compact ? ' is-compact' : ''}${className ? ` ${className}` : ''}`} aria-labelledby={compact ? undefined : 'classroom-guide-title'} aria-label={compact ? t('classroom.guideTitle') : undefined}>
+    <header className="classroom-journey__header">
+      <div>
+        <span>{t('classroom.eyebrow')}</span>
+        {compact ? <strong>{t(stepCopy[progress.currentStep.id].title)}</strong> : <h2 id="classroom-guide-title">{t('classroom.guideTitle')}</h2>}
       </div>
-      <progress
-        style={styles.progress}
-        value={progress.completedSteps}
-        max={progress.steps.length}
-        aria-label="Progreso del ejercicio"
-      />
-      <ol style={styles.list} aria-label="Pasos del ejercicio">
-        {visibleSteps.map((step) => {
-          const actionAvailable = step.action.kind === 'tool' ? Boolean(onChooseTool) : Boolean(onAnalyze);
-          return (
-            <li
-              key={step.id}
-              data-classroom-step={step.id}
-              data-state={step.state}
-              style={stepBackground(step)}
-              aria-current={step.state === 'current' || step.state === 'attention' ? 'step' : undefined}
-            >
-              <span style={markerStyle(step)} aria-hidden="true">{step.complete ? '✓' : progress.steps.findIndex((candidate) => candidate.id === step.id) + 1}</span>
-              <div>
-                <strong style={styles.stepTitle}>{step.title}</strong>
-                <span style={styles.description}>{step.description}</span>
-                {!step.complete && actionAvailable ? (
-                  <button type="button" style={styles.action} onClick={() => runAction(step)}>{step.action.label}</button>
-                ) : null}
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-    </section>
-  );
+      <output aria-live="polite">{t('classroom.progressCount', { completed: progress.completedSteps, total: progress.steps.length })}</output>
+    </header>
+    <progress value={progress.completedSteps} max={progress.steps.length} aria-label={t('classroom.progressLabel')} />
+    <ol className="classroom-journey__steps" aria-label={t('classroom.stepsLabel')}>
+      {visibleSteps.map((step, index) => {
+        const copy = stepCopy[step.id];
+        const actionAvailable = step.action.kind === 'tool'
+          ? Boolean(onChooseTool)
+          : step.action.kind === 'analyze'
+            ? Boolean(onAnalyze)
+            : step.action.kind !== 'compare' || Boolean(analysis?.success);
+        return <li key={step.id} data-classroom-step={step.id} data-state={step.state} aria-current={step.id === progress.currentStep.id ? 'step' : undefined}>
+          <span className="sr-only">{t(step.complete ? 'classroom.stepComplete' : step.state === 'attention' ? 'classroom.stepAttention' : step.state === 'current' ? 'classroom.stepCurrent' : 'classroom.stepPending')}</span>
+          <span className="classroom-journey__marker" aria-hidden="true">{step.complete ? <Check size={14} /> : step.state === 'attention' ? <TriangleAlert size={14} /> : compact ? progress.steps.findIndex((candidate) => candidate.id === step.id) + 1 : index + 1}</span>
+          <div>
+            <strong>{t(copy.title)}</strong>
+            <small>{t(copy.description)}</small>
+            {!step.complete && step.state !== 'pending' && actionAvailable ? <button type="button" onClick={() => runAction(step.id)}>{t(copy.action)} <ChevronRight size={14} /></button> : null}
+          </div>
+        </li>;
+      })}
+    </ol>
+    {progress.currentStep.id === 'conclude' || session.conclusion ? <label className="classroom-conclusion" htmlFor={conclusionId}>
+      <span>{t('classroom.conclusionLabel')}</span>
+      <textarea id={conclusionId} rows={compact ? 2 : 3} value={session.conclusion} placeholder={t('classroom.conclusionPlaceholder')} onChange={(event) => session.setConclusion(event.currentTarget.value)} />
+      <small>{session.conclusion.trim() ? t('classroom.conclusionSaved') : t('classroom.conclusionHint')}</small>
+    </label> : null}
+    <p className="classroom-journey__notice"><Lightbulb size={15} /> <span>{t('classroom.defaultsWarning')}</span></p>
+  </section>;
 };

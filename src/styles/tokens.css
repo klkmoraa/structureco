@@ -38,6 +38,7 @@
   --sc-color-state-warning-foreground: #8a4f00;
   --sc-color-state-error-foreground: #a92f2f;
   --sc-color-aula: var(--sc-violet-500);
+  --sc-color-aula-foreground: var(--sc-white);
 
   /* Canvas/document roles are explicit so themes are not produced by inversion. */
   --sc-color-canvas-grid: #e6ebe8;
@@ -250,6 +251,7 @@
   --sc-color-state-warning-foreground: var(--sc-color-state-warning);
   --sc-color-state-error-foreground: var(--sc-color-state-error);
   --sc-color-aula: #9a83f0;
+  --sc-color-aula-foreground: #171121;
   --sc-color-canvas-grid: #222b27;
   --sc-color-canvas-grid-strong: #2c3632;
   --sc-color-canvas-member: #f2f6f4;

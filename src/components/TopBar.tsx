@@ -29,6 +29,7 @@ import { exportProjectJson } from '../utils/export';
 import { AnalysisStatus } from './AnalysisStatus';
 import { BrandMark } from './BrandMark';
 import { Button, IconButton } from '../ui/controls';
+import { useClassroomSession } from '../store/ClassroomSessionContext';
 
 const PortableImportCenter = lazy(() => import('./PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
 
@@ -63,6 +64,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
     setSelectedCombinationId,
   } = useProject();
   const { language, t } = useI18n();
+  const classroomSession = useClassroomSession();
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -153,6 +155,17 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
     if (portableExport !== kind) return kind === 'pdf' ? 'PDF completo reimportable' : 'Expediente .structureco';
     if (!analysis) return kind === 'pdf' ? 'Analizando y generando PDF…' : 'Analizando y preparando paquete…';
     return kind === 'pdf' ? 'Generando PDF…' : 'Preparando paquete…';
+  };
+  const requestAnalysis = () => {
+    if (project.settings.calculationMode === 'classroom') {
+      if (!classroomSession.hasPredictions) {
+        classroomSession.startPredicting();
+        window.dispatchEvent(new CustomEvent('structureco:expand-mobile-results'));
+        return;
+      }
+      classroomSession.markAnalysisRequested();
+    }
+    analyze();
   };
 
   const exportPortable = async (kind: 'pdf' | 'bundle') => {
@@ -312,7 +325,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
                 <button onClick={redo} disabled={!canRedo}><Redo2 size={17} /> {t('history.redo')}</button>
               </div>
               <label className="mobile-menu-field overflow-case"><span>{t('analysis.caseOrCombination')}</span><select value={selectedCombinationId} onChange={(event) => setSelectedCombinationId(event.target.value)}><option value="">{t('analysis.activeCases')}</option>{project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}</select></label>
-              <label className="mobile-menu-field overflow-mode"><span>{t('analysis.mode')}</span><select value={project.settings.calculationMode ?? 'complete'} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } }))}><option value="classroom">{t('analysis.modeClassroom')}</option><option value="complete">{t('analysis.modeComplete')}</option></select></label>
+              <label className="mobile-menu-field overflow-mode"><span>{t('analysis.mode')}</span><select value={project.settings.calculationMode ?? 'complete'} onChange={(event) => { updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } })); setShowMobileMenu(false); }}><option value="classroom">{t('analysis.modeClassroom')}</option><option value="complete">{t('analysis.modeComplete')}</option></select></label>
               <label className="mobile-menu-field overflow-units"><span>{t('units.label')}</span><select value={project.settings.units} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units } }))}><option value="kN-m">kN · m</option><option value="N-mm">N · mm</option><option value="kgf-m">kgf · m</option><option value="kip-ft">kip · ft</option></select></label>
               <label className="mobile-menu-field"><span>{t('language.label')}</span><select value={language} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, language: event.target.value as 'es' | 'en' } }))}><option value="es">{t('language.es')}</option><option value="en">{t('language.en')}</option></select></label>
               <button onClick={() => { setTheme(theme === 'light' ? 'dark' : 'light'); setShowMobileMenu(false); }}>{theme === 'light' ? <Moon size={17} /> : <Sun size={17} />} {theme === 'light' ? t('theme.dark') : t('theme.light')}</button>
@@ -345,7 +358,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
           className={`analyze-button${isAnalyzing ? ' analyzing' : ''}`}
           variant="primary"
           size="touch"
-          onClick={analyze}
+          onClick={requestAnalysis}
           loading={isAnalyzing}
           loadingLabel={t('analysis.runningLabel')}
           leadingIcon={<Play size={17} fill="currentColor" />}

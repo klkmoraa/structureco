@@ -5,7 +5,7 @@ import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from 
 import { evaluateEducationalAssertions, type EducationalAssertionEvaluation } from '../engine/educationalAssertions';
 import { buildDiagramEnvelope, evaluateEnvelopeAt } from '../engine/envelope';
 import { useScenarioAnalysis } from '../engine/useScenarioAnalysis';
-import type { DiagramQuantity, DiagramSegment, EducationalAssertionTarget, MatrixTrace, MemberResult } from '../types';
+import type { DiagramQuantity, DiagramSegment, EducationalAssertionTarget, MatrixTrace, MemberResult, ProjectModel } from '../types';
 import { toDisplay, unitLabel } from '../engine/units';
 import { useI18n } from '../i18n/useI18n';
 import type { TranslationKey } from '../i18n/catalogs';
@@ -14,6 +14,7 @@ import { useClassroomSession } from '../store/ClassroomSessionContext';
 import { deriveClassroomProgress } from '../education/classroomProgress';
 import { InfluenceLineView } from './InfluenceLineView';
 import { formatResultNumber } from './results/resultFormatting';
+import { ClassroomPredictionForm } from './ClassroomPredictionForm';
 
 const tabs: Array<{ id: ResultTab; labelKey: TranslationKey; color?: string }> = [
   { id: 'summary', labelKey: 'results.summary' },
@@ -107,7 +108,12 @@ export const ResultsPanel = () => {
   const selectedMemberId = resultContext.memberId;
   const memberResult = selectedMemberId ? analysis?.memberResults.find((result) => result.memberId === selectedMemberId) : undefined;
   const classroomMode = project.settings.calculationMode === 'classroom';
-  const { resultsVisible, hideResults } = useClassroomSession();
+  const classroomSession = useClassroomSession();
+  const { resultsVisible, hideResults } = classroomSession;
+  const classroomProgress = classroomMode ? deriveClassroomProgress(project, analysis) : null;
+  const classroomPredictionRequired = Boolean(classroomMode
+    && classroomProgress?.readyToAnalyze
+    && (!analysis || (!analysis.success && (!classroomSession.hasPredictions || classroomSession.revealState === 'predicting'))));
   const resultsAllowed = !classroomMode || resultsVisible;
   const availableTabs = classroomMode ? tabs.filter((tab) => tab.id !== 'deformed') : tabs;
   const activeTab = availableTabs.find((tab) => tab.id === resultTab) ?? availableTabs[0];
@@ -143,6 +149,12 @@ export const ResultsPanel = () => {
   useEffect(() => {
     if (classroomMode && resultTab === 'deformed') setResultTab('moment');
   }, [classroomMode, resultTab, setResultTab]);
+  useEffect(() => {
+    if (!classroomMode || !analysis?.success) return;
+    const targetId = resultsVisible ? 'classroom-result-summary' : 'classroom-result-gate-title';
+    const focusFrame = window.requestAnimationFrame(() => document.getElementById(targetId)?.focus({ preventScroll: true }));
+    return () => window.cancelAnimationFrame(focusFrame);
+  }, [analysis, classroomMode, resultsVisible]);
   useEffect(() => {
     const query = window.matchMedia?.(MOBILE_RESULTS_QUERY);
     if (!query) return undefined;
@@ -353,31 +365,32 @@ export const ResultsPanel = () => {
         </div>)}
       </nav>
       <div id="results-content" className="results-body" role="tabpanel" aria-labelledby={`result-tab-${activeTab.id}`} aria-busy={isAnalyzing}>
-        {analysis?.success && classroomMode && resultsVisible ? <button className="hide-classroom-results" onClick={hideResults}>Ocultar resultados</button> : null}
-        {!analysis ? <EmptyResults onAnalyze={analyze} /> : null}
-        {analysis && !analysis.success && resultTab !== 'issues' ? <FailedResults onOpenIssues={() => setResultTab('issues')} /> : null}
-        {analysis?.success && !resultsAllowed ? <ClassroomResultGate memberId={selectedMemberId ?? memberResult?.memberId ?? ''} /> : null}
+        {analysis?.success && classroomMode && resultsVisible ? <button className="hide-classroom-results" onClick={hideResults}>{t('classroom.hideResults')}</button> : null}
+        {classroomPredictionRequired ? <ClassroomPredictionForm project={project} preferredMemberId={selectedMemberId} onContinue={() => { classroomSession.markAnalysisRequested(); analyze(); }} /> : null}
+        {!analysis && (!classroomMode || !classroomProgress?.readyToAnalyze) ? <EmptyResults onAnalyze={analyze} /> : null}
+        {analysis && !analysis.success && !classroomPredictionRequired && resultTab !== 'issues' ? <FailedResults onOpenIssues={() => setResultTab('issues')} /> : null}
+        {analysis?.success && !resultsAllowed ? <ClassroomResultGate project={project} memberId={selectedMemberId ?? memberResult?.memberId ?? ''} onAnalyze={analyze} /> : null}
         {analysis?.success && resultsAllowed && resultTab === 'reactions' ? <ReactionTable /> : null}
         {analysis?.success && resultsAllowed && resultTab === 'summary' ? <ResultSummary /> : null}
         {analysis?.success && resultsAllowed && ['axial', 'shear', 'moment'].includes(resultTab) ? <DiagramView type={resultTab as 'axial' | 'shear' | 'moment'} memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
         {analysis?.success && resultsAllowed && resultTab === 'influence' ? <InfluenceLineView project={project} selection={selection ?? undefined} onCanvasStateChange={setInfluenceCanvasState} /> : null}
         {analysis?.success && resultsAllowed && resultTab === 'deformed' ? <DeformationView memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
         {analysis?.success && resultsAllowed && resultTab === 'learn' ? <LearningSteps /> : null}
-        {analysis && resultTab === 'issues' ? <IssuesView /> : null}
+        {analysis && resultTab === 'issues' && !classroomPredictionRequired ? <IssuesView /> : null}
       </div>
     </section>
   </>;
 };
 
-const ClassroomResultGate = ({ memberId }: { memberId: string }) => {
-  const { revealState, predictions, startPredicting, revealResults, setPrediction } = useClassroomSession();
+const ClassroomResultGate = ({ project, memberId, onAnalyze }: { project: ProjectModel; memberId: string; onAnalyze: () => void }) => {
+  const { t } = useI18n();
+  const { hasPredictions, revealState, startPredicting, revealResults, markAnalysisRequested } = useClassroomSession();
   const { setResultTab } = useProject();
-  const current = predictions[memberId] ?? {};
-  return <section className="classroom-result-gate" aria-labelledby="classroom-result-gate-title">
+  if (!hasPredictions || revealState === 'predicting') return <ClassroomPredictionForm project={project} preferredMemberId={memberId} onContinue={() => { markAnalysisRequested(); onAnalyze(); }} />;
+  return <section className="classroom-result-gate" aria-labelledby="classroom-result-gate-title" aria-live="polite">
     <div className="classroom-result-lock" aria-hidden="true">?</div>
-    <div><span className="eyebrow">Práctica activa</span><h3 id="classroom-result-gate-title">El análisis terminó. Decide cuándo ver la solución.</h3><p>Primero puedes anticipar el signo y el máximo absoluto del miembro {memberId || 'seleccionado'}; después compara tu estimación con los diagramas exactos.</p></div>
-    {revealState === 'predicting' ? <div className="prediction-inputs">{(['axial', 'shear', 'moment'] as const).map((quantity) => <label key={quantity}><span>{quantity === 'axial' ? 'N estimado' : quantity === 'shear' ? 'V estimado' : 'M estimado'}</span><input type="number" inputMode="decimal" value={current[quantity] ?? ''} placeholder="Incluye el signo" onChange={(event) => setPrediction(memberId, quantity, event.currentTarget.value === '' ? null : event.currentTarget.valueAsNumber)} /></label>)}</div> : null}
-    <div className="classroom-result-gate-actions">{revealState !== 'predicting' ? <button className="secondary" onClick={startPredicting}>Hacer una predicción</button> : null}<button onClick={() => { revealResults(); setResultTab('summary'); }}>Revelar y comparar</button></div>
+    <div><span className="eyebrow">{t('classroom.practiceActive')}</span><h3 id="classroom-result-gate-title" tabIndex={-1}>{t('classroom.gateTitle')}</h3><p>{t('classroom.gateBody', { member: memberId || t('classroom.selectedMember') })}</p></div>
+    <div className="classroom-result-gate-actions"><button className="secondary" onClick={() => { startPredicting(); window.requestAnimationFrame(() => document.getElementById('classroom-prediction-title')?.focus()); }}>{t('classroom.editPrediction')}</button><button onClick={() => { revealResults(); setResultTab('summary'); }}>{t('classroom.revealAndCompare')}</button></div>
   </section>;
 };
 
@@ -404,7 +417,7 @@ const ReactionTable = () => {
   const momentUnit = unitLabel(units, 'moment');
   const classroom = project.settings.calculationMode === 'classroom';
   return <div className="table-wrap">
-    {classroom ? <div className="classroom-result-note"><strong>Modo Aula</strong><span>Se muestran reacciones y esfuerzos. Las propiedades automáticas solo afectan estructuras hiperestáticas.</span></div> : null}
+    {classroom ? <div className="classroom-result-note"><strong>{t('classroom.resultNoteTitle')}</strong><span>{t('classroom.resultNoteBody')}</span></div> : null}
     <table className="results-table">
       <caption>{t('results.reactionCaption')}</caption>
       <thead><tr><th scope="col">{t('results.node')}</th>{classroom ? null : <><th scope="col">Ux ({lengthUnit})</th><th scope="col">Uy ({lengthUnit})</th><th scope="col">Rz (rad)</th></>}<th scope="col">Rx ({forceUnit})</th><th scope="col">Ry ({forceUnit})</th><th scope="col">Mz ({momentUnit})</th></tr></thead>
@@ -648,7 +661,7 @@ const LearningSteps = () => {
   useEffect(() => () => setLearningFocus(null), [setLearningFocus]);
   return <div className="learning-steps">
     <EducationExplorer />
-    <div className="learning-toolbar"><div><strong>Procedimiento vinculado al cálculo</strong><small>{analysis?.explanation.length ?? 0} pasos · abre uno para resaltarlo en el modelo</small></div><div className="learning-level" role="group" aria-label="Nivel de detalle"><button className={detailLevel === 'summary' ? 'active' : ''} onClick={() => setDetailLevel('summary')}>Resumen</button><button className={detailLevel === 'steps' ? 'active' : ''} onClick={() => setDetailLevel('steps')}>Paso a paso</button><button className={detailLevel === 'full' ? 'active' : ''} onClick={() => setDetailLevel('full')}>Completo</button></div></div>
+    <div className="learning-toolbar"><div><strong>Procedimiento vinculado al cálculo</strong><small>{analysis?.explanation.length ?? 0} pasos · abre uno para resaltarlo en el modelo</small></div><div className="learning-level" role="group" aria-label="Nivel de detalle"><button aria-pressed={detailLevel === 'summary'} className={detailLevel === 'summary' ? 'active' : ''} onClick={() => setDetailLevel('summary')}>Resumen</button><button aria-pressed={detailLevel === 'steps'} className={detailLevel === 'steps' ? 'active' : ''} onClick={() => setDetailLevel('steps')}>Paso a paso</button><button aria-pressed={detailLevel === 'full'} className={detailLevel === 'full' ? 'active' : ''} onClick={() => setDetailLevel('full')}>Completo</button></div></div>
     {educationalCase ? <section className="educational-source">
       <div><strong>{educationalCase.chapter}</strong><span>{educationalCase.kind === 'attributed-example' ? t('results.attributedExample') : t('results.originalPractice')}</span></div>
       <p>{educationalCase.note}</p>

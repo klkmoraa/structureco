@@ -26,7 +26,6 @@ import type {
   UnitSystemId,
   ValidationIssue,
 } from '../../types';
-import { ClassroomGuide } from '../ClassroomGuide';
 import { InspectorNumericField } from './InspectorNumericField';
 import { formatInspectorValue } from './numericFormatting';
 import {
@@ -148,7 +147,7 @@ const InspectorIssues = ({ issues }: { issues: readonly ValidationIssue[] }) => 
 };
 
 export const InspectorProperties = () => {
-  const { project, analysis, selection, setActiveTool, setSelection, updateProject, analyze } = useProject();
+  const { project, analysis, selection, setSelection, updateProject } = useProject();
   const { t } = useI18n();
   const { resultsVisible } = useClassroomSession();
   const [expandedSections, setExpandedSections] = usePersistentInspectorSections();
@@ -427,7 +426,7 @@ export const InspectorProperties = () => {
     </div>
 
     {selection === null ? <div className="inspector-empty-state">
-      {classroomMode ? <ClassroomGuide compact project={project} analysis={analysis} onChooseTool={setActiveTool} onAnalyze={analyze} /> : <InspectorHelper>Selecciona un objeto para ver sus propiedades, unidades y resultados derivados.</InspectorHelper>}
+      <InspectorHelper>Selecciona un objeto para ver sus propiedades, unidades y resultados derivados.</InspectorHelper>
     </div> : null}
 
     {selection?.kind === 'multi' ? <>
