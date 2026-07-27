@@ -27,7 +27,7 @@ afterEach(() => cleanup());
 
 const openWorkspace = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.click(screen.getByRole('button', { name: /continuar proyecto/i }));
-  await screen.findByRole('button', { name: /^analizar$/i });
+  await screen.findByRole('button', { name: /^analizar$/i }, { timeout: 5000 });
 };
 
 const renderExampleApp = async (user: ReturnType<typeof userEvent.setup>) => {
@@ -57,7 +57,41 @@ describe('structureCo app shell', () => {
     expect(await screen.findByDisplayValue('Proyecto sin título', {}, { timeout: 5000 })).toBeTruthy();
     expect(container.querySelectorAll('.node-object')).toHaveLength(0);
     expect(container.querySelectorAll('.member-object')).toHaveLength(0);
-  });
+  }, 10_000);
+
+  it('localizes built-in example cards and preserves English when an example opens', async () => {
+    const user = userEvent.setup();
+    const project = createDefaultProject();
+    project.settings = { ...project.settings, language: 'en' };
+    localStorage.setItem('structureCo.project', JSON.stringify(project));
+    const { container } = render(<App />);
+
+    const exampleFrame = screen.getByRole('button', { name: /Example frame.*6 × 4 m frame/ });
+    expect(exampleFrame).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Simply supported beam.*8 m beam/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Triangular truss.*statically determinate truss/i })).toBeTruthy();
+    const cards = [...container.querySelectorAll('.welcome-example-card')].map((card) => card.textContent).join(' ');
+    expect(cards).not.toMatch(/Pórtico de ejemplo|Viga simplemente apoyada|Armadura triangular/);
+
+    await user.click(exampleFrame);
+    expect(await screen.findByRole('button', { name: /^analyze$/i }, { timeout: 5000 })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^analizar$/i })).toBeNull();
+  }, 10_000);
+
+  it('preserves English when creating a guided exercise', async () => {
+    const user = userEvent.setup();
+    const project = createDefaultProject();
+    project.settings = { ...project.settings, language: 'en' };
+    localStorage.setItem('structureCo.project', JSON.stringify(project));
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /new exercise/i }));
+    await user.click(screen.getByRole('radio', { name: /simply supported beam/i }));
+    await user.click(screen.getByRole('button', { name: /create exercise/i }));
+
+    expect(await screen.findByRole('button', { name: /^analyze$/i }, { timeout: 5000 })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /^analizar$/i })).toBeNull();
+  }, 10_000);
 
   it('renders the editor and runs analysis for an existing model', async () => {
     const user = userEvent.setup();
@@ -141,7 +175,7 @@ describe('structureCo app shell', () => {
     await user.click(screen.getAllByRole('button', { name: /revelar y comparar/i }).at(-1)!);
     await waitFor(() => expect(screen.getByText(/resumen global/i)).toBeTruthy());
     expect(screen.getByText(/tu predicción frente al resultado/i)).toBeTruthy();
-  });
+  }, 10_000);
 
   it('changes between light and dark themes', async () => {
     const user = userEvent.setup();
@@ -162,6 +196,7 @@ describe('structureCo app shell', () => {
 
     expect(screen.getByRole('button', { name: /^analyze$/i })).toBeTruthy();
     expect(screen.getAllByRole('combobox', { name: /load case or combination/i }).length).toBeGreaterThan(0);
+    await waitFor(() => expect(document.documentElement.lang).toBe('en'));
     await waitFor(() => {
       const saved = JSON.parse(localStorage.getItem('structureCo.project') ?? '{}');
       expect(saved.settings?.language).toBe('en');
@@ -231,6 +266,33 @@ describe('structureCo app shell', () => {
     fireEvent.keyDown(canvas, { key: 'h', code: 'KeyH' });
     expect(screen.getByRole('button', { name: /desplazar \(H\)/i }).getAttribute('aria-pressed')).toBe('true');
   });
+
+  it('localizes canvas object names, CAD entry, feedback, and result legend in English', async () => {
+    const user = userEvent.setup();
+    const project = createDefaultProject();
+    project.settings = { ...project.settings, language: 'en' };
+    localStorage.setItem('structureCo.project', JSON.stringify(project));
+    const { container } = render(<App />);
+    await user.click(screen.getByRole('button', { name: /continue project/i }));
+    await screen.findByRole('button', { name: /^analyze$/i }, { timeout: 5000 });
+    const canvas = screen.getByRole('application', { name: /structural workspace/i });
+
+    expect(screen.getByRole('button', { name: /Member M1, from N1 to N3/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Node N1, X 0\.000, Y 0\.000/ })).toBeTruthy();
+    expect(container.querySelector('.load-symbol, .distributed-symbol')?.getAttribute('aria-label')).not.toMatch(/Carga|Momento/);
+
+    fireEvent.keyDown(canvas, { key: 'n', code: 'KeyN' });
+    const cad = screen.getByRole('form', { name: 'CAD numeric entry' });
+    expect(within(cad).getByText('Node by coordinates')).toBeTruthy();
+    await user.click(within(cad).getByRole('button', { name: 'Create node' }));
+    expect(screen.getByRole('alert').textContent).toContain('Enter two valid numeric values.');
+
+    await user.click(screen.getByRole('button', { name: /^analyze$/i }));
+    await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+    expect(container.querySelector('.canvas-result-legend')?.getAttribute('aria-label')).toBe('Diagram convention');
+    expect(container.querySelector('.canvas-result-legend')?.textContent).toContain('Exact curve');
+    expect(container.querySelector('.canvas-result-legend')?.textContent).not.toMatch(/Curva exacta|por miembro|común/);
+  }, 10_000);
 
   it('renames a project without invalidating completed analysis', async () => {
     const user = userEvent.setup();

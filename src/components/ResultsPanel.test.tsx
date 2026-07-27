@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createHibbelerStyleDiagramPractice } from '../data/defaultProject';
+import { createBlankProject, createHibbelerStyleDiagramPractice } from '../data/defaultProject';
 import { PROJECT_STORAGE_KEY } from '../data/projectStorage';
 import { createSimpleBeamExercise } from '../education/exerciseTemplates';
 import { ClassroomSessionProvider, useClassroomSession } from '../store/ClassroomSessionContext';
@@ -74,6 +74,17 @@ afterEach(() => {
 });
 
 describe('Results analytical center', () => {
+  it('localizes the empty classroom next step in English', () => {
+    const project = createBlankProject();
+    project.settings = { ...project.settings, calculationMode: 'classroom', language: 'en' };
+    renderResults(project);
+
+    expect(screen.getByText('Next: Build')).toBeTruthy();
+    expect(screen.getByText('Create connected nodes and members; this geometry remains the real model.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Continue building' })).toBeTruthy();
+    expect(screen.queryByText(/Siguiente|Construye|Continuar construcción/)).toBeNull();
+  });
+
   it('organizes tabs by purpose and supports keyboard plus persistent panel modes', async () => {
     const user = userEvent.setup();
     renderResults();
@@ -122,6 +133,62 @@ describe('Results analytical center', () => {
     expect(screen.getByText('Miembro AB')).toBeTruthy();
   }, 10_000);
 
+  it('announces keyboard chart readings and exposes complete advanced tab semantics', async () => {
+    const user = userEvent.setup();
+    renderResults();
+
+    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
+    const chart = await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+    const graph = within(chart).getByRole('img', { name: /diagrama .* del miembro/i });
+    expect(graph.getAttribute('aria-describedby')).toBeTruthy();
+    expect(graph.getAttribute('aria-keyshortcuts')).toContain('ArrowRight');
+
+    graph.focus();
+    await user.keyboard('{ArrowRight}');
+    const reading = within(chart).getByRole('status');
+    expect(reading.getAttribute('aria-live')).toBe('polite');
+    expect(reading.textContent).toContain('x');
+    expect(screen.getByLabelText('Cursor de resultados').textContent).not.toBe('none');
+    await user.keyboard('{Escape}');
+    expect(screen.getByLabelText('Cursor de resultados').textContent).toBe('none');
+
+    await user.click(screen.getByRole('tab', { name: 'Aprender' }));
+    const modelTab = screen.getByRole('tab', { name: 'Modelo' });
+    const dofTab = screen.getByRole('tab', { name: 'GDL' });
+    modelTab.focus();
+    await user.keyboard('{ArrowRight}');
+    await waitFor(() => expect(document.activeElement).toBe(dofTab));
+    expect(dofTab.getAttribute('tabindex')).toBe('0');
+    expect(dofTab.getAttribute('aria-controls')).toBe('education-stage-panel-dofs');
+    const dofPanel = screen.getByRole('tabpanel', { name: 'GDL' });
+    expect(dofPanel.getAttribute('aria-labelledby')).toBe('education-stage-tab-dofs');
+
+    const locateNode = within(dofPanel).getAllByRole('button', { name: /Mostrar nodo/i })[0];
+    locateNode.focus();
+    await user.keyboard('[Space]');
+    expect(screen.getByLabelText('Selección actual').textContent).toMatch(/^node:/);
+  }, 10_000);
+
+  it('lets an unpinned chart Escape close the mobile results sheet', async () => {
+    const user = userEvent.setup();
+    window.matchMedia = mockMatchMedia(true);
+    renderResults();
+
+    const toggle = screen.getByRole('button', { name: 'Resultados' });
+    await user.click(toggle);
+    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
+    const chart = await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+    const graph = within(chart).getByRole('img', { name: /diagrama .* del miembro/i });
+    expect(screen.getByRole('dialog', { name: /Resultados del an/ })).toBeTruthy();
+    expect(screen.getByLabelText('Cursor de resultados').textContent).toBe('none');
+
+    graph.focus();
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Resultados del an/ })).toBeNull());
+    expect(document.activeElement).toBe(toggle);
+  }, 10_000);
+
   it('links reaction rows back to the selected model node', async () => {
     const user = userEvent.setup();
     renderResults();
@@ -154,7 +221,72 @@ describe('Results analytical center', () => {
     expect(screen.getByRole('button', { name: 'Compact' })).toBeTruthy();
     expect(screen.getByText('Ready to analyze').getAttribute('role')).toBe('status');
     await user.click(screen.getByRole('button', { name: 'Analyze structure' }));
-    await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+    const chart = await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+    const graph = within(chart).getByRole('img', { name: /bending moment diagram/i });
+    const help = document.getElementById(graph.getAttribute('aria-describedby') ?? '');
+    expect(help?.textContent).toContain('Use the Left and Right Arrow keys');
+    expect(within(chart).getByText('Member')).toBeTruthy();
+    expect(within(chart).getByRole('combobox', { name: 'Member for diagram' })).toBeTruthy();
+    expect(within(chart).getByRole('button', { name: 'Env.' }).getAttribute('title')).toBe('Compare all cases and combinations');
+    expect(within(chart).getByText('Move the pointer · tap to pin')).toBeTruthy();
+    expect(within(chart).getByText('Exact N–V–M cursor · enable Env. to compare cases and combinations')).toBeTruthy();
+    expect(chart.textContent).not.toMatch(/Miembro|Comparar todos|Mueve el cursor|Discontinuidad/);
+
+    await user.click(screen.getByRole('tab', { name: 'Deformed' }));
+    const deformation = await screen.findByTestId('deformation-chart');
+    expect(within(deformation).getByRole('combobox', { name: 'Member for deformation' })).toBeTruthy();
+    expect(within(deformation).getByRole('group', { name: 'Member response' })).toBeTruthy();
+    expect(screen.getByText('Exact member response')).toBeTruthy();
+    expect(screen.getByText('Interior maximum')).toBeTruthy();
+    expect(within(deformation).getByText('Exact u–v–θ cursor · interior maxima are calculated from the polynomial roots')).toBeTruthy();
+    const deformationGraph = within(deformation).getByRole('img', { name: /v response for member/i });
+    deformationGraph.focus();
+    await user.keyboard('{ArrowRight}');
+    expect(within(deformation).getByText('Pinned reading · tap to release')).toBeTruthy();
+    await user.keyboard('{Escape}');
+    expect(deformation.textContent).not.toMatch(/Miembro|Mueve el cursor|Lectura fijada|máximos interiores/);
+
+    await user.click(screen.getByRole('tab', { name: 'Learn' }));
+    const explorer = screen.getByRole('region', { name: 'Stiffness-method explorer' });
+    expect(within(explorer).getByText('Real data from the current analysis · not a parallel calculation')).toBeTruthy();
+    expect(within(explorer).getByRole('tablist', { name: 'Method stages' })).toBeTruthy();
+    expect(within(explorer).getByText('Nodes')).toBeTruthy();
+    expect(within(explorer).getByText('Members')).toBeTruthy();
+    expect(within(explorer).getByText('Constraints')).toBeTruthy();
+    expect(within(explorer).getByText(/The method assembles each local matrix into K/)).toBeTruthy();
+    expect(explorer.textContent).not.toMatch(/Explorador|Datos reales|Etapas del método|Nodos|Miembros|Restricciones/);
+    await user.click(screen.getByRole('tab', { name: 'DOFs' }));
+    expect(screen.getAllByRole('button', { name: /Show node/i }).length).toBeGreaterThan(0);
+    expect(explorer.textContent).not.toMatch(/Estado|Residuo|Prescrito|Restringido|Libre/);
+
+    await user.click(within(explorer).getByRole('tab', { name: 'Element' }));
+    expect(within(explorer).getByRole('combobox', { name: 'Member' })).toBeTruthy();
+    expect(within(explorer).getByRole('combobox', { name: 'Matrix' })).toBeTruthy();
+    expect(within(explorer).getByText('Flexible length')).toBeTruthy();
+    expect(within(explorer).getByText('Released DOFs')).toBeTruthy();
+    expect(within(explorer).getByText('Local stiffness kˡ')).toBeTruthy();
+    expect(explorer.textContent).not.toMatch(/Matriz|con liberaciones|Transformación|Aporte global|L flexible|GDL liberados|Rigidez/);
+
+    await user.click(within(explorer).getByRole('tab', { name: 'Assembly' }));
+    expect(within(explorer).getByText('Detail')).toBeTruthy();
+    expect(within(explorer).getByText('Strain energy')).toBeTruthy();
+    expect(within(explorer).getByText('Global stiffness matrix K')).toBeTruthy();
+    expect(within(explorer).getByText('Constraint matrix C')).toBeTruthy();
+    expect(explorer.textContent).not.toMatch(/Detalle|Energía|Matriz global|Restricciones C|Vista parcial/);
+
+    await user.click(within(explorer).getByRole('tab', { name: 'Verification' }));
+    expect(within(explorer).getByText('Algebraic equilibrium')).toBeTruthy();
+    expect(within(explorer).getByText('Compatibility')).toBeTruthy();
+    expect(within(explorer).getByText('Linear solver')).toBeTruthy();
+    expect(within(explorer).getByText('Error bound')).toBeTruthy();
+    expect(explorer.textContent).not.toMatch(/Equilibrio algebraico|Compatibilidad|Solver lineal|refinamientos|Cota de error|dígitos confiables/);
+
+    expect(screen.getByText('Procedure linked to analysis')).toBeTruthy();
+    const detailLevel = screen.getByRole('group', { name: 'Detail level' });
+    expect(within(detailLevel).getByRole('button', { name: 'Summary' })).toBeTruthy();
+    expect(within(detailLevel).getByRole('button', { name: 'Step by step' })).toBeTruthy();
+    expect(within(detailLevel).getByRole('button', { name: 'Full' })).toBeTruthy();
+    expect(screen.getAllByText(/\d+ equations/).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('tab', { name: 'Summary' }));
     expect(await screen.findByRole('region', { name: 'Global results summary' })).toBeTruthy();
   }, 10_000);

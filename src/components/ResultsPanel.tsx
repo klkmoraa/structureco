@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { AlertCircle, Check, ChevronDown, ChevronUp, CircleDotDashed, GripHorizontal } from 'lucide-react';
 import { useProject, type ResultTab } from '../store/ProjectContext';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../engine/diagram';
@@ -11,7 +11,7 @@ import { useI18n } from '../i18n/useI18n';
 import type { TranslationKey } from '../i18n/catalogs';
 import { ResultSummary } from './ResultSummary';
 import { useClassroomSession } from '../store/ClassroomSessionContext';
-import { deriveClassroomProgress } from '../education/classroomProgress';
+import { deriveClassroomProgress, type ClassroomProgressStepId } from '../education/classroomProgress';
 import { InfluenceLineView } from './InfluenceLineView';
 import { formatResultNumber } from './results/resultFormatting';
 import { ClassroomPredictionForm } from './ClassroomPredictionForm';
@@ -39,6 +39,13 @@ const resultFamilies: Array<{ id: string; labelKey: TranslationKey; tabs: Result
   { id: 'understand', labelKey: 'results.familyUnderstand', tabs: ['learn'] },
   { id: 'warnings', labelKey: 'results.familyWarnings', tabs: ['issues'] },
 ];
+
+const classroomProgressCopy: Record<ClassroomProgressStepId, { title: TranslationKey; description: TranslationKey; action: TranslationKey }> = {
+  geometry: { title: 'classroom.buildTitle', description: 'classroom.buildBody', action: 'classroom.buildAction' },
+  supports: { title: 'classroom.defineTitle', description: 'classroom.defineBody', action: 'classroom.defineAction' },
+  loads: { title: 'classroom.defineTitle', description: 'classroom.defineBody', action: 'classroom.defineAction' },
+  analysis: { title: 'classroom.analyzeTitle', description: 'classroom.analyzeBody', action: 'classroom.analyzeAction' },
+};
 
 const resultsFocusableSelector = [
   'button:not([disabled]):not([tabindex="-1"])',
@@ -401,11 +408,12 @@ const EmptyResults = ({ onAnalyze }: { onAnalyze: () => void }) => {
   const { project, setActiveTool } = useProject();
   const classroom = project.settings.calculationMode === 'classroom';
   const current = classroom ? deriveClassroomProgress(project).currentStep : null;
+  const currentCopy = current ? classroomProgressCopy[current.id] : null;
   const run = () => {
     if (current?.action.kind === 'tool') setActiveTool(current.action.tool);
     else onAnalyze();
   };
-  return <div className="empty-results"><CircleDotDashed size={28} /><div><strong>{current ? `Siguiente: ${current.title}` : t('results.readyTitle')}</strong><p>{current?.description ?? t('results.readyBody')}</p></div><button onClick={run}>{current?.action.label ?? t('results.analyzeStructure')}</button></div>;
+  return <div className="empty-results"><CircleDotDashed size={28} /><div><strong>{currentCopy ? t('results.nextStep', { title: t(currentCopy.title) }) : t('results.readyTitle')}</strong><p>{currentCopy ? t(currentCopy.description) : t('results.readyBody')}</p></div><button onClick={run}>{currentCopy ? t(currentCopy.action) : t('results.analyzeStructure')}</button></div>;
 };
 
 const FailedResults = ({ onOpenIssues }: { onOpenIssues: () => void }) => { const { t } = useI18n(); return <div className="failed-results"><AlertCircle size={28} /><div><strong>{t('results.failedTitle')}</strong><p>{t('results.failedBody')}</p></div><button onClick={onOpenIssues}>{t('results.openIssues')}</button></div>; };
@@ -442,6 +450,7 @@ const DiagramView = ({ type, memberResult, memberId }: { type: DiagramQuantity; 
   const { t } = useI18n();
   const [hoverX, setHoverX] = useState<number | null>(null);
   const [envelopeMode, setEnvelopeMode] = useState(false);
+  const cursorHelpId = useId();
   const { scenarios: envelopeScenarios, busy: envelopeBusy, run: runEnvelopeAnalysis } = useScenarioAnalysis(project);
   useEffect(() => { setEnvelopeMode(false); }, [project]);
   const envelope = useMemo(() => envelopeScenarios ? buildDiagramEnvelope(envelopeScenarios, memberId, type) : null, [envelopeScenarios, memberId, type]);
@@ -503,6 +512,7 @@ const DiagramView = ({ type, memberResult, memberId }: { type: DiagramQuantity; 
   const quantity = type === 'moment' ? 'moment' as const : 'force' as const;
   const displayValue = (value: number) => toDisplay(value, units, quantity);
   const colorClass = type;
+  const diagramAriaLabel = t('results.diagramForMember', { diagram: label, member: memberId });
   const displayCritical = memberResult.criticalPoints
     .filter((point) => point.quantity === type && ['maximum', 'minimum', 'jump', 'end', 'zero'].includes(point.kind))
     .filter((point, index, all) => all.findIndex((candidate) => Math.abs(candidate.x - point.x) < Math.max(L, 1) * 1e-7 && Math.abs(candidate.value - point.value) < Math.max(maxAbs, 1) * 1e-7 && candidate.side === point.side) === index)
@@ -534,6 +544,12 @@ const DiagramView = ({ type, memberResult, memberId }: { type: DiagramQuantity; 
   const movePinnedByKeyboard = (event: ReactKeyboardEvent<SVGSVGElement>) => {
     const current = pinnedX ?? 0;
     const step = event.shiftKey ? L / 20 : L / 100;
+    if (event.key === 'Escape' && pinnedX !== null) {
+      event.preventDefault();
+      event.stopPropagation();
+      setResultCursor(null);
+      return;
+    }
     let next: number | null = null;
     if (event.key === 'ArrowLeft') next = current - step;
     else if (event.key === 'ArrowRight') next = current + step;
@@ -541,12 +557,13 @@ const DiagramView = ({ type, memberResult, memberId }: { type: DiagramQuantity; 
     else if (event.key === 'End') next = L;
     if (next === null) return;
     event.preventDefault();
+    event.stopPropagation();
     setResultCursor({ memberId, x: Math.max(0, Math.min(L, next)), pinned: true });
   };
   return <div className="diagram-result-layout">
     <div className="diagram-guidance"><div className={`step-badge ${colorClass}`}>1</div><div><strong>{label}</strong><p>{t('results.exactCurves')}</p></div><div className="step-badge muted">2</div><div><strong>{t('results.mainValues')}</strong><p>{t('results.maximum')} {displayValue(max).toFixed(3)} {unit}<br />{t('results.minimum')} {displayValue(min).toFixed(3)} {unit}</p></div><div className="step-badge muted">3</div><div><strong>{t('results.verification')}</strong><p>{t('results.derivativeCheck')}</p></div></div>
-    <div className={`diagram-chart ${colorClass}`} data-testid="diagram-chart"><div className="diagram-chart-heading"><label><span>Miembro</span><select aria-label="Miembro para diagrama" value={memberId} onChange={(event) => { setSelection({ kind: 'member', id: event.target.value }); setResultCursor(null); }}>{memberOptions.map((member) => <option key={member.memberId} value={member.memberId}>{member.memberId}</option>)}</select></label><strong>{label}</strong><button className="envelope-toggle" aria-pressed={envelopeMode} disabled={envelopeBusy} title="Comparar todos los casos y combinaciones" onClick={() => { if (!envelopeScenarios) runEnvelopeAnalysis(); setEnvelopeMode((current) => !current); }}>{envelopeBusy ? '…' : 'Env.'}</button><small>{envelopeMode ? `${envelopeScenarios?.length ?? 0} escenarios` : pinnedX === null ? 'Mueve el cursor · toca para fijar' : 'Lectura fijada · toca para liberar'}</small></div><svg tabIndex={0} role="img" aria-label={`${label} del miembro ${memberId}`} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" onKeyDown={movePinnedByKeyboard} onPointerMove={(event) => setHoverX(pointerX(event))} onPointerDown={(event) => pinAt(pointerX(event))} onPointerLeave={() => setHoverX(null)}>
-      <title>{label} del miembro {memberId}</title><desc>Usa las flechas para recorrer la estación; Inicio y Fin saltan a los extremos.</desc>
+    <div className={`diagram-chart ${colorClass}`} data-testid="diagram-chart"><div className="diagram-chart-heading"><label><span>{t('results.member')}</span><select aria-label={t('results.memberForDiagram')} value={memberId} onChange={(event) => { setSelection({ kind: 'member', id: event.target.value }); setResultCursor(null); }}>{memberOptions.map((member) => <option key={member.memberId} value={member.memberId}>{member.memberId}</option>)}</select></label><strong>{label}</strong><button className="envelope-toggle" aria-pressed={envelopeMode} disabled={envelopeBusy} title={t('results.compareAllCases')} onClick={() => { if (!envelopeScenarios) runEnvelopeAnalysis(); setEnvelopeMode((current) => !current); }}>{envelopeBusy ? '…' : 'Env.'}</button><small>{envelopeMode ? t('results.scenarioCount', { count: envelopeScenarios?.length ?? 0 }) : pinnedX === null ? t('results.pointerHint') : t('results.pinnedHint')}</small></div><span id={cursorHelpId} className="sr-only">{t('results.chartKeyboardHelp')}</span><svg tabIndex={0} role="img" aria-label={diagramAriaLabel} aria-describedby={cursorHelpId} aria-keyshortcuts="ArrowLeft ArrowRight Home End Escape" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" onKeyDown={movePinnedByKeyboard} onPointerMove={(event) => setHoverX(pointerX(event))} onPointerDown={(event) => pinAt(pointerX(event))} onPointerLeave={() => setHoverX(null)}>
+      <title>{diagramAriaLabel}</title><desc>{t('results.chartKeyboardHelp')}</desc>
       <line className="chart-axis" x1="0" y1={baseline} x2={width} y2={baseline} />
       {xTicks.map((x) => <g className="chart-tick" key={`tick-${x}`}><line x1={sx(x)} y1={baseline - 4} x2={sx(x)} y2={baseline + 4} /><text x={sx(x)} y={height - 6} textAnchor={x === 0 ? 'start' : x === L ? 'end' : 'middle'}>{toDisplay(x, units, 'length').toFixed(2)}</text></g>)}
       {memberResult.diagramSegments.slice(1).map((segment) => <line key={segment.x0} className="chart-break" x1={sx(segment.x0)} y1="20" x2={sx(segment.x0)} y2={height - 20} />)}
@@ -560,15 +577,17 @@ const DiagramView = ({ type, memberResult, memberId }: { type: DiagramQuantity; 
       {envelopeMode && envelope ? <><path className="envelope-line minimum" d={envelopePath('minimum')} fill="none" /><path className="envelope-line maximum" d={envelopePath('maximum')} fill="none" /></> : null}
       {displayCritical.map((point, index) => <g className={`chart-critical ${point.kind}`} key={`${point.kind}-${point.side}-${point.x}-${index}`}><circle cx={sx(point.x)} cy={sy(point.value)} r={point.kind === 'zero' ? 4 : 3.2} /><text x={sx(point.x)} y={sy(point.value) + (point.value >= 0 ? -8 : 14)} textAnchor={point.x < L * .08 ? 'start' : point.x > L * .92 ? 'end' : 'middle'}>{point.kind === 'zero' ? '0' : displayValue(point.value).toFixed(2)}</text></g>)}
       {cursorPoint ? <g className={`chart-hover ${pinnedX === null ? '' : 'pinned'}`}><line x1={sx(cursorPoint.x)} y1="16" x2={sx(cursorPoint.x)} y2={height - 18} /><circle cx={sx(cursorPoint.x)} cy={sy(cursorPoint[type])} r="4" /></g> : null}
-    </svg>{cursorPoint ? <div className={`diagram-cursor-readout ${cursorJump ? 'at-jump' : ''}`}><span className="cursor-position"><b>x</b>{toDisplay(cursorPoint.x, units, 'length').toFixed(3)} {unitLabel(units, 'length')}</span>{envelopeCursor ? <><span className="envelope-min"><b>Mín.</b>{displayValue(envelopeCursor.minimum).toFixed(3)} {unit}</span><span className="envelope-max"><b>Máx.</b>{displayValue(envelopeCursor.maximum).toFixed(3)} {unit}</span><small>{envelopeCursor.minimumScenario} → {envelopeCursor.maximumScenario}</small></> : <><span className="axial-text"><b>N</b>{toDisplay(cursorPoint.axial, units, 'force').toFixed(3)} {unitLabel(units, 'force')}</span><span className="shear-text"><b>V</b>{toDisplay(cursorPoint.shear, units, 'force').toFixed(3)} {unitLabel(units, 'force')}</span><span className="moment-text"><b>M</b>{toDisplay(cursorPoint.moment, units, 'moment').toFixed(3)} {unitLabel(units, 'moment')}</span>{cursorJump && cursorLeft && cursorRight ? <small>Discontinuidad: izq. {displayValue(cursorLeft[type]).toFixed(3)} → der. {displayValue(cursorRight[type]).toFixed(3)} {unit}</small> : null}</>}</div> : <div className="diagram-cursor-placeholder">Cursor exacto N–V–M · activa Env. para comparar casos y combinaciones</div>}</div>
+    </svg>{cursorPoint ? <div className={`diagram-cursor-readout ${cursorJump ? 'at-jump' : ''}`} role={pinnedX !== null ? 'status' : undefined} aria-live={pinnedX !== null ? 'polite' : undefined} aria-atomic={pinnedX !== null ? true : undefined}><span className="cursor-position"><b>x</b>{toDisplay(cursorPoint.x, units, 'length').toFixed(3)} {unitLabel(units, 'length')}</span>{envelopeCursor ? <><span className="envelope-min"><b>{t('results.minimum')}</b>{displayValue(envelopeCursor.minimum).toFixed(3)} {unit}</span><span className="envelope-max"><b>{t('results.maximum')}</b>{displayValue(envelopeCursor.maximum).toFixed(3)} {unit}</span><small>{envelopeCursor.minimumScenario} → {envelopeCursor.maximumScenario}</small></> : <><span className="axial-text"><b>N</b>{toDisplay(cursorPoint.axial, units, 'force').toFixed(3)} {unitLabel(units, 'force')}</span><span className="shear-text"><b>V</b>{toDisplay(cursorPoint.shear, units, 'force').toFixed(3)} {unitLabel(units, 'force')}</span><span className="moment-text"><b>M</b>{toDisplay(cursorPoint.moment, units, 'moment').toFixed(3)} {unitLabel(units, 'moment')}</span>{cursorJump && cursorLeft && cursorRight ? <small>{t('results.discontinuityReading', { left: displayValue(cursorLeft[type]).toFixed(3), right: displayValue(cursorRight[type]).toFixed(3), unit })}</small> : null}</>}</div> : <div className="diagram-cursor-placeholder">{t('results.exactDiagramCursor')}</div>}</div>
   </div>;
 };
 
 const DeformationView = ({ memberResult, memberId }: { memberResult: MemberResult | undefined; memberId: string }) => {
   const { project, analysis, setSelection, resultCursor, setResultCursor } = useProject();
+  const { t } = useI18n();
   const [quantity, setQuantity] = useState<'u' | 'v' | 'theta'>('v');
   const [hoverX, setHoverX] = useState<number | null>(null);
-  if (!memberResult?.deformationSegments.length) return <div className="empty-small">Selecciona un miembro de pórtico.</div>;
+  const cursorHelpId = useId();
+  if (!memberResult?.deformationSegments.length) return <div className="empty-small">{t('results.selectFrameMember')}</div>;
   const L = memberResult.length;
   const pinnedX = resultCursor?.memberId === memberId && resultCursor.pinned ? Math.max(0, Math.min(L, resultCursor.x)) : null;
   const units = project.settings.units;
@@ -587,6 +606,7 @@ const DeformationView = ({ memberResult, memberId }: { memberResult: MemberResul
   const sx = (x: number) => x / L * width;
   const sy = (value: number) => baseline - value / maxAbsValue * amplitude;
   const line = memberResult.deformation.map((point, index) => `${index ? 'L' : 'M'} ${sx(point.x)} ${sy(point[quantity])}`).join(' ');
+  const responseAriaLabel = t('results.responseForMember', { quantity, member: memberId });
   const cursorX = pinnedX ?? hoverX;
   const cursor = cursorX === null ? null : evaluateDeformationAt(memberResult.deformationSegments, cursorX);
   const memberOptions = analysis?.memberResults ?? [];
@@ -598,39 +618,50 @@ const DeformationView = ({ memberResult, memberId }: { memberResult: MemberResul
   const movePinnedByKeyboard = (event: ReactKeyboardEvent<SVGSVGElement>) => {
     const current = pinnedX ?? 0;
     const step = event.shiftKey ? L / 20 : L / 100;
+    if (event.key === 'Escape' && pinnedX !== null) {
+      event.preventDefault();
+      event.stopPropagation();
+      setResultCursor(null);
+      return;
+    }
     const next = event.key === 'ArrowLeft' ? current - step : event.key === 'ArrowRight' ? current + step : event.key === 'Home' ? 0 : event.key === 'End' ? L : null;
     if (next === null) return;
     event.preventDefault();
+    event.stopPropagation();
     setResultCursor({ memberId, x: Math.max(0, Math.min(L, next)), pinned: true });
   };
   return <div className="deformation-result-layout">
-    <div className="diagram-guidance deformation-guidance"><div className="step-badge deformed">1</div><div><strong>Respuesta exacta del miembro</strong><p>u(x), v(x) y θ(x) se integran por tramos desde N/EA y M/EI; Timoshenko agrega V/GAs.</p></div><div className="step-badge muted">2</div><div><strong>Máximo interior</strong><p>{absolute ? `${quantity} = ${displayValue(absolute.value).toExponential(4)} ${unit} en x = ${toDisplay(absolute.x, units, 'length').toFixed(3)} ${unitLabel(units, 'length')}` : '—'}</p></div></div>
-    <div className="diagram-chart deformation" data-testid="deformation-chart"><div className="diagram-chart-heading"><label><span>Miembro</span><select aria-label="Miembro para deformación" value={memberId} onChange={(event) => { setSelection({ kind: 'member', id: event.target.value }); setResultCursor(null); }}>{memberOptions.map((member) => <option key={member.memberId} value={member.memberId}>{member.memberId}</option>)}</select></label><div className="response-selector" role="group" aria-label="Respuesta del miembro">{(['u', 'v', 'theta'] as const).map((item) => <button key={item} aria-pressed={quantity === item} className={quantity === item ? 'active' : ''} onClick={() => setQuantity(item)}>{item === 'theta' ? 'θ' : item}</button>)}</div><small>{pinnedX === null ? 'Mueve el cursor · toca para fijar' : 'Lectura fijada · toca para liberar'}</small></div>
-      <svg tabIndex={0} role="img" aria-label={`Diagrama ${quantity} del miembro ${memberId}`} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" onKeyDown={movePinnedByKeyboard} onPointerMove={(event) => setHoverX(pointerX(event))} onPointerDown={(event) => pinAt(pointerX(event))} onPointerLeave={() => setHoverX(null)}>
-        <title>Respuesta {quantity} del miembro {memberId}</title><desc>Usa las flechas para recorrer la estación; Inicio y Fin saltan a los extremos.</desc>
+    <div className="diagram-guidance deformation-guidance"><div className="step-badge deformed">1</div><div><strong>{t('results.exactMemberResponseTitle')}</strong><p>{t('results.exactMemberResponseBody')}</p></div><div className="step-badge muted">2</div><div><strong>{t('results.interiorMaximum')}</strong><p>{absolute ? t('results.responseAtPosition', { quantity, value: displayValue(absolute.value).toExponential(4), unit, x: toDisplay(absolute.x, units, 'length').toFixed(3), lengthUnit: unitLabel(units, 'length') }) : '—'}</p></div></div>
+    <div className="diagram-chart deformation" data-testid="deformation-chart"><div className="diagram-chart-heading"><label><span>{t('results.member')}</span><select aria-label={t('results.memberForDeformation')} value={memberId} onChange={(event) => { setSelection({ kind: 'member', id: event.target.value }); setResultCursor(null); }}>{memberOptions.map((member) => <option key={member.memberId} value={member.memberId}>{member.memberId}</option>)}</select></label><div className="response-selector" role="group" aria-label={t('results.memberResponse')}>{(['u', 'v', 'theta'] as const).map((item) => <button key={item} aria-pressed={quantity === item} className={quantity === item ? 'active' : ''} onClick={() => setQuantity(item)}>{item === 'theta' ? 'θ' : item}</button>)}</div><small>{pinnedX === null ? t('results.pointerHint') : t('results.pinnedHint')}</small></div>
+      <span id={cursorHelpId} className="sr-only">{t('results.chartKeyboardHelp')}</span>
+      <svg tabIndex={0} role="img" aria-label={responseAriaLabel} aria-describedby={cursorHelpId} aria-keyshortcuts="ArrowLeft ArrowRight Home End Escape" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" onKeyDown={movePinnedByKeyboard} onPointerMove={(event) => setHoverX(pointerX(event))} onPointerDown={(event) => pinAt(pointerX(event))} onPointerLeave={() => setHoverX(null)}>
+        <title>{responseAriaLabel}</title><desc>{t('results.chartKeyboardHelp')}</desc>
         <line className="chart-axis" x1="0" y1={baseline} x2={width} y2={baseline} />
         <path className="chart-line" d={line} fill="none" />
         {critical.filter((point) => point.kind === 'maximum' || point.kind === 'minimum' || point.kind === 'zero').slice(0, 16).map((point, index) => <g className={`chart-critical ${point.kind}`} key={`${point.kind}-${point.x}-${index}`}><circle cx={sx(point.x)} cy={sy(point.value)} r="3.2" /><text x={sx(point.x)} y={sy(point.value) + (point.value >= 0 ? -8 : 14)} textAnchor={point.x < L * .08 ? 'start' : point.x > L * .92 ? 'end' : 'middle'}>{point.kind === 'zero' ? '0' : displayValue(point.value).toExponential(2)}</text></g>)}
         {cursor ? <g className={`chart-hover ${pinnedX === null ? '' : 'pinned'}`}><line x1={sx(cursor.x)} y1="16" x2={sx(cursor.x)} y2={height - 18} /><circle cx={sx(cursor.x)} cy={sy(cursor[quantity])} r="4" /></g> : null}
       </svg>
-      {cursor ? <div className="diagram-cursor-readout"><span className="cursor-position"><b>x</b>{toDisplay(cursor.x, units, 'length').toFixed(3)} {unitLabel(units, 'length')}</span><span><b>u</b>{toDisplay(cursor.u, units, 'length').toExponential(4)} {unitLabel(units, 'length')}</span><span><b>v</b>{toDisplay(cursor.v, units, 'length').toExponential(4)} {unitLabel(units, 'length')}</span><span><b>θ</b>{cursor.theta.toExponential(4)} rad</span></div> : <div className="diagram-cursor-placeholder">Cursor exacto u–v–θ · los máximos interiores se calculan con las raíces del polinomio</div>}
+      {cursor ? <div className="diagram-cursor-readout" role={pinnedX !== null ? 'status' : undefined} aria-live={pinnedX !== null ? 'polite' : undefined} aria-atomic={pinnedX !== null ? true : undefined}><span className="cursor-position"><b>x</b>{toDisplay(cursor.x, units, 'length').toFixed(3)} {unitLabel(units, 'length')}</span><span><b>u</b>{toDisplay(cursor.u, units, 'length').toExponential(4)} {unitLabel(units, 'length')}</span><span><b>v</b>{toDisplay(cursor.v, units, 'length').toExponential(4)} {unitLabel(units, 'length')}</span><span><b>θ</b>{cursor.theta.toExponential(4)} rad</span></div> : <div className="diagram-cursor-placeholder">{t('results.exactDeformationCursor')}</div>}
     </div>
   </div>;
 };
 
 const MatrixView = ({ title, trace }: { title: string; trace: MatrixTrace }) => {
+  const { t } = useI18n();
   const rowLimit = Math.min(trace.rows, 12);
   const columnLimit = Math.min(trace.columns, 12);
   const values = new Map(trace.entries.map((entry) => [`${entry.row}:${entry.column}`, entry.value]));
-  return <div className="matrix-view"><div className="matrix-view-heading"><strong>{title}</strong><span>{trace.rows} × {trace.columns}</span></div>{trace.rows > rowLimit || trace.columns > columnLimit ? <small>Vista parcial legible; el cálculo conserva la matriz completa.</small> : null}<div className="matrix-scroll"><table aria-label={title}><thead><tr><th>GDL</th>{trace.columnLabels.slice(0, columnLimit).map((label) => <th key={label} scope="col">{label}</th>)}</tr></thead><tbody>{trace.rowLabels.slice(0, rowLimit).map((label, row) => <tr key={label}><th scope="row">{label}</th>{Array.from({ length: columnLimit }, (_, column) => { const value = values.get(`${row}:${column}`) ?? 0; return <td className={value === 0 ? 'zero' : ''} key={`${row}-${column}`}>{value === 0 ? '·' : value.toExponential(2)}</td>; })}</tr>)}</tbody></table></div></div>;
+  return <div className="matrix-view"><div className="matrix-view-heading"><strong>{title}</strong><span>{trace.rows} × {trace.columns}</span></div>{trace.rows > rowLimit || trace.columns > columnLimit ? <small>{t('results.partialMatrix')}</small> : null}<div className="matrix-scroll"><table aria-label={title}><thead><tr><th>{t('results.dof')}</th>{trace.columnLabels.slice(0, columnLimit).map((label) => <th key={label} scope="col">{label}</th>)}</tr></thead><tbody>{trace.rowLabels.slice(0, rowLimit).map((label, row) => <tr key={label}><th scope="row">{label}</th>{Array.from({ length: columnLimit }, (_, column) => { const value = values.get(`${row}:${column}`) ?? 0; return <td className={value === 0 ? 'zero' : ''} key={`${row}-${column}`}>{value === 0 ? '·' : value.toExponential(2)}</td>; })}</tr>)}</tbody></table></div></div>;
 };
 
 const EducationExplorer = () => {
   const { analysis, project, selection, setSelection, setLearningFocus } = useProject();
+  const { t } = useI18n();
   const trace = analysis?.educationTrace;
   const [stage, setStage] = useState<'model' | 'dofs' | 'element' | 'assembly' | 'verify'>('model');
   const [elementId, setElementId] = useState(() => selection?.kind === 'member' ? selection.id : trace?.elements[0]?.memberId ?? '');
   const [elementMatrix, setElementMatrix] = useState<'local' | 'condensed' | 'transform' | 'global'>('local');
+  const explorerRef = useRef<HTMLElement>(null);
   useEffect(() => {
     if (stage === 'element' && elementId) setLearningFocus({ nodeIds: [], memberIds: [elementId] });
     else setLearningFocus(null);
@@ -639,18 +670,34 @@ const EducationExplorer = () => {
   if (!trace) return null;
   const element = trace.elements.find((item) => item.memberId === elementId) ?? trace.elements[0];
   const stages = [
-    { id: 'model' as const, label: 'Modelo' },
-    { id: 'dofs' as const, label: 'GDL' },
-    { id: 'element' as const, label: 'Elemento' },
-    { id: 'assembly' as const, label: 'Ensamblaje' },
-    { id: 'verify' as const, label: 'Verificación' },
+    { id: 'model' as const, label: t('results.stageModel') },
+    { id: 'dofs' as const, label: t('results.stageDofs') },
+    { id: 'element' as const, label: t('results.stageElement') },
+    { id: 'assembly' as const, label: t('results.stageAssembly') },
+    { id: 'verify' as const, label: t('results.stageVerification') },
   ];
-  return <section className="education-explorer" aria-label="Explorador del método de rigidez"><div className="education-explorer-heading"><div><strong>Explorador del método de rigidez</strong><small>Datos reales del análisis actual · no es un cálculo paralelo</small></div><span>{trace.formulation === 'linear-static-mixed-beam' ? 'Euler–Bernoulli + Timoshenko' : 'Euler–Bernoulli'}</span></div><div className="education-stage-tabs" role="tablist" aria-label="Etapas del método">{stages.map((item) => <button role="tab" aria-selected={stage === item.id} className={stage === item.id ? 'active' : ''} key={item.id} onClick={() => setStage(item.id)}>{item.label}</button>)}</div>
-    {stage === 'model' ? <div className="education-stage"><div className="education-kpis"><div><span>Nodos</span><strong>{project.nodes.length}</strong></div><div><span>Miembros</span><strong>{project.members.length}</strong></div><div><span>GDL</span><strong>{trace.dofs.length}</strong></div><div><span>Restricciones</span><strong>{trace.assembly.constraintMatrix.rows}</strong></div></div><div className="equation-block">[ K  Cᵀ ; C  0 ] [ U ; λ ] = [ F ; g ]</div><p>El método ensambla cada matriz local en K, impone apoyos y vínculos con C y resuelve desplazamientos U y multiplicadores λ. Los asentamientos aparecen en g.</p></div> : null}
-    {stage === 'dofs' ? <div className="education-stage table-wrap"><table className="results-table dof-table"><thead><tr><th>GDL</th><th>Estado</th><th>U</th><th>F</th><th>R</th><th>Residuo</th></tr></thead><tbody>{trace.dofs.map((dof) => <tr key={dof.index} onClick={() => { setSelection({ kind: 'node', id: dof.nodeId }); setLearningFocus({ nodeIds: [dof.nodeId], memberIds: [] }); }}><td><strong>{dof.label}</strong></td><td>{dof.constrained ? dof.prescribedValue ? 'Prescrito' : 'Restringido' : 'Libre'}</td><td>{dof.displacement.toExponential(3)}</td><td>{dof.appliedLoad.toExponential(3)}</td><td>{dof.reaction.toExponential(3)}</td><td>{dof.residual.toExponential(2)}</td></tr>)}</tbody></table></div> : null}
-    {stage === 'element' && element ? <div className="education-stage"><div className="education-element-controls"><label><span>Miembro</span><select value={element.memberId} onChange={(event) => { setElementId(event.target.value); setSelection({ kind: 'member', id: event.target.value }); }}>{trace.elements.map((item) => <option key={item.memberId} value={item.memberId}>{item.memberId}</option>)}</select></label><label><span>Matriz</span><select value={elementMatrix} onChange={(event) => setElementMatrix(event.target.value as typeof elementMatrix)}><option value="local">k local</option><option value="condensed">k con liberaciones</option><option value="transform">Transformación T</option><option value="global">Aporte global</option></select></label></div><div className="education-kpis"><div><span>L flexible</span><strong>{element.length.toPrecision(5)} m</strong></div><div><span>cos θ</span><strong>{element.c.toPrecision(4)}</strong></div><div><span>sen θ</span><strong>{element.s.toPrecision(4)}</strong></div><div><span>GDL liberados</span><strong>{element.releasedLocalDofs.length ? element.releasedLocalDofs.join(', ') : '—'}</strong></div></div><MatrixView title={elementMatrix === 'local' ? 'Rigidez local kˡ' : elementMatrix === 'condensed' ? 'Rigidez efectiva después de liberaciones' : elementMatrix === 'transform' ? 'Transformación local-global T' : 'Contribución global TᵀkT'} trace={elementMatrix === 'local' ? element.localStiffnessOriginal : elementMatrix === 'condensed' ? element.localStiffnessEffective : elementMatrix === 'transform' ? element.transformation : element.globalStiffnessContribution} /><div className="equation-block">qˡ = kˡ dˡ − fˡ₀</div></div> : null}
-    {stage === 'assembly' ? <div className="education-stage"><div className="education-kpis"><div><span>Detalle</span><strong>{trace.assembly.matrixDetail === 'full' ? 'Completo' : 'Resumen'}</strong></div><div><span>Energía</span><strong>{trace.assembly.strainEnergy.toExponential(3)}</strong></div><div><span>‖F‖∞</span><strong>{Math.max(0, ...trace.assembly.load.map(Math.abs)).toExponential(3)}</strong></div></div><MatrixView title="Matriz global K" trace={trace.assembly.stiffness} /><MatrixView title="Restricciones C" trace={trace.assembly.constraintMatrix} /></div> : null}
-    {stage === 'verify' ? <div className="education-stage verification-grid"><div className={(analysis?.residualNorm ?? 1) < 1e-8 ? 'passed' : 'warning'}><span>Equilibrio algebraico</span><strong>{analysis?.residualNorm.toExponential(3)}</strong><small>‖KU+Cᵀλ−F‖ normalizado</small></div><div className={(analysis?.constraintResidual ?? 1) < 1e-9 ? 'passed' : 'warning'}><span>Compatibilidad</span><strong>{analysis?.constraintResidual?.toExponential(3) ?? '—'}</strong><small>‖CU−g‖ normalizado</small></div><div className={(analysis?.linearResidual ?? 1) < 1e-12 ? 'passed' : 'warning'}><span>Solver lineal</span><strong>{analysis?.linearResidual?.toExponential(3) ?? '—'}</strong><small>{analysis?.refinementIterations ?? 0} refinamientos</small></div><div className={(analysis?.forwardErrorBound ?? 1) < 1e-6 ? 'passed' : 'warning'}><span>Cota de error</span><strong>{analysis?.forwardErrorBound?.toExponential(3) ?? '—'}</strong><small>≈ {analysis?.reliableDigits?.toFixed(1) ?? '0'} dígitos confiables</small></div></div> : null}
+  const onStageKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number) => {
+    let nextIndex = index;
+    if (event.key === 'ArrowLeft') nextIndex = (index - 1 + stages.length) % stages.length;
+    else if (event.key === 'ArrowRight') nextIndex = (index + 1) % stages.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = stages.length - 1;
+    else return;
+    event.preventDefault();
+    const next = stages[nextIndex];
+    setStage(next.id);
+    window.requestAnimationFrame(() => explorerRef.current?.querySelector<HTMLButtonElement>(`[data-education-stage-tab="${next.id}"]`)?.focus());
+  };
+  const focusDof = (nodeId: string) => {
+    setSelection({ kind: 'node', id: nodeId });
+    setLearningFocus({ nodeIds: [nodeId], memberIds: [] });
+  };
+  return <section ref={explorerRef} className="education-explorer" aria-label={t('results.stiffnessExplorer')}><div className="education-explorer-heading"><div><strong>{t('results.stiffnessExplorer')}</strong><small>{t('results.stiffnessExplorerSubtitle')}</small></div><span>{trace.formulation === 'linear-static-mixed-beam' ? 'Euler–Bernoulli + Timoshenko' : 'Euler–Bernoulli'}</span></div><div className="education-stage-tabs" role="tablist" aria-label={t('results.methodStages')}>{stages.map((item, index) => <button id={`education-stage-tab-${item.id}`} type="button" role="tab" aria-selected={stage === item.id} aria-controls={`education-stage-panel-${item.id}`} tabIndex={stage === item.id ? 0 : -1} data-education-stage-tab={item.id} className={stage === item.id ? 'active' : ''} key={item.id} onClick={() => setStage(item.id)} onKeyDown={(event) => onStageKeyDown(event, index)}>{item.label}</button>)}</div>
+    {stage === 'model' ? <div id="education-stage-panel-model" className="education-stage" role="tabpanel" aria-labelledby="education-stage-tab-model"><div className="education-kpis"><div><span>{t('results.nodes')}</span><strong>{project.nodes.length}</strong></div><div><span>{t('results.members')}</span><strong>{project.members.length}</strong></div><div><span>{t('results.dofs')}</span><strong>{trace.dofs.length}</strong></div><div><span>{t('results.constraints')}</span><strong>{trace.assembly.constraintMatrix.rows}</strong></div></div><div className="equation-block">[ K  Cᵀ ; C  0 ] [ U ; λ ] = [ F ; g ]</div><p>{t('results.stiffnessMethodSummary')}</p></div> : null}
+    {stage === 'dofs' ? <div id="education-stage-panel-dofs" className="education-stage table-wrap" role="tabpanel" aria-labelledby="education-stage-tab-dofs"><table className="results-table dof-table"><thead><tr><th>{t('results.dof')}</th><th>{t('results.state')}</th><th>U</th><th>F</th><th>R</th><th>{t('results.residual')}</th></tr></thead><tbody>{trace.dofs.map((dof) => <tr key={dof.index}><td><button type="button" className="result-object-link" aria-label={t('results.showNodeForDof', { node: dof.nodeId, dof: dof.label })} onClick={() => focusDof(dof.nodeId)}><strong>{dof.label}</strong></button></td><td>{dof.constrained ? dof.prescribedValue ? t('results.prescribed') : t('results.constrained') : t('results.free')}</td><td>{dof.displacement.toExponential(3)}</td><td>{dof.appliedLoad.toExponential(3)}</td><td>{dof.reaction.toExponential(3)}</td><td>{dof.residual.toExponential(2)}</td></tr>)}</tbody></table></div> : null}
+    {stage === 'element' && element ? <div id="education-stage-panel-element" className="education-stage" role="tabpanel" aria-labelledby="education-stage-tab-element"><div className="education-element-controls"><label><span>{t('results.member')}</span><select value={element.memberId} onChange={(event) => { setElementId(event.target.value); setSelection({ kind: 'member', id: event.target.value }); }}>{trace.elements.map((item) => <option key={item.memberId} value={item.memberId}>{item.memberId}</option>)}</select></label><label><span>{t('results.matrix')}</span><select value={elementMatrix} onChange={(event) => setElementMatrix(event.target.value as typeof elementMatrix)}><option value="local">{t('results.matrixOptionLocal')}</option><option value="condensed">{t('results.matrixOptionReleased')}</option><option value="transform">{t('results.matrixOptionTransform')}</option><option value="global">{t('results.matrixOptionGlobal')}</option></select></label></div><div className="education-kpis"><div><span>{t('results.flexibleLength')}</span><strong>{element.length.toPrecision(5)} m</strong></div><div><span>cos θ</span><strong>{element.c.toPrecision(4)}</strong></div><div><span>{t('results.sineTheta')}</span><strong>{element.s.toPrecision(4)}</strong></div><div><span>{t('results.releasedDofs')}</span><strong>{element.releasedLocalDofs.length ? element.releasedLocalDofs.join(', ') : '—'}</strong></div></div><MatrixView title={elementMatrix === 'local' ? t('results.localStiffnessMatrix') : elementMatrix === 'condensed' ? t('results.releasedStiffnessMatrix') : elementMatrix === 'transform' ? t('results.transformationMatrix') : t('results.globalContributionMatrix')} trace={elementMatrix === 'local' ? element.localStiffnessOriginal : elementMatrix === 'condensed' ? element.localStiffnessEffective : elementMatrix === 'transform' ? element.transformation : element.globalStiffnessContribution} /><div className="equation-block">qˡ = kˡ dˡ − fˡ₀</div></div> : null}
+    {stage === 'assembly' ? <div id="education-stage-panel-assembly" className="education-stage" role="tabpanel" aria-labelledby="education-stage-tab-assembly"><div className="education-kpis"><div><span>{t('results.detail')}</span><strong>{trace.assembly.matrixDetail === 'full' ? t('results.full') : t('results.summary')}</strong></div><div><span>{t('results.strainEnergy')}</span><strong>{trace.assembly.strainEnergy.toExponential(3)}</strong></div><div><span>‖F‖∞</span><strong>{Math.max(0, ...trace.assembly.load.map(Math.abs)).toExponential(3)}</strong></div></div><MatrixView title={t('results.globalStiffnessMatrix')} trace={trace.assembly.stiffness} /><MatrixView title={t('results.constraintMatrix')} trace={trace.assembly.constraintMatrix} /></div> : null}
+    {stage === 'verify' ? <div id="education-stage-panel-verify" className="education-stage verification-grid" role="tabpanel" aria-labelledby="education-stage-tab-verify"><div className={(analysis?.residualNorm ?? 1) < 1e-8 ? 'passed' : 'warning'}><span>{t('results.algebraicEquilibrium')}</span><strong>{analysis?.residualNorm.toExponential(3)}</strong><small>{t('results.normalizedEquilibriumResidual')}</small></div><div className={(analysis?.constraintResidual ?? 1) < 1e-9 ? 'passed' : 'warning'}><span>{t('results.compatibility')}</span><strong>{analysis?.constraintResidual?.toExponential(3) ?? '—'}</strong><small>{t('results.normalizedCompatibilityResidual')}</small></div><div className={(analysis?.linearResidual ?? 1) < 1e-12 ? 'passed' : 'warning'}><span>{t('results.linearSolver')}</span><strong>{analysis?.linearResidual?.toExponential(3) ?? '—'}</strong><small>{t('results.refinementCount', { count: analysis?.refinementIterations ?? 0 })}</small></div><div className={(analysis?.forwardErrorBound ?? 1) < 1e-6 ? 'passed' : 'warning'}><span>{t('results.errorBound')}</span><strong>{analysis?.forwardErrorBound?.toExponential(3) ?? '—'}</strong><small>{t('results.reliableDigits', { digits: analysis?.reliableDigits?.toFixed(1) ?? '0' })}</small></div></div> : null}
   </section>;
 };
 
@@ -663,7 +710,7 @@ const LearningSteps = () => {
   useEffect(() => () => setLearningFocus(null), [setLearningFocus]);
   return <div className="learning-steps">
     <EducationExplorer />
-    <div className="learning-toolbar"><div><strong>Procedimiento vinculado al cálculo</strong><small>{analysis?.explanation.length ?? 0} pasos · abre uno para resaltarlo en el modelo</small></div><div className="learning-level" role="group" aria-label="Nivel de detalle"><button aria-pressed={detailLevel === 'summary'} className={detailLevel === 'summary' ? 'active' : ''} onClick={() => setDetailLevel('summary')}>Resumen</button><button aria-pressed={detailLevel === 'steps'} className={detailLevel === 'steps' ? 'active' : ''} onClick={() => setDetailLevel('steps')}>Paso a paso</button><button aria-pressed={detailLevel === 'full'} className={detailLevel === 'full' ? 'active' : ''} onClick={() => setDetailLevel('full')}>Completo</button></div></div>
+    <div className="learning-toolbar"><div><strong>{t('results.linkedProcedure')}</strong><small>{t('results.learningStepCount', { count: analysis?.explanation.length ?? 0 })}</small></div><div className="learning-level" role="group" aria-label={t('results.detailLevel')}><button aria-pressed={detailLevel === 'summary'} className={detailLevel === 'summary' ? 'active' : ''} onClick={() => setDetailLevel('summary')}>{t('results.summary')}</button><button aria-pressed={detailLevel === 'steps'} className={detailLevel === 'steps' ? 'active' : ''} onClick={() => setDetailLevel('steps')}>{t('results.stepByStep')}</button><button aria-pressed={detailLevel === 'full'} className={detailLevel === 'full' ? 'active' : ''} onClick={() => setDetailLevel('full')}>{t('results.full')}</button></div></div>
     {educationalCase ? <section className="educational-source">
       <div><strong>{educationalCase.chapter}</strong><span>{educationalCase.kind === 'attributed-example' ? t('results.attributedExample') : t('results.originalPractice')}</span></div>
       <p>{educationalCase.note}</p>
@@ -679,7 +726,7 @@ const LearningSteps = () => {
         setFocusedStepId(null);
         setLearningFocus(null);
       }
-    }}><summary><span className="learn-check">{index + 1}</span><div><strong>{step.title}</strong><small>{step.category} · {step.equations.length} ecuaciones</small></div><ChevronDown size={17} /></summary><div className="learning-content"><p>{step.summary}</p>{detailLevel === 'full' && step.inputs?.length ? <><small className="learning-value-heading">Datos de entrada</small><dl className="learning-values inputs">{step.inputs.map((input) => <div key={`${step.id}-input-${input.label}`}><dt>{input.label}</dt><dd>{Number.isFinite(input.value) ? input.value.toPrecision(6) : '—'} {input.unit}</dd></div>)}</dl></> : null}{detailLevel !== 'summary' ? step.equations.map((equation) => <div className="equation-block" key={equation}>{equation}</div>) : null}{detailLevel !== 'summary' && step.outputs?.length ? <><small className="learning-value-heading">Resultados</small><dl className="learning-values">{step.outputs.map((output) => <div key={`${step.id}-${output.label}`}><dt>{output.label}</dt><dd>{Number.isFinite(output.value) ? output.value.toPrecision(6) : '—'} {output.unit}</dd></div>)}</dl></> : null}{detailLevel === 'full' && (step.relatedMemberIds?.length || step.relatedNodeIds?.length) ? <small className="learning-related">Relacionado con {step.relatedMemberIds?.length ? `miembros ${step.relatedMemberIds.join(', ')}` : ''}{step.relatedMemberIds?.length && step.relatedNodeIds?.length ? ' y ' : ''}{step.relatedNodeIds?.length ? `nodos ${step.relatedNodeIds.join(', ')}` : ''}.</small> : null}</div></details>)}
+    }}><summary><span className="learn-check">{index + 1}</span><div><strong>{step.title}</strong><small>{step.category} · {t('results.equationCount', { count: step.equations.length })}</small></div><ChevronDown size={17} /></summary><div className="learning-content"><p>{step.summary}</p>{detailLevel === 'full' && step.inputs?.length ? <><small className="learning-value-heading">{t('results.inputData')}</small><dl className="learning-values inputs">{step.inputs.map((input) => <div key={`${step.id}-input-${input.label}`}><dt>{input.label}</dt><dd>{Number.isFinite(input.value) ? input.value.toPrecision(6) : '—'} {input.unit}</dd></div>)}</dl></> : null}{detailLevel !== 'summary' ? step.equations.map((equation) => <div className="equation-block" key={equation}>{equation}</div>) : null}{detailLevel !== 'summary' && step.outputs?.length ? <><small className="learning-value-heading">{t('results.outputs')}</small><dl className="learning-values">{step.outputs.map((output) => <div key={`${step.id}-${output.label}`}><dt>{output.label}</dt><dd>{Number.isFinite(output.value) ? output.value.toPrecision(6) : '—'} {output.unit}</dd></div>)}</dl></> : null}{detailLevel === 'full' && step.relatedMemberIds?.length && step.relatedNodeIds?.length ? <small className="learning-related">{t('results.relatedMembersAndNodes', { members: step.relatedMemberIds.join(', '), nodes: step.relatedNodeIds.join(', ') })}</small> : detailLevel === 'full' && step.relatedMemberIds?.length ? <small className="learning-related">{t('results.relatedMembers', { members: step.relatedMemberIds.join(', ') })}</small> : detailLevel === 'full' && step.relatedNodeIds?.length ? <small className="learning-related">{t('results.relatedNodes', { nodes: step.relatedNodeIds.join(', ') })}</small> : null}</div></details>)}
   </div>;
 };
 
@@ -744,5 +791,5 @@ const IssuesView = () => {
     else if (text.includes('carga')) setActiveTool('pointLoad');
     else setActiveTool('select');
   };
-  return <div className="issues-list">{analysis.issues.map((issue) => <div className={`issue-card ${issue.severity}`} key={issue.id}><span className="issue-icon">{issue.severity === 'error' ? '!' : issue.severity === 'warning' ? '△' : 'i'}</span><div><strong>{issue.title}</strong><p>{issue.message}</p>{issue.objectId ? <small>{t('results.object', { id: issue.objectId })}</small> : null}{issue.suggestedFix ? <p className="issue-fix"><b>{t('results.fix')}</b> {issue.suggestedFix}</p> : null}<button className="issue-action" onClick={() => act(issue)}>{issue.objectId ? 'Mostrar en el lienzo' : 'Corregir en el modelo'}</button></div></div>)}</div>;
+  return <div className="issues-list">{analysis.issues.map((issue) => <div className={`issue-card ${issue.severity}`} key={issue.id}><span className="issue-icon">{issue.severity === 'error' ? '!' : issue.severity === 'warning' ? '△' : 'i'}</span><div><strong>{issue.title}</strong><p>{issue.message}</p>{issue.objectId ? <small>{t('results.object', { id: issue.objectId })}</small> : null}{issue.suggestedFix ? <p className="issue-fix"><b>{t('results.fix')}</b> {issue.suggestedFix}</p> : null}<button className="issue-action" onClick={() => act(issue)}>{t(issue.objectId ? 'results.showOnCanvas' : 'results.correctInModel')}</button></div></div>)}</div>;
 };

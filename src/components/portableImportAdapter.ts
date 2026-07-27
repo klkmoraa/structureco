@@ -1,5 +1,6 @@
 import type { ProjectModel } from '../types';
 import { normalizeProject } from '../data/migrate';
+import { translate, type Language, type TranslationKey } from '../i18n/catalogs';
 import {
   inspectPortableFile,
   type PortableFileInspection,
@@ -13,75 +14,116 @@ import type {
 
 const inspectedFiles = new WeakMap<File, PortableFileInspection>();
 
+type Translate = (key: TranslationKey, variables?: Record<string, string | number>) => string;
+
 const projectContents = (
   project: ProjectModel,
   includeAnalysis: boolean,
+  t: Translate,
 ): ImportContentOption[] => [
   {
     key: 'geometry',
-    label: 'Geometría y propiedades',
-    detail: `${project.nodes.length} nodos · ${project.members.length} miembros`,
+    label: t('importCenter.geometry'),
+    detail: t('importCenter.geometryCount', { nodes: project.nodes.length, members: project.members.length }),
     available: true,
     selectedByDefault: true,
   },
   {
     key: 'supports',
-    label: 'Apoyos y desplazamientos',
-    detail: `${project.nodes.filter((node) => node.support.type !== 'none').length} apoyos`,
+    label: t('importCenter.supports'),
+    detail: t('importCenter.supportCount', { supports: project.nodes.filter((node) => node.support.type !== 'none').length }),
     available: true,
     selectedByDefault: true,
   },
   {
     key: 'loads',
-    label: 'Cargas, casos y combinaciones',
-    detail: `${project.nodalLoads.length + project.memberLoads.length} cargas`,
+    label: t('importCenter.portableLoads'),
+    detail: t('importCenter.portableLoadCount', { loads: project.nodalLoads.length + project.memberLoads.length }),
     available: true,
     selectedByDefault: true,
   },
   {
     key: 'results',
-    label: 'Resultados del análisis',
-    detail: includeAnalysis ? 'Reacciones, desplazamientos y verificación numérica' : 'Se recalculan después de importar',
+    label: t('importCenter.results'),
+    detail: includeAnalysis ? t('importCenter.portableResultsIncluded') : t('importCenter.portableResultsRecalculate'),
     available: includeAnalysis,
     selectedByDefault: includeAnalysis,
   },
   {
     key: 'diagrams',
-    label: 'DCL y diagramas N–V–M',
-    detail: includeAnalysis ? 'Segmentos exactos, saltos y puntos críticos' : 'Se generan al analizar',
+    label: t('importCenter.diagrams'),
+    detail: includeAnalysis ? t('importCenter.portableDiagramsIncluded') : t('importCenter.portableDiagramsGenerate'),
     available: includeAnalysis,
     selectedByDefault: includeAnalysis,
   },
   {
     key: 'procedures',
-    label: 'Procedimientos y cálculos',
-    detail: includeAnalysis ? 'Pasos, ecuaciones, matrices y traza educativa' : 'Se generan al analizar',
+    label: t('importCenter.procedures'),
+    detail: includeAnalysis ? t('importCenter.portableProceduresIncluded') : t('importCenter.portableProceduresGenerate'),
     available: includeAnalysis,
     selectedByDefault: includeAnalysis,
   },
   {
     key: 'attachments',
-    label: 'Procedencia e integridad',
-    detail: includeAnalysis ? 'Metadatos y checksum SHA-256 verificados' : 'Sin adjuntos',
+    label: t('importCenter.portableProvenance'),
+    detail: includeAnalysis ? t('importCenter.portableProvenanceVerified') : t('importCenter.portableNoAttachments'),
     available: includeAnalysis,
     selectedByDefault: includeAnalysis,
   },
 ];
 
-const referenceContents = (inspection: PortableFileInspection): ImportContentOption[] => {
+const referenceContents = (inspection: PortableFileInspection, t: Translate): ImportContentOption[] => {
   const pages = 'pdf' in inspection ? inspection.pdf.pageCount : 0;
   return [
-    { key: 'geometry', label: 'Geometría y propiedades', detail: 'No se reconstruyen sin confirmación humana', available: false },
-    { key: 'supports', label: 'Apoyos y desplazamientos', detail: 'No confirmados', available: false },
-    { key: 'loads', label: 'Cargas, casos y combinaciones', detail: 'No confirmados', available: false },
-    { key: 'results', label: 'Resultados detectados', detail: 'Se conservan solo como referencia', available: false },
-    { key: 'diagrams', label: 'DCL y diagramas', detail: 'No se convierten en resultados calculados', available: false },
-    { key: 'procedures', label: 'Texto y procedimientos', detail: `${pages} páginas inspeccionadas`, available: false },
-    { key: 'attachments', label: 'PDF original', detail: 'No se guarda en localStorage para proteger la memoria de iOS', available: false },
+    { key: 'geometry', label: t('importCenter.geometry'), detail: t('importCenter.referenceGeometry'), available: false },
+    { key: 'supports', label: t('importCenter.supports'), detail: t('importCenter.referenceNotConfirmed'), available: false },
+    { key: 'loads', label: t('importCenter.portableLoads'), detail: t('importCenter.referenceNotConfirmed'), available: false },
+    { key: 'results', label: t('importCenter.referenceResults'), detail: t('importCenter.referenceResultsOnly'), available: false },
+    { key: 'diagrams', label: t('importCenter.referenceDiagrams'), detail: t('importCenter.referenceDiagramsOnly'), available: false },
+    { key: 'procedures', label: t('importCenter.referenceProcedures'), detail: t('importCenter.referencePages', { pages }), available: false },
+    { key: 'attachments', label: t('importCenter.referenceOriginalPdf'), detail: t('importCenter.referencePdfStorage'), available: false },
   ];
 };
 
-const mapInspection = (inspection: PortableFileInspection): ImportInspection => {
+const localizeWarnings = (warnings: string[], t: Translate): string[] => warnings.map((warning) => {
+  const attachmentRecovery = warning.match(/^El adjunto (.+) no pudo recuperarse\.$/);
+  if (attachmentRecovery) return t('importCenter.warningAttachmentRecovery', { filename: attachmentRecovery[1] });
+  const attachmentInvalid = warning.match(/^El adjunto (.+) no es valido\.$/);
+  if (attachmentInvalid) return t('importCenter.warningAttachmentInvalid', { filename: attachmentInvalid[1] });
+  const previewLimit = warning.match(/^Vista previa limitada a (\d+) de (\d+) paginas\.$/);
+  if (previewLimit) return t('importCenter.warningPreviewLimit', { shown: previewLimit[1], total: previewLimit[2] });
+  if (warning.startsWith('PDF externo:')) return t('importCenter.warningExternalPdf');
+  if (warning.startsWith('No se encontro texto suficiente;')) return t('importCenter.warningScannedPdf');
+  return warning;
+});
+
+const localizeReaderError = (reason: unknown, language: Language, t: Translate): string => {
+  if (!(reason instanceof Error)) return t('importCenter.inspectError');
+  const exactKeys: Record<string, TranslationKey> = {
+    'El archivo JSON no es valido.': 'importCenter.readerInvalidJson',
+    'Formato no compatible. Usa PDF, .structureco o .structureco.json.': 'importCenter.readerUnsupportedFormat',
+    'El PDF esta protegido con contrasena y no puede inspeccionarse.': 'importCenter.readerPdfPassword',
+    'El archivo .structureco no es un paquete ZIP valido.': 'importCenter.readerInvalidBundle',
+    'El paquete no contiene manifest.json.': 'importCenter.readerMissingManifest',
+    'El paquete no tiene un manifest structureCo compatible.': 'importCenter.readerIncompatibleManifest',
+    'El paquete structureCo esta incompleto.': 'importCenter.readerIncompleteBundle',
+    'El checksum del manifest no coincide con el expediente.': 'importCenter.readerChecksumMismatch',
+    'Los datos separados del paquete no coinciden con el expediente firmado.': 'importCenter.readerPackageMismatch',
+    'Este navegador no ofrece SHA-256 para verificar el expediente.': 'importCenter.readerShaUnavailable',
+    'El adjunto no es un expediente structureCo compatible.': 'importCenter.readerIncompatibleAttachment',
+    'El adjunto structureCo no contiene JSON válido.': 'importCenter.readerInvalidAttachmentJson',
+    'El expediente fue modificado o está dañado: el checksum no coincide.': 'importCenter.readerDamagedPackage',
+  };
+  const exactKey = exactKeys[reason.message];
+  if (exactKey) return t(exactKey);
+  const pdfLimit = reason.message.match(/^El PDF excede el limite de (\d+) MB\.$/);
+  if (pdfLimit) return t('importCenter.readerPdfLimit', { limit: pdfLimit[1] });
+  const pdfFailure = reason.message.match(/^No se pudo leer el PDF: (.+)$/);
+  if (pdfFailure) return t('importCenter.readerPdfFailure', { message: pdfFailure[1] });
+  return language === 'es' ? reason.message : t('importCenter.inspectError');
+};
+
+const mapInspection = (inspection: PortableFileInspection, t: Translate): ImportInspection => {
   const isPdf = inspection.kind.endsWith('-pdf');
   const kind: ImportInspection['kind'] = isPdf
     ? 'pdf'
@@ -92,19 +134,19 @@ const mapInspection = (inspection: PortableFileInspection): ImportInspection => 
   if (!inspection.canRestoreProject) {
     return {
       kind,
-      sourceLabel: inspection.kind === 'scanned-pdf' ? 'PDF escaneado' : 'PDF externo',
+      sourceLabel: inspection.kind === 'scanned-pdf' ? t('importCenter.sourceScannedPdf') : t('importCenter.sourceExternalPdf'),
       confidence: Math.round(inspection.pdf.confidence * 100),
       supported: false,
       summary: inspection.pdf.text
-        ? `Se extrajo texto de ${inspection.pdf.pageCount} páginas. Puede revisarse como referencia, pero no se inventará un modelo estructural.`
-        : 'El PDF parece escaneado. Se necesita OCR y revisión manual antes de crear un modelo.',
+        ? t('importCenter.referenceTextSummary', { pages: inspection.pdf.pageCount })
+        : t('importCenter.referenceScanSummary'),
       statistics: [
-        { label: 'Páginas', value: inspection.pdf.pageCount },
-        { label: 'Caracteres', value: inspection.pdf.text.length },
-        { label: 'Tamaño', value: `${(inspection.size / 1024 / 1024).toFixed(2)} MB` },
+        { label: t('importCenter.pages'), value: inspection.pdf.pageCount },
+        { label: t('importCenter.characters'), value: inspection.pdf.text.length },
+        { label: t('importCenter.size'), value: `${(inspection.size / 1024 / 1024).toFixed(2)} MB` },
       ],
-      warnings: inspection.pdf.warnings,
-      contents: referenceContents(inspection),
+      warnings: localizeWarnings(inspection.pdf.warnings, t),
+      contents: referenceContents(inspection, t),
     };
   }
 
@@ -112,16 +154,16 @@ const mapInspection = (inspection: PortableFileInspection): ImportInspection => 
   const project = normalizeProject(inspection.kind === 'project-json' ? inspection.project : payload!.project);
   const includeAnalysis = Boolean(payload?.analysis);
   const sourceLabel = inspection.kind === 'native-pdf'
-    ? 'PDF inteligente de structureCo'
+    ? t('importCenter.sourceNativePdf')
     : inspection.kind === 'bundle'
-      ? 'Expediente portátil .structureco'
+      ? t('importCenter.sourcePortableBundle')
       : inspection.kind === 'payload-json'
-        ? 'Snapshot portátil JSON'
-        : 'Proyecto structureCo JSON';
+        ? t('importCenter.sourcePortableJson')
+        : t('importCenter.sourceJson');
   const warnings = inspection.kind === 'native-pdf'
-    ? inspection.pdf.warnings
+    ? localizeWarnings(inspection.pdf.warnings, t)
     : project.nodes.length === 0
-      ? ['El proyecto no contiene nodos.']
+      ? [t('importCenter.emptyNodesWarning')]
       : [];
 
   return {
@@ -131,43 +173,55 @@ const mapInspection = (inspection: PortableFileInspection): ImportInspection => 
     confidence: payload ? 99 : 100,
     supported: true,
     summary: payload
-      ? `Expediente “${project.name}” verificado con SHA-256; el modelo, resultados, diagramas y procedimientos pueden restaurarse.`
-      : `Proyecto “${project.name}” validado; los resultados se recalcularán al abrirlo.`,
+      ? t('importCenter.portableVerifiedSummary', { name: project.name })
+      : t('importCenter.portableProjectSummary', { name: project.name }),
     statistics: [
-      { label: 'Nodos', value: project.nodes.length },
-      { label: 'Miembros', value: project.members.length },
-      { label: 'Cargas', value: project.nodalLoads.length + project.memberLoads.length },
-      { label: 'Procedimientos', value: payload?.analysis.explanation.length ?? 0 },
+      { label: t('importCenter.nodes'), value: project.nodes.length },
+      { label: t('importCenter.members'), value: project.members.length },
+      { label: t('importCenter.loadStatistic'), value: project.nodalLoads.length + project.memberLoads.length },
+      { label: t('importCenter.procedureStatistic'), value: payload?.analysis.explanation.length ?? 0 },
     ],
     warnings,
-    contents: projectContents(project, includeAnalysis),
+    contents: projectContents(project, includeAnalysis, t),
     project,
     restoredAnalysis: payload?.analysis,
   };
 };
 
-export const portableImportCenterAdapter: ImportCenterAdapter = {
-  inspect: async (file) => {
-    const inspection = await inspectPortableFile(file, { maxBytes: 25 * 1024 * 1024, maxPages: 120 });
-    inspectedFiles.set(file, inspection);
-    return mapInspection(inspection);
-  },
-  importFile: async (file, inspection): Promise<ImportOutcome> => {
-    const portable = inspectedFiles.get(file) ?? await inspectPortableFile(file, { maxBytes: 25 * 1024 * 1024, maxPages: 120 });
-    if (!portable.canRestoreProject) {
-      throw new Error('Este PDF se inspeccionó como referencia. Confirma primero su geometría y cargas antes de convertirlo en un modelo.');
+export const createPortableImportCenterAdapter = (language: Language): ImportCenterAdapter => {
+  const t: Translate = (key, variables) => translate(language, key, variables);
+  const inspectFile = async (file: File) => {
+    try {
+      return await inspectPortableFile(file, { maxBytes: 25 * 1024 * 1024, maxPages: 120 });
+    } catch (reason) {
+      throw new Error(localizeReaderError(reason, language, t));
     }
-    const payload = 'payload' in portable ? portable.payload : undefined;
-    const project = normalizeProject(portable.kind === 'project-json' ? portable.project : payload!.project);
-    return {
-      project,
-      restoredAnalysis: payload?.analysis,
-      title: payload ? 'Expediente completo restaurado' : 'Proyecto importado',
-      message: payload
-        ? 'Se verificaron el modelo, resultados, diagramas, procedimientos y checksum del expediente.'
-        : 'El modelo quedó listo; ejecuta Analizar para generar resultados y procedimientos.',
-      statistics: inspection.statistics,
-      warnings: inspection.warnings,
-    };
-  },
+  };
+  return {
+    inspect: async (file) => {
+      const inspection = await inspectFile(file);
+      inspectedFiles.set(file, inspection);
+      return mapInspection(inspection, t);
+    },
+    importFile: async (file, inspection): Promise<ImportOutcome> => {
+      const portable = inspectedFiles.get(file) ?? await inspectFile(file);
+      if (!portable.canRestoreProject) {
+        throw new Error(t('importCenter.referenceImportError'));
+      }
+      const payload = 'payload' in portable ? portable.payload : undefined;
+      const project = normalizeProject(portable.kind === 'project-json' ? portable.project : payload!.project);
+      return {
+        project,
+        restoredAnalysis: payload?.analysis,
+        title: payload ? t('importCenter.portableRestoredTitle') : t('importCenter.portableImportedTitle'),
+        message: payload
+          ? t('importCenter.portableRestoredMessage')
+          : t('importCenter.portableImportedMessage'),
+        statistics: inspection.statistics,
+        warnings: inspection.warnings,
+      };
+    },
+  };
 };
+
+export const portableImportCenterAdapter = createPortableImportCenterAdapter('es');

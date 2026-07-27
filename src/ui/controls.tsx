@@ -34,6 +34,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   className = '',
   disabled,
   type = 'button',
+  'aria-label': ariaLabel,
   children,
   ...props
 }, ref) {
@@ -44,6 +45,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     className={`sc-button sc-button--${variant} sc-button--${size}${fullWidth ? ' sc-button--full' : ''}${loading ? ' is-loading' : ''}${className ? ` ${className}` : ''}`}
     disabled={disabled || loading}
     aria-busy={loading || undefined}
+    aria-label={loading ? loadingLabel : ariaLabel}
   >
     {loading ? <Spinner size="sm" label={loadingLabel} decorative /> : leadingIcon ? <span className="sc-button__icon" aria-hidden="true">{leadingIcon}</span> : null}
     <span className="sc-button__label">{children}</span>
@@ -64,7 +66,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
   variant = 'ghost',
   size = 'md',
   loading = false,
-  loadingLabel = 'Loading',
+  loadingLabel,
   className = '',
   disabled,
   type = 'button',
@@ -76,7 +78,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
     ref={ref}
     type={type}
     className={`sc-icon-button sc-icon-button--${variant} sc-icon-button--${size}${loading ? ' is-loading' : ''}${className ? ` ${className}` : ''}`}
-    aria-label={label}
+    aria-label={loading ? (loadingLabel ?? label) : label}
     aria-busy={loading || undefined}
     disabled={disabled || loading}
   >
@@ -120,11 +122,11 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(function Field({
     <label className="sc-field__label" htmlFor={id}>{label}{optionalLabel ? <small>{optionalLabel}</small> : null}</label>
     <span className={`sc-field__control sc-field__control--${controlSize}`}>
       {prefix ? <span className="sc-field__affix" aria-hidden="true">{prefix}</span> : null}
-      <input {...props} ref={ref} id={id} aria-describedby={describedBy} aria-invalid={Boolean(error) || undefined} />
+      <input {...props} ref={ref} id={id} aria-describedby={describedBy} aria-errormessage={errorId} aria-invalid={Boolean(error) || undefined} />
       {suffix ? <span className="sc-field__affix">{suffix}</span> : null}
     </span>
     {hint ? <small id={hintId} className="sc-field__hint">{hint}</small> : null}
-    {error ? <small id={errorId} className="sc-field__error">{error}</small> : null}
+    {error ? <small id={errorId} className="sc-field__error" role="alert">{error}</small> : null}
   </div>;
 });
 
@@ -156,11 +158,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
     <label className="sc-field__label" htmlFor={id}>{label}{optionalLabel ? <small>{optionalLabel}</small> : null}</label>
     <span className={`sc-field__control sc-field__control--select sc-field__control--${controlSize}`}>
       {prefix ? <span className="sc-field__affix" aria-hidden="true">{prefix}</span> : null}
-      <select {...props} ref={ref} id={id} aria-describedby={describedBy} aria-invalid={Boolean(error) || undefined}>{children}</select>
+      <select {...props} ref={ref} id={id} aria-describedby={describedBy} aria-errormessage={errorId} aria-invalid={Boolean(error) || undefined}>{children}</select>
       {suffix ? <span className="sc-field__affix">{suffix}</span> : <ChevronDown className="sc-field__select-icon" size={16} aria-hidden="true" />}
     </span>
     {hint ? <small id={hintId} className="sc-field__hint">{hint}</small> : null}
-    {error ? <small id={errorId} className="sc-field__error">{error}</small> : null}
+    {error ? <small id={errorId} className="sc-field__error" role="alert">{error}</small> : null}
   </div>;
 });
 

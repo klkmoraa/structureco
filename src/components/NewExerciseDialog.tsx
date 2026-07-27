@@ -3,9 +3,13 @@ import {
   classroomExerciseTemplates,
   getClassroomExerciseTemplate,
   type ClassroomDifficulty,
+  type ClassroomExerciseParameterKey,
   type ClassroomExerciseParameters,
   type ClassroomExerciseTemplateId,
+  type ClassroomTopic,
 } from '../education/exerciseTemplates';
+import type { TranslationKey } from '../i18n/catalogs';
+import { useI18n } from '../i18n/useI18n';
 import type { ProjectModel } from '../types';
 
 export interface NewExerciseDialogProps {
@@ -15,10 +19,35 @@ export interface NewExerciseDialogProps {
   initialTemplateId?: ClassroomExerciseTemplateId;
 }
 
-const difficultyLabels: Record<ClassroomDifficulty, string> = {
-  basic: 'Básico',
-  intermediate: 'Intermedio',
-  advanced: 'Avanzado',
+const difficultyLabelKeys: Record<ClassroomDifficulty, TranslationKey> = {
+  basic: 'newExercise.difficultyBasic',
+  intermediate: 'newExercise.difficultyIntermediate',
+  advanced: 'newExercise.difficultyAdvanced',
+};
+
+const templateCopyKeys: Record<ClassroomExerciseTemplateId, { name: TranslationKey; description: TranslationKey }> = {
+  blank: { name: 'newExercise.template.blankName', description: 'newExercise.template.blankDescription' },
+  'simple-beam': { name: 'newExercise.template.simpleBeamName', description: 'newExercise.template.simpleBeamDescription' },
+  cantilever: { name: 'newExercise.template.cantileverName', description: 'newExercise.template.cantileverDescription' },
+  'triangular-truss': { name: 'newExercise.template.triangularTrussName', description: 'newExercise.template.triangularTrussDescription' },
+  'portal-frame': { name: 'newExercise.template.portalFrameName', description: 'newExercise.template.portalFrameDescription' },
+};
+
+const topicLabelKeys: Record<ClassroomTopic, TranslationKey> = {
+  inicio: 'newExercise.topicStart',
+  vigas: 'newExercise.topicBeams',
+  diagramas: 'newExercise.topicDiagrams',
+  pórticos: 'newExercise.topicFrames',
+  armaduras: 'newExercise.topicTrusses',
+  hiperestática: 'newExercise.topicIndeterminate',
+};
+
+const fieldLabelKeys: Record<ClassroomExerciseParameterKey, TranslationKey> = {
+  length: 'newExercise.fieldLength',
+  height: 'newExercise.fieldHeight',
+  loadMagnitude: 'newExercise.fieldLoad',
+  distributedLoadMagnitude: 'newExercise.fieldDistributedLoad',
+  loadPosition: 'newExercise.fieldLoadPosition',
 };
 
 const styles: Record<string, CSSProperties> = {
@@ -44,6 +73,7 @@ const styles: Record<string, CSSProperties> = {
   inputWrap: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', alignItems: 'center', border: '1px solid var(--border, #cfd5df)', borderRadius: 9, background: 'var(--surface, #fff)', overflow: 'hidden' },
   input: { width: '100%', minWidth: 0, minHeight: 42, padding: '0 9px', border: 0, background: 'transparent', color: 'var(--text, #18202a)', font: 'inherit' },
   unit: { padding: '0 9px', color: 'var(--muted, #667085)', fontSize: 9 },
+  fieldError: { gridColumn: '2', margin: '-5px 0 0', color: 'var(--danger, #b42318)', fontSize: 10, lineHeight: 1.4 },
   note: { margin: 0, color: 'var(--muted, #667085)', fontSize: 10, lineHeight: 1.5 },
   submit: { minHeight: 46, marginTop: 2, border: 0, borderRadius: 11, background: 'var(--accent)', color: 'var(--accent-foreground, #fff)', fontSize: 12, fontWeight: 750, cursor: 'pointer' },
 };
@@ -69,18 +99,28 @@ export const NewExerciseDialog = ({
   onCreate,
   initialTemplateId = 'blank',
 }: NewExerciseDialogProps) => {
+  const { t } = useI18n();
   const [templateId, setTemplateId] = useState<ClassroomExerciseTemplateId>(initialTemplateId);
   const [parameters, setParameters] = useState<Partial<ClassroomExerciseParameters>>(() => initialParameters(initialTemplateId));
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<ClassroomExerciseParameterKey, string>>>({});
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
+  const shouldFocusInvalidRef = useRef(false);
   const template = getClassroomExerciseTemplate(templateId);
 
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   useEffect(() => {
+    if (!shouldFocusInvalidRef.current) return;
+    shouldFocusInvalidRef.current = false;
+    dialogRef.current?.querySelector<HTMLInputElement>('[aria-invalid="true"]')?.focus();
+  }, [fieldErrors]);
+
+  useEffect(() => {
     if (!open) return;
     setTemplateId(initialTemplateId);
     setParameters(initialParameters(initialTemplateId));
+    setFieldErrors({});
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -92,14 +132,15 @@ export const NewExerciseDialog = ({
         return;
       }
       if (event.key !== 'Tab') return;
-      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])');
-      if (!focusable?.length) return;
+      const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]):not([tabindex="-1"]), input:not([disabled]):not([type="hidden"]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])') ?? [])]
+        .filter((element) => !element.closest('[hidden], [aria-hidden="true"], [inert]'));
+      if (!focusable.length) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
+      if (event.shiftKey && (document.activeElement === first || !dialogRef.current?.contains(document.activeElement))) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
+      } else if (!event.shiftKey && (document.activeElement === last || !dialogRef.current?.contains(document.activeElement))) {
         event.preventDefault();
         first.focus();
       }
@@ -118,6 +159,7 @@ export const NewExerciseDialog = ({
   const chooseTemplate = (id: ClassroomExerciseTemplateId) => {
     setTemplateId(id);
     setParameters(initialParameters(id));
+    setFieldErrors({});
   };
 
   const onTemplateKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -141,27 +183,42 @@ export const NewExerciseDialog = ({
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div ref={dialogRef} className="new-exercise-dialog" role="dialog" aria-modal="true" aria-labelledby="new-exercise-title" style={styles.dialog}>
+      <div ref={dialogRef} className="new-exercise-dialog" role="dialog" aria-modal="true" aria-labelledby="new-exercise-title" aria-describedby="new-exercise-subtitle" style={styles.dialog}>
         <header style={styles.header}>
           <div>
-            <p style={styles.eyebrow}>Modo Aula</p>
-            <h2 id="new-exercise-title" style={styles.title}>Nuevo ejercicio</h2>
-            <p style={styles.subtitle}>Empieza desde cero o genera un modelo con geometría, apoyos y una carga editable.</p>
+            <p style={styles.eyebrow}>{t('classroom.eyebrow')}</p>
+            <h2 id="new-exercise-title" style={styles.title}>{t('newExercise.title')}</h2>
+            <p id="new-exercise-subtitle" style={styles.subtitle}>{t('newExercise.subtitle')}</p>
           </div>
-          <button type="button" aria-label="Cerrar" style={styles.close} onClick={onClose}>×</button>
+          <button type="button" aria-label={t('newExercise.close')} style={styles.close} onClick={onClose}>×</button>
         </header>
         <form
           style={styles.form}
           noValidate
           onSubmit={(event) => {
             event.preventDefault();
+            const nextErrors: Partial<Record<ClassroomExerciseParameterKey, string>> = {};
+            for (const field of template.fields) {
+              const value = parameters[field.key];
+              if (typeof value !== 'number' || !Number.isFinite(value)) {
+                nextErrors[field.key] = t('newExercise.fieldEmpty');
+              } else if (value < field.min || value > field.max) {
+                nextErrors[field.key] = t('newExercise.fieldRange', { min: field.min, max: field.max });
+              }
+            }
+            if (Object.keys(nextErrors).length) {
+              shouldFocusInvalidRef.current = true;
+              setFieldErrors(nextErrors);
+              return;
+            }
             onCreate(template.build(parameters));
           }}
         >
-          <div style={styles.chooser} role="radiogroup" aria-label="Tipo de ejercicio">
-            <h3 style={styles.sectionTitle}>Elige una base</h3>
+          <div style={styles.chooser} role="radiogroup" aria-label={t('newExercise.typeLabel')}>
+            <h3 style={styles.sectionTitle}>{t('newExercise.chooseBase')}</h3>
             {classroomExerciseTemplates.map((candidate, index) => {
               const selected = candidate.id === templateId;
+              const copy = templateCopyKeys[candidate.id];
               return (
                 <button
                   key={candidate.id}
@@ -176,12 +233,12 @@ export const NewExerciseDialog = ({
                   onKeyDown={(event) => onTemplateKeyDown(event, index)}
                 >
                   <span style={styles.templateCopy}>
-                    <strong style={styles.templateName}>{candidate.name}</strong>
-                    <span style={styles.templateDescription}>{candidate.description}</span>
+                    <strong style={styles.templateName}>{t(copy.name)}</strong>
+                    <span style={styles.templateDescription}>{t(copy.description)}</span>
                     <span style={styles.badgeRow}>
-                      <span style={styles.badge}>{difficultyLabels[candidate.difficulty]}</span>
-                      <span style={styles.badge}>{candidate.durationMinutes} min</span>
-                      {candidate.topics.slice(0, 2).map((topic) => <span key={topic} style={styles.badge}>{topic}</span>)}
+                      <span style={styles.badge}>{t(difficultyLabelKeys[candidate.difficulty])}</span>
+                      <span style={styles.badge}>{t('newExercise.duration', { minutes: candidate.durationMinutes })}</span>
+                      {candidate.topics.slice(0, 2).map((topic) => <span key={topic} style={styles.badge}>{t(topicLabelKeys[topic])}</span>)}
                     </span>
                   </span>
                   <span style={selected ? selectedRadioStyle : styles.radio} aria-hidden="true" />
@@ -190,21 +247,27 @@ export const NewExerciseDialog = ({
             })}
           </div>
           <section style={styles.settings} aria-labelledby="exercise-parameters-title">
-            <h3 id="exercise-parameters-title" style={styles.sectionTitle}>Datos esenciales</h3>
-            {template.fields.length ? template.fields.map((field) => (
-              <label key={field.key} style={styles.field}>
-                <span>{field.label}</span>
+            <h3 id="exercise-parameters-title" style={styles.sectionTitle}>{t('newExercise.parametersTitle')}</h3>
+            {template.fields.length ? template.fields.map((field) => {
+              const label = t(fieldLabelKeys[field.key]);
+              const error = fieldErrors[field.key];
+              const errorId = `new-exercise-${field.key}-error`;
+              return <label key={field.key} style={styles.field}>
+                <span>{label}</span>
                 <span className="new-exercise-input-wrap" style={styles.inputWrap}>
                   <input
                     className="new-exercise-input"
                     style={styles.input}
-                    aria-label={field.label}
+                    aria-label={label}
                     type="number"
                     inputMode="decimal"
                     min={field.min}
                     max={field.max}
                     step={field.step}
                     required
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? errorId : undefined}
+                    aria-errormessage={error ? errorId : undefined}
                     value={parameters[field.key] ?? ''}
                     onChange={(event) => {
                       const value = event.currentTarget.valueAsNumber;
@@ -214,14 +277,21 @@ export const NewExerciseDialog = ({
                         else delete next[field.key];
                         return next;
                       });
+                      setFieldErrors((current) => {
+                        if (!current[field.key]) return current;
+                        const next = { ...current };
+                        delete next[field.key];
+                        return next;
+                      });
                     }}
                   />
                   <small style={styles.unit}>{field.unit}</small>
                 </span>
-              </label>
-            )) : <p style={styles.note}>El proyecto se abrirá vacío. La guía te indicará cuándo agregar nodos, miembros, apoyos y cargas.</p>}
-            <p style={styles.note}>Las propiedades mecánicas se asignan internamente. Puedes concentrarte en equilibrio, reacciones y diagramas N–V–M.</p>
-            <button className="new-exercise-submit" type="submit" style={styles.submit}>Crear ejercicio</button>
+                {error ? <small id={errorId} style={styles.fieldError} role="alert">{error}</small> : null}
+              </label>;
+            }) : <p style={styles.note}>{t('newExercise.emptyNote')}</p>}
+            <p style={styles.note}>{t('newExercise.mechanicalNote')}</p>
+            <button className="new-exercise-submit" type="submit" style={styles.submit}>{t('newExercise.create')}</button>
           </section>
         </form>
       </div>

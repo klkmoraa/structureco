@@ -6,6 +6,7 @@ import {
   type InputHTMLAttributes,
   type ReactNode,
 } from 'react';
+import { CheckCircle2, Circle, CircleAlert, Clock3, TriangleAlert } from 'lucide-react';
 import { Spinner } from './feedback';
 
 export type ToolTone = 'navigation' | 'structure' | 'load' | 'distributed' | 'moment' | 'dimension' | 'cut' | 'destructive';
@@ -31,7 +32,7 @@ export const ToolButton = forwardRef<HTMLButtonElement, ToolButtonProps>(functio
   detail,
   active = false,
   loading = false,
-  loadingLabel = 'Loading',
+  loadingLabel,
   tone = 'navigation',
   compact = false,
   className = '',
@@ -46,7 +47,7 @@ export const ToolButton = forwardRef<HTMLButtonElement, ToolButtonProps>(functio
     type={type}
     role={role}
     className={`sc-tool-button sc-tool-button--${tone}${active ? ' is-active' : ''}${compact ? ' is-compact' : ''}${loading ? ' is-loading' : ''}${className ? ` ${className}` : ''}`}
-    aria-label={shortcut ? `${label} (${shortcut})` : label}
+    aria-label={loading ? (loadingLabel ?? label) : shortcut ? `${label} (${shortcut})` : label}
     aria-pressed={role === 'menuitemradio' || role === 'radio' ? undefined : active}
     aria-busy={loading || undefined}
     aria-keyshortcuts={keyShortcut ?? shortcut}
@@ -87,10 +88,18 @@ export const StatusStrip = ({ status, title, detail, action, className = '' }: S
   <section
     className={`sc-status-strip sc-status-strip--${status}${className ? ` ${className}` : ''}`}
     role={status === 'error' ? 'alert' : 'status'}
-    aria-live={status === 'loading' || status === 'error' ? 'polite' : 'off'}
+    aria-live={status === 'error' ? 'assertive' : status === 'loading' || status === 'stale' || status === 'warning' || status === 'success' ? 'polite' : 'off'}
+    aria-atomic="true"
     aria-busy={status === 'loading' || undefined}
   >
-    <span className="sc-status-strip__mark" aria-hidden="true">{status === 'loading' ? <Spinner size="sm" decorative /> : <i />}</span>
+    <span className="sc-status-strip__mark" aria-hidden="true">{
+      status === 'loading' ? <Spinner size="sm" decorative />
+        : status === 'success' ? <CheckCircle2 size={18} />
+          : status === 'stale' ? <Clock3 size={18} />
+            : status === 'warning' ? <TriangleAlert size={18} />
+              : status === 'error' ? <CircleAlert size={18} />
+                : <Circle size={18} />
+    }</span>
     <div className="sc-status-strip__copy"><strong>{title}</strong>{detail ? <span>{detail}</span> : null}</div>
     {action ? <div className="sc-status-strip__action">{action}</div> : null}
   </section>
@@ -159,12 +168,13 @@ export const UnitField = forwardRef<HTMLInputElement, UnitFieldProps>(function U
         inputMode="decimal"
         value={value}
         aria-describedby={messageId}
+        aria-errormessage={error ? messageId : undefined}
         aria-invalid={Boolean(error) || undefined}
         onChange={(event) => onValueChange(event.target.value)}
       />
       <span aria-hidden="true">{unit}</span>
     </span>
-    {error ? <small id={messageId} className="sc-unit-field__error">{error}</small> : hint ? <small id={messageId}>{hint}</small> : null}
+    {error ? <small id={messageId} className="sc-unit-field__error" role="alert">{error}</small> : hint ? <small id={messageId}>{hint}</small> : null}
   </div>;
 });
 

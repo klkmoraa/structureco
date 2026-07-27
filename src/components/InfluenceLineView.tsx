@@ -20,6 +20,7 @@ import { useInfluenceAnalysis } from '../engine/useInfluenceAnalysis';
 import { fromDisplay, toDisplay, unitLabel } from '../engine/units';
 import type { DiagramQuantity, ProjectModel, Selection } from '../types';
 import type { InfluenceCanvasState } from '../store/ProjectContext';
+import { useI18n } from '../i18n/useI18n';
 
 export interface InfluenceLineViewProps {
   project: ProjectModel;
@@ -194,6 +195,7 @@ const ExactPolynomialChart = ({
   yAxisLabel,
   onCursorChange,
 }: ExactPolynomialChartProps) => {
+  const { t } = useI18n();
   const [hoverPosition, setHoverPosition] = useState<number | null>(null);
   const [pinnedPosition, setPinnedPosition] = useState<number | null>(null);
   const [domainStart, domainEnd] = domain;
@@ -270,7 +272,7 @@ const ExactPolynomialChart = ({
   return <div className={`diagram-chart ${colorClass}`}>
     <div className="diagram-chart-heading">
       <strong>{ariaLabel}</strong>
-      <small>{pinnedPosition === null ? 'Mueve el cursor · toca para fijar' : 'Lectura fijada · Esc para liberar'}</small>
+      <small>{pinnedPosition === null ? t('influence.chartPointerHint') : t('influence.chartPinnedHint')}</small>
     </div>
     <svg
       tabIndex={0}
@@ -288,7 +290,7 @@ const ExactPolynomialChart = ({
       onPointerLeave={() => setHoverPosition(null)}
     >
       <title>{ariaLabel}</title>
-      <desc>Cada intervalo se representa con una Bézier cúbica equivalente al polinomio del motor; no se muestrea la curva.</desc>
+      <desc>{t('influence.chartDescription')}</desc>
       <line className="chart-axis" x1="0" y1={baseline} x2={width} y2={baseline} />
       {[0, 0.25, 0.5, 0.75, 1].map((fraction) => {
         const position = domainStart + fraction * domainLength;
@@ -314,12 +316,13 @@ const ExactPolynomialChart = ({
       </g> : null}
     </svg>
     {activePosition !== null && activeValue !== null
-      ? <div className="diagram-cursor-readout"><span><b>x</b>{formatX(activePosition)}</span><span><b>valor</b>{formatY(activeValue)}</span></div>
-      : <div className="diagram-cursor-placeholder">Cursor exacto sobre el polinomio · los saltos conservan sus límites laterales</div>}
+      ? <div className="diagram-cursor-readout"><span><b>x</b>{formatX(activePosition)}</span><span><b>{t('influence.value')}</b>{formatY(activeValue)}</span></div>
+      : <div className="diagram-cursor-placeholder">{t('influence.chartCursorPlaceholder')}</div>}
   </div>;
 };
 
 const InfluenceDiagnostics = ({ line }: { line: InfluenceLine }) => {
+  const { t } = useI18n();
   const closurePassed = line.fit.maxAbsoluteError <= 1e-9 || line.fit.maxRelativeError <= 1e-8;
   const equilibriumResidual = Math.max(line.solver.maxEquilibriumResidual, line.solver.maxStructuralResidual);
   const equilibriumPassed = equilibriumResidual <= 1e-8;
@@ -327,18 +330,18 @@ const InfluenceDiagnostics = ({ line }: { line: InfluenceLine }) => {
     && (line.solver.minReliableDigits >= 6 || !Number.isFinite(line.solver.minReliableDigits));
   return <>
     <div className="verification-grid">
-      <div className={closurePassed ? 'passed' : 'warning'}><span>Cierre polinómico</span><strong>{finiteExponential(line.fit.maxAbsoluteError, 3)}</strong><small>Error abs. máx.; relativo {finiteExponential(line.fit.maxRelativeError, 2)} en {line.fit.validations.length} puntos independientes.</small></div>
-      <div className={equilibriumPassed ? 'passed' : 'warning'}><span>Equilibrio</span><strong>{finiteExponential(equilibriumResidual, 3)}</strong><small>Máximo entre equilibrio global y residuo estructural de {line.solver.analyses} análisis.</small></div>
-      <div className={precisionPassed ? 'passed' : 'warning'}><span>Precisión estimada</span><strong>{Number.isFinite(line.solver.minReliableDigits) ? `${line.solver.minReliableDigits.toFixed(1)} dígitos` : 'No estimada'}</strong><small>Cota de error {finiteExponential(line.solver.maxForwardErrorBound, 2)}; residuo lineal {finiteExponential(line.solver.maxLinearResidual, 2)}.</small></div>
-      <div className="passed"><span>Extremos</span><strong>Raíces exactas</strong><small>Se evalúan extremos, saltos y raíces de la derivada cúbica, sin malla de posiciones.</small></div>
+      <div className={closurePassed ? 'passed' : 'warning'}><span>{t('influence.polynomialClosure')}</span><strong>{finiteExponential(line.fit.maxAbsoluteError, 3)}</strong><small>{t('influence.polynomialClosureDetail', { relative: finiteExponential(line.fit.maxRelativeError, 2), count: line.fit.validations.length })}</small></div>
+      <div className={equilibriumPassed ? 'passed' : 'warning'}><span>{t('influence.equilibrium')}</span><strong>{finiteExponential(equilibriumResidual, 3)}</strong><small>{t('influence.equilibriumDetail', { count: line.solver.analyses })}</small></div>
+      <div className={precisionPassed ? 'passed' : 'warning'}><span>{t('influence.estimatedPrecision')}</span><strong>{Number.isFinite(line.solver.minReliableDigits) ? t('influence.reliableDigits', { digits: line.solver.minReliableDigits.toFixed(1) }) : t('influence.notEstimated')}</strong><small>{t('influence.precisionDetail', { bound: finiteExponential(line.solver.maxForwardErrorBound, 2), residual: finiteExponential(line.solver.maxLinearResidual, 2) })}</small></div>
+      <div className="passed"><span>{t('influence.extrema')}</span><strong>{t('influence.exactRoots')}</strong><small>{t('influence.extremaDetail')}</small></div>
     </div>
     <details style={{ margin: '8px 12px 12px' }}>
-      <summary style={{ cursor: 'pointer', fontSize: 10, color: 'var(--muted)' }}>Detalle numérico del ajuste y del solver</summary>
+      <summary style={{ cursor: 'pointer', fontSize: 10, color: 'var(--muted)' }}>{t('influence.numericDetails')}</summary>
       <div className="education-kpis" style={{ marginTop: 8 }}>
-        <div><span>κ interpolación</span><strong>{finiteExponential(line.fit.interpolationConditionEstimate, 2)}</strong></div>
-        <div><span>Residuo interpolación</span><strong>{finiteExponential(line.fit.interpolationRelativeResidual, 2)}</strong></div>
-        <div><span>Razón pivote</span><strong>{finiteExponential(line.fit.interpolationPivotRatio, 2)}</strong></div>
-        <div><span>κ estructural máx.</span><strong>{finiteExponential(line.solver.maxConditionEstimate, 2)}</strong></div>
+        <div><span>{t('influence.interpolationCondition')}</span><strong>{finiteExponential(line.fit.interpolationConditionEstimate, 2)}</strong></div>
+        <div><span>{t('influence.interpolationResidual')}</span><strong>{finiteExponential(line.fit.interpolationRelativeResidual, 2)}</strong></div>
+        <div><span>{t('influence.pivotRatio')}</span><strong>{finiteExponential(line.fit.interpolationPivotRatio, 2)}</strong></div>
+        <div><span>{t('influence.maximumStructuralCondition')}</span><strong>{finiteExponential(line.solver.maxConditionEstimate, 2)}</strong></div>
       </div>
     </details>
   </>;
@@ -357,6 +360,7 @@ const trainCurveSegments = (train: AxleTrainEnvelope | null): CurveSegment[] => 
 })) ?? [];
 
 export const InfluenceLineView = ({ project, selection = null, onCanvasStateChange }: InfluenceLineViewProps) => {
+  const { t } = useI18n();
   const deformableMembers = useMemo(() => project.members.filter((member) => member.type !== 'rigid'), [project.members]);
   const frameMembers = useMemo(() => project.members.filter((member) => member.type === 'frame'), [project.members]);
   const selectedFrameIds = useMemo(() => selectionFrameIds(project, selection), [project, selection]);
@@ -460,7 +464,7 @@ export const InfluenceLineView = ({ project, selection = null, onCanvasStateChan
 
   const useSelectionAsPath = () => {
     if (!selectedFrameIds.length) {
-      setLocalError('La selección no contiene miembros frame. Selecciona una barra o una cadena continua.');
+      setLocalError(t('influence.errorSelectionNoFrames'));
       return;
     }
     invalidate();
@@ -470,23 +474,23 @@ export const InfluenceLineView = ({ project, selection = null, onCanvasStateChan
   const calculate = () => {
     setLocalError(null);
     if (!targetMemberId || targetLength <= 0) {
-      setLocalError('Selecciona un miembro objetivo deformable.');
+      setLocalError(t('influence.errorSelectTarget'));
       return;
     }
     if (!pathMemberIds.length) {
-      setLocalError('Selecciona una trayectoria de al menos un miembro frame.');
+      setLocalError(t('influence.errorSelectPath'));
       return;
     }
     if (axles.length < 1 || axles.length > 4) {
-      setLocalError('El tren debe contener entre uno y cuatro ejes.');
+      setLocalError(t('influence.errorAxleCount'));
       return;
     }
     if (axles.some((axle) => !Number.isFinite(axle.P) || axle.P <= 0 || !Number.isFinite(axle.offset))) {
-      setLocalError('Cada eje necesita una P positiva hacia abajo y un offset finito.');
+      setLocalError(t('influence.errorInvalidAxle'));
       return;
     }
     if (!Number.isFinite(impactFactor) || impactFactor < 1) {
-      setLocalError('El factor de impacto debe ser mayor o igual que 1.');
+      setLocalError(t('influence.errorImpactFactor'));
       return;
     }
     setCursor(null);
@@ -532,34 +536,37 @@ export const InfluenceLineView = ({ project, selection = null, onCanvasStateChan
     ? `${toDisplay(value, units, 'moment').toPrecision(5)} ${momentUnit}`
     : `${toDisplay(value, units, 'force').toPrecision(5)} ${forceUnit}`, [forceUnit, momentUnit, quantity, units]);
   const pathSummary = pathMemberIds.length
-    ? `${pathMemberIds.length} miembro${pathMemberIds.length === 1 ? '' : 's'} · ${pathMemberIds.join(' → ')}`
-    : 'Sin trayectoria';
+    ? t(pathMemberIds.length === 1 ? 'influence.pathSummaryOne' : 'influence.pathSummaryMany', {
+        count: pathMemberIds.length,
+        members: pathMemberIds.join(' → '),
+      })
+    : t('influence.noPath');
   const displayedError = localError ?? error;
 
-  return <section className="education-explorer influence-line-view" aria-label="Línea de influencia y tren de ejes">
+  return <section className="education-explorer influence-line-view" aria-label={t('influence.regionLabel')}>
     <div className="education-explorer-heading">
-      <div><strong>Línea de influencia</strong><small>Carga unitaria vertical · reconstrucción cúbica validada · extremos sin barrido</small></div>
-      <span>{busy ? 'Calculando…' : line ? `${line.solver.analyses} análisis` : 'N · V · M'}</span>
+      <div><strong>{t('influence.title')}</strong><small>{t('influence.subtitle')}</small></div>
+      <span>{busy ? t('influence.calculating') : line ? t('influence.analysisCount', { count: line.solver.analyses }) : 'N · V · M'}</span>
     </div>
     <div className="education-stage" style={{ display: 'grid', gap: 12 }}>
       <div style={controlGridStyle}>
-        <label style={fieldStyle}><span>Esfuerzo objetivo</span><div className="response-selector" role="group" aria-label="Esfuerzo de la línea de influencia">
+        <label style={fieldStyle}><span>{t('influence.targetResponse')}</span><div className="response-selector" role="group" aria-label={t('influence.responseGroup')}>
           {(['N', 'V', 'M'] as const).map((item) => <button type="button" aria-pressed={quantity === item} className={quantity === item ? 'active' : ''} key={item} onClick={() => { invalidate(); setQuantity(item); }}>{item}</button>)}
         </div></label>
-        <label style={fieldStyle}><span>Miembro objetivo</span><select style={inputStyle} value={targetMemberId} onChange={(event) => {
+        <label style={fieldStyle}><span>{t('influence.targetMember')}</span><select style={inputStyle} value={targetMemberId} onChange={(event) => {
           const memberId = event.currentTarget.value;
           invalidate();
           setTargetMemberId(memberId);
           setTargetX(memberDeformableLength(project, memberId) / 2);
         }}>{deformableMembers.map((member) => <option value={member.id} key={member.id}>{member.label ? `${member.id} · ${member.label}` : member.id}</option>)}</select></label>
-        <label style={fieldStyle}><span>Límite en el corte</span><select style={inputStyle} value={targetSide} onChange={(event) => { invalidate(); setTargetSide(event.currentTarget.value as 'left' | 'right'); }}><option value="right">Derecho</option><option value="left">Izquierdo</option></select></label>
-        <div style={fieldStyle}><span>Trayectoria de la carga</span><button type="button" style={secondaryButtonStyle} disabled={!selectedFrameIds.length || busy} onClick={useSelectionAsPath}>Usar selección ({selectedFrameIds.length})</button></div>
+        <label style={fieldStyle}><span>{t('influence.cutLimit')}</span><select style={inputStyle} value={targetSide} onChange={(event) => { invalidate(); setTargetSide(event.currentTarget.value as 'left' | 'right'); }}><option value="right">{t('influence.right')}</option><option value="left">{t('influence.left')}</option></select></label>
+        <div style={fieldStyle}><span>{t('influence.loadPath')}</span><button type="button" style={secondaryButtonStyle} disabled={!selectedFrameIds.length || busy} onClick={useSelectionAsPath}>{t('influence.useSelection', { count: selectedFrameIds.length })}</button></div>
       </div>
       <label style={fieldStyle}>
-        <span>Sección objetivo x · 0 a {targetLengthDisplay.toFixed(3)} {lengthUnit}</span>
+        <span>{t('influence.targetSection', { length: targetLengthDisplay.toFixed(3), unit: lengthUnit })}</span>
         <div style={rowStyle}>
           <input style={{ flex: '1 1 260px' }} type="range" min={0} max={targetLengthDisplay || 0} step={rangeStep} value={toDisplay(targetX, units, 'length')} onChange={(event) => { invalidate(); setTargetX(fromDisplay(event.currentTarget.valueAsNumber, units, 'length')); }} />
-          <span className="number-control" style={{ width: 150 }}><input aria-label="Coordenada del corte" type="number" min={0} max={targetLengthDisplay || 0} step={rangeStep} value={toDisplay(targetX, units, 'length')} onChange={(event) => {
+          <span className="number-control" style={{ width: 150 }}><input aria-label={t('influence.cutCoordinate')} type="number" min={0} max={targetLengthDisplay || 0} step={rangeStep} value={toDisplay(targetX, units, 'length')} onChange={(event) => {
             if (!Number.isFinite(event.currentTarget.valueAsNumber)) return;
             invalidate();
             setTargetX(clamp(fromDisplay(event.currentTarget.valueAsNumber, units, 'length'), 0, targetLength));
@@ -568,45 +575,45 @@ export const InfluenceLineView = ({ project, selection = null, onCanvasStateChan
       </label>
       <div style={rowStyle}>
         <small style={{ flex: '1 1 280px', color: 'var(--muted)' }}>{pathSummary}</small>
-        <button type="button" disabled={busy || !frameMembers.length || !deformableMembers.length} onClick={calculate}>{busy ? 'Calculando…' : 'Calcular'}</button>
+        <button type="button" disabled={busy || !frameMembers.length || !deformableMembers.length} onClick={calculate}>{busy ? t('influence.calculating') : t('influence.calculate')}</button>
       </div>
-      {displayedError ? <div className="issue-card error" role="alert"><span className="issue-icon">!</span><div><strong>No se pudo completar el cálculo</strong><p>{displayedError}</p></div></div> : null}
+      {displayedError ? <div className="issue-card error" role="alert"><span className="issue-icon">!</span><div><strong>{t('influence.calculationErrorTitle')}</strong><p>{displayedError}</p></div></div> : null}
     </div>
 
-    <div className="education-stage-tabs" role="tablist" aria-label="Vista de influencia">
-      <button type="button" role="tab" aria-selected={subtab === 'line'} className={subtab === 'line' ? 'active' : ''} onClick={() => { setCursor(null); setSubtab('line'); }}>Línea de influencia</button>
-      <button type="button" role="tab" aria-selected={subtab === 'train'} className={subtab === 'train' ? 'active' : ''} onClick={() => { setCursor(null); setSubtab('train'); }}>Tren de ejes</button>
+    <div className="education-stage-tabs" role="tablist" aria-label={t('influence.viewLabel')}>
+      <button type="button" role="tab" aria-selected={subtab === 'line'} className={subtab === 'line' ? 'active' : ''} onClick={() => { setCursor(null); setSubtab('line'); }}>{t('influence.title')}</button>
+      <button type="button" role="tab" aria-selected={subtab === 'train'} className={subtab === 'train' ? 'active' : ''} onClick={() => { setCursor(null); setSubtab('train'); }}>{t('influence.axleTrain')}</button>
     </div>
 
     {subtab === 'train' ? <div className="education-stage" style={{ display: 'grid', gap: 10 }}>
-      <div style={rowStyle}><strong style={{ fontSize: 11, flex: 1 }}>Editor local · {axles.length}/4 ejes</strong><label style={{ ...fieldStyle, gridTemplateColumns: 'auto 100px', alignItems: 'center' }}><span>Impacto φ ≥ 1</span><input aria-label="Factor de impacto" style={inputStyle} type="number" min={1} step={0.01} value={impactFactor} onChange={(event) => { if (!Number.isFinite(event.currentTarget.valueAsNumber)) return; invalidate(); setImpactFactor(event.currentTarget.valueAsNumber); }} /></label><button type="button" style={secondaryButtonStyle} disabled={axles.length >= 4} onClick={addAxle}>+ Eje</button></div>
-      <div className="table-wrap"><table className="results-table"><thead><tr><th>Eje</th><th>P positiva ↓ ({forceUnit})</th><th>Offset ({lengthUnit})</th><th>Acción</th></tr></thead><tbody>{axles.map((axle, index) => <tr key={axle.id ?? index}><td><strong>{axle.id ?? `E${index + 1}`}</strong></td><td><input aria-label={`Carga del eje ${index + 1}`} style={inputStyle} type="number" min={0} step="any" value={toDisplay(axle.P, units, 'force')} onChange={(event) => { if (Number.isFinite(event.currentTarget.valueAsNumber)) updateAxle(index, { P: fromDisplay(event.currentTarget.valueAsNumber, units, 'force') }); }} /></td><td><input aria-label={`Offset del eje ${index + 1}`} style={inputStyle} type="number" step="any" value={toDisplay(axle.offset, units, 'length')} onChange={(event) => { if (Number.isFinite(event.currentTarget.valueAsNumber)) updateAxle(index, { offset: fromDisplay(event.currentTarget.valueAsNumber, units, 'length') }); }} /></td><td><button type="button" style={secondaryButtonStyle} disabled={axles.length <= 1} onClick={() => removeAxle(index)}>Quitar</button></td></tr>)}</tbody></table></div>
-      <small style={{ color: 'var(--muted)' }}>El offset se mide desde la referencia del tren. El motor superpone polinomios trasladados y encuentra extremos mediante raíces de la derivada; no usa una cuadrícula de posiciones.</small>
+      <div style={rowStyle}><strong style={{ fontSize: 11, flex: 1 }}>{t('influence.localEditor', { count: axles.length })}</strong><label style={{ ...fieldStyle, gridTemplateColumns: 'auto 100px', alignItems: 'center' }}><span>{t('influence.impact')}</span><input aria-label={t('influence.impactFactor')} style={inputStyle} type="number" min={1} step={0.01} value={impactFactor} onChange={(event) => { if (!Number.isFinite(event.currentTarget.valueAsNumber)) return; invalidate(); setImpactFactor(event.currentTarget.valueAsNumber); }} /></label><button type="button" style={secondaryButtonStyle} disabled={axles.length >= 4} onClick={addAxle}>{t('influence.addAxle')}</button></div>
+      <div className="table-wrap"><table className="results-table"><thead><tr><th>{t('influence.axle')}</th><th>{t('influence.positiveLoad', { unit: forceUnit })}</th><th>{t('influence.offset', { unit: lengthUnit })}</th><th>{t('influence.action')}</th></tr></thead><tbody>{axles.map((axle, index) => <tr key={axle.id ?? index}><td><strong>{axle.id ?? `E${index + 1}`}</strong></td><td><input aria-label={t('influence.axleLoad', { index: index + 1 })} style={inputStyle} type="number" min={0} step="any" value={toDisplay(axle.P, units, 'force')} onChange={(event) => { if (Number.isFinite(event.currentTarget.valueAsNumber)) updateAxle(index, { P: fromDisplay(event.currentTarget.valueAsNumber, units, 'force') }); }} /></td><td><input aria-label={t('influence.axleOffset', { index: index + 1 })} style={inputStyle} type="number" step="any" value={toDisplay(axle.offset, units, 'length')} onChange={(event) => { if (Number.isFinite(event.currentTarget.valueAsNumber)) updateAxle(index, { offset: fromDisplay(event.currentTarget.valueAsNumber, units, 'length') }); }} /></td><td><button type="button" style={secondaryButtonStyle} disabled={axles.length <= 1} onClick={() => removeAxle(index)}>{t('influence.remove')}</button></td></tr>)}</tbody></table></div>
+      <small style={{ color: 'var(--muted)' }}>{t('influence.trainHelp')}</small>
     </div> : null}
 
-    {!line && !busy ? <div className="empty-small">Define la sección y la trayectoria, luego pulsa Calcular.</div> : null}
-    {busy ? <div className="empty-small" aria-live="polite">Resolviendo cargas unitarias y validando cada tramo…</div> : null}
+    {!line && !busy ? <div className="empty-small">{t('influence.emptyPrompt')}</div> : null}
+    {busy ? <div className="empty-small" aria-live="polite">{t('influence.busyMessage')}</div> : null}
 
     {line && subtab === 'line' ? <>
       <div className="education-stage" style={{ paddingBottom: 0 }}><div className="education-kpis">
-        <div><span>Mínimo</span><strong>{formatInfluenceValue(line.minimum.value)}</strong><small>x {formatPathX(line.minimum.position)}</small></div>
-        <div><span>Máximo</span><strong>{formatInfluenceValue(line.maximum.value)}</strong><small>x {formatPathX(line.maximum.position)}</small></div>
-        <div><span>Longitud de ruta</span><strong>{formatPathX(line.path.length)}</strong><small>{line.path.members.length} miembros ordenados</small></div>
-        <div><span>Representación</span><strong>{line.segments.length} cúbicas</strong><small>{line.jumps.length} saltos explícitos</small></div>
+        <div><span>{t('influence.minimum')}</span><strong>{formatInfluenceValue(line.minimum.value)}</strong><small>x {formatPathX(line.minimum.position)}</small></div>
+        <div><span>{t('influence.maximum')}</span><strong>{formatInfluenceValue(line.maximum.value)}</strong><small>x {formatPathX(line.maximum.position)}</small></div>
+        <div><span>{t('influence.routeLength')}</span><strong>{formatPathX(line.path.length)}</strong><small>{t(line.path.members.length === 1 ? 'influence.orderedMemberOne' : 'influence.orderedMemberMany', { count: line.path.members.length })}</small></div>
+        <div><span>{t('influence.representation')}</span><strong>{t(line.segments.length === 1 ? 'influence.cubicOne' : 'influence.cubicMany', { count: line.segments.length })}</strong><small>{t(line.jumps.length === 1 ? 'influence.explicitJumpOne' : 'influence.explicitJumpMany', { count: line.jumps.length })}</small></div>
       </div></div>
       <ExactPolynomialChart
-        ariaLabel={`Línea de influencia ${quantity} en ${line.target.memberId}, x = ${formatPathX(line.target.x)}`}
+        ariaLabel={t('influence.lineChartLabel', { quantity, member: line.target.memberId, position: formatPathX(line.target.x) })}
         colorClass={curveClass(quantity)}
         segments={lineSegments}
         jumps={lineJumps}
         domain={[0, line.path.length]}
-        minimum={{ x: line.minimum.position, value: line.minimum.value, label: 'mín.' }}
-        maximum={{ x: line.maximum.position, value: line.maximum.value, label: 'máx.' }}
+        minimum={{ x: line.minimum.position, value: line.minimum.value, label: t('influence.minimumShort') }}
+        maximum={{ x: line.maximum.position, value: line.maximum.value, label: t('influence.maximumShort') }}
         valueAt={lineValueAt}
         formatX={formatPathX}
         formatY={formatInfluenceValue}
-        xAxisLabel={`posición sobre la ruta (${lengthUnit})`}
-        yAxisLabel={quantity === 'M' ? `ψM (${lengthUnit})` : `ψ${quantity} (adim.)`}
+        xAxisLabel={t('influence.routePosition', { unit: lengthUnit })}
+        yAxisLabel={quantity === 'M' ? `ψM (${lengthUnit})` : `ψ${quantity} (${t('influence.dimensionless')})`}
         onCursorChange={setCursor}
       />
       <InfluenceDiagnostics line={line} />
@@ -614,27 +621,27 @@ export const InfluenceLineView = ({ project, selection = null, onCanvasStateChan
 
     {line && subtab === 'train' && axleTrain ? <>
       <div className="education-stage" style={{ paddingBottom: 0 }}><div className="education-kpis">
-        <div><span>Mínimo del tren</span><strong>{formatTrainValue(axleTrain.minimum.value)}</strong><small>ref. {formatPathX(axleTrain.minimum.referencePosition)}</small></div>
-        <div><span>Máximo del tren</span><strong>{formatTrainValue(axleTrain.maximum.value)}</strong><small>ref. {formatPathX(axleTrain.maximum.referencePosition)}</small></div>
-        <div><span>Dominio de referencia</span><strong>{formatPathX(axleTrain.domain[1] - axleTrain.domain[0])}</strong><small>{formatPathX(axleTrain.domain[0])} a {formatPathX(axleTrain.domain[1])}</small></div>
-        <div><span>Solución</span><strong>{axleTrain.segments.length} cúbicas</strong><small>φ = {axleTrain.train.impactFactor.toFixed(3)} · {axleTrain.train.axles.length} ejes</small></div>
+        <div><span>{t('influence.trainMinimum')}</span><strong>{formatTrainValue(axleTrain.minimum.value)}</strong><small>{t('influence.referenceShort')} {formatPathX(axleTrain.minimum.referencePosition)}</small></div>
+        <div><span>{t('influence.trainMaximum')}</span><strong>{formatTrainValue(axleTrain.maximum.value)}</strong><small>{t('influence.referenceShort')} {formatPathX(axleTrain.maximum.referencePosition)}</small></div>
+        <div><span>{t('influence.referenceDomain')}</span><strong>{formatPathX(axleTrain.domain[1] - axleTrain.domain[0])}</strong><small>{t('influence.rangeFromTo', { from: formatPathX(axleTrain.domain[0]), to: formatPathX(axleTrain.domain[1]) })}</small></div>
+        <div><span>{t('influence.solution')}</span><strong>{t(axleTrain.segments.length === 1 ? 'influence.cubicOne' : 'influence.cubicMany', { count: axleTrain.segments.length })}</strong><small>φ = {axleTrain.train.impactFactor.toFixed(3)} · {t(axleTrain.train.axles.length === 1 ? 'influence.axleCountOne' : 'influence.axleCountMany', { count: axleTrain.train.axles.length })}</small></div>
       </div></div>
       <ExactPolynomialChart
-        ariaLabel={`Respuesta exacta del tren para ${quantity} en ${line.target.memberId}`}
+        ariaLabel={t('influence.trainChartLabel', { quantity, member: line.target.memberId })}
         colorClass={curveClass(quantity)}
         segments={trainSegments}
         jumps={trainJumps}
         domain={axleTrain.domain}
-        minimum={{ x: axleTrain.minimum.referencePosition, value: axleTrain.minimum.value, label: 'mín.' }}
-        maximum={{ x: axleTrain.maximum.referencePosition, value: axleTrain.maximum.value, label: 'máx.' }}
+        minimum={{ x: axleTrain.minimum.referencePosition, value: axleTrain.minimum.value, label: t('influence.minimumShort') }}
+        maximum={{ x: axleTrain.maximum.referencePosition, value: axleTrain.maximum.value, label: t('influence.maximumShort') }}
         valueAt={trainValueAt}
         formatX={formatPathX}
         formatY={formatTrainValue}
-        xAxisLabel={`posición de referencia (${lengthUnit})`}
+        xAxisLabel={t('influence.referencePosition', { unit: lengthUnit })}
         yAxisLabel={quantity === 'M' ? momentUnit : forceUnit}
         onCursorChange={setCursor}
       />
-      <details style={{ margin: '0 12px 12px' }}><summary style={{ cursor: 'pointer', fontSize: 10, color: 'var(--muted)' }}>Posiciones exactas de los ejes en los extremos</summary><div style={{ ...controlGridStyle, marginTop: 8 }}>{([['Mínimo', axleTrain.minimum], ['Máximo', axleTrain.maximum]] as const).map(([label, extreme]) => <div className="matrix-view" style={{ marginTop: 0 }} key={label}><div className="matrix-view-heading"><strong>{label}</strong><span>ref. {formatPathX(extreme.referencePosition)}</span></div><div style={{ padding: 9, display: 'grid', gap: 4 }}>{extreme.axlePositions.map((position, index) => <small key={`${position.id}-${index}`} style={{ color: position.onPath ? 'var(--text)' : 'var(--muted)' }}>{position.id ?? `E${index + 1}`}: {formatPathX(position.position)} · {position.onPath ? 'sobre la ruta' : 'fuera de la ruta'}</small>)}</div></div>)}</div></details>
+      <details style={{ margin: '0 12px 12px' }}><summary style={{ cursor: 'pointer', fontSize: 10, color: 'var(--muted)' }}>{t('influence.exactAxlePositions')}</summary><div style={{ ...controlGridStyle, marginTop: 8 }}>{([[t('influence.minimum'), axleTrain.minimum], [t('influence.maximum'), axleTrain.maximum]] as const).map(([label, extreme]) => <div className="matrix-view" style={{ marginTop: 0 }} key={label}><div className="matrix-view-heading"><strong>{label}</strong><span>{t('influence.referenceShort')} {formatPathX(extreme.referencePosition)}</span></div><div style={{ padding: 9, display: 'grid', gap: 4 }}>{extreme.axlePositions.map((position, index) => <small key={`${position.id}-${index}`} style={{ color: position.onPath ? 'var(--text)' : 'var(--muted)' }}>{position.id ?? `E${index + 1}`}: {formatPathX(position.position)} · {position.onPath ? t('influence.onPath') : t('influence.offPath')}</small>)}</div></div>)}</div></details>
       <InfluenceDiagnostics line={line} />
     </> : null}
   </section>;

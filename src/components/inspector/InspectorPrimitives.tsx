@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { CircleHelp, LockKeyhole, PencilLine } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useI18n } from '../../i18n/useI18n';
 import { Accordion } from '../../ui/disclosure';
 
 export interface InspectorSummaryMetric {
@@ -23,8 +24,9 @@ export const InspectorSelectionSummary = ({
   description: string;
   metrics?: readonly InspectorSummaryMetric[];
   empty?: boolean;
-}) => (
-  <section className={`inspector-summary${empty ? ' is-empty' : ''}`} aria-label="Resumen de selección">
+}) => {
+  const { t } = useI18n();
+  return <section className={`inspector-summary${empty ? ' is-empty' : ''}`} aria-label={t('inspector.selectionSummary')}>
     <div className="inspector-summary__identity">
       <span className="inspector-summary__preview" aria-hidden="true"><Icon size={20} /></span>
       <div>
@@ -33,14 +35,14 @@ export const InspectorSelectionSummary = ({
         <small>{description}</small>
       </div>
     </div>
-    {metrics.length > 0 ? <dl className="inspector-summary__metrics" aria-label="Resultados rápidos">
+    {metrics.length > 0 ? <dl className="inspector-summary__metrics" aria-label={t('inspector.quickResults')}>
       {metrics.map((metric) => <div key={metric.label} className={metric.tone ? `is-${metric.tone}` : undefined}>
         <dt>{metric.label}</dt>
         <dd>{metric.value}</dd>
       </div>)}
     </dl> : null}
-  </section>
-);
+  </section>;
+};
 
 export const InspectorPropertyGroup = ({
   title,
@@ -54,8 +56,9 @@ export const InspectorPropertyGroup = ({
   mode?: 'editable' | 'derived';
   children: ReactNode;
   className?: string;
-}) => (
-  <section className={`inspector-property-group is-${mode}${className ? ` ${className}` : ''}`}>
+}) => {
+  const { t } = useI18n();
+  return <section className={`inspector-property-group is-${mode}${className ? ` ${className}` : ''}`}>
     <header className="inspector-property-group__header">
       <div>
         <h3>{title}</h3>
@@ -63,12 +66,12 @@ export const InspectorPropertyGroup = ({
       </div>
       <span className="inspector-property-group__mode">
         {mode === 'editable' ? <PencilLine size={13} aria-hidden="true" /> : <LockKeyhole size={13} aria-hidden="true" />}
-        {mode === 'editable' ? 'Editable' : 'Calculado'}
+        {mode === 'editable' ? t('inspector.editable') : t('inspector.calculated')}
       </span>
     </header>
     <div className="inspector-property-group__body">{children}</div>
-  </section>
-);
+  </section>;
+};
 
 export interface InspectorDerivedRow {
   label: string;
@@ -109,16 +112,17 @@ export const InspectorAdvancedProperties = ({
   expanded: readonly string[];
   onExpandedChange: (expanded: string[]) => void;
   children: ReactNode;
-}) => (
-  <Accordion
+}) => {
+  const { t } = useI18n();
+  return <Accordion
     multiple
     className="inspector-advanced"
     expanded={expanded}
     onExpandedChange={onExpandedChange}
     items={[{
       id,
-      title: 'Propiedades avanzadas',
+      title: t('inspector.advancedProperties'),
       content: <div className="inspector-advanced__content">{children}</div>,
     }]}
-  />
-);
+  />;
+};

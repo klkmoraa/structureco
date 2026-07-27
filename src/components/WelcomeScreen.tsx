@@ -14,6 +14,7 @@ import { exportProjectJson } from '../utils/export';
 import { useI18n } from '../i18n/useI18n';
 import { NewExerciseDialog } from './NewExerciseDialog';
 import { BrandMark } from './BrandMark';
+import { presentExample } from './examplePresentation';
 
 const PortableImportCenter = lazy(() => import('./PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
 
@@ -31,7 +32,7 @@ const quickExampleIcon = (name: string) => {
 
 export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeScreenProps) => {
   const { project, replaceProject } = useProject();
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const [exerciseDialogOpen, setExerciseDialogOpen] = useState(false);
   const [importCenterOpen, setImportCenterOpen] = useState(false);
   const quickExamples = quickExampleNames
@@ -39,12 +40,14 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
     .filter((example): example is NonNullable<typeof example> => Boolean(example));
 
   const openBlankProject = () => {
-    replaceProject(createBlankProject());
+    const next = createBlankProject();
+    replaceProject({ ...next, settings: { ...next.settings, language } });
     onOpenWorkspace();
   };
 
   const openExample = (build: () => typeof project) => {
-    replaceProject(build());
+    const next = build();
+    replaceProject({ ...next, settings: { ...next.settings, language } });
     onOpenWorkspace();
   };
 
@@ -89,10 +92,11 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
           <div className="welcome-example-rail">
             {quickExamples.map((example) => {
               const Icon = quickExampleIcon(example.name);
+              const copy = presentExample(example.name, example.description, t);
               return (
                 <button key={example.name} className="welcome-option welcome-example-card" onClick={() => openExample(example.build)}>
                   <span className="welcome-option-icon"><Icon size={20} /></span>
-                  <span><strong>{example.name}</strong><small>{example.description}</small></span>
+                  <span><strong>{copy.name}</strong><small>{copy.description}</small></span>
                   <ArrowRight size={18} />
                 </button>
               );
@@ -119,12 +123,12 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
         onClose={() => setImportCenterOpen(false)}
         onSaveCurrent={() => exportProjectJson(project)}
         onImported={(outcome) => {
-          replaceProject(outcome.project, outcome.restoredAnalysis);
+          replaceProject({ ...outcome.project, settings: { ...outcome.project.settings, language } }, outcome.restoredAnalysis);
           setImportCenterOpen(false);
           onOpenWorkspace();
         }}
       /></Suspense> : null}
-      <NewExerciseDialog open={exerciseDialogOpen} onClose={() => setExerciseDialogOpen(false)} onCreate={(next) => { replaceProject(next); setExerciseDialogOpen(false); onOpenWorkspace(); }} />
+      <NewExerciseDialog open={exerciseDialogOpen} onClose={() => setExerciseDialogOpen(false)} onCreate={(next) => { replaceProject({ ...next, settings: { ...next.settings, language } }); setExerciseDialogOpen(false); onOpenWorkspace(); }} />
     </main>
   );
 };

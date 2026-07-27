@@ -121,6 +121,15 @@ const toolLabelKeys: Record<Tool, TranslationKey> = {
   delete: 'toolbar.delete',
 };
 
+const snapLabelKeys: Record<SnapKind, TranslationKey> = {
+  node: 'canvas.snapNode',
+  midpoint: 'canvas.snapMidpoint',
+  intersection: 'canvas.snapIntersection',
+  perpendicular: 'canvas.snapPerpendicular',
+  target: 'canvas.snapTarget',
+  grid: 'canvas.snapGrid',
+};
+
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 const nextId = (prefix: string, ids: string[]) => {
@@ -418,11 +427,11 @@ export const StructuralCanvas = ({
       if (!point) return;
       const scale = Math.max(85, cameraRef.current.scale);
       updateCamera({ scale, x: size.width / 2 - point.x * scale, y: size.height / 2 + point.y * scale });
-      showCanvasFeedback(`Objeto ${detail.id} centrado en el lienzo`);
+      showCanvasFeedback(t('canvas.objectCentered', { id: detail.id }));
     };
     window.addEventListener('structureco:focus-object', focusObject);
     return () => window.removeEventListener('structureco:focus-object', focusObject);
-  }, [memberMap, nodeMap, project.memberLoads, project.nodalLoads, showCanvasFeedback, size.height, size.width, updateCamera]);
+  }, [memberMap, nodeMap, project.memberLoads, project.nodalLoads, showCanvasFeedback, size.height, size.width, t, updateCamera]);
 
   useEffect(() => {
     const exportSvg = () => svgRef.current && exportSvgElement(svgRef.current, `${project.name.replace(/\s+/g, '-').toLowerCase()}.svg`);
@@ -524,7 +533,7 @@ export const StructuralCanvas = ({
     }
     const startNode = nodeMap.get(memberStart);
     if (!startNode || Math.hypot(point.x - startNode.x, point.y - startNode.y) <= 1e-10) {
-      setQuickEntryError('El extremo debe estar separado del nodo inicial.');
+      setQuickEntryError(t('canvas.endpointSeparated'));
       return;
     }
     let nodeId = '';
@@ -551,8 +560,13 @@ export const StructuralCanvas = ({
   const submitQuickEntry = () => {
     const first = Number(quickEntry.first);
     const second = Number(quickEntry.second);
-    if (!Number.isFinite(first) || !Number.isFinite(second)) {
-      setQuickEntryError('Introduce dos valores numéricos válidos.');
+    if (
+      quickEntry.first.trim() === ''
+      || quickEntry.second.trim() === ''
+      || !Number.isFinite(first)
+      || !Number.isFinite(second)
+    ) {
+      setQuickEntryError(t('canvas.twoValidNumbers'));
       return;
     }
     if (activeTool === 'node') {
@@ -1439,7 +1453,7 @@ export const StructuralCanvas = ({
   const renderMechanism = () => {
     if (analysis?.success !== false || !analysis.mechanism?.nodes.length) return null;
     return (
-      <g className="mechanism-layer" aria-label="Modo de mecanismo detectado">
+      <g className="mechanism-layer" aria-label={t('canvas.mechanismMode')}>
         {project.members.map((member) => {
           const ni = nodeMap.get(member.i); const nj = nodeMap.get(member.j);
           if (!ni || !nj) return null;
@@ -1463,8 +1477,8 @@ export const StructuralCanvas = ({
         })}
         <g className="mechanism-caption" transform="translate(18 24)">
           <rect width="230" height="42" rx="8" />
-          <text x="12" y="17">Mecanismo detectado · nulidad {analysis.mechanism.nullity}</text>
-          <text x="12" y="32">Forma normalizada, no es una deformación real</text>
+          <text x="12" y="17">{t('canvas.mechanismDetected', { nullity: analysis.mechanism.nullity })}</text>
+          <text x="12" y="32">{t('canvas.mechanismNormalized')}</text>
         </g>
       </g>
     );
@@ -1552,7 +1566,7 @@ export const StructuralCanvas = ({
       const start = { x: p.x - ux * length, y: p.y - uy * length };
       const end = { x: p.x - ux * 8, y: p.y - uy * 8 };
       return (
-        <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="nodalLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={`Carga puntual ${load.id} en ${load.nodeId}, ${toDisplay(magnitude, units, 'force').toFixed(2)} ${forceLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'nodalLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'nodalLoad', id: load.id })}>
+        <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="nodalLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.pointLoadAria', { id: load.id, target: load.nodeId, value: toDisplay(magnitude, units, 'force').toFixed(2), unit: forceLabel })} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'nodalLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'nodalLoad', id: load.id })}>
           {selected ? <line className="load-selection-halo" x1={start.x} y1={start.y} x2={end.x} y2={end.y} /> : null}
           <line className="load-hit" x1={start.x} y1={start.y} x2={end.x} y2={end.y} />
           {arrowPath(start.x, start.y, end.x, end.y)}
@@ -1561,7 +1575,7 @@ export const StructuralCanvas = ({
     }
     if (Math.abs(load.mz) > 1e-9) {
       const momentPath = `M ${p.x - 20} ${p.y - 8} A 22 22 0 1 1 ${p.x + 17} ${p.y - 14}`;
-      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="nodalLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={`Momento ${load.id} en ${load.nodeId}, ${toDisplay(load.mz, units, 'moment').toFixed(2)} ${momentLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'nodalLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'nodalLoad', id: load.id })}>
+      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="nodalLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.momentLoadAria', { id: load.id, target: load.nodeId, value: toDisplay(load.mz, units, 'moment').toFixed(2), unit: momentLabel })} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'nodalLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'nodalLoad', id: load.id })}>
         {selected ? <path className="load-selection-halo" d={momentPath} /> : null}
         <path className="load-hit" d={momentPath} />
         <path d={momentPath} fill="none" markerEnd="url(#arrow-purple)" />
@@ -1583,7 +1597,7 @@ export const StructuralCanvas = ({
       const ux = gx / mag; const uy = -gy / mag;
       const start = { x: base.x - ux * 52, y: base.y - uy * 52 };
       const end = { x: base.x - ux * 7, y: base.y - uy * 7 };
-      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={`Carga puntual ${load.id} en ${load.memberId}, ${toDisplay(mag, units, 'force').toFixed(2)} ${forceLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <line className="load-selection-halo" x1={start.x} y1={start.y} x2={end.x} y2={end.y} /> : null}<line className="load-hit" x1={start.x} y1={start.y} x2={end.x} y2={end.y} />{arrowPath(start.x, start.y, end.x, end.y)}</g>;
+      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.pointLoadAria', { id: load.id, target: load.memberId, value: toDisplay(mag, units, 'force').toFixed(2), unit: forceLabel })} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <line className="load-selection-halo" x1={start.x} y1={start.y} x2={end.x} y2={end.y} /> : null}<line className="load-hit" x1={start.x} y1={start.y} x2={end.x} y2={end.y} />{arrowPath(start.x, start.y, end.x, end.y)}</g>;
     }
     if (load.type === 'moment') {
       const r = grossRatioFromFlexible(member, load.position ?? 0.5);
@@ -1592,7 +1606,7 @@ export const StructuralCanvas = ({
       const path = clockwise
         ? `M ${base.x - 22} ${base.y - 3} A 23 23 0 1 0 ${base.x + 18} ${base.y - 13}`
         : `M ${base.x + 22} ${base.y - 3} A 23 23 0 1 1 ${base.x - 18} ${base.y - 13}`;
-      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={`Momento ${load.id} en ${load.memberId}, ${toDisplay(load.moment ?? 0, units, 'moment').toFixed(2)} ${momentLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <path className="load-selection-halo" d={path} /> : null}<path className="load-hit" d={path} /><path d={path} markerEnd="url(#arrow-purple)" /></g>;
+      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.momentLoadAria', { id: load.id, target: load.memberId, value: toDisplay(load.moment ?? 0, units, 'moment').toFixed(2), unit: momentLabel })} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <path className="load-selection-halo" d={path} /> : null}<path className="load-hit" d={path} /><path d={path} markerEnd="url(#arrow-purple)" /></g>;
     }
     const visibleLoadedLength = L * camera.scale * Math.abs(load.end - load.start);
     const count = Math.max(3, Math.min(9, Math.round(visibleLoadedLength / 34) + 1));
@@ -1616,7 +1630,7 @@ export const StructuralCanvas = ({
     const hitEndRatio = grossRatioFromFlexible(member, load.end);
     const hitStart = toScreen(ni.x + dx * hitStartRatio, ni.y + dy * hitStartRatio);
     const hitEnd = toScreen(ni.x + dx * hitEndRatio, ni.y + dy * hitEndRatio);
-    return <g key={load.id} className={`distributed-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={`Carga distribuida ${load.id} en ${load.memberId}, ${toDisplay(average, units, 'distributedForce').toFixed(2)} ${distributedLabel}`} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <line className="load-selection-halo" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} /> : null}<line className="load-hit" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} />{arrows}</g>;
+    return <g key={load.id} className={`distributed-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.distributedLoadAria', { id: load.id, target: load.memberId, value: toDisplay(average, units, 'distributedForce').toFixed(2), unit: distributedLabel })} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <line className="load-selection-halo" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} /> : null}<line className="load-hit" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} />{arrows}</g>;
   };
 
   const smartLabelCandidates: SmartLabelCandidate[] = [];
@@ -1908,7 +1922,7 @@ export const StructuralCanvas = ({
         {grid}
         {snapPreview ? (() => {
           const point = toScreen(snapPreview.x, snapPreview.y);
-          const label = snapPreview.kind === 'node' ? 'Nodo' : snapPreview.kind === 'midpoint' ? 'Medio' : snapPreview.kind === 'intersection' ? 'Intersección' : snapPreview.kind === 'perpendicular' ? 'Perpendicular' : 'Cuadrícula';
+          const label = t(snapLabelKeys[snapPreview.kind]);
           return <g className={`snap-glyph ${snapPreview.kind}`} transform={`translate(${point.x} ${point.y})`} pointerEvents="none"><circle r="8" /><path d="M-12 0H12M0-12V12" /><text x="12" y="-11">{label}</text></g>;
         })() : null}
         {selectionBox ? (() => {
@@ -1917,7 +1931,7 @@ export const StructuralCanvas = ({
           const crossing = selectionBox.current.x < selectionBox.start.x;
           const x = Math.min(start.x, current.x);
           const y = Math.min(start.y, current.y);
-          return <g className={`selection-marquee-group ${crossing ? 'crossing' : 'window'}`}><rect className="selection-marquee" x={x} y={y} width={Math.abs(current.x - start.x)} height={Math.abs(current.y - start.y)} /><g className="selection-marquee-label" transform={`translate(${x + 8} ${y + 8})`}><rect width={crossing ? 47 : 54} height="20" rx="6" /><text x="7" y="14">{crossing ? 'Cruce' : 'Ventana'}</text></g></g>;
+          return <g className={`selection-marquee-group ${crossing ? 'crossing' : 'window'}`}><rect className="selection-marquee" x={x} y={y} width={Math.abs(current.x - start.x)} height={Math.abs(current.y - start.y)} /><g className="selection-marquee-label" transform={`translate(${x + 8} ${y + 8})`}><rect width={crossing ? 54 : 58} height="20" rx="6" /><text x="7" y="14">{t(crossing ? 'canvas.crossingSelection' : 'canvas.windowSelection')}</text></g></g>;
         })() : null}
         {memberStart && snapPreview ? (() => {
           const startNode = nodeMap.get(memberStart);
@@ -1948,7 +1962,7 @@ export const StructuralCanvas = ({
                 role="button"
                 tabIndex={0}
                 aria-keyshortcuts="Enter Space"
-                aria-label={`Miembro ${member.id}, de ${member.i} a ${member.j}`}
+                aria-label={t('canvas.memberAria', { id: member.id, i: member.i, j: member.j })}
                 aria-pressed={selected}
                 onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'member', id: member.id })}
                 onKeyDown={(event: ReactKeyboardEvent<SVGGElement>) => {
@@ -2005,7 +2019,7 @@ export const StructuralCanvas = ({
                 role="button"
                 tabIndex={0}
                 aria-keyshortcuts="Enter Space"
-                aria-label={`Nodo ${node.id}, X ${node.x.toFixed(3)}, Y ${node.y.toFixed(3)}`}
+                aria-label={t('canvas.nodeAria', { id: node.id, x: node.x.toFixed(3), y: node.y.toFixed(3) })}
                 aria-pressed={selected}
                 onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'node', id: node.id })}
                 onKeyDown={(event: ReactKeyboardEvent<SVGGElement>) => {
@@ -2073,13 +2087,13 @@ export const StructuralCanvas = ({
         onFit={fitModel}
       />
       {canvasFeedback ? <div className="canvas-feedback" role="alert">{canvasFeedback}</div> : null}
-      {layers.results && layers.labels && resultsAllowed && analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <div className={`canvas-result-legend ${resultTab}`} aria-label="Convención del diagrama" data-canvas-chrome="result-legend"><strong>{resultTab === 'axial' ? 'N · axial' : resultTab === 'shear' ? 'V · cortante' : 'M · momento'}</strong><span><i /> Curva exacta · escala {project.settings.diagramScaleMode === 'individual' ? 'por miembro' : 'común'}</span><small>Se dibuja hacia {project.settings.diagramSide === 'positive' ? '+y' : '−y'} local · valores positivos mantienen el color y el trazo</small></div> : null}
-      {memberStart ? <div className="canvas-hint" role="status"><span>Toca el nodo destino</span><button type="button" onClick={() => setMemberStart(null)} aria-label="Cancelar creación de miembro"><X size={14} /></button></div> : null}
-      {activeTool === 'node' || (activeTool === 'member' && memberStart) ? <form className="quick-entry-bar" aria-label="Entrada numérica CAD" onSubmit={(event) => { event.preventDefault(); submitQuickEntry(); }}><div className="quick-entry-heading"><strong>{activeTool === 'node' ? 'Nodo por coordenadas' : 'Extremo del miembro'}</strong>{activeTool === 'member' ? <div className="quick-entry-mode"><button type="button" aria-pressed={quickEntryMode === 'delta'} onClick={() => setQuickEntryMode('delta')}>ΔX · ΔY</button><button type="button" aria-pressed={quickEntryMode === 'polar'} onClick={() => setQuickEntryMode('polar')}>L · ∠</button></div> : null}</div><label><span>{activeTool === 'node' ? 'X' : quickEntryMode === 'delta' ? 'ΔX' : 'L'}</span><input type="number" inputMode="decimal" step="any" value={quickEntry.first} onChange={(event) => setQuickEntry((current) => ({ ...current, first: event.target.value }))} /><small>{lengthLabel}</small></label><label><span>{activeTool === 'node' ? 'Y' : quickEntryMode === 'delta' ? 'ΔY' : '∠'}</span><input type="number" inputMode="decimal" step="any" value={quickEntry.second} onChange={(event) => setQuickEntry((current) => ({ ...current, second: event.target.value }))} /><small>{activeTool === 'member' && quickEntryMode === 'polar' ? '°' : lengthLabel}</small></label><button type="submit">{activeTool === 'node' ? 'Crear nodo' : 'Crear miembro'}</button>{quickEntryError ? <span className="quick-entry-error" role="alert">{quickEntryError}</span> : null}</form> : null}
-      {cycleIndicator ? <div className="selection-cycle-indicator" style={{ left: cycleIndicator.x + 12, top: cycleIndicator.y + 12 }} role="status">{cycleIndicator.index}/{cycleIndicator.total} · Alt para recorrer</div> : null}
+      {layers.results && layers.labels && resultsAllowed && analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <div className={`canvas-result-legend ${resultTab}`} aria-label={t('canvas.diagramConvention')} data-canvas-chrome="result-legend"><strong>{resultTab === 'axial' ? `N · ${t('results.axial')}` : resultTab === 'shear' ? `V · ${t('results.shear')}` : `M · ${t('results.moment')}`}</strong><span><i /> {t('canvas.exactCurveScale', { scale: t(project.settings.diagramScaleMode === 'individual' ? 'canvas.scaleByMember' : 'canvas.scaleCommon') })}</span><small>{t('canvas.diagramSideDescription', { side: project.settings.diagramSide === 'positive' ? '+y' : '−y' })}</small></div> : null}
+      {memberStart ? <div className="canvas-hint" role="status"><span>{t('canvas.touchDestinationNode')}</span><button type="button" onClick={() => setMemberStart(null)} aria-label={t('canvas.cancelMemberCreation')}><X size={14} /></button></div> : null}
+      {activeTool === 'node' || (activeTool === 'member' && memberStart) ? <form className="quick-entry-bar" aria-label={t('canvas.cadEntry')} onSubmit={(event) => { event.preventDefault(); submitQuickEntry(); }}><div className="quick-entry-heading"><strong>{t(activeTool === 'node' ? 'canvas.nodeByCoordinates' : 'canvas.memberEndpoint')}</strong>{activeTool === 'member' ? <div className="quick-entry-mode"><button type="button" aria-pressed={quickEntryMode === 'delta'} onClick={() => setQuickEntryMode('delta')}>ΔX · ΔY</button><button type="button" aria-pressed={quickEntryMode === 'polar'} onClick={() => setQuickEntryMode('polar')}>L · ∠</button></div> : null}</div><label><span>{activeTool === 'node' ? 'X' : quickEntryMode === 'delta' ? 'ΔX' : 'L'}</span><input type="number" inputMode="decimal" step="any" value={quickEntry.first} onChange={(event) => setQuickEntry((current) => ({ ...current, first: event.target.value }))} /><small>{lengthLabel}</small></label><label><span>{activeTool === 'node' ? 'Y' : quickEntryMode === 'delta' ? 'ΔY' : '∠'}</span><input type="number" inputMode="decimal" step="any" value={quickEntry.second} onChange={(event) => setQuickEntry((current) => ({ ...current, second: event.target.value }))} /><small>{activeTool === 'member' && quickEntryMode === 'polar' ? '°' : lengthLabel}</small></label><button type="submit">{t(activeTool === 'node' ? 'canvas.createNode' : 'canvas.createMember')}</button>{quickEntryError ? <span className="quick-entry-error" role="alert">{quickEntryError}</span> : null}</form> : null}
+      {cycleIndicator ? <div className="selection-cycle-indicator" style={{ left: cycleIndicator.x + 12, top: cycleIndicator.y + 12 }} role="status">{t('canvas.selectionCycle', { index: cycleIndicator.index, total: cycleIndicator.total })}</div> : null}
       {cut?.point ? (
         <div className="cut-tooltip" style={{ left: clamp(cut.clientX - (hostRef.current?.getBoundingClientRect().left ?? 0) + 14, 10, Math.max(10, size.width - 350)), top: clamp(cut.clientY - (hostRef.current?.getBoundingClientRect().top ?? 0) + 14, 10, Math.max(10, size.height - 390)) }}>
-          <div className="cut-title-row"><strong>Corte · {cut.memberId}</strong><span>{cut.pinned ? 'Fijado' : 'Vista previa'}</span></div>
+          <div className="cut-title-row"><strong>{t('canvas.cutTitle', { member: cut.memberId })}</strong><span>{t(cut.pinned ? 'canvas.pinned' : 'canvas.preview')}</span></div>
           <span>x = {toDisplay(cut.point.x, units, 'length').toFixed(3)} {lengthLabel}</span>
           <div className="cut-values">
             <span className="axial-text">N = {toDisplay(cut.point.axial, units, 'force').toFixed(3)} {forceLabel}</span>
@@ -2088,8 +2102,8 @@ export const StructuralCanvas = ({
           </div>
           {cutEquilibrium ? (
             <div className="cut-equilibrium">
-              <b>DCL del lado izquierdo</b>
-              <svg className="cut-fbd" viewBox="0 0 280 82" role="img" aria-label={`Diagrama de cuerpo libre del miembro ${cut.memberId} hasta x ${cut.point.x.toFixed(3)}`}>
+              <b>{t('canvas.leftSideFbd')}</b>
+              <svg className="cut-fbd" viewBox="0 0 280 82" role="img" aria-label={t('canvas.fbdAria', { member: cut.memberId, x: cut.point.x.toFixed(3) })}>
                 <line className="cut-fbd-member" x1="24" y1="43" x2="232" y2="43" />
                 <line className="cut-fbd-section" x1="232" y1="17" x2="232" y2="68" />
                 <line className="cut-fbd-axis" x1="24" y1="70" x2="65" y2="70" />
@@ -2105,7 +2119,7 @@ export const StructuralCanvas = ({
                 })}
                 <text x="140" y="80" textAnchor="middle">x = {toDisplay(cutEquilibrium.x, units, 'length').toFixed(3)} {lengthLabel}</text>
               </svg>
-              {cutEquilibrium.resultants.length ? <div className="cut-resultants"><small>Resultantes externas hasta el corte</small>{cutEquilibrium.resultants.map((load, index) => <span key={`${load.kind}-${load.sourceX}-${index}`}><b>{load.kind === 'distributed' ? 'Distribuida' : load.kind === 'point' ? 'Puntual' : 'Momento'}</b> x={toDisplay(load.sourceX, units, 'length').toFixed(3)} {lengthLabel} · Fx={toDisplay(load.forceX, units, 'force').toFixed(3)} {forceLabel} · Fy={toDisplay(load.forceY, units, 'force').toFixed(3)} {forceLabel}{Math.abs(load.appliedMoment) > 1e-12 ? ` · M=${toDisplay(load.appliedMoment, units, 'moment').toFixed(3)} ${momentLabel}` : ''}</span>)}</div> : <small className="cut-no-loads">No hay cargas externas entre el extremo i y el corte.</small>}
+              {cutEquilibrium.resultants.length ? <div className="cut-resultants"><small>{t('canvas.externalResultants')}</small>{cutEquilibrium.resultants.map((load, index) => <span key={`${load.kind}-${load.sourceX}-${index}`}><b>{t(load.kind === 'distributed' ? 'canvas.distributedKind' : load.kind === 'point' ? 'canvas.pointKind' : 'canvas.momentKind')}</b> x={toDisplay(load.sourceX, units, 'length').toFixed(3)} {lengthLabel} · Fx={toDisplay(load.forceX, units, 'force').toFixed(3)} {forceLabel} · Fy={toDisplay(load.forceY, units, 'force').toFixed(3)} {forceLabel}{Math.abs(load.appliedMoment) > 1e-12 ? ` · M=${toDisplay(load.appliedMoment, units, 'moment').toFixed(3)} ${momentLabel}` : ''}</span>)}</div> : <small className="cut-no-loads">{t('canvas.noExternalLoads')}</small>}
               {cutEquilibrium.symbolicEquations.map((equation) => <code key={equation}>{equation}</code>)}
               <div className="cut-substitution">
                 <code>ΣFₓ = {toDisplay(-cutEquilibrium.start.axial, units, 'force').toFixed(3)} + {toDisplay(cutEquilibrium.totals.forceX, units, 'force').toFixed(3)} + {toDisplay(cut.point.axial, units, 'force').toFixed(3)} = {toDisplay(cutEquilibrium.residuals.forceX, units, 'force').toExponential(1)} {forceLabel}</code>

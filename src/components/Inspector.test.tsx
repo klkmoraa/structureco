@@ -159,6 +159,82 @@ describe('Inspector selection variants', () => {
     expect(screen.queryByRole('heading', { name: 'Propiedades frecuentes' })).toBeNull();
   });
 
+  it('localizes Inspector chrome, load tools, and display controls in English without changing technical values', async () => {
+    const user = userEvent.setup();
+    const project = createInspectorProject();
+    project.settings = { ...project.settings, language: 'en' };
+    const firstLoadCase = project.loadCases[0];
+    renderInspector(project);
+
+    expect(screen.getByRole('complementary', { name: 'Inspector' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Selection summary' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Loads' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'View' })).toBeTruthy();
+
+    await user.click(screen.getByRole('tab', { name: 'Loads' }));
+    expect(screen.getByRole('heading', { name: 'Add a load' })).toBeTruthy();
+    expect(screen.getByText('Choose a type, then tap the node or member on the canvas.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Point.*Force at a node or point on a member/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Distributed.*Uniform or varying load along a member/ })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Add load case' }));
+    expect((screen.getByRole('textbox', { name: 'Load case name LC2' }) as HTMLInputElement).value).toBe('Case 2');
+    await user.click(screen.getByRole('button', { name: 'Add combination' }));
+    expect(screen.getByRole('option', { name: 'Combination 2' })).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: `Activate ${firstLoadCase.name}` })).toBeTruthy();
+    const loadCaseName = screen.getByRole('textbox', { name: `Load case name ${firstLoadCase.id}` }) as HTMLInputElement;
+    expect(loadCaseName.value).toBe(firstLoadCase.name);
+
+    await user.click(screen.getByRole('tab', { name: 'View' }));
+    expect(screen.getByRole('heading', { name: 'Calculation experience' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Complete' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'CAD precision' })).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Selection filters' })).toBeTruthy();
+    const spacing = screen.getByRole('textbox', { name: 'Spacing' });
+    expectDescribedUnit(spacing, 'm');
+
+    await user.click(screen.getByRole('tab', { name: 'Inspector' }));
+    await user.click(screen.getByRole('button', { name: 'Seleccionar nodo N3' }));
+    expect(screen.getAllByText('Editable').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Calculated').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Add a load')).toBeNull();
+  });
+
+  it('localizes representative Inspector property copy and presentational labels in English', async () => {
+    const user = userEvent.setup();
+    const project = createInspectorProject();
+    project.settings = { ...project.settings, language: 'en' };
+    renderInspector(project);
+
+    await user.click(screen.getByRole('button', { name: 'Seleccionar nodo N3' }));
+    const nodeProperties = document.querySelector('.inspector-properties');
+    expect(nodeProperties?.textContent).not.toMatch(/Nodo libre|Propiedades frecuentes|Valores derivados|Identificador del modelo/);
+    expect(screen.getByText('Free node · editable coordinates')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Frequently used properties' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Derived values' })).toBeTruthy();
+    expect(screen.getByText('Model identifier')).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Advanced properties' }));
+    expect(screen.getByRole('heading', { name: 'Springs' })).toBeTruthy();
+    expect(screen.getByText('Optional elastic support stiffnesses.')).toBeTruthy();
+    expect(screen.getByText('Settlements unavailable')).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Seleccionar vínculo rígido MR' }));
+    expect(screen.getByText('No editable stiffness properties')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Advanced properties' }));
+    expect(screen.getByText('Mechanical properties locked')).toBeTruthy();
+    expect(screen.getByText(/exact kinematic compatibility/)).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Seleccionar carga distribuida ML1' }));
+    const loadProperties = document.querySelector('.inspector-properties');
+    expect(loadProperties?.textContent).not.toMatch(/Carga distribuida|Magnitud y posición|Eliminar carga/);
+    expect(screen.getByText('Distributed load')).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: 'Type' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Distributed' })).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Coordinate system' })).toBeTruthy();
+    expectDescribedUnit(screen.getByRole('textbox', { name: 'From' }), 'x/L');
+    expect(screen.getByRole('button', { name: 'Delete load' })).toBeTruthy();
+  });
+
   it('distinguishes a free node from a support and exposes units plus calculated values', async () => {
     const user = userEvent.setup();
     renderInspector();

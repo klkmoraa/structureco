@@ -46,6 +46,22 @@ const ModalHarness = () => {
 
 const FieldInModal = () => <button type="button">Acción interna</button>;
 
+const VisibilityModalHarness = () => {
+  const [open, setOpen] = useState(false);
+  return <>
+    <button type="button" onClick={() => setOpen(true)}>Abrir filtro</button>
+    <Dialog open={open} onOpenChange={setOpen} title="Filtro de foco">
+      <button type="button">Acción visible</button>
+      <details>
+        <summary>Opciones avanzadas</summary>
+        <button type="button">Acción dentro de detalle cerrado</button>
+      </details>
+      <button type="button" style={{ display: 'none' }}>Acción oculta por CSS</button>
+      <div aria-hidden="true"><button type="button">Acción oculta semánticamente</button></div>
+    </Dialog>
+  </>;
+};
+
 describe('component-library overlays', () => {
   it('adds tooltip description without replacing an existing one', () => {
     render(<Tooltip content="Ayuda contextual"><button type="button" aria-describedby="existing">Acción</button></Tooltip>);
@@ -95,5 +111,18 @@ describe('component-library overlays', () => {
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Propiedades' })).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
+  it('traps focus using only visible controls and the summary of closed details', async () => {
+    const user = userEvent.setup();
+    render(<VisibilityModalHarness />);
+    await user.click(screen.getByRole('button', { name: 'Abrir filtro' }));
+    const close = screen.getByRole('button', { name: 'Close' });
+    await waitFor(() => expect(document.activeElement).toBe(close));
+
+    await user.keyboard('{Shift>}{Tab}{/Shift}');
+    expect(document.activeElement).toBe(screen.getByText('Opciones avanzadas'));
+    await user.tab();
+    expect(document.activeElement).toBe(close);
   });
 });

@@ -13,7 +13,9 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { useEffect, useRef, useState, type DragEvent } from 'react';
+import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { translate, type TranslationKey } from '../i18n/catalogs';
+import { useI18n } from '../i18n/useI18n';
 import type { AnalysisResult, ProjectModel } from '../types';
 import { importProjectJson } from '../utils/export';
 
@@ -81,23 +83,46 @@ export interface ImportCenterDialogProps {
 
 type ImportStage = 'select' | 'inspect' | 'content' | 'conflicts' | 'confirm' | 'result';
 
-const stages: Array<{ id: ImportStage; label: string }> = [
-  { id: 'select', label: 'Archivo' },
-  { id: 'inspect', label: 'Inspección' },
-  { id: 'content', label: 'Contenido' },
-  { id: 'conflicts', label: 'Destino' },
-  { id: 'confirm', label: 'Confirmar' },
-  { id: 'result', label: 'Resultado' },
+type Translate = (key: TranslationKey, variables?: Record<string, string | number>) => string;
+
+const stages: Array<{ id: ImportStage; labelKey: TranslationKey }> = [
+  { id: 'select', labelKey: 'importCenter.stageFile' },
+  { id: 'inspect', labelKey: 'importCenter.stageInspection' },
+  { id: 'content', labelKey: 'importCenter.stageContent' },
+  { id: 'conflicts', labelKey: 'importCenter.stageDestination' },
+  { id: 'confirm', labelKey: 'importCenter.stageConfirm' },
+  { id: 'result', labelKey: 'importCenter.stageResult' },
 ];
 
-const defaultContents = (project: ProjectModel): ImportContentOption[] => [
-  { key: 'geometry', label: 'Geometría y propiedades', detail: `${project.nodes.length} nodos · ${project.members.length} miembros`, available: true, selectedByDefault: true },
-  { key: 'supports', label: 'Apoyos y desplazamientos', detail: `${project.nodes.filter((node) => node.support.type !== 'none').length} apoyos`, available: true, selectedByDefault: true },
-  { key: 'loads', label: 'Cargas y combinaciones', detail: `${project.nodalLoads.length + project.memberLoads.length} cargas · ${project.combinations.length} combinaciones`, available: true, selectedByDefault: true },
-  { key: 'results', label: 'Resultados del análisis', detail: 'No incluidos en el JSON del proyecto', available: false },
-  { key: 'diagrams', label: 'DCL y diagramas N–V–M', detail: 'No incluidos en el JSON del proyecto', available: false },
-  { key: 'procedures', label: 'Procedimientos y cálculos', detail: 'No incluidos en el JSON del proyecto', available: false },
-  { key: 'attachments', label: 'Adjuntos', detail: 'No incluidos en el JSON del proyecto', available: false },
+const defaultContents = (project: ProjectModel, t: Translate): ImportContentOption[] => [
+  {
+    key: 'geometry',
+    label: t('importCenter.geometry'),
+    detail: t('importCenter.geometryCount', { nodes: project.nodes.length, members: project.members.length }),
+    available: true,
+    selectedByDefault: true,
+  },
+  {
+    key: 'supports',
+    label: t('importCenter.supports'),
+    detail: t('importCenter.supportCount', { supports: project.nodes.filter((node) => node.support.type !== 'none').length }),
+    available: true,
+    selectedByDefault: true,
+  },
+  {
+    key: 'loads',
+    label: t('importCenter.loads'),
+    detail: t('importCenter.loadCount', {
+      loads: project.nodalLoads.length + project.memberLoads.length,
+      combinations: project.combinations.length,
+    }),
+    available: true,
+    selectedByDefault: true,
+  },
+  { key: 'results', label: t('importCenter.results'), detail: t('importCenter.notIncludedJson'), available: false },
+  { key: 'diagrams', label: t('importCenter.diagrams'), detail: t('importCenter.notIncludedJson'), available: false },
+  { key: 'procedures', label: t('importCenter.procedures'), detail: t('importCenter.notIncludedJson'), available: false },
+  { key: 'attachments', label: t('importCenter.attachments'), detail: t('importCenter.notIncludedJson'), available: false },
 ];
 
 const classifyFile = (file: File): ImportInspection['kind'] => {
@@ -107,27 +132,27 @@ const classifyFile = (file: File): ImportInspection['kind'] => {
   return 'json';
 };
 
-const inspectWithJsonFallback = async (file: File): Promise<ImportInspection> => {
+const inspectWithJsonFallback = async (file: File, t: Translate): Promise<ImportInspection> => {
   const kind = classifyFile(file);
   if (kind !== 'json') {
     return {
       kind,
-      sourceLabel: kind === 'pdf' ? 'Documento PDF' : 'Expediente structureCo',
+      sourceLabel: kind === 'pdf' ? t('importCenter.sourcePdf') : t('importCenter.sourceBundle'),
       confidence: 0,
       supported: false,
       summary: kind === 'pdf'
-        ? 'El centro reconoce el PDF, pero este despliegue todavía no tiene conectado el extractor de modelos y memorias de cálculo.'
-        : 'El centro reconoce el expediente, pero este despliegue todavía no tiene conectado el lector de paquetes.',
-      statistics: [{ label: 'Tamaño', value: formatBytes(file.size) }],
-      warnings: ['Conecta un adaptador portable para inspeccionar e importar este formato sin perder información.'],
+        ? t('importCenter.pdfUnsupportedSummary')
+        : t('importCenter.bundleUnsupportedSummary'),
+      statistics: [{ label: t('importCenter.size'), value: formatBytes(file.size) }],
+      warnings: [t('importCenter.adapterWarning')],
       contents: [
-        { key: 'geometry', label: 'Geometría y propiedades', detail: 'Pendiente de inspección', available: false },
-        { key: 'supports', label: 'Apoyos y desplazamientos', detail: 'Pendiente de inspección', available: false },
-        { key: 'loads', label: 'Cargas y combinaciones', detail: 'Pendiente de inspección', available: false },
-        { key: 'results', label: 'Resultados del análisis', detail: 'Pendiente de inspección', available: false },
-        { key: 'diagrams', label: 'DCL y diagramas N–V–M', detail: 'Pendiente de inspección', available: false },
-        { key: 'procedures', label: 'Procedimientos y cálculos', detail: 'Pendiente de inspección', available: false },
-        { key: 'attachments', label: 'Adjuntos', detail: 'Pendiente de inspección', available: false },
+        { key: 'geometry', label: t('importCenter.geometry'), detail: t('importCenter.pendingInspection'), available: false },
+        { key: 'supports', label: t('importCenter.supports'), detail: t('importCenter.pendingInspection'), available: false },
+        { key: 'loads', label: t('importCenter.loads'), detail: t('importCenter.pendingInspection'), available: false },
+        { key: 'results', label: t('importCenter.results'), detail: t('importCenter.pendingInspection'), available: false },
+        { key: 'diagrams', label: t('importCenter.diagrams'), detail: t('importCenter.pendingInspection'), available: false },
+        { key: 'procedures', label: t('importCenter.procedures'), detail: t('importCenter.pendingInspection'), available: false },
+        { key: 'attachments', label: t('importCenter.attachments'), detail: t('importCenter.pendingInspection'), available: false },
       ],
     };
   }
@@ -136,37 +161,39 @@ const inspectWithJsonFallback = async (file: File): Promise<ImportInspection> =>
   const loads = project.nodalLoads.length + project.memberLoads.length;
   return {
     kind,
-    sourceLabel: 'Proyecto structureCo JSON',
+    sourceLabel: t('importCenter.sourceJson'),
     version: String(project.schemaVersion),
     confidence: 100,
     supported: true,
-    summary: `Proyecto “${project.name}” validado y listo para importar.`,
+    summary: t('importCenter.projectValidated', { name: project.name }),
     statistics: [
-      { label: 'Nodos', value: project.nodes.length },
-      { label: 'Miembros', value: project.members.length },
-      { label: 'Cargas', value: loads },
-      { label: 'Casos', value: project.loadCases.length },
+      { label: t('importCenter.nodes'), value: project.nodes.length },
+      { label: t('importCenter.members'), value: project.members.length },
+      { label: t('importCenter.loadStatistic'), value: loads },
+      { label: t('importCenter.cases'), value: project.loadCases.length },
     ],
-    warnings: project.nodes.length === 0 ? ['El proyecto no contiene nodos.'] : [],
-    contents: defaultContents(project),
+    warnings: project.nodes.length === 0 ? [t('importCenter.emptyNodesWarning')] : [],
+    contents: defaultContents(project, t),
     project,
   };
 };
 
-// oxlint-disable-next-line react/only-export-components
-export const jsonImportCenterAdapter: ImportCenterAdapter = {
-  inspect: inspectWithJsonFallback,
+const createJsonImportCenterAdapter = (t: Translate): ImportCenterAdapter => ({
+  inspect: (file) => inspectWithJsonFallback(file, t),
   importFile: async (_file, inspection) => {
-    if (!inspection.project) throw new Error('No hay un proyecto validado para importar.');
+    if (!inspection.project) throw new Error(t('importCenter.noValidatedProject'));
     return {
       project: inspection.project,
-      title: 'Proyecto listo',
-      message: 'La importación se completó sin modificar el archivo original.',
+      title: t('importCenter.readyTitle'),
+      message: t('importCenter.readyMessage'),
       statistics: inspection.statistics,
       warnings: inspection.warnings,
     };
   },
-};
+});
+
+// oxlint-disable-next-line react/only-export-components
+export const jsonImportCenterAdapter = createJsonImportCenterAdapter((key, variables) => translate('es', key, variables));
 
 const formatBytes = (bytes: number) => {
   if (bytes < 1024) return `${bytes} B`;
@@ -186,8 +213,10 @@ export const ImportCenterDialog = ({
   onClose,
   onImported,
   onSaveCurrent,
-  adapter = jsonImportCenterAdapter,
+  adapter,
 }: ImportCenterDialogProps) => {
+  const { t } = useI18n();
+  const activeAdapter = adapter ?? createJsonImportCenterAdapter(t);
   const [stage, setStage] = useState<ImportStage>('select');
   const [file, setFile] = useState<File | null>(null);
   const [inspection, setInspection] = useState<ImportInspection | null>(null);
@@ -217,7 +246,13 @@ export const ImportCenterDialog = ({
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const focusHandle = window.requestAnimationFrame(() => dialogRef.current?.querySelector<HTMLElement>('.import-dropzone button, .import-center-close')?.focus());
+    const focusHandle = window.requestAnimationFrame(() => {
+      const dialog = dialogRef.current;
+      (
+        dialog?.querySelector<HTMLElement>('[data-import-stage-focus="select"]')
+        ?? dialog?.querySelector<HTMLElement>('.import-center-close')
+      )?.focus();
+    });
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -225,14 +260,15 @@ export const ImportCenterDialog = ({
         return;
       }
       if (event.key !== 'Tab') return;
-      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])');
-      if (!focusable?.length) return;
+      const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]):not([tabindex="-1"]), input:not([disabled]):not([type="hidden"]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])') ?? [])]
+        .filter((element) => !element.closest('[hidden], [aria-hidden="true"], [inert]'));
+      if (!focusable.length) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
+      if (event.shiftKey && (document.activeElement === first || !dialogRef.current?.contains(document.activeElement))) {
         event.preventDefault();
         last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
+      } else if (!event.shiftKey && (document.activeElement === last || !dialogRef.current?.contains(document.activeElement))) {
         event.preventDefault();
         first.focus();
       }
@@ -246,6 +282,11 @@ export const ImportCenterDialog = ({
     };
   }, [onSaveCurrent, open]);
 
+  useEffect(() => {
+    if (!open) return;
+    dialogRef.current?.querySelector<HTMLElement>(`[data-import-stage-focus="${stage}"]`)?.focus();
+  }, [open, stage]);
+
   if (!open) return null;
 
   const inspectFile = async (nextFile: File) => {
@@ -255,12 +296,12 @@ export const ImportCenterDialog = ({
     setError(null);
     setStage('inspect');
     try {
-      const nextInspection = await adapter.inspect(nextFile);
+      const nextInspection = await activeAdapter.inspect(nextFile);
       setInspection(nextInspection);
       setSelectedContent(nextInspection.contents.filter((item) => item.available && item.selectedByDefault !== false).map((item) => item.key));
       setStage('content');
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'No se pudo inspeccionar el archivo.');
+      setError(reason instanceof Error ? reason.message : t('importCenter.inspectError'));
       setStage('select');
     }
   };
@@ -278,34 +319,50 @@ export const ImportCenterDialog = ({
     setStage('inspect');
     try {
       if (mode === 'replace' && saveCurrent && onSaveCurrent) await onSaveCurrent();
-      const nextOutcome = await adapter.importFile(file, inspection, { mode, content: selectedContent, saveCurrent });
+      const nextOutcome = await activeAdapter.importFile(file, inspection, { mode, content: selectedContent, saveCurrent });
       setOutcome(nextOutcome);
       setStage('result');
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'No se pudo completar la importación.');
+      setError(reason instanceof Error ? reason.message : t('importCenter.importError'));
       setStage('confirm');
     }
   };
 
   const activeIndex = stages.findIndex((item) => item.id === stage);
   const FileIcon = getFileIcon(inspection?.kind ?? (file ? classifyFile(file) : undefined));
+  const onModeKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    const options = [...(dialogRef.current?.querySelectorAll<HTMLButtonElement>('.import-mode-options [role="radio"]:not(:disabled)') ?? [])];
+    const index = options.indexOf(event.currentTarget);
+    if (index < 0 || options.length === 0) return;
+    let nextIndex = index;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = (index + 1) % options.length;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = (index - 1 + options.length) % options.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = options.length - 1;
+    else return;
+    event.preventDefault();
+    const next = options[nextIndex];
+    const nextMode = next.dataset.importMode;
+    if (nextMode === 'new' || nextMode === 'replace') setMode(nextMode);
+    next.focus();
+  };
 
   return (
     <div className="import-center-backdrop" onPointerDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div ref={dialogRef} className="import-center-dialog" role="dialog" aria-modal="true" aria-labelledby="import-center-title" aria-describedby="import-center-subtitle">
         <header className="import-center-header">
           <div>
-            <p className="import-center-eyebrow">Centro de importación</p>
-            <h2 id="import-center-title">Trae un proyecto con contexto</h2>
-            <p id="import-center-subtitle">Revisa el archivo antes de abrirlo y decide exactamente qué conservar.</p>
+            <p className="import-center-eyebrow">{t('importCenter.eyebrow')}</p>
+            <h2 id="import-center-title">{t('importCenter.title')}</h2>
+            <p id="import-center-subtitle">{t('importCenter.subtitle')}</p>
           </div>
-          <button type="button" className="import-center-close" aria-label="Cerrar centro de importación" onClick={onClose}><X size={20} /></button>
+          <button type="button" className="import-center-close" aria-label={t('importCenter.close')} onClick={onClose}><X size={20} /></button>
         </header>
 
-        <nav className="import-center-steps" aria-label="Progreso de importación">
+        <nav className="import-center-steps" aria-label={t('importCenter.progress')}>
           {stages.map((item, index) => (
             <span key={item.id} className={index === activeIndex ? 'active' : index < activeIndex ? 'complete' : ''} aria-current={index === activeIndex ? 'step' : undefined}>
-              <i>{index < activeIndex ? <Check size={12} /> : index + 1}</i><em>{item.label}</em>
+              <i>{index < activeIndex ? <Check size={12} /> : index + 1}</i><em>{t(item.labelKey)}</em>
             </span>
           ))}
         </nav>
@@ -313,7 +370,7 @@ export const ImportCenterDialog = ({
         <div className="import-center-body">
           {stage === 'select' ? (
             <section className="import-center-section" aria-labelledby="import-select-title">
-              <div className="import-section-heading"><p>Paso 1</p><h3 id="import-select-title">Selecciona el expediente</h3><span>JSON, PDF o .structureco</span></div>
+              <div className="import-section-heading"><p>{t('importCenter.step', { step: 1 })}</p><h3 id="import-select-title">{t('importCenter.selectTitle')}</h3><span>{t('importCenter.selectFormats')}</span></div>
               <div
                 className={`import-dropzone ${dragging ? 'dragging' : ''}`}
                 onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
@@ -322,15 +379,16 @@ export const ImportCenterDialog = ({
                 onDrop={handleDrop}
               >
                 <span className="import-dropzone-icon"><Upload size={26} /></span>
-                <strong>Suelta aquí tu archivo</strong>
-                <span>o selecciónalo desde Archivos, iCloud Drive o tu dispositivo</span>
-                <button type="button" onClick={() => fileInputRef.current?.click()}>Elegir archivo</button>
+                <strong>{t('importCenter.dropTitle')}</strong>
+                <span>{t('importCenter.dropHint')}</span>
+                <button type="button" data-import-stage-focus="select" onClick={() => fileInputRef.current?.click()}>{t('importCenter.chooseFile')}</button>
                 <input
                   ref={fileInputRef}
                   className="import-file-input"
                   type="file"
+                  tabIndex={-1}
                   accept="application/json,application/pdf,.json,.pdf,.structureco,.structureco.json"
-                  aria-label="Seleccionar archivo para importar"
+                  aria-label={t('importCenter.fileInput')}
                   onChange={(event) => {
                     const nextFile = event.currentTarget.files?.[0];
                     if (nextFile) void inspectFile(nextFile);
@@ -338,10 +396,10 @@ export const ImportCenterDialog = ({
                   }}
                 />
               </div>
-              <div className="import-format-grid" aria-label="Formatos compatibles">
-                <article><FileJson size={19} /><div><strong>JSON structureCo</strong><span>Modelo editable y validado</span></div><b>Disponible</b></article>
-                <article><FileText size={19} /><div><strong>PDF inteligente</strong><span>Modelo, DCL, N–V–M y memoria</span></div><b>Con adaptador</b></article>
-                <article><FileArchive size={19} /><div><strong>Expediente .structureco</strong><span>Proyecto y entregables en un paquete</span></div><b>Con adaptador</b></article>
+              <div className="import-format-grid" aria-label={t('importCenter.formatsLabel')}>
+                <article><FileJson size={19} /><div><strong>{t('importCenter.jsonTitle')}</strong><span>{t('importCenter.jsonDetail')}</span></div><b>{t('importCenter.available')}</b></article>
+                <article><FileText size={19} /><div><strong>{t('importCenter.pdfTitle')}</strong><span>{t('importCenter.pdfDetail')}</span></div><b>{t('importCenter.withAdapter')}</b></article>
+                <article><FileArchive size={19} /><div><strong>{t('importCenter.bundleTitle')}</strong><span>{t('importCenter.bundleDetail')}</span></div><b>{t('importCenter.withAdapter')}</b></article>
               </div>
             </section>
           ) : null}
@@ -349,8 +407,8 @@ export const ImportCenterDialog = ({
           {stage === 'inspect' ? (
             <section className="import-center-loading" aria-live="polite">
               <LoaderCircle className="spin" size={31} />
-              <h3>{outcome ? 'Preparando el resultado…' : 'Inspeccionando el archivo…'}</h3>
-              <p>Validamos estructura, versión y contenido antes de modificar tu proyecto.</p>
+              <h3 tabIndex={-1} data-import-stage-focus="inspect">{outcome ? t('importCenter.loadingResult') : t('importCenter.loadingInspect')}</h3>
+              <p>{t('importCenter.loadingBody')}</p>
             </section>
           ) : null}
 
@@ -358,14 +416,14 @@ export const ImportCenterDialog = ({
             <section className="import-center-section" aria-labelledby="import-content-title">
               <div className="import-file-summary">
                 <span className="import-file-icon"><FileIcon size={26} /></span>
-                <div><strong>{file.name}</strong><span>{inspection.sourceLabel} · {formatBytes(file.size)}{inspection.version ? ` · Esquema ${inspection.version}` : ''}</span></div>
-                <span className={`import-confidence ${inspection.confidence >= 80 ? 'high' : inspection.confidence > 0 ? 'medium' : 'unknown'}`}>{inspection.confidence > 0 ? `${inspection.confidence}% confianza` : 'Por revisar'}</span>
+                <div><strong>{file.name}</strong><span>{inspection.sourceLabel} · {formatBytes(file.size)}{inspection.version ? ` · ${t('importCenter.schema', { version: inspection.version })}` : ''}</span></div>
+                <span className={`import-confidence ${inspection.confidence >= 80 ? 'high' : inspection.confidence > 0 ? 'medium' : 'unknown'}`}>{inspection.confidence > 0 ? t('importCenter.confidence', { confidence: inspection.confidence }) : t('importCenter.reviewPending')}</span>
               </div>
-              <div className="import-section-heading"><p>Paso 3</p><h3 id="import-content-title">Contenido encontrado</h3><span>{inspection.summary}</span></div>
+              <div className="import-section-heading"><p>{t('importCenter.step', { step: 3 })}</p><h3 id="import-content-title" tabIndex={-1} data-import-stage-focus="content">{t('importCenter.contentTitle')}</h3><span>{inspection.summary}</span></div>
               {inspection.statistics.length ? <dl className="import-stat-grid">{inspection.statistics.map((stat) => <div key={stat.label}><dt>{stat.label}</dt><dd>{stat.value}</dd></div>)}</dl> : null}
               {inspection.warnings.length ? <div className="import-warning-list" role="status">{inspection.warnings.map((warning) => <p key={warning}><AlertTriangle size={16} />{warning}</p>)}</div> : null}
               <fieldset className="import-content-list">
-                <legend className="sr-only">Selecciona el contenido que deseas importar</legend>
+                <legend className="sr-only">{t('importCenter.contentLegend')}</legend>
                 {inspection.contents.map((item) => {
                   const checked = selectedContent.includes(item.key);
                   return (
@@ -377,34 +435,35 @@ export const ImportCenterDialog = ({
                         onChange={() => setSelectedContent((current) => checked ? current.filter((key) => key !== item.key) : [...current, item.key])}
                       />
                       <span><strong>{item.label}</strong><small>{item.detail}</small></span>
-                      <em>{item.available ? (checked ? 'Incluir' : 'Omitir') : 'No detectado'}</em>
+                      <em>{item.available ? (checked ? t('importCenter.include') : t('importCenter.omit')) : t('importCenter.notDetected')}</em>
                     </label>
                   );
                 })}
               </fieldset>
-              {!inspection.supported ? <div className="import-blocked-message" role="alert"><AlertTriangle size={18} /><span><strong>Este formato necesita el lector portable.</strong>{inspection.summary}</span></div> : null}
+              {!inspection.supported ? <div className="import-blocked-message" role="alert"><AlertTriangle size={18} /><span><strong>{t('importCenter.portableRequired')}</strong>{inspection.summary}</span></div> : null}
             </section>
           ) : null}
 
           {stage === 'conflicts' && inspection ? (
             <section className="import-center-section" aria-labelledby="import-destination-title">
-              <div className="import-section-heading"><p>Paso 4</p><h3 id="import-destination-title">¿Dónde quieres abrirlo?</h3><span>Tu proyecto actual es “{currentProjectName}”.</span></div>
-              <div className="import-mode-options" role="radiogroup" aria-label="Destino de la importación">
-                <button type="button" role="radio" aria-checked={mode === 'new'} className={mode === 'new' ? 'selected' : ''} onClick={() => setMode('new')}>
-                  <span className="import-radio" /><span><strong>Abrir como proyecto nuevo</strong><small>Conserva el proyecto actual en el historial local.</small></span><b>Recomendado</b>
+              <div className="import-section-heading"><p>{t('importCenter.step', { step: 4 })}</p><h3 id="import-destination-title" tabIndex={-1} data-import-stage-focus="conflicts">{t('importCenter.destinationTitle')}</h3><span>{t('importCenter.currentProject', { name: currentProjectName })}</span></div>
+              <div className="import-mode-options" role="radiogroup" aria-label={t('importCenter.destinationLabel')}>
+                <button type="button" role="radio" aria-checked={mode === 'new'} tabIndex={mode === 'new' ? 0 : -1} data-import-mode="new" className={mode === 'new' ? 'selected' : ''} onClick={() => setMode('new')} onKeyDown={onModeKeyDown}>
+                  <span className="import-radio" /><span><strong>{t('importCenter.newModeTitle')}</strong><small>{t('importCenter.newModeDescription')}</small></span><b>{t('importCenter.recommended')}</b>
                 </button>
-                <button type="button" role="radio" aria-checked={mode === 'replace'} className={mode === 'replace' ? 'selected danger' : ''} onClick={() => setMode('replace')}>
-                  <span className="import-radio" /><span><strong>Reemplazar el proyecto actual</strong><small>Sustituye el modelo que está abierto.</small></span>
+                <button type="button" role="radio" aria-checked={mode === 'replace'} tabIndex={mode === 'replace' ? 0 : -1} data-import-mode="replace" className={mode === 'replace' ? 'selected danger' : ''} onClick={() => setMode('replace')} onKeyDown={onModeKeyDown}>
+                  <span className="import-radio" /><span><strong>{t('importCenter.replaceModeTitle')}</strong><small>{t('importCenter.replaceModeDescription')}</small></span>
                 </button>
                 <button type="button" role="radio" aria-checked="false" disabled aria-describedby="merge-import-help">
-                  <span className="import-radio" /><span><strong>Combinar con el proyecto actual</strong><small id="merge-import-help">No disponible hasta resolver identificadores, unidades y casos duplicados con seguridad.</small></span>
+                  <span className="import-radio" /><span><strong>{t('importCenter.mergeModeTitle')}</strong></span>
                 </button>
               </div>
+              <p id="merge-import-help" className="field-help">{t('importCenter.mergeHelp')}</p>
               {mode === 'replace' ? (
                 <label className={`import-save-option ${onSaveCurrent ? '' : 'disabled'}`}>
                   <input type="checkbox" checked={saveCurrent && Boolean(onSaveCurrent)} disabled={!onSaveCurrent} onChange={(event) => setSaveCurrent(event.currentTarget.checked)} />
                   <Save size={19} />
-                  <span><strong>Descargar una copia antes de reemplazar</strong><small>{onSaveCurrent ? 'Generaremos un JSON del proyecto actual antes de continuar.' : 'El guardado previo no está disponible desde esta pantalla.'}</small></span>
+                  <span><strong>{t('importCenter.saveCopyTitle')}</strong><small>{onSaveCurrent ? t('importCenter.saveCopyAvailable') : t('importCenter.saveCopyUnavailable')}</small></span>
                 </label>
               ) : null}
             </section>
@@ -412,31 +471,31 @@ export const ImportCenterDialog = ({
 
           {stage === 'confirm' && file && inspection ? (
             <section className="import-center-section" aria-labelledby="import-confirm-title">
-              <div className="import-section-heading"><p>Paso 5</p><h3 id="import-confirm-title">Confirma la importación</h3><span>Nada cambiará hasta que pulses “Importar ahora”.</span></div>
+              <div className="import-section-heading"><p>{t('importCenter.step', { step: 5 })}</p><h3 id="import-confirm-title" tabIndex={-1} data-import-stage-focus="confirm">{t('importCenter.confirmTitle')}</h3><span>{t('importCenter.confirmDescription')}</span></div>
               <div className="import-confirm-card">
                 <div><FileIcon size={24} /><span><strong>{file.name}</strong><small>{inspection.sourceLabel} · {formatBytes(file.size)}</small></span></div>
                 <dl>
-                  <div><dt>Destino</dt><dd>{mode === 'new' ? 'Proyecto nuevo' : `Reemplazar “${currentProjectName}”`}</dd></div>
-                  <div><dt>Contenido</dt><dd>{selectedContent.length} de {inspection.contents.filter((item) => item.available).length} grupos</dd></div>
-                  <div><dt>Copia previa</dt><dd>{mode === 'replace' && saveCurrent && onSaveCurrent ? 'Sí, descargar JSON' : 'No necesaria'}</dd></div>
+                  <div><dt>{t('importCenter.destinationTerm')}</dt><dd>{mode === 'new' ? t('importCenter.newProject') : t('importCenter.replaceProject', { name: currentProjectName })}</dd></div>
+                  <div><dt>{t('importCenter.contentTerm')}</dt><dd>{t('importCenter.contentCount', { selected: selectedContent.length, total: inspection.contents.filter((item) => item.available).length })}</dd></div>
+                  <div><dt>{t('importCenter.previousCopyTerm')}</dt><dd>{mode === 'replace' && saveCurrent && onSaveCurrent ? t('importCenter.downloadJson') : t('importCenter.notNeeded')}</dd></div>
                 </dl>
               </div>
-              <div className="import-safety-note"><ShieldCheck size={20} /><span><strong>Importación reversible</strong>El proyecto importado entra al historial; podrás deshacer el reemplazo desde el editor.</span></div>
+              <div className="import-safety-note"><ShieldCheck size={20} /><span><strong>{t('importCenter.reversibleTitle')}</strong>{t('importCenter.reversibleBody')}</span></div>
             </section>
           ) : null}
 
           {stage === 'result' && outcome ? (
             <section className="import-center-result" aria-labelledby="import-result-title" aria-live="polite">
               <span className="import-result-icon"><CheckCircle2 size={32} /></span>
-              <p>Paso 6</p>
-              <h3 id="import-result-title">{outcome.title ?? 'Importación completada'}</h3>
-              <span>{outcome.message ?? 'El contenido está listo para abrirse en el editor.'}</span>
+              <p>{t('importCenter.step', { step: 6 })}</p>
+              <h3 id="import-result-title" tabIndex={-1} data-import-stage-focus="result">{outcome.title ?? t('importCenter.completedTitle')}</h3>
+              <span>{outcome.message ?? t('importCenter.completedBody')}</span>
               {outcome.statistics?.length ? <dl className="import-stat-grid">{outcome.statistics.map((stat) => <div key={stat.label}><dt>{stat.label}</dt><dd>{stat.value}</dd></div>)}</dl> : null}
               {outcome.warnings?.length ? <div className="import-warning-list">{outcome.warnings.map((warning) => <p key={warning}><AlertTriangle size={16} />{warning}</p>)}</div> : null}
             </section>
           ) : null}
 
-          {error ? <div className="import-error-message" role="alert"><AlertTriangle size={18} /><span><strong>No pudimos continuar</strong>{error}</span></div> : null}
+          {error ? <div className="import-error-message" role="alert"><AlertTriangle size={18} /><span><strong>{t('importCenter.errorTitle')}</strong>{error}</span></div> : null}
         </div>
 
         <footer className="import-center-footer">
@@ -447,12 +506,12 @@ export const ImportCenterDialog = ({
             else if (stage === 'confirm') setStage('conflicts');
           }} disabled={stage === 'inspect'}>
             {stage === 'select' || stage === 'result' ? <X size={17} /> : <ArrowLeft size={17} />}
-            {stage === 'select' ? 'Cancelar' : stage === 'result' ? 'Cerrar' : 'Atrás'}
+            {stage === 'select' ? t('importCenter.cancel') : stage === 'result' ? t('importCenter.closeAction') : t('importCenter.back')}
           </button>
-          {stage === 'content' ? <button type="button" className="import-button-primary" disabled={!inspection?.supported || selectedContent.length === 0} onClick={() => setStage('conflicts')}>Continuar <ArrowRight size={17} /></button> : null}
-          {stage === 'conflicts' ? <button type="button" className="import-button-primary" onClick={() => setStage('confirm')}>Revisar importación <ArrowRight size={17} /></button> : null}
-          {stage === 'confirm' ? <button type="button" className="import-button-primary" onClick={() => void runImport()}><Upload size={17} /> Importar ahora</button> : null}
-          {stage === 'result' ? <button type="button" className="import-button-primary" onClick={() => onImported(outcome!)}>Abrir proyecto <ArrowRight size={17} /></button> : null}
+          {stage === 'content' ? <button type="button" className="import-button-primary" disabled={!inspection?.supported || selectedContent.length === 0} onClick={() => setStage('conflicts')}>{t('importCenter.continue')} <ArrowRight size={17} /></button> : null}
+          {stage === 'conflicts' ? <button type="button" className="import-button-primary" onClick={() => setStage('confirm')}>{t('importCenter.review')} <ArrowRight size={17} /></button> : null}
+          {stage === 'confirm' ? <button type="button" className="import-button-primary" onClick={() => void runImport()}><Upload size={17} /> {t('importCenter.importNow')}</button> : null}
+          {stage === 'result' ? <button type="button" className="import-button-primary" onClick={() => onImported(outcome!)}>{t('importCenter.openProject')} <ArrowRight size={17} /></button> : null}
         </footer>
       </div>
     </div>

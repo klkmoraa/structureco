@@ -95,13 +95,24 @@ export const Popover = ({
 };
 
 const focusableSelector = [
-  'button:not([disabled])',
-  'input:not([disabled])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
-  'a[href]',
+  'button:not([disabled]):not([tabindex="-1"])',
+  'input:not([disabled]):not([type="hidden"]):not([tabindex="-1"])',
+  'select:not([disabled]):not([tabindex="-1"])',
+  'textarea:not([disabled]):not([tabindex="-1"])',
+  'a[href]:not([tabindex="-1"])',
+  'summary',
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
+
+const getModalFocusable = (surface: HTMLElement | null) => [
+  ...(surface?.querySelectorAll<HTMLElement>(focusableSelector) ?? []),
+].filter((element) => {
+  if (element.closest('[hidden], [aria-hidden="true"], [inert]')) return false;
+  const closedDetails = element.closest('details:not([open])');
+  if (closedDetails && element.tagName !== 'SUMMARY') return false;
+  const style = window.getComputedStyle(element);
+  return style.display !== 'none' && style.visibility !== 'hidden' && style.visibility !== 'collapse';
+});
 
 const useModalFocus = (
   open: boolean,
@@ -131,7 +142,9 @@ const useModalFocus = (
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const focusFrame = window.requestAnimationFrame(() => {
-      surfaceRef.current?.querySelector<HTMLElement>(focusableSelector)?.focus();
+      const surface = surfaceRef.current;
+      const first = getModalFocusable(surface)[0];
+      (first ?? surface)?.focus();
     });
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -140,7 +153,7 @@ const useModalFocus = (
         return;
       }
       if (event.key !== 'Tab') return;
-      const focusable = [...(surfaceRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? [])];
+      const focusable = getModalFocusable(surfaceRef.current);
       if (!focusable.length) {
         event.preventDefault();
         surfaceRef.current?.focus();

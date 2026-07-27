@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   Check,
   ChevronDown,
@@ -30,6 +30,7 @@ import { AnalysisStatus } from './AnalysisStatus';
 import { BrandMark } from './BrandMark';
 import { Button, IconButton } from '../ui/controls';
 import { useClassroomSession } from '../store/ClassroomSessionContext';
+import { presentExample } from './examplePresentation';
 
 const PortableImportCenter = lazy(() => import('./PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
 
@@ -72,12 +73,24 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
   const [portableExport, setPortableExport] = useState<'pdf' | 'bundle' | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [projectNameDraft, setProjectNameDraft] = useState(project.name);
+  const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine !== false);
   const topbarRef = useRef<HTMLElement>(null);
   const projectNameRef = useRef<HTMLInputElement>(null);
   const projectMenuButtonRef = useRef<HTMLButtonElement>(null);
   const exportMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const storageDescriptionId = useId();
   const menuOpen = showProjectMenu || showExportMenu || showMobileMenu;
+
+  useEffect(() => {
+    const syncConnectivity = () => setOnline(navigator.onLine !== false);
+    window.addEventListener('online', syncConnectivity);
+    window.addEventListener('offline', syncConnectivity);
+    return () => {
+      window.removeEventListener('online', syncConnectivity);
+      window.removeEventListener('offline', syncConnectivity);
+    };
+  }, []);
 
   const closeMenus = () => {
     setShowProjectMenu(false);
@@ -137,6 +150,10 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
     setShowProjectMenu(false);
     setShowExportMenu(false);
   };
+  const closeImportCenter = () => {
+    setImportCenterOpen(false);
+    window.requestAnimationFrame(() => projectMenuButtonRef.current?.focus());
+  };
 
   useLayoutEffect(() => setProjectNameDraft(project.name), [project.id, project.name]);
 
@@ -147,14 +164,42 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
   };
   const selectedCombination = project.combinations.find((item) => item.id === selectedCombinationId);
   const scenarioName = selectedCombination?.name
-    ?? (project.loadCases.filter((item) => item.active).map((item) => item.name).join(' + ') || 'Casos activos');
+    ?? (project.loadCases.filter((item) => item.active).map((item) => item.name).join(' + ') || t('analysis.activeCases'));
   const scenarioFactors = selectedCombination?.factors ?? Object.fromEntries(
     project.loadCases.filter((loadCase) => loadCase.active).map((loadCase) => [loadCase.id, 1]),
   );
+  const storageState = storageIssue === 'load-failed'
+    ? 'load-error'
+    : storageIssue === 'save-failed'
+      ? 'save-error'
+      : !online
+        ? 'offline'
+        : storageIssue === 'recovered'
+          ? 'recovered'
+          : 'local';
+  const storageHasError = storageState === 'load-error' || storageState === 'save-error';
+  const storageLabel = storageState === 'load-error'
+    ? t('storage.loadFailedShort')
+    : storageState === 'save-error'
+      ? t('storage.failedShort')
+    : storageState === 'recovered'
+      ? t('storage.recoveredShort')
+      : storageState === 'offline'
+        ? t('storage.offline')
+        : t('storage.local');
+  const storageDescription = storageState === 'load-error'
+    ? t('storage.loadFailed')
+    : storageState === 'save-error'
+      ? t('storage.failed')
+    : storageState === 'recovered'
+      ? t('storage.recovered')
+      : storageState === 'offline'
+        ? t('storage.offlineDescription')
+        : t('storage.localDescription');
   const portableExportLabel = (kind: 'pdf' | 'bundle'): string => {
-    if (portableExport !== kind) return kind === 'pdf' ? 'PDF completo reimportable' : 'Expediente .structureco';
-    if (!analysis) return kind === 'pdf' ? 'Analizando y generando PDF…' : 'Analizando y preparando paquete…';
-    return kind === 'pdf' ? 'Generando PDF…' : 'Preparando paquete…';
+    if (portableExport !== kind) return t(kind === 'pdf' ? 'portable.pdfLabel' : 'portable.bundleLabel');
+    if (!analysis) return t(kind === 'pdf' ? 'portable.analyzingPdf' : 'portable.analyzingBundle');
+    return t(kind === 'pdf' ? 'portable.generatingPdf' : 'portable.preparingBundle');
   };
   const requestAnalysis = () => {
     if (project.settings.calculationMode === 'classroom') {
@@ -181,15 +226,15 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
       const options = { appVersion: '0.7.0', scenarioName, scenarioFactors, includeEducationTrace: true };
       if (kind === 'pdf') {
         const report = await portable.createCalculationReport(project, exportAnalysis, options);
-        await portable.shareOrDownloadPortableBytes(report.bytes, report.filename, 'application/pdf', `${project.name} - memoria de cálculo`);
+        await portable.shareOrDownloadPortableBytes(report.bytes, report.filename, 'application/pdf', t('portable.reportShareTitle', { name: project.name }));
       } else {
         const bundle = await portable.createPortableBundle(project, exportAnalysis, options);
-        await portable.shareOrDownloadPortableBytes(bundle.bytes, bundle.filename, portable.STRUCTURECO_BUNDLE_MIME, `${project.name} - expediente structureCo`);
+        await portable.shareOrDownloadPortableBytes(bundle.bytes, bundle.filename, portable.STRUCTURECO_BUNDLE_MIME, t('portable.bundleShareTitle', { name: project.name }));
       }
       setShowExportMenu(false);
       setShowMobileMenu(false);
     } catch (error) {
-      setExportError(error instanceof Error ? error.message : 'No se pudo generar el expediente.');
+      setExportError(language === 'es' && error instanceof Error ? error.message : t('portable.exportFailed'));
     } finally {
       setPortableExport(null);
     }
@@ -198,7 +243,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
   return (
     <header ref={topbarRef} className="topbar">
       <div className="brand-block topbar-zone topbar-document-zone" data-topbar-zone="document">
-        <button className="brand-mark brand-home-button" type="button" aria-label="Ir al inicio" onClick={onOpenHome}>
+        <button className="brand-mark brand-home-button" type="button" aria-label={t('navigation.home')} onClick={onOpenHome}>
           <BrandMark size={34} />
         </button>
         <div className="top-divider" />
@@ -234,21 +279,27 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
           </div>
         </div>
         <span
-          className={`autosave-state${storageIssue ? ' has-issue' : ''}`}
+          className={`autosave-state${storageHasError || storageState === 'offline' ? ' has-issue' : ''}`}
+          data-storage-state={storageState}
+          data-storage-diagnostic={storageMessage ?? undefined}
           role="status"
           aria-live="polite"
-          title={storageIssue ? (storageMessage ?? t(storageIssue === 'recovered' ? 'storage.recovered' : 'storage.failed')) : t('storage.local')}
-        >{storageIssue ? <CloudOff size={14} /> : <Check size={14} />} <span>{storageIssue ? '⚠' : t('storage.local')}</span></span>
+          aria-atomic="true"
+          aria-describedby={storageDescriptionId}
+          tabIndex={0}
+          title={storageDescription}
+        >{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />} <span>{storageLabel}</span><small id={storageDescriptionId} className="autosave-state__description">{storageDescription}</small></span>
         {showProjectMenu ? (
           <div className="popover project-menu" role="menu" aria-label={t('project.openExamples')} onKeyDown={onMenuKeyDown}>
-            <button role="menuitem" onClick={() => { replaceProject(createBlankProject()); setShowProjectMenu(false); }}>
+            <button role="menuitem" onClick={() => { const next = createBlankProject(); replaceProject({ ...next, settings: { ...next.settings, language } }); setShowProjectMenu(false); }}>
               <FilePlus2 size={17} /> {t('project.new')}
             </button>
-            {exampleProjects.map((example) => (
-              <button role="menuitem" key={example.name} onClick={() => { replaceProject(example.build()); setShowProjectMenu(false); }}>
-                <span className="menu-copy"><strong>{example.name}</strong><small>{example.description}</small></span>
-              </button>
-            ))}
+            {exampleProjects.map((example) => {
+              const copy = presentExample(example.name, example.description, t);
+              return <button role="menuitem" key={example.name} onClick={() => { const next = example.build(); replaceProject({ ...next, settings: { ...next.settings, language } }); setShowProjectMenu(false); }}>
+                <span className="menu-copy"><strong>{copy.name}</strong><small>{copy.description}</small></span>
+              </button>;
+            })}
             <button role="menuitem" onClick={() => { setImportCenterOpen(true); setShowProjectMenu(false); }}><FolderOpen size={17} /> {t('project.importJson')}</button>
           </div>
         ) : null}
@@ -349,7 +400,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
               <button onClick={() => { window.dispatchEvent(new CustomEvent('structureco:export-svg')); setShowMobileMenu(false); }}><Download size={16} /> {t('export.svg')}</button>
               <button onClick={() => { window.dispatchEvent(new CustomEvent('structureco:export-png')); setShowMobileMenu(false); }}><Download size={16} /> {t('export.png')}</button>
               <button onClick={() => { window.print(); setShowMobileMenu(false); }}>{t('export.print')}</button>
-              <div className={`mobile-storage-state ${storageIssue ? 'error' : ''}`} role="status"><CloudOff size={14} /><span>{storageIssue ? (storageMessage ?? t('storage.failed')) : t('storage.local')}</span></div>
+              <div className={`mobile-storage-state ${storageHasError || storageState === 'offline' ? 'error' : ''}`} data-storage-state={storageState} role="status" aria-live="polite" aria-atomic="true">{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}<span><strong>{storageLabel}</strong><small>{storageDescription}</small></span></div>
               {exportError ? <div className="portable-export-error" role="alert">{exportError}</div> : null}
             </div>
           ) : null}
@@ -369,11 +420,11 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
       {importCenterOpen ? <Suspense fallback={null}><PortableImportCenter
         open
         currentProjectName={project.name}
-        onClose={() => setImportCenterOpen(false)}
+        onClose={closeImportCenter}
         onSaveCurrent={() => exportProjectJson(project)}
         onImported={(outcome) => {
-          replaceProject(outcome.project, outcome.restoredAnalysis);
-          setImportCenterOpen(false);
+          replaceProject({ ...outcome.project, settings: { ...outcome.project.settings, language } }, outcome.restoredAnalysis);
+          closeImportCenter();
         }}
       /></Suspense> : null}
     </header>

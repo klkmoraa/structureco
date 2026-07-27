@@ -1,5 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { CheckCircle2, CircleAlert, Info, TriangleAlert, X } from 'lucide-react';
 
 export type FeedbackTone = 'neutral' | 'info' | 'success' | 'warning' | 'error';
 
@@ -63,8 +63,15 @@ export const Banner = ({
     {...props}
     className={`sc-banner sc-banner--${tone}${className ? ` ${className}` : ''}`}
     role={tone === 'error' ? 'alert' : 'status'}
+    aria-live={tone === 'error' ? 'assertive' : 'polite'}
+    aria-atomic="true"
   >
-    {icon ? <span className="sc-banner__icon" aria-hidden="true">{icon}</span> : null}
+    <span className="sc-banner__icon" aria-hidden="true">{icon ?? (
+      tone === 'success' ? <CheckCircle2 size={18} />
+        : tone === 'warning' ? <TriangleAlert size={18} />
+          : tone === 'error' ? <CircleAlert size={18} />
+            : <Info size={18} />
+    )}</span>
     <div className="sc-banner__copy">
       <strong>{title}</strong>
       {children ? <div className="sc-banner__description">{children}</div> : null}

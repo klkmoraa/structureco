@@ -106,39 +106,33 @@ const PhysicalNumberField = ({
   validate?: (value: number) => string | undefined;
   disabled?: boolean;
   lockedReason?: string;
-}) => (
-  <InspectorNumericField
-    label={label}
-    value={toDisplay(value, units, quantity)}
-    unit={unitLabel(units, quantity)}
-    resetKey={`${resetKey}:${units}`}
-    hint={hint}
-    validate={validate}
-    disabled={disabled}
-    lockedReason={lockedReason}
-    onCommit={(displayValue) => onCommit(fromDisplay(displayValue, units, quantity))}
-  />
-);
+}) => {
+  const { language } = useI18n();
+  return (
+    <InspectorNumericField
+      label={label}
+      value={toDisplay(value, units, quantity)}
+      unit={unitLabel(units, quantity)}
+      resetKey={`${resetKey}:${units}`}
+      hint={hint}
+      validate={validate}
+      disabled={disabled}
+      lockedReason={lockedReason}
+      language={language}
+      onCommit={(displayValue) => onCommit(fromDisplay(displayValue, units, quantity))}
+    />
+  );
+};
 
 const formatPhysical = (value: number, units: UnitSystemId, quantity: UnitQuantity) => (
   formatInspectorValue(toDisplay(value, units, quantity), unitLabel(units, quantity))
 );
 
-const nonNegative = (value: number) => value >= 0 ? undefined : 'Debe ser mayor o igual que 0.';
-const normalizedPosition = (value: number) => value >= 0 && value <= 1 ? undefined : 'Usa un valor entre 0 y 1.';
-
-const supportNames: Record<SupportType, string> = {
-  none: 'Libre',
-  pin: 'Articulado',
-  roller: 'Rodillo orientable',
-  fixed: 'Empotramiento',
-  custom: 'Personalizado',
-};
-
 const InspectorIssues = ({ issues }: { issues: readonly ValidationIssue[] }) => {
+  const { t } = useI18n();
   if (issues.length === 0) return null;
-  return <section className="inspector-inline-issues" aria-label="Validaciones del objeto">
-    <h3>Validación del análisis</h3>
+  return <section className="inspector-inline-issues" aria-label={t('inspector.objectValidationRegion')}>
+    <h3>{t('inspector.analysisValidationHeading')}</h3>
     {issues.map((issue) => <div key={issue.id} className={`is-${issue.severity}`} role={issue.severity === 'error' ? 'alert' : 'status'}>
       <AlertTriangle size={15} aria-hidden="true" />
       <span><strong>{issue.title}</strong>{issue.message}</span>
@@ -148,11 +142,26 @@ const InspectorIssues = ({ issues }: { issues: readonly ValidationIssue[] }) => 
 
 export const InspectorProperties = () => {
   const { project, analysis, selection, setSelection, updateProject } = useProject();
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const { resultsVisible } = useClassroomSession();
   const [expandedSections, setExpandedSections] = usePersistentInspectorSections();
   const units = project.settings.units;
   const classroomMode = project.settings.calculationMode === 'classroom';
+  const nonNegative = useCallback(
+    (value: number) => value >= 0 ? undefined : t('inspector.nonNegativeValidation'),
+    [t],
+  );
+  const normalizedPosition = useCallback(
+    (value: number) => value >= 0 && value <= 1 ? undefined : t('inspector.normalizedPositionValidation'),
+    [t],
+  );
+  const supportNames: Record<SupportType, string> = {
+    none: t('inspector.free'),
+    pin: t('inspector.pin'),
+    roller: t('inspector.roller'),
+    fixed: t('inspector.fixed'),
+    custom: t('inspector.custom'),
+  };
 
   const selectedNode = selection?.kind === 'node' ? project.nodes.find((node) => node.id === selection.id) : null;
   const selectedMember = selection?.kind === 'member' ? project.members.find((member) => member.id === selection.id) : null;
@@ -258,7 +267,7 @@ export const InspectorProperties = () => {
 
   let summaryType = t('inspector.noneSelected');
   let summaryId = '—';
-  let summaryDescription = 'Selecciona un nodo, miembro, apoyo o carga en el lienzo.';
+  let summaryDescription = t('inspector.selectObjectProperties');
   let SummaryIcon = MousePointer2;
   let summaryMetrics: InspectorSummaryMetric[] = [];
 
@@ -266,7 +275,9 @@ export const InspectorProperties = () => {
     const hasSupport = selectedNode.support.type !== 'none';
     summaryType = hasSupport ? t('inspector.support') : t('inspector.node');
     summaryId = selectedNode.id;
-    summaryDescription = hasSupport ? `${supportNames[selectedNode.support.type]} · nodo estructural` : 'Nodo libre · coordenadas editables';
+    summaryDescription = hasSupport
+      ? t('inspector.supportNodeSummary', { support: supportNames[selectedNode.support.type] })
+      : t('inspector.freeNodeSummary');
     SummaryIcon = hasSupport ? Anchor : CircleDot;
     if (nodeResult && (!classroomMode || resultsVisible)) summaryMetrics = [
       { label: 'Rx', value: formatPhysical(nodeResult.rx, units, 'force') },
@@ -279,48 +290,65 @@ export const InspectorProperties = () => {
     summaryDescription = `${selectedMember.type === 'frame' ? t('inspector.frame') : selectedMember.type === 'truss' ? t('inspector.truss') : t('inspector.rigid')} · ${selectedMember.i} → ${selectedMember.j}`;
     SummaryIcon = Minus;
     if (memberResult && (!classroomMode || resultsVisible)) summaryMetrics = [
-      { label: 'N máx.', value: formatPhysical(memberResult.maxAxial, units, 'force'), tone: 'axial' },
-      { label: 'V máx.', value: formatPhysical(memberResult.maxShear, units, 'force'), tone: 'shear' },
-      { label: 'M máx.', value: formatPhysical(memberResult.maxMoment, units, 'moment'), tone: 'moment' },
+      { label: t('inspector.maxAxial'), value: formatPhysical(memberResult.maxAxial, units, 'force'), tone: 'axial' },
+      { label: t('inspector.maxShear'), value: formatPhysical(memberResult.maxShear, units, 'force'), tone: 'shear' },
+      { label: t('inspector.maxMoment'), value: formatPhysical(memberResult.maxMoment, units, 'moment'), tone: 'moment' },
     ];
   } else if (selectedNodalLoad) {
     const hasForce = Math.hypot(selectedNodalLoad.fx, selectedNodalLoad.fy) !== 0;
     const hasMoment = selectedNodalLoad.mz !== 0;
-    summaryType = hasForce && hasMoment ? 'Carga nodal mixta' : hasMoment ? 'Momento' : 'Carga puntual';
+    summaryType = hasForce && hasMoment
+      ? t('inspector.mixedNodalLoad')
+      : hasMoment
+        ? t('inspector.moment')
+        : t('inspector.pointLoad');
     summaryId = selectedNodalLoad.id;
-    summaryDescription = `Nodo ${selectedNodalLoad.nodeId} · ${selectedNodalLoad.caseId}`;
+    summaryDescription = t('inspector.nodeLoadSummary', {
+      nodeId: selectedNodalLoad.nodeId,
+      caseId: selectedNodalLoad.caseId,
+    });
     SummaryIcon = hasMoment && !hasForce ? RotateCcw : MoveDown;
   } else if (selectedMemberLoad) {
-    summaryType = selectedMemberLoad.type === 'distributed' ? 'Carga distribuida' : selectedMemberLoad.type === 'point' ? 'Carga puntual' : 'Momento';
+    summaryType = selectedMemberLoad.type === 'distributed'
+      ? t('inspector.distributedLoad')
+      : selectedMemberLoad.type === 'point'
+        ? t('inspector.pointLoad')
+        : t('inspector.moment');
     summaryId = selectedMemberLoad.id;
-    summaryDescription = `Miembro ${selectedMemberLoad.memberId} · ${selectedMemberLoad.caseId}`;
+    summaryDescription = t('inspector.memberLoadSummary', {
+      memberId: selectedMemberLoad.memberId,
+      caseId: selectedMemberLoad.caseId,
+    });
     SummaryIcon = selectedMemberLoad.type === 'distributed' ? Sigma : selectedMemberLoad.type === 'point' ? MoveDown : RotateCcw;
   } else if (selection?.kind === 'multi') {
     summaryType = t('inspector.multiple');
-    summaryId = `${multiCount} objetos`;
-    summaryDescription = `${selection.nodeIds.length} nodos · ${selection.memberIds.length} miembros`;
+    summaryId = t('inspector.objectCount', { count: multiCount });
+    summaryDescription = t('inspector.selectionCounts', {
+      nodes: selection.nodeIds.length,
+      members: selection.memberIds.length,
+    });
     SummaryIcon = Layers3;
   }
 
   const renderNodeAdvanced = selectedNode ? <>
-    <InspectorPropertyGroup title={t('inspector.connection')} description="Comportamiento rotacional del nodo.">
+    <InspectorPropertyGroup title={t('inspector.connection')} description={t('inspector.nodeRotationDescription')}>
       <label className="toggle-row">
         <span>{t('inspector.internalHinge')}<small>{t('inspector.internalHingeHelp')}</small></span>
         <input type="checkbox" checked={selectedNode.internalHinge ?? false} onChange={(event) => updateNode('internalHinge', event.target.checked)} />
       </label>
     </InspectorPropertyGroup>
 
-    {!classroomMode ? <InspectorPropertyGroup title="Resortes" description="Rigideces elásticas opcionales del apoyo.">
+    {!classroomMode ? <InspectorPropertyGroup title={t('inspector.springs')} description={t('inspector.optionalSupportStiffnesses')}>
       <PhysicalNumberField label="kx" value={selectedNode.support.spring?.kx ?? 0} units={units} quantity="translationalStiffness" resetKey={`${selectionKey}:spring-kx`} validate={nonNegative} onCommit={(value) => updateNode('spring.kx', value)} />
       <PhysicalNumberField label="ky" value={selectedNode.support.spring?.ky ?? 0} units={units} quantity="translationalStiffness" resetKey={`${selectionKey}:spring-ky`} validate={nonNegative} onCommit={(value) => updateNode('spring.ky', value)} />
       <PhysicalNumberField label="kθ" value={selectedNode.support.spring?.kr ?? 0} units={units} quantity="rotationalStiffness" resetKey={`${selectionKey}:spring-kr`} validate={nonNegative} onCommit={(value) => updateNode('spring.kr', value)} />
-      <PhysicalNumberField label="k normal" value={selectedNode.support.spring?.kNormal ?? 0} units={units} quantity="translationalStiffness" resetKey={`${selectionKey}:spring-normal`} validate={nonNegative} onCommit={(value) => updateNode('spring.kNormal', value)} />
-    </InspectorPropertyGroup> : <InspectorLockedState title="Resortes bloqueados en modo Aula">Cambia a Completo para editar rigideces elásticas; los valores almacenados se conservan.</InspectorLockedState>}
+      <PhysicalNumberField label={t('inspector.kNormal')} value={selectedNode.support.spring?.kNormal ?? 0} units={units} quantity="translationalStiffness" resetKey={`${selectionKey}:spring-normal`} validate={nonNegative} onCommit={(value) => updateNode('spring.kNormal', value)} />
+    </InspectorPropertyGroup> : <InspectorLockedState title={t('inspector.springsLockedClassroom')}>{t('inspector.springsLockedClassroomBody')}</InspectorLockedState>}
 
-    {!classroomMode && selectedNode.support.type !== 'none' ? <InspectorPropertyGroup title="Asentamientos por caso" description="Movimiento impuesto en un grado de libertad restringido.">
+    {!classroomMode && selectedNode.support.type !== 'none' ? <InspectorPropertyGroup title={t('inspector.settlementsByCase')} description={t('inspector.settlementsDescription')}>
       <div className="section-heading">
-        <span className="section-description">{selectedNodePrescribed.length > 0 ? `${selectedNodePrescribed.length} definidos` : 'Sin asentamientos definidos'}</span>
-        <button type="button" className="mini-button" aria-label="Añadir desplazamiento prescrito" onClick={() => updateProject((draft) => {
+        <span className="section-description">{selectedNodePrescribed.length > 0 ? t('inspector.definedCount', { count: selectedNodePrescribed.length }) : t('inspector.noSettlements')}</span>
+        <button type="button" className="mini-button" aria-label={t('inspector.addPrescribedDisplacement')} onClick={() => updateProject((draft) => {
           draft.prescribedDisplacements ??= [];
           let index = 1;
           while (draft.prescribedDisplacements.some((item) => item.id === `PD${index}`)) index += 1;
@@ -331,84 +359,84 @@ export const InspectorProperties = () => {
         })}><Plus size={15} /></button>
       </div>
       <div className="effect-list">{selectedNodePrescribed.map((item) => <div className="effect-card" key={item.id}>
-        <SelectField label="Caso" value={item.caseId} onChange={(value) => updatePrescribed(item.id, 'caseId', value)}>{project.loadCases.map((loadCase) => <option key={loadCase.id} value={loadCase.id}>{loadCase.name}</option>)}</SelectField>
-        <SelectField label="Componente" value={item.component} onChange={(value) => updatePrescribed(item.id, 'component', value)}>
-          {selectedNode.support.type === 'roller' ? <option value="normal">Normal</option> : <>
+        <SelectField label={t('inspector.case')} value={item.caseId} onChange={(value) => updatePrescribed(item.id, 'caseId', value)}>{project.loadCases.map((loadCase) => <option key={loadCase.id} value={loadCase.id}>{loadCase.name}</option>)}</SelectField>
+        <SelectField label={t('inspector.component')} value={item.component} onChange={(value) => updatePrescribed(item.id, 'component', value)}>
+          {selectedNode.support.type === 'roller' ? <option value="normal">{t('inspector.normal')}</option> : <>
             <option value="ux">Ux</option><option value="uy">Uy</option>
             {selectedNode.support.type === 'fixed' || selectedNode.support.type === 'custom' ? <option value="rz">Rz</option> : null}
           </>}
         </SelectField>
-        {item.component === 'rz' ? <InspectorNumericField label="Valor" value={item.value} unit="rad" resetKey={`${selectionKey}:${item.id}:value`} onCommit={(value) => updatePrescribed(item.id, 'value', value)} /> : <PhysicalNumberField label="Valor" value={item.value} units={units} quantity="length" resetKey={`${selectionKey}:${item.id}:value`} onCommit={(value) => updatePrescribed(item.id, 'value', value)} />}
-        <button type="button" className="icon-danger-button" aria-label={`Eliminar ${item.id}`} onClick={() => updateProject((draft) => {
+        {item.component === 'rz' ? <InspectorNumericField label={t('inspector.value')} value={item.value} unit="rad" resetKey={`${selectionKey}:${item.id}:value`} language={language} onCommit={(value) => updatePrescribed(item.id, 'value', value)} /> : <PhysicalNumberField label={t('inspector.value')} value={item.value} units={units} quantity="length" resetKey={`${selectionKey}:${item.id}:value`} onCommit={(value) => updatePrescribed(item.id, 'value', value)} />}
+        <button type="button" className="icon-danger-button" aria-label={t('inspector.deleteItem', { id: item.id })} onClick={() => updateProject((draft) => {
           draft.prescribedDisplacements = (draft.prescribedDisplacements ?? []).filter((candidate) => candidate.id !== item.id);
           return draft;
-        })}><Trash2 size={14} /> Eliminar</button>
+        })}><Trash2 size={14} /> {t('inspector.delete')}</button>
       </div>)}</div>
-      <InspectorHelper>El factor del caso o combinación activa multiplica el valor. En un rodillo se mide sobre la normal restringida.</InspectorHelper>
+      <InspectorHelper>{t('inspector.settlementFactorHelp')}</InspectorHelper>
     </InspectorPropertyGroup> : null}
-    {!classroomMode && selectedNode.support.type === 'none' ? <InspectorLockedState title="Asentamientos no disponibles">Selecciona un tipo de apoyo para habilitar movimientos prescritos compatibles.</InspectorLockedState> : null}
-    {classroomMode ? <InspectorLockedState title="Asentamientos bloqueados en modo Aula">Cambia a Completo para editar desplazamientos prescritos por caso.</InspectorLockedState> : null}
+    {!classroomMode && selectedNode.support.type === 'none' ? <InspectorLockedState title={t('inspector.settlementsUnavailable')}>{t('inspector.settlementsUnavailableBody')}</InspectorLockedState> : null}
+    {classroomMode ? <InspectorLockedState title={t('inspector.settlementsLockedClassroom')}>{t('inspector.settlementsLockedClassroomBody')}</InspectorLockedState> : null}
   </> : null;
 
   const renderMemberAdvanced = selectedMember ? <>
-    {selectedMember.type === 'rigid' ? <InspectorLockedState title="Propiedades mecánicas bloqueadas">El vínculo rígido usa compatibilidad cinemática exacta; no recibe una rigidez artificial.</InspectorLockedState> : <>
-      {!classroomMode ? <InspectorPropertyGroup title="Material complementario" description="Propiedades menos frecuentes del elemento.">
-        <PhysicalNumberField label="ρ" value={selectedMember.density ?? 0} units={units} quantity="density" resetKey={`${selectionKey}:density`} validate={nonNegative} hint={selectedMember.density === undefined ? 'Sin valor explícito; solo se guarda si lo editas.' : undefined} onCommit={(value) => updateMember('density', value)} />
+    {selectedMember.type === 'rigid' ? <InspectorLockedState title={t('inspector.mechanicalPropertiesLocked')}>{t('inspector.rigidHelp')}</InspectorLockedState> : <>
+      {!classroomMode ? <InspectorPropertyGroup title={t('inspector.complementaryMaterial')} description={t('inspector.lessFrequentMemberProperties')}>
+        <PhysicalNumberField label="ρ" value={selectedMember.density ?? 0} units={units} quantity="density" resetKey={`${selectionKey}:density`} validate={nonNegative} hint={selectedMember.density === undefined ? t('inspector.explicitValueSaveHint') : undefined} onCommit={(value) => updateMember('density', value)} />
       </InspectorPropertyGroup> : null}
 
-      {selectedMember.type === 'frame' && !classroomMode ? <InspectorPropertyGroup title="Teoría de viga" description="Modelo de deformación del miembro.">
-        <SelectField label="Teoría" value={selectedMember.beamTheory ?? 'euler-bernoulli'} onChange={(value) => updateMember('beamTheory', value)}>
-          <option value="euler-bernoulli">Euler–Bernoulli</option><option value="timoshenko">Timoshenko</option>
+      {selectedMember.type === 'frame' && !classroomMode ? <InspectorPropertyGroup title={t('inspector.beamTheory')} description={t('inspector.memberDeformationModel')}>
+        <SelectField label={t('inspector.theory')} value={selectedMember.beamTheory ?? 'euler-bernoulli'} onChange={(value) => updateMember('beamTheory', value)}>
+          <option value="euler-bernoulli">{t('inspector.eulerBernoulli')}</option><option value="timoshenko">{t('inspector.timoshenko')}</option>
         </SelectField>
         {selectedMember.beamTheory === 'timoshenko' ? <>
-          <PhysicalNumberField label="G" value={selectedMember.G ?? selectedMember.E / 2.6} units={units} quantity="elasticModulus" resetKey={`${selectionKey}:G`} hint={selectedMember.G === undefined ? 'Valor sugerido; solo se guarda si lo editas.' : undefined} onCommit={(value) => updateMember('G', value)} />
-          <PhysicalNumberField label="As efectiva" value={selectedMember.shearArea ?? selectedMember.A * 5 / 6} units={units} quantity="area" resetKey={`${selectionKey}:As`} hint={selectedMember.shearArea === undefined ? 'Valor sugerido; solo se guarda si lo editas.' : 'Incluye la corrección de cortante.'} onCommit={(value) => updateMember('shearArea', value)} />
+          <PhysicalNumberField label="G" value={selectedMember.G ?? selectedMember.E / 2.6} units={units} quantity="elasticModulus" resetKey={`${selectionKey}:G`} hint={selectedMember.G === undefined ? t('inspector.suggestedValueSaveHint') : undefined} onCommit={(value) => updateMember('G', value)} />
+          <PhysicalNumberField label={t('inspector.effectiveShearArea')} value={selectedMember.shearArea ?? selectedMember.A * 5 / 6} units={units} quantity="area" resetKey={`${selectionKey}:As`} hint={selectedMember.shearArea === undefined ? t('inspector.suggestedValueSaveHint') : t('inspector.shearCorrectionHint')} onCommit={(value) => updateMember('shearArea', value)} />
         </> : null}
       </InspectorPropertyGroup> : null}
 
-      {!classroomMode ? <InspectorPropertyGroup title="Temperatura y deformación inicial" description="Efectos dependientes del caso de carga.">
+      {!classroomMode ? <InspectorPropertyGroup title={t('inspector.temperatureInitialStrain')} description={t('inspector.loadCaseDependentEffects')}>
         <div className="section-heading">
-          <span className="section-description">{selectedMemberEffects.length > 0 ? `${selectedMemberEffects.length} definidos` : 'Sin efectos iniciales'}</span>
-          <button type="button" className="mini-button" aria-label="Añadir efecto inicial" onClick={() => updateProject((draft) => {
+          <span className="section-description">{selectedMemberEffects.length > 0 ? t('inspector.definedCount', { count: selectedMemberEffects.length }) : t('inspector.noInitialEffects')}</span>
+          <button type="button" className="mini-button" aria-label={t('inspector.addInitialEffect')} onClick={() => updateProject((draft) => {
             draft.memberInitialEffects ??= [];
             let index = 1;
             while (draft.memberInitialEffects.some((item) => item.id === `IE${index}`)) index += 1;
             draft.memberInitialEffects.push({ id: `IE${index}`, memberId: selectedMember.id, caseId: draft.loadCases[0]?.id ?? 'LC1', type: 'temperature', alpha: 1.2e-5, deltaT: 0, gradient: 0 });
             return draft;
-          })}><Plus size={15} /></button>
+        })}><Plus size={15} /></button>
         </div>
         <div className="effect-list">{selectedMemberEffects.map((effect) => <div className="effect-card" key={effect.id}>
-          <SelectField label="Tipo" value={effect.type} onChange={(value) => updateInitialEffect(effect.id, 'type', value)}><option value="temperature">Temperatura</option><option value="initial-strain">Deformación inicial</option></SelectField>
-          <SelectField label="Caso" value={effect.caseId} onChange={(value) => updateInitialEffect(effect.id, 'caseId', value)}>{project.loadCases.map((loadCase) => <option key={loadCase.id} value={loadCase.id}>{loadCase.name}</option>)}</SelectField>
+          <SelectField label={t('inspector.type')} value={effect.type} onChange={(value) => updateInitialEffect(effect.id, 'type', value)}><option value="temperature">{t('inspector.temperature')}</option><option value="initial-strain">{t('inspector.initialStrain')}</option></SelectField>
+          <SelectField label={t('inspector.case')} value={effect.caseId} onChange={(value) => updateInitialEffect(effect.id, 'caseId', value)}>{project.loadCases.map((loadCase) => <option key={loadCase.id} value={loadCase.id}>{loadCase.name}</option>)}</SelectField>
           {effect.type === 'temperature' ? <>
-            <InspectorNumericField label="α" value={effect.alpha ?? 1.2e-5} unit="1/°C" resetKey={`${selectionKey}:${effect.id}:alpha`} validate={nonNegative} onCommit={(value) => updateInitialEffect(effect.id, 'alpha', Math.max(0, value))} />
-            <InspectorNumericField label="ΔT uniforme" value={effect.deltaT ?? 0} unit="°C" resetKey={`${selectionKey}:${effect.id}:delta-t`} onCommit={(value) => updateInitialEffect(effect.id, 'deltaT', value)} />
-            {selectedMember.type === 'frame' ? <InspectorNumericField label="Gradiente hacia +y local" value={effect.gradient ?? 0} unit="°C/m" resetKey={`${selectionKey}:${effect.id}:gradient`} onCommit={(value) => updateInitialEffect(effect.id, 'gradient', value)} /> : null}
+            <InspectorNumericField label="α" value={effect.alpha ?? 1.2e-5} unit="1/°C" resetKey={`${selectionKey}:${effect.id}:alpha`} language={language} validate={nonNegative} onCommit={(value) => updateInitialEffect(effect.id, 'alpha', Math.max(0, value))} />
+            <InspectorNumericField label={t('inspector.uniformDeltaT')} value={effect.deltaT ?? 0} unit="°C" resetKey={`${selectionKey}:${effect.id}:delta-t`} language={language} onCommit={(value) => updateInitialEffect(effect.id, 'deltaT', value)} />
+            {selectedMember.type === 'frame' ? <InspectorNumericField label={t('inspector.localYGradient')} value={effect.gradient ?? 0} unit="°C/m" resetKey={`${selectionKey}:${effect.id}:gradient`} language={language} onCommit={(value) => updateInitialEffect(effect.id, 'gradient', value)} /> : null}
           </> : <>
-            <InspectorNumericField label="ε₀ axial" value={effect.axialStrain ?? 0} unit="" resetKey={`${selectionKey}:${effect.id}:strain`} onCommit={(value) => updateInitialEffect(effect.id, 'axialStrain', value)} />
-            {selectedMember.type === 'frame' ? <InspectorNumericField label="κ₀" value={effect.curvature ?? 0} unit="1/m" resetKey={`${selectionKey}:${effect.id}:curvature`} onCommit={(value) => updateInitialEffect(effect.id, 'curvature', value)} /> : null}
+            <InspectorNumericField label={t('inspector.axialInitialStrain')} value={effect.axialStrain ?? 0} unit="" resetKey={`${selectionKey}:${effect.id}:strain`} language={language} onCommit={(value) => updateInitialEffect(effect.id, 'axialStrain', value)} />
+            {selectedMember.type === 'frame' ? <InspectorNumericField label="κ₀" value={effect.curvature ?? 0} unit="1/m" resetKey={`${selectionKey}:${effect.id}:curvature`} language={language} onCommit={(value) => updateInitialEffect(effect.id, 'curvature', value)} /> : null}
           </>}
-          <button type="button" className="icon-danger-button" aria-label={`Eliminar ${effect.id}`} onClick={() => updateProject((draft) => {
+          <button type="button" className="icon-danger-button" aria-label={t('inspector.deleteItem', { id: effect.id })} onClick={() => updateProject((draft) => {
             draft.memberInitialEffects = (draft.memberInitialEffects ?? []).filter((candidate) => candidate.id !== effect.id);
             return draft;
-          })}><Trash2 size={14} /> Eliminar</button>
+          })}><Trash2 size={14} /> {t('inspector.delete')}</button>
         </div>)}</div>
-        <InspectorHelper>ε₀ positivo alarga; κ₀ positivo incrementa dθ/dx. Un gradiente térmico positivo hacia +y produce κ₀ negativo.</InspectorHelper>
-      </InspectorPropertyGroup> : <InspectorLockedState title="Propiedades avanzadas bloqueadas en modo Aula">Los valores mecánicos almacenados se conservan. Cambia a Completo para editarlos.</InspectorLockedState>}
+        <InspectorHelper>{t('inspector.initialEffectsSignHelp')}</InspectorHelper>
+      </InspectorPropertyGroup> : <InspectorLockedState title={t('inspector.advancedLockedClassroom')}>{t('inspector.advancedLockedClassroomBody')}</InspectorLockedState>}
 
-      {selectedMember.type === 'frame' ? <InspectorPropertyGroup title="Conexiones" description="Semirrigidez y zonas rígidas de extremo.">
+      {selectedMember.type === 'frame' ? <InspectorPropertyGroup title={t('inspector.connections')} description={t('inspector.endConnectionsDescription')}>
         {!classroomMode ? <>
-          <h4 className="subsection-title">Conexiones semirrígidas</h4>
-          <label className="toggle-row"><span>Activar en i</span><input type="checkbox" checked={selectedMember.rotationalSpringI !== undefined} onChange={(event) => updateMember('useRotationalSpringI', event.target.checked)} /></label>
-          {selectedMember.rotationalSpringI !== undefined ? <PhysicalNumberField label="kθ extremo i" value={selectedMember.rotationalSpringI} units={units} quantity="rotationalStiffness" resetKey={`${selectionKey}:rot-spring-i`} validate={nonNegative} onCommit={(value) => updateMember('rotationalSpringI', value)} /> : null}
-          <label className="toggle-row"><span>Activar en j</span><input type="checkbox" checked={selectedMember.rotationalSpringJ !== undefined} onChange={(event) => updateMember('useRotationalSpringJ', event.target.checked)} /></label>
-          {selectedMember.rotationalSpringJ !== undefined ? <PhysicalNumberField label="kθ extremo j" value={selectedMember.rotationalSpringJ} units={units} quantity="rotationalStiffness" resetKey={`${selectionKey}:rot-spring-j`} validate={nonNegative} onCommit={(value) => updateMember('rotationalSpringJ', value)} /> : null}
-          <InspectorHelper>Sin resorte significa unión rígida; kθ = 0 equivale a articulación. La liberación prevalece.</InspectorHelper>
-          <h4 className="subsection-title">Zonas rígidas</h4>
-          <PhysicalNumberField label="Offset i" value={selectedMember.rigidOffsetI ?? 0} units={units} quantity="length" resetKey={`${selectionKey}:offset-i`} validate={nonNegative} onCommit={(value) => updateMember('rigidOffsetI', Math.max(0, value))} />
-          <PhysicalNumberField label="Offset j" value={selectedMember.rigidOffsetJ ?? 0} units={units} quantity="length" resetKey={`${selectionKey}:offset-j`} validate={nonNegative} onCommit={(value) => updateMember('rigidOffsetJ', Math.max(0, value))} />
-          <InspectorHelper>Las cargas de miembro y los diagramas se definen sobre la longitud flexible entre caras.</InspectorHelper>
-        </> : <InspectorLockedState title="Semirrigidez y offsets bloqueados">Cambia a Completo para editar conexiones avanzadas.</InspectorLockedState>}
+          <h4 className="subsection-title">{t('inspector.semiRigidConnections')}</h4>
+          <label className="toggle-row"><span>{t('inspector.enableAtI')}</span><input type="checkbox" checked={selectedMember.rotationalSpringI !== undefined} onChange={(event) => updateMember('useRotationalSpringI', event.target.checked)} /></label>
+          {selectedMember.rotationalSpringI !== undefined ? <PhysicalNumberField label={t('inspector.rotationalSpringEndI')} value={selectedMember.rotationalSpringI} units={units} quantity="rotationalStiffness" resetKey={`${selectionKey}:rot-spring-i`} validate={nonNegative} onCommit={(value) => updateMember('rotationalSpringI', value)} /> : null}
+          <label className="toggle-row"><span>{t('inspector.enableAtJ')}</span><input type="checkbox" checked={selectedMember.rotationalSpringJ !== undefined} onChange={(event) => updateMember('useRotationalSpringJ', event.target.checked)} /></label>
+          {selectedMember.rotationalSpringJ !== undefined ? <PhysicalNumberField label={t('inspector.rotationalSpringEndJ')} value={selectedMember.rotationalSpringJ} units={units} quantity="rotationalStiffness" resetKey={`${selectionKey}:rot-spring-j`} validate={nonNegative} onCommit={(value) => updateMember('rotationalSpringJ', value)} /> : null}
+          <InspectorHelper>{t('inspector.rotationalSpringHelp')}</InspectorHelper>
+          <h4 className="subsection-title">{t('inspector.rigidZones')}</h4>
+          <PhysicalNumberField label={t('inspector.offsetI')} value={selectedMember.rigidOffsetI ?? 0} units={units} quantity="length" resetKey={`${selectionKey}:offset-i`} validate={nonNegative} onCommit={(value) => updateMember('rigidOffsetI', Math.max(0, value))} />
+          <PhysicalNumberField label={t('inspector.offsetJ')} value={selectedMember.rigidOffsetJ ?? 0} units={units} quantity="length" resetKey={`${selectionKey}:offset-j`} validate={nonNegative} onCommit={(value) => updateMember('rigidOffsetJ', Math.max(0, value))} />
+          <InspectorHelper>{t('inspector.flexibleLengthHelp')}</InspectorHelper>
+        </> : <InspectorLockedState title={t('inspector.semirigidityLocked')}>{t('inspector.semirigidityLockedBody')}</InspectorLockedState>}
       </InspectorPropertyGroup> : null}
     </>}
   </> : null;
@@ -426,37 +454,37 @@ export const InspectorProperties = () => {
     </div>
 
     {selection === null ? <div className="inspector-empty-state">
-      <InspectorHelper>Selecciona un objeto para ver sus propiedades, unidades y resultados derivados.</InspectorHelper>
+      <InspectorHelper>{t('inspector.emptyPropertiesHelp')}</InspectorHelper>
     </div> : null}
 
     {selection?.kind === 'multi' ? <>
-      <InspectorPropertyGroup title="Resumen de selección" mode="derived" description="La selección múltiple es de lectura para evitar cambios físicos ambiguos.">
+      <InspectorPropertyGroup title={t('inspector.selectionSummary')} mode="derived" description={t('inspector.multipleSelectionDescription')}>
         <InspectorDerivedList rows={[
-          { label: 'Nodos', value: selection.nodeIds.length, description: selection.nodeIds.join(', ') || 'Ninguno' },
-          { label: 'Miembros', value: selection.memberIds.length, description: selection.memberIds.join(', ') || 'Ninguno' },
-          { label: 'Total', value: multiCount },
+          { label: t('inspector.nodes'), value: selection.nodeIds.length, description: selection.nodeIds.join(', ') || t('inspector.none') },
+          { label: t('inspector.members'), value: selection.memberIds.length, description: selection.memberIds.join(', ') || t('inspector.none') },
+          { label: t('inspector.total'), value: multiCount },
         ]} />
       </InspectorPropertyGroup>
-      <InspectorLockedState title="Edición masiva bloqueada">Selecciona un solo objeto para editar. Esta fase no agrega handlers masivos ni cambia contratos de selección.</InspectorLockedState>
+      <InspectorLockedState title={t('inspector.bulkEditingLocked')}>{t('inspector.bulkEditingLockedBody')}</InspectorLockedState>
     </> : null}
 
     {selectedNode ? <>
-      <InspectorPropertyGroup title="Propiedades frecuentes" description="Posición y condición de apoyo del nodo.">
+      <InspectorPropertyGroup title={t('inspector.frequentProperties')} description={t('inspector.nodeFrequentDescription')}>
         <PhysicalNumberField label="X" value={selectedNode.x} units={units} quantity="length" resetKey={`${selectionKey}:x`} onCommit={(value) => updateNode('x', value)} />
         <PhysicalNumberField label="Y" value={selectedNode.y} units={units} quantity="length" resetKey={`${selectionKey}:y`} onCommit={(value) => updateNode('y', value)} />
         <SelectField label={t('inspector.support')} value={selectedNode.support.type} onChange={(value) => updateNode('supportType', value)}>
           <option value="none">{t('inspector.free')}</option><option value="pin">{t('inspector.pin')}</option><option value="roller">{t('inspector.roller')}</option><option value="fixed">{t('inspector.fixed')}</option><option value="custom">{t('inspector.custom')}</option>
         </SelectField>
-        {selectedNode.support.type === 'roller' ? <InspectorNumericField label="Normal" value={selectedNode.support.angleDeg ?? 90} unit="°" resetKey={`${selectionKey}:support-angle`} formatOptions={{ maximumFractionDigits: 2 }} hint="Dirección restringida, antihoraria desde +X global." onCommit={(value) => updateNode('supportAngle', value)} /> : null}
-        {selectedNode.support.type === 'custom' ? <div className="checkbox-grid" role="group" aria-label="Grados de libertad restringidos">
+        {selectedNode.support.type === 'roller' ? <InspectorNumericField label={t('inspector.normal')} value={selectedNode.support.angleDeg ?? 90} unit="°" resetKey={`${selectionKey}:support-angle`} language={language} formatOptions={{ maximumFractionDigits: 2 }} hint={t('inspector.rollerNormalHint')} onCommit={(value) => updateNode('supportAngle', value)} /> : null}
+        {selectedNode.support.type === 'custom' ? <div className="checkbox-grid" role="group" aria-label={t('inspector.restrictedDegreesOfFreedom')}>
           <label><input type="checkbox" checked={selectedNode.support.restrainX ?? false} onChange={(event) => updateNode('restrainX', event.target.checked)} /> Ux</label>
           <label><input type="checkbox" checked={selectedNode.support.restrainY ?? false} onChange={(event) => updateNode('restrainY', event.target.checked)} /> Uy</label>
           <label><input type="checkbox" checked={selectedNode.support.restrainR ?? false} onChange={(event) => updateNode('restrainR', event.target.checked)} /> Rz</label>
         </div> : null}
       </InspectorPropertyGroup>
-      <InspectorPropertyGroup title="Valores derivados" mode="derived" description="Solo lectura; se recalculan con el modelo.">
+      <InspectorPropertyGroup title={t('inspector.derivedValues')} mode="derived" description={t('inspector.derivedReadOnlyDescription')}>
         <InspectorDerivedList rows={[
-          { label: 'ID', value: selectedNode.id, description: 'Identificador del modelo' },
+          { label: 'ID', value: selectedNode.id, description: t('inspector.modelIdentifier') },
           ...(nodeResult && (!classroomMode || resultsVisible) ? [
             ...(!classroomMode ? [
               { label: 'Ux', value: formatPhysical(nodeResult.ux, units, 'length') },
@@ -479,32 +507,32 @@ export const InspectorProperties = () => {
       const length = ni && nj ? Math.hypot(nj.x - ni.x, nj.y - ni.y) : Number.NaN;
       const angle = ni && nj ? Math.atan2(nj.y - ni.y, nj.x - ni.x) * 180 / Math.PI : Number.NaN;
       return <>
-        <InspectorPropertyGroup title="Propiedades frecuentes" description="Tipo, material y sección del elemento.">
+        <InspectorPropertyGroup title={t('inspector.frequentProperties')} description={t('inspector.memberFrequentDescription')}>
           <SelectField label={t('inspector.element')} value={selectedMember.type} onChange={(value) => updateMember('type', value)}>
             <option value="frame">{t('inspector.frame')}</option><option value="truss">{t('inspector.truss')}</option><option value="rigid">{t('inspector.rigid')}</option>
           </SelectField>
           {selectedMember.type !== 'rigid' && !classroomMode ? <>
-            <PhysicalNumberField label="E" value={selectedMember.E} units={units} quantity="elasticModulus" resetKey={`${selectionKey}:E`} hint="El dominio valida E > 0 al analizar." onCommit={(value) => updateMember('E', value)} />
-            <PhysicalNumberField label="A" value={selectedMember.A} units={units} quantity="area" resetKey={`${selectionKey}:A`} hint="El dominio valida A > 0 al analizar." onCommit={(value) => updateMember('A', value)} />
-            <PhysicalNumberField label="I" value={selectedMember.I} units={units} quantity="inertia" resetKey={`${selectionKey}:I`} hint={selectedMember.type === 'frame' ? 'El dominio valida I > 0 al analizar.' : 'Se conserva para compatibilidad si el tipo cambia a pórtico.'} onCommit={(value) => updateMember('I', value)} />
+            <PhysicalNumberField label="E" value={selectedMember.E} units={units} quantity="elasticModulus" resetKey={`${selectionKey}:E`} hint={t('inspector.domainValidatesE')} onCommit={(value) => updateMember('E', value)} />
+            <PhysicalNumberField label="A" value={selectedMember.A} units={units} quantity="area" resetKey={`${selectionKey}:A`} hint={t('inspector.domainValidatesA')} onCommit={(value) => updateMember('A', value)} />
+            <PhysicalNumberField label="I" value={selectedMember.I} units={units} quantity="inertia" resetKey={`${selectionKey}:I`} hint={selectedMember.type === 'frame' ? t('inspector.domainValidatesI') : t('inspector.inertiaCompatibilityHint')} onCommit={(value) => updateMember('I', value)} />
           </> : null}
-          {selectedMember.type !== 'rigid' && classroomMode ? <InspectorLockedState title="Material bloqueado en modo Aula">E, A e I conservan los valores actuales. Cambia a Completo para editarlos.</InspectorLockedState> : null}
-          {selectedMember.type === 'rigid' ? <InspectorLockedState title="Sin propiedades de rigidez editables">El vínculo rígido se define por su cinemática.</InspectorLockedState> : null}
-          {selectedMember.type === 'frame' ? <div className="checkbox-grid" role="group" aria-label="Liberaciones de momento">
-            <label><input type="checkbox" checked={selectedMember.releases?.iMoment ?? false} onChange={(event) => updateMember('iMoment', event.target.checked)} /> Momento i</label>
-            <label><input type="checkbox" checked={selectedMember.releases?.jMoment ?? false} onChange={(event) => updateMember('jMoment', event.target.checked)} /> Momento j</label>
+          {selectedMember.type !== 'rigid' && classroomMode ? <InspectorLockedState title={t('inspector.materialLockedClassroom')}>{t('inspector.materialLockedClassroomBody')}</InspectorLockedState> : null}
+          {selectedMember.type === 'rigid' ? <InspectorLockedState title={t('inspector.noEditableStiffness')}>{t('inspector.noEditableStiffnessBody')}</InspectorLockedState> : null}
+          {selectedMember.type === 'frame' ? <div className="checkbox-grid" role="group" aria-label={t('inspector.momentReleases')}>
+            <label><input type="checkbox" checked={selectedMember.releases?.iMoment ?? false} onChange={(event) => updateMember('iMoment', event.target.checked)} /> {t('inspector.momentI')}</label>
+            <label><input type="checkbox" checked={selectedMember.releases?.jMoment ?? false} onChange={(event) => updateMember('jMoment', event.target.checked)} /> {t('inspector.momentJ')}</label>
           </div> : null}
         </InspectorPropertyGroup>
-        <InspectorPropertyGroup title="Valores derivados" mode="derived" description="Geometría y extremos calculados, sin edición directa.">
+        <InspectorPropertyGroup title={t('inspector.derivedValues')} mode="derived" description={t('inspector.memberDerivedDescription')}>
           <InspectorDerivedList rows={[
             { label: t('inspector.nodeI'), value: selectedMember.i },
             { label: t('inspector.nodeJ'), value: selectedMember.j },
             { label: t('inspector.length'), value: formatPhysical(length, units, 'length') },
             { label: t('inspector.angle'), value: formatInspectorValue(angle, '°', { maximumFractionDigits: 2 }) },
             ...(memberResult && (!classroomMode || resultsVisible) ? [
-              { label: 'N máx.', value: formatPhysical(memberResult.maxAxial, units, 'force') },
-              { label: 'V máx.', value: formatPhysical(memberResult.maxShear, units, 'force') },
-              { label: 'M máx.', value: formatPhysical(memberResult.maxMoment, units, 'moment') },
+              { label: t('inspector.maxAxial'), value: formatPhysical(memberResult.maxAxial, units, 'force') },
+              { label: t('inspector.maxShear'), value: formatPhysical(memberResult.maxShear, units, 'force') },
+              { label: t('inspector.maxMoment'), value: formatPhysical(memberResult.maxMoment, units, 'moment') },
             ] : []),
           ]} />
         </InspectorPropertyGroup>
@@ -514,55 +542,55 @@ export const InspectorProperties = () => {
     })() : null}
 
     {selectedNodalLoad ? <>
-      <InspectorPropertyGroup title="Propiedades frecuentes" description="Componentes de fuerza y momento aplicados al nodo.">
-        <SelectField label="Caso" value={selectedNodalLoad.caseId} onChange={(value) => updateNodalLoad('caseId', value)}>{project.loadCases.map((loadCase) => <option key={loadCase.id} value={loadCase.id}>{loadCase.name}</option>)}</SelectField>
-        <PhysicalNumberField label="Horizontal Fx" value={selectedNodalLoad.fx} units={units} quantity="force" resetKey={`${selectionKey}:fx`} onCommit={(value) => updateNodalLoad('fx', value)} />
-        <PhysicalNumberField label="Vertical Fy" value={selectedNodalLoad.fy} units={units} quantity="force" resetKey={`${selectionKey}:fy`} onCommit={(value) => updateNodalLoad('fy', value)} />
-        <PhysicalNumberField label="Momento Mz" value={selectedNodalLoad.mz} units={units} quantity="moment" resetKey={`${selectionKey}:mz`} onCommit={(value) => updateNodalLoad('mz', value)} />
-        <InspectorHelper>Un signo negativo invierte la dirección visual. Fuerza y momento pueden coexistir en el mismo registro.</InspectorHelper>
+      <InspectorPropertyGroup title={t('inspector.frequentProperties')} description={t('inspector.nodalLoadFrequentDescription')}>
+        <SelectField label={t('inspector.case')} value={selectedNodalLoad.caseId} onChange={(value) => updateNodalLoad('caseId', value)}>{project.loadCases.map((loadCase) => <option key={loadCase.id} value={loadCase.id}>{loadCase.name}</option>)}</SelectField>
+        <PhysicalNumberField label={t('inspector.horizontalFx')} value={selectedNodalLoad.fx} units={units} quantity="force" resetKey={`${selectionKey}:fx`} onCommit={(value) => updateNodalLoad('fx', value)} />
+        <PhysicalNumberField label={t('inspector.verticalFy')} value={selectedNodalLoad.fy} units={units} quantity="force" resetKey={`${selectionKey}:fy`} onCommit={(value) => updateNodalLoad('fy', value)} />
+        <PhysicalNumberField label={t('inspector.momentMz')} value={selectedNodalLoad.mz} units={units} quantity="moment" resetKey={`${selectionKey}:mz`} onCommit={(value) => updateNodalLoad('mz', value)} />
+        <InspectorHelper>{t('inspector.nodalLoadSignHelp')}</InspectorHelper>
       </InspectorPropertyGroup>
-      <InspectorPropertyGroup title="Valores derivados" mode="derived"><InspectorDerivedList rows={[{ label: 'ID', value: selectedNodalLoad.id }, { label: 'Nodo', value: selectedNodalLoad.nodeId }]} /></InspectorPropertyGroup>
+      <InspectorPropertyGroup title={t('inspector.derivedValues')} mode="derived"><InspectorDerivedList rows={[{ label: 'ID', value: selectedNodalLoad.id }, { label: t('inspector.node'), value: selectedNodalLoad.nodeId }]} /></InspectorPropertyGroup>
       <InspectorAdvancedProperties id="advanced-nodal-load" expanded={expandedSections} onExpandedChange={setExpandedSections}>
-        <InspectorLockedState title="Relación con el modelo">El nodo de aplicación y el identificador se derivan de la carga seleccionada.</InspectorLockedState>
+        <InspectorLockedState title={t('inspector.modelRelationship')}>{t('inspector.modelRelationshipBody')}</InspectorLockedState>
       </InspectorAdvancedProperties>
       <InspectorIssues issues={selectedIssues} />
-      <button type="button" className="danger-button" onClick={() => deleteLoad('nodal', selectedNodalLoad.id)}><Trash2 size={15} /> Eliminar carga</button>
+      <button type="button" className="danger-button" onClick={() => deleteLoad('nodal', selectedNodalLoad.id)}><Trash2 size={15} /> {t('inspector.deleteLoad')}</button>
     </> : null}
 
     {selectedMemberLoad ? <>
-      <InspectorPropertyGroup title="Propiedades frecuentes" description="Magnitud y posición sobre el miembro.">
-        <SelectField label="Tipo" value={selectedMemberLoad.type} onChange={(value) => updateMemberLoad('type', value)}><option value="distributed">Distribuida</option><option value="point">Puntual</option><option value="moment">Momento</option></SelectField>
-        <SelectField label="Caso" value={selectedMemberLoad.caseId} onChange={(value) => updateMemberLoad('caseId', value)}>{project.loadCases.map((loadCase) => <option key={loadCase.id} value={loadCase.id}>{loadCase.name}</option>)}</SelectField>
-        <div className="segmented-control" role="group" aria-label="Sistema de coordenadas">
-          {[{ value: 'global', label: 'Global' }, { value: 'local', label: 'Local' }].map((option) => <button type="button" key={option.value} aria-pressed={selectedMemberLoad.coordinateSystem === option.value} className={selectedMemberLoad.coordinateSystem === option.value ? 'active' : ''} onClick={() => updateMemberLoad('coordinateSystem', option.value)}>{option.label}</button>)}
+      <InspectorPropertyGroup title={t('inspector.frequentProperties')} description={t('inspector.memberLoadFrequentDescription')}>
+        <SelectField label={t('inspector.type')} value={selectedMemberLoad.type} onChange={(value) => updateMemberLoad('type', value)}><option value="distributed">{t('inspector.distributed')}</option><option value="point">{t('inspector.point')}</option><option value="moment">{t('inspector.moment')}</option></SelectField>
+        <SelectField label={t('inspector.case')} value={selectedMemberLoad.caseId} onChange={(value) => updateMemberLoad('caseId', value)}>{project.loadCases.map((loadCase) => <option key={loadCase.id} value={loadCase.id}>{loadCase.name}</option>)}</SelectField>
+        <div className="segmented-control" role="group" aria-label={t('inspector.coordinateSystem')}>
+          {[{ value: 'global', label: t('inspector.global') }, { value: 'local', label: t('inspector.local') }].map((option) => <button type="button" key={option.value} aria-pressed={selectedMemberLoad.coordinateSystem === option.value} className={selectedMemberLoad.coordinateSystem === option.value ? 'active' : ''} onClick={() => updateMemberLoad('coordinateSystem', option.value)}>{option.label}</button>)}
         </div>
-        {selectedMemberLoad.type === 'distributed' ? <SelectField label="Base" value={selectedMemberLoad.lengthBasis} onChange={(value) => updateMemberLoad('lengthBasis', value)}><option value="real">Longitud real</option><option value="horizontal">Proyección horizontal</option><option value="vertical">Proyección vertical</option></SelectField> : null}
+        {selectedMemberLoad.type === 'distributed' ? <SelectField label={t('inspector.base')} value={selectedMemberLoad.lengthBasis} onChange={(value) => updateMemberLoad('lengthBasis', value)}><option value="real">{t('inspector.realLength')}</option><option value="horizontal">{t('inspector.horizontalProjection')}</option><option value="vertical">{t('inspector.verticalProjection')}</option></SelectField> : null}
         {selectedMemberLoad.type === 'distributed' ? <>
-          <InspectorNumericField label="Desde" value={selectedMemberLoad.start} unit="x/L" resetKey={`${selectionKey}:start`} hint="Intervalo normalizado; debe ser menor que fin." validate={normalizedPosition} onCommit={(value) => updateMemberLoad('start', Math.max(0, Math.min(1, value)))} />
-          <InspectorNumericField label="Hasta" value={selectedMemberLoad.end} unit="x/L" resetKey={`${selectionKey}:end`} hint="Intervalo normalizado; debe ser mayor que inicio." validate={normalizedPosition} onCommit={(value) => updateMemberLoad('end', Math.max(0, Math.min(1, value)))} />
-          <PhysicalNumberField label="qx al inicio" value={selectedMemberLoad.qxStart ?? 0} units={units} quantity="distributedForce" resetKey={`${selectionKey}:qx-start`} onCommit={(value) => updateMemberLoad('qxStart', value)} />
-          <PhysicalNumberField label="qx al final" value={selectedMemberLoad.qxEnd ?? 0} units={units} quantity="distributedForce" resetKey={`${selectionKey}:qx-end`} onCommit={(value) => updateMemberLoad('qxEnd', value)} />
-          <PhysicalNumberField label="qy al inicio" value={selectedMemberLoad.qyStart ?? 0} units={units} quantity="distributedForce" resetKey={`${selectionKey}:qy-start`} onCommit={(value) => updateMemberLoad('qyStart', value)} />
-          <PhysicalNumberField label="qy al final" value={selectedMemberLoad.qyEnd ?? 0} units={units} quantity="distributedForce" resetKey={`${selectionKey}:qy-end`} onCommit={(value) => updateMemberLoad('qyEnd', value)} />
+          <InspectorNumericField label={t('inspector.from')} value={selectedMemberLoad.start} unit="x/L" resetKey={`${selectionKey}:start`} language={language} hint={t('inspector.normalizedBeforeEndHint')} validate={normalizedPosition} onCommit={(value) => updateMemberLoad('start', Math.max(0, Math.min(1, value)))} />
+          <InspectorNumericField label={t('inspector.to')} value={selectedMemberLoad.end} unit="x/L" resetKey={`${selectionKey}:end`} language={language} hint={t('inspector.normalizedAfterStartHint')} validate={normalizedPosition} onCommit={(value) => updateMemberLoad('end', Math.max(0, Math.min(1, value)))} />
+          <PhysicalNumberField label={t('inspector.qxStart')} value={selectedMemberLoad.qxStart ?? 0} units={units} quantity="distributedForce" resetKey={`${selectionKey}:qx-start`} onCommit={(value) => updateMemberLoad('qxStart', value)} />
+          <PhysicalNumberField label={t('inspector.qxEnd')} value={selectedMemberLoad.qxEnd ?? 0} units={units} quantity="distributedForce" resetKey={`${selectionKey}:qx-end`} onCommit={(value) => updateMemberLoad('qxEnd', value)} />
+          <PhysicalNumberField label={t('inspector.qyStart')} value={selectedMemberLoad.qyStart ?? 0} units={units} quantity="distributedForce" resetKey={`${selectionKey}:qy-start`} onCommit={(value) => updateMemberLoad('qyStart', value)} />
+          <PhysicalNumberField label={t('inspector.qyEnd')} value={selectedMemberLoad.qyEnd ?? 0} units={units} quantity="distributedForce" resetKey={`${selectionKey}:qy-end`} onCommit={(value) => updateMemberLoad('qyEnd', value)} />
         </> : null}
         {selectedMemberLoad.type === 'point' ? <>
-          <InspectorNumericField label="Posición" value={selectedMemberLoad.position ?? 0.5} unit="x/L" resetKey={`${selectionKey}:position`} validate={normalizedPosition} onCommit={(value) => updateMemberLoad('position', Math.max(0, Math.min(1, value)))} />
-          <PhysicalNumberField label="Fuerza X" value={selectedMemberLoad.px ?? 0} units={units} quantity="force" resetKey={`${selectionKey}:px`} onCommit={(value) => updateMemberLoad('px', value)} />
-          <PhysicalNumberField label="Fuerza Y" value={selectedMemberLoad.py ?? 0} units={units} quantity="force" resetKey={`${selectionKey}:py`} onCommit={(value) => updateMemberLoad('py', value)} />
+          <InspectorNumericField label={t('inspector.position')} value={selectedMemberLoad.position ?? 0.5} unit="x/L" resetKey={`${selectionKey}:position`} language={language} validate={normalizedPosition} onCommit={(value) => updateMemberLoad('position', Math.max(0, Math.min(1, value)))} />
+          <PhysicalNumberField label={t('inspector.forceX')} value={selectedMemberLoad.px ?? 0} units={units} quantity="force" resetKey={`${selectionKey}:px`} onCommit={(value) => updateMemberLoad('px', value)} />
+          <PhysicalNumberField label={t('inspector.forceY')} value={selectedMemberLoad.py ?? 0} units={units} quantity="force" resetKey={`${selectionKey}:py`} onCommit={(value) => updateMemberLoad('py', value)} />
         </> : null}
         {selectedMemberLoad.type === 'moment' ? <>
-          <InspectorNumericField label="Posición" value={selectedMemberLoad.position ?? 0.5} unit="x/L" resetKey={`${selectionKey}:position`} validate={normalizedPosition} onCommit={(value) => updateMemberLoad('position', Math.max(0, Math.min(1, value)))} />
+          <InspectorNumericField label={t('inspector.position')} value={selectedMemberLoad.position ?? 0.5} unit="x/L" resetKey={`${selectionKey}:position`} language={language} validate={normalizedPosition} onCommit={(value) => updateMemberLoad('position', Math.max(0, Math.min(1, value)))} />
           <PhysicalNumberField label="M" value={selectedMemberLoad.moment ?? 0} units={units} quantity="moment" resetKey={`${selectionKey}:moment`} onCommit={(value) => updateMemberLoad('moment', value)} />
         </> : null}
       </InspectorPropertyGroup>
-      <InspectorPropertyGroup title="Valores derivados" mode="derived"><InspectorDerivedList rows={[{ label: 'ID', value: selectedMemberLoad.id }, { label: 'Miembro', value: selectedMemberLoad.memberId }]} /></InspectorPropertyGroup>
+      <InspectorPropertyGroup title={t('inspector.derivedValues')} mode="derived"><InspectorDerivedList rows={[{ label: 'ID', value: selectedMemberLoad.id }, { label: t('inspector.member'), value: selectedMemberLoad.memberId }]} /></InspectorPropertyGroup>
       <InspectorAdvancedProperties id="advanced-member-load" expanded={expandedSections} onExpandedChange={setExpandedSections}>
-        <InspectorPropertyGroup title="Interpretación" description="Convención geométrica de la carga seleccionada.">
-          <InspectorHelper tone="warning">La base se convierte explícitamente antes del análisis; no modifica las magnitudes almacenadas.</InspectorHelper>
+        <InspectorPropertyGroup title={t('inspector.interpretation')} description={t('inspector.loadGeometryConvention')}>
+          <InspectorHelper tone="warning">{t('inspector.loadBasisConversionHelp')}</InspectorHelper>
         </InspectorPropertyGroup>
       </InspectorAdvancedProperties>
       <InspectorIssues issues={selectedIssues} />
-      <button type="button" className="danger-button" onClick={() => deleteLoad('member', selectedMemberLoad.id)}><Trash2 size={15} /> Eliminar carga</button>
+      <button type="button" className="danger-button" onClick={() => deleteLoad('member', selectedMemberLoad.id)}><Trash2 size={15} /> {t('inspector.deleteLoad')}</button>
     </> : null}
   </div>;
 };

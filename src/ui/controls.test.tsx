@@ -2,7 +2,7 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { Button, Field, SegmentedControl, Select } from './controls';
+import { Button, Field, IconButton, SegmentedControl, Select } from './controls';
 
 beforeAll(() => {
   if (!window.requestAnimationFrame) {
@@ -19,11 +19,18 @@ describe('component-library controls', () => {
     const onClick = vi.fn();
     render(<Button loading loadingLabel="Guardando" onClick={onClick}>Guardar</Button>);
 
-    const button = screen.getByRole('button', { name: 'Guardar' });
+    const button = screen.getByRole('button', { name: 'Guardando' });
     expect((button as HTMLButtonElement).disabled).toBe(true);
     expect(button.getAttribute('aria-busy')).toBe('true');
+    expect(button.getAttribute('aria-label')).toBe('Guardando');
     await user.click(button);
     expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('announces the active action for a loading icon button', () => {
+    render(<IconButton label="Exportar" loading loadingLabel="Exportando">icon</IconButton>);
+    const button = screen.getByRole('button', { name: 'Exportando' });
+    expect(button.getAttribute('aria-busy')).toBe('true');
   });
 
   it('connects field hints and errors to their controls', () => {
@@ -36,7 +43,9 @@ describe('component-library controls', () => {
     const invalid = screen.getByRole('textbox', { name: 'Longitud' });
     expect(document.getElementById(named.getAttribute('aria-describedby') ?? '')?.textContent).toBe('Etiqueta breve');
     expect(invalid.getAttribute('aria-invalid')).toBe('true');
+    expect(invalid.getAttribute('aria-errormessage')).toBe(invalid.getAttribute('aria-describedby'));
     expect(document.getElementById(invalid.getAttribute('aria-describedby') ?? '')?.textContent).toBe('Valor requerido');
+    expect(screen.getByRole('alert').textContent).toBe('Valor requerido');
   });
 
   it('emits native select changes and skips disabled segmented options with the keyboard', async () => {

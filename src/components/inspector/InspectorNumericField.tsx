@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
+import type { Language } from '../../i18n/catalogs';
 import {
   formatInspectorNumber,
   parseInspectorNumber,
@@ -20,6 +21,7 @@ export interface InspectorNumericFieldProps {
   id?: string;
   className?: string;
   formatOptions?: InspectorNumberFormatOptions;
+  language?: Language;
   emptyMessage?: string;
   invalidMessage?: string;
 }
@@ -42,9 +44,16 @@ export const InspectorNumericField = ({
   id: providedId,
   className = '',
   formatOptions,
-  emptyMessage = 'Este campo no puede quedar vacío.',
-  invalidMessage = 'Ingresa un número válido.',
+  language = 'es',
+  emptyMessage,
+  invalidMessage,
 }: InspectorNumericFieldProps) => {
+  const resolvedEmptyMessage = emptyMessage ?? (language === 'en'
+    ? 'This field cannot be empty.'
+    : 'Este campo no puede quedar vacío.');
+  const resolvedInvalidMessage = invalidMessage ?? (language === 'en'
+    ? 'Enter a valid number.'
+    : 'Ingresa un número válido.');
   const generatedId = useId();
   const inputId = providedId ?? `inspector-number-${generatedId}`;
   const unitId = unit ? `${inputId}-unit` : undefined;
@@ -65,7 +74,7 @@ export const InspectorNumericField = ({
 
   const validationMessage = (candidate: string) => {
     const parsed = parseInspectorNumber(candidate);
-    if (!parsed.ok) return parsed.reason === 'empty' ? emptyMessage : invalidMessage;
+    if (!parsed.ok) return parsed.reason === 'empty' ? resolvedEmptyMessage : resolvedInvalidMessage;
     return validate?.(parsed.value);
   };
 
@@ -88,10 +97,10 @@ export const InspectorNumericField = ({
 
     const parsed = parseInspectorNumber(text);
     const nextError = !parsed.ok
-      ? parsed.reason === 'empty' ? emptyMessage : invalidMessage
+      ? parsed.reason === 'empty' ? resolvedEmptyMessage : resolvedInvalidMessage
       : validate?.(parsed.value);
     if (!parsed.ok || nextError) {
-      setError(nextError ?? invalidMessage);
+      setError(nextError ?? resolvedInvalidMessage);
       return;
     }
 

@@ -74,6 +74,44 @@ describe('InspectorNumericField', () => {
     expect(screen.getByRole('alert').textContent).toBe('Ingresa un número válido.');
   });
 
+  it('localizes built-in validation feedback without changing the numeric draft', () => {
+    const onCommit = vi.fn();
+    const { rerender } = render(
+      <InspectorNumericField
+        label="Coordinate Y"
+        value={4.5}
+        unit="m"
+        resetKey="node:N1"
+        language="en"
+        onCommit={onCommit}
+      />,
+    );
+    const input = screen.getByRole('textbox', { name: 'Coordinate Y' }) as HTMLInputElement;
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '' } });
+    fireEvent.blur(input);
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(input.value).toBe('');
+    expect(screen.getByRole('alert').textContent).toBe('This field cannot be empty.');
+
+    rerender(
+      <InspectorNumericField
+        label="Coordinate Y"
+        value={4.5}
+        unit="m"
+        resetKey="node:N1"
+        language="en"
+        onCommit={onCommit}
+      />,
+    );
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'abc' } });
+    fireEvent.blur(input);
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert').textContent).toBe('Enter a valid number.');
+  });
+
   it('runs optional range validation without committing', () => {
     const onCommit = vi.fn();
     render(<InspectorNumericField
