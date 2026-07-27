@@ -11,6 +11,7 @@ import {
 import type { TranslationKey } from '../i18n/catalogs';
 import { useI18n } from '../i18n/useI18n';
 import type { ProjectModel } from '../types';
+import { useModalFocus } from '../ui/modalFocus';
 
 export interface NewExerciseDialogProps {
   open: boolean;
@@ -104,11 +105,8 @@ export const NewExerciseDialog = ({
   const [parameters, setParameters] = useState<Partial<ClassroomExerciseParameters>>(() => initialParameters(initialTemplateId));
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<ClassroomExerciseParameterKey, string>>>({});
   const dialogRef = useRef<HTMLDivElement>(null);
-  const onCloseRef = useRef(onClose);
   const shouldFocusInvalidRef = useRef(false);
   const template = getClassroomExerciseTemplate(templateId);
-
-  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   useEffect(() => {
     if (!shouldFocusInvalidRef.current) return;
@@ -121,38 +119,14 @@ export const NewExerciseDialog = ({
     setTemplateId(initialTemplateId);
     setParameters(initialParameters(initialTemplateId));
     setFieldErrors({});
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const focusHandle = window.requestAnimationFrame(() => dialogRef.current?.querySelector<HTMLElement>('button, input')?.focus());
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onCloseRef.current();
-        return;
-      }
-      if (event.key !== 'Tab') return;
-      const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]):not([tabindex="-1"]), input:not([disabled]):not([type="hidden"]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])') ?? [])]
-        .filter((element) => !element.closest('[hidden], [aria-hidden="true"], [inert]'));
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && (document.activeElement === first || !dialogRef.current?.contains(document.activeElement))) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && (document.activeElement === last || !dialogRef.current?.contains(document.activeElement))) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.cancelAnimationFrame(focusHandle);
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', onKeyDown);
-      if (previousFocus?.isConnected) window.requestAnimationFrame(() => previousFocus.focus());
-    };
   }, [initialTemplateId, open]);
+
+  useModalFocus({
+    open,
+    containerRef: dialogRef,
+    onEscape: onClose,
+    initialFocus: (dialog) => dialog.querySelector<HTMLElement>('button, input'),
+  });
 
   if (!open) return null;
 

@@ -15,7 +15,8 @@
     "qa:phase2": "npm run build && node qa-phase2.mjs",
     "qa:phase3": "npm run build && node qa-phase3.mjs",
     "qa:phase11": "npm run build && node qa-phase11.mjs",
-    "qa:phase12": "npm run build && node qa-phase12.mjs"
+    "qa:phase12": "npm run build && node qa-phase12.mjs",
+    "qa:phase13": "npm run build && node qa-phase13.mjs"
   },
   "dependencies": {
     "fflate": "^0.8.3",

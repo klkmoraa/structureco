@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createBlankProject, createHibbelerStyleDiagramPractice } from '../data/defaultProject';
@@ -84,6 +84,18 @@ describe('Results analytical center', () => {
     expect(screen.getByRole('button', { name: 'Continue building' })).toBeTruthy();
     expect(screen.queryByText(/Siguiente|Construye|Continuar construcción/)).toBeNull();
   });
+
+  it('announces the accessible fallback while the influence workspace loads on demand', async () => {
+    const user = userEvent.setup();
+    renderResults();
+    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
+    await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Influencia' }));
+
+    expect(screen.getByRole('status', { name: 'Cargando línea de influencia' })).toBeTruthy();
+    expect(await screen.findByRole('region', { name: 'Línea de influencia y tren de ejes' })).toBeTruthy();
+  }, 10_000);
 
   it('organizes tabs by purpose and supports keyboard plus persistent panel modes', async () => {
     const user = userEvent.setup();

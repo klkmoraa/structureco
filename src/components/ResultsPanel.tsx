@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import { AlertCircle, Check, ChevronDown, ChevronUp, CircleDotDashed, GripHorizontal } from 'lucide-react';
+import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { AlertCircle, Check, ChevronDown, ChevronUp, CircleDotDashed, GripHorizontal, LoaderCircle } from 'lucide-react';
 import { useProject, type ResultTab } from '../store/ProjectContext';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../engine/diagram';
 import { evaluateEducationalAssertions, type EducationalAssertionEvaluation } from '../engine/educationalAssertions';
@@ -12,9 +12,12 @@ import type { TranslationKey } from '../i18n/catalogs';
 import { ResultSummary } from './ResultSummary';
 import { useClassroomSession } from '../store/ClassroomSessionContext';
 import { deriveClassroomProgress, type ClassroomProgressStepId } from '../education/classroomProgress';
-import { InfluenceLineView } from './InfluenceLineView';
 import { formatResultNumber } from './results/resultFormatting';
 import { ClassroomPredictionForm } from './ClassroomPredictionForm';
+
+const loadInfluenceLineView = () => import('./InfluenceLineView')
+  .then((module) => ({ default: module.InfluenceLineView }));
+const LazyInfluenceLineView = lazy(loadInfluenceLineView);
 
 const tabs: Array<{ id: ResultTab; labelKey: TranslationKey; color?: string }> = [
   { id: 'summary', labelKey: 'results.summary' },
@@ -358,7 +361,7 @@ export const ResultsPanel = () => {
           <span id={`result-family-${family.id}`} className="result-tab-family__label">{t(family.labelKey)}</span>
           <div role="presentation">{family.tabs.map((tab) => {
             const index = availableTabs.findIndex((item) => item.id === tab.id);
-            return <button id={`result-tab-${tab.id}`} key={tab.id} data-result-tab={tab.id} role="tab" aria-selected={resultTab === tab.id} aria-describedby={`result-family-${family.id}`} aria-controls="results-content" tabIndex={resultTab === tab.id ? 0 : -1} className={`${resultTab === tab.id ? 'active' : ''} ${tab.color ?? ''}`} onClick={() => setResultTab(tab.id)} onKeyDown={(event) => {
+            return <button id={`result-tab-${tab.id}`} key={tab.id} data-result-tab={tab.id} role="tab" aria-selected={resultTab === tab.id} aria-describedby={`result-family-${family.id}`} aria-controls="results-content" tabIndex={resultTab === tab.id ? 0 : -1} className={`${resultTab === tab.id ? 'active' : ''} ${tab.color ?? ''}`} onFocus={() => { if (tab.id === 'influence') void loadInfluenceLineView(); }} onPointerEnter={() => { if (tab.id === 'influence') void loadInfluenceLineView(); }} onClick={() => setResultTab(tab.id)} onKeyDown={(event) => {
               let nextIndex = index;
               if (event.key === 'ArrowLeft') nextIndex = (index - 1 + availableTabs.length) % availableTabs.length;
               else if (event.key === 'ArrowRight') nextIndex = (index + 1) % availableTabs.length;
@@ -382,7 +385,7 @@ export const ResultsPanel = () => {
         {analysis?.success && resultsAllowed && resultTab === 'reactions' ? <ReactionTable /> : null}
         {analysis?.success && resultsAllowed && resultTab === 'summary' ? <ResultSummary /> : null}
         {analysis?.success && resultsAllowed && ['axial', 'shear', 'moment'].includes(resultTab) ? <DiagramView type={resultTab as 'axial' | 'shear' | 'moment'} memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
-        {analysis?.success && resultsAllowed && resultTab === 'influence' ? <InfluenceLineView project={project} selection={selection ?? undefined} onCanvasStateChange={setInfluenceCanvasState} /> : null}
+        {analysis?.success && resultsAllowed && resultTab === 'influence' ? <Suspense fallback={<div className="results-view-loading" role="status" aria-label={t('results.loadingInfluence')}><LoaderCircle className="spin" size={20} aria-hidden="true" /><span>{t('results.loadingInfluence')}</span></div>}><LazyInfluenceLineView project={project} selection={selection ?? undefined} onCanvasStateChange={setInfluenceCanvasState} /></Suspense> : null}
         {analysis?.success && resultsAllowed && resultTab === 'deformed' ? <DeformationView memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
         {analysis?.success && resultsAllowed && resultTab === 'learn' ? <LearningSteps /> : null}
         {analysis && resultTab === 'issues' && !classroomPredictionRequired ? <IssuesView /> : null}

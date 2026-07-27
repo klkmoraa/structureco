@@ -17,6 +17,7 @@ import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent as Reac
 import { translate, type TranslationKey } from '../i18n/catalogs';
 import { useI18n } from '../i18n/useI18n';
 import type { AnalysisResult, ProjectModel } from '../types';
+import { useModalFocus } from '../ui/modalFocus';
 import { importProjectJson } from '../utils/export';
 
 export type ImportContentKey =
@@ -228,9 +229,6 @@ export const ImportCenterDialog = ({
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const onCloseRef = useRef(onClose);
-
-  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -243,44 +241,17 @@ export const ImportCenterDialog = ({
     setDragging(false);
     setError(null);
     setOutcome(null);
-    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const focusHandle = window.requestAnimationFrame(() => {
-      const dialog = dialogRef.current;
-      (
-        dialog?.querySelector<HTMLElement>('[data-import-stage-focus="select"]')
-        ?? dialog?.querySelector<HTMLElement>('.import-center-close')
-      )?.focus();
-    });
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onCloseRef.current();
-        return;
-      }
-      if (event.key !== 'Tab') return;
-      const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]):not([tabindex="-1"]), input:not([disabled]):not([type="hidden"]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), [tabindex]:not([tabindex="-1"])') ?? [])]
-        .filter((element) => !element.closest('[hidden], [aria-hidden="true"], [inert]'));
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && (document.activeElement === first || !dialogRef.current?.contains(document.activeElement))) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && (document.activeElement === last || !dialogRef.current?.contains(document.activeElement))) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.cancelAnimationFrame(focusHandle);
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener('keydown', onKeyDown);
-      if (previousFocus?.isConnected) window.requestAnimationFrame(() => previousFocus.focus());
-    };
   }, [onSaveCurrent, open]);
+
+  useModalFocus({
+    open,
+    containerRef: dialogRef,
+    onEscape: onClose,
+    initialFocus: (dialog) => (
+      dialog.querySelector<HTMLElement>('[data-import-stage-focus="select"]')
+      ?? dialog.querySelector<HTMLElement>('.import-center-close')
+    ),
+  });
 
   useEffect(() => {
     if (!open) return;
