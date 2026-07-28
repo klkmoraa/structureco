@@ -364,6 +364,21 @@ const exerciseResults = async (page, row, scope, spec, browserName, requestedAss
       check(row, scope, 'compactResultTabs', compactDensity.tabsHeight <= 48, JSON.stringify(compactDensity));
       check(row, scope, 'compactResultPanel', compactDensity.panelHeight <= spec.height * 0.43, JSON.stringify(compactDensity));
       check(row, scope, 'compactResultLegend', compactDensity.legendHeight === 0 || compactDensity.legendHeight <= 44, JSON.stringify(compactDensity));
+      const commandbar = page.locator('.results-commandbar');
+      const commandbarDisplayNone = await commandbar.evaluate((element) => getComputedStyle(element).display === 'none');
+      await resultToggle.focus();
+      await page.keyboard.press('Tab');
+      const commandbarSkipsFocus = await page.evaluate(() => {
+        const context = document.querySelector('.results-commandbar');
+        return Boolean(context && !context.contains(document.activeElement));
+      });
+      check(
+        row,
+        scope,
+        'compactResultContextUntabbable',
+        commandbarDisplayNone && commandbarSkipsFocus,
+        JSON.stringify({ commandbarDisplayNone, commandbarSkipsFocus }),
+      );
     } else {
       await page.waitForFunction(() => document.querySelector('.results-panel[role="dialog"]')?.contains(document.activeElement));
       const resultTrap = await verifyFocusTrap(page, expandedResults);

@@ -166,6 +166,15 @@ const runViewport = async (browserName, browser, spec) => {
       checks.compactResultTabs = compactDensity.tabsHeight <= 48;
       checks.compactResultPanel = compactDensity.panelHeight <= spec.height * 0.43;
       checks.compactResultLegend = compactDensity.legendHeight === 0 || compactDensity.legendHeight <= 44;
+      const commandbar = page.locator('.results-commandbar');
+      const commandbarDisplayNone = await commandbar.evaluate((element) => getComputedStyle(element).display === 'none');
+      await resultLauncher.focus();
+      await page.keyboard.press('Tab');
+      const commandbarSkipsFocus = await page.evaluate(() => {
+        const context = document.querySelector('.results-commandbar');
+        return Boolean(context && !context.contains(document.activeElement));
+      });
+      checks.compactResultContextUntabbable = commandbarDisplayNone && commandbarSkipsFocus;
       checks.resultsReserveCanvasSpace = Boolean(resultLayout?.reservedCanvasSpace);
       const fitControl = page.getByRole('button', { name: 'Ajustar modelo a la vista' });
       const fitBox = await fitControl.boundingBox();
