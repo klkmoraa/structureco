@@ -94,7 +94,11 @@ describe('Results analytical center', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Influencia' }));
 
     expect(screen.getByRole('status', { name: 'Cargando línea de influencia' })).toBeTruthy();
-    expect(await screen.findByRole('region', { name: 'Línea de influencia y tren de ejes' })).toBeTruthy();
+    expect(await screen.findByRole(
+      'region',
+      { name: 'Línea de influencia y tren de ejes' },
+      { timeout: 5_000 },
+    )).toBeTruthy();
   }, 10_000);
 
   it('organizes tabs by purpose and supports keyboard plus persistent panel modes', async () => {

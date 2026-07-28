@@ -1,0 +1,714 @@
+{
+  "phase": 14,
+  "generatedAt": "2026-07-28T05:41:57.532Z",
+  "environment": {
+    "node": "v24.18.0",
+    "platform": "win32-x64",
+    "headless": true,
+    "previewPort": 4184
+  },
+  "browsers": {
+    "chromium": {
+      "desktop": {
+        "viewport": "1536x960",
+        "touch": false,
+        "theme": "light",
+        "checks": {
+          "themeApplied": true,
+          "canvasVisible": true,
+          "workspaceActivatedWithin10s": true,
+          "selectionWorks": true,
+          "multiSelectionWorks": true,
+          "analysisResolved": true,
+          "analysisWorkerRequested": true,
+          "analysisCompletedWithin20s": true,
+          "persistentInspector": true,
+          "resultsPanelVisible": true,
+          "summaryVisible": true,
+          "momentDiagramVisible": true,
+          "momentKeyboardCursor": true,
+          "deformationVisible": true,
+          "learningStepsVisible": true,
+          "influenceLazyViewVisible": true,
+          "influenceChunkRequested": true,
+          "influenceCalculated": true,
+          "influenceWorkerRequested": true,
+          "noHorizontalOverflow": true,
+          "undoEnabledAfterEdit": true,
+          "undoRestoresEdit": true,
+          "redoRestoresEdit": true,
+          "unitSelectionVisible": true,
+          "unitSwitchPreservesTechnicalValues": true,
+          "consoleClean": true,
+          "pageErrorsClean": true
+        },
+        "timings": {
+          "cleanStartupMs": 1517.62,
+          "workspaceActivationMs": 548.8,
+          "analysisMs": 540.4,
+          "momentTabMs": 218.97,
+          "influenceActivationMs": 424.07
+        },
+        "resources": {
+          "navigation": [
+            {
+              "duration": 30.6,
+              "domContentLoaded": 30.5,
+              "loadEvent": 30.6,
+              "transferSize": 300,
+              "decodedBodySize": 1574
+            }
+          ],
+          "resourceCount": 15,
+          "transferSize": 70432,
+          "decodedBodySize": 205731,
+          "longTaskSupported": true,
+          "longTaskCount": 1,
+          "longTaskTotalMs": 168,
+          "longestTaskMs": 168
+        },
+        "requestedAssets": [
+          "InfluenceLineView-BuTvgsXA.js",
+          "WorkspaceShell-BKKDiSza.js",
+          "WorkspaceShell-BcxUA6Ay.css",
+          "analysis.worker-DGWJYyKB.js",
+          "index-DGLmSazj.css",
+          "index-DTONzcs1.js",
+          "influence.worker-CylX3CWD.js",
+          "migrate-CXbEFtjY.js",
+          "modelOperations-CGzj28H-.js",
+          "preload-helper-HclGiUj8.js",
+          "rolldown-runtime-QTnfLwEv.js",
+          "solver-DHmhvbTA.js",
+          "units-BeEUHQSx.js",
+          "useI18n-D2Kx_1YP.js"
+        ],
+        "console": [],
+        "pageErrors": [],
+        "shellMetrics": {
+          "scrollWidth": 1536,
+          "clientWidth": 1536,
+          "scrollHeight": 960,
+          "clientHeight": 960
+        }
+      },
+      "tablet": {
+        "viewport": "834x1194",
+        "touch": true,
+        "theme": "dark",
+        "checks": {
+          "themeApplied": true,
+          "canvasVisible": true,
+          "workspaceActivatedWithin10s": true,
+          "selectionWorks": true,
+          "analysisResolved": true,
+          "analysisWorkerRequested": true,
+          "analysisCompletedWithin20s": true,
+          "resultsDialogSemantics": true,
+          "resultsFocusTrapBackward": true,
+          "resultsFocusTrapForward": true,
+          "resultsWithinViewport": true,
+          "resultsEscapeCloses": true,
+          "resultsFocusReturns": true,
+          "summaryVisible": true,
+          "momentDiagramVisible": true,
+          "momentKeyboardCursor": true,
+          "noHorizontalOverflow": true,
+          "inspectorDialogSemantics": true,
+          "inspectorFocusTrapBackward": true,
+          "inspectorFocusTrapForward": true,
+          "inspectorWithinViewport": true,
+          "inspectorEscapeCloses": true,
+          "inspectorFocusReturns": true,
+          "consoleClean": true,
+          "pageErrorsClean": true
+        },
+        "timings": {
+          "cleanStartupMs": 1350.06,
+          "workspaceActivationMs": 524.85,
+          "analysisMs": 259.92,
+          "momentTabMs": 79.97
+        },
+        "resources": {
+          "navigation": [
+            {
+              "duration": 33.1,
+              "domContentLoaded": 32.9,
+              "loadEvent": 33.1,
+              "transferSize": 300,
+              "decodedBodySize": 1574
+            }
+          ],
+          "resourceCount": 13,
+          "transferSize": 30239,
+          "decodedBodySize": 81972,
+          "longTaskSupported": true,
+          "longTaskCount": 4,
+          "longTaskTotalMs": 306,
+          "longestTaskMs": 135
+        },
+        "requestedAssets": [
+          "WorkspaceShell-BKKDiSza.js",
+          "WorkspaceShell-BcxUA6Ay.css",
+          "analysis.worker-DGWJYyKB.js",
+          "index-DGLmSazj.css",
+          "index-DTONzcs1.js",
+          "migrate-CXbEFtjY.js",
+          "modelOperations-CGzj28H-.js",
+          "preload-helper-HclGiUj8.js",
+          "rolldown-runtime-QTnfLwEv.js",
+          "solver-DHmhvbTA.js",
+          "units-BeEUHQSx.js",
+          "useI18n-D2Kx_1YP.js"
+        ],
+        "console": [],
+        "pageErrors": [],
+        "shellMetrics": {
+          "scrollWidth": 834,
+          "clientWidth": 834,
+          "scrollHeight": 1194,
+          "clientHeight": 1194
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "touch": true,
+        "theme": "light",
+        "checks": {
+          "themeApplied": true,
+          "canvasVisible": true,
+          "workspaceActivatedWithin10s": true,
+          "selectionWorks": true,
+          "analysisResolved": true,
+          "analysisWorkerRequested": true,
+          "analysisCompletedWithin20s": true,
+          "resultsDialogSemantics": true,
+          "resultsFocusTrapBackward": true,
+          "resultsFocusTrapForward": true,
+          "resultsWithinViewport": true,
+          "resultsEscapeCloses": true,
+          "resultsFocusReturns": true,
+          "summaryVisible": true,
+          "momentDiagramVisible": true,
+          "momentKeyboardCursor": true,
+          "noHorizontalOverflow": true,
+          "inspectorDialogSemantics": true,
+          "inspectorFocusTrapBackward": true,
+          "inspectorFocusTrapForward": true,
+          "inspectorWithinViewport": true,
+          "inspectorEscapeCloses": true,
+          "inspectorFocusReturns": true,
+          "consoleClean": true,
+          "pageErrorsClean": true
+        },
+        "timings": {
+          "cleanStartupMs": 1444.56,
+          "workspaceActivationMs": 449.74,
+          "analysisMs": 293.02,
+          "momentTabMs": 183.98
+        },
+        "resources": {
+          "navigation": [
+            {
+              "duration": 30.2,
+              "domContentLoaded": 29,
+              "loadEvent": 30.2,
+              "transferSize": 300,
+              "decodedBodySize": 1574
+            }
+          ],
+          "resourceCount": 13,
+          "transferSize": 30239,
+          "decodedBodySize": 81972,
+          "longTaskSupported": true,
+          "longTaskCount": 2,
+          "longTaskTotalMs": 149,
+          "longestTaskMs": 82
+        },
+        "requestedAssets": [
+          "WorkspaceShell-BKKDiSza.js",
+          "WorkspaceShell-BcxUA6Ay.css",
+          "analysis.worker-DGWJYyKB.js",
+          "index-DGLmSazj.css",
+          "index-DTONzcs1.js",
+          "migrate-CXbEFtjY.js",
+          "modelOperations-CGzj28H-.js",
+          "preload-helper-HclGiUj8.js",
+          "rolldown-runtime-QTnfLwEv.js",
+          "solver-DHmhvbTA.js",
+          "units-BeEUHQSx.js",
+          "useI18n-D2Kx_1YP.js"
+        ],
+        "console": [],
+        "pageErrors": [],
+        "shellMetrics": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "scrollHeight": 844,
+          "clientHeight": 844
+        }
+      }
+    },
+    "webkit": {
+      "desktop": {
+        "viewport": "1366x768",
+        "touch": false,
+        "theme": "dark",
+        "checks": {
+          "themeApplied": true,
+          "canvasVisible": true,
+          "workspaceActivatedWithin10s": true,
+          "selectionWorks": true,
+          "multiSelectionWorks": true,
+          "analysisResolved": true,
+          "analysisWorkerRequested": true,
+          "analysisCompletedWithin20s": true,
+          "persistentInspector": true,
+          "resultsPanelVisible": true,
+          "summaryVisible": true,
+          "momentDiagramVisible": true,
+          "momentKeyboardCursor": true,
+          "deformationVisible": true,
+          "learningStepsVisible": true,
+          "noHorizontalOverflow": true,
+          "consoleClean": true,
+          "pageErrorsClean": true
+        },
+        "timings": {
+          "cleanStartupMs": 1197.21,
+          "workspaceActivationMs": 592.36,
+          "analysisMs": 550.16,
+          "momentTabMs": 282.07
+        },
+        "resources": {
+          "navigation": [
+            {
+              "duration": 77,
+              "domContentLoaded": 76,
+              "loadEvent": 77,
+              "transferSize": 941,
+              "decodedBodySize": 1574
+            }
+          ],
+          "resourceCount": 13,
+          "transferSize": 128582,
+          "decodedBodySize": 452170,
+          "longTaskSupported": true,
+          "longTaskCount": 0,
+          "longTaskTotalMs": 0,
+          "longestTaskMs": 0
+        },
+        "requestedAssets": [
+          "WorkspaceShell-BKKDiSza.js",
+          "WorkspaceShell-BcxUA6Ay.css",
+          "analysis.worker-DGWJYyKB.js",
+          "index-DGLmSazj.css",
+          "index-DTONzcs1.js",
+          "migrate-CXbEFtjY.js",
+          "modelOperations-CGzj28H-.js",
+          "preload-helper-HclGiUj8.js",
+          "rolldown-runtime-QTnfLwEv.js",
+          "solver-DHmhvbTA.js",
+          "units-BeEUHQSx.js",
+          "useI18n-D2Kx_1YP.js"
+        ],
+        "console": [],
+        "pageErrors": [],
+        "shellMetrics": {
+          "scrollWidth": 1366,
+          "clientWidth": 1366,
+          "scrollHeight": 768,
+          "clientHeight": 768
+        }
+      },
+      "tablet": {
+        "viewport": "834x1194",
+        "touch": true,
+        "theme": "light",
+        "checks": {
+          "themeApplied": true,
+          "canvasVisible": true,
+          "workspaceActivatedWithin10s": true,
+          "selectionWorks": true,
+          "analysisResolved": true,
+          "analysisWorkerRequested": true,
+          "analysisCompletedWithin20s": true,
+          "resultsDialogSemantics": true,
+          "resultsFocusTrapBackward": true,
+          "resultsFocusTrapForward": true,
+          "resultsWithinViewport": true,
+          "resultsEscapeCloses": true,
+          "resultsFocusReturns": true,
+          "summaryVisible": true,
+          "momentDiagramVisible": true,
+          "momentKeyboardCursor": true,
+          "noHorizontalOverflow": true,
+          "inspectorDialogSemantics": true,
+          "inspectorFocusTrapBackward": true,
+          "inspectorFocusTrapForward": true,
+          "inspectorWithinViewport": true,
+          "inspectorEscapeCloses": true,
+          "inspectorFocusReturns": true,
+          "consoleClean": true,
+          "pageErrorsClean": true
+        },
+        "timings": {
+          "cleanStartupMs": 1247.18,
+          "workspaceActivationMs": 603.73,
+          "analysisMs": 426.04,
+          "momentTabMs": 401.47
+        },
+        "resources": {
+          "navigation": [
+            {
+              "duration": 92,
+              "domContentLoaded": 91,
+              "loadEvent": 92,
+              "transferSize": 941,
+              "decodedBodySize": 1574
+            }
+          ],
+          "resourceCount": 13,
+          "transferSize": 128582,
+          "decodedBodySize": 452170,
+          "longTaskSupported": true,
+          "longTaskCount": 0,
+          "longTaskTotalMs": 0,
+          "longestTaskMs": 0
+        },
+        "requestedAssets": [
+          "WorkspaceShell-BKKDiSza.js",
+          "WorkspaceShell-BcxUA6Ay.css",
+          "analysis.worker-DGWJYyKB.js",
+          "index-DGLmSazj.css",
+          "index-DTONzcs1.js",
+          "migrate-CXbEFtjY.js",
+          "modelOperations-CGzj28H-.js",
+          "preload-helper-HclGiUj8.js",
+          "rolldown-runtime-QTnfLwEv.js",
+          "solver-DHmhvbTA.js",
+          "units-BeEUHQSx.js",
+          "useI18n-D2Kx_1YP.js"
+        ],
+        "console": [],
+        "pageErrors": [],
+        "shellMetrics": {
+          "scrollWidth": 834,
+          "clientWidth": 834,
+          "scrollHeight": 1194,
+          "clientHeight": 1194
+        }
+      },
+      "mobile": {
+        "viewport": "390x844",
+        "touch": true,
+        "theme": "dark",
+        "checks": {
+          "themeApplied": true,
+          "canvasVisible": true,
+          "workspaceActivatedWithin10s": true,
+          "selectionWorks": true,
+          "analysisResolved": true,
+          "analysisWorkerRequested": true,
+          "analysisCompletedWithin20s": true,
+          "resultsDialogSemantics": true,
+          "resultsFocusTrapBackward": true,
+          "resultsFocusTrapForward": true,
+          "resultsWithinViewport": true,
+          "resultsEscapeCloses": true,
+          "resultsFocusReturns": true,
+          "summaryVisible": true,
+          "momentDiagramVisible": true,
+          "momentKeyboardCursor": true,
+          "noHorizontalOverflow": true,
+          "inspectorDialogSemantics": true,
+          "inspectorFocusTrapBackward": true,
+          "inspectorFocusTrapForward": true,
+          "inspectorWithinViewport": true,
+          "inspectorEscapeCloses": true,
+          "inspectorFocusReturns": true,
+          "consoleClean": true,
+          "pageErrorsClean": true
+        },
+        "timings": {
+          "cleanStartupMs": 1187.66,
+          "workspaceActivationMs": 565.51,
+          "analysisMs": 380.22,
+          "momentTabMs": 201.87
+        },
+        "resources": {
+          "navigation": [
+            {
+              "duration": 90,
+              "domContentLoaded": 90,
+              "loadEvent": 90,
+              "transferSize": 941,
+              "decodedBodySize": 1574
+            }
+          ],
+          "resourceCount": 13,
+          "transferSize": 128582,
+          "decodedBodySize": 452170,
+          "longTaskSupported": true,
+          "longTaskCount": 0,
+          "longTaskTotalMs": 0,
+          "longestTaskMs": 0
+        },
+        "requestedAssets": [
+          "WorkspaceShell-BKKDiSza.js",
+          "WorkspaceShell-BcxUA6Ay.css",
+          "analysis.worker-DGWJYyKB.js",
+          "index-DGLmSazj.css",
+          "index-DTONzcs1.js",
+          "migrate-CXbEFtjY.js",
+          "modelOperations-CGzj28H-.js",
+          "preload-helper-HclGiUj8.js",
+          "rolldown-runtime-QTnfLwEv.js",
+          "solver-DHmhvbTA.js",
+          "units-BeEUHQSx.js",
+          "useI18n-D2Kx_1YP.js"
+        ],
+        "console": [],
+        "pageErrors": [],
+        "shellMetrics": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "scrollHeight": 844,
+          "clientHeight": 844
+        }
+      }
+    }
+  },
+  "criticalFlows": {
+    "importExport": {
+      "checks": {
+        "jsonDownloaded": true,
+        "exportPreservesTechnicalValues": true,
+        "dialogModal": true,
+        "initialFocusInside": true,
+        "resultFocused": true,
+        "roundTripPreservesTechnicalValues": true,
+        "workspaceRestored": true,
+        "consoleClean": true,
+        "pageErrorsClean": true
+      },
+      "console": [],
+      "pageErrors": []
+    },
+    "classroom": {
+      "checks": {
+        "journeyVisible": true,
+        "predictionRequiredBeforeResults": true,
+        "predictionTabsKeyboardAccessible": true,
+        "resultsRemainLocked": true,
+        "resultsRevealAfterPrediction": true,
+        "classroomModeRetained": true,
+        "consoleClean": true,
+        "pageErrorsClean": true
+      },
+      "console": [],
+      "pageErrors": []
+    }
+  },
+  "runtime": {
+    "samples": [
+      {
+        "browser": "chromium",
+        "viewport": "desktop",
+        "cleanStartupMs": 1517.62,
+        "workspaceActivationMs": 548.8,
+        "analysisMs": 540.4,
+        "momentTabMs": 218.97,
+        "influenceActivationMs": 424.07,
+        "navigation": [
+          {
+            "duration": 30.6,
+            "domContentLoaded": 30.5,
+            "loadEvent": 30.6,
+            "transferSize": 300,
+            "decodedBodySize": 1574
+          }
+        ],
+        "resourceCount": 15,
+        "transferSize": 70432,
+        "decodedBodySize": 205731,
+        "longTaskSupported": true,
+        "longTaskCount": 1,
+        "longTaskTotalMs": 168,
+        "longestTaskMs": 168
+      },
+      {
+        "browser": "chromium",
+        "viewport": "tablet",
+        "cleanStartupMs": 1350.06,
+        "workspaceActivationMs": 524.85,
+        "analysisMs": 259.92,
+        "momentTabMs": 79.97,
+        "navigation": [
+          {
+            "duration": 33.1,
+            "domContentLoaded": 32.9,
+            "loadEvent": 33.1,
+            "transferSize": 300,
+            "decodedBodySize": 1574
+          }
+        ],
+        "resourceCount": 13,
+        "transferSize": 30239,
+        "decodedBodySize": 81972,
+        "longTaskSupported": true,
+        "longTaskCount": 4,
+        "longTaskTotalMs": 306,
+        "longestTaskMs": 135
+      },
+      {
+        "browser": "chromium",
+        "viewport": "mobile",
+        "cleanStartupMs": 1444.56,
+        "workspaceActivationMs": 449.74,
+        "analysisMs": 293.02,
+        "momentTabMs": 183.98,
+        "navigation": [
+          {
+            "duration": 30.2,
+            "domContentLoaded": 29,
+            "loadEvent": 30.2,
+            "transferSize": 300,
+            "decodedBodySize": 1574
+          }
+        ],
+        "resourceCount": 13,
+        "transferSize": 30239,
+        "decodedBodySize": 81972,
+        "longTaskSupported": true,
+        "longTaskCount": 2,
+        "longTaskTotalMs": 149,
+        "longestTaskMs": 82
+      },
+      {
+        "browser": "webkit",
+        "viewport": "desktop",
+        "cleanStartupMs": 1197.21,
+        "workspaceActivationMs": 592.36,
+        "analysisMs": 550.16,
+        "momentTabMs": 282.07,
+        "navigation": [
+          {
+            "duration": 77,
+            "domContentLoaded": 76,
+            "loadEvent": 77,
+            "transferSize": 941,
+            "decodedBodySize": 1574
+          }
+        ],
+        "resourceCount": 13,
+        "transferSize": 128582,
+        "decodedBodySize": 452170,
+        "longTaskSupported": true,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0
+      },
+      {
+        "browser": "webkit",
+        "viewport": "tablet",
+        "cleanStartupMs": 1247.18,
+        "workspaceActivationMs": 603.73,
+        "analysisMs": 426.04,
+        "momentTabMs": 401.47,
+        "navigation": [
+          {
+            "duration": 92,
+            "domContentLoaded": 91,
+            "loadEvent": 92,
+            "transferSize": 941,
+            "decodedBodySize": 1574
+          }
+        ],
+        "resourceCount": 13,
+        "transferSize": 128582,
+        "decodedBodySize": 452170,
+        "longTaskSupported": true,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0
+      },
+      {
+        "browser": "webkit",
+        "viewport": "mobile",
+        "cleanStartupMs": 1187.66,
+        "workspaceActivationMs": 565.51,
+        "analysisMs": 380.22,
+        "momentTabMs": 201.87,
+        "navigation": [
+          {
+            "duration": 90,
+            "domContentLoaded": 90,
+            "loadEvent": 90,
+            "transferSize": 941,
+            "decodedBodySize": 1574
+          }
+        ],
+        "resourceCount": 13,
+        "transferSize": 128582,
+        "decodedBodySize": 452170,
+        "longTaskSupported": true,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0
+      }
+    ],
+    "summary": {
+      "cleanStartupMs": {
+        "samples": 6,
+        "minimum": 1187.66,
+        "median": 1350.06,
+        "maximum": 1517.62
+      },
+      "workspaceActivationMs": {
+        "samples": 6,
+        "minimum": 449.74,
+        "median": 565.51,
+        "maximum": 603.73
+      },
+      "analysisMs": {
+        "samples": 6,
+        "minimum": 259.92,
+        "median": 426.04,
+        "maximum": 550.16
+      },
+      "momentTabMs": {
+        "samples": 6,
+        "minimum": 79.97,
+        "median": 218.97,
+        "maximum": 401.47
+      },
+      "longTaskTotalMs": {
+        "samples": 6,
+        "minimum": 0,
+        "median": 149,
+        "maximum": 306
+      },
+      "longestTaskMs": {
+        "samples": 6,
+        "minimum": 0,
+        "median": 82,
+        "maximum": 168
+      },
+      "note": "Tiempos locales headless; sirven como línea base reproducible y no como SLA de hardware real."
+    }
+  },
+  "screenshots": [
+    "phase14-chromium-desktop-1536x960-light.png",
+    "phase14-chromium-tablet-834x1194-dark.png",
+    "phase14-chromium-mobile-390x844-light.png",
+    "phase14-chromium-import-roundtrip-1536x960.png",
+    "phase14-webkit-desktop-1366x768-dark.png",
+    "phase14-webkit-tablet-834x1194-light.png",
+    "phase14-webkit-mobile-390x844-dark.png",
+    "phase14-webkit-classroom-1366x768-dark.png"
+  ],
+  "console": [],
+  "pageErrors": [],
+  "failures": []
+}

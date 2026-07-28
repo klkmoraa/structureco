@@ -1,5 +1,33 @@
 # Fidelity ledger
 
+## Fase 14 - cierre del candidato
+
+Referencia rectora: Plan Maestro, Fase 14, páginas 47-49. Las referencias se aplican como especificación de intención sobre la aplicación real; no como sustitución del lenguaje visual técnico establecido.
+
+| Criterio | Resultado final | Evidencia | Estado |
+| --- | --- | --- | --- |
+| Canvas-first y navegación global | El modelo conserva el área principal; rail/dock, chrome y safe zones mantienen jerarquía y acceso. | Capturas Chromium/WebKit desktop, tablet y móvil. | **Aprobado** |
+| Inspector y propiedades | Resumen, propiedades frecuentes, avanzadas y derivadas mantienen editabilidad, unidades, bloqueo Aula y precisión de presentación. | Capturas desktop Light/Dark, suite de Inspector y fingerprint técnico. | **Aprobado** |
+| Centro analítico | Tabs por intención, resumen, diagramas, deformada, influencia, aprendizaje y avisos conservan trazabilidad. | `phase14-metrics.json`, desktop y sheets responsive. | **Aprobado** |
+| Aula | Predicción, análisis, comparación, revelado y conclusión se distinguen con acento educativo sin crear un segundo motor. | `phase14-webkit-classroom-1366x768-dark.png`. | **Aprobado** |
+| Responsive | Panel lateral en desktop, drawer/sheet en tablet y pantalla completa en móvil sin overflow horizontal. | Seis filas 1536/1366/834/390 en Chromium y WebKit. | **Aprobado** |
+| Light/Dark y color semántico | Acción, selección, magnitudes, estados y modo Aula conservan roles separados y legibles. | Cuatro combinaciones finales de tema y motor. | **Aprobado** |
+| Teclado y foco | Focus trap hacia delante/atrás, Escape, retorno al launcher, tabs y cursor de diagramas pasan. | Checks `results*`, `inspector*` y `momentKeyboardCursor`. | **Aprobado** |
+| Importación/exportación | Preview, confirmación, foco por etapa y resultado no rompen el shell ni el contexto técnico. | `phase14-chromium-import-roundtrip-1536x960.png`. | **Aprobado** |
+| Rendimiento perceptible | La carga temprana combinada baja; Influencia y workers siguen bajo demanda. | `PERFORMANCE_REPORT.md` y métricas de Fases 13-14. | **Aprobado** |
+| Integridad matemática | Cero cambios en los 45 archivos protegidos; resultados, signos, unidades y tolerancias preservados. | Huella SHA-256 `bb6fd8de4d1cc1054754db5460647ec4c6c2715499a45ea7eff7df87514d2f65`. | **Aprobado** |
+
+### Desviaciones aceptadas
+
+- La composición adapta densidad y chrome por viewport; no intenta forzar la misma distribución desktop en móvil.
+- En móvil, resultados ocupan una superficie modal completa para proteger legibilidad y teclado; en tablet se presenta como sheet y en desktop como panel persistente.
+- Los controles técnicos y colores de diagramas conservan el lenguaje original de structureCo, mientras el sistema semántico unifica selección, foco, acción y estados.
+- Las limitaciones de hardware real, lectores de pantalla, red lenta y medición de campo permanecen explícitas en `KNOWN_ISSUES.md`; ninguna constituye una regresión observada.
+
+### Revisión visual
+
+Se inspeccionaron directamente las ocho capturas finales. No se observaron colisiones, controles cortados, pérdida de contenido crítico, texto fuera de superficie ni overflow horizontal. La fidelidad final queda aprobada para el candidato de release.
+
 ## Fase 3 - cierre comparativo
 
 | Punto | Referencia aprobada | Baseline | Criterio de cierre | Estado |
