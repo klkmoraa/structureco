@@ -68,7 +68,10 @@ const compactDensity = await page.evaluate(() => {
   const rect = (element) => element?.getBoundingClientRect();
   return {
     modeHeight: rect(mode)?.height ?? Infinity,
-    gestureVisible: Boolean(gesture && rect(gesture)?.width && getComputedStyle(gesture).visibility !== 'hidden'),
+    gestureVisible: Boolean(gesture
+      && (rect(gesture)?.width ?? 0) > 2
+      && (rect(gesture)?.height ?? 0) > 2
+      && getComputedStyle(gesture).visibility !== 'hidden'),
     contextWidth: rect(context)?.width ?? Infinity,
     tabsHeight: rect(tabs)?.height ?? Infinity,
     panelHeight: rect(panel)?.height ?? Infinity,
