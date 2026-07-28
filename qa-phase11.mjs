@@ -102,12 +102,13 @@ const runViewport = async (browserName, browser, spec) => {
 
     const resultLauncher = page.locator('.results-mobile-toggle');
     await resultLauncher.click();
-    const results = page.locator('.results-panel[role="dialog"]');
+    const phoneResults = spec.width <= 700;
+    const results = page.locator('.results-panel:not(.mobile-collapsed)');
     await results.waitFor({ state: 'visible' });
     await page.waitForTimeout(420);
     const resultBox = await results.boundingBox();
     const resultLayout = await page.evaluate(() => {
-      const panel = document.querySelector('.results-panel[role="dialog"]')?.getBoundingClientRect();
+      const panel = document.querySelector('.results-panel:not(.mobile-collapsed)')?.getBoundingClientRect();
       const canvas = document.querySelector('.canvas-host')?.getBoundingClientRect();
       if (!panel || !canvas) return null;
       const exposedTop = Math.max(0, canvas.top);
@@ -124,23 +125,83 @@ const runViewport = async (browserName, browser, spec) => {
         }).length;
       return {
         exposedCanvasHeight: Math.max(0, exposedBottom - exposedTop),
+        canvasWidth: canvas.width,
+        panelWidth: panel.width,
         visibleModelObjectCount,
+        reservedCanvasSpace: Math.abs(canvas.bottom - panel.top) <= 2,
       };
     });
-    checks.resultsDialog = await results.getAttribute('aria-modal') === 'true';
+    if (phoneResults) {
+      checks.resultsModeless = await results.getAttribute('role') !== 'dialog'
+        && await results.getAttribute('aria-modal') === null;
+      checks.resultsCanvasInteractive = await results.getAttribute('data-canvas-interactive') === 'true';
+      checks.resultsDoNotBlockCanvas = await page.evaluate(() => {
+        const canvas = document.querySelector('.canvas-host');
+        return canvas?.inert !== true
+          && !canvas?.hasAttribute('aria-hidden')
+          && !document.querySelector('.results-sheet-backdrop');
+      });
+      checks.resultsReserveCanvasSpace = Boolean(resultLayout?.reservedCanvasSpace);
+      const fitControl = page.getByRole('button', { name: 'Ajustar modelo a la vista' });
+      const fitBox = await fitControl.boundingBox();
+      checks.canvasFitControlReachable = Boolean(fitBox && resultBox && fitBox.y + fitBox.height <= resultBox.y + 1);
+      await fitControl.click();
+      await page.waitForTimeout(120);
+      const panDistance = await page.evaluate(async () => {
+        const canvas = document.querySelector('.canvas-host');
+        const svg = document.querySelector('svg.structural-canvas');
+        const member = document.querySelector('.member-object');
+        if (!canvas || !svg || !member) return 0;
+        const canvasBox = canvas.getBoundingClientRect();
+        const memberBox = member.getBoundingClientRect();
+        const before = { x: memberBox.x + memberBox.width / 2, y: memberBox.y + memberBox.height / 2 };
+        const start = {
+          x: canvasBox.left + canvasBox.width * 0.25,
+          y: canvasBox.top + canvasBox.height * 0.62,
+        };
+        const emit = (type, x, y, buttons) => svg.dispatchEvent(new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerId: 41,
+          pointerType: 'touch',
+          isPrimary: true,
+          button: 0,
+          buttons,
+          clientX: x,
+          clientY: y,
+        }));
+        emit('pointerdown', start.x, start.y, 1);
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        emit('pointermove', start.x + 46, start.y + 18, 1);
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        emit('pointerup', start.x + 46, start.y + 18, 0);
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const after = member.getBoundingClientRect();
+        return Math.hypot(
+          after.x + after.width / 2 - before.x,
+          after.y + after.height / 2 - before.y,
+        );
+      });
+      checks.canvasPansWithResultsOpen = panDistance >= 20;
+    } else {
+      checks.resultsDialog = await results.getAttribute('role') === 'dialog'
+        && await results.getAttribute('aria-modal') === 'true';
+    }
     checks.resultsWithinViewport = isInside(resultBox, spec);
-    checks.resultsPresentation = spec.width <= 700
-      ? Boolean(resultBox
-        && resultBox.width >= spec.width - 1
-        && resultBox.height >= Math.min(180, spec.height * 0.42)
+    checks.resultsPresentation = phoneResults
+      ? Boolean(resultBox && resultLayout
+        && resultLayout.panelWidth >= resultLayout.canvasWidth - 1
+        && resultBox.height >= Math.min(150, spec.height * 0.42)
         && resultBox.height < spec.height * 0.75)
       : Boolean(resultBox && resultBox.height < spec.height * 0.8 && resultBox.height >= 220);
     checks.resultsLeaveModelVisible = Boolean(
       resultLayout && resultLayout.exposedCanvasHeight >= Math.min(180, spec.height * 0.24),
     );
     checks.resultsShowModelGeometry = Boolean(resultLayout && resultLayout.visibleModelObjectCount > 0);
+    if (phoneResults) await page.locator('svg.structural-canvas').focus();
     await page.keyboard.press('Escape');
     checks.resultsEscapeCloses = await results.isHidden();
+    await page.waitForFunction(() => document.activeElement?.classList.contains('results-mobile-toggle'));
     checks.resultsFocusReturns = await resultLauncher.evaluate((element) => element === document.activeElement);
   }
 

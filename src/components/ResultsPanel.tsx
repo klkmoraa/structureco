@@ -75,7 +75,9 @@ const readResultsMode = (): ResultsPanelMode => {
 };
 
 const MOBILE_RESULTS_QUERY = '(max-width: 1023px)';
+const PHONE_RESULTS_QUERY = '(max-width: 700px)';
 const isMobileResultsViewport = () => typeof window !== 'undefined' && Boolean(window.matchMedia?.(MOBILE_RESULTS_QUERY).matches);
+const isPhoneResultsViewport = () => typeof window !== 'undefined' && Boolean(window.matchMedia?.(PHONE_RESULTS_QUERY).matches);
 
 export const ResultsPanel = () => {
   const { project, analysis, resultTab, setResultTab, analyze, selection, isAnalyzing, setInfluenceCanvasState } = useProject();
@@ -83,16 +85,22 @@ export const ResultsPanel = () => {
   const [height, setHeight] = useState(() => isMobileResultsViewport() ? Math.min(330, window.innerHeight * 0.4) : 285);
   const [drag, setDrag] = useState<{ y: number; height: number } | null>(null);
   const [isMobile, setIsMobile] = useState(isMobileResultsViewport);
+  const [isPhone, setIsPhone] = useState(isPhoneResultsViewport);
   const [mobileExpanded, setMobileExpanded] = useState(() => !isMobileResultsViewport());
   const [panelMode, setPanelMode] = useState<ResultsPanelMode>(readResultsMode);
   const previousAnalysisRef = useRef(analysis);
   const resizeFrameRef = useRef<number | null>(null);
+  const mobileFitFrameRef = useRef<number | null>(null);
+  const mobileFitTimerRef = useRef<number | null>(null);
+  const mobileFitTransitionCleanupRef = useRef<(() => void) | null>(null);
   const pendingHeightRef = useRef<number | null>(null);
   const panelRef = useRef<HTMLElement>(null);
   const focusedLauncherRef = useRef<HTMLButtonElement | null>(null);
   const previousPanelModeRef = useRef<ResultsPanelMode>('expanded');
   const mobileToggleRef = useRef<HTMLButtonElement>(null);
   const mobileReturnFocusRef = useRef<HTMLElement | null>(null);
+  const phoneCanvasInteractive = isPhone && mobileExpanded;
+  const mobileResultsModal = isMobile && mobileExpanded && !isPhone;
   const resultContext = useMemo(() => {
     if (selection?.kind === 'member') return { memberId: selection.id, label: t('results.contextMember', { id: selection.id }) };
     if (selection?.kind === 'multi') {
@@ -148,7 +156,21 @@ export const ResultsPanel = () => {
       ? candidate
       : mobileToggleRef.current;
   }, []);
+  const cancelScheduledPhoneFit = useCallback(() => {
+    if (mobileFitFrameRef.current !== null) {
+      window.cancelAnimationFrame(mobileFitFrameRef.current);
+      mobileFitFrameRef.current = null;
+    }
+    if (mobileFitTimerRef.current !== null) {
+      window.clearTimeout(mobileFitTimerRef.current);
+      mobileFitTimerRef.current = null;
+    }
+    mobileFitTransitionCleanupRef.current?.();
+    mobileFitTransitionCleanupRef.current = null;
+    panelRef.current?.removeAttribute('data-canvas-fit-settled');
+  }, []);
   const closeMobileResults = useCallback(() => {
+    cancelScheduledPhoneFit();
     setMobileExpanded(false);
     window.requestAnimationFrame(() => {
       const remembered = mobileReturnFocusRef.current;
@@ -157,7 +179,66 @@ export const ResultsPanel = () => {
       const returnTarget = rememberedUnavailable ? mobileToggleRef.current : remembered;
       returnTarget?.focus({ preventScroll: true });
     });
-  }, []);
+  }, [cancelScheduledPhoneFit]);
+  const schedulePhoneCanvasFit = useCallback(() => {
+    cancelScheduledPhoneFit();
+    mobileFitFrameRef.current = window.requestAnimationFrame(() => {
+      mobileFitFrameRef.current = null;
+      const panel = panelRef.current;
+      if (!panel) return;
+
+      let completed = false;
+      const cleanupTransition = () => {
+        panel.removeEventListener('transitionend', onTransitionEnd);
+        if (mobileFitTimerRef.current !== null) {
+          window.clearTimeout(mobileFitTimerRef.current);
+          mobileFitTimerRef.current = null;
+        }
+        if (mobileFitTransitionCleanupRef.current === cleanupTransition) {
+          mobileFitTransitionCleanupRef.current = null;
+        }
+      };
+      const finish = () => {
+        if (completed) return;
+        completed = true;
+        cleanupTransition();
+        mobileFitFrameRef.current = window.requestAnimationFrame(() => {
+          mobileFitFrameRef.current = window.requestAnimationFrame(() => {
+            window.dispatchEvent(new CustomEvent('structureco:fit-canvas'));
+            mobileFitFrameRef.current = window.requestAnimationFrame(() => {
+              mobileFitFrameRef.current = null;
+              panelRef.current?.setAttribute('data-canvas-fit-settled', 'true');
+            });
+          });
+        });
+      };
+      function onTransitionEnd(event: TransitionEvent) {
+        if (event.target === panel && ['height', 'min-height', 'max-height'].includes(event.propertyName)) finish();
+      }
+
+      const parseTime = (value: string) => {
+        const normalized = value.trim();
+        if (normalized.endsWith('ms')) return Number.parseFloat(normalized);
+        if (normalized.endsWith('s')) return Number.parseFloat(normalized) * 1_000;
+        return 0;
+      };
+      const style = window.getComputedStyle(panel);
+      const durations = style.transitionDuration.split(',').map(parseTime);
+      const delays = style.transitionDelay.split(',').map(parseTime);
+      const transitionTime = durations.reduce((maximum, duration, index) => (
+        Math.max(maximum, duration + (delays[index % Math.max(delays.length, 1)] ?? 0))
+      ), 0);
+
+      if (transitionTime <= 0) {
+        finish();
+        return;
+      }
+
+      panel.addEventListener('transitionend', onTransitionEnd);
+      mobileFitTransitionCleanupRef.current = cleanupTransition;
+      mobileFitTimerRef.current = window.setTimeout(finish, Math.max(800, transitionTime + 200));
+    });
+  }, [cancelScheduledPhoneFit]);
   useEffect(() => {
     if (classroomMode && resultTab === 'deformed') setResultTab('moment');
   }, [classroomMode, resultTab, setResultTab]);
@@ -181,12 +262,20 @@ export const ResultsPanel = () => {
     return () => query.removeEventListener('change', update);
   }, []);
   useEffect(() => {
+    const query = window.matchMedia?.(PHONE_RESULTS_QUERY);
+    if (!query) return undefined;
+    const update = (event: MediaQueryListEvent) => setIsPhone(event.matches);
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  useEffect(() => {
     if (isMobile && analysis && analysis !== previousAnalysisRef.current) {
       rememberMobileLauncher(document.activeElement);
       setMobileExpanded(true);
+      if (isPhone) schedulePhoneCanvasFit();
     }
     previousAnalysisRef.current = analysis;
-  }, [analysis, isMobile, rememberMobileLauncher]);
+  }, [analysis, isMobile, isPhone, rememberMobileLauncher, schedulePhoneCanvasFit]);
   useEffect(() => {
     const collapse = () => closeMobileResults();
     const expand = () => {
@@ -203,7 +292,8 @@ export const ResultsPanel = () => {
   }, [closeMobileResults, rememberMobileLauncher]);
   useEffect(() => () => {
     if (resizeFrameRef.current !== null) window.cancelAnimationFrame(resizeFrameRef.current);
-  }, []);
+    cancelScheduledPhoneFit();
+  }, [cancelScheduledPhoneFit]);
   useEffect(() => {
     window.localStorage.setItem(RESULTS_MODE_STORAGE_KEY, panelMode);
     if (isMobile) return;
@@ -215,7 +305,7 @@ export const ResultsPanel = () => {
     if (isMobile && panelMode === 'focused') setPanelMode('expanded');
   }, [isMobile, panelMode]);
   useEffect(() => {
-    if (!isMobile || !mobileExpanded) return undefined;
+    if (!mobileResultsModal) return undefined;
     const panel = panelRef.current;
     const previousOverflow = document.body.style.overflow;
     const inactive = document.querySelectorAll<HTMLElement>('.app-shell-skip-link, .topbar, .toolbar, .inspector-panel, .mobile-inspector-toggle, .canvas-host, .classroom-workspace-journey');
@@ -261,7 +351,29 @@ export const ResultsPanel = () => {
         element.removeAttribute('aria-hidden');
       });
     };
-  }, [closeMobileResults, isMobile, mobileExpanded]);
+  }, [closeMobileResults, mobileResultsModal]);
+  useEffect(() => {
+    if (!phoneCanvasInteractive) return undefined;
+    const onPhoneEscape = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.key !== 'Escape') return;
+      const visibleModalAbove = [...document.querySelectorAll<HTMLElement>('[aria-modal="true"]')]
+        .some((element) => {
+          if (element === panelRef.current || panelRef.current?.contains(element)) return false;
+          const style = window.getComputedStyle(element);
+          return !element.hidden
+            && element.inert !== true
+            && element.getAttribute('aria-hidden') !== 'true'
+            && style.display !== 'none'
+            && style.visibility !== 'hidden';
+        });
+      if (visibleModalAbove) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closeMobileResults();
+    };
+    document.addEventListener('keydown', onPhoneEscape, true);
+    return () => document.removeEventListener('keydown', onPhoneEscape, true);
+  }, [closeMobileResults, phoneCanvasInteractive]);
 
   const scheduleHeight = (next: number) => {
     pendingHeightRef.current = next;
@@ -294,14 +406,15 @@ export const ResultsPanel = () => {
   };
 
   return <>
-    {isMobile && mobileExpanded ? <button className="results-sheet-backdrop" type="button" aria-hidden="true" tabIndex={-1} onClick={closeMobileResults} /> : null}
+    {mobileResultsModal ? <button className="results-sheet-backdrop" type="button" aria-hidden="true" tabIndex={-1} onClick={closeMobileResults} /> : null}
     <section
       ref={panelRef}
       className={`results-panel results-mode-${panelMode}${isMobile && !mobileExpanded ? ' mobile-collapsed' : ''}`}
       aria-label={t('results.panel')}
-      role={isMobile && mobileExpanded ? 'dialog' : undefined}
-      aria-modal={isMobile && mobileExpanded ? true : undefined}
+      role={mobileResultsModal ? 'dialog' : undefined}
+      aria-modal={mobileResultsModal ? true : undefined}
       data-results-mode={panelMode}
+      data-canvas-interactive={phoneCanvasInteractive ? 'true' : undefined}
       tabIndex={-1}
       style={{ height: isMobile && !mobileExpanded ? 54 : height }}
       onKeyDown={(event) => {

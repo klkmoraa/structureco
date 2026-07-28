@@ -2108,20 +2108,13 @@ button:not(:disabled):active,.welcome-option:active,.selection-card:active {
 }
 
 @media (max-width:700px) {
-  .app-shell:has(.results-panel[role='dialog']:not(.mobile-collapsed)) .workspace { z-index:calc(var(--sc-z-modal) + 1); }
-  .results-sheet-backdrop {
-    position:fixed;
-    inset:0;
-    z-index:calc(var(--sc-z-modal) - 1);
-    background:linear-gradient(to bottom,transparent 0,transparent 38%,var(--sc-color-overlay-soft) 100%);
-    backdrop-filter:none;
-  }
-  .results-panel:not(.mobile-collapsed) {
-    position:fixed;
+  .results-panel[data-canvas-interactive='true'] {
+    position:relative;
     z-index:var(--sc-z-modal);
-    inset:auto 0 var(--sc-visual-viewport-bottom,0px);
+    inset:auto;
+    flex:0 0 auto;
     width:100%;
-    height:min(56dvh,500px)!important;
+    height:min(46dvh,420px)!important;
     min-height:min(180px,46dvh);
     max-height:calc(var(--sc-visual-viewport-height,100dvh) - 168px);
     border:1px solid var(--border);

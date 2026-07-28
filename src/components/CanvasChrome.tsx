@@ -1,5 +1,5 @@
 import { Crosshair, LocateFixed, Minus, Plus, X } from 'lucide-react';
-import type { Dispatch, RefObject } from 'react';
+import { useEffect, type Dispatch, type RefObject } from 'react';
 import { useI18n } from '../i18n/useI18n';
 import { IconButton } from '../ui/controls';
 import { CanvasLayers } from './CanvasLayers';
@@ -41,6 +41,12 @@ export const CanvasChrome = ({
 }: CanvasChromeProps) => {
   const { t } = useI18n();
 
+  useEffect(() => {
+    const fitCanvas = () => onFit();
+    window.addEventListener('structureco:fit-canvas', fitCanvas);
+    return () => window.removeEventListener('structureco:fit-canvas', fitCanvas);
+  }, [onFit]);
+
   return <>
     <div className={`canvas-mode-badge${placementInstruction ? ' placing-load' : ''}`} role="status" aria-live="polite" data-canvas-chrome="mode">
       <strong>{modeLabel}</strong>
@@ -68,4 +74,3 @@ export const CanvasChrome = ({
     </div>
   </>;
 };
-

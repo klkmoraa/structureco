@@ -309,6 +309,7 @@ const exerciseResults = async (page, row, scope, spec, browserName, requestedAss
 
   const resultPanel = page.locator('.results-panel');
   if (spec.width < 1024) {
+    const phoneResults = spec.width <= 700;
     const resultToggle = page.locator('.results-mobile-toggle');
     if (await resultPanel.evaluate((element) => element.classList.contains('mobile-collapsed'))) {
       await resultToggle.focus();
@@ -316,16 +317,39 @@ const exerciseResults = async (page, row, scope, spec, browserName, requestedAss
         window.dispatchEvent(new CustomEvent('structureco:expand-mobile-results'));
       });
     }
-    const dialog = page.locator('.results-panel[role="dialog"]');
-    await dialog.waitFor({ state: 'visible' });
-    await page.waitForFunction(() => document.querySelector('.results-panel[role="dialog"]')?.contains(document.activeElement));
-    const resultTrap = await verifyFocusTrap(page, dialog);
-    check(row, scope, 'resultsDialogSemantics', await dialog.getAttribute('aria-modal') === 'true');
-    check(row, scope, 'resultsFocusTrapBackward', resultTrap.backwardWrap, `focusables=${resultTrap.count}`);
-    check(row, scope, 'resultsFocusTrapForward', resultTrap.forwardWrap, `focusables=${resultTrap.count}`);
-    check(row, scope, 'resultsWithinViewport', isInsideViewport(await dialog.boundingBox(), spec));
+    const expandedResults = page.locator('.results-panel:not(.mobile-collapsed)');
+    await expandedResults.waitFor({ state: 'visible' });
+    if (phoneResults) {
+      check(
+        row,
+        scope,
+        'resultsModelessSemantics',
+        await expandedResults.getAttribute('role') !== 'dialog'
+          && await expandedResults.getAttribute('aria-modal') === null,
+      );
+      check(row, scope, 'resultsCanvasInteractive', await expandedResults.getAttribute('data-canvas-interactive') === 'true');
+      check(row, scope, 'resultsDoNotBlockCanvas', await page.evaluate(() => {
+        const canvas = document.querySelector('.canvas-host');
+        return canvas?.inert !== true
+          && !canvas?.hasAttribute('aria-hidden')
+          && !document.querySelector('.results-sheet-backdrop');
+      }));
+      await page.waitForFunction(
+        () => document.querySelector('.results-panel[data-canvas-fit-settled="true"]'),
+        null,
+        { timeout: 2_000 },
+      );
+    } else {
+      await page.waitForFunction(() => document.querySelector('.results-panel[role="dialog"]')?.contains(document.activeElement));
+      const resultTrap = await verifyFocusTrap(page, expandedResults);
+      check(row, scope, 'resultsDialogSemantics', await expandedResults.getAttribute('aria-modal') === 'true');
+      check(row, scope, 'resultsFocusTrapBackward', resultTrap.backwardWrap, `focusables=${resultTrap.count}`);
+      check(row, scope, 'resultsFocusTrapForward', resultTrap.forwardWrap, `focusables=${resultTrap.count}`);
+    }
+    const resultBox = await expandedResults.boundingBox();
+    check(row, scope, 'resultsWithinViewport', isInsideViewport(resultBox, spec));
     const resultLayout = await page.evaluate(() => {
-      const panel = document.querySelector('.results-panel[role="dialog"]')?.getBoundingClientRect();
+      const panel = document.querySelector('.results-panel:not(.mobile-collapsed)')?.getBoundingClientRect();
       const canvas = document.querySelector('.canvas-host')?.getBoundingClientRect();
       if (!panel || !canvas) return null;
       const exposedTop = Math.max(0, canvas.top);
@@ -333,6 +357,16 @@ const exerciseResults = async (page, row, scope, spec, browserName, requestedAss
       return {
         panelHeight: panel.height,
         exposedCanvasHeight: Math.max(0, exposedBottom - exposedTop),
+        reservedCanvasSpace: Math.abs(canvas.bottom - panel.top) <= 2,
+        nodeCount: document.querySelectorAll('.node-object').length,
+        fullyVisibleNodeCount: [...document.querySelectorAll('.node-object')]
+          .filter((element) => {
+            const rect = element.getBoundingClientRect();
+            return rect.left >= canvas.left
+              && rect.right <= canvas.right
+              && rect.top >= exposedTop
+              && rect.bottom <= exposedBottom;
+          }).length,
         visibleModelObjectCount: [...document.querySelectorAll('.member-object, .node-object')]
           .filter((element) => {
             const rect = element.getBoundingClientRect();
@@ -367,17 +401,82 @@ const exerciseResults = async (page, row, scope, spec, browserName, requestedAss
         Boolean(resultLayout && resultLayout.panelHeight < spec.height * 0.75),
         JSON.stringify(resultLayout),
       );
+      check(row, scope, 'resultsReserveCanvasSpace', Boolean(resultLayout?.reservedCanvasSpace), JSON.stringify(resultLayout));
+      check(
+        row,
+        scope,
+        'resultsAutoFitShowsEveryNode',
+        Boolean(resultLayout
+          && resultLayout.nodeCount > 0
+          && resultLayout.fullyVisibleNodeCount === resultLayout.nodeCount),
+        JSON.stringify(resultLayout),
+      );
+      const fitControl = page.getByRole('button', { name: 'Ajustar modelo a la vista' });
+      const fitBox = await fitControl.boundingBox();
+      check(
+        row,
+        scope,
+        'canvasFitControlReachable',
+        Boolean(fitBox && resultBox && fitBox.y + fitBox.height <= resultBox.y + 1),
+      );
+      await fitControl.click();
+      await page.waitForTimeout(120);
+      const panDistance = await page.evaluate(async () => {
+        const canvas = document.querySelector('.canvas-host');
+        const svg = document.querySelector('svg.structural-canvas');
+        const member = document.querySelector('.member-object');
+        if (!canvas || !svg || !member) return 0;
+        const canvasBox = canvas.getBoundingClientRect();
+        const memberBox = member.getBoundingClientRect();
+        const before = { x: memberBox.x + memberBox.width / 2, y: memberBox.y + memberBox.height / 2 };
+        const start = {
+          x: canvasBox.left + canvasBox.width * 0.25,
+          y: canvasBox.top + canvasBox.height * 0.62,
+        };
+        const emit = (type, x, y, buttons) => svg.dispatchEvent(new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerId: 41,
+          pointerType: 'touch',
+          isPrimary: true,
+          button: 0,
+          buttons,
+          clientX: x,
+          clientY: y,
+        }));
+        emit('pointerdown', start.x, start.y, 1);
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        emit('pointermove', start.x + 46, start.y + 18, 1);
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        emit('pointerup', start.x + 46, start.y + 18, 0);
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const after = member.getBoundingClientRect();
+        return Math.hypot(
+          after.x + after.width / 2 - before.x,
+          after.y + after.height / 2 - before.y,
+        );
+      });
+      check(row, scope, 'canvasPansWithResultsOpen', panDistance >= 20, `${panDistance}px`);
     }
+    if (phoneResults) await page.locator('svg.structural-canvas').focus();
     await page.keyboard.press('Escape');
-    await dialog.waitFor({ state: 'hidden' });
-    check(row, scope, 'resultsEscapeCloses', await dialog.isHidden());
+    await expandedResults.waitFor({ state: 'hidden' });
+    check(row, scope, 'resultsEscapeCloses', await expandedResults.isHidden());
+    if (phoneResults) {
+      check(
+        row,
+        scope,
+        'resultsEscapePreservesSelection',
+        await page.locator('.member-object.selected').count() === selectedCount,
+      );
+    }
     await page.waitForFunction(() => document.activeElement?.classList.contains('results-mobile-toggle'));
     check(row, scope, 'resultsFocusReturns', await resultToggle.evaluate((element) => element === document.activeElement));
     await resultToggle.focus();
     await page.evaluate(() => {
       window.dispatchEvent(new CustomEvent('structureco:expand-mobile-results'));
     });
-    await dialog.waitFor({ state: 'visible' });
+    await expandedResults.waitFor({ state: 'visible' });
   } else {
     check(row, scope, 'persistentInspector', await page.locator('.inspector-panel').isVisible());
     check(row, scope, 'resultsPanelVisible', await resultPanel.isVisible());
@@ -496,7 +595,7 @@ const exerciseResults = async (page, row, scope, spec, browserName, requestedAss
     await page.evaluate(() => {
       window.dispatchEvent(new CustomEvent('structureco:expand-mobile-results'));
     });
-    await page.locator('.results-panel[role="dialog"]').waitFor({ state: 'visible' });
+    await page.locator('.results-panel:not(.mobile-collapsed)').waitFor({ state: 'visible' });
     await page.getByRole('tab', { name: 'Momento', exact: true }).click();
     await momentChart.waitFor({ state: 'visible' });
   }

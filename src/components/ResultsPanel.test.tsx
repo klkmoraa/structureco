@@ -12,8 +12,10 @@ import { ResultsPanel } from './ResultsPanel';
 
 const RESULTS_MODE_STORAGE_KEY = 'structureCo.results.mode.v1';
 
-const mockMatchMedia = (mobile = false) => vi.fn().mockImplementation((query: string) => ({
-  matches: mobile && query === '(max-width: 1023px)',
+const mockMatchMedia = (viewport: boolean | 'phone' = false) => vi.fn().mockImplementation((query: string) => ({
+  matches: query === '(max-width: 1023px)'
+    ? viewport === true || viewport === 'phone'
+    : query === '(max-width: 700px)' && viewport === 'phone',
   media: query,
   onchange: null,
   addEventListener: vi.fn(),
@@ -307,7 +309,7 @@ describe('Results analytical center', () => {
     expect(await screen.findByRole('region', { name: 'Global results summary' })).toBeTruthy();
   }, 10_000);
 
-  it('uses a modal mobile sheet with focus trap, Escape return, and safe focused-mode normalization', async () => {
+  it('uses a modal tablet sheet with focus trap, Escape return, and safe focused-mode normalization', async () => {
     const user = userEvent.setup();
     window.matchMedia = mockMatchMedia(true);
     localStorage.setItem(RESULTS_MODE_STORAGE_KEY, 'focused');
@@ -332,6 +334,72 @@ describe('Results analytical center', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Resultados del análisis' })).toBeNull());
     expect(document.activeElement).toBe(toggle);
   });
+
+  it('keeps the phone results sheet modeless so the canvas remains reachable', async () => {
+    const user = userEvent.setup();
+    window.matchMedia = mockMatchMedia('phone');
+    const { container } = renderResults();
+    const canvasHost = document.createElement('div');
+    canvasHost.className = 'canvas-host';
+    canvasHost.tabIndex = 0;
+    container.prepend(canvasHost);
+
+    const toggle = screen.getByRole('button', { name: 'Resultados' });
+    await user.click(toggle);
+
+    const sheet = await screen.findByRole('region', { name: /Resultados del an/ });
+    expect(screen.queryByRole('dialog', { name: /Resultados del an/ })).toBeNull();
+    expect(sheet.getAttribute('aria-modal')).toBeNull();
+    expect(sheet.getAttribute('data-canvas-interactive')).toBe('true');
+    expect(canvasHost.inert).not.toBe(true);
+    expect(canvasHost.getAttribute('aria-hidden')).toBeNull();
+    expect(document.querySelector('.results-sheet-backdrop')).toBeNull();
+
+    canvasHost.focus();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(sheet.classList.contains('mobile-collapsed')).toBe(true));
+    expect(document.activeElement).toBe(toggle);
+  });
+
+  it('leaves Escape to a visible modal above the modeless phone results', async () => {
+    const user = userEvent.setup();
+    window.matchMedia = mockMatchMedia('phone');
+    renderResults();
+    await user.click(screen.getByRole('button', { name: 'Resultados' }));
+    const sheet = await screen.findByRole('region', { name: /Resultados del an/ });
+    const modalEscape = vi.fn();
+    const modal = document.createElement('div');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.tabIndex = -1;
+    modal.addEventListener('keydown', modalEscape);
+    document.body.append(modal);
+
+    try {
+      modal.focus();
+      await user.keyboard('{Escape}');
+      expect(modalEscape).toHaveBeenCalledOnce();
+      expect(sheet.classList.contains('mobile-collapsed')).toBe(false);
+    } finally {
+      modal.remove();
+    }
+  });
+
+  it('requests a fresh phone canvas fit when a new analysis expands the results', async () => {
+    const user = userEvent.setup();
+    window.matchMedia = mockMatchMedia('phone');
+    const onFitCanvas = vi.fn();
+    window.addEventListener('structureco:fit-canvas', onFitCanvas);
+
+    try {
+      renderResults();
+      await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
+      await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+      await waitFor(() => expect(onFitCanvas).toHaveBeenCalledOnce());
+    } finally {
+      window.removeEventListener('structureco:fit-canvas', onFitCanvas);
+    }
+  }, 10_000);
 
   it('keeps native learning summaries inside the mobile focus loop', async () => {
     const user = userEvent.setup();
