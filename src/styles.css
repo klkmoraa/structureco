@@ -2174,3 +2174,81 @@ button:not(:disabled):active,.welcome-option:active,.selection-card:active {
   .classroom-prediction__footer button { width:100%; }
   .learning-level button { min-height:44px; }
 }
+
+@media (max-width:700px) {
+  .canvas-mode-badge {
+    min-height:36px;
+    max-width:calc(100% - 64px);
+    padding:5px 8px;
+    gap:5px;
+    border-radius:8px;
+  }
+  .canvas-mode-badge strong { font-size:12px; }
+  .canvas-mode-badge .touch-gesture-hint {
+    position:absolute!important;
+    width:1px!important;
+    height:1px!important;
+    padding:0!important;
+    margin:-1px!important;
+    overflow:hidden!important;
+    clip:rect(0,0,0,0)!important;
+    white-space:nowrap!important;
+    border:0!important;
+  }
+  .canvas-mode-badge.placing-load {
+    max-width:calc(100% - 20px);
+    min-height:44px;
+    padding:5px 6px 5px 9px;
+  }
+  .canvas-result-legend {
+    top:52px;
+    width:max-content;
+    max-width:calc(100% - 72px);
+    padding:6px 8px;
+    gap:3px 7px;
+    border-radius:8px;
+  }
+  .canvas-result-legend strong { font-size:11px!important; }
+  .canvas-result-legend span {
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:10px!important;
+  }
+  .canvas-result-legend i { width:16px; }
+
+  .results-commandbar {
+    position:absolute!important;
+    width:1px!important;
+    height:1px!important;
+    padding:0!important;
+    margin:-1px!important;
+    overflow:hidden!important;
+    clip:rect(0,0,0,0)!important;
+    white-space:nowrap!important;
+    border:0!important;
+  }
+  .results-panel[data-canvas-interactive='true'] {
+    height:min(42dvh,420px)!important;
+    min-height:min(176px,42dvh);
+  }
+  .results-panel:not(.mobile-collapsed) .results-mobile-toggle {
+    height:48px;
+    min-height:48px;
+    padding-inline:12px;
+  }
+  .result-tabs {
+    height:46px;
+    flex-basis:46px;
+    gap:4px;
+    padding-inline:6px;
+  }
+  .result-tab-family { padding-right:3px; }
+  .result-tabs button {
+    min-width:62px;
+    height:44px;
+    padding-inline:8px;
+    font-size:12px!important;
+  }
+}

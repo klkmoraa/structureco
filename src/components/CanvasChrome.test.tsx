@@ -37,6 +37,9 @@ describe('CanvasChrome', () => {
     /></ProjectProvider>);
 
     expect(container.querySelectorAll('[data-canvas-chrome]')).toHaveLength(5);
+    expect(screen.getByText('Elige un nodo')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Cancelar colocación' })).toBeTruthy();
+    expect(container.querySelector('.canvas-mode-badge')?.classList.contains('placing-load')).toBe(true);
     expect(screen.getByText('SNAP activo')).toBeTruthy();
     expect(screen.getByText('GRID inactivo')).toBeTruthy();
     expect(coordinateReadoutRef.current?.textContent).toContain('X — · Y — m');

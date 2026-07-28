@@ -339,6 +339,31 @@ const exerciseResults = async (page, row, scope, spec, browserName, requestedAss
         null,
         { timeout: 2_000 },
       );
+      const compactDensity = await page.evaluate(() => {
+        const mode = document.querySelector('.canvas-mode-badge');
+        const gesture = document.querySelector('.touch-gesture-hint');
+        const context = document.querySelector('.results-commandbar');
+        const tabs = document.querySelector('.result-tabs');
+        const panel = document.querySelector('.results-panel:not(.mobile-collapsed)');
+        const legend = document.querySelector('.canvas-result-legend');
+        const rect = (element) => element?.getBoundingClientRect();
+        return {
+          modeHeight: rect(mode)?.height ?? Infinity,
+          gestureVisible: Boolean(gesture
+            && (rect(gesture)?.width ?? 0) > 2
+            && (rect(gesture)?.height ?? 0) > 2
+            && getComputedStyle(gesture).visibility !== 'hidden'),
+          contextWidth: rect(context)?.width ?? Infinity,
+          tabsHeight: rect(tabs)?.height ?? Infinity,
+          panelHeight: rect(panel)?.height ?? Infinity,
+          legendHeight: rect(legend)?.height ?? 0,
+        };
+      });
+      check(row, scope, 'compactModeBadge', compactDensity.modeHeight <= 40 && !compactDensity.gestureVisible, JSON.stringify(compactDensity));
+      check(row, scope, 'compactResultContext', compactDensity.contextWidth <= 2, JSON.stringify(compactDensity));
+      check(row, scope, 'compactResultTabs', compactDensity.tabsHeight <= 48, JSON.stringify(compactDensity));
+      check(row, scope, 'compactResultPanel', compactDensity.panelHeight <= spec.height * 0.43, JSON.stringify(compactDensity));
+      check(row, scope, 'compactResultLegend', compactDensity.legendHeight === 0 || compactDensity.legendHeight <= 44, JSON.stringify(compactDensity));
     } else {
       await page.waitForFunction(() => document.querySelector('.results-panel[role="dialog"]')?.contains(document.activeElement));
       const resultTrap = await verifyFocusTrap(page, expandedResults);

@@ -141,6 +141,31 @@ const runViewport = async (browserName, browser, spec) => {
           && !canvas?.hasAttribute('aria-hidden')
           && !document.querySelector('.results-sheet-backdrop');
       });
+      const compactDensity = await page.evaluate(() => {
+        const mode = document.querySelector('.canvas-mode-badge');
+        const gesture = document.querySelector('.touch-gesture-hint');
+        const context = document.querySelector('.results-commandbar');
+        const tabs = document.querySelector('.result-tabs');
+        const panel = document.querySelector('.results-panel:not(.mobile-collapsed)');
+        const legend = document.querySelector('.canvas-result-legend');
+        const rect = (element) => element?.getBoundingClientRect();
+        return {
+          modeHeight: rect(mode)?.height ?? Infinity,
+          gestureVisible: Boolean(gesture
+            && (rect(gesture)?.width ?? 0) > 2
+            && (rect(gesture)?.height ?? 0) > 2
+            && getComputedStyle(gesture).visibility !== 'hidden'),
+          contextWidth: rect(context)?.width ?? Infinity,
+          tabsHeight: rect(tabs)?.height ?? Infinity,
+          panelHeight: rect(panel)?.height ?? Infinity,
+          legendHeight: rect(legend)?.height ?? 0,
+        };
+      });
+      checks.compactModeBadge = compactDensity.modeHeight <= 40 && !compactDensity.gestureVisible;
+      checks.compactResultContext = compactDensity.contextWidth <= 2;
+      checks.compactResultTabs = compactDensity.tabsHeight <= 48;
+      checks.compactResultPanel = compactDensity.panelHeight <= spec.height * 0.43;
+      checks.compactResultLegend = compactDensity.legendHeight === 0 || compactDensity.legendHeight <= 44;
       checks.resultsReserveCanvasSpace = Boolean(resultLayout?.reservedCanvasSpace);
       const fitControl = page.getByRole('button', { name: 'Ajustar modelo a la vista' });
       const fitBox = await fitControl.boundingBox();
