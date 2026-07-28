@@ -2109,23 +2109,30 @@ button:not(:disabled):active,.welcome-option:active,.selection-card:active {
 
 @media (max-width:700px) {
   .app-shell:has(.results-panel[role='dialog']:not(.mobile-collapsed)) .workspace { z-index:calc(var(--sc-z-modal) + 1); }
-  .results-sheet-backdrop { position:fixed; inset:0; z-index:calc(var(--sc-z-modal) - 1); }
+  .results-sheet-backdrop {
+    position:fixed;
+    inset:0;
+    z-index:calc(var(--sc-z-modal) - 1);
+    background:linear-gradient(to bottom,transparent 0,transparent 38%,var(--sc-color-overlay-soft) 100%);
+    backdrop-filter:none;
+  }
   .results-panel:not(.mobile-collapsed) {
     position:fixed;
     z-index:var(--sc-z-modal);
-    inset:var(--sc-visual-viewport-top,0px) 0 auto;
+    inset:auto 0 var(--sc-visual-viewport-bottom,0px);
     width:100%;
-    height:var(--sc-visual-viewport-height,100dvh)!important;
-    min-height:0;
-    max-height:none;
-    border:0;
-    border-radius:0;
-    box-shadow:none;
+    height:min(56dvh,500px)!important;
+    min-height:min(180px,46dvh);
+    max-height:calc(var(--sc-visual-viewport-height,100dvh) - 168px);
+    border:1px solid var(--border);
+    border-bottom:0;
+    border-radius:18px 18px 0 0;
+    box-shadow:0 -18px 48px rgba(8,24,16,.22);
   }
   .results-panel:not(.mobile-collapsed) .results-mobile-toggle {
-    height:calc(54px + env(safe-area-inset-top));
-    min-height:calc(54px + env(safe-area-inset-top));
-    padding-top:env(safe-area-inset-top);
+    height:54px;
+    min-height:54px;
+    padding-top:0;
   }
   .results-panel:not(.mobile-collapsed) .results-body {
     padding-bottom:max(18px,env(safe-area-inset-bottom));
@@ -2140,6 +2147,14 @@ button:not(:disabled):active,.welcome-option:active,.selection-card:active {
     bottom:var(--sc-visual-viewport-bottom,0px);
     height:min(78dvh,720px,calc(var(--sc-visual-viewport-height,100dvh) - 8px));
     max-height:calc(var(--sc-visual-viewport-height,100dvh) - 8px);
+  }
+}
+
+@media (max-width:700px) and (max-height:480px) {
+  .results-panel:not(.mobile-collapsed) {
+    height:min(44dvh,180px)!important;
+    min-height:min(150px,42dvh);
+    max-height:calc(var(--sc-visual-viewport-height,100dvh) - 140px);
   }
 }
 

@@ -324,6 +324,50 @@ const exerciseResults = async (page, row, scope, spec, browserName, requestedAss
     check(row, scope, 'resultsFocusTrapBackward', resultTrap.backwardWrap, `focusables=${resultTrap.count}`);
     check(row, scope, 'resultsFocusTrapForward', resultTrap.forwardWrap, `focusables=${resultTrap.count}`);
     check(row, scope, 'resultsWithinViewport', isInsideViewport(await dialog.boundingBox(), spec));
+    const resultLayout = await page.evaluate(() => {
+      const panel = document.querySelector('.results-panel[role="dialog"]')?.getBoundingClientRect();
+      const canvas = document.querySelector('.canvas-host')?.getBoundingClientRect();
+      if (!panel || !canvas) return null;
+      const exposedTop = Math.max(0, canvas.top);
+      const exposedBottom = Math.min(canvas.bottom, panel.top);
+      return {
+        panelHeight: panel.height,
+        exposedCanvasHeight: Math.max(0, exposedBottom - exposedTop),
+        visibleModelObjectCount: [...document.querySelectorAll('.member-object, .node-object')]
+          .filter((element) => {
+            const rect = element.getBoundingClientRect();
+            return rect.width > 0
+              && rect.height > 0
+              && rect.right > canvas.left
+              && rect.left < canvas.right
+              && rect.bottom > exposedTop
+              && rect.top < exposedBottom;
+          }).length,
+      };
+    });
+    check(
+      row,
+      scope,
+      'resultsLeaveModelVisible',
+      Boolean(resultLayout && resultLayout.exposedCanvasHeight >= Math.min(180, spec.height * 0.24)),
+      JSON.stringify(resultLayout),
+    );
+    check(
+      row,
+      scope,
+      'resultsShowModelGeometry',
+      Boolean(resultLayout && resultLayout.visibleModelObjectCount > 0),
+      JSON.stringify(resultLayout),
+    );
+    if (spec.width <= 700) {
+      check(
+        row,
+        scope,
+        'resultsUsePartialMobileSheet',
+        Boolean(resultLayout && resultLayout.panelHeight < spec.height * 0.75),
+        JSON.stringify(resultLayout),
+      );
+    }
     await page.keyboard.press('Escape');
     await dialog.waitFor({ state: 'hidden' });
     check(row, scope, 'resultsEscapeCloses', await dialog.isHidden());
@@ -343,13 +387,42 @@ const exerciseResults = async (page, row, scope, spec, browserName, requestedAss
   await page.locator('.result-summary-workspace').waitFor({ state: 'visible' });
   check(row, scope, 'summaryVisible', await page.locator('.result-summary-workspace').isVisible());
 
-  const momentStarted = performance.now();
-  progress(scope, 'checking moment result');
-  await page.getByRole('tab', { name: 'Momento', exact: true }).click();
+  const diagramSelection = await page.locator('.member-object.selected').evaluateAll((elements) => elements
+    .map((element) => element.getAttribute('data-structure-id'))
+    .filter(Boolean)
+    .sort()
+    .join(','));
+  for (const diagram of [
+    { tab: 'Axial', key: 'axial' },
+    { tab: 'Cortante', key: 'shear' },
+    { tab: 'Momento', key: 'moment' },
+  ]) {
+    const tabStarted = performance.now();
+    progress(scope, `checking ${diagram.key} result`);
+    await page.getByRole('tab', { name: diagram.tab, exact: true }).click();
+    const chart = page.locator(`.diagram-chart.${diagram.key}`);
+    await chart.waitFor({ state: 'visible' });
+    if (diagram.key === 'moment') {
+      row.timings.momentTabMs = Math.round((performance.now() - tabStarted) * 100) / 100;
+    }
+    check(row, scope, `${diagram.key}DiagramVisible`, await chart.locator('svg[role="img"]').isVisible());
+    const canvasOverlayVisible = await page.evaluate((key) => {
+      const panelTop = document.querySelector('.results-panel')?.getBoundingClientRect().top ?? window.innerHeight;
+      return [...document.querySelectorAll(`.diagram-shape.${key}`)].some((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < panelTop;
+      });
+    }, diagram.key);
+    check(row, scope, `${diagram.key}CanvasOverlayVisible`, canvasOverlayVisible);
+    const currentSelection = await page.locator('.member-object.selected').evaluateAll((elements) => elements
+      .map((element) => element.getAttribute('data-structure-id'))
+      .filter(Boolean)
+      .sort()
+      .join(','));
+    check(row, scope, `${diagram.key}SelectionStable`, currentSelection === diagramSelection, `${diagramSelection} -> ${currentSelection}`);
+  }
+
   const momentChart = page.locator('.diagram-chart.moment');
-  await momentChart.waitFor({ state: 'visible' });
-  row.timings.momentTabMs = Math.round((performance.now() - momentStarted) * 100) / 100;
-  check(row, scope, 'momentDiagramVisible', await momentChart.locator('svg[role="img"]').isVisible());
   const momentGraph = momentChart.locator('svg[role="img"]');
   await momentGraph.focus();
   await page.keyboard.press('ArrowRight');

@@ -106,11 +106,39 @@ const runViewport = async (browserName, browser, spec) => {
     await results.waitFor({ state: 'visible' });
     await page.waitForTimeout(420);
     const resultBox = await results.boundingBox();
+    const resultLayout = await page.evaluate(() => {
+      const panel = document.querySelector('.results-panel[role="dialog"]')?.getBoundingClientRect();
+      const canvas = document.querySelector('.canvas-host')?.getBoundingClientRect();
+      if (!panel || !canvas) return null;
+      const exposedTop = Math.max(0, canvas.top);
+      const exposedBottom = Math.min(canvas.bottom, panel.top);
+      const visibleModelObjectCount = [...document.querySelectorAll('.member-object, .node-object')]
+        .filter((element) => {
+          const rect = element.getBoundingClientRect();
+          return rect.width > 0
+            && rect.height > 0
+            && rect.right > canvas.left
+            && rect.left < canvas.right
+            && rect.bottom > exposedTop
+            && rect.top < exposedBottom;
+        }).length;
+      return {
+        exposedCanvasHeight: Math.max(0, exposedBottom - exposedTop),
+        visibleModelObjectCount,
+      };
+    });
     checks.resultsDialog = await results.getAttribute('aria-modal') === 'true';
     checks.resultsWithinViewport = isInside(resultBox, spec);
     checks.resultsPresentation = spec.width <= 700
-      ? Boolean(resultBox && resultBox.width >= spec.width - 1 && resultBox.height >= spec.height - 2)
+      ? Boolean(resultBox
+        && resultBox.width >= spec.width - 1
+        && resultBox.height >= Math.min(180, spec.height * 0.42)
+        && resultBox.height < spec.height * 0.75)
       : Boolean(resultBox && resultBox.height < spec.height * 0.8 && resultBox.height >= 220);
+    checks.resultsLeaveModelVisible = Boolean(
+      resultLayout && resultLayout.exposedCanvasHeight >= Math.min(180, spec.height * 0.24),
+    );
+    checks.resultsShowModelGeometry = Boolean(resultLayout && resultLayout.visibleModelObjectCount > 0);
     await page.keyboard.press('Escape');
     checks.resultsEscapeCloses = await results.isHidden();
     checks.resultsFocusReturns = await resultLauncher.evaluate((element) => element === document.activeElement);
