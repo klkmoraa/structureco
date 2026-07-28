@@ -1,5 +1,35 @@
 # Changelog UX/UI
 
+## 2026-07-27 — Candidato 0.8.0, Fases 4 a 15
+
+### Consolidado
+
+- Fase 4: tokens, color, tipografía, elevación, motion y roles técnicos.
+- Fase 5: biblioteca de componentes y reglas de reutilización.
+- Fases 6–7: App Shell, navegación global y sistema canvas-first.
+- Fase 8: Inspector por selección con edición numérica segura, unidades,
+  validación inline y composiciones responsive.
+- Fases 9–10: centro analítico de Resultados y recorrido Aula guiado.
+- Fases 11–12: paridad desktop/tablet/móvil, touch, accesibilidad, feedback,
+  Light/Dark y catálogos ES/EN.
+- Fase 13: consolidación de migración UI, lazy loading y presupuesto de bundle.
+- Fase 14: candidato certificado en Chromium/WebKit, 6/6 viewports, 8 capturas,
+  384/384 pruebas y frontera matemática intacta.
+- Fase 15: versionado 0.8.0, release notes, nueva línea base, mantenimiento,
+  retrospectiva, preview, rollback y deploy `6a68469008f16649235e8075`.
+
+### No cambiado
+
+- Solver, engine, workers, datos, defaults físicos, unidades internas, signos,
+  topología, geometría, precisión almacenada, persistencia y handlers
+  matemáticos.
+- El formato de proyecto no requiere migración entre 0.7.0 y 0.8.0.
+
+### Evidencia
+
+- `RELEASE_QA_REPORT.md`, `RELEASE_BASELINE.md`, `PERFORMANCE_REPORT.md`,
+  `A11Y_REPORT.md` y `evidence/phase-14/after/`.
+
 ## 2026-07-17 - Fase 3, entrega para revisión
 
 ### Completado

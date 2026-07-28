@@ -4,6 +4,10 @@ Aplicación web local-first para modelar, analizar y aprender estructuras planas
 2D. Integra un editor gráfico, un motor matricial independiente de la interfaz y
 resultados trazables desde el modelo hasta las matrices, reacciones y diagramas.
 
+Versión estable: **0.8.0**, cierre del rediseño UX/UI canvas-first.
+
+![Workspace de structureCo 0.8.0 en desktop](docs/ux-redesign/evidence/phase-14/after/phase14-chromium-desktop-1536x960-light.png)
+
 ## Dos experiencias de cálculo
 
 ### Aula · diagramas
@@ -91,12 +95,16 @@ Vite mostrará la dirección local disponible, normalmente
 ```bash
 npm run verify
 npm run qa
+npm run qa:webkit
+npm run qa:phase14
 ```
 
 `verify` ejecuta lint, pruebas automatizadas y build. `qa` recorre la interfaz en
 Chromium para escritorio y móvil. `qa:webkit` valida el centro de importación y
-la lectura de PDF nativo con perfiles iPhone/iPad en WebKit. El cierre 0.7.0
-aprobó 227 de 227 pruebas en 39 archivos.
+la lectura de PDF nativo con perfiles iPhone/iPad en WebKit. `qa:phase14` cubre
+el candidato en Chromium/WebKit para desktop, tablet y móvil, incluidos análisis,
+Resultados, Inspector, Aula e importación/exportación. El cierre 0.8.0 aprobó
+384 de 384 pruebas en 66 archivos.
 
 ## Publicar en Netlify
 
@@ -108,7 +116,8 @@ npx netlify deploy --prod --build
 ```
 
 La configuración reproducible de compilación, publicación, caché y rutas SPA
-vive en `netlify.toml`. El vínculo local con el sitio no se versiona.
+vive en `netlify.toml`. Siempre se verifica un deploy preview antes de promover
+a producción. El vínculo local con el sitio no se versiona.
 
 ## Documentación
 
@@ -119,6 +128,11 @@ vive en `netlify.toml`. El vínculo local con el sitio no se versiona.
 - [Limitaciones](docs/LIMITATIONS.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Expedientes PDF y `.structureco`](docs/PORTABLE_EXPEDIENTS.md)
+- [Release notes 0.8.0](docs/ux-redesign/RELEASE_NOTES_0.8.0.md)
+- [QA del candidato](docs/ux-redesign/RELEASE_QA_REPORT.md)
+- [Sistema de diseño](docs/ux-redesign/DESIGN_TOKENS.md)
+- [Biblioteca de componentes](docs/ux-redesign/COMPONENTS.md)
+- [Contribuir](CONTRIBUTING.md)
 
 ## Arquitectura
 

@@ -1,8 +1,8 @@
 # Riesgos residuales y limitaciones conocidas
 
-Estado del candidato: Fase 14, base `7faf52b`.
+Estado de release: structureCo 0.8.0, deploy `6a68469008f16649235e8075`.
 
-No hay defectos funcionales, estructurales, visuales o de accesibilidad conocidos que bloqueen el candidato. Los siguientes límites permanecen explícitamente aceptados:
+No hay defectos funcionales, estructurales, visuales o de accesibilidad conocidos que bloqueen la release. Los siguientes límites permanecen explícitamente aceptados:
 
 | Riesgo o límite | Impacto | Mitigación / evidencia | Owner |
 | --- | --- | --- | --- |

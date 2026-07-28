@@ -1,10 +1,13 @@
 # Roadmap de producto — structureCo
 
-## Incremento actual — puntos 1 a 9
+## Release actual — 0.8.0
 
-El incremento posterior a 0.3 endurece el producto sin ampliar su teoría física
-más allá del análisis estático 2D lineal-elástico. La publicación pública
-(punto 10) está excluida expresamente de este ciclo.
+El incremento endurece el producto sin ampliar su teoría física más allá del
+análisis estático 2D lineal-elástico. El rediseño UX/UI de Fases 0 a 15 se cerró
+como una release canvas-first, responsive y accesible, con preview previo,
+rollback documentado y promoción controlada.
+
+## Capacidades funcionales consolidadas
 
 ### 1. Articulaciones internas
 
@@ -77,24 +80,30 @@ más allá del análisis estático 2D lineal-elástico. La publicación pública
 - Rotación de copia primaria a respaldo y conservación de payload dañado para
   recuperación.
 
-## Puerta de aceptación del incremento
+## Puerta de aceptación de 0.8.0
 
-Antes de etiquetar una versión:
+Antes de etiquetar o promover la versión:
 
-1. `npm run lint` sin errores.
-2. `npm test` con todos los fixtures y propiedades aprobados.
-3. `npm run build` aprobado.
-4. QA de escritorio y teléfono sin errores de consola ni desbordamiento.
-5. Verificación visual de axial, cortante, momento, saltos, extremos y offsets.
-6. Revisión documental: especificación, limitaciones y conteos coinciden con la
+1. `npm run verify`: lint, 384/384 pruebas y build.
+2. QA Chromium y WebKit sin errores de consola ni desbordamiento.
+3. Matrices de Fases 11 a 14 aprobadas.
+4. Verificación visual de Light/Dark, desktop/tablet/móvil, Inspector, Resultados
+   y Aula.
+5. Round-trip JSON sin pérdida técnica y cambio de unidades solo de presentación.
+6. Preview verificado antes de producción y rollback registrado.
+7. Especificación, limitaciones, release notes y conteos alineados con la
    ejecución final.
 
-## Trabajo posterior (no incluido en este ciclo)
+## Trabajo posterior a 0.8.0
 
 - Ejecutar y archivar las comparaciones externas `SC-FT-03…11` con FTool 4.01.
 - Añadir panel zones deformables o conexiones semirrígidas con formulación propia.
 - Cotas persistentes más avanzadas, selección por capas y modelos grandes.
-- Impresión/PDF y PWA después de estabilizar el esquema v3.
-- P-Delta, Timoshenko, no linealidad, dinámica, sismo y diseño solo con
+- Añadir Firefox, hardware touch/stylus y tecnologías asistivas reales a la
+  matriz de release.
+- Establecer presupuestos de rendimiento con hardware de referencia y telemetría
+  de campo.
+- P-Delta, no linealidad, dinámica, sismo y diseño solo con
   especificaciones y bancos de validación independientes.
-- Publicación/hosting: punto 10, pospuesto por decisión del usuario.
+- Mantener el hosting, la verificación post-deploy y el rollback según
+  `docs/ux-redesign/MAINTENANCE.md`.
