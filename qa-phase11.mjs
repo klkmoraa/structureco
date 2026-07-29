@@ -199,10 +199,30 @@ const runViewport = async (browserName, browser, spec) => {
       });
       checks.compactResultContextUntabbable = commandbarDisplayNone && commandbarSkipsFocus;
       checks.resultsReserveCanvasSpace = Boolean(resultLayout?.reservedCanvasSpace);
-      const fitControl = page.getByRole('button', { name: 'Ajustar modelo a la vista' });
-      const fitBox = await fitControl.boundingBox();
+      const cameraControls = [
+        ['canvasZoomInReachable', page.getByRole('button', { name: 'Acercar' })],
+        ['canvasZoomOutReachable', page.getByRole('button', { name: 'Alejar' })],
+        ['canvasFitControlClickable', page.getByRole('button', { name: 'Ajustar modelo a la vista' })],
+      ];
+      const cameraBoxes = await Promise.all(cameraControls.map(([, control]) => control.boundingBox()));
+      const layerBox = await page.getByRole('button', { name: 'Capas de información' }).boundingBox();
+      const boxesIntersect = (left, right) => Boolean(left && right
+        && left.x < right.x + right.width
+        && left.x + left.width > right.x
+        && left.y < right.y + right.height
+        && left.y + left.height > right.y);
+      checks.canvasCameraLayerDoNotOverlap = Boolean(layerBox)
+        && cameraBoxes.every((box) => Boolean(box) && !boxesIntersect(box, layerBox));
+      const fitBox = cameraBoxes[2];
       checks.canvasFitControlReachable = Boolean(fitBox && resultBox && fitBox.y + fitBox.height <= resultBox.y + 1);
-      await fitControl.click();
+      for (const [check, control] of cameraControls) {
+        try {
+          await control.click({ timeout: 1500 });
+          checks[check] = true;
+        } catch {
+          checks[check] = false;
+        }
+      }
       await page.waitForTimeout(120);
       const panDistance = await page.evaluate(async () => {
         const canvas = document.querySelector('.canvas-host');

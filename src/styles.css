@@ -2273,7 +2273,7 @@ button:not(:disabled):active,.welcome-option:active,.selection-card:active {
   .workspace { grid-template-columns:1fr; grid-template-rows:minmax(0,1fr) auto; }
   .center-stage { grid-column:1; grid-row:1; }
   .canvas-layer-trigger {
-    right:max(62px,calc(env(safe-area-inset-right) + 62px));
+    right:max(160px,calc(env(safe-area-inset-right) + 160px));
   }
   .toolbar {
     grid-column:1;
