@@ -90,6 +90,30 @@ const runViewport = async (browserName, browser, spec) => {
       && mobileShellDensity.dockCount === 6
       && mobileShellDensity.dockRoutesVisible
       && mobileShellDensity.touchSafe;
+
+    await page.getByRole('button', { name: 'Herramientas de carga', exact: true }).click();
+    await page.getByRole('menuitemradio', { name: /^Carga puntual\./ }).click();
+    const placementCancel = page.getByRole('button', { name: 'Cancelar colocación', exact: true });
+    await placementCancel.waitFor({ state: 'visible' });
+    const placementMetrics = await page.evaluate(() => {
+      const badge = document.querySelector('.canvas-mode-badge.placing-load');
+      const instruction = badge?.querySelector('.canvas-action-instruction');
+      const cancel = badge?.querySelector('button[aria-label="Cancelar colocación"]');
+      const cancelRect = cancel?.getBoundingClientRect();
+      const instructionRect = instruction?.getBoundingClientRect();
+      return {
+        cancelWidth: cancelRect?.width ?? 0,
+        cancelHeight: cancelRect?.height ?? 0,
+        instructionVisible: Boolean(instructionRect
+          && instructionRect.width > 1
+          && instructionRect.height > 1
+          && getComputedStyle(instruction).visibility !== 'hidden'),
+      };
+    });
+    checks.placementCancelTouchTarget = placementMetrics.cancelWidth >= 44
+      && placementMetrics.cancelHeight >= 44;
+    checks.placementInstructionVisible = placementMetrics.instructionVisible;
+    await placementCancel.click();
   }
 
   if (spec.width >= 1024) {
@@ -135,7 +159,11 @@ const runViewport = async (browserName, browser, spec) => {
       const canvas = document.querySelector('.canvas-host')?.getBoundingClientRect();
       if (!panel || !canvas) return null;
       const exposedTop = Math.max(0, canvas.top);
-      const exposedBottom = Math.min(canvas.bottom, panel.top);
+      const exposedBottom = Math.min(innerHeight, canvas.bottom);
+      const separated = panel.right <= canvas.left + 1
+        || panel.left >= canvas.right - 1
+        || panel.bottom <= canvas.top + 1
+        || panel.top >= canvas.bottom - 1;
       const visibleModelObjectCount = [...document.querySelectorAll('.member-object, .node-object')]
         .filter((element) => {
           const rect = element.getBoundingClientRect();
@@ -149,9 +177,14 @@ const runViewport = async (browserName, browser, spec) => {
       return {
         exposedCanvasHeight: Math.max(0, exposedBottom - exposedTop),
         canvasWidth: canvas.width,
+        canvasHeight: canvas.height,
         panelWidth: panel.width,
+        panelHeight: panel.height,
         visibleModelObjectCount,
-        reservedCanvasSpace: Math.abs(canvas.bottom - panel.top) <= 2,
+        reservedCanvasSpace: separated && (
+          Math.abs(canvas.bottom - panel.top) <= 2
+          || Math.abs(canvas.right - panel.left) <= 2
+        ),
       };
     });
     if (phoneResults) {
@@ -181,13 +214,16 @@ const runViewport = async (browserName, browser, spec) => {
           contextWidth: rect(context)?.width ?? Infinity,
           tabsHeight: rect(tabs)?.height ?? Infinity,
           panelHeight: rect(panel)?.height ?? Infinity,
+          panelWidth: rect(panel)?.width ?? Infinity,
           legendHeight: rect(legend)?.height ?? 0,
         };
       });
       checks.compactModeBadge = compactDensity.modeHeight <= 40 && !compactDensity.gestureVisible;
       checks.compactResultContext = compactDensity.contextWidth <= 2;
       checks.compactResultTabs = compactDensity.tabsHeight <= 48;
-      checks.compactResultPanel = compactDensity.panelHeight <= spec.height * 0.43;
+      checks.compactResultPanel = spec.width > spec.height
+        ? compactDensity.panelWidth <= spec.width * 0.44 + 1
+        : compactDensity.panelHeight <= spec.height * 0.43;
       checks.compactResultLegend = compactDensity.legendHeight === 0 || compactDensity.legendHeight <= 44;
       const commandbar = page.locator('.results-commandbar');
       const commandbarDisplayNone = await commandbar.evaluate((element) => getComputedStyle(element).display === 'none');
@@ -214,7 +250,10 @@ const runViewport = async (browserName, browser, spec) => {
       checks.canvasCameraLayerDoNotOverlap = Boolean(layerBox)
         && cameraBoxes.every((box) => Boolean(box) && !boxesIntersect(box, layerBox));
       const fitBox = cameraBoxes[2];
-      checks.canvasFitControlReachable = Boolean(fitBox && resultBox && fitBox.y + fitBox.height <= resultBox.y + 1);
+      checks.canvasFitControlReachable = Boolean(fitBox && resultBox && (
+        fitBox.y + fitBox.height <= resultBox.y + 1
+        || fitBox.x + fitBox.width <= resultBox.x + 1
+      ));
       for (const [check, control] of cameraControls) {
         try {
           await control.click({ timeout: 1500 });
@@ -266,10 +305,14 @@ const runViewport = async (browserName, browser, spec) => {
     }
     checks.resultsWithinViewport = isInside(resultBox, spec);
     checks.resultsPresentation = phoneResults
-      ? Boolean(resultBox && resultLayout
-        && resultLayout.panelWidth >= resultLayout.canvasWidth - 1
-        && resultBox.height >= Math.min(150, spec.height * 0.42)
-        && resultBox.height < spec.height * 0.75)
+      ? Boolean(resultBox && resultLayout && (
+        (resultLayout.panelWidth >= resultLayout.canvasWidth - 1
+          && resultBox.height >= Math.min(150, spec.height * 0.42)
+          && resultBox.height < spec.height * 0.75)
+        || (spec.width > spec.height
+          && resultLayout.panelWidth <= spec.width * 0.44 + 1
+          && resultLayout.panelHeight >= resultLayout.canvasHeight - 1)
+      ))
       : Boolean(resultBox && resultBox.height < spec.height * 0.8 && resultBox.height >= 220);
     checks.resultsLeaveModelVisible = Boolean(
       resultLayout && resultLayout.exposedCanvasHeight >= Math.min(180, spec.height * 0.24),

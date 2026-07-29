@@ -47,11 +47,13 @@ const matrix = {
     { id: 'desktop', width: 1536, height: 960, touch: false, theme: 'light', extended: true },
     { id: 'tablet', width: 834, height: 1194, touch: true, theme: 'dark' },
     { id: 'mobile', width: 390, height: 844, touch: true, theme: 'light' },
+    { id: 'mobile-landscape', width: 683, height: 384, touch: true, theme: 'light' },
   ],
   webkit: [
     { id: 'desktop', width: 1366, height: 768, touch: false, theme: 'dark' },
     { id: 'tablet', width: 834, height: 1194, touch: true, theme: 'light' },
     { id: 'mobile', width: 390, height: 844, touch: true, theme: 'dark' },
+    { id: 'mobile-landscape', width: 683, height: 384, touch: true, theme: 'dark' },
   ],
 };
 
@@ -356,13 +358,22 @@ const exerciseResults = async (page, row, scope, spec, browserName, requestedAss
           contextWidth: rect(context)?.width ?? Infinity,
           tabsHeight: rect(tabs)?.height ?? Infinity,
           panelHeight: rect(panel)?.height ?? Infinity,
+          panelWidth: rect(panel)?.width ?? Infinity,
           legendHeight: rect(legend)?.height ?? 0,
         };
       });
       check(row, scope, 'compactModeBadge', compactDensity.modeHeight <= 40 && !compactDensity.gestureVisible, JSON.stringify(compactDensity));
       check(row, scope, 'compactResultContext', compactDensity.contextWidth <= 2, JSON.stringify(compactDensity));
       check(row, scope, 'compactResultTabs', compactDensity.tabsHeight <= 48, JSON.stringify(compactDensity));
-      check(row, scope, 'compactResultPanel', compactDensity.panelHeight <= spec.height * 0.43, JSON.stringify(compactDensity));
+      check(
+        row,
+        scope,
+        'compactResultPanel',
+        spec.width > spec.height
+          ? compactDensity.panelWidth <= spec.width * 0.44 + 1
+          : compactDensity.panelHeight <= spec.height * 0.43,
+        JSON.stringify(compactDensity),
+      );
       check(row, scope, 'compactResultLegend', compactDensity.legendHeight === 0 || compactDensity.legendHeight <= 44, JSON.stringify(compactDensity));
       const commandbar = page.locator('.results-commandbar');
       const commandbarDisplayNone = await commandbar.evaluate((element) => getComputedStyle(element).display === 'none');
@@ -393,11 +404,20 @@ const exerciseResults = async (page, row, scope, spec, browserName, requestedAss
       const canvas = document.querySelector('.canvas-host')?.getBoundingClientRect();
       if (!panel || !canvas) return null;
       const exposedTop = Math.max(0, canvas.top);
-      const exposedBottom = Math.min(canvas.bottom, panel.top);
+      const exposedBottom = Math.min(innerHeight, canvas.bottom);
+      const separated = panel.right <= canvas.left + 1
+        || panel.left >= canvas.right - 1
+        || panel.bottom <= canvas.top + 1
+        || panel.top >= canvas.bottom - 1;
       return {
         panelHeight: panel.height,
         exposedCanvasHeight: Math.max(0, exposedBottom - exposedTop),
-        reservedCanvasSpace: Math.abs(canvas.bottom - panel.top) <= 2,
+        canvasWidth: canvas.width,
+        panelWidth: panel.width,
+        reservedCanvasSpace: separated && (
+          Math.abs(canvas.bottom - panel.top) <= 2
+          || Math.abs(canvas.right - panel.left) <= 2
+        ),
         nodeCount: document.querySelectorAll('.node-object').length,
         fullyVisibleNodeCount: [...document.querySelectorAll('.node-object')]
           .filter((element) => {
@@ -419,6 +439,7 @@ const exerciseResults = async (page, row, scope, spec, browserName, requestedAss
           }).length,
       };
     });
+    row.mobileCanvasMetrics = resultLayout;
     check(
       row,
       scope,
@@ -457,10 +478,84 @@ const exerciseResults = async (page, row, scope, spec, browserName, requestedAss
         row,
         scope,
         'canvasFitControlReachable',
-        Boolean(fitBox && resultBox && fitBox.y + fitBox.height <= resultBox.y + 1),
+        Boolean(fitBox && resultBox && (
+          fitBox.y + fitBox.height <= resultBox.y + 1
+          || fitBox.x + fitBox.width <= resultBox.x + 1
+        )),
       );
       await fitControl.click();
       await page.waitForTimeout(120);
+      const pinchMetrics = await page.evaluate(async () => {
+        const svg = document.querySelector('svg.structural-canvas');
+        const nodes = [...document.querySelectorAll('.node-object')];
+        if (!svg || nodes.length < 2) return null;
+        const centerOf = (element) => {
+          const rect = element.getBoundingClientRect();
+          return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+        };
+        const distanceBetweenNodes = () => {
+          const first = centerOf(nodes[0]);
+          const second = centerOf(nodes[1]);
+          return Math.hypot(second.x - first.x, second.y - first.y);
+        };
+        const selectedIds = () => [...document.querySelectorAll('.member-object.selected, .node-object.selected')]
+          .map((element) => element.getAttribute('data-structure-id'))
+          .filter(Boolean)
+          .sort()
+          .join(',');
+        const canvas = svg.getBoundingClientRect();
+        const midpoint = {
+          x: canvas.left + canvas.width * 0.5,
+          y: canvas.top + canvas.height * 0.52,
+        };
+        const emit = (type, pointerId, isPrimary, x, y, buttons) => svg.dispatchEvent(new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerId,
+          pointerType: 'touch',
+          isPrimary,
+          button: 0,
+          buttons,
+          clientX: x,
+          clientY: y,
+        }));
+        const beforeDistance = distanceBetweenNodes();
+        const selectionBefore = selectedIds();
+        emit('pointerdown', 51, true, midpoint.x - 42, midpoint.y, 1);
+        emit('pointerdown', 52, false, midpoint.x + 42, midpoint.y, 1);
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        emit('pointermove', 51, true, midpoint.x - 82, midpoint.y, 1);
+        emit('pointermove', 52, false, midpoint.x + 82, midpoint.y, 1);
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        emit('pointerup', 52, false, midpoint.x + 82, midpoint.y, 0);
+        emit('pointerup', 51, true, midpoint.x - 82, midpoint.y, 0);
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        return {
+          beforeDistance,
+          afterDistance: distanceBetweenNodes(),
+          selectionBefore,
+          selectionAfter: selectedIds(),
+        };
+      });
+      row.pinchMetrics = pinchMetrics;
+      check(
+        row,
+        scope,
+        'canvasPinchChangesScale',
+        Boolean(pinchMetrics
+          && pinchMetrics.beforeDistance > 0
+          && pinchMetrics.afterDistance >= pinchMetrics.beforeDistance * 1.25),
+        JSON.stringify(pinchMetrics),
+      );
+      check(
+        row,
+        scope,
+        'canvasPinchPreservesSelection',
+        Boolean(pinchMetrics
+          && pinchMetrics.selectionBefore
+          && pinchMetrics.selectionAfter === pinchMetrics.selectionBefore),
+        JSON.stringify(pinchMetrics),
+      );
       const panDistance = await page.evaluate(async () => {
         const canvas = document.querySelector('.canvas-host');
         const svg = document.querySelector('svg.structural-canvas');
@@ -497,6 +592,13 @@ const exerciseResults = async (page, row, scope, spec, browserName, requestedAss
         );
       });
       check(row, scope, 'canvasPansWithResultsOpen', panDistance >= 20, `${panDistance}px`);
+      check(
+        row,
+        scope,
+        'canvasInteractiveAfterPinch',
+        Boolean(pinchMetrics && panDistance >= 20),
+        JSON.stringify({ pinchMetrics, panDistance }),
+      );
     }
     if (phoneResults) await page.locator('svg.structural-canvas').focus();
     await page.keyboard.press('Escape');
@@ -546,10 +648,16 @@ const exerciseResults = async (page, row, scope, spec, browserName, requestedAss
     }
     check(row, scope, `${diagram.key}DiagramVisible`, await chart.locator('svg[role="img"]').isVisible());
     const canvasOverlayVisible = await page.evaluate((key) => {
-      const panelTop = document.querySelector('.results-panel')?.getBoundingClientRect().top ?? window.innerHeight;
+      const canvas = document.querySelector('.canvas-host')?.getBoundingClientRect();
+      if (!canvas) return false;
       return [...document.querySelectorAll(`.diagram-shape.${key}`)].some((element) => {
         const rect = element.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < panelTop;
+        return rect.width > 0
+          && rect.height > 0
+          && rect.right > canvas.left
+          && rect.left < canvas.right
+          && rect.bottom > canvas.top
+          && rect.top < canvas.bottom;
       });
     }, diagram.key);
     check(row, scope, `${diagram.key}CanvasOverlayVisible`, canvasOverlayVisible);
