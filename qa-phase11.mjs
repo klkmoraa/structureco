@@ -69,6 +69,29 @@ const runViewport = async (browserName, browser, spec) => {
       : await page.locator('.mobile-tool-dock').isVisible(),
   };
 
+  if (spec.width <= 700) {
+    const mobileShellDensity = await page.evaluate(() => {
+      const topbar = document.querySelector('.topbar')?.getBoundingClientRect();
+      const toolbar = document.querySelector('.toolbar')?.getBoundingClientRect();
+      const dockButtons = [...document.querySelectorAll('.mobile-tool-dock button')]
+        .map((element) => element.getBoundingClientRect());
+      return {
+        topbarHeight: topbar?.height ?? Infinity,
+        toolbarHeight: toolbar?.height ?? Infinity,
+        dockCount: dockButtons.length,
+        dockRoutesVisible: dockButtons.every(({ left, top, right, bottom }) => (
+          left >= 0 && top >= 0 && right <= innerWidth && bottom <= innerHeight
+        )),
+        touchSafe: dockButtons.every(({ width, height }) => width >= 44 && height >= 44),
+      };
+    });
+    checks.compactMobileTopbar = mobileShellDensity.topbarHeight <= 50;
+    checks.compactMobileDock = mobileShellDensity.toolbarHeight <= 60
+      && mobileShellDensity.dockCount === 6
+      && mobileShellDensity.dockRoutesVisible
+      && mobileShellDensity.touchSafe;
+  }
+
   if (spec.width >= 1024) {
     const resize = page.locator('.inspector-resize-handle');
     checks.persistentInspector = await page.locator('.inspector-panel').isVisible();
