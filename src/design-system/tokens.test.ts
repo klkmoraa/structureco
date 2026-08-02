@@ -3,8 +3,11 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const tokensCss = readFileSync(new URL('./tokens.css', import.meta.url), 'utf8');
-const stylesCss = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+/** The block matchers below are line-oriented; CRLF checkouts must not disable them. */
+const readCss = (url: URL) => readFileSync(url, 'utf8').replace(/\r\n/g, '\n');
+
+const tokensCss = readCss(new URL('./tokens.css', import.meta.url));
+const stylesCss = readCss(new URL('../styles.css', import.meta.url));
 
 const blockFor = (pattern: RegExp) => {
   const match = tokensCss.match(pattern);
