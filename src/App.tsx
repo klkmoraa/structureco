@@ -1,14 +1,14 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
-import { BrandMark } from './components/BrandMark';
-import { WelcomeScreen } from './components/WelcomeScreen';
+import { BrandMark } from './features/topbar/BrandMark';
+import { WelcomeScreen } from './features/welcome/WelcomeScreen';
 import { ProjectProvider } from './store/ProjectContext';
 import { useProject } from './store/ProjectContext';
 import { ClassroomSessionProvider } from './store/ClassroomSessionContext';
 import { useI18n } from './i18n/useI18n';
 import './styles.css';
 
-const loadWorkspaceShell = () => import('./components/WorkspaceShell');
+const loadWorkspaceShell = () => import('./features/workspace/WorkspaceShell');
 const WorkspaceShell = lazy(loadWorkspaceShell);
 
 const AppShell = () => {

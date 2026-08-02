@@ -6,7 +6,7 @@ const root = createRoot(document.getElementById('root')!);
 const render = (content: ReactNode) => root.render(<StrictMode>{content}</StrictMode>);
 
 if (import.meta.env.DEV && window.location.pathname === '/__components') {
-  void import('./ui/ComponentLab').then(({ ComponentLab }) => render(<ComponentLab />));
+  void import('./design-system/lab/ComponentLab').then(({ ComponentLab }) => render(<ComponentLab />));
 } else {
   render(<App />);
 }

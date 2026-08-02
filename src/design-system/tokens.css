@@ -1,0 +1,461 @@
+/*
+ * structureCo · Design tokens
+ * ---------------------------------------------------------------------------
+ * Dirección visual: "Mesa Modular" (organización) + "Laboratorio Nocturno"
+ * (modo Noche) + "Instrumento de Precisión" (rigor tipográfico/numérico),
+ * con claridad inspirada en principios Apple pero identidad propia de
+ * ingeniería estructural.
+ *
+ * Capas:
+ *   1. Primitivas (ramps de color, escalas). Nunca se consumen directo.
+ *   2. Roles semánticos (--sc-color-*). Los componentes consumen esto.
+ *   3. Roles técnicos del dominio (cargas, diagramas, reacciones...).
+ *   4. Alias de compatibilidad (--app-bg, --accent...) para CSS existente.
+ *
+ * Los colores técnicos de diagramas conservan los valores verificados
+ * WCAG AA del release 0.8.0 (COLOR_ACCESSIBILITY.md). No los alteres sin
+ * volver a medir contraste en ambos temas.
+ */
+
+:root {
+  /* ------------------------------------------------------------------ */
+  /* 1 · PRIMITIVAS                                                      */
+  /* ------------------------------------------------------------------ */
+  --sc-white: #ffffff;
+  --sc-black: #000000;
+
+  /* Identidad verde/teal (pino calibrado) */
+  --sc-green-50: #e9f6f0;
+  --sc-green-100: #d2eee2;
+  --sc-green-200: #a6ddc6;
+  --sc-green-300: #6cc6a4;
+  --sc-green-400: #31a97f;
+  --sc-green-500: #0a7e5e;
+  --sc-green-600: #076853;
+  --sc-green-700: #05533f;
+  --sc-green-800: #044534;
+  --sc-green-900: #033628;
+
+  /* Azul de interacción (selección / foco / información) */
+  --sc-blue-100: #e8effd;
+  --sc-blue-300: #9dbdf6;
+  --sc-blue-500: #2867e8;
+  --sc-blue-600: #1e56cc;
+  --sc-blue-700: #1847ab;
+
+  /* Acentos de estado y dominio */
+  --sc-violet-500: #7357d8;
+  --sc-orange-500: #e25d32;
+  --sc-red-500: #d44848;
+  --sc-red-700: #a92f2f;
+  --sc-amber-500: #d88408;
+  --sc-plum-500: #8a4da8;
+
+  /* ------------------------------------------------------------------ */
+  /* 2 · ROLES SEMÁNTICOS — TEMA DÍA (editorial, porcelana técnica)      */
+  /* ------------------------------------------------------------------ */
+  --sc-color-bg-app: #f4f6f5;
+  --sc-color-bg-canvas: #fafcfb;
+  --sc-color-surface-1: var(--sc-white);
+  --sc-color-surface-2: #eef2f0;
+  --sc-color-surface-elevated: var(--sc-white);
+  --sc-color-surface-inset: #e8edea;
+  --sc-color-surface-toolbar: #fbfcfc;
+  --sc-color-surface-input: var(--sc-white);
+
+  --sc-color-text-primary: #16211c;
+  --sc-color-text-secondary: #5a6862;
+  --sc-color-text-muted: #6f7b75;
+  --sc-color-text-disabled: #939c97;
+  --sc-color-text-inverse: var(--sc-white);
+  --sc-color-text-link: var(--sc-blue-600);
+  --sc-color-text-technical: #46534d;
+  --sc-color-text-unit: #7b8781;
+
+  --sc-color-border: #d8dfdb;
+  --sc-color-border-soft: #e6ebe8;
+  --sc-color-border-strong: #c2cbc6;
+  --sc-color-divider: #e2e8e4;
+
+  --sc-color-action-primary: var(--sc-green-500);
+  --sc-color-action-hover: var(--sc-green-600);
+  --sc-color-action-pressed: var(--sc-green-700);
+  --sc-color-action-foreground: var(--sc-white);
+  --sc-color-action-subtle: var(--sc-green-50);
+  --sc-color-brand-secondary: var(--sc-green-700);
+
+  --sc-color-focus: var(--sc-blue-500);
+  --sc-color-info: var(--sc-blue-500);
+  --sc-color-selection: #dce9ff;
+  --sc-color-selection-stroke: var(--sc-blue-500);
+
+  --sc-color-state-success: #1c9560;
+  --sc-color-state-warning: var(--sc-amber-500);
+  --sc-color-state-error: var(--sc-red-500);
+  --sc-color-state-critical: #b3261e;
+  --sc-color-state-info: var(--sc-blue-500);
+  --sc-color-state-stale: var(--sc-amber-500);
+  --sc-color-state-loading: var(--sc-blue-500);
+  --sc-color-state-valid: #1c9560;
+  --sc-color-state-invalid: var(--sc-red-500);
+  --sc-color-state-pending: #6f7b75;
+  --sc-color-state-warning-foreground: #8a4f00;
+  --sc-color-state-error-foreground: var(--sc-red-700);
+
+  --sc-color-aula: var(--sc-violet-500);
+  --sc-color-aula-foreground: var(--sc-white);
+
+  /* Lienzo y documento: explícitos, nunca producidos por inversión. */
+  --sc-color-canvas-grid: #e7ece9;
+  --sc-color-canvas-grid-strong: #d8dfdb;
+  --sc-color-canvas-member: #16211c;
+  --sc-color-canvas-node-fill: #fafcfb;
+  --sc-color-overlay-soft: rgba(4, 11, 7, 0.28);
+  --sc-color-overlay-sheet: rgba(2, 10, 6, 0.34);
+  --sc-color-overlay-strong: rgba(5, 18, 11, 0.58);
+
+  /* ------------------------------------------------------------------ */
+  /* 3 · ROLES TÉCNICOS DEL DOMINIO (valores verificados 0.8.0)          */
+  /* ------------------------------------------------------------------ */
+  --sc-color-technical-load: var(--sc-orange-500);
+  --sc-color-technical-axial: #0e7490;
+  --sc-color-technical-shear: #2f8f59;
+  --sc-color-technical-moment: #b94b43;
+  --sc-color-technical-deformed: #2f8f9d;
+  --sc-color-technical-reaction: #2867e8;
+  --sc-color-technical-dimension: #8d6c19;
+  --sc-color-technical-axis: #a9552d;
+
+  /* Roles estructurales formalizados (Sección 12 del sistema).
+     Mapean sobre los técnicos verificados; los roles "reservados"
+     documentan intención sin alterar la codificación actual del canvas. */
+  --sc-color-structure-member: var(--sc-color-canvas-member);
+  --sc-color-structure-member-selected: var(--sc-color-selection-stroke);
+  --sc-color-structure-node: var(--sc-color-canvas-member);
+  --sc-color-structure-node-selected: var(--sc-color-selection-stroke);
+  --sc-color-structure-support: var(--sc-color-canvas-member);
+  --sc-color-structure-spring: var(--sc-color-technical-axis);
+  --sc-color-structure-hinge: var(--sc-color-technical-axis);
+  --sc-color-structure-release: var(--sc-color-technical-axis);
+  --sc-color-load-point: var(--sc-color-technical-load);
+  --sc-color-load-distributed: var(--sc-color-technical-shear);
+  --sc-color-load-moment: var(--sc-color-technical-moment);
+  --sc-color-reaction: var(--sc-color-technical-reaction);
+  --sc-color-axial-tension: var(--sc-color-technical-axial);
+  --sc-color-axial-compression: var(--sc-plum-500); /* reservado: el canvas codifica signo por lado/etiqueta */
+  --sc-color-shear-positive: var(--sc-color-technical-shear);
+  --sc-color-shear-negative: var(--sc-color-technical-shear);
+  --sc-color-moment-positive: var(--sc-color-technical-moment);
+  --sc-color-moment-negative: var(--sc-color-technical-moment);
+  --sc-color-deformation: var(--sc-color-technical-deformed);
+  --sc-color-influence-line: var(--sc-color-action-primary);
+  --sc-color-envelope: #5b54c8;
+  --sc-color-critical-point: var(--sc-amber-500);
+  --sc-color-geometry-error: var(--sc-color-state-error);
+  --sc-color-stale-result: var(--sc-color-state-warning);
+  --sc-color-selection-outline: var(--sc-color-selection-stroke);
+  --sc-color-snap-target: var(--sc-color-action-primary);
+  --sc-color-hover-target: var(--sc-color-action-primary);
+
+  /* Identificación de herramientas: refleja el canvas. Selección/foco = azul. */
+  --sc-color-tool-navigation: var(--sc-color-text-secondary);
+  --sc-color-tool-structure: var(--sc-color-text-primary);
+  --sc-color-tool-point-load: var(--sc-color-technical-load);
+  --sc-color-tool-distributed-load: var(--sc-color-technical-shear);
+  --sc-color-tool-moment: var(--sc-color-technical-moment);
+  --sc-color-tool-dimension: var(--sc-color-technical-dimension);
+  --sc-color-tool-cut: var(--sc-color-technical-axis);
+  --sc-color-tool-destructive: var(--sc-color-state-error);
+
+  /* ------------------------------------------------------------------ */
+  /* 4 · ESPACIADO, TAMAÑOS, FORMA, ELEVACIÓN                            */
+  /* ------------------------------------------------------------------ */
+  --sc-space-1: 4px;
+  --sc-space-2: 8px;
+  --sc-space-3: 12px;
+  --sc-space-4: 16px;
+  --sc-space-5: 20px;
+  --sc-space-6: 24px;
+  --sc-space-7: 32px;
+  --sc-space-8: 40px;
+
+  --sc-size-icon-sm: 16px;
+  --sc-size-icon-md: 20px;
+  --sc-size-icon-lg: 24px;
+  --sc-size-icon-tool: 22px;
+  --sc-size-target-pointer: 36px;
+  --sc-size-target-touch: 44px;
+
+  --sc-border-width: 1px;
+  --sc-border-width-strong: 2px;
+  --sc-focus-ring-width: 3px;
+  --sc-focus-ring-width-compact: 2px;
+  --sc-focus-ring-offset: 2px;
+  --sc-radius-sm: 8px;
+  --sc-radius-md: 10px;
+  --sc-radius-lg: 14px;
+  --sc-radius-sheet: 20px;
+
+  /* Elevación en capas (difusa + contacto), calibrada por tema. */
+  --sc-shadow-raised:
+    0 1px 2px rgba(9, 24, 18, 0.05),
+    0 4px 12px rgba(9, 24, 18, 0.06);
+  --sc-shadow-floating:
+    0 2px 6px rgba(14, 34, 25, 0.07),
+    0 16px 44px rgba(14, 34, 25, 0.12);
+  --sc-shadow-modal:
+    0 8px 24px rgba(10, 26, 19, 0.14),
+    0 28px 80px rgba(10, 26, 19, 0.26);
+  --sc-shadow-popover:
+    0 2px 8px rgba(10, 26, 19, 0.08),
+    0 12px 32px rgba(10, 26, 19, 0.14);
+
+  /* ------------------------------------------------------------------ */
+  /* 5 · TIPOGRAFÍA (Instrumento de Precisión)                           */
+  /* ------------------------------------------------------------------ */
+  --sc-font-ui: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --sc-font-heading: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --sc-font-mono: ui-monospace, "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --sc-font-weight-regular: 400;
+  --sc-font-weight-medium: 550;
+  --sc-font-weight-semibold: 650;
+  --sc-font-weight-bold: 750;
+  --sc-font-weight-heavy: 800;
+  --sc-font-size-caption: 10px;
+  --sc-font-size-technical: 12px;
+  --sc-font-size-label: 12px;
+  --sc-font-size-body: 14px;
+  --sc-font-size-control: 14px;
+  --sc-font-size-subtitle: 15px;
+  --sc-font-size-panel: 17px;
+  --sc-font-size-screen: 26px;
+  --sc-line-height-tight: 1.2;
+  --sc-line-height-compact: 1.35;
+  --sc-line-height-body: 1.5;
+  --sc-line-height-control: 1.25;
+  --sc-tracking-tight: -0.025em;
+  --sc-tracking-control: -0.008em;
+  --sc-tracking-technical: 0.01em;
+  --sc-numeric-variant: tabular-nums lining-nums;
+  --sc-numeric-features: "tnum" 1, "lnum" 1, "cv02" 1, "cv03" 1, "cv04" 1, "cv11" 1;
+
+  /* ------------------------------------------------------------------ */
+  /* 6 · CONTROLES, LAYOUT Y DENSIDAD (Mesa Modular)                     */
+  /* ------------------------------------------------------------------ */
+  --sc-control-height-sm: 36px;
+  --sc-control-height-md: 40px;
+  --sc-control-height-touch: 44px;
+  --sc-layout-topbar: 68px;
+  --sc-layout-rail: 164px;
+  --sc-layout-rail-compact: 76px;
+  --sc-layout-inspector: 320px;
+  --sc-layout-inspector-compact: 290px;
+  --sc-layout-results: 285px;
+  --sc-layout-gutter: 18px;
+
+  /* Densidades: la profesional es compacta pero legible; la táctil se
+     activa por breakpoint/pointer, Aula usa la cómoda. */
+  --sc-density-row-compact: 30px;
+  --sc-density-row-comfortable: 36px;
+  --sc-density-row-touch: 44px;
+
+  /* ------------------------------------------------------------------ */
+  /* 7 · MOTION Y APILAMIENTO                                            */
+  /* ------------------------------------------------------------------ */
+  --sc-motion-instant: 70ms;
+  --sc-motion-press: 70ms;
+  --sc-motion-fast: 140ms;
+  --sc-motion-control: 160ms;
+  --sc-motion-standard: 220ms;
+  --sc-motion-slow: 360ms;
+  --sc-motion-loading: 800ms;
+  --sc-ease-standard: cubic-bezier(.22, 1, .36, 1);
+  --sc-ease-enter: cubic-bezier(.22, 1, .36, 1);
+  --sc-ease-exit: cubic-bezier(.4, 0, 1, 1);
+  --sc-ease-press: cubic-bezier(.2, .8, .2, 1);
+  --sc-ease-emphasized: cubic-bezier(.32, .72, 0, 1);
+  --sc-spring-soft: cubic-bezier(.3, 1.18, .35, 1);
+  --sc-spring-panel: cubic-bezier(.26, 1.08, .32, 1);
+  --sc-transition-control:
+    background-color var(--sc-motion-control) var(--sc-ease-standard),
+    border-color var(--sc-motion-control) var(--sc-ease-standard),
+    color var(--sc-motion-control) var(--sc-ease-standard),
+    box-shadow var(--sc-motion-control) var(--sc-ease-standard),
+    transform var(--sc-motion-control) var(--sc-ease-standard);
+  --sc-transition-theme:
+    background-color var(--sc-motion-standard) var(--sc-ease-standard),
+    border-color var(--sc-motion-standard) var(--sc-ease-standard),
+    color var(--sc-motion-fast) var(--sc-ease-standard);
+  --sc-z-base: 0;
+  --sc-z-panel: 10;
+  --sc-z-sticky: 20;
+  --sc-z-topbar: 30;
+  --sc-z-drawer: 60;
+  --sc-z-sheet: 70;
+  --sc-z-popover: 80;
+  --sc-z-modal: 1200;
+
+  /* ------------------------------------------------------------------ */
+  /* 8 · ALIAS DE COMPATIBILIDAD (migración por rol)                     */
+  /* ------------------------------------------------------------------ */
+  --app-bg: var(--sc-color-bg-app);
+  --surface: var(--sc-color-surface-1);
+  --surface-2: var(--sc-color-surface-2);
+  --surface-3: color-mix(in srgb, var(--sc-color-surface-2) 82%, var(--sc-color-border));
+  --canvas-bg: var(--sc-color-bg-canvas);
+  --text: var(--sc-color-text-primary);
+  --muted: var(--sc-color-text-secondary);
+  --muted-strong: color-mix(in srgb, var(--sc-color-text-primary) 78%, var(--sc-color-text-secondary));
+  --subtle: var(--sc-color-text-muted);
+  --border: var(--sc-color-border);
+  --border-soft: var(--sc-color-border-soft);
+  --shadow: var(--sc-shadow-floating);
+  --accent: var(--sc-color-action-primary);
+  --accent-hover: var(--sc-color-action-hover);
+  --accent-pressed: var(--sc-color-action-pressed);
+  --accent-soft: color-mix(in srgb, var(--sc-color-action-primary) 10%, var(--sc-color-surface-1));
+  --accent-foreground: var(--sc-color-action-foreground);
+  --focus: var(--sc-color-focus);
+  --selection: var(--sc-color-selection-stroke);
+  --selection-soft: var(--sc-color-selection);
+  --axial: var(--sc-color-technical-axial);
+  --shear: var(--sc-color-technical-shear);
+  --moment: var(--sc-color-technical-moment);
+  --force: var(--sc-color-technical-load);
+  --dimension: var(--sc-color-technical-dimension);
+  --axis: var(--sc-color-technical-axis);
+  --deformed: var(--sc-color-technical-deformed);
+  --reaction: var(--sc-color-technical-reaction);
+  --warning: var(--sc-color-state-warning);
+  --error: var(--sc-color-state-error);
+  --danger: var(--sc-color-state-error);
+  --success: var(--sc-color-state-success);
+  --grid: var(--sc-color-canvas-grid);
+  --grid-strong: var(--sc-color-canvas-grid-strong);
+  --member: var(--sc-color-canvas-member);
+  --node-fill: var(--sc-color-canvas-node-fill);
+  --radius-sm: var(--sc-radius-sm);
+  --radius-md: var(--sc-radius-md);
+  --radius-lg: var(--sc-radius-lg);
+  --topbar-h: var(--sc-layout-topbar);
+  --toolbar-w: var(--sc-layout-rail);
+  --inspector-w: var(--sc-layout-inspector);
+  --motion-fast: var(--sc-motion-fast);
+  --motion-control: var(--sc-motion-control);
+  --motion-press: var(--sc-motion-press);
+  --motion-standard: var(--sc-motion-standard);
+  --motion-slow: var(--sc-motion-slow);
+  --motion-loading: var(--sc-motion-loading);
+  --ease-native: var(--sc-ease-standard);
+  --ease-enter: var(--sc-ease-enter);
+  --ease-exit: var(--sc-ease-exit);
+  --ease-press: var(--sc-ease-press);
+}
+
+/*
+ * TEMA NOCHE · "Laboratorio Nocturno"
+ * Grafito frío profundo (nunca negro puro), capas diferenciadas por
+ * elevación real, acentos medidos, texto sin brillo excesivo.
+ * No es una inversión del Día: cada rol se reasigna a mano.
+ */
+:root[data-theme='dark'] {
+  --sc-color-bg-app: #101416;
+  --sc-color-bg-canvas: #0c1012;
+  --sc-color-surface-1: #171c1f;
+  --sc-color-surface-2: #1e2427;
+  --sc-color-surface-elevated: #232a2e;
+  --sc-color-surface-inset: #131719;
+  --sc-color-surface-toolbar: #14191c;
+  --sc-color-surface-input: #14191c;
+
+  --sc-color-text-primary: #f1f5f4;
+  --sc-color-text-secondary: #a9b4b1;
+  --sc-color-text-muted: #8d9895;
+  --sc-color-text-disabled: #67716e;
+  --sc-color-text-inverse: #101416;
+  --sc-color-text-link: #8db4ff;
+  --sc-color-text-technical: #c0cac6;
+  --sc-color-text-unit: #939e9a;
+
+  --sc-color-border: #2c3539;
+  --sc-color-border-soft: #222b2e;
+  --sc-color-border-strong: #3b464b;
+  --sc-color-divider: #1f272a;
+
+  --sc-color-action-primary: #2fbe8e;
+  --sc-color-action-hover: #3bcb9a;
+  --sc-color-action-pressed: #27ac80;
+  --sc-color-action-foreground: #06140f;
+  --sc-color-action-subtle: #12261f;
+  --sc-color-brand-secondary: #6cc6a4;
+
+  --sc-color-focus: #6ea0ff;
+  --sc-color-info: #6ea0ff;
+  --sc-color-selection: #18385e;
+  --sc-color-selection-stroke: #78a8ff;
+
+  --sc-color-state-success: #45c98a;
+  --sc-color-state-warning: #f0aa3c;
+  --sc-color-state-error: #f26b6b;
+  --sc-color-state-critical: #ff8a80;
+  --sc-color-state-info: #6ea0ff;
+  --sc-color-state-stale: #f0aa3c;
+  --sc-color-state-loading: #6ea0ff;
+  --sc-color-state-valid: #45c98a;
+  --sc-color-state-invalid: #f26b6b;
+  --sc-color-state-pending: #8d9895;
+  --sc-color-state-warning-foreground: var(--sc-color-state-warning);
+  --sc-color-state-error-foreground: var(--sc-color-state-error);
+
+  --sc-color-aula: #9a83f0;
+  --sc-color-aula-foreground: #171121;
+
+  --sc-color-canvas-grid: #202a2b;
+  --sc-color-canvas-grid-strong: #2c3539;
+  --sc-color-canvas-member: #f1f5f4;
+  --sc-color-canvas-node-fill: #0c1012;
+  --sc-color-overlay-soft: rgba(0, 0, 0, 0.34);
+  --sc-color-overlay-sheet: rgba(0, 0, 0, 0.46);
+  --sc-color-overlay-strong: rgba(0, 0, 0, 0.68);
+
+  --sc-color-technical-load: #ff825c;
+  --sc-color-technical-axial: #51bdd2;
+  --sc-color-technical-shear: #58cf83;
+  --sc-color-technical-moment: #ff8279;
+  --sc-color-technical-deformed: #65cbd1;
+  --sc-color-technical-reaction: #78a8ff;
+  --sc-color-technical-dimension: #e7bd55;
+  --sc-color-technical-axis: #ed8b58;
+
+  --sc-color-axial-compression: #c79be0;
+  --sc-color-envelope: #a29bf0;
+  --sc-color-critical-point: #e7bd55;
+
+  --sc-shadow-raised:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 6px 18px rgba(0, 0, 0, 0.32);
+  --sc-shadow-floating:
+    0 2px 8px rgba(0, 0, 0, 0.42),
+    0 18px 52px rgba(0, 0, 0, 0.46);
+  --sc-shadow-modal:
+    0 10px 28px rgba(0, 0, 0, 0.5),
+    0 28px 86px rgba(0, 0, 0, 0.62);
+  --sc-shadow-popover:
+    0 2px 10px rgba(0, 0, 0, 0.44),
+    0 14px 40px rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --sc-motion-instant: 0.001ms;
+    --sc-motion-press: 0.001ms;
+    --sc-motion-fast: 0.001ms;
+    --sc-motion-control: 0.001ms;
+    --sc-motion-standard: 0.001ms;
+    --sc-motion-slow: 0.001ms;
+    --sc-motion-loading: 0.001ms;
+    --sc-ease-emphasized: linear;
+    --sc-spring-soft: linear;
+    --sc-spring-panel: linear;
+  }
+}
