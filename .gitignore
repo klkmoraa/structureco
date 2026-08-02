@@ -12,3 +12,17 @@ __pycache__/
 
 # Local Netlify folder
 .netlify
+
+# Tooling interno de agentes/skills (no forma parte del producto)
+.agents/
+.superpowers/
+.playwright/
+.playwright-cli/
+skill-audit/
+skills-lock.json
+structureco-classroom-mode/
+structureco-documentation-handoff/
+structureco-engine-safety/
+structureco-release-certification/
+structureco-skills/
+structureco-ux-responsive/
