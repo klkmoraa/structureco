@@ -228,8 +228,26 @@ export const ImportCenterDialog = ({
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
+  /**
+   * `stage === 'inspect'` covers two different waits: reading the just-selected file, and
+   * committing the confirmed import. They need different copy ("Inspeccionando…" vs.
+   * "Preparando el resultado…") and only the first is safe to cancel — walking away mid
+   * inspection discards nothing, walking away mid commit could leave the project half
+   * replaced. `busyPhase` is what tells them apart; `outcome` cannot, because it is only
+   * ever set at the very end of the commit, after which the stage has already moved to
+   * 'result'.
+   */
+  const [busyPhase, setBusyPhase] = useState<'inspecting' | 'importing' | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  /**
+   * Bumped on every new inspection and on cancel, so a slow, abandoned inspection can never
+   * apply its result after the user has moved on to a different file — the requirement is
+   * explicit: "una inspección anterior no debe reemplazar el resultado de una selección más
+   * reciente". The visible flow already serializes file selection (the dropzone unmounts
+   * during 'inspect'), so this is defense in depth rather than a reachable race today.
+   */
+  const inspectionRequestRef = useRef(0);
 
   useEffect(() => {
     if (!open) return;
@@ -242,6 +260,8 @@ export const ImportCenterDialog = ({
     setDragging(false);
     setError(null);
     setOutcome(null);
+    setBusyPhase(null);
+    inspectionRequestRef.current += 1;
   }, [onSaveCurrent, open]);
 
   useModalFocus({
@@ -262,20 +282,36 @@ export const ImportCenterDialog = ({
   if (!open) return null;
 
   const inspectFile = async (nextFile: File) => {
+    const requestId = (inspectionRequestRef.current += 1);
     setFile(nextFile);
     setInspection(null);
     setOutcome(null);
     setError(null);
+    setBusyPhase('inspecting');
     setStage('inspect');
     try {
       const nextInspection = await activeAdapter.inspect(nextFile);
+      if (inspectionRequestRef.current !== requestId) return;
       setInspection(nextInspection);
       setSelectedContent(nextInspection.contents.filter((item) => item.available && item.selectedByDefault !== false).map((item) => item.key));
+      setBusyPhase(null);
       setStage('content');
     } catch (reason) {
+      if (inspectionRequestRef.current !== requestId) return;
       setError(reason instanceof Error ? reason.message : t('importCenter.inspectError'));
+      setBusyPhase(null);
       setStage('select');
     }
+  };
+
+  /** Abandons an in-flight inspection. Its eventual result, if any, is discarded on arrival. */
+  const cancelInspection = () => {
+    inspectionRequestRef.current += 1;
+    setBusyPhase(null);
+    setFile(null);
+    setInspection(null);
+    setError(null);
+    setStage('select');
   };
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
@@ -288,14 +324,17 @@ export const ImportCenterDialog = ({
   const runImport = async () => {
     if (!file || !inspection) return;
     setError(null);
+    setBusyPhase('importing');
     setStage('inspect');
     try {
       if (mode === 'replace' && saveCurrent && onSaveCurrent) await onSaveCurrent();
       const nextOutcome = await activeAdapter.importFile(file, inspection, { mode, content: selectedContent, saveCurrent });
       setOutcome(nextOutcome);
+      setBusyPhase(null);
       setStage('result');
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t('importCenter.importError'));
+      setBusyPhase(null);
       setStage('confirm');
     }
   };
@@ -379,8 +418,8 @@ export const ImportCenterDialog = ({
           {stage === 'inspect' ? (
             <section className="import-center-loading" aria-live="polite">
               <LoaderCircle className="spin" size={31} />
-              <h3 tabIndex={-1} data-import-stage-focus="inspect">{outcome ? t('importCenter.loadingResult') : t('importCenter.loadingInspect')}</h3>
-              <p>{t('importCenter.loadingBody')}</p>
+              <h3 tabIndex={-1} data-import-stage-focus="inspect">{busyPhase === 'importing' ? t('importCenter.loadingResult') : t('importCenter.loadingInspect')}</h3>
+              <p>{busyPhase === 'importing' ? t('importCenter.loadingImportingBody') : t('importCenter.loadingBody')}</p>
             </section>
           ) : null}
 
@@ -472,13 +511,14 @@ export const ImportCenterDialog = ({
 
         <footer className="import-center-footer">
           <button type="button" className="import-button-secondary" onClick={() => {
+            if (stage === 'inspect') { if (busyPhase === 'inspecting') cancelInspection(); return; }
             if (stage === 'select' || stage === 'result') onClose();
             else if (stage === 'content') setStage('select');
             else if (stage === 'conflicts') setStage('content');
             else if (stage === 'confirm') setStage('conflicts');
-          }} disabled={stage === 'inspect'}>
-            {stage === 'select' || stage === 'result' ? <X size={17} /> : <ArrowLeft size={17} />}
-            {stage === 'select' ? t('importCenter.cancel') : stage === 'result' ? t('importCenter.closeAction') : t('importCenter.back')}
+          }} disabled={stage === 'inspect' && busyPhase !== 'inspecting'}>
+            {stage === 'select' || stage === 'result' || (stage === 'inspect' && busyPhase === 'inspecting') ? <X size={17} /> : <ArrowLeft size={17} />}
+            {stage === 'select' || (stage === 'inspect' && busyPhase === 'inspecting') ? t('importCenter.cancel') : stage === 'result' ? t('importCenter.closeAction') : t('importCenter.back')}
           </button>
           {stage === 'content' ? <button type="button" className="import-button-primary" disabled={!inspection?.supported || selectedContent.length === 0} onClick={() => setStage('conflicts')}>{t('importCenter.continue')} <ArrowRight size={17} /></button> : null}
           {stage === 'conflicts' ? <button type="button" className="import-button-primary" onClick={() => setStage('confirm')}>{t('importCenter.review')} <ArrowRight size={17} /></button> : null}

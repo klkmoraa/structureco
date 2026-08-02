@@ -5,7 +5,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { createBlankProject } from '../../data/defaultProject';
 import { PROJECT_STORAGE_KEY } from '../../data/projectStorage';
 import { ProjectProvider } from '../../store/ProjectContext';
-import { ImportCenterDialog, type ImportCenterAdapter, type ImportInspection } from './ImportCenterDialog';
+import { ImportCenterDialog, type ImportCenterAdapter, type ImportInspection, type ImportOutcome } from './ImportCenterDialog';
 
 beforeAll(() => {
   if (!window.requestAnimationFrame) {
@@ -301,6 +301,67 @@ describe('ImportCenterDialog', () => {
 
     expect((await screen.findByRole('alert')).textContent).toContain('El archivo está dañado.');
     expect(screen.getByRole('heading', { name: /selecciona el expediente/i })).toBeTruthy();
+  });
+
+  it('lets the user cancel a slow inspection instead of being stuck with no way back', async () => {
+    // §19 requires "Permite cancelar operaciones pesadas" — before this fix the back/cancel
+    // button was unconditionally disabled while stage === 'inspect', so a large PDF or
+    // .structureco (near the 25/40 MB budgets from S09) left the user with no way out.
+    const user = userEvent.setup();
+    let resolveInspect!: (value: ImportInspection) => void;
+    const adapter: ImportCenterAdapter = {
+      inspect: vi.fn(() => new Promise<ImportInspection>((resolve) => { resolveInspect = resolve; })),
+      importFile: vi.fn(),
+    };
+    renderInLanguage(
+      <ImportCenterDialog open currentProjectName="Actual" adapter={adapter} onClose={vi.fn()} onImported={vi.fn()} />,
+    );
+
+    await user.upload(screen.getByLabelText(/seleccionar archivo para importar/i), new File(['{}'], 'grande.structureco', { type: 'application/json' }));
+    const heading = await screen.findByRole('heading', { name: /inspeccionando el archivo/i });
+    expect(heading).toBeTruthy();
+
+    const cancelButton = screen.getByRole('button', { name: /cancelar/i }) as HTMLButtonElement;
+    expect(cancelButton.disabled).toBe(false);
+    await user.click(cancelButton);
+
+    expect(await screen.findByRole('heading', { name: /selecciona el expediente/i })).toBeTruthy();
+
+    // The abandoned inspection must not resurrect once it finally resolves.
+    resolveInspect(inspection);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.getByRole('heading', { name: /selecciona el expediente/i })).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: /contenido encontrado/i })).toBeNull();
+  });
+
+  it('shows distinct copy for inspecting vs. committing, and disables cancel once committing', async () => {
+    // Before this fix `outcome` (only ever set at the very end of the commit) gated the
+    // loading copy, so "Preparando el resultado…" was unreachable dead code: users saw
+    // "Inspeccionando el archivo…" even while the import was actually being written.
+    const user = userEvent.setup();
+    let resolveImport!: (value: ImportOutcome) => void;
+    const adapter: ImportCenterAdapter = {
+      inspect: vi.fn().mockResolvedValue(inspection),
+      importFile: vi.fn(() => new Promise<ImportOutcome>((resolve) => { resolveImport = resolve; })),
+    };
+    renderInLanguage(
+      <ImportCenterDialog open currentProjectName="Actual" adapter={adapter} onClose={vi.fn()} onImported={vi.fn()} />,
+    );
+
+    await user.upload(screen.getByLabelText(/seleccionar archivo para importar/i), new File(['{}'], 'modelo.json', { type: 'application/json' }));
+    await screen.findByRole('heading', { name: /contenido encontrado/i });
+    await user.click(screen.getByRole('button', { name: /continuar/i }));
+    await user.click(screen.getByRole('button', { name: /revisar importación/i }));
+    await user.click(screen.getByRole('button', { name: /importar ahora/i }));
+
+    expect(await screen.findByRole('heading', { name: /preparando el resultado/i })).toBeTruthy();
+    // Committing must not be cancellable: walking away here could leave the project
+    // half-replaced.
+    const backButton = screen.getByRole('button', { name: /atrás/i }) as HTMLButtonElement;
+    expect(backButton.disabled).toBe(true);
+
+    resolveImport({ project });
+    expect(await screen.findByRole('heading', { name: /completada|listo/i })).toBeTruthy();
   });
 
   it('requires explicit confirmation before saving and replacing the current project', async () => {
