@@ -102,6 +102,15 @@
   --sc-color-state-warning-foreground: #8a4f00;
   --sc-color-state-error-foreground: var(--sc-red-700);
 
+  /* Superficies sólidas: un control relleno necesita un fondo y un primer plano
+     medidos como pareja. `--sc-color-state-*` sigue reservado para bordes, iconos y
+     texto sobre superficie, donde el requisito de contraste es otro.
+     Medido: #187f52 con blanco = 5,00:1; #b43d3d con blanco = 5,71:1. */
+  --sc-color-success-solid: #187f52;
+  --sc-color-success-on-solid: var(--sc-white);
+  --sc-color-error-solid: #b43d3d;
+  --sc-color-error-on-solid: var(--sc-white);
+
   --sc-color-aula: var(--sc-violet-500);
   --sc-color-aula-foreground: var(--sc-white);
 
@@ -209,6 +218,15 @@
   --sc-shadow-popover:
     0 2px 8px rgba(10, 26, 19, 0.08),
     0 12px 32px rgba(10, 26, 19, 0.14);
+  /* Contacto: separa un control activo de su carril sin sugerir que flota. */
+  --sc-shadow-contact: 0 1px 3px rgba(14, 37, 24, 0.10);
+  /* drop-shadow() sólo admite una capa, así que la elevación flotante tiene una
+     variante propia para elementos con forma recortada. */
+  --sc-shadow-drop: 0 12px 26px rgba(14, 37, 24, 0.16);
+  /* Hoja inferior: la luz cae desde arriba, así que su sombra sube. */
+  --sc-shadow-sheet:
+    0 -2px 8px rgba(8, 24, 16, 0.08),
+    0 -18px 48px rgba(8, 24, 16, 0.18);
 
   /* ------------------------------------------------------------------ */
   /* 5 · TIPOGRAFÍA (Instrumento de Precisión)                           */
@@ -330,6 +348,10 @@
   --error: var(--sc-color-state-error);
   --danger: var(--sc-color-state-error);
   --success: var(--sc-color-state-success);
+  --success-solid: var(--sc-color-success-solid);
+  --success-foreground: var(--sc-color-success-on-solid);
+  --error-solid: var(--sc-color-error-solid);
+  --error-foreground: var(--sc-color-error-on-solid);
   --grid: var(--sc-color-canvas-grid);
   --grid-strong: var(--sc-color-canvas-grid-strong);
   --member: var(--sc-color-canvas-member);
@@ -407,6 +429,13 @@
   --sc-color-state-warning-foreground: var(--sc-color-state-warning);
   --sc-color-state-error-foreground: var(--sc-color-state-error);
 
+  /* En Noche el relleno es claro, así que el primer plano se invierte a tinta.
+     Medido: #45c98a con #06140f = 8,95:1; #f26b6b con #1a0e0e = 6,20:1. */
+  --sc-color-success-solid: var(--sc-color-state-success);
+  --sc-color-success-on-solid: #06140f;
+  --sc-color-error-solid: var(--sc-color-state-error);
+  --sc-color-error-on-solid: #1a0e0e;
+
   --sc-color-aula: #9a83f0;
   --sc-color-aula-foreground: #171121;
 
@@ -443,6 +472,11 @@
   --sc-shadow-popover:
     0 2px 10px rgba(0, 0, 0, 0.44),
     0 14px 40px rgba(0, 0, 0, 0.5);
+  --sc-shadow-contact: 0 1px 3px rgba(0, 0, 0, 0.42);
+  --sc-shadow-drop: 0 12px 26px rgba(0, 0, 0, 0.5);
+  --sc-shadow-sheet:
+    0 -2px 10px rgba(0, 0, 0, 0.4),
+    0 -18px 52px rgba(0, 0, 0, 0.52);
 }
 
 @media (prefers-reduced-motion: reduce) {

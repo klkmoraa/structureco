@@ -162,6 +162,10 @@ describe('Phase 4 design-token contract', () => {
       ['--sc-color-text-primary', '--sc-color-surface-1', 4.5],
       ['--sc-color-text-secondary', '--sc-color-surface-1', 4.5],
       ['--sc-color-action-foreground', '--sc-color-action-primary', 4.5],
+      // Solid semantic fills are measured as a pair. `styles.css` used to hardcode #fff
+      // on these, which in Dark gave 2.11:1 on success and 2.37:1 on the accent.
+      ['--sc-color-success-on-solid', '--sc-color-success-solid', 4.5],
+      ['--sc-color-error-on-solid', '--sc-color-error-solid', 4.5],
       ['--sc-color-focus', '--sc-color-surface-1', 3],
       ['--sc-color-state-warning-foreground', '--sc-color-surface-1', 4.5],
       ['--sc-color-state-error-foreground', '--sc-color-surface-1', 4.5],
@@ -199,5 +203,25 @@ describe('Phase 4 design-token contract', () => {
 
   it('does not consume primitive color tokens from component CSS', () => {
     expect(stylesCss).not.toMatch(/var\(--sc-(?:white|black|green-\d+|blue-\d+|violet-\d+|orange-\d+|red-\d+|amber-\d+)\)/);
+  });
+
+  it('never hardcodes an opaque color in component CSS', () => {
+    // A literal foreground cannot follow the theme. `color:#fff` on `var(--accent)`
+    // measured 2.37:1 in Dark, far below the 4.5:1 the tokens themselves guarantee.
+    const literals = stylesCss.match(/#[0-9a-fA-F]{3,8}\b|(?<!\/\*[^*]*)\brgb\([^)]*\)/g) ?? [];
+    expect(literals).toEqual([]);
+  });
+
+  it('keeps translucency literals to shadows and scrims, where a token cannot express alpha', () => {
+    // `rgba()` is still allowed, but only inside box-shadow / filter / background scrims.
+    // Anywhere else it would be a color decision escaping the palette.
+    const offenders: string[] = [];
+    for (const match of stylesCss.matchAll(/[^;{}]*rgba\([^)]*\)[^;{}]*/g)) {
+      const declaration = match[0].trim();
+      if (!/box-shadow|drop-shadow|filter|background(-color)?\s*:/.test(declaration)) {
+        offenders.push(declaration.slice(0, 80));
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });
