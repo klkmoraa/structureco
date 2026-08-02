@@ -1,5 +1,6 @@
 import type { ProjectModel } from '../types';
 import { normalizeProject } from '../data/migrate';
+import { assertWithinBudget, FILE_BUDGETS } from './fileGuards';
 
 const download = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob);
@@ -28,9 +29,7 @@ export const exportProjectJson = (project: ProjectModel) => {
 };
 
 export const importProjectJson = async (file: File): Promise<ProjectModel> => {
-  if (file.size > 20 * 1024 * 1024) {
-    throw new Error('El archivo excede el límite de 20 MB.');
-  }
+  assertWithinBudget(file.size, FILE_BUDGETS.jsonBytes, 'JSON');
   const text = await file.text();
   let parsed: unknown;
   try {

@@ -5,6 +5,7 @@ import {
   type StructureCoPortablePayload,
 } from './portableTypes';
 import { parsePortablePayload } from './portablePayload';
+import { FILE_BUDGETS, PDF_BUDGETS } from './fileGuards';
 
 export interface InspectPdfOptions {
   maxBytes?: number;
@@ -41,13 +42,17 @@ export const inspectPdf = async (
   input: ArrayBuffer | Uint8Array | Blob,
   options: InspectPdfOptions = {},
 ): Promise<PdfInspection> => {
-  const maxBytes = options.maxBytes ?? 50 * 1024 * 1024;
+  const maxBytes = options.maxBytes ?? FILE_BUDGETS.pdfBytes;
+  const tooLarge = () => new Error(`El PDF excede el limite de ${Math.round(maxBytes / 1024 / 1024)} MB.`);
+  // A Blob knows its size without being read; checking first keeps an oversized PDF
+  // from being materialized just to be rejected.
+  if (input instanceof Blob && input.size > maxBytes) throw tooLarge();
   const source = input instanceof Blob
     ? new Uint8Array(await input.arrayBuffer())
     : input instanceof Uint8Array
       ? input
       : new Uint8Array(input);
-  if (source.byteLength > maxBytes) throw new Error(`El PDF excede el limite de ${Math.round(maxBytes / 1024 / 1024)} MB.`);
+  if (source.byteLength > maxBytes) throw tooLarge();
 
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
   if (typeof document !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
@@ -70,12 +75,22 @@ export const inspectPdf = async (
   let attachmentName: string | undefined;
   const attachments = await documentProxy.getAttachments();
   if (attachments) {
+    let examined = 0;
     for (const [key, attachment] of attachments) {
       const filename = attachment.filename || key;
       if (filename.toLowerCase() !== STRUCTURECO_PAYLOAD_FILENAME && !filename.toLowerCase().endsWith('.structureco.json')) continue;
+      examined += 1;
+      if (examined > PDF_BUDGETS.maxAttachments) {
+        warnings.push(`Solo se examinaron los primeros ${PDF_BUDGETS.maxAttachments} adjuntos.`);
+        break;
+      }
       const content = attachment.content ?? await documentProxy.getAttachmentContent(key);
       if (!content) {
         warnings.push(`El adjunto ${filename} no pudo recuperarse.`);
+        continue;
+      }
+      if (content.byteLength > PDF_BUDGETS.maxAttachmentBytes) {
+        warnings.push(`El adjunto ${filename} excede el limite y se omitio.`);
         continue;
       }
       try {
@@ -88,7 +103,7 @@ export const inspectPdf = async (
     }
   }
 
-  const pageLimit = Math.min(documentProxy.numPages, options.maxPages ?? 120);
+  const pageLimit = Math.min(documentProxy.numPages, options.maxPages ?? PDF_BUDGETS.maxPages);
   const textByPage: string[] = [];
   for (let pageNumber = 1; pageNumber <= pageLimit; pageNumber += 1) {
     const page = await documentProxy.getPage(pageNumber);

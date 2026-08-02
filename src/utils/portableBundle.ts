@@ -2,6 +2,13 @@ import type { AnalysisResult, ProjectModel } from '../types';
 import { createCalculationReport, type CalculationReportOptions } from './calculationPdf';
 import { canonicalStringify, parsePortablePayload, serializePortablePayload } from './portablePayload';
 import {
+  assertSafeArchivePath,
+  assertWithinBudget,
+  createArchiveBudgetTracker,
+  FILE_BUDGETS,
+  FileBudgetError,
+} from './fileGuards';
+import {
   PORTABLE_FORMAT_VERSION,
   type PortableBundleManifest,
   type StructureCoPortablePayload,
@@ -36,12 +43,27 @@ const decodeJson = (bytes: Uint8Array, label: string): unknown => {
   }
 };
 
+const REQUIRED_MANIFEST_FILES = ['payload', 'project', 'analysis', 'report'] as const;
+
 const assertManifest: (value: unknown) => asserts value is PortableBundleManifest = (value) => {
   if (typeof value !== 'object' || value === null
     || !('format' in value) || value.format !== 'structureco-bundle'
     || !('formatVersion' in value) || value.formatVersion !== PORTABLE_FORMAT_VERSION
     || !('payloadChecksum' in value) || typeof value.payloadChecksum !== 'string') {
     throw new Error('El paquete no tiene un manifest structureCo compatible.');
+  }
+  // `files` drives every lookup below, so it is validated here rather than crashing
+  // with a TypeError on a hand-edited or truncated manifest.
+  const files: unknown = 'files' in value ? value.files : undefined;
+  if (typeof files !== 'object' || files === null || Array.isArray(files)) {
+    throw new Error('El paquete no tiene un manifest structureCo compatible.');
+  }
+  for (const key of REQUIRED_MANIFEST_FILES) {
+    const entry: unknown = (files as Record<string, unknown>)[key];
+    if (typeof entry !== 'string' || entry === '') {
+      throw new Error('El paquete no tiene un manifest structureCo compatible.');
+    }
+    assertSafeArchivePath(entry);
   }
 };
 
@@ -87,16 +109,27 @@ export const createPortableBundle = async (
 export const readPortableBundle = async (
   input: ArrayBuffer | Uint8Array | Blob,
 ): Promise<PortableBundleContents> => {
+  if (input instanceof Blob) assertWithinBudget(input.size, FILE_BUDGETS.bundleBytes, '.structureco');
   const source = input instanceof Blob
     ? new Uint8Array(await input.arrayBuffer())
     : input instanceof Uint8Array
       ? input
       : new Uint8Array(input);
+  assertWithinBudget(source.byteLength, FILE_BUDGETS.bundleBytes, '.structureco');
   const { unzipSync } = await import('fflate');
+  // The filter runs against each entry's declared header before it is inflated, so a
+  // zip bomb is rejected on its claims instead of on the memory it would have taken.
+  const budget = createArchiveBudgetTracker();
   let files: Record<string, Uint8Array>;
   try {
-    files = unzipSync(source);
-  } catch {
+    files = unzipSync(source, {
+      filter: (entry) => {
+        budget.accept(entry);
+        return true;
+      },
+    });
+  } catch (error) {
+    if (error instanceof FileBudgetError) throw error;
     throw new Error('El archivo .structureco no es un paquete ZIP valido.');
   }
   const manifestBytes = files['manifest.json'];

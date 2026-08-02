@@ -118,6 +118,27 @@ const localizeReaderError = (reason: unknown, language: Language, t: Translate):
   if (exactKey) return t(exactKey);
   const pdfLimit = reason.message.match(/^El PDF excede el limite de (\d+) MB\.$/);
   if (pdfLimit) return t('importCenter.readerPdfLimit', { limit: pdfLimit[1] });
+
+  // Resource budgets (fileGuards). These carry the offending label/path, so they are
+  // matched by shape rather than by exact text.
+  const budgetPatterns: Array<[RegExp, TranslationKey, (match: RegExpMatchArray) => Record<string, string>]> = [
+    [/^El archivo (.+) excede el limite de ([\d.]+) MB\.$/, 'importCenter.readerFileTooLarge', (m) => ({ label: m[1], limit: m[2] })],
+    [/^El archivo (.+) esta vacio\.$/, 'importCenter.readerFileEmpty', (m) => ({ label: m[1] })],
+    [/^El archivo (.+) no declara un tamano valido\.$/, 'importCenter.readerFileInvalidSize', (m) => ({ label: m[1] })],
+    [/^El paquete supera las \d+ entradas permitidas\.$/, 'importCenter.readerArchiveEntries', () => ({})],
+    [/^El paquete contiene una ruta interna insegura: (.+)$/, 'importCenter.readerArchiveUnsafePath', (m) => ({ name: m[1] })],
+    [/^El paquete contiene una ruta demasiado profunda: (.+)$/, 'importCenter.readerArchiveDeepPath', (m) => ({ name: m[1] })],
+    [/^El paquete repite la entrada (.+)\.$/, 'importCenter.readerArchiveDuplicate', (m) => ({ name: m[1] })],
+    [/^La entrada .+ excede el limite de [\d.]+ MB descomprimidos\.$/, 'importCenter.readerArchiveTooLarge', () => ({})],
+    [/^El paquete supera los [\d.]+ MB descomprimidos\.$/, 'importCenter.readerArchiveTooLarge', () => ({})],
+    [/^La entrada .+ tiene una relacion de compresion sospechosa\.$/, 'importCenter.readerArchiveRatio', () => ({})],
+    [/^El paquete contiene una ruta interna no valida\.$/, 'importCenter.readerArchiveInvalidPath', () => ({})],
+  ];
+  for (const [pattern, key, variables] of budgetPatterns) {
+    const match = reason.message.match(pattern);
+    if (match) return t(key, variables(match));
+  }
+
   const pdfFailure = reason.message.match(/^No se pudo leer el PDF: (.+)$/);
   if (pdfFailure) return t('importCenter.readerPdfFailure', { message: pdfFailure[1] });
   return language === 'es' ? reason.message : t('importCenter.inspectError');

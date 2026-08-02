@@ -79,4 +79,28 @@ describe('portableImportCenterAdapter presentation localization', () => {
     await expect(adapter.inspect(new File(['{'], 'broken.json', { type: 'application/json' })))
       .rejects.toThrow('The JSON file is invalid.');
   });
+
+  it('explains a rejected file instead of leaking the raw budget message', async () => {
+    // Every guard in fileGuards must reach the user as a sentence, not as internals.
+    const cases: Array<[string, RegExp]> = [
+      ['El archivo PDF excede el limite de 25 MB.', /The PDF file exceeds the 25 MB limit/],
+      ['El archivo JSON esta vacio.', /The JSON file is empty/],
+      ['El archivo seleccionado no declara un tamano valido.', /does not report a valid size/],
+      ['El paquete supera las 32 entradas permitidas.', /too many entries/],
+      ['El paquete contiene una ruta interna insegura: ../fuera.json', /unsafe internal path \(\.\.\/fuera\.json\)/],
+      ['El paquete contiene una ruta demasiado profunda: a/b/c/d/e/f/g.json', /nested too deeply/],
+      ['El paquete repite la entrada manifest.json.', /repeats the entry manifest\.json/],
+      ['La entrada huge.bin excede el limite de 64 MB descomprimidos.', /exceed the allowed limit/],
+      ['El paquete supera los 128 MB descomprimidos.', /exceed the allowed limit/],
+      ['La entrada bomba.bin tiene una relacion de compresion sospechosa.', /anomalous compression ratio/],
+      ['El paquete contiene una ruta interna no valida.', /invalid internal path/],
+    ];
+    const adapter = createPortableImportCenterAdapter('en');
+    const file = new File(['x'], 'any.bin');
+
+    for (const [raw, expected] of cases) {
+      inspectPortableFileMock.mockRejectedValueOnce(new Error(raw));
+      await expect(adapter.inspect(file)).rejects.toThrow(expected);
+    }
+  });
 });
