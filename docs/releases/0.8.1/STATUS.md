@@ -22,9 +22,9 @@ revisión del diff + verificación de la frontera protegida + reporte + commit l
 | S08 | Mentor/Aula | NOT_STARTED | Opus 5 | S03 | — | — | — | — |
 | S09 | Seguridad de importaciones | COMPLETE | Opus 5 | S01 | `fdb0ab5` | 69 archivos / 439 pruebas en verde (+51) | corpus adversarial en `portableSecurity.test.ts`, [reporte](../../../reports/2026-08-02-1205-s09-seguridad-de-importaciones.md) | — |
 | S10 | Experiencia de importación | NOT_STARTED | Opus 5 | S09 | — | — | — | — |
-| S11 | Política numérica | NOT_STARTED | Opus 5 | S01 | — | — | — | — |
-| S12 | SVG | NOT_STARTED | Opus 5 | S11 | — | — | — | — |
-| S13 | PNG | NOT_STARTED | Opus 5 | S12 | — | — | — | — |
+| S11 | Política numérica | COMPLETE | Opus 5 | S01 | `5992cfc` | 71 archivos / 467 pruebas en verde (+28) | verificación funcional en navegador, [reporte](../../../reports/2026-08-02-1220-s11-politica-numerica.md) | — |
+| S12 | SVG | COMPLETE | Opus 5 | S11 | `f068e33` | 73 archivos / 487 pruebas en verde (+20) | medición antes/después en la app real, [reporte](../../../reports/2026-08-02-1230-s12-s13-fidelidad-svg-png.md) | — |
+| S13 | PNG | COMPLETE | Opus 5 | S12 | `f068e33` | incluidas arriba | rasterizado 2000×1280 verificado, [reporte](../../../reports/2026-08-02-1230-s12-s13-fidelidad-svg-png.md) | — |
 | S14 | PDF | NOT_STARTED | Opus 5 | S11 | — | — | — | — |
 | S15 | Casos analíticos e invariantes | NOT_STARTED | Opus 5 | S01 | — | — | — | — |
 | S16 | Rendimiento | NOT_STARTED | Opus 5 | S01 | — | — | — | — |
