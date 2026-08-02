@@ -115,15 +115,14 @@ describe('memoria de calculo: calidad editorial', () => {
     const all = pages.map((page) => page.text).join('\n');
     expect(all).toMatch(/N axial: min=0 kip; max=0 kip/);
     expect(all).toMatch(/Equilibrio: Fx=0, Fy=0, M=0/);
-    // Three contexts may still carry a value that small:
-    //  - the solver's own precision figures, where the exponent is the information;
-    //  - the narrative the engine writes into `explanation`;
-    //  - equation strings the engine pre-renders as vector literals, e.g.
-    //    `q_e^l = [-6.80938e-16, 1.11206e+1, ...]`.
-    // The last two are produced inside `src/engine/**`, which is the protected
-    // mathematical boundary. Cleaning them requires touching the engine and is recorded
-    // as a pending item, not fixed silently here.
-    const allowed = /residuo|precision|error|condicion|desplazamiento traslacional|=\s*\[/i;
+    // Only one context may legitimately carry a value that small: the solver's own
+    // precision figures, where the exponent *is* the information.
+    //
+    // The narrative and the pre-rendered equation vectors used to be exceptions here,
+    // because they are produced inside `src/engine/**`. They were fixed at the source
+    // under explicit authorization, so the allowance is gone and this assertion now
+    // covers the whole document.
+    const allowed = /residuo|precision|error|condicion/i;
     const unexplained: string[] = [];
     for (const match of all.matchAll(/-?\d(?:\.\d+)?e-(?:1[2-9]|[2-9]\d)/g)) {
       const context = all.slice(Math.max(0, match.index - 90), match.index);

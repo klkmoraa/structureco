@@ -1016,10 +1016,44 @@ const toMatrixTrace = (
   return { rows: matrix.length, columns: matrix[0]?.length ?? 0, rowLabels, columnLabels, entries };
 };
 
+/**
+ * Formats one number for the explanation prose and equations.
+ *
+ * Presentation only: it is applied exclusively to the strings in `ExplanationStep`, never
+ * to a stored result. `explanation` also carries `inputs`/`outputs` as raw numbers, and
+ * those keep full precision.
+ *
+ * A value that is zero up to the solver's tolerance is written as `0`. Publishing
+ * `-2.93915e-15 kN` as an axial force in a transversally loaded beam states a measurable
+ * quantity where there is none, and that text is reproduced verbatim in the PDF report.
+ */
+const explanationValue = (value: number, reference: number, digits = 5): string => {
+  if (!Number.isFinite(value)) return 'n/d';
+  const scale = Number.isFinite(reference) ? Math.abs(reference) : 0;
+  if (value === 0 || (scale > 0 && Math.abs(value) <= 1e-9 * scale)) return '0';
+  return value.toExponential(digits);
+};
+
 const explanationSteps = (project: ProjectModel, result: Omit<AnalysisResult, 'explanation'>): ExplanationStep[] => {
   const nodeMap = getNodeMap(project);
   const maxReaction = Math.max(0, ...result.nodeResults.flatMap((node) => [Math.abs(node.rx), Math.abs(node.ry), Math.abs(node.rm)]));
   const maxDisp = Math.max(0, ...result.nodeResults.flatMap((node) => [Math.abs(node.ux), Math.abs(node.uy)]));
+  /* A maximum has no larger sibling to be compared against, so displacement is judged
+     against the model's own size and reaction against the actions that produced it. */
+  const modelSpan = Math.max(
+    1,
+    ...project.nodes.map((node) => Math.abs(node.x)),
+    ...project.nodes.map((node) => Math.abs(node.y)),
+  );
+  const appliedScale = Math.max(
+    ...project.nodalLoads.map((load) => Math.max(Math.abs(load.fx), Math.abs(load.fy), Math.abs(load.mz))),
+    ...project.memberLoads.map((load) => Math.max(
+      Math.abs(load.qyStart ?? 0), Math.abs(load.qyEnd ?? 0),
+      Math.abs(load.qxStart ?? 0), Math.abs(load.qxEnd ?? 0),
+      Math.abs(load.px ?? 0), Math.abs(load.py ?? 0), Math.abs(load.moment ?? 0),
+    )),
+    0,
+  );
   const restrainedDofs = project.nodes.reduce((total, node) => {
     if (node.support.type === 'fixed') return total + 3;
     if (node.support.type === 'pin') return total + 2;
@@ -1089,7 +1123,7 @@ const explanationSteps = (project: ProjectModel, result: Omit<AnalysisResult, 'e
     },
     {
       id: 'solution', category: 'stiffness', title: '7. Solución de desplazamientos y reacciones',
-      summary: `Se resolvió el sistema restringido con equilibrado simétrico, factorización LU con pivoteo escalado y refinamiento por residuo. El desplazamiento traslacional máximo fue ${maxDisp.toExponential(4)} m y la reacción de mayor magnitud fue ${maxReaction.toExponential(4)} en unidades base.`,
+      summary: `Se resolvió el sistema restringido con equilibrado simétrico, factorización LU con pivoteo escalado y refinamiento por residuo. El desplazamiento traslacional máximo fue ${explanationValue(maxDisp, modelSpan, 4)} m y la reacción de mayor magnitud fue ${explanationValue(maxReaction, appliedScale, 4)} en unidades base.`,
       equations: ['D A D y = D b', 'x = D y', 'A = [K  Cᵀ; C  0]', 'Rsoporte = −Csoporteᵀ λ', 'Rresorte = −Ks U'],
       outputs: [
         { label: 'Residuo normalizado', value: result.residualNorm, unit: '—' },
@@ -1116,10 +1150,12 @@ const explanationSteps = (project: ProjectModel, result: Omit<AnalysisResult, 'e
       title: `${8 + index}. Miembro ${member.id}: recuperación local`,
       summary: `${member.type === 'truss' ? 'Barra de armadura' : 'Elemento de marco'} desde ${member.i} hasta ${member.j}; L = ${L.toFixed(6)} m, c = ${c.toFixed(6)}, s = ${s.toFixed(6)}.`,
       equations: member.type === 'truss'
-        ? ['N = EA/L [−1  1] dˡaxial', `N = ${(memberResult?.diagram[0]?.axial ?? 0).toExponential(6)} kN (${memberResult?.trussState ?? 'sin clasificar'})`]
+        ? ['N = EA/L [−1  1] dˡaxial', `N = ${explanationValue(memberResult?.diagram[0]?.axial ?? 0, maxReaction, 6)} kN (${memberResult?.trussState ?? 'sin clasificar'})`]
         : [
             'qₑˡ = kₑˡ dₑˡ − fₑˡ',
-            `qₑˡ = [${endForces.map((value) => value.toExponential(5)).join(', ')}]ᵀ`,
+            // Compared against the largest component of this member's own vector: a
+            // component that is 1e-16 of its neighbours is nothing, not a small force.
+            `qₑˡ = [${endForces.map((value) => explanationValue(value, Math.max(...endForces.map(Math.abs)), 5)).join(', ')}]ᵀ`,
             'N positivo = tensión; M positivo = sagante en el diagrama.',
           ],
       relatedMemberIds: [member.id],
