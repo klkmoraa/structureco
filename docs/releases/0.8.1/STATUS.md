@@ -21,7 +21,7 @@ revisión del diff + verificación de la frontera protegida + reporte + commit l
 | S07 | Resultados | COMPLETE (auditado) | Sonnet 5 | S03 | — | sin cambios de código | avisos, corrección guiada y exportación CSV verificados | — |
 | S08 | Mentor/Aula | COMPLETE (auditado) | Sonnet 5 | S03 | — | sin cambios de código | recorrido de 6 etapas verificado contra §16 | — |
 | S09 | Seguridad de importaciones | COMPLETE | Opus 5 | S01 | `fdb0ab5` | 69 archivos / 439 pruebas en verde (+51) | corpus adversarial en `portableSecurity.test.ts`, [reporte](../../../reports/2026-08-02-1205-s09-seguridad-de-importaciones.md) | — |
-| S10 | Experiencia de importación | COMPLETE | Sonnet 5 | S09 | (pendiente) | 78 archivos / 530 pruebas | cancelación de inspección + guarda anti-carrera, [reporte](../../../reports/2026-08-02-1516-s10-experiencia-de-importacion.md) | — |
+| S10 | Experiencia de importación | COMPLETE | Sonnet 5 | S09 | `550cec4` | 78 archivos / 530 pruebas | cancelación de inspección + guarda anti-carrera, [reporte](../../../reports/2026-08-02-1516-s10-experiencia-de-importacion.md) | — |
 | S11 | Política numérica | COMPLETE | Opus 5 | S01 | `5992cfc` | 71 archivos / 467 pruebas en verde (+28) | verificación funcional en navegador, [reporte](../../../reports/2026-08-02-1220-s11-politica-numerica.md) | — |
 | S12 | SVG | COMPLETE | Opus 5 | S11 | `f068e33` | 73 archivos / 487 pruebas en verde (+20) | medición antes/después en la app real, [reporte](../../../reports/2026-08-02-1230-s12-s13-fidelidad-svg-png.md) | — |
 | S13 | PNG | COMPLETE | Opus 5 | S12 | `f068e33` | incluidas arriba | rasterizado 2000×1280 verificado, [reporte](../../../reports/2026-08-02-1230-s12-s13-fidelidad-svg-png.md) | — |
