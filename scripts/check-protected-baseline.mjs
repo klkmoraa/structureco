@@ -31,9 +31,13 @@ const collect = async (relative) => {
   return nested.flat();
 };
 
+/**
+ * Line endings are normalized before hashing: git may check these files out as CRLF
+ * or LF depending on the platform, and that difference says nothing about the maths.
+ */
 const hashFile = async (relative) => {
-  const bytes = await readFile(path.join(ROOT, relative));
-  return createHash('sha256').update(bytes).digest('hex');
+  const text = await readFile(path.join(ROOT, relative), 'utf8');
+  return createHash('sha256').update(text.replace(/\r\n/g, '\n'), 'utf8').digest('hex');
 };
 
 const currentDigest = async () => {
