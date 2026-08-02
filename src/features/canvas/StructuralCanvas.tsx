@@ -435,15 +435,27 @@ export const StructuralCanvas = ({
   }, [memberMap, nodeMap, project.memberLoads, project.nodalLoads, showCanvasFeedback, size.height, size.width, t, updateCamera]);
 
   useEffect(() => {
-    const exportSvg = () => svgRef.current && exportSvgElement(svgRef.current, `${project.name.replace(/\s+/g, '-').toLowerCase()}.svg`);
-    const exportPng = () => svgRef.current && exportSvgAsPng(svgRef.current, `${project.name.replace(/\s+/g, '-').toLowerCase()}.png`);
+    const baseName = project.name.replace(/\s+/g, '-').toLowerCase();
+    // The drawing is exported over the background the user is actually looking at: a
+    // dark-theme canvas on a transparent page would be invisible in most viewers.
+    const options = {
+      background: 'current' as const,
+      title: project.name,
+      description: t('canvas.exportDescription', { project: project.name }),
+    };
+    const exportSvg = () => svgRef.current && exportSvgElement(svgRef.current, `${baseName}.svg`, options);
+    const exportPng = () => {
+      if (!svgRef.current) return;
+      exportSvgAsPng(svgRef.current, `${baseName}.png`, options)
+        .catch((error: unknown) => showCanvasFeedback(error instanceof Error ? error.message : t('canvas.exportFailed')));
+    };
     window.addEventListener('structureco:export-svg', exportSvg);
     window.addEventListener('structureco:export-png', exportPng);
     return () => {
       window.removeEventListener('structureco:export-svg', exportSvg);
       window.removeEventListener('structureco:export-png', exportPng);
     };
-  }, [project.name]);
+  }, [project.name, showCanvasFeedback, t]);
 
   const snapPoint = useCallback((point: { x: number; y: number }, excludedNodeId?: string) => {
     const drawingOrigin = memberStart ? nodeMap.get(memberStart) : null;
