@@ -29,7 +29,7 @@ revisión del diff + verificación de la frontera protegida + reporte + commit l
 | S15 | Casos analíticos e invariantes | COMPLETE | Opus 5 | S01 | `a5b7566` | 75 archivos / 507 pruebas | [VERIFICATION_POLICY.md](VERIFICATION_POLICY.md), [reporte](../../../reports/2026-08-02-1255-s15-invariantes.md) | — |
 | S16 | Rendimiento | COMPLETE | Opus 5 | S01 | `226a66f` | 76 archivos / 513 pruebas | [PERFORMANCE.md](PERFORMANCE.md), [reporte](../../../reports/2026-08-02-1400-s16-rendimiento.md) | — |
 | S17 | Accesibilidad y responsive | COMPLETE (auditado) | Sonnet 5 | S04–S08 | — | sin cambios de código | 8 viewports sin overflow, [reporte](../../../reports/2026-08-02-1530-s17-accesibilidad-y-responsive.md) | — |
-| S18 | CI preparado localmente | NOT_STARTED | Opus 5 | S15 | — | — | — | — |
+| S18 | CI preparado localmente | COMPLETE | Sonnet 5 | S15 | (pendiente) | 78 archivos / 530 pruebas + qa/qa:webkit en verde | [CI.md](CI.md), [reporte](../../../reports/2026-08-02-1615-s18-ci-preparado-localmente.md) | — |
 | S19 | Documentación | NOT_STARTED | Opus 5 | todos | — | — | — | — |
 | S20 | Certificación y versión | NOT_STARTED | Opus 5 | todos | — | — | — | — |
 

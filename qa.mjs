@@ -225,7 +225,10 @@ async function influenceWorkflow() {
   const lineView = page.locator('.influence-line-view');
   await lineView.getByRole('img', { name: /Línea de influencia M en M1/ }).waitFor({ state: 'visible' });
   const lineText = await lineView.innerText();
-  out.checks.influenceMomentExact = /Máximo\s+2\.0000 m\s+x 4\.000 m/i.test(lineText);
+  // S11 replaced the raw .toPrecision(5) this value used to go through with the shared
+  // formatSignificant policy, which strips cosmetic trailing zeros ("2.0000" -> "2"). The
+  // "x 4.000 m" position keeps its fixed 3-decimal alignment (formatFixed), unaffected.
+  out.checks.influenceMomentExact = /Máximo\s+2 m\s+x 4\.000 m/i.test(lineText);
   out.checks.influencePiecewiseExact = lineText.includes('2 cúbicas') && lineText.includes('0 saltos explícitos');
   out.checks.influenceDiagnostics = await lineView.locator('.verification-grid > .passed').count() === 4;
   out.checks.influenceStaticLoadsHidden = await page.locator('.load-layer').count() === 0;
@@ -245,7 +248,8 @@ async function influenceWorkflow() {
   await lineView.getByRole('button', { name: 'Calcular', exact: true }).click();
   await lineView.getByRole('img', { name: /Respuesta exacta del tren para M en M1/ }).waitFor({ state: 'visible' });
   const trainText = await lineView.innerText();
-  out.checks.influenceSingleAxleExact = /Máximo del tren\s+20\.000 kN·m\s+ref\. 4\.000 m/i.test(trainText);
+  // Same S11 formatSignificant change: "20.000 kN·m" -> "20 kN·m".
+  out.checks.influenceSingleAxleExact = /Máximo del tren\s+20 kN·m\s+ref\. 4\.000 m/i.test(trainText);
   out.checks.influenceTrainWithoutGrid = trainText.includes('no usa una cuadrícula de posiciones');
 
   await page.setViewportSize({ width: 430, height: 932 });
@@ -337,7 +341,12 @@ async function mobile() {
   await page.getByRole('tab', { name: 'Momento', exact: true }).click();
   await page.locator('.diagram-chart.moment').waitFor({ state: 'visible' });
   const membersBeforeModalShortcut = await page.locator('.member-object').count();
-  await page.getByRole('dialog', { name: 'Resultados del análisis' }).press('Escape');
+  // At phone width (<=700px) results.panel is intentionally a non-modal region, not a
+  // dialog: the canvas stays interactive underneath (phoneCanvasInteractive), so a
+  // document-level Escape handler closes the sheet instead of a role="dialog" one. This
+  // script used to assert the tablet-only dialog role here; scope Escape to the panel
+  // itself so the check matches the phone behaviour it is actually exercising.
+  await page.locator('.results-panel').press('Escape');
   await page.locator('.results-panel.mobile-collapsed').waitFor({ state: 'visible' });
   await page.getByLabel('Abrir inspector').click();
   out.checks.mobileInspector = await page.locator('.inspector-panel.mobile-open').isVisible();
