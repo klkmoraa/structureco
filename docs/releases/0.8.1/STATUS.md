@@ -15,11 +15,11 @@ revisión del diff + verificación de la frontera protegida + reporte + commit l
 | S01 | Baseline y protección | COMPLETE | Opus 5 | — | `b6cfde7`, `be02366` | 67 archivos / 388 pruebas en verde | `PROTECTED_BASELINE.sha256`, [reporte](../../../reports/2026-08-02-1150-s01-baseline-y-proteccion.md) | — |
 | S02 | Especificación de diseño | COMPLETE | Opus 5 | S01 | `8f9cb73` | 76 archivos / 515 pruebas | [DESIGN_AUDIT.md](DESIGN_AUDIT.md), [reporte](../../../reports/2026-08-02-1410-s02-s03-tokens-y-contraste.md) | — |
 | S03 | Fundamentos del sistema de diseño | COMPLETE | Opus 5 | S02 | `8f9cb73` | contraste medido en ambos temas | 38 → 0 literales de color; 6/6 parejas AA | — |
-| S04 | Navegación y shell | NOT_STARTED | Opus 5 | S03 | — | — | — | — |
-| S05 | Canvas e interacción | NOT_STARTED | Opus 5 | S03 | — | — | — | — |
-| S06 | Inspector y formularios | NOT_STARTED | Opus 5 | S03 | — | — | — | — |
-| S07 | Resultados | NOT_STARTED | Opus 5 | S03 | — | — | — | — |
-| S08 | Mentor/Aula | NOT_STARTED | Opus 5 | S03 | — | — | — | — |
+| S04 | Navegación y shell | COMPLETE | Opus 5 | S03 | `1752ac1` | 77 archivos / 521 pruebas | bus de comandos tipado, [reporte](../../../reports/2026-08-02-1418-s04-bus-de-comandos.md) | — |
+| S05 | Canvas e interacción | COMPLETE (auditado) | Sonnet 5 | S03 | — | sin cambios de código | [reporte conjunto](../../../reports/2026-08-02-1500-s05-s08-auditoria-canvas-inspector-resultados-aula.md) | — |
+| S06 | Inspector y formularios | COMPLETE (auditado) | Sonnet 5 | S03 | — | sin cambios de código | verificado vía manejador de React real (blur nativo no fiable en pestaña de fondo) | — |
+| S07 | Resultados | COMPLETE (auditado) | Sonnet 5 | S03 | — | sin cambios de código | avisos, corrección guiada y exportación CSV verificados | — |
+| S08 | Mentor/Aula | COMPLETE (auditado) | Sonnet 5 | S03 | — | sin cambios de código | recorrido de 6 etapas verificado contra §16 | — |
 | S09 | Seguridad de importaciones | COMPLETE | Opus 5 | S01 | `fdb0ab5` | 69 archivos / 439 pruebas en verde (+51) | corpus adversarial en `portableSecurity.test.ts`, [reporte](../../../reports/2026-08-02-1205-s09-seguridad-de-importaciones.md) | — |
 | S10 | Experiencia de importación | NOT_STARTED | Opus 5 | S09 | — | — | — | — |
 | S11 | Política numérica | COMPLETE | Opus 5 | S01 | `5992cfc` | 71 archivos / 467 pruebas en verde (+28) | verificación funcional en navegador, [reporte](../../../reports/2026-08-02-1220-s11-politica-numerica.md) | — |
