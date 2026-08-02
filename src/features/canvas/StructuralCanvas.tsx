@@ -43,6 +43,7 @@ import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { CanvasChrome } from './CanvasChrome';
 import { layoutSmartLabels, smartLabelDetailForScale, type SmartLabelCandidate } from './labelLayout';
 import { buildCanvasSelectionVisualState, selectionEnvelopeForPoints, selectionEnvelopeHandles } from './selectionVisuals';
+import { onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
 
 type Camera = CanvasCamera;
 
@@ -405,8 +406,7 @@ export const StructuralCanvas = ({
   }, [canvasMeasured, fitModel, project.id, project.nodes.length, size.height, size.width, updateCamera]);
 
   useEffect(() => {
-    const focusObject = (event: Event) => {
-      const detail = (event as CustomEvent<{ kind: 'node' | 'member' | 'nodalLoad' | 'memberLoad'; id: string }>).detail;
+    const focusObject = (detail: FocusableSelection) => {
       if (!detail) return;
       let point: { x: number; y: number } | null = null;
       if (detail.kind === 'node') {
@@ -430,8 +430,7 @@ export const StructuralCanvas = ({
       updateCamera({ scale, x: size.width / 2 - point.x * scale, y: size.height / 2 + point.y * scale });
       showCanvasFeedback(t('canvas.objectCentered', { id: detail.id }));
     };
-    window.addEventListener('structureco:focus-object', focusObject);
-    return () => window.removeEventListener('structureco:focus-object', focusObject);
+    return onWorkspaceCommand('focus-object', focusObject);
   }, [memberMap, nodeMap, project.memberLoads, project.nodalLoads, showCanvasFeedback, size.height, size.width, t, updateCamera]);
 
   useEffect(() => {
@@ -449,12 +448,11 @@ export const StructuralCanvas = ({
       exportSvgAsPng(svgRef.current, `${baseName}.png`, options)
         .catch((error: unknown) => showCanvasFeedback(error instanceof Error ? error.message : t('canvas.exportFailed')));
     };
-    window.addEventListener('structureco:export-svg', exportSvg);
-    window.addEventListener('structureco:export-png', exportPng);
-    return () => {
-      window.removeEventListener('structureco:export-svg', exportSvg);
-      window.removeEventListener('structureco:export-png', exportPng);
-    };
+    const unsubscribes = [
+      onWorkspaceCommand('export-svg', exportSvg),
+      onWorkspaceCommand('export-png', exportPng),
+    ];
+    return () => { for (const unsubscribe of unsubscribes) unsubscribe(); };
   }, [project.name, showCanvasFeedback, t]);
 
   const snapPoint = useCallback((point: { x: number; y: number }, excludedNodeId?: string) => {

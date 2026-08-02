@@ -32,6 +32,7 @@ import { Button, IconButton } from '../../design-system/components/controls';
 import { useClassroomSession } from '../../store/ClassroomSessionContext';
 import { presentExample } from '../welcome/examplePresentation';
 import { APP_VERSION } from '../../appVersion';
+import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
 
@@ -206,7 +207,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
     if (project.settings.calculationMode === 'classroom') {
       if (!classroomSession.hasPredictions) {
         classroomSession.startPredicting();
-        window.dispatchEvent(new CustomEvent('structureco:expand-mobile-results'));
+        emitWorkspaceCommand('expand-mobile-results');
         return;
       }
       classroomSession.markAnalysisRequested();
@@ -352,7 +353,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
           isAnalyzing={isAnalyzing}
           onOpenIssues={() => {
             setResultTab('issues');
-            window.dispatchEvent(new CustomEvent('structureco:expand-mobile-results'));
+            emitWorkspaceCommand('expand-mobile-results');
           }}
         />
         <div className="export-wrap">
@@ -362,8 +363,8 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
               <button role="menuitem" onClick={() => { exportProjectJson(project); setShowExportMenu(false); }}><Save size={16} /> {t('export.projectJson')}</button>
               <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
               <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
-              <button role="menuitem" onClick={() => { window.dispatchEvent(new CustomEvent('structureco:export-svg')); setShowExportMenu(false); }}>{t('export.imageSvg')}</button>
-              <button role="menuitem" onClick={() => { window.dispatchEvent(new CustomEvent('structureco:export-png')); setShowExportMenu(false); }}>{t('export.imagePng')}</button>
+              <button role="menuitem" onClick={() => { emitWorkspaceCommand('export-svg'); setShowExportMenu(false); }}>{t('export.imageSvg')}</button>
+              <button role="menuitem" onClick={() => { emitWorkspaceCommand('export-png'); setShowExportMenu(false); }}>{t('export.imagePng')}</button>
               <button role="menuitem" onClick={() => { window.print(); setShowExportMenu(false); }}>{t('export.print')}</button>
             </div>
           ) : null}
@@ -398,8 +399,8 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
               <button onClick={() => { exportProjectJson(project); setShowMobileMenu(false); }}><Save size={16} /> {t('export.json')}</button>
               <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
               <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
-              <button onClick={() => { window.dispatchEvent(new CustomEvent('structureco:export-svg')); setShowMobileMenu(false); }}><Download size={16} /> {t('export.svg')}</button>
-              <button onClick={() => { window.dispatchEvent(new CustomEvent('structureco:export-png')); setShowMobileMenu(false); }}><Download size={16} /> {t('export.png')}</button>
+              <button onClick={() => { emitWorkspaceCommand('export-svg'); setShowMobileMenu(false); }}><Download size={16} /> {t('export.svg')}</button>
+              <button onClick={() => { emitWorkspaceCommand('export-png'); setShowMobileMenu(false); }}><Download size={16} /> {t('export.png')}</button>
               <button onClick={() => { window.print(); setShowMobileMenu(false); }}>{t('export.print')}</button>
               <div className={`mobile-storage-state ${storageHasError || storageState === 'offline' ? 'error' : ''}`} data-storage-state={storageState} role="status" aria-live="polite" aria-atomic="true">{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}<span><strong>{storageLabel}</strong><small>{storageDescription}</small></span></div>
               {exportError ? <div className="portable-export-error" role="alert">{exportError}</div> : null}

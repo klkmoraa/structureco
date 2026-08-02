@@ -12,6 +12,7 @@ import { createPersistedEditorLayerState, editorLayerReducer, persistEditorLayer
 import { AppShellLayout } from './AppShellLayout';
 import { useWorkspaceLayoutPreferences } from './useWorkspaceLayoutPreferences';
 import '../../design-system/components/ui.css';
+import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
 
 export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => void; projectId: string }) => {
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
@@ -41,7 +42,7 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
       && activeElement !== document.documentElement
       ? activeElement
       : inspectorToggleRef.current;
-    window.dispatchEvent(new CustomEvent('structureco:collapse-mobile-results'));
+    emitWorkspaceCommand('collapse-mobile-results');
     setMobileInspectorOpen(true);
   }, []);
 
@@ -56,9 +57,7 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
   }, []);
 
   useEffect(() => {
-    const yieldInspectorToResults = () => setMobileInspectorOpen(false);
-    window.addEventListener('structureco:expand-mobile-results', yieldInspectorToResults);
-    return () => window.removeEventListener('structureco:expand-mobile-results', yieldInspectorToResults);
+    return onWorkspaceCommand('expand-mobile-results', () => setMobileInspectorOpen(false));
   }, []);
 
   useEffect(() => {

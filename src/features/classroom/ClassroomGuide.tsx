@@ -5,6 +5,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { useClassroomSession } from '../../store/ClassroomSessionContext';
 import type { AnalysisResult, ProjectModel, Tool } from '../../types';
 import type { TranslationKey } from '../../i18n/catalogs';
+import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 
 export interface ClassroomGuideProps {
   project: ProjectModel;
@@ -51,7 +52,7 @@ export const ClassroomGuide = ({
     if (step.action.kind === 'tool') onChooseTool?.(step.action.tool);
     else if (step.action.kind === 'predict') {
       session.startPredicting();
-      window.dispatchEvent(new CustomEvent('structureco:expand-mobile-results'));
+      emitWorkspaceCommand('expand-mobile-results');
       window.requestAnimationFrame(() => document.getElementById('classroom-prediction-title')?.focus());
     } else if (step.action.kind === 'analyze') {
       if (session.hasPredictions) {
@@ -61,7 +62,7 @@ export const ClassroomGuide = ({
       else session.startPredicting();
     } else if (step.action.kind === 'compare') {
       session.revealResults();
-      window.dispatchEvent(new CustomEvent('structureco:expand-mobile-results'));
+      emitWorkspaceCommand('expand-mobile-results');
     } else {
       window.requestAnimationFrame(() => document.getElementById(conclusionId)?.focus());
     }

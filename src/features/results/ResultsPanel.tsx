@@ -15,6 +15,7 @@ import { deriveClassroomProgress, type ClassroomProgressStepId } from '../../edu
 import { formatResultNumber } from './resultFormatting';
 import { formatFixed, formatScientific, formatSignificant } from '../../utils/numberFormat';
 import { ClassroomPredictionForm } from '../classroom/ClassroomPredictionForm';
+import { emitWorkspaceCommand, onWorkspaceCommand } from '../workspace/workspaceCommands';
 
 const loadInfluenceLineView = () => import('./InfluenceLineView')
   .then((module) => ({ default: module.InfluenceLineView }));
@@ -205,7 +206,7 @@ export const ResultsPanel = () => {
         cleanupTransition();
         mobileFitFrameRef.current = window.requestAnimationFrame(() => {
           mobileFitFrameRef.current = window.requestAnimationFrame(() => {
-            window.dispatchEvent(new CustomEvent('structureco:fit-canvas'));
+            emitWorkspaceCommand('fit-canvas');
             mobileFitFrameRef.current = window.requestAnimationFrame(() => {
               mobileFitFrameRef.current = null;
               panelRef.current?.setAttribute('data-canvas-fit-settled', 'true');
@@ -284,12 +285,11 @@ export const ResultsPanel = () => {
       setMobileExpanded(true);
       window.requestAnimationFrame(() => panelRef.current?.focus({ preventScroll: true }));
     };
-    window.addEventListener('structureco:collapse-mobile-results', collapse);
-    window.addEventListener('structureco:expand-mobile-results', expand);
-    return () => {
-      window.removeEventListener('structureco:collapse-mobile-results', collapse);
-      window.removeEventListener('structureco:expand-mobile-results', expand);
-    };
+    const unsubscribes = [
+      onWorkspaceCommand('collapse-mobile-results', collapse),
+      onWorkspaceCommand('expand-mobile-results', expand),
+    ];
+    return () => { for (const unsubscribe of unsubscribes) unsubscribe(); };
   }, [closeMobileResults, rememberMobileLauncher]);
   useEffect(() => () => {
     if (resizeFrameRef.current !== null) window.cancelAnimationFrame(resizeFrameRef.current);
@@ -896,7 +896,7 @@ const IssuesView = () => {
                 : null;
       if (target) {
         setSelection(target);
-        window.dispatchEvent(new CustomEvent('structureco:focus-object', { detail: target }));
+        emitWorkspaceCommand('focus-object', target);
       }
       return;
     }

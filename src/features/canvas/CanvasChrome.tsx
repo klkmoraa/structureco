@@ -5,6 +5,7 @@ import { IconButton } from '../../design-system/components/controls';
 import { CanvasLayers } from './CanvasLayers';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { formatFixed } from '../../utils/numberFormat';
+import { onWorkspaceCommand } from '../workspace/workspaceCommands';
 
 export interface CanvasChromeProps {
   modeLabel: string;
@@ -43,9 +44,7 @@ export const CanvasChrome = ({
   const { t } = useI18n();
 
   useEffect(() => {
-    const fitCanvas = () => onFit();
-    window.addEventListener('structureco:fit-canvas', fitCanvas);
-    return () => window.removeEventListener('structureco:fit-canvas', fitCanvas);
+    return onWorkspaceCommand('fit-canvas', () => onFit());
   }, [onFit]);
 
   return <>

@@ -13,8 +13,8 @@ revisión del diff + verificación de la frontera protegida + reporte + commit l
 | ID | Slice | Estado | Propietario | Dependencias | Commit local | Pruebas | Evidencia | Bloqueos |
 |----|-------|--------|-------------|--------------|--------------|---------|-----------|----------|
 | S01 | Baseline y protección | COMPLETE | Opus 5 | — | `b6cfde7`, `be02366` | 67 archivos / 388 pruebas en verde | `PROTECTED_BASELINE.sha256`, [reporte](../../../reports/2026-08-02-1150-s01-baseline-y-proteccion.md) | — |
-| S02 | Especificación de diseño | NOT_STARTED | Opus 5 | S01 | — | — | — | — |
-| S03 | Fundamentos del sistema de diseño | NOT_STARTED | Opus 5 | S02 | — | — | — | — |
+| S02 | Especificación de diseño | COMPLETE | Opus 5 | S01 | `8f9cb73` | 76 archivos / 515 pruebas | [DESIGN_AUDIT.md](DESIGN_AUDIT.md), [reporte](../../../reports/2026-08-02-1410-s02-s03-tokens-y-contraste.md) | — |
+| S03 | Fundamentos del sistema de diseño | COMPLETE | Opus 5 | S02 | `8f9cb73` | contraste medido en ambos temas | 38 → 0 literales de color; 6/6 parejas AA | — |
 | S04 | Navegación y shell | NOT_STARTED | Opus 5 | S03 | — | — | — | — |
 | S05 | Canvas e interacción | NOT_STARTED | Opus 5 | S03 | — | — | — | — |
 | S06 | Inspector y formularios | NOT_STARTED | Opus 5 | S03 | — | — | — | — |
@@ -25,9 +25,9 @@ revisión del diff + verificación de la frontera protegida + reporte + commit l
 | S11 | Política numérica | COMPLETE | Opus 5 | S01 | `5992cfc` | 71 archivos / 467 pruebas en verde (+28) | verificación funcional en navegador, [reporte](../../../reports/2026-08-02-1220-s11-politica-numerica.md) | — |
 | S12 | SVG | COMPLETE | Opus 5 | S11 | `f068e33` | 73 archivos / 487 pruebas en verde (+20) | medición antes/después en la app real, [reporte](../../../reports/2026-08-02-1230-s12-s13-fidelidad-svg-png.md) | — |
 | S13 | PNG | COMPLETE | Opus 5 | S12 | `f068e33` | incluidas arriba | rasterizado 2000×1280 verificado, [reporte](../../../reports/2026-08-02-1230-s12-s13-fidelidad-svg-png.md) | — |
-| S14 | PDF | NOT_STARTED | Opus 5 | S11 | — | — | — | — |
-| S15 | Casos analíticos e invariantes | NOT_STARTED | Opus 5 | S01 | — | — | — | — |
-| S16 | Rendimiento | NOT_STARTED | Opus 5 | S01 | — | — | — | — |
+| S14 | PDF | COMPLETE | Opus 5 | S11 | `72752b7` | 74 archivos / 495 pruebas | [reporte](../../../reports/2026-08-02-1248-s14-pdf-editorial.md) | pendiente autorización sobre ruido del motor |
+| S15 | Casos analíticos e invariantes | COMPLETE | Opus 5 | S01 | `a5b7566` | 75 archivos / 507 pruebas | [VERIFICATION_POLICY.md](VERIFICATION_POLICY.md), [reporte](../../../reports/2026-08-02-1255-s15-invariantes.md) | — |
+| S16 | Rendimiento | COMPLETE | Opus 5 | S01 | `226a66f` | 76 archivos / 513 pruebas | [PERFORMANCE.md](PERFORMANCE.md), [reporte](../../../reports/2026-08-02-1400-s16-rendimiento.md) | — |
 | S17 | Accesibilidad y responsive | NOT_STARTED | Opus 5 | S04–S08 | — | — | — | — |
 | S18 | CI preparado localmente | NOT_STARTED | Opus 5 | S15 | — | — | — | — |
 | S19 | Documentación | NOT_STARTED | Opus 5 | todos | — | — | — | — |
@@ -35,8 +35,13 @@ revisión del diff + verificación de la frontera protegida + reporte + commit l
 
 ## Frontera matemática protegida
 
-45 archivos con hash SHA-256 registrado en `PROTECTED_BASELINE.sha256`:
+22 archivos **fuente** con hash SHA-256 registrado en `PROTECTED_BASELINE.sha256`:
 `src/engine/**`, `src/workers/**`, `src/data/**`, `src/store/ProjectContext.tsx`, `src/types.ts`.
+
+Los archivos de prueba dentro de esas carpetas quedan excluidos a propósito: añadir una prueba
+nunca cambia la matemática, y exigir un `--update` por cada prueba nueva acostumbraría a
+ejecutarlo, que es como se cuela una modificación real del solver.
+Ver [VERIFICATION_POLICY.md](VERIFICATION_POLICY.md).
 
 Verificación:
 
