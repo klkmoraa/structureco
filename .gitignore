@@ -26,3 +26,25 @@ structureco-engine-safety/
 structureco-release-certification/
 structureco-skills/
 structureco-ux-responsive/
+
+# Backups y temporales de trabajo
+structureCo-backup-*/
+structureCo-contexto-*/
+structureCo-create-zip-parts.py
+structureCo-documentation-builder.py
+structureCo-email-parts.py
+structureCo-finalize-volumes.py
+structureCo-local-master-builder.py
+structureCo-worktrees/
+structureco-design-review-package-*
+structureco-design-review/
+structureco-palette-lab-package-*
+structureco-palette-lab/
+structureco-sites-worktrees/
+structureco-sites/
+*.tar.gz
+*.json.manifest
+*.part-*
+structureCo/
+structureCo-contexto-total-autocontenido-*/
+structureCo-documentacion-integral-*/

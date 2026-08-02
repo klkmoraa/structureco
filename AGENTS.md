@@ -1,6 +1,8 @@
 # structureCo — reglas persistentes
 
-- No usar Git ni GitHub sobre structureCo: no init, ramas, commits, worktrees, PRs, publicación ni despliegue.
+- Este proyecto es trabajado por dos agentes distintos sobre el mismo repo: Claude Code y Codex. Ninguno ve la conversación del otro — git/GitHub (`github.com/klkmoraa/structureco`, rama `main`) es el único puente entre ambos.
+- Git y GitHub SÍ están permitidos (init, ramas, commits, push, PRs) — nunca hacer push sin confirmación explícita del usuario en el chat de esa sesión.
+- Después de cualquier cambio relevante (código, config, diseño, docs), generar un reporte en `reports/YYYY-MM-DD-HHmm-slug.md` (qué cambió, por qué, archivos tocados, cómo verificar, pendientes) y commitearlo junto con el cambio, para que el otro agente pueda verlo con `git pull`. Ver `.claude/skills/change-report/SKILL.md` para el template exacto.
 - Antes de modificar, usar structureco-project-guardian: respaldo local, hashes, versión de package.json y alcance.
 - Informar toda discrepancia de versión; una especificación, roadmap o T09 no prueba implementación.
 - Activar structureco-engine-safety al tocar rutas críticas; no tocar solver en tareas visuales.

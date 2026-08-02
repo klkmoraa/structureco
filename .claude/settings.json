@@ -1,0 +1,15 @@
+{
+  "workspace": {
+    "name": "structureCo",
+    "description": "Shared workspace - Claude Code + Codex + GitHub"
+  },
+  "git": {
+    "autoPush": false,
+    "autoCommit": false
+  },
+  "tools": {
+    "git": {
+      "confirmBeforePush": true
+    }
+  }
+}
