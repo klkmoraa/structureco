@@ -20,7 +20,7 @@ revisión del diff + verificación de la frontera protegida + reporte + commit l
 | S06 | Inspector y formularios | NOT_STARTED | Opus 5 | S03 | — | — | — | — |
 | S07 | Resultados | NOT_STARTED | Opus 5 | S03 | — | — | — | — |
 | S08 | Mentor/Aula | NOT_STARTED | Opus 5 | S03 | — | — | — | — |
-| S09 | Seguridad de importaciones | COMPLETE | Opus 5 | S01 | `95ad0e1` | 69 archivos / 439 pruebas en verde (+51) | corpus adversarial en `portableSecurity.test.ts`, [reporte](../../../reports/2026-08-02-1205-s09-seguridad-de-importaciones.md) | — |
+| S09 | Seguridad de importaciones | COMPLETE | Opus 5 | S01 | `fdb0ab5` | 69 archivos / 439 pruebas en verde (+51) | corpus adversarial en `portableSecurity.test.ts`, [reporte](../../../reports/2026-08-02-1205-s09-seguridad-de-importaciones.md) | — |
 | S10 | Experiencia de importación | NOT_STARTED | Opus 5 | S09 | — | — | — | — |
 | S11 | Política numérica | NOT_STARTED | Opus 5 | S01 | — | — | — | — |
 | S12 | SVG | NOT_STARTED | Opus 5 | S11 | — | — | — | — |
