@@ -22,10 +22,17 @@ const PROTECTED = [
   'src/types.ts',
 ];
 
+/**
+ * Test files inside the protected directories are deliberately excluded: adding a test
+ * never changes the mathematics, and requiring a baseline bump for one would train
+ * everyone to run `--update`, which is exactly how a real solver edit slips through.
+ */
+const isTest = (relative) => /\.(test|spec)\.[cm]?[jt]sx?$/.test(relative);
+
 const collect = async (relative) => {
   const absolute = path.join(ROOT, relative);
   const info = await stat(absolute);
-  if (!info.isDirectory()) return [relative];
+  if (!info.isDirectory()) return isTest(relative) ? [] : [relative];
   const entries = await readdir(absolute, { withFileTypes: true });
   const nested = await Promise.all(entries.map((entry) => collect(`${relative}/${entry.name}`)));
   return nested.flat();
