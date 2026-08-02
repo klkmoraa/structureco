@@ -31,6 +31,7 @@ import { BrandMark } from './BrandMark';
 import { Button, IconButton } from '../../design-system/components/controls';
 import { useClassroomSession } from '../../store/ClassroomSessionContext';
 import { presentExample } from '../welcome/examplePresentation';
+import { APP_VERSION } from '../../appVersion';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
 
@@ -223,7 +224,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
         exportAnalysis = analyzeProject(project, selectedCombination ?? null);
       }
       const portable = await import('../../utils/portable');
-      const options = { appVersion: '0.7.0', scenarioName, scenarioFactors, includeEducationTrace: true };
+      const options = { appVersion: APP_VERSION, scenarioName, scenarioFactors, includeEducationTrace: true };
       if (kind === 'pdf') {
         const report = await portable.createCalculationReport(project, exportAnalysis, options);
         await portable.shareOrDownloadPortableBytes(report.bytes, report.filename, 'application/pdf', t('portable.reportShareTitle', { name: project.name }));

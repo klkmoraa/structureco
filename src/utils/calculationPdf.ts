@@ -428,7 +428,15 @@ export const createCalculationReport = async (
           color: definition.color,
         });
       }
-      page.drawText(`min ${number(Math.min(...values), 4)} | max ${number(Math.max(...values), 4)}`, { x: left + 3, y: chartBottom + 3, size: 5.7, font: regular, color: rgb(0.34, 0.38, 0.43) });
+      // These legends printed raw base-unit numbers with no label, next to tables stating
+      // the same quantities in the project's display units. Convert, collapse the noise
+      // against the curve's own magnitude, and name the unit.
+      const quantityUnitKey = quantityUnit(definition.key);
+      const scale = Math.max(...values.map((value) => Math.abs(toDisplay(value, project.settings.units, quantityUnitKey))), 1e-12);
+      const legendValue = (value: number) =>
+        clearNumber(toDisplay(value, project.settings.units, quantityUnitKey), scale, 3);
+      const legend = `min ${legendValue(Math.min(...values))} | max ${legendValue(Math.max(...values))} ${unitLabel(project.settings.units, quantityUnitKey)}`;
+      page.drawText(pdfText(legend), { x: left + 3, y: chartBottom + 3, size: 5.7, font: regular, color: rgb(0.34, 0.38, 0.43) });
     }
     y = chartBottom - 14;
   };
@@ -775,10 +783,76 @@ export const createCalculationReport = async (
     page.drawText('Las paginas siguientes conservan datos, auditoria, ecuaciones completas y matrices como anexo tecnico.', { x: MARGIN + 14, y: 81, size: 6.6, font: regular, color: rgb(0.30, 0.37, 0.32) });
   };
 
+  /**
+   * An engineering memoir has to state, on its own pages, the units it uses, the sign
+   * convention behind every N-V-M figure, what the analysis does and does not cover, and
+   * any warning the solver raised. Until 0.8.1 the document jumped straight from the
+   * executive page to the diagrams and left all of that implicit.
+   */
+  const drawScopePage = (): void => {
+    newPage();
+    drawVisualHeader('Unidades y convenciones', 'Como debe leerse este documento');
+    drawSectionBand('05', 'Unidades y convenciones', 'Base de lectura de todas las cifras del documento');
+    y = 700;
+
+    heading('Unidades de presentacion');
+    const units = project.settings.units;
+    for (const [label, quantity] of [
+      ['Longitud y desplazamiento', 'length'],
+      ['Fuerza y reaccion', 'force'],
+      ['Momento', 'moment'],
+      ['Carga distribuida', 'distributedForce'],
+    ] as const) {
+      row(label, unitLabel(units, quantity));
+    }
+    row('Rotacion', 'rad');
+    row('Precision interna', 'doble precision IEEE-754; el redondeo es solo de presentacion');
+    row('Cero mostrado', 'un valor por debajo de la tolerancia relativa del solver se presenta como 0');
+
+    heading('Convenciones de signo');
+    text('+X apunta a la derecha y +Y hacia arriba. El eje local x de cada miembro va del nodo i al nodo j, y el eje local y gira 90 grados en sentido antihorario respecto de x.', 8.7);
+    row('N axial', 'positivo en traccion, segun el eje local x del miembro');
+    row('V cortante', 'positivo segun el eje local y del miembro');
+    row('M momento', 'positivo cuando tracciona la fibra del lado local -y');
+    row('Reacciones', 'expresadas en ejes globales, con el signo de la fuerza que el apoyo ejerce sobre la estructura');
+    row('Deformada', 'desplazamientos nodales en ejes globales; la escala del dibujo es ilustrativa');
+
+    heading('Alcance del analisis');
+    row('Formulacion', analysis.educationTrace?.formulation ?? 'analisis estatico lineal 2D');
+    row('Elemento de marco', 'Euler-Bernoulli con deformacion axial y flexion');
+    row('Elemento de armadura', 'rigidez axial exclusivamente');
+    row('Hipotesis', 'comportamiento elastico lineal, pequenas deformaciones y propiedades prismaticas por miembro');
+
+    heading('Limitaciones declaradas');
+    for (const limitation of [
+      'No se consideran efectos de segundo orden (P-Delta) ni no linealidad geometrica.',
+      'No se considera plasticidad, fluencia, fisuracion ni degradacion de rigidez.',
+      'No se realiza analisis modal, dinamico, de historia en el tiempo ni espectral.',
+      'No se aplica ninguna norma de diseno: el documento reporta solicitaciones, no verificaciones normativas.',
+      'El pandeo, la torsion fuera del plano y el comportamiento tridimensional quedan fuera del modelo 2D.',
+      'Los resultados dependen enteramente del modelo introducido; su idoneidad es responsabilidad del ingeniero que firma.',
+    ]) {
+      text(`- ${limitation}`, 8.5, regular, rgb(0.24, 0.28, 0.34), 10);
+    }
+
+    heading('Advertencias del analisis');
+    if (analysis.issues.length === 0) {
+      text('Las comprobaciones de entrada, estabilidad y equilibrio no detectaron incidencias.', 8.7, regular, rgb(0.10, 0.35, 0.22), 10);
+    } else {
+      for (const issue of analysis.issues) {
+        const severity = issue.severity === 'error' ? 'ERROR' : issue.severity === 'warning' ? 'AVISO' : 'INFO';
+        const color = issue.severity === 'error' ? rgb(0.75, 0.20, 0.16) : issue.severity === 'warning' ? rgb(0.62, 0.42, 0.05) : rgb(0.24, 0.28, 0.34);
+        text(`[${severity}] ${issue.title}${issue.objectId ? ` (${issue.objectId})` : ''}: ${issue.message}`, 8.5, regular, color, 10);
+        if (issue.suggestedFix) text(`Solucion sugerida: ${issue.suggestedFix}`, 8, regular, rgb(0.37, 0.43, 0.39), 20);
+      }
+    }
+  };
+
   drawExecutivePage();
   drawQuantityPage('axial', '02');
   drawQuantityPage('shear', '03');
   drawQuantityPage('moment', '04');
+  drawScopePage();
   drawProcedureSummary();
   newPage();
   heading('Anexo tecnico verificable');
@@ -792,14 +866,26 @@ export const createCalculationReport = async (
   row('Formulacion', analysis.educationTrace?.formulation ?? 'analisis estatico lineal 2D');
   row('Norma residual', number(analysis.residualNorm));
   row('Estimacion de condicion', number(analysis.conditionEstimate));
-  row('Equilibrio', `Fx=${number(analysis.equilibrium.sumFx)}, Fy=${number(analysis.equilibrium.sumFy)}, M=${number(analysis.equilibrium.sumM)}; residuo=${number(analysis.equilibrium.normalizedResidual)}`);
+  // These sums are meant to close at zero. Printing one of them as `0` and the next as
+  // `-1.06581e-14` says nothing about the structure, only about which float happened to
+  // land exactly on zero. They collapse against the applied load; the normalized residual
+  // right after keeps the audit trail at full precision.
+  const equilibriumScale = Math.max(
+    Math.abs(analysis.loadAudit?.source.fx ?? 0),
+    Math.abs(analysis.loadAudit?.source.fy ?? 0),
+    1,
+  );
+  const equilibriumMomentScale = Math.max(Math.abs(analysis.loadAudit?.source.mz ?? 0), 1);
+  row('Equilibrio', `Fx=${clearNumber(analysis.equilibrium.sumFx, equilibriumScale)}, Fy=${clearNumber(analysis.equilibrium.sumFy, equilibriumScale)}, M=${clearNumber(analysis.equilibrium.sumM, equilibriumMomentScale)}; residuo=${number(analysis.equilibrium.normalizedResidual)}`);
   if (analysis.loadAudit) {
     const reference = analysis.loadAudit.referencePoint;
     const critical = analysis.loadAudit.memberAudits.reduce<typeof analysis.loadAudit.memberAudits[number] | undefined>(
       (best, audit) => !best || audit.normalizedResidual > best.normalizedResidual ? audit : best,
       undefined,
     );
-    row('Auditoria independiente de cargas', `origen O=${reference ? `(${number(reference.x)}, ${number(reference.y)})` : 'no disponible'}; fuente Fx=${number(analysis.loadAudit.source.fx)}, Fy=${number(analysis.loadAudit.source.fy)}, M_O=${number(analysis.loadAudit.source.mz)}; ensamblaje Fx=${number(analysis.loadAudit.assembled.fx)}, Fy=${number(analysis.loadAudit.assembled.fy)}, M_O=${number(analysis.loadAudit.assembled.mz)}; residuo global=${number(analysis.loadAudit.resultantResidual)}; residuo maximo=${number(analysis.loadAudit.normalizedResidual)}${critical ? ` en ${critical.memberId}` : ''}`);
+    const auditForce = (value: number) => clearNumber(value, equilibriumScale);
+    const auditMoment = (value: number) => clearNumber(value, equilibriumMomentScale);
+    row('Auditoria independiente de cargas', `origen O=${reference ? `(${number(reference.x)}, ${number(reference.y)})` : 'no disponible'}; fuente Fx=${auditForce(analysis.loadAudit.source.fx)}, Fy=${auditForce(analysis.loadAudit.source.fy)}, M_O=${auditMoment(analysis.loadAudit.source.mz)}; ensamblaje Fx=${auditForce(analysis.loadAudit.assembled.fx)}, Fy=${auditForce(analysis.loadAudit.assembled.fy)}, M_O=${auditMoment(analysis.loadAudit.assembled.mz)}; residuo global=${number(analysis.loadAudit.resultantResidual)}; residuo maximo=${number(analysis.loadAudit.normalizedResidual)}${critical ? ` en ${critical.memberId}` : ''}`);
   }
   if (analysis.issues.length) {
     heading('Incidencias', 2);
@@ -836,8 +922,26 @@ export const createCalculationReport = async (
 
   heading('3. Reacciones y desplazamientos');
   if (!analysis.nodeResults.length) text('No hay resultados nodales.', 8.7, regular, undefined, 8);
+  // Each family collapses against its own governing magnitude across the model, so a
+  // displacement of 1e-37 m reads as 0 instead of as a measurable movement.
+  const extreme = (pick: (entry: typeof analysis.nodeResults[number]) => number) =>
+    Math.max(1e-12, ...analysis.nodeResults.map((entry) => Math.abs(pick(entry))));
+  const reactionScale = Math.max(extreme((entry) => entry.rx), extreme((entry) => entry.ry));
+  const nodalMomentScale = extreme((entry) => entry.rm);
+  const displacementScale = Math.max(extreme((entry) => entry.ux), extreme((entry) => entry.uy));
+  const rotationScale = extreme((entry) => entry.rz);
   for (const result of analysis.nodeResults) {
-    row(result.nodeId, `Rx=${display(project, result.rx, 'force')}, Ry=${display(project, result.ry, 'force')}, M=${display(project, result.rm, 'moment')}; Ux=${display(project, result.ux, 'length')}, Uy=${display(project, result.uy, 'length')}, Rz=${number(result.rz)} rad`);
+    const reactions = [
+      `Rx=${clearDisplay(project, result.rx, 'force', reactionScale)}`,
+      `Ry=${clearDisplay(project, result.ry, 'force', reactionScale)}`,
+      `M=${clearDisplay(project, result.rm, 'moment', nodalMomentScale)}`,
+    ].join(', ');
+    const displacements = [
+      `Ux=${clearDisplay(project, result.ux, 'length', displacementScale)}`,
+      `Uy=${clearDisplay(project, result.uy, 'length', displacementScale)}`,
+      `Rz=${clearNumber(result.rz, rotationScale)} rad`,
+    ].join(', ');
+    row(result.nodeId, `${reactions}; ${displacements}`);
   }
 
   heading('4. Diagramas N, V y M');
@@ -846,13 +950,32 @@ export const createCalculationReport = async (
   for (const result of analysis.memberResults) {
     ensure(145);
     heading(`Miembro ${result.memberId}`, 2);
-    row('N axial', `min=${display(project, result.minAxial, 'force')}; max=${display(project, result.maxAxial, 'force')}`);
-    row('V cortante', `min=${display(project, result.minShear, 'force')}; max=${display(project, result.maxShear, 'force')}`);
-    row('M momento', `min=${display(project, result.minMoment, 'moment')}; max=${display(project, result.maxMoment, 'moment')}`);
-    row('Extremos locales', result.localEndForces.map((entry) => number(entry, 5)).join(', '));
+    // The annex used raw `display`, so a beam with no axial load reported
+    // "min=1.53081e-16 kip" while page 1 correctly reported 0. Both now collapse against
+    // the governing magnitude of the same member, so the document does not contradict itself.
+    const forceScale = Math.max(
+      Math.abs(result.maxShear), Math.abs(result.minShear),
+      Math.abs(result.maxAxial), Math.abs(result.minAxial), 1e-12,
+    );
+    const momentScale = Math.max(Math.abs(result.maxMoment), Math.abs(result.minMoment), 1e-12);
+    const forceText = (value: number) => clearDisplay(project, value, 'force', forceScale);
+    const momentText = (value: number) => clearDisplay(project, value, 'moment', momentScale);
+    row('N axial', `min=${forceText(result.minAxial)}; max=${forceText(result.maxAxial)}`);
+    row('V cortante', `min=${forceText(result.minShear)}; max=${forceText(result.maxShear)}`);
+    row('M momento', `min=${momentText(result.minMoment)}; max=${momentText(result.maxMoment)}`);
+    // `localEndForces` is [Fxi, Fyi, Mi, Fxj, Fyj, Mj] in base units. It used to be printed
+    // bare, so the same page stated forces in kip on one line and in kN on the next with no
+    // label at all. Each component is now converted and labelled.
+    row('Extremos locales', result.localEndForces
+      .map((entry, position) => {
+        const label = ['Fx_i', 'Fy_i', 'M_i', 'Fx_j', 'Fy_j', 'M_j'][position] ?? `q${position}`;
+        const isMoment = position === 2 || position === 5;
+        return `${label}=${isMoment ? momentText(entry) : forceText(entry)}`;
+      })
+      .join(', '));
     const critical = result.criticalPoints
       .slice(0, 18)
-      .map((point) => `${point.quantity}@${display(project, point.x, 'length')}=${point.quantity === 'moment' ? display(project, point.value, 'moment') : display(project, point.value, 'force')} (${point.kind})`)
+      .map((point) => `${point.quantity}@${display(project, point.x, 'length')}=${point.quantity === 'moment' ? momentText(point.value) : forceText(point.value)} (${point.kind})`)
       .join('; ');
     if (critical) row('Puntos criticos', critical);
     for (const [segmentIndex, segment] of result.diagramSegments.entries()) {
@@ -871,8 +994,20 @@ export const createCalculationReport = async (
     heading(`${index + 1}. ${step.title.replace(/^\d+\.\s*/, '')}`, 2);
     text(step.summary, 8.7, regular, undefined, 8);
     for (const equation of step.equations) text(`- ${equation}`, 8.3, regular, rgb(0.24, 0.28, 0.34), 16);
-    if (step.inputs?.length) row('Entradas', step.inputs.map((entry) => `${entry.label}=${number(entry.value)} ${entry.unit}`).join('; '));
-    if (step.outputs?.length) row('Resultados', step.outputs.map((entry) => `${entry.label}=${number(entry.value)} ${entry.unit}`).join('; '));
+    // The values come from the engine, but the formatting is ours. Within one step,
+    // entries sharing a unit are comparable, so each collapses against the largest of its
+    // own family: an equilibrium sum of -1.06581e-14 kN beside a load of 22 kN is zero.
+    const formatEntries = (entries: readonly { label: string; value: number; unit: string }[]): string => {
+      const scaleByUnit = new Map<string, number>();
+      for (const entry of entries) {
+        scaleByUnit.set(entry.unit, Math.max(scaleByUnit.get(entry.unit) ?? 1e-12, Math.abs(entry.value)));
+      }
+      return entries
+        .map((entry) => `${entry.label}=${clearNumber(entry.value, scaleByUnit.get(entry.unit) ?? 1)} ${entry.unit}`)
+        .join('; ');
+    };
+    if (step.inputs?.length) row('Entradas', formatEntries(step.inputs));
+    if (step.outputs?.length) row('Resultados', formatEntries(step.outputs));
   }
 
   if (options.includeEducationTrace !== false && analysis.educationTrace) {

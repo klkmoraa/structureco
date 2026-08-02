@@ -1,4 +1,5 @@
 import type { AnalysisResult, ProjectModel } from '../types';
+import { APP_VERSION } from '../appVersion';
 import {
   PORTABLE_FORMAT_VERSION,
   type PortableProvenance,
@@ -76,7 +77,7 @@ export const createPortablePayload = async (
     generatedBy: 'structureCo',
     source: 'native-export',
     generatedAt: options.generatedAt ?? new Date().toISOString(),
-    appVersion: options.appVersion ?? '0.7.0',
+    appVersion: options.appVersion ?? APP_VERSION,
     projectSchemaVersion: project.schemaVersion,
     analysisIncluded: true,
   };
