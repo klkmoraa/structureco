@@ -21,6 +21,7 @@ import { fromDisplay, toDisplay, unitLabel } from '../../engine/units';
 import type { DiagramQuantity, ProjectModel, Selection } from '../../types';
 import type { InfluenceCanvasState } from '../../store/ProjectContext';
 import { useI18n } from '../../i18n/useI18n';
+import { formatFixed, formatScientific, formatSignificant } from '../../utils/numberFormat';
 
 export interface InfluenceLineViewProps {
   project: ProjectModel;
@@ -97,8 +98,7 @@ const secondaryButtonStyle: CSSProperties = {
 const clamp = (value: number, minimum: number, maximum: number): number =>
   Math.max(minimum, Math.min(maximum, value));
 
-const finiteExponential = (value: number, digits = 2): string =>
-  Number.isFinite(value) ? value.toExponential(digits) : '—';
+const finiteExponential = (value: number, digits = 2): string => formatScientific(value, digits);
 
 const polynomialValue = (coefficients: readonly number[], xi: number): number =>
   coefficients.reduceRight((value, coefficient) => value * xi + coefficient, 0);
@@ -229,7 +229,7 @@ const ExactPolynomialChart = ({
 
   const paths = useMemo(() => segments.map((segment) => {
     const control = cubicBezier(segment);
-    const number = (value: number) => value.toFixed(5);
+    const number = (value: number) => formatFixed(value, 5);
     return `M ${number(sx(control.x0))} ${number(sy(control.y0))} C ${number(sx(control.c1x))} ${number(sy(control.c1y))} ${number(sx(control.c2x))} ${number(sy(control.c2y))} ${number(sx(control.x1))} ${number(sy(control.y1))}`;
   }), [segments, sx, sy]);
 
@@ -332,7 +332,7 @@ const InfluenceDiagnostics = ({ line }: { line: InfluenceLine }) => {
     <div className="verification-grid">
       <div className={closurePassed ? 'passed' : 'warning'}><span>{t('influence.polynomialClosure')}</span><strong>{finiteExponential(line.fit.maxAbsoluteError, 3)}</strong><small>{t('influence.polynomialClosureDetail', { relative: finiteExponential(line.fit.maxRelativeError, 2), count: line.fit.validations.length })}</small></div>
       <div className={equilibriumPassed ? 'passed' : 'warning'}><span>{t('influence.equilibrium')}</span><strong>{finiteExponential(equilibriumResidual, 3)}</strong><small>{t('influence.equilibriumDetail', { count: line.solver.analyses })}</small></div>
-      <div className={precisionPassed ? 'passed' : 'warning'}><span>{t('influence.estimatedPrecision')}</span><strong>{Number.isFinite(line.solver.minReliableDigits) ? t('influence.reliableDigits', { digits: line.solver.minReliableDigits.toFixed(1) }) : t('influence.notEstimated')}</strong><small>{t('influence.precisionDetail', { bound: finiteExponential(line.solver.maxForwardErrorBound, 2), residual: finiteExponential(line.solver.maxLinearResidual, 2) })}</small></div>
+      <div className={precisionPassed ? 'passed' : 'warning'}><span>{t('influence.estimatedPrecision')}</span><strong>{Number.isFinite(line.solver.minReliableDigits) ? t('influence.reliableDigits', { digits: formatFixed(line.solver.minReliableDigits, 1) }) : t('influence.notEstimated')}</strong><small>{t('influence.precisionDetail', { bound: finiteExponential(line.solver.maxForwardErrorBound, 2), residual: finiteExponential(line.solver.maxLinearResidual, 2) })}</small></div>
       <div className="passed"><span>{t('influence.extrema')}</span><strong>{t('influence.exactRoots')}</strong><small>{t('influence.extremaDetail')}</small></div>
     </div>
     <details style={{ margin: '8px 12px 12px' }}>
@@ -528,13 +528,13 @@ export const InfluenceLineView = ({ project, selection = null, onCanvasStateChan
   const trainJumps = useMemo(() => deriveJumps(trainSegments), [trainSegments]);
   const lineValueAt = useCallback((position: number) => line ? evaluateInfluenceLine(line, position, 'right') ?? 0 : 0, [line]);
   const trainValueAt = useCallback((position: number) => axleTrain ? evaluateAxleTrain(axleTrain, position, 'right') : 0, [axleTrain]);
-  const formatPathX = useCallback((position: number) => `${toDisplay(position, units, 'length').toFixed(3)} ${lengthUnit}`, [lengthUnit, units]);
+  const formatPathX = useCallback((position: number) => `${formatFixed(toDisplay(position, units, 'length'), 3)} ${lengthUnit}`, [lengthUnit, units]);
   const formatInfluenceValue = useCallback((value: number) => quantity === 'M'
-    ? `${toDisplay(value, units, 'length').toPrecision(5)} ${lengthUnit}`
-    : value.toPrecision(5), [lengthUnit, quantity, units]);
+    ? `${formatSignificant(toDisplay(value, units, 'length'), 5)} ${lengthUnit}`
+    : formatSignificant(value, 5), [lengthUnit, quantity, units]);
   const formatTrainValue = useCallback((value: number) => quantity === 'M'
-    ? `${toDisplay(value, units, 'moment').toPrecision(5)} ${momentUnit}`
-    : `${toDisplay(value, units, 'force').toPrecision(5)} ${forceUnit}`, [forceUnit, momentUnit, quantity, units]);
+    ? `${formatSignificant(toDisplay(value, units, 'moment'), 5)} ${momentUnit}`
+    : `${formatSignificant(toDisplay(value, units, 'force'), 5)} ${forceUnit}`, [forceUnit, momentUnit, quantity, units]);
   const pathSummary = pathMemberIds.length
     ? t(pathMemberIds.length === 1 ? 'influence.pathSummaryOne' : 'influence.pathSummaryMany', {
         count: pathMemberIds.length,
@@ -563,7 +563,7 @@ export const InfluenceLineView = ({ project, selection = null, onCanvasStateChan
         <div style={fieldStyle}><span>{t('influence.loadPath')}</span><button type="button" style={secondaryButtonStyle} disabled={!selectedFrameIds.length || busy} onClick={useSelectionAsPath}>{t('influence.useSelection', { count: selectedFrameIds.length })}</button></div>
       </div>
       <label style={fieldStyle}>
-        <span>{t('influence.targetSection', { length: targetLengthDisplay.toFixed(3), unit: lengthUnit })}</span>
+        <span>{t('influence.targetSection', { length: formatFixed(targetLengthDisplay, 3), unit: lengthUnit })}</span>
         <div style={rowStyle}>
           <input style={{ flex: '1 1 260px' }} type="range" min={0} max={targetLengthDisplay || 0} step={rangeStep} value={toDisplay(targetX, units, 'length')} onChange={(event) => { invalidate(); setTargetX(fromDisplay(event.currentTarget.valueAsNumber, units, 'length')); }} />
           <span className="number-control" style={{ width: 150 }}><input aria-label={t('influence.cutCoordinate')} type="number" min={0} max={targetLengthDisplay || 0} step={rangeStep} value={toDisplay(targetX, units, 'length')} onChange={(event) => {
@@ -624,7 +624,7 @@ export const InfluenceLineView = ({ project, selection = null, onCanvasStateChan
         <div><span>{t('influence.trainMinimum')}</span><strong>{formatTrainValue(axleTrain.minimum.value)}</strong><small>{t('influence.referenceShort')} {formatPathX(axleTrain.minimum.referencePosition)}</small></div>
         <div><span>{t('influence.trainMaximum')}</span><strong>{formatTrainValue(axleTrain.maximum.value)}</strong><small>{t('influence.referenceShort')} {formatPathX(axleTrain.maximum.referencePosition)}</small></div>
         <div><span>{t('influence.referenceDomain')}</span><strong>{formatPathX(axleTrain.domain[1] - axleTrain.domain[0])}</strong><small>{t('influence.rangeFromTo', { from: formatPathX(axleTrain.domain[0]), to: formatPathX(axleTrain.domain[1]) })}</small></div>
-        <div><span>{t('influence.solution')}</span><strong>{t(axleTrain.segments.length === 1 ? 'influence.cubicOne' : 'influence.cubicMany', { count: axleTrain.segments.length })}</strong><small>φ = {axleTrain.train.impactFactor.toFixed(3)} · {t(axleTrain.train.axles.length === 1 ? 'influence.axleCountOne' : 'influence.axleCountMany', { count: axleTrain.train.axles.length })}</small></div>
+        <div><span>{t('influence.solution')}</span><strong>{t(axleTrain.segments.length === 1 ? 'influence.cubicOne' : 'influence.cubicMany', { count: axleTrain.segments.length })}</strong><small>φ = {formatFixed(axleTrain.train.impactFactor, 3)} · {t(axleTrain.train.axles.length === 1 ? 'influence.axleCountOne' : 'influence.axleCountMany', { count: axleTrain.train.axles.length })}</small></div>
       </div></div>
       <ExactPolynomialChart
         ariaLabel={t('influence.trainChartLabel', { quantity, member: line.target.memberId })}

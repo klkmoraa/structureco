@@ -11,6 +11,7 @@ import {
   serializePortablePayload,
   type PortablePayloadOptions,
 } from './portablePayload';
+import { formatNearZero, formatNumber } from './numberFormat';
 
 export interface CalculationReportOptions extends PortablePayloadOptions {
   includeEducationTrace?: boolean;
@@ -61,18 +62,16 @@ const pdfText = (value: unknown): string => Array.from(String(value))
   })
   .join('');
 
-const number = (value: number, digits = 6): string => {
-  if (!Number.isFinite(value)) return 'n/d';
-  if (Math.abs(value) > 1e7 || (Math.abs(value) > 0 && Math.abs(value) < 1e-5)) return value.toExponential(4);
-  return Number(value.toPrecision(digits)).toString();
-};
+/**
+ * The report reads the same numbers the interface shows. Before 0.8.1 this module used
+ * its own thresholds (1e-5/1e7 here, 1e-4/1e8 in `clearNumber`, 1e-4/1e7 on screen), so a
+ * value could appear in three shapes across the app, the PDF and the annex.
+ */
+const number = (value: number, digits = 6): string =>
+  formatNumber(value, 'report', { significantDigits: digits });
 
-const clearNumber = (value: number, reference = 1, digits = 5): string => {
-  if (!Number.isFinite(value)) return 'n/d';
-  if (Math.abs(value) <= 1e-9 * Math.max(1, Math.abs(reference))) return '0';
-  if (Math.abs(value) >= 1e8 || Math.abs(value) < 1e-4) return value.toExponential(3);
-  return Number(value.toPrecision(digits)).toString();
-};
+const clearNumber = (value: number, reference = 1, digits = 5): string =>
+  formatNearZero(value, reference, 'report', { significantDigits: digits });
 
 const quantityUnit = (quantity: DiagramQuantity): UnitQuantity => quantity === 'moment' ? 'moment' : 'force';
 

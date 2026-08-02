@@ -4,6 +4,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { IconButton } from '../../design-system/components/controls';
 import { CanvasLayers } from './CanvasLayers';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
+import { formatFixed } from '../../utils/numberFormat';
 
 export interface CanvasChromeProps {
   modeLabel: string;
@@ -70,7 +71,7 @@ export const CanvasChrome = ({
       <Crosshair size={14} aria-hidden="true" />
       <output ref={coordinateReadoutRef} className="canvas-coordinate-output" aria-label={t('canvas.coordinates')}>X — · Y — {lengthLabel}</output>
       <span className="canvas-status-divider" aria-hidden="true">·</span>
-      <span className="canvas-scale-output">{t('canvas.scale')} {(scale / 85).toFixed(2)}×</span>
+      <span className="canvas-scale-output">{t('canvas.scale')} {formatFixed((scale / 85), 2)}×</span>
     </div>
   </>;
 };

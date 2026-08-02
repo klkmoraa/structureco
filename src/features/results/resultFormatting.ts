@@ -1,9 +1,9 @@
-export const formatResultNumber = (value: number) => {
-  if (!Number.isFinite(value)) return '—';
-  if (value === 0) return '0';
-  const absolute = Math.abs(value);
-  if (absolute >= 1e7 || absolute < 1e-4) return value.toExponential(4);
-  return Number(value.toPrecision(6)).toString();
-};
+import { formatNumber, formatValue } from '../../utils/numberFormat';
 
-export const formatResultValue = (value: number, unit: string) => `${formatResultNumber(value)} ${unit}`.trim();
+/**
+ * Results share the Inspector's reading rule: the same stored value must not read as
+ * `1e-14` in one panel and `1.0000e-14` in the other.
+ */
+export const formatResultNumber = (value: number) => formatNumber(value, 'table');
+
+export const formatResultValue = (value: number, unit: string) => formatValue(value, unit, 'table');

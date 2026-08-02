@@ -1,6 +1,7 @@
 import type { AnalysisResult, ProjectModel } from '../types';
 import { toDisplay, unitLabel, type UnitQuantity } from '../engine/units';
 import { summarizeAnalysisResults } from '../engine/resultSummary';
+import { formatMachineNumber } from './numberFormat';
 
 export interface ResultsCsvOptions {
   scenarioName?: string;
@@ -13,11 +14,7 @@ const csvCell = (value: string | number): string => {
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 };
 
-const csvNumber = (value: number): string => {
-  if (!Number.isFinite(value)) return '';
-  if (Object.is(value, -0)) return '0';
-  return Number(value.toPrecision(15)).toString();
-};
+const csvNumber = (value: number): string => formatMachineNumber(value);
 
 const row = (values: Array<string | number>): string => values.map(csvCell).join(',');
 

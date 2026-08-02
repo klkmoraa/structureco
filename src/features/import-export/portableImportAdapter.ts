@@ -11,6 +11,7 @@ import type {
   ImportInspection,
   ImportOutcome,
 } from './ImportCenterDialog';
+import { formatFixed } from '../../utils/numberFormat';
 
 const inspectedFiles = new WeakMap<File, PortableFileInspection>();
 
@@ -164,7 +165,7 @@ const mapInspection = (inspection: PortableFileInspection, t: Translate): Import
       statistics: [
         { label: t('importCenter.pages'), value: inspection.pdf.pageCount },
         { label: t('importCenter.characters'), value: inspection.pdf.text.length },
-        { label: t('importCenter.size'), value: `${(inspection.size / 1024 / 1024).toFixed(2)} MB` },
+        { label: t('importCenter.size'), value: `${formatFixed((inspection.size / 1024 / 1024), 2)} MB` },
       ],
       warnings: localizeWarnings(inspection.pdf.warnings, t),
       contents: referenceContents(inspection, t),

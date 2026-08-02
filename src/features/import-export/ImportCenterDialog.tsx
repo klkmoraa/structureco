@@ -19,6 +19,7 @@ import { useI18n } from '../../i18n/useI18n';
 import type { AnalysisResult, ProjectModel } from '../../types';
 import { useModalFocus } from '../../design-system/components/modalFocus';
 import { importProjectJson } from '../../utils/export';
+import { formatFixed } from '../../utils/numberFormat';
 
 export type ImportContentKey =
   | 'geometry'
@@ -198,8 +199,8 @@ export const jsonImportCenterAdapter = createJsonImportCenterAdapter((key, varia
 
 const formatBytes = (bytes: number) => {
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024) return `${formatFixed((bytes / 1024), 1)} KB`;
+  return `${formatFixed((bytes / (1024 * 1024)), 1)} MB`;
 };
 
 const getFileIcon = (kind?: ImportInspection['kind']) => {
