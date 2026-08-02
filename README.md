@@ -5,6 +5,10 @@ Aplicación web local-first para modelar, analizar y aprender estructuras planas
 resultados trazables desde el modelo hasta las matrices, reacciones y diagramas.
 
 Versión estable: **0.8.0**, cierre del rediseño UX/UI canvas-first.
+Rediseño visual integral 2026-08: dirección "Mesa Modular + Laboratorio
+Nocturno + Instrumento de Precisión" con claridad inspirada en principios
+Apple e identidad propia de ingeniería estructural (ver
+[docs/design-system/](docs/design-system/PALETTE.md)).
 
 ![Workspace de structureCo 0.8.0 en desktop](docs/ux-redesign/evidence/phase-14/after/phase14-chromium-desktop-1536x960-light.png)
 
@@ -130,28 +134,51 @@ a producción. El vínculo local con el sitio no se versiona.
 - [Expedientes PDF y `.structureco`](docs/PORTABLE_EXPEDIENTS.md)
 - [Release notes 0.8.0](docs/ux-redesign/RELEASE_NOTES_0.8.0.md)
 - [QA del candidato](docs/ux-redesign/RELEASE_QA_REPORT.md)
-- [Sistema de diseño](docs/ux-redesign/DESIGN_TOKENS.md)
-- [Biblioteca de componentes](docs/ux-redesign/COMPONENTS.md)
+- [Sistema de diseño · Paleta](docs/design-system/PALETTE.md)
+- [Sistema de diseño · Tipografía](docs/design-system/TYPOGRAPHY.md)
+- [Sistema de diseño · Espaciado y densidad](docs/design-system/SPACING_DENSITY.md)
+- [Sistema de diseño · Motion](docs/design-system/MOTION.md)
+- [Sistema de diseño · Iconografía](docs/design-system/ICONOGRAPHY.md)
+- [Arquitectura frontend](docs/architecture/FRONTEND.md)
+- [Tokens históricos 0.8.0](docs/ux-redesign/DESIGN_TOKENS.md)
+- [Biblioteca de componentes (histórico 0.8.0)](docs/ux-redesign/COMPONENTS.md)
 - [Contribuir](CONTRIBUTING.md)
 
 ## Arquitectura
 
 ```text
 src/
-  components/          editor, inspector, aprendizaje y resultados
+  design-system/       tokens, iconografía estructural, biblioteca sc-* y laboratorio
+    tokens.css         paleta Día/Noche, tipografía, spacing, motion
+    icons/             glifos estructurales propios (24px · 1.8 · redondeado)
+    components/        controles, overlays, feedback, disclosure, foco modal
+    lab/               ComponentLab y TopBarLab (solo desarrollo, /__components)
+  features/            superficies de producto
+    welcome/           pantalla de inicio y nuevo ejercicio
+    workspace/         shell del espacio de trabajo y layout responsive
+    topbar/            barra superior, estado de análisis y marca
+    canvas/            StructuralCanvas, herramientas, capas y overlays
+    inspector/         propiedades, cargas y vista
+    results/           panel de resultados, resumen y línea de influencia
+    classroom/         guía y predicciones del modo Aula
+    import-export/     centro de importación y expedientes portables
   data/                proyectos y migración de esquema
-  engine/
+  engine/              ★ frontera matemática protegida
     solver.ts          rigidez, restricciones, solución y recuperación
     diagram.ts         funciones internas y deformadas exactas por tramo
     envelope.ts        envolventes analíticas y escenarios gobernantes
     resultSummary.ts   extremos globales y envolventes de resultados
     math.ts            álgebra lineal densa
     units.ts           conversión de unidades
-  workers/             análisis y escenarios fuera del hilo de interfaz
+  workers/             ★ análisis y escenarios fuera del hilo de interfaz
   education/           plantillas y progreso del modo Aula
-  store/               estado, historial y guardado local
+  store/               ★ estado, historial y guardado local
+  i18n/                catálogos ES/EN
   utils/               importación y exportación
 ```
+
+Las áreas marcadas con ★ forman la frontera matemática protegida: el rediseño
+visual 2026-08 no modificó su lógica (ver `CONTRIBUTING.md`).
 
 ## Alcance y aviso
 
