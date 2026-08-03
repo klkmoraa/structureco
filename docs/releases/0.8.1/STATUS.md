@@ -31,7 +31,7 @@ revisión del diff + verificación de la frontera protegida + reporte + commit l
 | S17 | Accesibilidad y responsive | COMPLETE (auditado) | Sonnet 5 | S04–S08 | — | sin cambios de código | 8 viewports sin overflow, [reporte](../../../reports/2026-08-02-1530-s17-accesibilidad-y-responsive.md) | — |
 | S18 | CI preparado localmente | COMPLETE | Sonnet 5 | S15 | `321cca2` | 78 archivos / 530 pruebas + qa/qa:webkit en verde | [CI.md](CI.md), [reporte](../../../reports/2026-08-02-1615-s18-ci-preparado-localmente.md) | — |
 | S19 | Documentación | COMPLETE | Sonnet 5 | todos | `c186d80` | 78 archivos / 530 pruebas | README, FRONTEND.md, PORTABLE_EXPEDIENTS.md y CHANGELOG consolidados, [reporte](../../../reports/2026-08-02-1905-s19-documentacion.md) | — |
-| S20 | Certificación y versión | COMPLETE | Sonnet 5 | todos | (pendiente) | 78 archivos / 530 pruebas, instalación limpia | qa + qa:webkit en verde, `package.json` en 0.8.1, [reporte](../../../reports/2026-08-02-1915-s20-certificacion-y-version.md) | — |
+| S20 | Certificación y versión | COMPLETE | Sonnet 5 | todos | `f6c6f9e` | 78 archivos / 530 pruebas, instalación limpia | qa + qa:webkit en verde, `package.json` en 0.8.1, [reporte](../../../reports/2026-08-02-1915-s20-certificacion-y-version.md) | — |
 
 ## Frontera matemática protegida
 
