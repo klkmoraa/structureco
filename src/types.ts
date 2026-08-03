@@ -186,6 +186,10 @@ export interface ProjectSettings {
   diagramSide: 'positive' | 'negative';
   /** Classroom mode keeps advanced material/eigenstrain inputs out of the primary workflow. */
   calculationMode?: 'complete' | 'classroom';
+  /** Second-order geometric-stiffness (P-Delta) analysis; absent/`'first-order'` keeps today's linear behavior. */
+  analysisMode?: 'first-order' | 'p-delta';
+  /** Overrides merged over `DEFAULT_PDELTA_CONFIG`; unset fields keep their default. */
+  pDeltaConfig?: Partial<PDeltaConfig>;
 }
 
 export interface ProjectModel {
@@ -426,7 +430,8 @@ export type ReliabilityCheckId =
   | 'equilibrium'
   | 'load-audit'
   | 'diagram-closure'
-  | 'compatibility';
+  | 'compatibility'
+  | 'p-delta-convergence';
 
 export interface ReliabilityCheck {
   id: ReliabilityCheckId;
@@ -451,6 +456,48 @@ export interface ResultReliability {
   governing?: ReliabilityCheck;
   /** Causes ordered from worst to mildest. */
   reasons: string[];
+}
+
+/** Advanced load-stepping/iteration limits for the P-Delta solver; every field has a project-independent default. */
+export interface PDeltaConfig {
+  maxLoadSteps: number;
+  maxIterationsPerStep: number;
+  equilibriumTolerance: number;
+  displacementTolerance: number;
+  stepReductionFactor: number;
+  /** Fraction of the total load; a step smaller than this aborts the run instead of subdividing further. */
+  minimumStep: number;
+}
+
+export interface PDeltaStepIteration {
+  step: number;
+  iteration: number;
+  /** Load fraction (0-1] this step targets. */
+  lambda: number;
+  /** Relative change in member axial forces since the previous iteration; the equilibrium/unbalanced-force proxy. */
+  residual: number;
+  /** Relative change in the global displacement vector since the previous iteration. */
+  displacementIncrement: number;
+  conditionEstimate: number;
+}
+
+export interface PDeltaDiagnostics {
+  enabled: true;
+  converged: boolean;
+  loadStepsUsed: number;
+  totalIterations: number;
+  initialResidual: number;
+  finalResidual: number;
+  finalDisplacementIncrement: number;
+  convergenceReason: string;
+  failureReason?: string;
+  stabilityWarning?: string;
+  /** Ratio of a global displacement measure against the equivalent first-order run; absent when that baseline is ~zero. */
+  amplificationFactor?: number;
+  /** Compact per-iteration trail; not every iteration ever attempted, see `totalIterations` for the true count. */
+  history: PDeltaStepIteration[];
+  /** Axial force (tension positive) used to build each frame member's geometric stiffness at convergence. */
+  memberAxialForces: Record<string, number>;
 }
 
 export interface AnalysisResult {
@@ -494,6 +541,8 @@ export interface AnalysisResult {
   /** Populated by `analyzeProject`; derive it with `resolveReliability` elsewhere. */
   reliability?: ResultReliability;
   explanation: ExplanationStep[];
+  /** Present only when `analyzeProjectPDelta` produced this result; absent on every first-order run. */
+  pDelta?: PDeltaDiagnostics;
 }
 
 export interface MatrixTrace {

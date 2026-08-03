@@ -56,9 +56,9 @@ interface ProjectContextValue {
 const ProjectContext = createContext<ProjectContextValue | null>(null);
 
 const runFallbackAnalysis = async (project: ProjectModel, combinationId: string) => {
-  const { analyzeProject } = await import('../engine/solver');
+  const { analyzeProjectAuto } = await import('../engine/pDelta');
   const combination = project.combinations.find((item) => item.id === combinationId) ?? null;
-  return analyzeProject(project, combination);
+  return analyzeProjectAuto(project, combination);
 };
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {

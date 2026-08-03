@@ -1,5 +1,5 @@
 import type { AnalysisResult, ProjectModel } from '../types';
-import { analyzeProject } from './solver';
+import { analyzeProjectAuto } from './pDelta';
 
 export interface AnalysisWorkerRequest {
   type: 'analyze';
@@ -34,7 +34,7 @@ export const handleAnalysisWorkerRequest = (request: AnalysisWorkerRequest): Ana
     return {
       type: 'analysis-result',
       requestId: request.requestId,
-      result: analyzeProject(request.project, combination),
+      result: analyzeProjectAuto(request.project, combination),
     };
   } catch (error) {
     return {

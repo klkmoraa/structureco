@@ -162,6 +162,25 @@ export const frameLocalStiffness = (member: MemberModel, L: number): Matrix => {
   ];
 };
 
+/**
+ * Consistent geometric-stiffness matrix for a prismatic 2-node beam-column
+ * element, local DOF order `[ui, vi, θi, uj, vj, θj]` (rows/cols 0 and 3, the
+ * axial DOFs, are left at zero). `N` follows this engine's own convention —
+ * tension positive — so a compressive member (`N < 0`) softens the transverse
+ * stiffness and an axial-force-free member (`N = 0`) leaves it unchanged.
+ */
+export const geometricStiffness = (L: number, N: number): Matrix => {
+  const g = N / L;
+  const k = zeros(6, 6);
+  k[1][1] = k[4][4] = (6 / 5) * g;
+  k[1][4] = k[4][1] = -(6 / 5) * g;
+  k[1][2] = k[2][1] = k[1][5] = k[5][1] = (L / 10) * g;
+  k[2][4] = k[4][2] = k[4][5] = k[5][4] = -(L / 10) * g;
+  k[2][2] = k[5][5] = (2 * L * L / 15) * g;
+  k[2][5] = k[5][2] = -(L * L / 30) * g;
+  return k;
+};
+
 const trussLocalStiffness = (member: MemberModel, L: number): Matrix => {
   const a = (member.E * member.A) / L;
   return [
@@ -1199,12 +1218,28 @@ const explanationSteps = (project: ProjectModel, result: Omit<AnalysisResult, 'e
 /** Result of a run that never reached a usable solution; always classified `failed`. */
 const abortedResult = abortedAnalysis;
 
-export const analyzeProject = (project: ProjectModel, combination?: LoadCombination | null): AnalysisResult => {
+/**
+ * `pDeltaAxialForces` is an internal hook used by `analyzeProjectPDelta`
+ * (`./pDelta.ts`) to fold each frame member's current axial force into its
+ * local stiffness before condensation, iteration over iteration. Every
+ * ordinary caller omits it and gets today's first-order behavior unchanged.
+ */
+export const analyzeProject = (
+  project: ProjectModel,
+  combination?: LoadCombination | null,
+  options?: { pDeltaAxialForces?: Map<string, number> },
+): AnalysisResult => {
   const issues = validateProject(project);
   if (issues.some((issue) => issue.severity === 'error')) {
     return abortedResult(issues);
   }
 
+  // Every first-order-geometry audit below (global equilibrium, load audit,
+  // per-member diagram closure) compares against the *undeformed* geometry;
+  // a converged P-Delta run correctly departs from that by its own P·Δ
+  // second-order moment, so those checks are informational, never blocking,
+  // while this run has geometric stiffness active.
+  const pDeltaActive = Boolean(options?.pDeltaAxialForces);
   let mechanism: NonNullable<AnalysisResult['mechanism']> | undefined;
   try {
     const nodes = getNodeMap(project);
@@ -1258,7 +1293,17 @@ export const analyzeProject = (project: ProjectModel, combination?: LoadCombinat
       if (iIndex === undefined || jIndex === undefined) continue;
       const indices = [iIndex * 3, iIndex * 3 + 1, iIndex * 3 + 2, jIndex * 3, jIndex * 3 + 1, jIndex * 3 + 2];
       const transform = rigidOffsetTransform(geometry, startOffset, endOffset);
-      const localStiffnessOriginal = member.type === 'truss' ? trussLocalStiffness(member, geometry.L) : frameLocalStiffness(member, geometry.L);
+      const elasticStiffness = member.type === 'truss' ? trussLocalStiffness(member, geometry.L) : frameLocalStiffness(member, geometry.L);
+      // Geometric stiffness only applies to bending (frame) members: a truss
+      // member has no transverse DOFs to soften/stiffen, and a rigid member
+      // never reaches this loop (it is a pure kinematic constraint, see below).
+      const pDeltaAxialForce = member.type === 'frame' ? options?.pDeltaAxialForces?.get(member.id) : undefined;
+      const localStiffnessOriginal = pDeltaAxialForce
+        ? (() => {
+            const kg = geometricStiffness(geometry.L, pDeltaAxialForce);
+            return elasticStiffness.map((row, i) => row.map((value, j) => value + kg[i][j]));
+          })()
+        : elasticStiffness;
       const localLoads = resolveMemberLocalLoads(project, member.id, combination).loads;
       const initialEffect = resolveMemberInitialEffect(project, member.id, combination);
       const mechanicalEquivalentLoad = equivalentNodalLoad(localLoads, geometry.L, member);
@@ -1744,7 +1789,8 @@ export const analyzeProject = (project: ProjectModel, combination?: LoadCombinat
       const shear = exact.points.map((point) => point.shear);
       const moment = exact.points.map((point) => point.moment);
       const compatibilityTolerance = 1e-7;
-      if (deformation.compatibilityError > compatibilityTolerance) {
+      // Same first-order-vs-P-Delta caveat as the global equilibrium check above.
+      if (deformation.compatibilityError > compatibilityTolerance && !pDeltaActive) {
         issues.push({
           id: `compatibility-${assembly.member.id}`,
           severity: 'warning',
@@ -1764,7 +1810,7 @@ export const analyzeProject = (project: ProjectModel, combination?: LoadCombinat
         Math.abs(exact.endCompatibility.shear) / endScales.shear,
         Math.abs(exact.endCompatibility.moment) / endScales.moment,
       );
-      if (endRelativeError > 1e-7) {
+      if (endRelativeError > 1e-7 && !pDeltaActive) {
         issues.push({
           id: `diagram-equilibrium-${assembly.member.id}`,
           severity: 'warning',
@@ -1905,13 +1951,26 @@ export const analyzeProject = (project: ProjectModel, combination?: LoadCombinat
       normalizedComponents: normalizedEquilibriumComponents,
       normalizedResidual: Math.max(normalizedEquilibriumComponents.fx, normalizedEquilibriumComponents.fy, normalizedEquilibriumComponents.mz),
     };
-    if (equilibrium.normalizedResidual > 1e-6) {
+    // This resultant sums moments using every node's UNDEFORMED position — a
+    // valid closure test for a first-order solve, but a P-Delta run correctly
+    // carries an additional P·Δ moment (the axial force's line of action
+    // through the *displaced* node) that this undeformed-geometry bookkeeping
+    // was never meant to see. Reporting it as a hard error would reject every
+    // P-Delta run with a real second-order effect, defeating the feature.
+    if (equilibrium.normalizedResidual > 1e-6 && !pDeltaActive) {
       issues.push({
         id: 'global-equilibrium',
         severity: 'error',
         title: 'El equilibrio global no cierra',
         message: `El residuo físico normalizado es ${equilibrium.normalizedResidual.toExponential(3)} (Fx=${normalizedEquilibriumComponents.fx.toExponential(3)}, Fy=${normalizedEquilibriumComponents.fy.toExponential(3)}, M=${normalizedEquilibriumComponents.mz.toExponential(3)}).`,
         suggestedFix: 'No uses los resultados: revisa las reacciones, las restricciones y el ensamblaje de cargas.',
+      });
+    } else if (equilibrium.normalizedResidual > 1e-6 && pDeltaActive) {
+      issues.push({
+        id: 'global-equilibrium',
+        severity: 'info',
+        title: 'Momento de segundo orden (P·Δ) presente',
+        message: `El residuo de equilibrio de primer orden es ${equilibrium.normalizedResidual.toExponential(3)}; bajo P-Delta esto refleja el momento adicional de la fuerza axial actuando sobre el nodo desplazado, no un error de ensamblaje.`,
       });
     } else if (equilibrium.normalizedResidual > 1e-8) {
       issues.push({

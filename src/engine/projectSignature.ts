@@ -9,8 +9,9 @@ const cache = new WeakMap<ProjectModel, string>();
  * object identity cannot tell a new node apart from a new unit system. Anything
  * that only affects presentation — units, language, diagram scale, layers — is
  * deliberately absent here, so changing it never discards results that are
- * still exact. `settings.calculationMode` *is* included because the solver
- * branches on it.
+ * still exact. `settings.calculationMode`, `settings.analysisMode` and
+ * `settings.pDeltaConfig` *are* included because `analyzeProjectAuto` branches
+ * and iterates on them.
  *
  * Memoised per project object: the callers share one computation per change.
  */
@@ -27,6 +28,8 @@ export const analysisSignature = (project: ProjectModel): string => {
     project.memberLoads,
     project.memberInitialEffects ?? null,
     project.settings.calculationMode ?? null,
+    project.settings.analysisMode ?? null,
+    project.settings.pDeltaConfig ?? null,
   ]);
   cache.set(project, signature);
   return signature;

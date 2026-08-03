@@ -80,6 +80,7 @@ describe('clasificación de confiabilidad numérica', () => {
       'equilibrium',
       'forward-error',
       'load-audit',
+      'p-delta-convergence',
       'refinement',
       'structural-residual',
     ]);

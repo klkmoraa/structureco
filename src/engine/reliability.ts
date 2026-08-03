@@ -92,6 +92,12 @@ const maxCompatibility = (result: AnalysisResult): number | undefined => {
 const buildChecks = (result: AnalysisResult): ReliabilityCheck[] => {
   const refinementExhausted = (result.refinementIterations ?? 0) >= 3
     && (result.linearResidual ?? 0) > 5e-15;
+  // A P-Delta run correctly carries a first-order-undeformed-geometry
+  // "equilibrium residual" proportional to its own P·Δ moment — the
+  // first-order 'equilibrium' check below would punish exactly the effect
+  // the analysis was asked to compute, so it is skipped in favor of the
+  // P-Delta-specific convergence check that follows it.
+  const pDelta = result.pDelta;
   const definitions: CheckDefinition[] = [
     {
       id: 'condition', label: 'Condición κ₁ del sistema equilibrado',
@@ -125,19 +131,36 @@ const buildChecks = (result: AnalysisResult): ReliabilityCheck[] => {
     },
     {
       id: 'equilibrium', label: 'Equilibrio físico global',
-      limitedAbove: 1e-8, unreliableAbove: 1e-6, value: result.equilibrium?.normalizedResidual, required: true,
+      limitedAbove: 1e-8, unreliableAbove: 1e-6,
+      value: pDelta?.enabled ? undefined : result.equilibrium?.normalizedResidual,
+      required: !pDelta?.enabled,
     },
     {
       id: 'load-audit', label: 'Auditoría independiente de cargas',
-      limitedAbove: 1e-10, unreliableAbove: 1e-8, value: result.loadAudit?.normalizedResidual, required: false,
+      limitedAbove: 1e-10, unreliableAbove: 1e-8,
+      value: pDelta?.enabled ? undefined : result.loadAudit?.normalizedResidual, required: false,
     },
     {
       id: 'diagram-closure', label: 'Cierre N–V–M de los diagramas',
-      limitedAbove: 1e-9, unreliableAbove: 1e-7, value: maxDiagramClosure(result), required: false,
+      limitedAbove: 1e-9, unreliableAbove: 1e-7,
+      value: pDelta?.enabled ? undefined : maxDiagramClosure(result), required: false,
+    },
+    {
+      // Value 1 flags that the converged P-Delta state is already close to a
+      // critical (buckling) load; the 'condition' check above independently
+      // catches the resulting ill-conditioning, so this only needs to reach
+      // 'limited', never re-derive 'unreliable' on its own.
+      id: 'p-delta-convergence', label: 'Proximidad a la carga crítica (P-Delta)',
+      limitedAbove: 0, unreliableAbove: Number.POSITIVE_INFINITY,
+      value: pDelta?.enabled ? (pDelta.stabilityWarning ? 1 : 0) : undefined, required: false,
+      describe: (level) => level === 'reliable'
+        ? 'Convergencia P-Delta: sin proximidad detectada a una carga crítica.'
+        : `Convergencia P-Delta: ${pDelta?.stabilityWarning ?? 'cerca de una carga crítica de pandeo.'}`,
     },
     {
       id: 'compatibility', label: 'Compatibilidad de la deformada',
-      limitedAbove: 1e-9, unreliableAbove: 1e-7, value: maxCompatibility(result), required: false,
+      limitedAbove: 1e-9, unreliableAbove: 1e-7,
+      value: pDelta?.enabled ? undefined : maxCompatibility(result), required: false,
     },
   ];
   return definitions.map(classifyValue);
