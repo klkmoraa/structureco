@@ -26,15 +26,7 @@ export const resolvePDeltaConfig = (project: ProjectModel): PDeltaConfig => ({
 
 /** Hard caps: a configuration past these cannot finish in interactive time, and
  *  an unbounded one (`Infinity`) would spin the iteration loop forever. */
-const CONFIG_LIMITS = { maxLoadSteps: 200, maxIterationsPerStep: 500 } as const;
-
-/**
- * Ceiling on the solved system's own algebraic residual for a converged
- * P-Delta state. Deliberately the same 1e-7 the first-order solver already
- * treats as its `residual` warning threshold, so the two orders of analysis
- * are held to one standard rather than two.
- */
-const EQUILIBRIUM_RESIDUAL_LIMIT = 1e-7;
+const CONFIG_LIMITS = { maxLoadSteps: 200, maxIterationsPerStep: 500, totalSolves: 10000 } as const;
 
 /**
  * Warn from this estimated critical load factor down. 1/0.8 = 1.25 means the
@@ -69,6 +61,15 @@ export const validatePDeltaConfig = (config: PDeltaConfig): string[] => {
   }
   if (!Number.isFinite(config.minimumStep) || config.minimumStep <= 0 || config.minimumStep > 1) {
     problems.push(`El paso mínimo debe cumplir 0 < paso ≤ 1 (valor recibido: ${config.minimumStep}).`);
+  }
+  // Per-field caps are not enough: 200 pasos × 500 iteraciones son 100 000
+  // resoluciones lineales, unas 6 h en un pórtico de 77 nodos — válido campo a
+  // campo y aun así inutilizable. El techo deja holgura para configuraciones
+  // legítimas de alta precisión (p. ej. 12 × 200 para un benchmark) y corta las
+  // patológicas.
+  const budget = config.maxLoadSteps * config.maxIterationsPerStep;
+  if (Number.isFinite(budget) && budget > CONFIG_LIMITS.totalSolves) {
+    problems.push(`El producto de pasos por iteraciones (${budget}) supera el presupuesto de ${CONFIG_LIMITS.totalSolves} resoluciones lineales; reduce alguno de los dos.`);
   }
   return problems;
 };
@@ -141,61 +142,55 @@ const vectorNorm = (values: readonly number[]): number =>
   Math.sqrt(values.reduce((sum, value) => sum + value * value, 0));
 
 /**
- * Response projected onto the first-order response direction, normalised so
- * that a purely first-order answer gives exactly 1. `undefined` when the
- * reference carries no direction (fully restrained or unloaded model).
+ * Fraction of the largest first-order displacement below which a DOF is
+ * treated as not participating in the amplification. Low enough to keep a
+ * stocky column's bending response (~1e-3 of its axial shortening), high
+ * enough to keep DOFs that are numerically zero from contributing a huge
+ * meaningless ratio.
  */
-const responseProjection = (displacements: readonly number[], firstOrderDisplacements: readonly number[]): number | undefined => {
-  if (firstOrderDisplacements.length !== displacements.length) return undefined;
-  let dot = 0;
-  let referenceScale = 0;
-  for (let i = 0; i < displacements.length; i += 1) {
-    dot += displacements[i] * firstOrderDisplacements[i];
-    referenceScale += firstOrderDisplacements[i] * firstOrderDisplacements[i];
-  }
-  if (referenceScale <= 1e-18) return undefined;
-  return dot / referenceScale;
-};
-
-/** The member carrying the largest axial force, and whether it is in compression. */
-const governingAxialForce = (axialForces: Map<string, number>): { magnitude: number; compressive: boolean } => {
-  let magnitude = 0;
-  let value = 0;
-  for (const force of axialForces.values()) {
-    if (Math.abs(force) > magnitude) { magnitude = Math.abs(force); value = force; }
-  }
-  return { magnitude, compressive: value < 0 };
-};
+const SIGNIFICANT_DOF_FRACTION = 1e-6;
 
 /**
  * True when a converged state cannot be a stable equilibrium.
  *
- * A plain sign test on the whole displacement vector is not sufficient, and
- * this was measured: for a compressed cantilever at 3·Pcr the tip sway is
- * genuinely *reversed* (−6.6e-3 m against a first-order +1.3e-2 m), yet the
- * whole-vector dot product stays POSITIVE because the column's axial
- * shortening — a large DOF that takes no part in the buckling mode — swamps
- * the reversed bending DOF. The engine happily returned that state as a
- * success.
+ * The test is applied to the single DOF that second-order effects changed the
+ * most, `argmax |u₂ᵢ − u₁ᵢ|`. That DOF is by construction the one the
+ * geometric stiffness actually acts on, which is what makes the test robust:
  *
- * The projection onto the first-order direction is the discriminating
- * quantity. Under a governing compression the geometric stiffness can only
- * soften, so the projection is ≥ 1 below the first critical load (measured:
- * 1.11 at 0.1·Pcr, 1.96 at 0.5, 8.62 at 0.9, 51.5 at 0.99) and drops below 1 —
- * through a pole — once it is passed (−362 at 1.01·Pcr, then 0.28 at 3·Pcr,
- * 0.69 at 5·Pcr). Under governing tension a projection below 1 is the correct
- * physical answer (0.68 at 0.5·Pcr tension), so the test only applies when
- * compression governs.
+ * - Any whole-vector measure (dot product, norm ratio) is dominated by
+ *   whichever DOF family is largest, and that is routinely *not* the one that
+ *   buckles. In a stocky column (L/r ≈ 22) the axial shortening dwarfs the
+ *   sway, so the projection onto the first-order response stayed at 0.9999996
+ *   while the sway was genuinely reversed, and the engine returned that
+ *   post-critical state as a success.
+ * - Flagging *any* reversed DOF is too strict: second-order effects legitimately
+ *   redistribute a multi-element or multi-storey model, and small DOFs can
+ *   change sign while the structure is perfectly stable.
+ *
+ * A reversal of the most-affected DOF is unambiguous: compression can amplify
+ * a response without bound, but it cannot turn the governing one around while
+ * the tangent is still positive definite. No tension/compression gate is
+ * needed — pure tension never reverses anything — which also removes a gate
+ * measured mis-firing in both directions on mixed models, where a tie carrying
+ * the largest |N| both hid real buckling and aborted valid runs.
  */
 const isPostCriticalState = (
   displacements: readonly number[],
   firstOrderDisplacements: readonly number[],
-  axialForces: Map<string, number>,
 ): boolean => {
-  const projection = responseProjection(displacements, firstOrderDisplacements);
-  if (projection === undefined) return false;
-  if (projection <= 0) return true;
-  return governingAxialForce(axialForces).compressive && projection < 1 - 1e-6;
+  if (firstOrderDisplacements.length !== displacements.length) return false;
+  let governing = -1;
+  let largestChange = 0;
+  for (let i = 0; i < displacements.length; i += 1) {
+    const change = Math.abs(displacements[i] - firstOrderDisplacements[i]);
+    if (change > largestChange) { largestChange = change; governing = i; }
+  }
+  if (governing < 0) return false;
+  const first = firstOrderDisplacements[governing];
+  const second = displacements[governing];
+  // Only a reversal that is itself a real motion counts, never a value
+  // crossing zero inside its own rounding error.
+  return second * first < 0 && Math.abs(second) > Math.abs(first) * 1e-6;
 };
 
 /**
@@ -263,7 +258,7 @@ const solveLoadStep = (
       };
     }
     const nextAxialForces = extractAxialForces(result, frameMemberIds);
-    if (isPostCriticalState(result.displacements, firstOrderDisplacements, nextAxialForces)) {
+    if (isPostCriticalState(result.displacements, firstOrderDisplacements)) {
       return {
         converged: false, analysisResult: result, axialForces, iterations: iteration, history,
         reason: 'La respuesta dejó de amplificarse respecto al primer orden bajo compresión gobernante: la estructura superó una carga crítica de pandeo y la solución encontrada no es un equilibrio estable.',
@@ -273,21 +268,22 @@ const solveLoadStep = (
     const displacementIncrement = previousDisplacements
       ? relativeVectorChange(result.displacements, previousDisplacements, displacementReference)
       : Number.POSITIVE_INFINITY;
-    // Independent of both increment measures: the solved system's own
-    // algebraic residual ‖K U + Cᵀλ − F‖ normalised by the acting forces.
-    // Two increment criteria alone can agree while both are wrong (Bathe
-    // §8.4.4 recommends never converging on a solution-increment norm alone),
-    // so this is required as well.
+    // Reported for traceability, NOT used as a convergence criterion: this is
+    // the algebraic residual of the *frozen* linear system K(N_prev)·U = F
+    // after iterative refinement, not the nonlinear unbalance. Measured across
+    // P/Pcr = 0.1…0.99 it sits at 1e-18…1e-16, nine or more orders below any
+    // useful threshold, so gating on it would be vacuous — and worse, it would
+    // make an ill-conditioned model that merely earns a warning in first order
+    // unable to converge at all in P-Delta.
     const equilibriumResidual = result.residualNorm;
     history.push({ step, iteration, lambda, residual: axialChange, displacementIncrement, equilibriumResidual, conditionEstimate: result.conditionEstimate });
 
     const converged = iteration > 1
       && axialChange <= config.equilibriumTolerance
       && displacementIncrement <= config.displacementTolerance
-      && Number.isFinite(equilibriumResidual)
-      && equilibriumResidual <= EQUILIBRIUM_RESIDUAL_LIMIT;
+      && Number.isFinite(equilibriumResidual);
     if (converged) {
-      return { converged: true, analysisResult: result, axialForces: nextAxialForces, iterations: iteration, history, reason: 'Se cumplieron las tolerancias de cambio axial y de incremento de desplazamiento, con el residuo de equilibrio dentro de su límite.' };
+      return { converged: true, analysisResult: result, axialForces: nextAxialForces, iterations: iteration, history, reason: 'Se cumplieron las tolerancias de cambio axial y de incremento de desplazamiento.' };
     }
     // Growth instead of shrinkage between successive iterations is the
     // signature of a fixed-point iteration diverging (e.g. near/above the
@@ -327,7 +323,7 @@ const amplificationOf = (second: readonly number[], first: readonly number[]): n
   let reference = 0;
   for (const value of first) reference = Math.max(reference, Math.abs(value));
   if (!(reference > 0)) return undefined;
-  const floor = reference * 1e-6;
+  const floor = reference * SIGNIFICANT_DOF_FRACTION;
   let worst = 0;
   let counted = false;
   for (let i = 0; i < first.length; i += 1) {
@@ -339,96 +335,28 @@ const amplificationOf = (second: readonly number[], first: readonly number[]): n
 };
 
 /**
- * Estimated elastic critical load factor for the *current load pattern*.
+ * Estimated elastic critical load factor for the current load pattern, from
+ * the standard design relation `B₂ = 1/(1 − 1/λ_cr)` applied to the computed
+ * amplification.
  *
- * The converged axial forces are scaled by a trial factor `s` and the tangent
- * `Ke + Kg(s·N)` re-solved; the smallest `s` at which the response stops
- * pointing with the applied load is the load multiple at which that tangent
- * stops being positive definite along the loading direction — i.e. `λ_cr`, the
- * quantity design codes express as `1/(1 − 1/λ_cr)` sway amplification.
+ * A bisection on the axial-force scale was implemented and then removed: the
+ * stability predicate is NOT monotone in that scale — past the first critical
+ * point there are windows that look stable again (measured projections at
+ * s = 1.5 … 2.5: 90.2, −25.3, −0.48, +1.50, +33.9, −8.6). A doubling scan
+ * lands in such a window and brackets the *second* critical point, so a frame
+ * at 91 % of its buckling load was reported at λ_cr = 2.01 with no warning,
+ * while this analytic relation gave the correct 1.10. It is also free, where
+ * the bisection cost up to 19 extra linear solves — 40× the first-order
+ * runtime on a 77-node frame.
  *
- * This is a computed bracket, not a full eigenvalue extraction: it finds the
- * critical point *visible to this load pattern* (a buckling mode orthogonal to
- * the loading would not be detected), and it inherits the model's
- * discretisation error — one element per member over-predicts a member's own
- * critical load by ~0.75 %, so `λ_cr` is optimistic by about the same margin.
- * Both limits are stated wherever the value is surfaced.
- *
- * Cost is bounded to `BISECTION_STEPS + 1` extra linear solves.
+ * It is an estimate and is labelled as one wherever it is surfaced: the
+ * relation assumes a single dominant buckling mode, and it inherits the
+ * model's discretisation error (one element per member over-predicts a
+ * member's own critical load by ~0.75 %).
  */
-const BISECTION_STEPS = 12;
-const MAX_CRITICAL_FACTOR = 64;
-const MIN_CRITICAL_FACTOR = 1 / 64;
-
-/**
- * Above this estimated factor the structure is far enough from critical that
- * refining the estimate changes no decision, so the (costly) bisection is
- * skipped. Measured: the free analytic screen and the bisection agree to
- * within 0.5 % across the whole range, and the bisection costs up to ~19 extra
- * linear solves — 40× the first-order runtime on a 77-node frame.
- */
-const BISECTION_THRESHOLD = 3;
-
-const estimateCriticalLoadFactor = (
-  project: ProjectModel,
-  scaled: LoadCombination,
-  axialForces: Map<string, number>,
-  firstOrderDisplacements: readonly number[],
-  amplification: number | undefined,
-): number | undefined => {
-  // Only a governing compression can produce a critical point through the
-  // geometric stiffness; a tension-governed model has no buckling load to
-  // quote and must not be given a fabricated one.
-  if (!axialForces.size || !governingAxialForce(axialForces).compressive) return undefined;
-
-  // Free screen from the standard amplification relation B₂ = 1/(1 − 1/λ_cr).
-  // Only worth refining when it says the load is within reach of critical.
-  const analytic = amplification !== undefined && amplification > 1
-    ? amplification / (amplification - 1)
-    : undefined;
-  if (analytic !== undefined && analytic > BISECTION_THRESHOLD) return analytic;
-  const scaledBy = (factor: number) => {
-    const scaledForces = new Map<string, number>();
-    axialForces.forEach((value, id) => scaledForces.set(id, value * factor));
-    return scaledForces;
-  };
-  const stableAt = (factor: number): boolean => {
-    const trial = analyzeProject(project, scaled, { pDeltaAxialForces: scaledBy(factor) });
-    if (!trial.success) return false;
-    return !isPostCriticalState(trial.displacements, firstOrderDisplacements, scaledBy(factor));
-  };
-
-  // Bracket the first critical point on whichever side of the current state it
-  // lies: a load already past critical needs the search to go *down*, which a
-  // one-sided upward scan would miss entirely.
-  let low: number;
-  let high: number;
-  if (stableAt(1)) {
-    let bracket = 0;
-    for (let factor = 2; factor <= MAX_CRITICAL_FACTOR; factor *= 2) {
-      if (!stableAt(factor)) { bracket = factor; break; }
-    }
-    // Stable everywhere in range: far from critical, no finite factor to quote.
-    if (!bracket) return undefined;
-    low = bracket === 2 ? 1 : bracket / 2;
-    high = bracket;
-  } else {
-    let bracket = 0;
-    for (let factor = 0.5; factor >= MIN_CRITICAL_FACTOR; factor /= 2) {
-      if (stableAt(factor)) { bracket = factor; break; }
-    }
-    // Unstable even at the smallest probe: the model is far past critical and
-    // the factor cannot be resolved, but it is certainly below the range.
-    if (!bracket) return MIN_CRITICAL_FACTOR;
-    low = bracket;
-    high = bracket * 2;
-  }
-
-  for (let step = 0; step < BISECTION_STEPS; step += 1) {
-    const middle = (low + high) / 2;
-    if (stableAt(middle)) low = middle; else high = middle;
-  }
-  return (low + high) / 2;
+const estimateCriticalLoadFactor = (amplification: number | undefined): number | undefined => {
+  if (amplification === undefined || !Number.isFinite(amplification) || amplification <= 1) return undefined;
+  return amplification / (amplification - 1);
 };
 
 /**
@@ -537,15 +465,9 @@ export const analyzeProjectPDelta = (
   // the ratio falls back below 1 (0.43 at 3·Pcr) because κ recovers on the far
   // side of the singularity. A computed load factor is monotone, scale-free
   // and directly comparable across models, so the warning is derived from it.
-  const criticalLoadFactor = estimateCriticalLoadFactor(
-    project,
-    scaleCombination(project, combination, 1),
-    axialForces,
-    firstOrder.displacements,
-    amplificationFactor,
-  );
+  const criticalLoadFactor = estimateCriticalLoadFactor(amplificationFactor);
   const stabilityWarning = criticalLoadFactor !== undefined && criticalLoadFactor <= CRITICAL_FACTOR_WARNING
-    ? `Factor de carga crítica elástica estimado ≈ ${criticalLoadFactor.toFixed(2)} para este patrón de cargas: la carga aplicada está al ${(100 / criticalLoadFactor).toFixed(0)} % de la crítica estimada. Es una estimación por bisección sobre la fuerza axial, no un análisis de valores propios, y con un elemento por miembro sobrestima la crítica alrededor de un 0.75 %; subdivide los miembros comprimidos para acotarla mejor.`
+    ? `Factor de carga crítica elástica estimado ≈ ${criticalLoadFactor.toFixed(2)}: la carga aplicada está al ${(100 / criticalLoadFactor).toFixed(0)} % de la crítica estimada. Estimación a partir de la amplificación mediante B₂ = 1/(1 − 1/λ), no un análisis de valores propios; supone un modo de pandeo dominante y con un elemento por miembro sobrestima la crítica ≈0.75 %.`
     : undefined;
 
   const memberAxialForces: Record<string, number> = {};

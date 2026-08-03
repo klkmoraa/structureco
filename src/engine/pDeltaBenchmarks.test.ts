@@ -154,15 +154,20 @@ describe('P-Delta · estudio de discretización (convergencia espacial)', () => 
     }
   });
 
-  it('el factor de carga crítica estimado también mejora al subdividir', () => {
+  it('el factor de carga crítica estimado ronda el valor exacto en toda malla', () => {
     const P = 0.5 * PCR;
     const factorFor = (n: number) => analyzeProjectPDelta(withTip(cantileverMesh(L, I, n), -P, H))!.pDelta!.criticalLoadFactor!;
-    // El valor exacto del continuo es 1/0.5 = 2; un elemento sobrestima ~0.75 %.
-    const one = factorFor(1);
-    const four = factorFor(4);
-    expect(one).toBeGreaterThan(2);
-    expect(Math.abs(four - 2)).toBeLessThan(Math.abs(one - 2));
-    expect(Math.abs(relError(four, 2))).toBeLessThan(1e-3);
+    // El valor exacto del continuo es 1/0.5 = 2. El factor sale de la relación
+    // B₂ = 1/(1 − 1/λ) aplicada a la amplificación, que es la mayor razón por
+    // GDL —una rotación amplifica algo distinto que una traslación—, así que
+    // no hereda limpiamente el signo del sesgo de discretización: lo que debe
+    // cumplirse es que ronde el valor exacto en cualquier malla, no que se
+    // acerque monótonamente. La exactitud del DESPLAZAMIENTO frente a la
+    // solución cerrada, que sí es monótona, se comprueba en las pruebas de
+    // discretización de arriba.
+    for (const n of [1, 2, 4, 8]) {
+      expect(Math.abs(relError(factorFor(n), 2)), `n=${n}`).toBeLessThan(0.02);
+    }
   });
 });
 
@@ -373,4 +378,91 @@ describe('P-Delta · presupuesto de rendimiento', () => {
     // muy por debajo del 40× que tenía la versión sin cribado.
     expect(pDeltaMs / Math.max(firstOrderMs, 1)).toBeLessThan(15);
   }, 30_000);
+});
+
+describe('P-Delta · detección post-crítica robusta (hallazgos del revisor)', () => {
+  const stockyColumn = (fraction: number): ProjectModel => {
+    // L/r ≈ 22: una columna corriente, no esbelta. El acortamiento axial es
+    // órdenes de magnitud mayor que la flecha, así que cualquier medida sobre
+    // el vector completo queda dominada por el GDL que NO pandea.
+    const project = baseProject();
+    const stockyL = 1;
+    const stockyI = 1e-3;
+    const stockyA = 0.5;
+    const pcr = (Math.PI ** 2 * E * stockyI) / (2 * stockyL) ** 2;
+    project.nodes = [
+      { id: 'N1', x: 0, y: 0, support: { type: 'fixed' } },
+      { id: 'N2', x: 0, y: stockyL, support: { type: 'none' } },
+    ];
+    project.members = [{ id: 'M1', i: 'N1', j: 'N2', type: 'frame', E, A: stockyA, I: stockyI }];
+    project.nodalLoads = [{ id: 'AX', nodeId: 'N2', caseId: 'LC1', fx: 10, fy: -fraction * pcr, mz: 0 }];
+    return project;
+  };
+
+  it('rechaza una columna robusta por encima de la crítica, no solo una esbelta', () => {
+    for (const fraction of [1.01, 1.2, 2, 3, 5, 10]) {
+      const result = analyzeProjectPDelta(stockyColumn(fraction));
+      expect(result.success, `L/r≈22 a ${fraction}·Pcr`).toBe(false);
+      expect(result.nodeResults, `L/r≈22 a ${fraction}·Pcr`).toHaveLength(0);
+    }
+  });
+
+  it('acepta la misma columna robusta por debajo de la crítica', () => {
+    const result = analyzeProjectPDelta(stockyColumn(0.5));
+    expect(result.success).toBe(true);
+    expect(result.pDelta?.converged).toBe(true);
+    // La amplificación debe verse pese a que el acortamiento axial domine.
+    expect(result.pDelta!.amplificationFactor!).toBeGreaterThan(1.5);
+  });
+
+  /** Columna comprimida y un tirante desacoplado con MAYOR |N| en tensión. */
+  const compressedPlusLargerTie = (fraction: number): ProjectModel => {
+    const project = baseProject();
+    const span = 4;
+    const inertia = 8e-5;
+    const area = 0.01;
+    const pcr = (Math.PI ** 2 * E * inertia) / (2 * span) ** 2;
+    project.nodes = [
+      { id: 'N1', x: 0, y: 0, support: { type: 'fixed' } },
+      { id: 'N2', x: 0, y: span, support: { type: 'none' } },
+      { id: 'T1', x: 20, y: 0, support: { type: 'fixed' } },
+      { id: 'T2', x: 20, y: span, support: { type: 'none' } },
+    ];
+    project.members = [
+      { id: 'M1', i: 'N1', j: 'N2', type: 'frame', E, A: area, I: inertia },
+      { id: 'TIE', i: 'T1', j: 'T2', type: 'frame', E, A: area, I: inertia },
+    ];
+    project.nodalLoads = [
+      { id: 'AX', nodeId: 'N2', caseId: 'LC1', fx: 10, fy: -fraction * pcr, mz: 0 },
+      { id: 'TN', nodeId: 'T2', caseId: 'LC1', fx: 1, fy: 9000, mz: 0 },
+    ];
+    return project;
+  };
+
+  it('un tirante con mayor |N| en tensión no oculta el pandeo de otro miembro', () => {
+    // Un criterio que se apoye en «la fuerza axial gobernante» mira el tirante,
+    // ve tensión, y deja pasar el estado post-crítico de la columna.
+    for (const fraction of [1.2, 3]) {
+      const result = analyzeProjectPDelta(compressedPlusLargerTie(fraction));
+      expect(result.success, `${fraction}·Pcr con tirante mayor`).toBe(false);
+    }
+  });
+
+  it('un tirante con mayor |N| en tensión tampoco aborta un análisis válido', () => {
+    // El reverso del mismo criterio: la tensión reduce legítimamente la
+    // respuesta por debajo del primer orden, lo que un umbral sobre la
+    // proyección global leería como pandeo.
+    const result = analyzeProjectPDelta(compressedPlusLargerTie(0.02));
+    expect(result.success).toBe(true);
+    expect(result.pDelta?.converged).toBe(true);
+  });
+
+  it('el presupuesto combinado de configuración se valida, no solo cada campo', () => {
+    // 200 × 500 = 100 000 resoluciones lineales pasa campo a campo y es
+    // inutilizable (≈6 h en un pórtico de 77 nodos).
+    const project = stockyColumn(0.5);
+    const result = analyzeProjectPDelta(project, undefined, { maxLoadSteps: 200, maxIterationsPerStep: 500 });
+    expect(result.success).toBe(false);
+    expect(result.issues.some((issue) => issue.id === 'pdelta-invalid-config')).toBe(true);
+  });
 });
