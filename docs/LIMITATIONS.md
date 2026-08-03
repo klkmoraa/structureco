@@ -108,6 +108,16 @@ desplaza una carga vertical unitaria sobre una cadena abierta de miembros frame
 y obtiene `N`, `V` o `M` en un corte. El tren móvil admite por ahora únicamente
 ejes concentrados positivos y un factor de impacto estático.
 
+Una envolvente solo admite escenarios clasificados `reliable` o `limited`. Los
+escenarios fallidos o poco confiables se conservan en la lista con su causa, pero
+no aportan valores, y la envolvente queda marcada `complete: false`. Una
+envolvente incompleta sigue siendo válida para los escenarios que contiene: no
+representa el conjunto solicitado y no debe leerse como si lo hiciera.
+
+Una línea de influencia que no alcanza su tolerancia de ajuste tras el límite de
+subdivisión se rechaza y no se entrega: en ese caso no hay línea degradada que
+consultar, solo el diagnóstico del rechazo.
+
 ## Precisión y tamaño de modelo
 
 El solucionador utiliza matrices densas. El análisis principal y la comparación
@@ -121,6 +131,14 @@ magnitud, resortes casi rígidos o sistemas próximos a un mecanismo pueden degr
 la precisión. El equilibrado, refinamiento iterativo, residuo, condición estimada
 y cota de error ayudan a detectar el problema, pero no vuelven confiable un modelo
 mal condicionado.
+
+Que un análisis termine con `success = true` no implica que sus cifras puedan
+usarse. Cada resultado publica `reliability` con tres respuestas separadas —cálculo
+terminado, resultado utilizable y nivel de confianza— derivadas de diez
+comprobaciones numéricas independientes descritas en `MATHEMATICAL_SPEC.md` §11.2.
+Los umbrales son diagnósticos numéricos: acotan el error aritmético de la solución,
+no la validez física del modelo, y un nivel `reliable` nunca certifica que la
+idealización estructural sea correcta.
 
 Las filas redundantes y compatibles de apoyos y vínculos rígidos se reducen antes
 de resolver, y una estructura estabilizada exclusivamente por resortes positivos

@@ -681,6 +681,44 @@ El equilibrio global publicado suma reacciones contra `R_source`, no contra `F`,
 y normaliza `Fx`, `Fy` y `M` por separado con la actividad absoluta de cada
 familia de términos.
 
+### 11.2 Clasificación de confiabilidad del resultado
+
+Terminar un cálculo, obtener un resultado legible y obtener un resultado
+confiable son tres condiciones distintas. El motor las publica por separado en
+`AnalysisResult.reliability`:
+
+- `completed`: la solución numérica llegó al final sin abortar;
+- `usable`: la corrida produjo resultados nodales que pueden leerse;
+- `level ∈ {reliable, limited, unreliable, failed}`: cuánto de esos resultados
+  puede utilizarse.
+
+`success` solo indica que ninguna incidencia alcanzó severidad de error. No es
+suficiente: todas las advertencias numéricas —condicionamiento, residuo lineal,
+compatibilidad de restricciones, cierre de diagramas— conservan `success = true`.
+Por eso la clasificación se construye a partir de diez comprobaciones
+independientes, cada una con su propio umbral:
+
+| Comprobación | `limited` por encima de | `unreliable` por encima de |
+| --- | --- | --- |
+| `condition` — κ₁ del sistema equilibrado | 1e10 | 1e12 |
+| `backward-error` — residuo relativo del sistema lineal | 1e-12 | 1e-8 |
+| `forward-error` — cota de error hacia delante | 1e-9 | 1e-4 |
+| `refinement` — refinamiento iterativo agotado sin alcanzar 5e-15 | — | — |
+| `structural-residual` — `r_n` | 1e-9 | 1e-7 |
+| `constraints` — `‖CU−g‖` normalizado | 1e-9 | 1e-6 |
+| `equilibrium` — residuo físico global | 1e-8 | 1e-6 |
+| `load-audit` — auditoría independiente de cargas | 1e-10 | 1e-8 |
+| `diagram-closure` — cierre `N–V–M` relativo por miembro | 1e-9 | 1e-7 |
+| `compatibility` — compatibilidad de la deformada | 1e-9 | 1e-7 |
+
+El nivel publicado es el peor de las comprobaciones. Una comprobación obligatoria
+sin valor finito se clasifica como `unreliable`: si la magnitud del error no puede
+acotarse, no hay evidencia de calidad. Una corrida que produjo números pero
+conserva alguna incidencia de error se clasifica como mínimo `unreliable`; una que
+no produjo resultados nodales se clasifica `failed`. Solo los niveles `reliable` y
+`limited` pueden alimentar envolventes, selección de escenario gobernante y
+líneas de influencia.
+
 ## 12. Recuperación de fuerzas
 
 \[
@@ -797,7 +835,15 @@ Para cada miembro se comprueban:
 Un error de cierre se reporta como advertencia numérica; no se corrige moviendo
 la curva ni sustituyendo el valor por una muestra gráfica. Los cierres `ΔN`,
 `ΔV` y `ΔM` se normalizan por separado; nunca se compara una fuerza en kN contra
-una escala de momento en kN·m.
+una escala de momento en kN·m. El cierre relativo de cada miembro se conserva en
+`MemberResult.endCompatibilityError` y participa en la clasificación de §11.2.
+
+Cada acción concentrada pertenece exactamente a una frontera de tramo. Los saltos
+se asignan a la abscisa de corte más cercana y su coordenada se ajusta a ella, en
+lugar de buscarlos por tolerancia en cada frontera: cuando otra frontera —el
+borde de una carga distribuida, por ejemplo— cae dentro de esa tolerancia, la
+búsqueda por proximidad aplicaría el mismo salto dos veces y falsearía todo el
+diagrama aguas abajo de la carga.
 
 ### 13.4 Envolventes de N, V y M
 
@@ -810,6 +856,21 @@ del escenario que gobiernan el mínimo o el máximo.
 Este procedimiento acepta factores positivos o negativos y evita construir una
 envolvente a partir de máximos aislados o de una malla de muestreo. La exactitud
 es la del modelo lineal y de los tipos de carga admitidos.
+
+Todos los escenarios solicitados se analizan y se conservan, incluidos los que
+fallaron o resultaron poco confiables; ninguno desaparece de la lista. Solo los
+escenarios con nivel `reliable` o `limited` alimentan la envolvente. Cada
+envolvente —de diagramas, de reacciones y de deformadas— publica por ello:
+
+- `complete`: verdadero únicamente si contribuyeron todos los escenarios;
+- `includedScenarioIds` y `excludedScenarios` con la causa de cada exclusión;
+- `level`: el peor nivel de confiabilidad entre los escenarios que contribuyeron.
+
+Cada tramo de la envolvente se evalúa en sus dos extremos, de modo que una carga
+puntual o un momento concentrado aportan su límite izquierdo y su límite derecho
+al mínimo, al máximo y a la identidad del escenario gobernante. `evaluateEnvelopeAt`
+y `evaluateDeformationEnvelopeAt` reciben el lado (`left` o `right`) como argumento
+explícito, porque en una discontinuidad los dos límites son números distintos.
 
 ### 13.5 Líneas de influencia y trenes de ejes
 
@@ -831,6 +892,24 @@ distintos de los anteriores, certifican la reconstrucción. Se conservan por
 separado los límites izquierdo y derecho de todo salto. Los extremos globales se
 obtienen de los extremos de intervalo y de las raíces interiores de la derivada;
 no proceden de una cuadrícula gráfica.
+
+La certificación es vinculante, no informativa. Un punto de comprobación falla
+solo si excede a la vez la tolerancia absoluta y la relativa —cerca de un cero de
+la línea, un error relativo aislado no significa nada—. Los valores por omisión
+son `1e-6` relativo, `1e-9` absoluto y hasta cuatro subdivisiones sucesivas. Si un
+intervalo no cumple, se divide por la mitad y cada mitad se vuelve a ajustar y a
+certificar de forma independiente. Si tras agotar el límite de subdivisión algún
+intervalo sigue sin cumplir, la línea se rechaza con `InfluenceFitError`, que
+transporta el diagnóstico completo (`accepted`, `subdivisions`,
+`maxSubdivisionDepth`, `rejectedIntervals`). Una línea rechazada nunca se entrega
+al resto de la aplicación. Además, cada análisis de carga unitaria se clasifica
+según §11.2 y un nivel `unreliable` interrumpe la construcción en lugar de
+propagarse a la línea.
+
+Como la reconstrucción es exacta para esta biblioteca de elementos —los
+desplazamientos bajo una carga puntual móvil son cúbicos por tramos en la
+posición de la carga—, estos límites vigilan la degradación numérica, no el error
+de discretización.
 
 Para un tren de ejes concentrados con cargas positivas descendentes `P_a`,
 offsets `d_a` respecto de un eje de referencia y factor de impacto estático
