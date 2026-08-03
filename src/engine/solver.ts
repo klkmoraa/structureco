@@ -21,6 +21,7 @@ import {
   type LocalMemberLoad,
 } from './diagram';
 import { compareGeneralizedLoads, integrateIndependentMemberSourceLoads } from './loadAudit';
+import { classifyAnalysisReliability } from './reliability';
 import {
   addToMatrix,
   addToVector,
@@ -1194,10 +1195,30 @@ const explanationSteps = (project: ProjectModel, result: Omit<AnalysisResult, 'e
   return steps;
 };
 
+/** Result of a run that never reached a usable solution; always classified `failed`. */
+const abortedResult = (
+  issues: ValidationIssue[],
+  extra: Partial<AnalysisResult> = {},
+): AnalysisResult => {
+  const base: AnalysisResult = {
+    success: false,
+    issues,
+    nodeResults: [],
+    memberResults: [],
+    displacements: [],
+    residualNorm: Number.NaN,
+    conditionEstimate: Number.NaN,
+    equilibrium: { sumFx: Number.NaN, sumFy: Number.NaN, sumM: Number.NaN, normalizedComponents: { fx: Number.NaN, fy: Number.NaN, mz: Number.NaN }, normalizedResidual: Number.NaN },
+    explanation: [],
+    ...extra,
+  };
+  return { ...base, reliability: classifyAnalysisReliability(base) };
+};
+
 export const analyzeProject = (project: ProjectModel, combination?: LoadCombination | null): AnalysisResult => {
   const issues = validateProject(project);
   if (issues.some((issue) => issue.severity === 'error')) {
-    return { success: false, issues, nodeResults: [], memberResults: [], displacements: [], residualNorm: Number.NaN, conditionEstimate: Number.NaN, equilibrium: { sumFx: Number.NaN, sumFy: Number.NaN, sumM: Number.NaN, normalizedComponents: { fx: Number.NaN, fy: Number.NaN, mz: Number.NaN }, normalizedResidual: Number.NaN }, explanation: [] };
+    return abortedResult(issues);
   }
 
   let mechanism: NonNullable<AnalysisResult['mechanism']> | undefined;
@@ -1230,7 +1251,7 @@ export const analyzeProject = (project: ProjectModel, combination?: LoadCombinat
         });
       });
       if (issues.some((issue) => issue.severity === 'error')) {
-        return { success: false, issues, nodeResults: [], memberResults: [], displacements: [], residualNorm: Number.NaN, conditionEstimate: Number.NaN, equilibrium: { sumFx: Number.NaN, sumFy: Number.NaN, sumM: Number.NaN, normalizedComponents: { fx: Number.NaN, fy: Number.NaN, mz: Number.NaN }, normalizedResidual: Number.NaN }, explanation: [] };
+        return abortedResult(issues);
       }
     }
     const prescribedByNode = resolvePrescribedDisplacements(project, factors);
@@ -1432,7 +1453,7 @@ export const analyzeProject = (project: ProjectModel, combination?: LoadCombinat
     });
     if (!hasGroundingConstraint && !hasGroundingSpring) {
       issues.push({ id: 'no-supports', severity: 'error', title: 'Estructura sin restricciones', message: 'Agrega apoyos para impedir los movimientos rígidos del modelo.' });
-      return { success: false, issues, nodeResults: [], memberResults: [], displacements: [], residualNorm: Number.NaN, conditionEstimate: Number.NaN, equilibrium: { sumFx: Number.NaN, sumFy: Number.NaN, sumM: Number.NaN, normalizedComponents: { fx: Number.NaN, fy: Number.NaN, mz: Number.NaN }, normalizedResidual: Number.NaN }, explanation: [] };
+      return abortedResult(issues);
     }
 
     const naug = ndof + C.length;
@@ -1813,6 +1834,8 @@ export const analyzeProject = (project: ProjectModel, combination?: LoadCombinat
           : undefined,
         compatibilityError: deformation.compatibilityError,
         compatibilityComponents: deformation.compatibilityComponents,
+        endCompatibility: { ...exact.endCompatibility },
+        endCompatibilityError: endRelativeError,
       };
     });
 
@@ -2004,7 +2027,10 @@ export const analyzeProject = (project: ProjectModel, combination?: LoadCombinat
       loadAudit,
       educationTrace,
     };
-    return { ...partial, explanation: explanationSteps(project, partial) };
+    const analysis: AnalysisResult = { ...partial, explanation: explanationSteps(project, partial) };
+    // Finishing is not the same as being trustworthy: classify the run against
+    // every independent numeric check before publishing it.
+    return { ...analysis, reliability: classifyAnalysisReliability(analysis) };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error desconocido durante el análisis.';
     const singular = message.toLowerCase().includes('singular') || message.toLowerCase().includes('mecanismo');
@@ -2036,6 +2062,6 @@ export const analyzeProject = (project: ProjectModel, combination?: LoadCombinat
           : 'Revisa las restricciones de ese nodo, la conectividad de sus miembros y las liberaciones cercanas. El grado indicado es un candidato numérico, no un modo propio completo.'
         : undefined,
     });
-    return { success: false, issues, nodeResults: [], memberResults: [], displacements: [], residualNorm: Number.NaN, conditionEstimate: Number.NaN, mechanism, equilibrium: { sumFx: Number.NaN, sumFy: Number.NaN, sumM: Number.NaN, normalizedComponents: { fx: Number.NaN, fy: Number.NaN, mz: Number.NaN }, normalizedResidual: Number.NaN }, explanation: [] };
+    return abortedResult(issues, { mechanism });
   }
 };

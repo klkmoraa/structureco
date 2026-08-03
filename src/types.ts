@@ -340,6 +340,10 @@ export interface MemberResult {
   /** Dimensionless end-compatibility residual: max(|du|/L, |dv|/L, |dtheta|). */
   compatibilityError?: number;
   compatibilityComponents?: { du: number; dv: number; dtheta: number };
+  /** Absolute N-V-M closure of the exact diagram against the element end forces. */
+  endCompatibility?: { axial: number; shear: number; moment: number };
+  /** Same closure normalized by this member's own diagram magnitudes. */
+  endCompatibilityError?: number;
 }
 
 export interface ExplanationValue {
@@ -405,6 +409,50 @@ export interface LoadAudit {
   normalizedResidual: number;
 }
 
+/**
+ * How much of a finished analysis may be trusted. `failed` means there is no
+ * usable result at all; `unreliable` means numbers exist but must never be
+ * consumed as an ordinary result.
+ */
+export type ReliabilityLevel = 'reliable' | 'limited' | 'unreliable' | 'failed';
+
+export type ReliabilityCheckId =
+  | 'condition'
+  | 'backward-error'
+  | 'forward-error'
+  | 'refinement'
+  | 'structural-residual'
+  | 'constraints'
+  | 'equilibrium'
+  | 'load-audit'
+  | 'diagram-closure'
+  | 'compatibility';
+
+export interface ReliabilityCheck {
+  id: ReliabilityCheckId;
+  label: string;
+  value: number;
+  /** Value above which the check stops being `reliable`. */
+  limitedAbove: number;
+  /** Value above which the check becomes `unreliable`. */
+  unreliableAbove: number;
+  level: ReliabilityLevel;
+  message: string;
+}
+
+export interface ResultReliability {
+  /** The numeric solution ran to the end without aborting. */
+  completed: boolean;
+  /** The run produced nodal results that can be read at all. */
+  usable: boolean;
+  level: ReliabilityLevel;
+  checks: ReliabilityCheck[];
+  /** Worst check; absent only when every check is `reliable`. */
+  governing?: ReliabilityCheck;
+  /** Causes ordered from worst to mildest. */
+  reasons: string[];
+}
+
 export interface AnalysisResult {
   success: boolean;
   issues: ValidationIssue[];
@@ -443,6 +491,8 @@ export interface AnalysisResult {
   };
   loadAudit?: LoadAudit;
   educationTrace?: EducationTrace;
+  /** Populated by `analyzeProject`; derive it with `resolveReliability` elsewhere. */
+  reliability?: ResultReliability;
   explanation: ExplanationStep[];
 }
 
