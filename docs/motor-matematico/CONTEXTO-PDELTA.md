@@ -27,20 +27,17 @@ no lineal, plasticidad, dinámica, grandes deformaciones, placas/cascarones, 3D.
   llegar a la combinación completa (`λ=1`) en un solo paso; solo subdivide
   cuando una iteración falla o se detecta inestabilidad, reduciendo `λ` por
   `stepReductionFactor` hasta `minimumStep`.
-- **Detección de pérdida de estabilidad**: dos mecanismos independientes, sin
-  extraer autovalores ni tocar la factorización LU compartida:
-  1. La estimación de condición `κ₁` ya existente (`conditionEstimate > 1e10`)
-     se reporta como `stabilityWarning` en el resultado convergido.
-  2. **Inversión de dirección respecto al primer orden**: por encima de la
-     carga crítica, el sistema deja de ser positivo-definido y puede converger
-     a un punto fijo autoconsistente pero físicamente absurdo — una carga
-     lateral hacia la derecha produce un desplazamiento hacia la izquierda.
-     Se detecta con un producto punto entre el vector de desplazamientos
-     actual y el de primer orden (`respondsAgainstFirstOrder`, `pDelta.ts`):
-     un producto no positivo rechaza la iteración. Verificado numéricamente:
-     a P=3·Pcr sin este chequeo el motor convergía en 3 iteraciones a un
-     resultado con el desplazamiento lateral **de signo invertido**; con el
-     chequeo, se rechaza correctamente.
+- **Detección de pérdida de estabilidad** (revisada en la fase 2, ver abajo):
+  1. *Criterio de rechazo.* Inversión de signo del **GDL que más cambia** por
+     efecto de segundo orden. Por encima de la crítica el sistema deja de ser
+     positivo-definido y puede converger a un punto fijo autoconsistente pero
+     físicamente absurdo — una carga lateral hacia la derecha produce un
+     desplazamiento hacia la izquierda. Medirlo sobre el GDL gobernante y no
+     sobre el vector completo es lo que lo hace fiable en columnas robustas,
+     donde el acortamiento axial enmascara la flecha.
+  2. *Estimación de aviso.* Factor de carga crítica elástica mediante la
+     relación de diseño `B₂ = 1/(1 − 1/λ)` aplicada a la amplificación. Es una
+     estimación etiquetada como tal, **no** un análisis de valores propios.
 
 ## Fallo silencioso encontrado y corregido en el camino
 
@@ -154,27 +151,27 @@ b3e1e0c feat(engine): implementar análisis P-Delta de segundo orden para pórti
 
 ## Limitaciones reales
 
-- **Precisión cerca de la carga crítica**: un solo elemento por columna tiene
-  ~0.7 % de error en su propia carga crítica frente a la teoría exacta,
-  amplificado a ~5.6 % de error en desplazamiento a P/Pcr=0.9. Mitigable
-  subdividiendo el miembro en 2-4 elementos (ya soportado, no probado en un
-  benchmark dedicado esta sesión).
-- **Rigidez geométrica solo en miembros `frame`**: los miembros `truss` y
-  `rigid` no reciben corrección P-Delta (decisión de alcance: el efecto
-  P-Delta de barras puramente axiales -tipo cable/pandeo lateral de armadura-
-  es un fenómeno distinto, fuera de lo pedido).
-- **Envolventes y líneas de influencia** (`analyzeProjectScenarios`,
-  `useInfluenceAnalysis`) siguen usando primer orden exclusivamente — no se
-  extendieron a P-Delta esta sesión (multiplicaría el costo por escenario sin
-  que se pidiera explícitamente).
-- **Timoshenko**: la rigidez geométrica usa la formulación Euler-Bernoulli
-  estándar incluso si el miembro tiene `beamTheory:'timoshenko'` (corrección
-  por cortante en el término geométrico omitida — simplificación común y
-  aceptada en la práctica, el efecto es de segundo orden sobre un efecto de
-  segundo orden).
-- **Mensajes de diagnóstico** (`pDelta.ts`) son siempre en español,
-  igual que el resto de mensajes del motor (`ValidationIssue`) — no pasan por
-  el catálogo i18n, consistente con la convención ya existente.
+- **Exactitud con un elemento por miembro.** El error crece con `P/Pcr`:
+  −0.35 % a 0.5, −5.6 % a 0.9, −11.7 % a 0.95, y es **siempre por defecto** (la
+  Kg consistente sobre-rigidiza). Dos elementos por miembro comprimido lo
+  reducen a −0.41 % a 0.9·Pcr y cuatro a −0.026 %. La interfaz avisa de esta
+  sensibilidad cuando la carga se acerca a la crítica.
+- **El factor de carga crítica es una estimación**, derivada de la
+  amplificación mediante `B₂`. Supone un modo de pandeo dominante y hereda el
+  sesgo de discretización (+0.75 % con un elemento). No es un análisis de
+  valores propios y no debe citarse como carga crítica calculada. Un modo de
+  pandeo esencialmente ortogonal al patrón de cargas no se detecta.
+- **Rigidez geométrica solo en miembros `frame`.** Los `truss` y `rigid` no la
+  reciben; un `truss` no tiene GDL transversales sobre los que actuar.
+- **Envolventes y líneas de influencia** siguen siendo de primer orden.
+- **Timoshenko**: el término geométrico usa la formulación Euler-Bernoulli
+  aunque el miembro declare `beamTheory: 'timoshenko'` — una corrección de
+  segundo orden sobre un efecto de segundo orden.
+- **No es análisis de grandes desplazamientos.** La geometría del elemento
+  (`c`, `s`, `L`) se calcula una sola vez sobre la configuración indeformada.
+  Válido mientras las rotaciones sean pequeñas (`θ ≲ 1/50`).
+- **Mensajes del motor en español**, como el resto de `ValidationIssue`. Lo que
+  se muestra en la interfaz sí está traducido (es/en).
 
 ## Revisión independiente (subagente) y hallazgos reales corregidos
 
@@ -214,6 +211,122 @@ reales y se corrigieron, uno quedó documentado como limitación no confirmada:
 independiente") demuestran cada corrección con un caso que fallaba antes del
 arreglo. Suite completa tras los arreglos: **86 archivos / 600 pruebas**
 (22 en `pDelta.test.ts`, antes 17).
+
+## Fase 2 — endurecimiento, validación y verificación matemática
+
+Segunda pasada dedicada a corregir, validar y pulir la capacidad ya integrada.
+La formulación no cambió; cambiaron los criterios, la detección de
+inestabilidad, la validación y la honestidad de lo que se afirma.
+
+### Verificación matemática de la formulación (sin cambios necesarios)
+
+Dos revisiones independientes con cálculo numérico propio confirmaron, sin
+tocar el código:
+
+- `geometricStiffness(L, N)` coincide **término a término y hasta el redondeo**
+  (máx. 7.1e-15) con la matriz de rigidez geométrica consistente de
+  Przemieniecki, *Theory of Matrix Structural Analysis*, §5.11 — la misma que
+  publican McGuire/Gallagher/Ziemian cap. 9 y Cook/Malkus/Plesha §18.3. Las tres
+  fuentes la escriben con **N positivo en tensión y suma `K = Ke + Kg`**, que es
+  exactamente la convención del motor: no hace falta ningún cambio de signo.
+- Las filas/columnas axiales nulas son correctas **por derivación**, no por
+  truncamiento: la energía de segundo orden `U₂ = (N/2)∫(v′)²dx` no contiene `u`.
+- El sesgo de un elemento por miembro es **+0.7522 %** en la carga crítica,
+  resuelto a mano desde el problema de valores propios 2×2 reducido:
+  `P_cr,1elem = (52 − 8√31)/3 · EI/L² = 2.4859617 EI/L²` frente a
+  `π²/4 = 2.4674011`. Reproduce el resultado clásico de libro de texto.
+- La convergencia espacial es **O(h⁴)** (error ÷16 al duplicar la malla),
+  verificada hasta 32 elementos: razones 14.69, 15.63, 15.90, 15.98, 16.03.
+- Corrección a lo que este documento afirmaba antes: la Kg **consistente**
+  captura **P-Δ y P-δ**, no solo P-Δ. La forma «lumped» que usa el método
+  clásico de cargas laterales ficticias da +21.6 % con un elemento y converge
+  solo O(h²); la consistente da +0.75 % con uno. El software puede afirmar más
+  de lo que afirmaba.
+- Corrección a lo que se creía de la iteración: su razón de contracción medida
+  es **0.0005–0.026** hasta 0.95·Pcr, no `P/Pcr`. La amplificación se captura
+  exacta *dentro* de cada resolución lineal; el bucle externo solo resuelve la
+  realimentación débil `N(u)`. La convergencia no se degrada cerca de la
+  crítica — solo la **exactitud**.
+
+### Defectos reales encontrados y corregidos
+
+| # | Defecto | Evidencia medida |
+| --- | --- | --- |
+| 1 | Convergencia falsa por un piso absoluto `max(1, ‖x‖)` en unidades base | Modelo rígido con ‖u‖≈1e-6 m: un cambio **real del 1 %** se reportaba como 2.3e-8 y pasaba una tolerancia de 1e-6 |
+| 2 | Configuración sin validar en el motor | `maxIterationsPerStep: Infinity` dejaba el bucle interno girando indefinidamente |
+| 3 | Estados post-críticos aceptados como éxito | A 3·Pcr y 5·Pcr el desplazamiento lateral estaba invertido y el motor devolvía éxito |
+| 4 | Heurística de condición κ₁ > 20 fallando en ambos sentidos | No avisaba a 0.90·Pcr (9.7) ni a 0.95 (19.3); **ciega** por encima de la crítica, donde la razón *baja* a 0.43 a 3·Pcr |
+| 5 | Amplificación engañosa | Columna rígida: se reportaba ×1.0000 con la flecha realmente duplicada (×1.9794), porque el acortamiento axial dominaba `max|u|` |
+| 6 | Coste desproporcionado | Pórtico de 77 nodos: 3360 ms frente a 83 ms de primer orden (**40.6×**) |
+| 7 | Detección post-crítica ciega para columnas robustas | L/r ≈ 22 a 10·Pcr: proyección 0.9999996 con la flecha invertida → aceptado |
+| 8 | Compuerta por «fuerza axial gobernante» | Un tirante con mayor \|N\| **ocultaba** pandeo real y **abortaba** análisis válidos |
+| 9 | Bisección saltando al segundo punto crítico | Predicado no monótono (90.2, −25.3, −0.48, **+1.50**, +33.9, −8.6): pórtico al 91 % de pandeo reportado con λ_cr = 2.01 y sin aviso |
+| 10 | «Tercer criterio» vacío | `residualNorm` mide 1e-18…1e-16, nueve órdenes bajo su límite de 1e-7: nunca podía fallar |
+| 11 | Topes de configuración insuficientes | 200 × 500 = 100 000 resoluciones (~6 h) pasaba la validación campo a campo |
+| 12 | Modo P-Delta no persistía | `normalizeProject` descartaba `analysisMode` y `pDeltaConfig`; al recargar todo volvía a primer orden y el autoguardado consolidaba la pérdida |
+
+### Decisiones finales
+
+- **Criterios de convergencia.** Referencia tomada del propio modelo (la
+  respuesta de primer orden del paso), no de una constante en unidades base;
+  un modelo sin escala reporta 0 en vez de inventarse un piso. El residuo
+  algebraico se publica **por trazabilidad, no como criterio**, con la razón
+  documentada.
+- **Detección post-crítica.** Se aplica al GDL que **más cambia** por efecto de
+  segundo orden, `argmax|u₂−u₁|`, que por construcción es sobre el que actúa la
+  rigidez geométrica. Ni una medida global (dominada por el GDL más grande, que
+  no es el que pandea) ni «cualquier GDL invertido» (demasiado estricto: los
+  efectos de segundo orden redistribuyen legítimamente) sirven. Sin compuerta
+  tensión/compresión: la tensión pura nunca invierte nada.
+- **Factor de carga crítica.** Relación de diseño `B₂ = 1/(1 − 1/λ)` aplicada a
+  la amplificación. Coincide con la bisección dentro del **0.5 %** en todo el
+  rango medido, es gratuita y **no puede saltar de modo**. Es una **estimación**
+  —supone un modo dominante y hereda el sesgo de discretización del 0.75 %— y
+  así se etiqueta en la interfaz, en español y en inglés.
+- **Clasificación.** Criterio matemático: la inversión de signo del GDL
+  gobernante (rechazo). Estimación: el factor de carga crítica (aviso, que
+  además degrada la confiabilidad a `limited`). Ninguna heurística se presenta
+  como carga crítica exacta ni como análisis de valores propios.
+
+### Estudio de discretización (medido)
+
+Voladizo L=4 m, EI=16000 kN·m², H=10 kN, contra la solución cerrada
+`δ = H(tan kL − kL)/(Pk)`:
+
+| P/Pcr | 1 elem. | 2 elem. | 4 elem. | 8 elem. | orden |
+| --- | --- | --- | --- | --- | --- |
+| 0.5 | −0.345 % | −0.025 % | −0.0016 % | −0.0001 % | ~4.0 |
+| 0.9 | −5.59 % | −0.411 % | −0.026 % | −0.0017 % | ~4.0 |
+
+El error es **de un solo signo**: la Kg consistente siempre sobre-rigidiza, así
+que el motor queda siempre por debajo del valor exacto. Las pruebas lo asertan
+de forma asimétrica, porque una cota simétrica dejaría pasar una Kg demasiado
+blanda. **Dos elementos por miembro comprimido eliminan prácticamente la
+limitación**; cuatro la dejan en ~0.03 % incluso a 0.9·Pcr.
+
+### Rendimiento (medido)
+
+Pórticos regulares con carga gravitatoria y lateral, tiempo de P-Delta frente
+al de primer orden en el mismo modelo:
+
+| Modelo | Nodos | Miembros | Primer orden | P-Delta | Razón |
+| --- | --- | --- | --- | --- | --- |
+| 1×1 | 4 | 3 | 35 ms | 26 ms | 0.7× |
+| 3×2 | 12 | 15 | 14 ms | 41 ms | 2.9× |
+| 6×4 | 35 | 54 | 42 ms | 180 ms | 4.3× |
+| 10×6 | 77 | 130 | 132 ms | 505 ms | 3.8× |
+
+Antes del cribado analítico el caso 10×6 costaba 3360 ms (40.6×). Hay una
+prueba de presupuesto (< 15×) para que no vuelva a degradarse.
+
+### Compatibilidad verificada
+
+Asentamientos prescritos (convergencia con carga axial y lateral, resultado
+final independiente del número de pasos de carga, asentamiento no amplificado),
+miembros inclinados (invariancia bajo rotación a 30°, 90° y 210°), invariancia
+por traslación, invariancia de escala del criterio de convergencia, modelos sin
+miembros `frame`, modelos totalmente restringidos y sin carga, y mezclas de
+tensión y compresión en el mismo modelo.
 
 ## Instrucciones para que Codex revise el trabajo
 
