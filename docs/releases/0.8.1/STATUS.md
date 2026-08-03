@@ -30,7 +30,7 @@ revisión del diff + verificación de la frontera protegida + reporte + commit l
 | S16 | Rendimiento | COMPLETE | Opus 5 | S01 | `226a66f` | 76 archivos / 513 pruebas | [PERFORMANCE.md](PERFORMANCE.md), [reporte](../../../reports/2026-08-02-1400-s16-rendimiento.md) | — |
 | S17 | Accesibilidad y responsive | COMPLETE (auditado) | Sonnet 5 | S04–S08 | — | sin cambios de código | 8 viewports sin overflow, [reporte](../../../reports/2026-08-02-1530-s17-accesibilidad-y-responsive.md) | — |
 | S18 | CI preparado localmente | COMPLETE | Sonnet 5 | S15 | `321cca2` | 78 archivos / 530 pruebas + qa/qa:webkit en verde | [CI.md](CI.md), [reporte](../../../reports/2026-08-02-1615-s18-ci-preparado-localmente.md) | — |
-| S19 | Documentación | COMPLETE | Sonnet 5 | todos | (pendiente) | 78 archivos / 530 pruebas | README, FRONTEND.md, PORTABLE_EXPEDIENTS.md y CHANGELOG consolidados, [reporte](../../../reports/2026-08-02-1905-s19-documentacion.md) | — |
+| S19 | Documentación | COMPLETE | Sonnet 5 | todos | `c186d80` | 78 archivos / 530 pruebas | README, FRONTEND.md, PORTABLE_EXPEDIENTS.md y CHANGELOG consolidados, [reporte](../../../reports/2026-08-02-1905-s19-documentacion.md) | — |
 | S20 | Certificación y versión | NOT_STARTED | Opus 5 | todos | — | — | — | — |
 
 ## Frontera matemática protegida
