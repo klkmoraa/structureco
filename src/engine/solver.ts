@@ -15,6 +15,7 @@ import type {
   ValidationIssue,
 } from '../types';
 import { memberInteriorRatioAtPoint, nodeHasStructuralActivity } from '../data/modelOperations';
+import { abortedAnalysis } from './analysisFailure';
 import {
   buildDeformationCurve,
   buildExactDiagrams,
@@ -1196,24 +1197,7 @@ const explanationSteps = (project: ProjectModel, result: Omit<AnalysisResult, 'e
 };
 
 /** Result of a run that never reached a usable solution; always classified `failed`. */
-const abortedResult = (
-  issues: ValidationIssue[],
-  extra: Partial<AnalysisResult> = {},
-): AnalysisResult => {
-  const base: AnalysisResult = {
-    success: false,
-    issues,
-    nodeResults: [],
-    memberResults: [],
-    displacements: [],
-    residualNorm: Number.NaN,
-    conditionEstimate: Number.NaN,
-    equilibrium: { sumFx: Number.NaN, sumFy: Number.NaN, sumM: Number.NaN, normalizedComponents: { fx: Number.NaN, fy: Number.NaN, mz: Number.NaN }, normalizedResidual: Number.NaN },
-    explanation: [],
-    ...extra,
-  };
-  return { ...base, reliability: classifyAnalysisReliability(base) };
-};
+const abortedResult = abortedAnalysis;
 
 export const analyzeProject = (project: ProjectModel, combination?: LoadCombination | null): AnalysisResult => {
   const issues = validateProject(project);

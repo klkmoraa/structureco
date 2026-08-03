@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { unavailableAnalysis } from '../engine/analysisFailure';
 import type { AnalysisWorkerRequest, AnalysisWorkerResponse } from '../engine/analysisWorkerProtocol';
 import { normalizeProject } from '../data/migrate';
 import { loadProjectFromStorage, saveProjectToStorage } from '../data/projectStorage';
@@ -192,10 +193,15 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         setSelection({ kind: 'member', id: critical.memberId });
       }
     };
+    // A run that never produced numbers still has to reach the user: leaving
+    // `isAnalyzing` set would freeze the UI on "analysing" with no explanation.
+    const fail = (message: string) => complete(unavailableAnalysis(message));
     const runFallback = () => {
       analysisTimerRef.current = window.setTimeout(() => {
         analysisTimerRef.current = null;
-        void runFallbackAnalysis(source, selectedCombinationId).then(complete);
+        void runFallbackAnalysis(source, selectedCombinationId)
+          .then(complete)
+          .catch((error: unknown) => fail(error instanceof Error ? error.message : 'No se pudo completar el análisis estructural.'));
       }, 0);
     };
     if (typeof Worker === 'undefined') {
@@ -218,8 +224,11 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         settled = true;
         worker.terminate();
         if (analysisWorkerRef.current === worker) analysisWorkerRef.current = null;
+        // `analysis-error` is a decision taken by the same pure function the
+        // fallback would call, so recomputing it on the main thread would only
+        // block the UI to reach the identical failure and hide its message.
         if (event.data.type === 'analysis-result') complete(event.data.result);
-        else runFallback();
+        else fail(event.data.message);
       };
       worker.onerror = fallbackOnce;
       const request: AnalysisWorkerRequest = { type: 'analyze', requestId: requestRevision, project: source, combinationId: selectedCombinationId || null };
@@ -252,9 +261,20 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     invalidateAnalysis();
     projectRef.current = next;
     setProject(next);
-    if (analyzeAfter) window.setTimeout(() => {
-      void runFallbackAnalysis(next, selectedCombinationId).then(setAnalysis);
-    }, 0);
+    if (analyzeAfter) {
+      // `invalidateAnalysis` above already bumped the revision; publishing this
+      // run without re-checking it would let a result from an older model land
+      // on top of a newer edit.
+      const requestRevision = analysisRevisionRef.current;
+      window.setTimeout(() => {
+        void runFallbackAnalysis(next, selectedCombinationId)
+          .then((result) => { if (analysisRevisionRef.current === requestRevision) setAnalysis(result); })
+          .catch((error: unknown) => {
+            if (analysisRevisionRef.current !== requestRevision) return;
+            setAnalysis(unavailableAnalysis(error instanceof Error ? error.message : 'No se pudo completar el análisis estructural.'));
+          });
+      }, 0);
+    }
   }, [invalidateAnalysis, selectedCombinationId]);
 
   const updateProjectView = useCallback((updater: (project: ProjectModel) => ProjectModel) => {
