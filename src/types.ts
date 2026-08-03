@@ -474,10 +474,12 @@ export interface PDeltaStepIteration {
   iteration: number;
   /** Load fraction (0-1] this step targets. */
   lambda: number;
-  /** Relative change in member axial forces since the previous iteration; the equilibrium/unbalanced-force proxy. */
+  /** Relative change in member axial forces since the previous iteration. */
   residual: number;
   /** Relative change in the global displacement vector since the previous iteration. */
   displacementIncrement: number;
+  /** Normalized physical equilibrium residual of this iterate; independent of the two increment measures. */
+  equilibriumResidual: number;
   conditionEstimate: number;
 }
 
@@ -489,6 +491,18 @@ export interface PDeltaDiagnostics {
   initialResidual: number;
   finalResidual: number;
   finalDisplacementIncrement: number;
+  /** Final relative change in member axial forces (same quantity as `finalResidual`, named for what it measures). */
+  finalAxialChange: number;
+  /** Final normalized physical equilibrium residual — an independent check, not an increment measure. */
+  finalEquilibriumResidual: number;
+  /**
+   * Estimated elastic critical load factor for THIS load pattern: the multiple
+   * of the applied loads at which the tangent stiffness stops being positive
+   * definite along the loading direction. Found by bisection on the axial-force
+   * scale, so it is a computed estimate bounded by the model's discretisation
+   * — not a full eigenvalue extraction. Absent when it could not be bracketed.
+   */
+  criticalLoadFactor?: number;
   convergenceReason: string;
   failureReason?: string;
   stabilityWarning?: string;

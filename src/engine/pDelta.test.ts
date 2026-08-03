@@ -358,3 +358,133 @@ describe('P-Delta: configuración por defecto', () => {
     expect(DEFAULT_PDELTA_CONFIG.minimumStep).toBeGreaterThan(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Fase 2: defectos reales reproducidos antes de corregirlos.
+// ---------------------------------------------------------------------------
+
+/** Cantiléver rígido: desplazamientos ~1e-6 m, donde el piso absoluto `max(1, ‖u‖)` degrada el criterio relativo a absoluto. */
+const stiffCantilever = (): ProjectModel => {
+  const project = cantilever(1, 200e6, 1e-3, 0.5);
+  return withTipLoads(project, -50, 0.05);
+};
+
+describe('P-Delta fase 2: criterios de convergencia', () => {
+  it('no declara convergencia por un piso absoluto cuando el modelo es rígido', () => {
+    // Un piso `Math.max(1, ‖u‖)` en unidades base convierte un criterio
+    // relativo en absoluto: con ‖u‖~1e-6 m, un cambio real del 1 % entre
+    // iteraciones se reporta como ~2e-8 y pasa una tolerancia de 1e-6.
+    const result = analyzeProjectPDelta(stiffCantilever(), undefined, {
+      displacementTolerance: 1e-10, equilibriumTolerance: 1e-10, maxIterationsPerStep: 40,
+    });
+    expect(result.pDelta?.converged).toBe(true);
+    // El criterio debe seguir siendo relativo a la escala del propio modelo:
+    // el incremento final reportado no puede ser un número "pequeño" que en
+    // realidad represente una fracción grande del desplazamiento total.
+    expect(result.pDelta!.finalDisplacementIncrement).toBeLessThanOrEqual(1e-10);
+  });
+
+  it('reporta el residuo de equilibrio además del cambio axial', () => {
+    const result = analyzeProjectPDelta(withTipLoads(cantilever(L, E, I), -0.5 * Pcr, H));
+    expect(result.pDelta?.converged).toBe(true);
+    expect(Number.isFinite(result.pDelta!.finalEquilibriumResidual)).toBe(true);
+    expect(result.pDelta!.finalEquilibriumResidual).toBeLessThan(1e-6);
+    expect(Number.isFinite(result.pDelta!.finalAxialChange)).toBe(true);
+  });
+});
+
+describe('P-Delta fase 2: validación de configuración', () => {
+  it('rechaza una configuración no finita en vez de iterar sin límite', () => {
+    const result = analyzeProjectPDelta(withTipLoads(cantilever(L, E, I), -0.3 * Pcr, H), undefined, {
+      maxIterationsPerStep: Number.POSITIVE_INFINITY,
+    });
+    expect(result.success).toBe(false);
+    expect(result.issues.some((issue) => issue.id === 'pdelta-invalid-config')).toBe(true);
+  });
+
+  it('rechaza tolerancias y factores fuera de rango con un mensaje accionable', () => {
+    for (const bad of [
+      { maxLoadSteps: 0 },
+      { maxLoadSteps: 2.5 },
+      { equilibriumTolerance: 0 },
+      { displacementTolerance: -1 },
+      { stepReductionFactor: 1 },
+      { stepReductionFactor: 0 },
+      { minimumStep: 0 },
+      { minimumStep: 2 },
+      { maxIterationsPerStep: Number.NaN },
+    ] as const) {
+      const result = analyzeProjectPDelta(withTipLoads(cantilever(L, E, I), -0.3 * Pcr, H), undefined, bad);
+      expect(result.success, JSON.stringify(bad)).toBe(false);
+      const issue = result.issues.find((item) => item.id === 'pdelta-invalid-config');
+      expect(issue, JSON.stringify(bad)).toBeDefined();
+      expect(issue!.suggestedFix).toBeTruthy();
+    }
+  });
+
+  it('acepta la configuración por defecto y una configuración válida no trivial', () => {
+    const ok = analyzeProjectPDelta(withTipLoads(cantilever(L, E, I), -0.3 * Pcr, H), undefined, {
+      maxLoadSteps: 20, maxIterationsPerStep: 50, stepReductionFactor: 0.4, minimumStep: 1 / 128,
+    });
+    expect(ok.success).toBe(true);
+    expect(ok.pDelta?.converged).toBe(true);
+  });
+});
+
+describe('P-Delta fase 2: proximidad a la carga crítica', () => {
+  // La razón de condición κ₁ medida contra primer orden falla en ambos
+  // sentidos: a 0.90·Pcr vale ~9.7 y a 0.95·Pcr ~19.3 (bajo el umbral 20, no
+  // avisa aunque el error de un elemento ya sea 5.6 %/11.7 %), y por encima
+  // de la crítica *baja* (0.43 a 3·Pcr), es decir queda ciega justo donde más
+  // importa. El diagnóstico debe apoyarse en un factor de carga crítica.
+  it('avisa de proximidad a la crítica a 0.90 y 0.95 de Pcr', () => {
+    for (const fraction of [0.9, 0.95]) {
+      const result = analyzeProjectPDelta(withTipLoads(cantilever(L, E, I), -fraction * Pcr, H));
+      expect(result.pDelta?.converged, `P/Pcr=${fraction}`).toBe(true);
+      expect(result.pDelta?.stabilityWarning, `P/Pcr=${fraction}`).toBeDefined();
+    }
+  });
+
+  it('rechaza todo estado posterior a la crítica, no solo el que invierte el vector completo', () => {
+    // Un producto punto sobre el vector COMPLETO no basta: a 3·Pcr el
+    // desplazamiento lateral sí se invierte (-6.6e-3 m contra +1.3e-2 m de
+    // primer orden) pero el acortamiento axial de la columna —un GDL grande
+    // que no participa del modo de pandeo— domina el producto y lo deja
+    // positivo, así que el motor devolvía ese estado como éxito.
+    for (const fraction of [1.01, 1.2, 2, 3, 5, 10]) {
+      const result = analyzeProjectPDelta(withTipLoads(cantilever(L, E, I), -fraction * Pcr, H));
+      expect(result.success, `P/Pcr=${fraction}`).toBe(false);
+      expect(result.pDelta?.converged, `P/Pcr=${fraction}`).toBe(false);
+      expect(result.nodeResults, `P/Pcr=${fraction}`).toHaveLength(0);
+    }
+  });
+
+  it('no inventa un factor de carga crítica cuando la compresión no gobierna', () => {
+    // Un modelo gobernado por tensión no tiene carga de pandeo que citar, y su
+    // proyección < 1 es la respuesta física correcta, no un estado post-crítico.
+    const result = analyzeProjectPDelta(withTipLoads(cantilever(L, E, I), 0.5 * Pcr, H));
+    expect(result.success).toBe(true);
+    expect(result.pDelta?.converged).toBe(true);
+    expect(result.pDelta?.criticalLoadFactor).toBeUndefined();
+    expect(result.pDelta?.stabilityWarning).toBeUndefined();
+  });
+
+  it('estima un factor de carga crítica cercano a 1 cuando la carga se acerca a Pcr', () => {
+    const half = analyzeProjectPDelta(withTipLoads(cantilever(L, E, I), -0.5 * Pcr, H));
+    const near = analyzeProjectPDelta(withTipLoads(cantilever(L, E, I), -0.9 * Pcr, H));
+    expect(half.pDelta?.criticalLoadFactor).toBeDefined();
+    expect(near.pDelta?.criticalLoadFactor).toBeDefined();
+    // El factor debe caer al acercarse a la crítica y mantenerse > 1 debajo de ella.
+    expect(near.pDelta!.criticalLoadFactor!).toBeLessThan(half.pDelta!.criticalLoadFactor!);
+    expect(near.pDelta!.criticalLoadFactor!).toBeGreaterThan(1);
+    // Un solo elemento sobreestima Pcr en +0.75 %, así que el factor estimado
+    // debe rondar 1/0.9 = 1.111 dentro de esa cota de discretización.
+    expect(near.pDelta!.criticalLoadFactor!).toBeCloseTo(1 / 0.9, 1);
+  });
+
+  it('no avisa de proximidad a la crítica lejos de ella', () => {
+    const result = analyzeProjectPDelta(withTipLoads(cantilever(L, E, I), -0.1 * Pcr, H));
+    expect(result.pDelta?.converged).toBe(true);
+    expect(result.pDelta?.stabilityWarning).toBeUndefined();
+  });
+});
