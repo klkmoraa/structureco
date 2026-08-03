@@ -25,56 +25,56 @@
   --sc-black: #000000;
 
   /* Identidad verde/teal (pino calibrado) */
-  --sc-green-50: #e9f6f0;
-  --sc-green-100: #d2eee2;
-  --sc-green-200: #a6ddc6;
-  --sc-green-300: #6cc6a4;
-  --sc-green-400: #31a97f;
-  --sc-green-500: #0a7e5e;
-  --sc-green-600: #076853;
-  --sc-green-700: #05533f;
-  --sc-green-800: #044534;
-  --sc-green-900: #033628;
+  --sc-green-50: #ddf4ec;
+  --sc-green-100: #c5ede1;
+  --sc-green-200: #97dec9;
+  --sc-green-300: #5acaad;
+  --sc-green-400: #24a88a;
+  --sc-green-500: #007a67;
+  --sc-green-600: #006158;
+  --sc-green-700: #004a40;
+  --sc-green-800: #003b33;
+  --sc-green-900: #002b24;
 
   /* Azul de interacción (selección / foco / información) */
   --sc-blue-100: #e8effd;
   --sc-blue-300: #9dbdf6;
-  --sc-blue-500: #2867e8;
-  --sc-blue-600: #1e56cc;
+  --sc-blue-500: #345fd6;
+  --sc-blue-600: #294db7;
   --sc-blue-700: #1847ab;
 
   /* Acentos de estado y dominio */
   --sc-violet-500: #7357d8;
-  --sc-orange-500: #e25d32;
-  --sc-red-500: #d44848;
+  --sc-coral-500: #c85a45;
+  --sc-red-500: #c73e4d;
   --sc-red-700: #a92f2f;
   --sc-amber-500: #d88408;
-  --sc-plum-500: #8a4da8;
+  --sc-plum-500: #7c4db2;
 
   /* ------------------------------------------------------------------ */
   /* 2 · ROLES SEMÁNTICOS — TEMA DÍA (editorial, porcelana técnica)      */
   /* ------------------------------------------------------------------ */
-  --sc-color-bg-app: #f4f6f5;
+  --sc-color-bg-app: #eef4f1;
   --sc-color-bg-canvas: #fafcfb;
   --sc-color-surface-1: var(--sc-white);
-  --sc-color-surface-2: #eef2f0;
+  --sc-color-surface-2: #e4ece8;
   --sc-color-surface-elevated: var(--sc-white);
-  --sc-color-surface-inset: #e8edea;
+  --sc-color-surface-inset: #dde7e2;
   --sc-color-surface-toolbar: #fbfcfc;
   --sc-color-surface-input: var(--sc-white);
 
-  --sc-color-text-primary: #16211c;
-  --sc-color-text-secondary: #5a6862;
-  --sc-color-text-muted: #6f7b75;
+  --sc-color-text-primary: #10231b;
+  --sc-color-text-secondary: #3f554b;
+  --sc-color-text-muted: #5f736a;
   --sc-color-text-disabled: #939c97;
   --sc-color-text-inverse: var(--sc-white);
   --sc-color-text-link: var(--sc-blue-600);
   --sc-color-text-technical: #46534d;
   --sc-color-text-unit: #7b8781;
 
-  --sc-color-border: #d8dfdb;
+  --sc-color-border: #cbd6d0;
   --sc-color-border-soft: #e6ebe8;
-  --sc-color-border-strong: #c2cbc6;
+  --sc-color-border-strong: #96a69e;
   --sc-color-divider: #e2e8e4;
 
   --sc-color-action-primary: var(--sc-green-500);
@@ -89,7 +89,7 @@
   --sc-color-selection: #dce9ff;
   --sc-color-selection-stroke: var(--sc-blue-500);
 
-  --sc-color-state-success: #1c9560;
+  --sc-color-state-success: #2b7a3d;
   --sc-color-state-warning: var(--sc-amber-500);
   --sc-color-state-error: var(--sc-red-500);
   --sc-color-state-critical: #b3261e;
@@ -126,14 +126,14 @@
   /* ------------------------------------------------------------------ */
   /* 3 · ROLES TÉCNICOS DEL DOMINIO (valores verificados 0.8.0)          */
   /* ------------------------------------------------------------------ */
-  --sc-color-technical-load: var(--sc-orange-500);
-  --sc-color-technical-axial: #0e7490;
-  --sc-color-technical-shear: #2f8f59;
-  --sc-color-technical-moment: #b94b43;
-  --sc-color-technical-deformed: #2f8f9d;
-  --sc-color-technical-reaction: #2867e8;
-  --sc-color-technical-dimension: #8d6c19;
-  --sc-color-technical-axis: #a9552d;
+  --sc-color-technical-load: var(--sc-coral-500);
+  --sc-color-technical-axial: #006b9a;
+  --sc-color-technical-shear: #2f7d46;
+  --sc-color-technical-moment: #b23b6f;
+  --sc-color-technical-deformed: #007d8a;
+  --sc-color-technical-reaction: #4a5fd1;
+  --sc-color-technical-dimension: #8a6800;
+  --sc-color-technical-axis: #8b4d2f;
 
   /* Roles estructurales formalizados (Sección 12 del sistema).
      Mapean sobre los técnicos verificados; los roles "reservados"
@@ -158,7 +158,7 @@
   --sc-color-moment-negative: var(--sc-color-technical-moment);
   --sc-color-deformation: var(--sc-color-technical-deformed);
   --sc-color-influence-line: var(--sc-color-action-primary);
-  --sc-color-envelope: #5b54c8;
+  --sc-color-envelope: #624fc7;
   --sc-color-critical-point: var(--sc-amber-500);
   --sc-color-geometry-error: var(--sc-color-state-error);
   --sc-color-stale-result: var(--sc-color-state-warning);
@@ -381,18 +381,18 @@
  * No es una inversión del Día: cada rol se reasigna a mano.
  */
 :root[data-theme='dark'] {
-  --sc-color-bg-app: #101416;
-  --sc-color-bg-canvas: #0c1012;
-  --sc-color-surface-1: #171c1f;
-  --sc-color-surface-2: #1e2427;
+  --sc-color-bg-app: #08110e;
+  --sc-color-bg-canvas: #060b09;
+  --sc-color-surface-1: #101915;
+  --sc-color-surface-2: #16231d;
   --sc-color-surface-elevated: #232a2e;
   --sc-color-surface-inset: #131719;
   --sc-color-surface-toolbar: #14191c;
   --sc-color-surface-input: #14191c;
 
-  --sc-color-text-primary: #f1f5f4;
-  --sc-color-text-secondary: #a9b4b1;
-  --sc-color-text-muted: #8d9895;
+  --sc-color-text-primary: #f2f7f4;
+  --sc-color-text-secondary: #b8c8c0;
+  --sc-color-text-muted: #91a299;
   --sc-color-text-disabled: #67716e;
   --sc-color-text-inverse: #101416;
   --sc-color-text-link: #8db4ff;
@@ -401,28 +401,28 @@
 
   --sc-color-border: #2c3539;
   --sc-color-border-soft: #222b2e;
-  --sc-color-border-strong: #3b464b;
+  --sc-color-border-strong: #466054;
   --sc-color-divider: #1f272a;
 
-  --sc-color-action-primary: #2fbe8e;
+  --sc-color-action-primary: #39d4a2;
   --sc-color-action-hover: #3bcb9a;
   --sc-color-action-pressed: #27ac80;
   --sc-color-action-foreground: #06140f;
   --sc-color-action-subtle: #12261f;
   --sc-color-brand-secondary: #6cc6a4;
 
-  --sc-color-focus: #6ea0ff;
-  --sc-color-info: #6ea0ff;
+  --sc-color-focus: #86a8ff;
+  --sc-color-info: #86a8ff;
   --sc-color-selection: #18385e;
   --sc-color-selection-stroke: #78a8ff;
 
-  --sc-color-state-success: #45c98a;
+  --sc-color-state-success: #7ad96b;
   --sc-color-state-warning: #f0aa3c;
-  --sc-color-state-error: #f26b6b;
+  --sc-color-state-error: #ff7586;
   --sc-color-state-critical: #ff8a80;
-  --sc-color-state-info: #6ea0ff;
+  --sc-color-state-info: #86a8ff;
   --sc-color-state-stale: #f0aa3c;
-  --sc-color-state-loading: #6ea0ff;
+  --sc-color-state-loading: #86a8ff;
   --sc-color-state-valid: #45c98a;
   --sc-color-state-invalid: #f26b6b;
   --sc-color-state-pending: #8d9895;
@@ -447,17 +447,17 @@
   --sc-color-overlay-sheet: rgba(0, 0, 0, 0.46);
   --sc-color-overlay-strong: rgba(0, 0, 0, 0.68);
 
-  --sc-color-technical-load: #ff825c;
-  --sc-color-technical-axial: #51bdd2;
-  --sc-color-technical-shear: #58cf83;
-  --sc-color-technical-moment: #ff8279;
-  --sc-color-technical-deformed: #65cbd1;
-  --sc-color-technical-reaction: #78a8ff;
-  --sc-color-technical-dimension: #e7bd55;
-  --sc-color-technical-axis: #ed8b58;
+  --sc-color-technical-load: #ff7d66;
+  --sc-color-technical-axial: #6bcbf1;
+  --sc-color-technical-shear: #78dc94;
+  --sc-color-technical-moment: #ff79ac;
+  --sc-color-technical-deformed: #5bdae2;
+  --sc-color-technical-reaction: #9baaff;
+  --sc-color-technical-dimension: #ffd56a;
+  --sc-color-technical-axis: #e6a57a;
 
-  --sc-color-axial-compression: #c79be0;
-  --sc-color-envelope: #a29bf0;
+  --sc-color-axial-compression: #d9a7f5;
+  --sc-color-envelope: #b8aaff;
   --sc-color-critical-point: #e7bd55;
 
   --sc-shadow-raised:

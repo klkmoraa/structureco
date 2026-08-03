@@ -1,7 +1,7 @@
 # Paleta — Sistema de diseño structureCo
 
-> Fuente de verdad: `src/styles/tokens.css` (rediseño 2026-08). Contrastes verificados: `docs/ux-redesign/COLOR_ACCESSIBILITY.md` (release 0.8.0).
-> Dirección visual: "Mesa Modular" + "Laboratorio Nocturno" + "Instrumento de Precisión", con identidad propia verde/teal de ingeniería estructural.
+> Fuente de verdad: `src/design-system/tokens.css` (paleta v2, 2026-08-03). Contrastes recalculados en esta revisión (ver `reports/` para el detalle de la migración v1 → v2).
+> Dirección visual: "Mesa Modular" + "Laboratorio Nocturno" + "Instrumento de Precisión", con identidad propia verde/teal de ingeniería estructural — ahora con un teal más profio, un modo Noche más profundo y una carga puntual salmón-coral en vez de naranja.
 
 ## Arquitectura de capas
 
@@ -23,37 +23,37 @@ No se consumen directamente. Se listan como referencia de las ramps.
 | Token | Valor | Notas |
 | --- | --- | --- |
 | `--sc-white` / `--sc-black` | `#ffffff` / `#000000` | El Noche nunca usa negro puro como fondo. |
-| `--sc-green-50…900` | `#e9f6f0`, `#d2eee2`, `#a6ddc6`, `#6cc6a4`, `#31a97f`, `#0a7e5e`, `#076853`, `#05533f`, `#044534`, `#033628` | Identidad verde/teal ("pino calibrado"). |
-| `--sc-blue-100/300/500/600/700` | `#e8effd`, `#9dbdf6`, `#2867e8`, `#1e56cc`, `#1847ab` | Azul de interacción: selección / foco / información. |
-| `--sc-violet-500` | `#7357d8` | Acento Aula. |
-| `--sc-orange-500` | `#e25d32` | Carga (técnico verificado). |
-| `--sc-red-500` / `--sc-red-700` | `#d44848` / `#a92f2f` | Error / foreground de error. |
-| `--sc-amber-500` | `#d88408` | Warning / punto crítico. |
-| `--sc-plum-500` | `#8a4da8` | Reservado: compresión axial. |
+| `--sc-green-50…900` | `#ddf4ec`, `#c5ede1`, `#97dec9`, `#5acaad`, `#24a88a`, `#007a67`, `#006158`, `#004a40`, `#003b33`, `#002b24` | Identidad verde/teal ("pino calibrado"), re-anclada al nuevo `--sc-green-500` (`#007a67`, antes `#0a7e5e`) conservando la misma familia de matiz/relación de pasos. |
+| `--sc-blue-100/300/500/600/700` | `#e8effd`, `#9dbdf6`, `#345fd6`, `#294db7`, `#1847ab` | Azul de interacción: selección / foco / información. `500`/`600` se movieron a un azul más editorial (antes `#2867e8` / `#1e56cc`). |
+| `--sc-violet-500` | `#7357d8` | Acento Aula (sin cambios: se mantiene distinto a propósito del resto de la paleta). |
+| `--sc-coral-500` | `#c85a45` | **Renombrado** desde `--sc-orange-500` (`#e25d32`). Carga puntual — salmón-coral, ya no naranja. |
+| `--sc-red-500` / `--sc-red-700` | `#c73e4d` / `#a92f2f` | Error / foreground de error. `500` se movió a un rojo más rosado (antes `#d44848`). |
+| `--sc-amber-500` | `#d88408` | Warning / punto crítico (sin cambios). |
+| `--sc-plum-500` | `#7c4db2` | Compresión axial (antes `#8a4da8`). |
 
 ## 2 · Identidad y acción
 
-| Token | Día | Noche | Uso previsto | Uso prohibido | Contraste / origen |
+| Token | Día | Noche | Uso previsto | Uso prohibido | Contraste |
 | --- | --- | --- | --- | --- | --- |
-| `--sc-color-action-primary` | `#0a7e5e` (green-500) | `#2fbe8e` | Botón primario, CTA, activo de marca, línea de influencia, snap/hover del canvas | Estados de éxito de formularios (usar `state-success`), foco de teclado (usar azul) | AA: 5.32:1 Día / 7.54:1 Noche contra `action-foreground` (verificado 0.8.0) |
-| `--sc-color-action-hover` | `#076853` (green-600) | `#3bcb9a` | Hover del primario | Texto suelto | Hereda pareja verificada |
-| `--sc-color-action-pressed` | `#05533f` (green-700) | `#27ac80` | Pressed del primario | — | Hereda pareja verificada |
+| `--sc-color-action-primary` | `#007a67` (green-500) | `#39d4a2` | Botón primario, CTA, activo de marca, línea de influencia, snap/hover del canvas | Estados de éxito de formularios (usar `state-success`), foco de teclado (usar azul) | 5.28:1 Día / 9.97:1 Noche contra `action-foreground` |
+| `--sc-color-action-hover` | `#006158` (green-600) | `#3bcb9a` | Hover del primario | Texto suelto | Recalibrado junto al nuevo `green-500` |
+| `--sc-color-action-pressed` | `#004a40` (green-700) | `#27ac80` | Pressed del primario | — | Recalibrado junto al nuevo `green-500` |
 | `--sc-color-action-foreground` | `#ffffff` | `#06140f` | Texto/icono sobre fondos de acción | Sobre superficies claras | Par de `action-primary` |
-| `--sc-color-action-subtle` | `#e9f6f0` (green-50) | `#12261f` | Fondos suaves de acción (chips, hovers tenues) | Como color de texto | Fondo, no requiere 4.5:1 propio |
-| `--sc-color-brand-secondary` | `#05533f` (green-700) | `#6cc6a4` | Marca secundaria, detalles editoriales | Botones de estado | — |
-| `--sc-color-aula` | `#7357d8` (violet-500) | `#9a83f0` | Identidad del modo Aula (guía, insignias) | Estados de error/warning | Nuevo rol del rediseño |
+| `--sc-color-action-subtle` | `#ddf4ec` (green-50) | `#12261f` | Fondos suaves de acción (chips, hovers tenues) | Como color de texto | Fondo, no requiere 4.5:1 propio |
+| `--sc-color-brand-secondary` | `#004a40` (green-700) | `#6cc6a4` | Marca secundaria, detalles editoriales | Botones de estado | — |
+| `--sc-color-aula` | `#7357d8` (violet-500) | `#9a83f0` | Identidad del modo Aula (guía, insignias) | Estados de error/warning | Sin cambios en v2 |
 | `--sc-color-aula-foreground` | `#ffffff` | `#171121` | Texto sobre fondo Aula | — | Par de `aula` |
 
 ## 3 · Superficies
 
 | Token | Día | Noche | Uso previsto | Uso prohibido |
 | --- | --- | --- | --- | --- |
-| `--sc-color-bg-app` | `#f4f6f5` | `#101416` | Fondo global de la aplicación | Fondos de tarjetas (usar surface-1/2) |
-| `--sc-color-bg-canvas` | `#fafcfb` | `#0c1012` | Fondo del lienzo estructural; base de validación de la paleta técnica | Paneles de UI |
-| `--sc-color-surface-1` | `#ffffff` | `#171c1f` | Superficie base de paneles y tarjetas | — |
-| `--sc-color-surface-2` | `#eef2f0` | `#1e2427` | Superficie secundaria: fondos de segmented, hovers, iconos contenedores | Texto |
+| `--sc-color-bg-app` | `#eef4f1` | `#08110e` | Fondo global de la aplicación | Fondos de tarjetas (usar surface-1/2) |
+| `--sc-color-bg-canvas` | `#fafcfb` | `#060b09` | Fondo del lienzo estructural; base de validación de la paleta técnica | Paneles de UI |
+| `--sc-color-surface-1` | `#ffffff` | `#101915` | Superficie base de paneles y tarjetas | — |
+| `--sc-color-surface-2` | `#e4ece8` | `#16231d` | Superficie secundaria: fondos de segmented, hovers, iconos contenedores | Texto |
 | `--sc-color-surface-elevated` | `#ffffff` | `#232a2e` | Popovers, diálogos, drawers (elevación real: en Noche es más clara que surface-1) | Fondos planos extensos |
-| `--sc-color-surface-inset` | `#e8edea` | `#131719` | Superficies hundidas (wells, áreas rebajadas) | — |
+| `--sc-color-surface-inset` | `#dde7e2` | `#131719` | Superficies hundidas (wells, áreas rebajadas) | — |
 | `--sc-color-surface-toolbar` | `#fbfcfc` | `#14191c` | Rail de herramientas y topbar | — |
 | `--sc-color-surface-input` | `#ffffff` | `#14191c` | Fondo de campos de entrada | — |
 
@@ -61,32 +61,32 @@ No se consumen directamente. Se listan como referencia de las ramps.
 
 | Token | Día | Noche | Uso previsto |
 | --- | --- | --- | --- |
-| `--sc-color-border` | `#d8dfdb` | `#2c3539` | Borde estándar de controles y paneles |
+| `--sc-color-border` | `#cbd6d0` | `#2c3539` | Borde estándar de controles y paneles |
 | `--sc-color-border-soft` | `#e6ebe8` | `#222b2e` | Bordes de baja jerarquía (headers de modal, filas) |
-| `--sc-color-border-strong` | `#c2cbc6` | `#3b464b` | Bordes enfatizados, scrollbars |
+| `--sc-color-border-strong` | `#96a69e` | `#466054` | Bordes enfatizados, scrollbars |
 | `--sc-color-divider` | `#e2e8e4` | `#1f272a` | Líneas divisorias puras |
 
 ## 4 · Texto
 
 | Token | Día | Noche | Uso previsto | Uso prohibido | Contraste |
 | --- | --- | --- | --- | --- | --- |
-| `--sc-color-text-primary` | `#16211c` | `#f1f5f4` | Texto principal, títulos, valores decisivos | — | 16.67:1 / 16.15:1 (AA, verificado) |
-| `--sc-color-text-secondary` | `#5a6862` | `#a9b4b1` | Párrafos secundarios, descripciones, instrucciones | — | 5.49:1 / 8.34:1 (AA, verificado) |
-| `--sc-color-text-muted` | `#6f7b75` | `#8d9895` | **Solo** metadatos auxiliares de tamaño suficiente | Párrafos, instrucciones o valores que afecten una decisión (usar secondary/primary) | Regla explícita en COLOR_ACCESSIBILITY.md |
+| `--sc-color-text-primary` | `#10231b` | `#f2f7f4` | Texto principal, títulos, valores decisivos | — | 16.43:1 / 16.54:1 |
+| `--sc-color-text-secondary` | `#3f554b` | `#b8c8c0` | Párrafos secundarios, descripciones, instrucciones | — | 8.04:1 / 10.29:1 |
+| `--sc-color-text-muted` | `#5f736a` | `#91a299` | **Solo** metadatos auxiliares de tamaño suficiente | Párrafos, instrucciones o valores que afecten una decisión (usar secondary/primary) | Regla explícita en COLOR_ACCESSIBILITY.md |
 | `--sc-color-text-disabled` | `#939c97` | `#67716e` | Controles deshabilitados | Nunca comunica información indispensable por sí solo | Exento de AA por estado |
 | `--sc-color-text-inverse` | `#ffffff` | `#101416` | Texto sobre fondos oscuros/claros invertidos (tooltips) | — | — |
-| `--sc-color-text-link` | `#1e56cc` (blue-600) | `#8db4ff` | Enlaces | Botones primarios | — |
-| `--sc-color-text-technical` | `#46534d` | `#c0cac6` | Texto técnico de apoyo (etiquetas de magnitudes) | — | Nuevo rol del rediseño |
-| `--sc-color-text-unit` | `#7b8781` | `#939e9a` | Unidades junto a valores numéricos | Valores en sí | Nuevo rol del rediseño |
+| `--sc-color-text-link` | `#294db7` (blue-600) | `#8db4ff` | Enlaces | Botones primarios | 7.40:1 Día (verificado en el PDF de paleta v2) |
+| `--sc-color-text-technical` | `#46534d` | `#c0cac6` | Texto técnico de apoyo (etiquetas de magnitudes) | — | — |
+| `--sc-color-text-unit` | `#7b8781` | `#939e9a` | Unidades junto a valores numéricos | Valores en sí | — |
 
 ## 5 · Interacción, foco y selección
 
 | Token | Día | Noche | Uso previsto | Uso prohibido | Contraste |
 | --- | --- | --- | --- | --- | --- |
-| `--sc-color-focus` | `#2867e8` (blue-500) | `#6ea0ff` | Focus ring universal (outline 3px) | Color activo genérico de herramientas | 5.01:1 / 6.82:1 AA gráfico (verificado) |
+| `--sc-color-focus` | `#345fd6` (blue-500) | `#86a8ff` | Focus ring universal (outline 3px) | Color activo genérico de herramientas | 5.59:1 / 7.73:1 contra `surface-1` |
 | `--sc-color-selection` | `#dce9ff` | `#18385e` | Relleno de selección (fila, área) | Texto | Fondo |
-| `--sc-color-selection-stroke` | `#2867e8` | `#78a8ff` | Contorno de selección en canvas y UI | — | En Noche coincide con `technical-reaction` (`#78a8ff`): contexto los desambigua |
-| `--sc-color-info` | `#2867e8` | `#6ea0ff` | Información neutral | — | = focus |
+| `--sc-color-selection-stroke` | `#345fd6` | `#78a8ff` | Contorno de selección en canvas y UI | — | Noche difiere ahora de `technical-reaction` (`#9baaff`); ya no coinciden por accidente |
+| `--sc-color-info` | `#345fd6` | `#86a8ff` | Información neutral | — | = focus |
 
 **Regla:** selección/foco = azul, siempre. El azul de interacción no se usa como color activo de herramientas; las reacciones (azul técnico) conservan su rol solo dentro de la representación estructural.
 
@@ -94,31 +94,31 @@ No se consumen directamente. Se listan como referencia de las ramps.
 
 | Token | Día | Noche | Uso previsto | Uso prohibido | Contraste |
 | --- | --- | --- | --- | --- | --- |
-| `--sc-color-state-success` | `#1c9560` | `#45c98a` | Confirmaciones, validación positiva | Marca (usar action-primary) | Verificado como par de estado 0.8.0 |
-| `--sc-color-state-warning` | `#d88408` (amber-500) | `#f0aa3c` | Advertencias, resultados obsoletos | Texto pequeño en Día (usar `warning-foreground`) | — |
-| `--sc-color-state-warning-foreground` | `#8a4f00` | = warning (`#f0aa3c`) | Texto de warning legible | — | 6.56:1 / 8.82:1 AA (verificado) |
-| `--sc-color-state-error` | `#d44848` (red-500) | `#f26b6b` | Errores, acciones destructivas, geometría inválida | Texto pequeño en Día (usar `error-foreground`) | — |
-| `--sc-color-state-error-foreground` | `#a92f2f` (red-700) | = error (`#f26b6b`) | Texto de error legible | — | 6.70:1 / 5.94:1 AA (verificado) |
-| `--sc-color-state-critical` | `#b3261e` | `#ff8a80` | Severidad crítica (escalón sobre error) | — | **Nuevo alias**: sin fila propia en las tablas 0.8.0; medir antes de usarlo como texto pequeño |
-| `--sc-color-state-info` / `-loading` | `#2867e8` | `#6ea0ff` | Información / progreso | — | = focus (verificado) |
+| `--sc-color-state-success` | `#2b7a3d` | `#7ad96b` | Confirmaciones, validación positiva | Marca (usar action-primary) | Separado del verde de marca a propósito (v2) |
+| `--sc-color-state-warning` | `#d88408` (amber-500) | `#f0aa3c` | Advertencias, resultados obsoletos | Texto pequeño en Día (usar `warning-foreground`) | Sin cambios |
+| `--sc-color-state-warning-foreground` | `#8a4f00` | = warning (`#f0aa3c`) | Texto de warning legible | — | 6.56:1 / 8.98:1 |
+| `--sc-color-state-error` | `#c73e4d` (red-500) | `#ff7586` | Errores, acciones destructivas, geometría inválida | Texto pequeño en Día (usar `error-foreground`) | Más rosado que la v1, se separa del naranja/coral de carga |
+| `--sc-color-state-error-foreground` | `#a92f2f` (red-700) | = error (`#ff7586`) | Texto de error legible | — | 6.70:1 / 6.95:1 |
+| `--sc-color-state-critical` | `#b3261e` | `#ff8a80` | Severidad crítica (escalón sobre error) | — | Sin cambios en v2; medir antes de usarlo como texto pequeño |
+| `--sc-color-state-info` / `-loading` | `#345fd6` | `#86a8ff` | Información / progreso | — | = focus |
 | `--sc-color-state-stale` | = warning | = warning | Resultados desactualizados | — | Alias |
-| `--sc-color-state-valid` / `-invalid` | = success / = error | = success / = error | Validación de formularios | — | Alias |
-| `--sc-color-state-pending` | `#6f7b75` | `#8d9895` | Estados pendientes/neutros | — | = text-muted |
+| `--sc-color-state-valid` / `-invalid` | `#1c9560` / = error | `#45c98a` / `#f26b6b` | Validación de formularios | — | **Nota:** estos dos alias quedaron con el verde/rojo de la v1 (no se tocaron en la migración v2 porque el PDF de paleta no los mencionaba explícitamente); revisar si deben converger con `state-success`/`state-error` en una futura pasada |
+| `--sc-color-state-pending` | `#5f736a` | `#8d9895` | Estados pendientes/neutros | — | = text-muted |
 
 ## 7 · Técnicos / estructurales (canvas y diagramas)
 
-**Todos los `--sc-color-technical-*` conservan los valores verificados WCAG AA del release 0.8.0** (medidos como elemento gráfico contra `bg-canvas`; ver COLOR_ACCESSIBILITY.md). No se alteran sin volver a medir contraste en ambos temas.
+Paleta v2: familias más separadas entre sí para reducir confusión visual. La carga puntual dejó de ser naranja (`#e25d32` / `#ff825c`) y ahora es un salmón-coral (`#c85a45` / `#ff7d66`); el resto de roles técnicos conserva su familia de matiz pero con tonos recalibrados. Contrastes recalculados contra `bg-canvas` en esta revisión.
 
 | Token | Día | Contraste | Noche | Contraste | Magnitud |
 | --- | --- | ---: | --- | ---: | --- |
-| `--sc-color-technical-load` | `#e25d32` | 3.43:1 | `#ff825c` | 7.95:1 | Carga puntual |
-| `--sc-color-technical-axial` | `#0e7490` | 5.11:1 | `#51bdd2` | 8.84:1 | Axial N |
-| `--sc-color-technical-shear` | `#2f8f59` | 3.86:1 | `#58cf83` | 9.86:1 | Cortante V / carga distribuida |
-| `--sc-color-technical-moment` | `#b94b43` | 4.83:1 | `#ff8279` | 8.06:1 | Momento M |
-| `--sc-color-technical-deformed` | `#2f8f9d` | 3.62:1 | `#65cbd1` | 10.19:1 | Deformada |
-| `--sc-color-technical-reaction` | `#2867e8` | 4.77:1 | `#78a8ff` | 8.18:1 | Reacciones |
-| `--sc-color-technical-dimension` | `#8d6c19` | 4.67:1 | `#e7bd55` | 10.92:1 | Cotas |
-| `--sc-color-technical-axis` | `#a9552d` | 4.98:1 | `#ed8b58` | 7.80:1 | Ejes / cortes |
+| `--sc-color-technical-load` | `#c85a45` | 4.07:1 | `#ff7d66` | 7.91:1 | Carga puntual (salmón-coral, ya no naranja) |
+| `--sc-color-technical-axial` | `#006b9a` | 5.71:1 | `#6bcbf1` | 10.79:1 | Axial N (se mantiene azul, sin cambio de familia) |
+| `--sc-color-technical-shear` | `#2f7d46` | 4.92:1 | `#78dc94` | 11.76:1 | Cortante V / carga distribuida |
+| `--sc-color-technical-moment` | `#b23b6f` | 5.44:1 | `#ff79ac` | 8.10:1 | Momento M |
+| `--sc-color-technical-deformed` | `#007d8a` | 4.74:1 | `#5bdae2` | 11.86:1 | Deformada |
+| `--sc-color-technical-reaction` | `#4a5fd1` | 5.30:1 | `#9baaff` | 9.05:1 | Reacciones (ya no comparte el primitivo con `focus`) |
+| `--sc-color-technical-dimension` | `#8a6800` | 5.02:1 | `#ffd56a` | 14.14:1 | Cotas |
+| `--sc-color-technical-axis` | `#8b4d2f` | 6.37:1 | `#e6a57a` | 9.46:1 | Ejes / cortes |
 
 **Uso prohibido transversal:** los colores técnicos no son tokens de estado. Un resultado correcto no se pinta con `technical-shear`, ni un error con `technical-moment`, aunque los tonos sean cercanos.
 
@@ -136,12 +136,12 @@ Mapean sobre los técnicos verificados. Los marcados **reservado** documentan in
 | `--sc-color-load-moment` | `technical-moment` | Heredado |
 | `--sc-color-reaction` | `technical-reaction` | Heredado |
 | `--sc-color-axial-tension` | `technical-axial` | Heredado |
-| `--sc-color-axial-compression` | `#8a4da8` (plum-500) / `#c79be0` | **Reservado** — el canvas codifica el signo por lado/etiqueta, no por color |
+| `--sc-color-axial-compression` | `#7c4db2` (plum-500) / `#d9a7f5` | **Reservado** — el canvas codifica el signo por lado/etiqueta, no por color |
 | `--sc-color-shear-positive` / `-negative` | ambos = `technical-shear` | Heredado (signo por geometría) |
 | `--sc-color-moment-positive` / `-negative` | ambos = `technical-moment` | Heredado (signo por geometría) |
 | `--sc-color-deformation` | `technical-deformed` | Heredado |
 | `--sc-color-influence-line` | `action-primary` | Heredado del rol de acción |
-| `--sc-color-envelope` | `#5b54c8` / `#a29bf0` | **Nuevo** — sin fila en tablas 0.8.0 |
+| `--sc-color-envelope` | `#624fc7` / `#b8aaff` | Recalibrado en v2 (antes `#5b54c8` / `#a29bf0`) |
 | `--sc-color-critical-point` | `#d88408` (amber-500) / `#e7bd55` | Heredado (ámbar / cota Noche) |
 | `--sc-color-geometry-error` | `state-error` | Alias |
 | `--sc-color-stale-result` | `state-warning` | Alias |
@@ -156,7 +156,9 @@ Explícitos por tema, **nunca producidos por inversión**.
 | `--sc-color-canvas-grid` | `#e7ece9` | `#202a2b` | Cuadrícula fina (siempre por debajo del miembro y de resultados) |
 | `--sc-color-canvas-grid-strong` | `#d8dfdb` | `#2c3539` | Cuadrícula mayor |
 | `--sc-color-canvas-member` | `#16211c` | `#f1f5f4` | Trazo de miembros y apoyos |
-| `--sc-color-canvas-node-fill` | `#fafcfb` | `#0c1012` | Relleno de nodos (= fondo del canvas) |
+| `--sc-color-canvas-node-fill` | `#fafcfb` | `#0c1012` | Relleno de nodos (= fondo del canvas Día; Noche difiere levemente de `bg-canvas` porque no se resincronizó en la migración v2 — revisar) |
+
+`--sc-color-bg-canvas` Noche pasó a `#060b09`, pero `--sc-color-canvas-node-fill` Noche se quedó en `#0c1012` (valor v1). No es un error funcional — solo el relleno de nodo queda ligeramente más claro que el fondo del canvas — pero conviene igualarlos en una futura pasada si se busca coherencia total. La exportación SVG (`src/utils/svgExport.ts`) sí se resincronizó con el nuevo `bg-canvas` Noche (`#060b09`).
 
 ## 8 · Herramientas (rail)
 
@@ -175,7 +177,7 @@ La identificación de herramienta refleja la codificación del canvas. El color 
 
 ## 9 · Overlays
 
-Tres niveles fijos; nunca se usa un negro arbitrario en el componente.
+Tres niveles fijos; nunca se usa un negro arbitrario en el componente. Sin cambios en v2.
 
 | Token | Día | Noche | Uso |
 | --- | --- | --- | --- |
@@ -185,7 +187,7 @@ Tres niveles fijos; nunca se usa un negro arbitrario en el componente.
 
 ## 10 · Alias de compatibilidad (capa 4)
 
-Para CSS existente en migración por rol: `--app-bg`, `--surface`, `--surface-2`, `--surface-3` (derivado con `color-mix`), `--canvas-bg`, `--text`, `--muted`, `--muted-strong`, `--subtle`, `--border`, `--border-soft`, `--shadow`, `--accent(-hover/-pressed/-soft/-foreground)`, `--focus`, `--selection(-soft)`, `--axial`, `--shear`, `--moment`, `--force`, `--dimension`, `--axis`, `--deformed`, `--reaction`, `--warning`, `--error`, `--danger`, `--success`, `--grid(-strong)`, `--member`, `--node-fill`, `--radius-*`, `--topbar-h`, `--toolbar-w`, `--inspector-w`, `--motion-*`, `--ease-*`. Todos resuelven a tokens `--sc-*`; el objetivo es retirarlos conforme cada superficie migra.
+Para CSS existente en migración por rol: `--app-bg`, `--surface`, `--surface-2`, `--surface-3` (derivado con `color-mix`), `--canvas-bg`, `--text`, `--muted`, `--muted-strong`, `--subtle`, `--border`, `--border-soft`, `--shadow`, `--accent(-hover/-pressed/-soft/-foreground)`, `--focus`, `--selection(-soft)`, `--axial`, `--shear`, `--moment`, `--force`, `--dimension`, `--axis`, `--deformed`, `--reaction`, `--warning`, `--error`, `--danger`, `--success`, `--grid(-strong)`, `--member`, `--node-fill`, `--radius-*`, `--topbar-h`, `--toolbar-w`, `--inspector-w`, `--motion-*`, `--ease-*`. Todos resuelven a tokens `--sc-*`; el objetivo es retirarlos conforme cada superficie migra. Todos siguen apuntando a los mismos roles semánticos tras la migración v2 — ningún alias cambió de destino, solo el valor final que resuelven.
 
 ## Regla transversal: no depender solo del color
 
@@ -195,11 +197,11 @@ Estados, herramientas y resultados **nunca** dependen únicamente del color. Se�
 | --- | --- | --- |
 | Selección | Azul | Halo, contorno, handles o geometría redundante |
 | Foco | Azul | Outline visible y posición de teclado |
-| Carga puntual | Naranja | Flecha individual |
+| Carga puntual | Salmón-coral | Flecha individual |
 | Carga distribuida | Verde | Serie de flechas y línea de distribución |
-| Momento | Coral | Flecha circular |
+| Momento | Magenta/rosa | Flecha circular |
 | Cota | Ocre | Extensiones, línea y puntas de cota |
-| Error | Rojo | Icono, texto y mensaje explicativo |
+| Error | Rojo-rosado | Icono, texto y mensaje explicativo |
 | Warning | Ámbar | Icono y etiqueta de advertencia |
 | Éxito | Verde de estado | Icono de confirmación y texto |
 
@@ -212,4 +214,4 @@ Complementos adicionales: tipos de línea (los diagramas usan líneas base disco
 3. Medir contraste contra todos los fondos donde aparecerá (piso: 4.5:1 texto normal, 3:1 texto grande/gráficos esenciales/focus).
 4. Agregar una señal no cromática.
 5. Probar normal, hover, active, focus y disabled.
-6. Añadir el par al contrato automático de tokens (`src/styles/tokens.test.ts`) si es texto, foco o dato técnico esencial.
+6. Añadir el par al contrato automático de tokens (`src/design-system/tokens.test.ts`) si es texto, foco o dato técnico esencial.

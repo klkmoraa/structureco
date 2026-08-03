@@ -46,7 +46,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 
 const BACKGROUND_TOKENS: Record<Exclude<SvgExportBackground, 'transparent'>, string> = {
   light: '#fafcfb',
-  dark: '#0c1012',
+  dark: '#060b09',
   current: '',
 };
 

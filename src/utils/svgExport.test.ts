@@ -123,7 +123,7 @@ describe('buildStandaloneSvg', () => {
     expect(light.firstElementChild).toBe(rectangle);
 
     const dark = buildStandaloneSvg(mountCanvas(), { background: 'dark' });
-    expect(dark.querySelector('rect')?.getAttribute('fill')).toBe('#0c1012');
+    expect(dark.querySelector('rect')?.getAttribute('fill')).toBe('#060b09');
   });
 
   it('writes accessible metadata for the drawing', () => {
