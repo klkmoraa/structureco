@@ -7,6 +7,7 @@ import type {
   ProjectModel,
 } from '../types';
 import { abortedAnalysis } from './analysisFailure';
+import { classifyAnalysisReliability } from './reliability';
 import { analyzeProject, selectedFactors } from './solver';
 
 export const DEFAULT_PDELTA_CONFIG: PDeltaConfig = {
@@ -79,10 +80,22 @@ const relativeVectorChange = (next: readonly number[], previous: readonly number
  * non-positive dot product against the (always-valid, N=0) first-order
  * response is a cheap, reliable tripwire for "wrong side of the buckling
  * threshold" that needs no eigenvalue extraction.
+ *
+ * A near-zero reference (a fully restrained model, a model with no load yet,
+ * or a load step whose own first-order response happens to be tiny) carries
+ * no directional information at all — `dot` rounds to ~0 for a *correct*
+ * result there just as readily as for a wrong-branch one, so this must never
+ * fire when the comparison itself is meaningless.
  */
 const respondsAgainstFirstOrder = (displacements: readonly number[], firstOrderDisplacements: readonly number[]): boolean => {
+  if (firstOrderDisplacements.length !== displacements.length) return false;
   let dot = 0;
-  for (let i = 0; i < displacements.length; i += 1) dot += displacements[i] * firstOrderDisplacements[i];
+  let referenceScale = 0;
+  for (let i = 0; i < displacements.length; i += 1) {
+    dot += displacements[i] * firstOrderDisplacements[i];
+    referenceScale += firstOrderDisplacements[i] * firstOrderDisplacements[i];
+  }
+  if (referenceScale <= 1e-18) return false;
   return dot <= 0;
 };
 
@@ -115,9 +128,14 @@ const solveLoadStep = (
   startingAxialForces: Map<string, number>,
   frameMemberIds: readonly string[],
   config: PDeltaConfig,
-  firstOrderDisplacements: readonly number[],
 ): StepOutcome => {
   const scaled = scaleCombination(project, combination, lambda);
+  // The direction reference is this *step's own* first-order response, not a
+  // single lambda=1 baseline: an absolute `support.prescribed` settlement
+  // does not scale with lambda, so the first-order direction at a partial
+  // load level is not simply a shrunk copy of the full-combination one.
+  const stepFirstOrder = analyzeProject(project, scaled);
+  const firstOrderDisplacements = stepFirstOrder.success ? stepFirstOrder.displacements : [];
   let axialForces = new Map(startingAxialForces);
   let previousDisplacements: number[] | null = null;
   let previousResidual = Number.POSITIVE_INFINITY;
@@ -227,7 +245,7 @@ export const analyzeProjectPDelta = (
     }
     attempts += 1;
     const target = Math.min(1, lambdaAchieved + stepSize);
-    const outcome = solveLoadStep(project, combination, target, loadStepsUsed + 1, axialForces, frameMemberIds, config, firstOrder.displacements);
+    const outcome = solveLoadStep(project, combination, target, loadStepsUsed + 1, axialForces, frameMemberIds, config);
     history.push(...outcome.history);
     totalIterations += outcome.iterations;
     if (outcome.converged) {
@@ -254,8 +272,17 @@ export const analyzeProjectPDelta = (
   const finalMeasure = globalDisplacementMeasure(finalResult.displacements);
   const amplificationFactor = firstOrderMeasure > 1e-9 ? finalMeasure / firstOrderMeasure : undefined;
   const lastIteration = history.at(-1);
-  const stabilityWarning = finalResult.conditionEstimate > 1e10
-    ? `El sistema equilibrado tiene una condición κ₁ de ${finalResult.conditionEstimate.toExponential(2)} en el estado convergido: la estructura está cerca de una carga crítica de pandeo.`
+  // An absolute condition-number threshold never fires for this diagnosis: the
+  // augmented KKT system is already ill-conditioned by construction (its
+  // Lagrange-multiplier block), so buckling proximity shows up as *growth
+  // relative to the model's own first-order baseline*, not as an absolute
+  // magnitude — measured on a cantilever, the ratio grows smoothly from ~1 far
+  // from critical to ~100+ near it, while the raw condition estimate never
+  // approaches a fixed absolute threshold like 1e10 even one step before
+  // buckling.
+  const conditionRatio = firstOrder.conditionEstimate > 1e-9 ? finalResult.conditionEstimate / firstOrder.conditionEstimate : 1;
+  const stabilityWarning = conditionRatio > 20
+    ? `La condición κ₁ del sistema equilibrado creció ×${conditionRatio.toFixed(0)} respecto al primer orden (${finalResult.conditionEstimate.toExponential(2)}): la estructura está cerca de una carga crítica de pandeo.`
     : undefined;
 
   const memberAxialForces: Record<string, number> = {};
@@ -280,7 +307,13 @@ export const analyzeProjectPDelta = (
     ? [{ id: 'pdelta-near-critical', severity: 'warning' as const, title: 'Proximidad a la carga crítica', message: stabilityWarning }, ...finalResult.issues]
     : finalResult.issues;
 
-  return { ...finalResult, issues, pDelta };
+  // `finalResult.reliability` was stamped by `analyzeProject` before `pDelta`
+  // existed on the object, so it still judges this run by first-order
+  // equilibrium bookkeeping — recompute now that `result.pDelta.enabled` is
+  // visible to `classifyAnalysisReliability`, or every real P-Delta result
+  // reads as "unreliable" for the exact P·Δ moment it was asked to capture.
+  const withPDelta: AnalysisResult = { ...finalResult, issues, pDelta };
+  return { ...withPDelta, reliability: classifyAnalysisReliability(withPDelta) };
 };
 
 const buildFailureResult = (

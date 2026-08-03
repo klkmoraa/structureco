@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ProjectModel } from '../types';
 import { analyzeProject, geometricStiffness } from './solver';
 import { analyzeProjectPDelta, DEFAULT_PDELTA_CONFIG } from './pDelta';
+import { resolveReliability } from './reliability';
 
 const baseProject = (): ProjectModel => ({
   schemaVersion: 1,
@@ -269,6 +270,82 @@ describe('P-Delta: resultado determinista al repetir el análisis (requisito 15)
     expect(a.pDelta?.loadStepsUsed).toBe(b.pDelta?.loadStepsUsed);
     expect(a.pDelta?.totalIterations).toBe(b.pDelta?.totalIterations);
     close(Math.abs(a.nodeResults.find((n) => n.nodeId === 'N2')!.ux), Math.abs(b.nodeResults.find((n) => n.nodeId === 'N2')!.ux), 1e-12);
+  });
+});
+
+describe('P-Delta: hallazgos de la revisión independiente', () => {
+  it('un resultado P-Delta convergido se clasifica confiable, no "unreliable" por un residuo de primer orden esperado', () => {
+    // `analyzeProject` stamps `reliability` before `pDelta` exists on the
+    // object; without recomputing it afterwards, every real P-Delta result
+    // read as 'unreliable' purely from the expected P·Δ moment residual.
+    const P = 0.3 * Pcr;
+    const result = analyzeProjectPDelta(withTipLoads(cantilever(L, E, I), -P, H));
+    expect(result.pDelta?.converged).toBe(true);
+    const reliability = resolveReliability(result);
+    expect(reliability.level).toBe('reliable');
+    expect(reliability.checks.find((check) => check.id === 'equilibrium')?.level).toBe('reliable');
+  });
+
+  it('un modelo completamente restringido (o sin carga) no se rechaza como si hubiera pandeado', () => {
+    // Zero displacement in both first order and P-Delta made the direction
+    // dot-product exactly 0, which the naive `<= 0` check misread as "response
+    // reversed" — the single most common state a user encounters right after
+    // switching a fresh/unloaded project to P-Delta mode.
+    const project = baseProject();
+    project.nodes = [
+      { id: 'A', x: 0, y: 0, support: { type: 'fixed' } },
+      { id: 'B', x: 6, y: 0, support: { type: 'fixed' } },
+    ];
+    project.members = [{ id: 'AB', i: 'A', j: 'B', type: 'frame', E: 200e6, A: 0.01, I: 8e-5 }];
+    project.memberLoads = [{ id: 'Q', memberId: 'AB', caseId: 'LC1', type: 'distributed', coordinateSystem: 'global', lengthBasis: 'real', start: 0, end: 1, qyStart: -10, qyEnd: -10 }];
+    const result = analyzeProjectPDelta(project);
+    expect(result.success).toBe(true);
+    expect(result.pDelta?.converged).toBe(true);
+
+    const unloaded = baseProject();
+    unloaded.nodes = project.nodes;
+    unloaded.members = project.members;
+    const unloadedResult = analyzeProjectPDelta(unloaded);
+    expect(unloadedResult.success).toBe(true);
+    expect(unloadedResult.pDelta?.converged).toBe(true);
+  });
+
+  it('la advertencia de proximidad a la carga crítica sí se activa cerca del pandeo', () => {
+    // A fixed absolute condition-number threshold never fired in practice —
+    // the ratio against the model's own first-order condition estimate does.
+    const result = analyzeProjectPDelta(withTipLoads(cantilever(L, E, I), -0.95 * Pcr, H));
+    expect(result.pDelta?.converged).toBe(true);
+    expect(result.pDelta?.stabilityWarning).toBeDefined();
+  });
+
+  it('no activa la advertencia de proximidad a la crítica lejos de ella', () => {
+    const result = analyzeProjectPDelta(withTipLoads(cantilever(L, E, I), -0.1 * Pcr, H));
+    expect(result.pDelta?.converged).toBe(true);
+    expect(result.pDelta?.stabilityWarning).toBeUndefined();
+  });
+
+  it('un modelo sin miembros frame no recibe la relajación de equilibrio pensada para P-Delta', () => {
+    // An empty axial-force map (no `frame` members at all) must not flip
+    // `pDeltaActive`: geometric stiffness never contributes anything here, so
+    // an equilibrium mismatch would be a real bug, not an expected P·Δ moment.
+    const project = baseProject();
+    project.nodes = [
+      { id: 'A', x: 0, y: 0, support: { type: 'pin' } },
+      { id: 'B', x: 6, y: 0, support: { type: 'roller', angleDeg: 90 } },
+      { id: 'C', x: 3, y: 4, support: { type: 'none' } },
+    ];
+    project.members = [
+      { id: 'AB', i: 'A', j: 'B', type: 'truss', E: 200e6, A: 0.01, I: 0 },
+      { id: 'AC', i: 'A', j: 'C', type: 'truss', E: 200e6, A: 0.01, I: 0 },
+      { id: 'BC', i: 'B', j: 'C', type: 'truss', E: 200e6, A: 0.01, I: 0 },
+    ];
+    project.nodalLoads = [{ id: 'P', nodeId: 'C', caseId: 'LC1', fx: 0, fy: -20, mz: 0 }];
+    const firstOrder = analyzeProject(project);
+    const pDeltaResult = analyzeProjectPDelta(project);
+    expect(firstOrder.success).toBe(true);
+    expect(pDeltaResult.success).toBe(true);
+    close(Math.abs(pDeltaResult.nodeResults.find((n) => n.nodeId === 'C')!.uy), Math.abs(firstOrder.nodeResults.find((n) => n.nodeId === 'C')!.uy), 1e-9);
+    expect(pDeltaResult.issues.some((issue) => issue.id === 'global-equilibrium')).toBe(false);
   });
 });
 

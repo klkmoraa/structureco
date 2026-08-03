@@ -1239,7 +1239,11 @@ export const analyzeProject = (
   // a converged P-Delta run correctly departs from that by its own P·Δ
   // second-order moment, so those checks are informational, never blocking,
   // while this run has geometric stiffness active.
-  const pDeltaActive = Boolean(options?.pDeltaAxialForces);
+  // An empty map (a project with no `frame` members at all) means geometric
+  // stiffness can never contribute anything to this run; relaxing the
+  // first-order equilibrium checks for it would hide a genuine assembly bug
+  // behind a P-Delta explanation that does not actually apply.
+  const pDeltaActive = Boolean(options?.pDeltaAxialForces?.size);
   let mechanism: NonNullable<AnalysisResult['mechanism']> | undefined;
   try {
     const nodes = getNodeMap(project);
