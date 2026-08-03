@@ -11,7 +11,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { analyzeProject } from './solver';
-import { buildDiagramEnvelope } from './envelope';
+import { buildDiagramEnvelope, type AnalysisScenario } from './envelope';
 import type { MemberModel, NodeModel, ProjectModel } from '../types';
 
 const settings: ProjectModel['settings'] = {
@@ -98,9 +98,9 @@ describe('presupuestos de rendimiento', () => {
     const project = continuousBeam(100);
     const analysis = analyzeProject(project);
     expect(analysis.success).toBe(true);
-    const scenarios = [
-      { id: 'a', name: 'a', result: analysis },
-      { id: 'b', name: 'b', result: analyzeProject(project) },
+    const scenarios: AnalysisScenario[] = [
+      { id: 'a', name: 'a', kind: 'case', result: analysis, status: 'reliable', usable: true },
+      { id: 'b', name: 'b', kind: 'case', result: analyzeProject(project), status: 'reliable', usable: true },
     ];
     const { value, ms } = timed(() => buildDiagramEnvelope(scenarios, 'M50', 'moment'));
     expect(value).not.toBeNull();

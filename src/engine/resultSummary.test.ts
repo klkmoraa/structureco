@@ -73,7 +73,10 @@ const analysis = (members: MemberResult[], nodes: NodeResult[] = []): AnalysisRe
 const scenario = (id: string, name: string, member: MemberResult, nodes: NodeResult[] = []): AnalysisScenario => ({
   id,
   name,
+  kind: 'case',
   result: analysis([member], nodes),
+  status: 'reliable',
+  usable: true,
 });
 
 describe('resumen exacto global', () => {

@@ -6,7 +6,8 @@ import type {
   ResponseQuantity,
 } from '../types';
 import { evaluatePolynomial, rootsInInterval } from './diagram';
-import type { AnalysisScenario } from './envelope';
+import { selectEnvelopeScenarios, type AnalysisScenario, type EnvelopeCoverage } from './envelope';
+import { worstLevel } from './reliability';
 
 export interface ExactExtremum<Q extends string> {
   quantity: Q;
@@ -14,6 +15,8 @@ export interface ExactExtremum<Q extends string> {
   memberId: string;
   x: number;
   value: number;
+  /** Which lateral limit the extremum belongs to at a discontinuity. */
+  side: 'left' | 'right' | 'continuous';
 }
 
 export interface ExactExtrema<Q extends string> {
@@ -52,7 +55,7 @@ export interface NodeReactionEnvelope {
   components: Partial<Record<ReactionComponent, ScalarEnvelope>>;
 }
 
-export interface ReactionEnvelope {
+export interface ReactionEnvelope extends EnvelopeCoverage {
   nodes: NodeReactionEnvelope[];
 }
 
@@ -70,7 +73,7 @@ export interface ResponseEnvelopeSegment {
   maximum: ResponseEnvelopeBranch;
 }
 
-export interface DeformationEnvelope {
+export interface DeformationEnvelope extends EnvelopeCoverage {
   memberId: string;
   quantity: ResponseQuantity;
   segments: ResponseEnvelopeSegment[];
@@ -84,21 +87,49 @@ const REACTION_COMPONENTS: ReactionComponent[] = ['rx', 'ry', 'rm', 'supportNorm
 
 const derivative = (coefficients: readonly number[]): number[] => coefficients.slice(1).map((value, index) => value * (index + 1));
 
+/**
+ * Marks a station that sits on a discontinuity with the side it belongs to.
+ * Both limits of a point load or a concentrated moment are real states of the
+ * member, so both take part in the extrema; the label says which one governs.
+ */
+const stationSide = (
+  segments: Array<{ x0: number; x1: number; coefficients: readonly number[] }>,
+  index: number,
+  xi: number,
+  length: number,
+  value: number,
+): 'left' | 'right' | 'continuous' => {
+  const differs = (neighbour: number) =>
+    Math.abs(neighbour - value) > 1e-9 * Math.max(1, Math.abs(neighbour), Math.abs(value));
+  if (xi <= 0 && index > 0) {
+    const previous = segments[index - 1];
+    return differs(evaluatePolynomial(previous.coefficients, previous.x1 - previous.x0)) ? 'right' : 'continuous';
+  }
+  if (xi >= length && index < segments.length - 1) {
+    return differs(evaluatePolynomial(segments[index + 1].coefficients, 0)) ? 'left' : 'continuous';
+  }
+  return 'continuous';
+};
+
 const extremaFromSegments = <Q extends string>(
   memberId: string,
   quantity: Q,
   segments: Array<{ x0: number; x1: number; coefficients: readonly number[] }>,
 ): ExactExtrema<Q> | null => {
-  const candidates = segments.flatMap((segment) => {
+  const candidates = segments.flatMap((segment, index) => {
     const length = segment.x1 - segment.x0;
     if (!(length >= 0) || segment.coefficients.some((value) => !Number.isFinite(value))) return [];
     const stations = length > 0 ? [0, length, ...rootsInInterval(derivative(segment.coefficients), length)] : [0];
-    return stations.map((xi) => ({
-      memberId,
-      quantity,
-      x: segment.x0 + xi,
-      value: evaluatePolynomial(segment.coefficients, xi),
-    }));
+    return stations.map((xi) => {
+      const value = evaluatePolynomial(segment.coefficients, xi);
+      return {
+        memberId,
+        quantity,
+        x: segment.x0 + xi,
+        value,
+        side: stationSide(segments, index, xi, length, value),
+      };
+    });
   });
   if (!candidates.length) return null;
   const minimumPoint = candidates.reduce((best, point) => point.value < best.value ? point : best);
@@ -158,17 +189,30 @@ export const summarizeAnalysisResults = (analysis: AnalysisResult): GlobalResult
   return { members, diagrams, deformations };
 };
 
-/** Reduces every available nodal reaction component and preserves governing scenario identity. */
+/**
+ * Reduces every available nodal reaction component and preserves governing
+ * scenario identity. Only trusted scenarios contribute, and the coverage fields
+ * state which requested scenarios were left out and why.
+ */
 export const buildReactionEnvelope = (scenarios: AnalysisScenario[]): ReactionEnvelope => {
+  const selection = selectEnvelopeScenarios(scenarios);
+  const contributing = selection.included;
+  const coverage: EnvelopeCoverage = {
+    complete: selection.excluded.length === 0,
+    includedScenarioIds: contributing.map((scenario) => scenario.id),
+    excludedScenarios: selection.excluded,
+    level: contributing.length ? worstLevel(...contributing.map((scenario) => scenario.status)) : 'failed',
+  };
   const nodeIds: string[] = [];
   const seen = new Set<string>();
-  for (const scenario of scenarios) for (const node of scenario.result.nodeResults) {
+  for (const scenario of contributing) for (const node of scenario.result.nodeResults) {
     if (!seen.has(node.nodeId)) { seen.add(node.nodeId); nodeIds.push(node.nodeId); }
   }
   return {
+    ...coverage,
     nodes: nodeIds.map((nodeId) => {
       const components = Object.fromEntries(REACTION_COMPONENTS.flatMap((component) => {
-        const values = scenarios.flatMap((scenario) => {
+        const values = contributing.flatMap((scenario) => {
           const node = scenario.result.nodeResults.find((item) => item.nodeId === nodeId);
           const value = node?.[component];
           return typeof value === 'number' && Number.isFinite(value)
@@ -210,7 +254,14 @@ export const buildDeformationEnvelope = (
   memberId: string,
   quantity: ResponseQuantity,
 ): DeformationEnvelope | null => {
-  const source = scenarios.flatMap((scenario) => {
+  const selection = selectEnvelopeScenarios(scenarios);
+  const coverage: EnvelopeCoverage = {
+    complete: selection.excluded.length === 0,
+    includedScenarioIds: selection.included.map((scenario) => scenario.id),
+    excludedScenarios: selection.excluded,
+    level: selection.included.length ? worstLevel(...selection.included.map((scenario) => scenario.status)) : 'failed',
+  };
+  const source = selection.included.flatMap((scenario) => {
     const member = scenario.result.memberResults.find((result) => result.memberId === memberId);
     return member?.deformationSegments.length ? [{ scenario, member }] : [];
   });
@@ -256,7 +307,7 @@ export const buildDeformationEnvelope = (
     }
   }
 
-  const extrema = segments.flatMap((segment) => (['minimum', 'maximum'] as const).flatMap((branch) => {
+  const extrema = segments.flatMap((segment, index) => (['minimum', 'maximum'] as const).flatMap((branch) => {
     const item = segment[branch];
     const lengthOfSegment = segment.x1 - segment.x0;
     return [0, lengthOfSegment, ...rootsInInterval(derivative(item.coefficients), lengthOfSegment)].map((xi) => ({
@@ -266,12 +317,16 @@ export const buildDeformationEnvelope = (
       value: evaluatePolynomial(item.coefficients, xi),
       scenarioId: item.scenarioId,
       scenarioName: item.scenarioName,
+      side: xi <= 0 && index > 0
+        ? 'right' as const
+        : xi >= lengthOfSegment && index < segments.length - 1 ? 'left' as const : 'continuous' as const,
     }));
   }));
   if (!extrema.length) return null;
   const minimumPoint = extrema.reduce((best, point) => point.value < best.value ? point : best);
   const maximumPoint = extrema.reduce((best, point) => point.value > best.value ? point : best);
   return {
+    ...coverage,
     memberId,
     quantity,
     segments,
@@ -280,12 +335,24 @@ export const buildDeformationEnvelope = (
   };
 };
 
-export const evaluateDeformationEnvelopeAt = (envelope: DeformationEnvelope, x: number) => {
-  const segment = envelope.segments.find((item) => x >= item.x0 - 1e-10 && x <= item.x1 + 1e-10) ?? envelope.segments.at(-1);
-  if (!segment) return null;
+export const evaluateDeformationEnvelopeAt = (
+  envelope: DeformationEnvelope,
+  x: number,
+  side: 'left' | 'right' = 'right',
+) => {
+  if (!envelope.segments.length) return null;
+  const span = envelope.segments.at(-1)!.x1 - envelope.segments[0].x0;
+  const tolerance = Math.max(1, span) * 1e-10;
+  let segment = envelope.segments.find((item) => x > item.x0 + tolerance && x < item.x1 - tolerance);
+  if (!segment) {
+    segment = side === 'left'
+      ? [...envelope.segments].reverse().find((item) => Math.abs(item.x1 - x) <= tolerance) ?? envelope.segments[0]
+      : envelope.segments.find((item) => Math.abs(item.x0 - x) <= tolerance) ?? envelope.segments.at(-1)!;
+  }
   const xi = Math.max(0, Math.min(segment.x1 - segment.x0, x - segment.x0));
   return {
     x: segment.x0 + xi,
+    side,
     minimum: evaluatePolynomial(segment.minimum.coefficients, xi),
     maximum: evaluatePolynomial(segment.maximum.coefficients, xi),
     minimumScenarioId: segment.minimum.scenarioId,
