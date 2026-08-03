@@ -353,14 +353,36 @@ export const buildExactDiagrams = (
 ): ExactDiagramResult => {
   const tolerance = coordinateTolerance(length);
   const intervalTolerance = intervalCoordinateTolerance(length);
-  const jumps = buildJumps(loads, length, tolerance);
+  const rawJumps = buildJumps(loads, length, tolerance);
   const breakpoints = uniqueSorted([
     0,
     length,
     ...loads.flatMap((load) => load.kind === 'distributed' ? [load.a, load.b] : []),
-    ...jumps.map((jump) => jump.x),
+    ...rawJumps.map((jump) => jump.x),
   ].map((x) => Math.min(length, Math.max(0, x))), intervalTolerance);
-  const jumpAt = (x: number) => jumps.find((jump) => Math.abs(jump.x - x) <= tolerance);
+
+  // A concentrated action belongs to exactly one segment boundary. Looking a
+  // jump up by tolerance at every breakpoint applies it twice whenever another
+  // breakpoint — the edge of a distributed load, for instance — falls inside
+  // that tolerance, which corrupts the whole diagram downstream of the load.
+  const jumpByBreakpoint = new Map<number, DiagramJump>();
+  for (const raw of rawJumps) {
+    let index = 0;
+    for (let candidate = 1; candidate < breakpoints.length; candidate += 1) {
+      if (Math.abs(breakpoints[candidate] - raw.x) < Math.abs(breakpoints[index] - raw.x)) index = candidate;
+    }
+    const existing = jumpByBreakpoint.get(index);
+    if (!existing) {
+      jumpByBreakpoint.set(index, { ...raw, x: breakpoints[index] });
+      continue;
+    }
+    existing.axialDelta += raw.axialDelta;
+    existing.shearDelta += raw.shearDelta;
+    existing.momentDelta += raw.momentDelta;
+  }
+  const jumps = [...jumpByBreakpoint.keys()]
+    .sort((a, b) => a - b)
+    .map((index) => jumpByBreakpoint.get(index)!);
 
   let axial = -endForces[0];
   let shear = endForces[1];
@@ -383,7 +405,7 @@ export const buildExactDiagrams = (
     moment += jump.momentDelta;
   };
 
-  const initialJump = jumpAt(0);
+  const initialJump = jumpByBreakpoint.get(0);
   if (initialJump) {
     const leftPoint: DiagramPoint = { x: 0, axial, shear, moment, side: 'left' };
     pushPoint(leftPoint);
@@ -404,7 +426,10 @@ export const buildExactDiagrams = (
     const x0 = breakpoints[index];
     const x1 = breakpoints[index + 1];
     const h = x1 - x0;
-    if (h <= intervalTolerance) continue;
+    if (h <= intervalTolerance) {
+      applyJump(jumpByBreakpoint.get(index + 1));
+      continue;
+    }
     const probeOffset = h * 0.5;
     const intensity = loadIntensityAt(loads, x0 + probeOffset, intervalTolerance);
     // Re-evaluate the linear intensity at the exact left boundary from its midpoint value and slope.
@@ -438,7 +463,7 @@ export const buildExactDiagrams = (
     shear = end.shear;
     moment = end.moment;
 
-    const boundaryJump = jumpAt(x1);
+    const boundaryJump = jumpByBreakpoint.get(index + 1);
     if (boundaryJump) {
       const leftPoint: DiagramPoint = { x: x1, axial, shear, moment, side: 'left' };
       pushPoint(leftPoint);
