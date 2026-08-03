@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { analyzeProjectScenarios, type AnalysisScenario } from './envelope';
+import { analysisSignature } from './projectSignature';
 import type { ProjectModel } from '../types';
 
 interface ScenarioWorkerResponse {
@@ -14,44 +15,56 @@ export const useScenarioAnalysis = (project: ProjectModel) => {
   const [error, setError] = useState<string | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const requestRef = useRef(0);
+  const fallbackTimerRef = useRef<number | null>(null);
+  // Scenarios stay valid while only presentation settings change, so the reset
+  // is keyed on what the solver actually reads, not on project identity.
+  const signature = useMemo(() => analysisSignature(project), [project]);
+  const projectRef = useRef(project);
+  projectRef.current = project;
 
-  const clear = useCallback(() => {
+  const cancelPending = useCallback(() => {
     requestRef.current += 1;
     workerRef.current?.terminate();
     workerRef.current = null;
+    if (fallbackTimerRef.current !== null) {
+      window.clearTimeout(fallbackTimerRef.current);
+      fallbackTimerRef.current = null;
+    }
+  }, []);
+
+  const clear = useCallback(() => {
+    cancelPending();
     setScenarios(null);
     setBusy(false);
     setError(null);
-  }, []);
+  }, [cancelPending]);
 
   useEffect(() => {
     setScenarios(null);
     setBusy(false);
     setError(null);
-    return () => {
-      requestRef.current += 1;
-      workerRef.current?.terminate();
-      workerRef.current = null;
-    };
-  }, [project]);
+    return cancelPending;
+  }, [cancelPending, signature]);
 
   const run = useCallback(() => {
-    const requestId = requestRef.current + 1;
-    requestRef.current = requestId;
-    workerRef.current?.terminate();
-    workerRef.current = null;
+    cancelPending();
+    const requestId = requestRef.current;
+    const project = projectRef.current;
     setBusy(true);
     setError(null);
-    const fallback = () => window.setTimeout(() => {
-      if (requestRef.current !== requestId) return;
-      try {
-        setScenarios(analyzeProjectScenarios(project));
-      } catch (caught) {
-        setError(caught instanceof Error ? caught.message : 'No se pudieron comparar los escenarios.');
-      } finally {
-        setBusy(false);
-      }
-    }, 0);
+    const fallback = () => {
+      fallbackTimerRef.current = window.setTimeout(() => {
+        fallbackTimerRef.current = null;
+        if (requestRef.current !== requestId) return;
+        try {
+          setScenarios(analyzeProjectScenarios(project));
+        } catch (caught) {
+          setError(caught instanceof Error ? caught.message : 'No se pudieron comparar los escenarios.');
+        } finally {
+          setBusy(false);
+        }
+      }, 0);
+    };
     if (typeof Worker === 'undefined') {
       fallback();
       return;
@@ -81,7 +94,7 @@ export const useScenarioAnalysis = (project: ProjectModel) => {
     } catch {
       fallback();
     }
-  }, [project]);
+  }, [cancelPending]);
 
   return { scenarios, busy, error, run, clear };
 };

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   analyzeAxleTrain,
   buildInfluenceLine,
@@ -7,6 +7,7 @@ import {
   type InfluenceLine,
   type InfluenceTarget,
 } from './influence';
+import { analysisSignature } from './projectSignature';
 import type { ProjectModel } from '../types';
 
 export interface InfluenceAnalysisInput {
@@ -52,6 +53,10 @@ export const useInfluenceAnalysis = (project: ProjectModel) => {
   const workerRef = useRef<Worker | null>(null);
   const requestRef = useRef(0);
   const fallbackTimerRef = useRef<number | null>(null);
+  // An influence line stays exact while only presentation settings change.
+  const signature = useMemo(() => analysisSignature(project), [project]);
+  const projectRef = useRef(project);
+  projectRef.current = project;
 
   const cancelPending = useCallback(() => {
     requestRef.current += 1;
@@ -75,11 +80,12 @@ export const useInfluenceAnalysis = (project: ProjectModel) => {
     setBusy(false);
     setError(null);
     return cancelPending;
-  }, [cancelPending, project]);
+  }, [cancelPending, signature]);
 
   const run = useCallback((input: InfluenceAnalysisInput) => {
     cancelPending();
     const requestId = requestRef.current;
+    const project = projectRef.current;
     const immutableInput: InfluenceAnalysisInput = {
       ...input,
       pathMemberIds: [...input.pathMemberIds],
@@ -154,7 +160,7 @@ export const useInfluenceAnalysis = (project: ProjectModel) => {
     } catch {
       fallback();
     }
-  }, [cancelPending, project]);
+  }, [cancelPending]);
 
   return {
     line: result?.line ?? null,

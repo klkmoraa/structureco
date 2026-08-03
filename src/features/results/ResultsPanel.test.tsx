@@ -225,6 +225,25 @@ describe('Results analytical center', () => {
     expect(screen.getByText(`Nodo ${nodeId}`)).toBeTruthy();
   }, 10_000);
 
+  it('keeps the solved envelope when only a presentation setting changes', async () => {
+    const user = userEvent.setup();
+    renderResults();
+
+    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
+    const chart = await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+    await user.click(within(chart).getByRole('button', { name: 'Env.' }));
+    const scenarios = await within(chart).findByText(/\d+ escenarios/, {}, { timeout: 5000 });
+    expect(scenarios.textContent).not.toBe('0 escenarios');
+    const solved = scenarios.textContent;
+
+    // Units are a display concern: the solver never reads them, so switching
+    // them must not throw away every scenario that was just solved.
+    await user.click(screen.getByRole('button', { name: 'Unidades N-mm' }));
+    const afterUnits = screen.getByTestId('diagram-chart');
+    expect(within(afterUnits).getByRole('button', { name: 'Env.' }).getAttribute('aria-pressed')).toBe('true');
+    expect(within(afterUnits).getByText(/escenarios/).textContent).toBe(solved);
+  }, 15_000);
+
   it('presents the analytical architecture in English without mixed Phase 9 labels', async () => {
     const user = userEvent.setup();
     const project = createHibbelerStyleDiagramPractice();

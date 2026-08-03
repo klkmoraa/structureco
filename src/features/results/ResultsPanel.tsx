@@ -4,6 +4,7 @@ import { useProject, type ResultTab } from '../../store/ProjectContext';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../../engine/diagram';
 import { evaluateEducationalAssertions, type EducationalAssertionEvaluation } from '../../engine/educationalAssertions';
 import { buildDiagramEnvelope, evaluateEnvelopeAt } from '../../engine/envelope';
+import { analysisSignature } from '../../engine/projectSignature';
 import { resolveReliability } from '../../engine/reliability';
 import { useScenarioAnalysis } from '../../engine/useScenarioAnalysis';
 import type { DiagramQuantity, DiagramSegment, EducationalAssertionTarget, MatrixTrace, MemberResult, ProjectModel } from '../../types';
@@ -577,7 +578,10 @@ const DiagramView = ({ type, memberResult, memberId }: { type: DiagramQuantity; 
   const [envelopeMode, setEnvelopeMode] = useState(false);
   const cursorHelpId = useId();
   const { scenarios: envelopeScenarios, busy: envelopeBusy, run: runEnvelopeAnalysis } = useScenarioAnalysis(project);
-  useEffect(() => { setEnvelopeMode(false); }, [project]);
+  // Only a change the solver would see invalidates the envelope; units,
+  // language or diagram scale leave the solved scenarios exact.
+  const modelSignature = useMemo(() => analysisSignature(project), [project]);
+  useEffect(() => { setEnvelopeMode(false); }, [modelSignature]);
   const envelope = useMemo(() => envelopeScenarios ? buildDiagramEnvelope(envelopeScenarios, memberId, type) : null, [envelopeScenarios, memberId, type]);
   const units = project.settings.units;
   if (!memberResult?.diagramSegments.length) return <div className="empty-small">{t('results.selectMember')}</div>;
