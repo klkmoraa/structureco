@@ -226,12 +226,13 @@ Verificación final:
 | --- | --- |
 | `npm run typecheck` | sin errores |
 | `npm run lint` (oxlint) | sin hallazgos |
-| `npm test` | **82 archivos / 556 pruebas, todas en verde** |
+| `npm test` | **82 archivos / 557 pruebas, todas en verde** |
 | `npm run build` | correcto (`tsc -b` + vite) |
 | `npm run verify:protected` | frontera intacta tras `--update` autorizado |
 
-Línea base 78/530 → 82/556 (incluye la prueba de cobertura por nodo de §7.5). No se
-desactivó ninguna prueba, no quedaron `console.log`
+Línea base 78/530 → 82/557 (incluye la prueba de cobertura por nodo de §7.5 y la
+de fusión de acciones concentradas de §7.6). No se desactivó ninguna prueba, no
+quedaron `console.log`
 ni archivos temporales (el archivo de sondeo `__probe.test.ts` se eliminó).
 
 ---
@@ -283,7 +284,12 @@ Ver `git log`. Ninguna operación remota: sin `push`, sin PR, sin `fetch`.
 1. **`AnalysisResult.reliability` es opcional.** Se hizo así para no romper los
    literales de `AnalysisResult` que ya existían en las pruebas. Un resultado
    restaurado desde un archivo `.structureco` antiguo no lo trae; usa siempre
-   `resolveReliability(result)` en lugar de leer el campo directamente.
+   `resolveReliability(result)` en lugar de leer el campo directamente. Verificado
+   (`grep -rn '\.reliability\b' src`): ningún consumidor del motor ni de fuera de
+   él lee el campo directamente hoy; `envelope.ts` e `influence.ts` ya pasan
+   siempre por `resolveReliability`. El riesgo sigue siendo real para código
+   futuro, así que se deja documentado en vez de intentar prohibirlo en tiempo de
+   compilación (el campo debe poder faltar en datos históricos).
 2. **Los umbrales son una elección de ingeniería, no una demostración.** Están
    calibrados contra los umbrales de advertencia que el solver ya aplicaba, y un
    modelo sano típico queda muy por debajo (κ₁ ≈ 3e3, residuo ≈ 1e-16). Si algún
@@ -310,9 +316,16 @@ Ver `git log`. Ninguna operación remota: sin `push`, sin PR, sin `fetch`.
    `resultSummary.test.ts` (`'tolera escenarios sin el mismo conjunto de nodos,
    pero señala la cobertura parcial'`).
 6. **La asignación de saltos a la frontera más cercana** fusiona dos acciones
-   concentradas separadas por menos de `1e-10·L` en una sola frontera. Es el
-   comportamiento deseado (esa distancia es la definición de "coincidentes"), pero
-   implica que el diagrama no distingue esas dos acciones.
+   concentradas separadas por menos de `coordinateTolerance(L)` (`≈1e-10·L`) en
+   una sola frontera. Es el comportamiento deseado (esa distancia es la
+   definición de "coincidentes"), pero implica que el diagrama no distingue esas
+   dos acciones. Confirmado con una prueba dedicada en `discontinuity.test.ts`
+   (`'funde dos acciones concentradas más cercanas que la tolerancia de
+   coordenada, pero las mantiene distintas si están más separadas'`): dos cargas
+   puntuales a `3e-10` m se funden en un único salto con el delta combinado; a
+   `5e-9` m —bien fuera de la tolerancia para `L=8`— producen dos saltos
+   independientes con sus valores originales. El límite queda documentado, no
+   solo implícito en la implementación.
 7. **El mecanismo de subdivisión de influencia no tiene una prueba positiva con
    un modelo físico** que lo obligue a subdividir y luego acepte, porque no existe
    tal modelo con esta biblioteca de elementos (§3.4). Si en el futuro se añaden

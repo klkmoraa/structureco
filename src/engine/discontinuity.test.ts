@@ -54,6 +54,38 @@ describe('discontinuidades exactas en cargas puntuales y momentos concentrados',
     close(result.endCompatibility.moment, 0, 1e-8);
   });
 
+  it('funde dos acciones concentradas más cercanas que la tolerancia de coordenada, pero las mantiene distintas si están más separadas', () => {
+    // buildExactDiagrams assigns each concentrated action to the nearest segment
+    // breakpoint (see the fix above); this is the deliberate boundary of that
+    // assignment, not an accident. coordinateTolerance(8) = max(8*1e-10, eps*8*64)
+    // = 8e-10 m, so 3e-10 sits inside it and 5e-9 sits well outside it.
+    const merged = buildExactDiagrams(
+      [0, 5, 0, 0, 5, 0],
+      [
+        { kind: 'point', x: 4, px: 0, py: -6 },
+        { kind: 'point', x: 4 + 3e-10, px: 0, py: -4 },
+      ],
+      8,
+    );
+    expect(merged.jumps).toHaveLength(1);
+    close(merged.jumps[0].x, 4, 1e-9);
+    close(merged.jumps[0].shearDelta, -10, 1e-8);
+    close(merged.endCompatibility.shear, 0, 1e-8);
+
+    const separate = buildExactDiagrams(
+      [0, 5, 0, 0, 5, 0],
+      [
+        { kind: 'point', x: 4, px: 0, py: -6 },
+        { kind: 'point', x: 4 + 5e-9, px: 0, py: -4 },
+      ],
+      8,
+    );
+    expect(separate.jumps).toHaveLength(2);
+    close(separate.jumps[0].shearDelta, -6, 1e-6);
+    close(separate.jumps[1].shearDelta, -4, 1e-6);
+    close(separate.endCompatibility.shear, 0, 1e-8);
+  });
+
   it('conserva los límites izquierdo y derecho de un momento concentrado', () => {
     const result = analyzeProject(beamWithConcentratedActions());
     const member = result.memberResults[0];
