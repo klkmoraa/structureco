@@ -2,11 +2,13 @@
 
 Fecha: 2026-08-02. Agente: Claude Code. Rama: `main`. Sin operaciones remotas.
 
-Alcance de la fase: **confiabilidad de los resultados estructurales**. Solo
-`src/engine`, sus tipos, los workers relacionados y sus pruebas. No se tocaron
-exportaciones, PDF, importaciones, estilos ni diseño. No se implementó P-Delta,
-3D, dinámica, plasticidad, placas, cascarones ni solver disperso. No se agregaron
-dependencias.
+Alcance de la fase: **confiabilidad de los resultados estructurales**. Núcleo en
+`src/engine`, sus tipos, los workers relacionados y sus pruebas. El usuario
+amplió explícitamente el alcance en una segunda parte de la sesión para cerrar
+los riesgos §7.3 y §7.4 en la interfaz (`ResultsPanel.tsx`, `src/i18n/catalogs.ts`)
+— ver esa sección para el detalle. Exportaciones, PDF e importaciones no se
+tocaron en ningún momento. No se implementó P-Delta, 3D, dinámica, plasticidad,
+placas, cascarones ni solver disperso. No se agregaron dependencias.
 
 ---
 
@@ -254,11 +256,15 @@ Pruebas:
 - `src/engine/scenarioCoverage.test.ts` *(nueva)*
 - `src/engine/influenceFit.test.ts` *(nueva)*
 - `src/engine/performance.test.ts` *(fixture)*
-- `src/engine/resultSummary.test.ts` *(fixture)*
+- `src/engine/resultSummary.test.ts` *(fixture, más la prueba de cobertura por nodo de §7.5)*
+- `src/engine/reliabilityCalibration.test.ts` *(nueva, evidencia de §7.2)*
 
 Consumidores:
 - `src/features/results/ResultSummary.tsx`
-- `src/features/results/ResultsPanel.tsx`
+- `src/features/results/ResultsPanel.tsx` (además del contador de escenarios: el
+  indicador de confiabilidad de §7.3 y el cursor de envolvente por lado de §7.4)
+- `src/i18n/catalogs.ts` (`results.stateResolvedLimited`, `results.stateResolvedUnreliable`,
+  `results.envelopeDiscontinuityReading`, en ambos idiomas)
 
 Documentación y metadatos:
 - `docs/MATHEMATICAL_SPEC.md` (§11.2 nueva, §13.3, §13.4, §13.5)
@@ -266,6 +272,10 @@ Documentación y metadatos:
 - `docs/motor-matematico/CONTEXTO-MEJORA-MOTOR-0.8.2.md` *(este documento)*
 - `docs/releases/0.8.1/PROTECTED_BASELINE.sha256` (regenerado con `--update`)
 - `package.json`, `package-lock.json` (versión 0.8.2)
+- `.claude/launch.json` (configuración `structureco-dev-verify` con puerto
+  automático, agregada para poder abrir un servidor de desarrollo propio en esta
+  sesión sin chocar con el de otra sesión activa en el puerto 5173; no afecta el
+  comportamiento de la aplicación)
 
 Workers: **sin cambios de código**. `scenarios.worker.ts` e `influence.worker.ts`
 siguen siendo válidos: `ResultReliability` es dato plano (clonable estructuralmente)
@@ -304,14 +314,30 @@ Ver `git log`. Ninguna operación remota: sin `push`, sin PR, sin `fetch`.
    reemplaza la intuición ("un modelo sano típico...") por una cifra
    reproducible: si algún modelo legítimo futuro se acerca a ese margen, esta
    prueba es donde debe añadirse antes de tocar el umbral.
-3. **La UI todavía no muestra el nivel de confiabilidad.** El motor lo publica y
-   el resumen de escenarios ya no cuenta los fallidos como resueltos, pero no hay
-   un indicador `reliable/limited/unreliable` en pantalla ni en el PDF. Era
-   trabajo de diseño, fuera del alcance de esta fase.
-4. **El cursor de envolvente sigue leyendo un solo lado.** `evaluateEnvelopeAt`
-   ya acepta `side`, pero `ResultsPanel` lo llama con el valor por omisión
-   (`right`); mostrar los dos límites en el lector de envolvente requiere trabajo
-   de interfaz.
+3. ~~La UI todavía no muestra el nivel de confiabilidad.~~ **Resuelto — alcance
+   ampliado explícitamente por el usuario a UI (sin exportaciones/PDF).**
+   `ResultsPanel.tsx` deriva `resolveReliability(analysis)` y lo usa en el
+   indicador de estado de la barra de comandos: `analysisState` distingue ahora
+   `results.stateResolved` (`reliable`), `results.stateResolvedLimited`
+   (`limited`) y `results.stateResolvedUnreliable` (`unreliable`), y el `title`
+   del indicador lleva el mensaje de la comprobación gobernante
+   (`reliability.governing?.message`) sin agregar CSS nuevo — reutiliza la clase
+   `is-warning` ya existente. El PDF y el resto de exportaciones no se tocaron.
+   Verificado en el navegador: el ejemplo "Viga simplemente apoyada" (modelo
+   sano) sigue mostrando "Resultados resueltos" / `is-resolved` / sin `title`,
+   sin regresión.
+4. ~~El cursor de envolvente sigue leyendo un solo lado.~~ **Resuelto — mismo
+   alcance ampliado.** `DiagramView` calcula ahora `evaluateEnvelopeAt(envelope,
+   cursorX, 'left')` y `'right'` por separado; cuando difieren en más de
+   `1e-9·maxAbs` se muestran ambos límites de mínimo y máximo bajo la lectura
+   principal, reutilizando la clase `at-jump` ya existente y el patrón de
+   `results.discontinuityReading` (nueva clave `results.envelopeDiscontinuityReading`,
+   con placeholders idénticos en ambos catálogos, verificados por
+   `catalogs.test.ts`). Confirmado en el navegador con el ejemplo de viga simple
+   en modo envolvente (4 escenarios): en `x=4.000 m`, V (que tiene un salto real
+   por la carga puntual) muestra `Mín.: izq. 0.000 → der. -30.000 kN` y
+   `Máx.: izq. 30.000 → der. 0.000 kN`; M (continuo en ese punto) no muestra
+   ninguna línea de discontinuidad — cero falsos positivos.
 5. ~~`ReactionEnvelope.complete` solo cubría escenarios.~~ **Resuelto.**
    `NodeReactionEnvelope` gana `complete`: verdadero solo si todos los escenarios
    incluidos reportaron ese nodo. `ReactionEnvelope.complete` ahora exige además
