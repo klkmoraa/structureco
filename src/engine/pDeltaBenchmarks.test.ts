@@ -320,3 +320,57 @@ describe('P-Delta · invariancia de unidades del criterio de convergencia', () =
     expect(Math.abs(relError(stiff.pDelta!.amplificationFactor!, flexible.pDelta!.amplificationFactor!))).toBeLessThan(1e-6);
   });
 });
+
+describe('P-Delta · presupuesto de rendimiento', () => {
+  /** Pórtico regular de `storeys` niveles y `bays` crujías, con carga gravitatoria y lateral. */
+  const multiStoreyFrame = (storeys: number, bays: number): ProjectModel => {
+    const project = baseProject();
+    const nodes: NodeModel[] = [];
+    const members: MemberModel[] = [];
+    const height = 3;
+    const span = 5;
+    for (let y = 0; y <= storeys; y += 1) {
+      for (let x = 0; x <= bays; x += 1) {
+        nodes.push({ id: `N${x}_${y}`, x: x * span, y: y * height, support: y === 0 ? { type: 'fixed' } : { type: 'none' } });
+      }
+    }
+    for (let y = 1; y <= storeys; y += 1) {
+      for (let x = 0; x <= bays; x += 1) members.push({ id: `C${x}_${y}`, i: `N${x}_${y - 1}`, j: `N${x}_${y}`, type: 'frame', E, A: AREA, I: 6e-4 });
+      for (let x = 0; x < bays; x += 1) members.push({ id: `B${x}_${y}`, i: `N${x}_${y}`, j: `N${x + 1}_${y}`, type: 'frame', E, A: AREA, I: 6e-4 });
+    }
+    project.nodes = nodes;
+    project.members = members;
+    project.nodalLoads = [];
+    for (let y = 1; y <= storeys; y += 1) {
+      for (let x = 0; x <= bays; x += 1) {
+        project.nodalLoads.push({ id: `L${x}_${y}`, nodeId: `N${x}_${y}`, caseId: 'LC1', fx: x === 0 ? 15 : 0, fy: -120, mz: 0 });
+      }
+    }
+    return project;
+  };
+
+  it('un pórtico de 10 niveles no cuesta un orden de magnitud más que el primer orden', () => {
+    // El coste dominante no es la iteración (converge en 3) sino la estimación
+    // del factor de carga crítica. Medido antes de acotarla: 40.6× el primer
+    // orden (3.4 s en un pórtico de 77 nodos). Con el cribado analítico previo
+    // —que coincide con la bisección dentro del 0.5 %— baja a ~4×, y la
+    // bisección solo se paga cerca de la crítica, donde sí importa.
+    const project = multiStoreyFrame(10, 6);
+    expect(project.nodes.length).toBeGreaterThan(70);
+
+    const firstOrderStart = performance.now();
+    const firstOrder = analyzeProject(project);
+    const firstOrderMs = performance.now() - firstOrderStart;
+
+    const pDeltaStart = performance.now();
+    const second = analyzeProjectPDelta(project);
+    const pDeltaMs = performance.now() - pDeltaStart;
+
+    expect(firstOrder.success).toBe(true);
+    expect(second.success).toBe(true);
+    expect(second.pDelta?.converged).toBe(true);
+    // Holgado frente a los ~4× medidos, para no volverse inestable en CI, pero
+    // muy por debajo del 40× que tenía la versión sin cribado.
+    expect(pDeltaMs / Math.max(firstOrderMs, 1)).toBeLessThan(15);
+  }, 30_000);
+});

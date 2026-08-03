@@ -87,7 +87,22 @@ export const ResultSummary = () => {
       <span className={analysis.pDelta.converged ? 'is-resolved' : 'is-warning'}>{analysis.pDelta.converged ? t('pdelta.converged') : t('pdelta.notConverged')}</span>
       <small>{t('pdelta.iterationsSummary', { steps: analysis.pDelta.loadStepsUsed, iterations: analysis.pDelta.totalIterations })}</small>
       {typeof analysis.pDelta.amplificationFactor === 'number' ? <small>{t('pdelta.amplification', { factor: formatFixed(analysis.pDelta.amplificationFactor, 3) })}</small> : null}
-      {analysis.pDelta.stabilityWarning ? <small className="is-warning">{analysis.pDelta.stabilityWarning}</small> : null}
+      <small>{t('pdelta.equilibriumResidual', {
+        value: formatScientific(analysis.pDelta.finalEquilibriumResidual, 2),
+        axial: formatScientific(analysis.pDelta.finalAxialChange, 2),
+      })}</small>
+      {/* Rendered from the structured factor rather than the engine's own
+          message so the reading follows the selected language, and always
+          alongside the note that it is an estimate, never a computed eigenvalue. */}
+      {typeof analysis.pDelta.criticalLoadFactor === 'number' ? <>
+        <small className={analysis.pDelta.stabilityWarning ? 'is-warning' : undefined}>{t('pdelta.criticalFactor', {
+          factor: formatFixed(analysis.pDelta.criticalLoadFactor, 2),
+          percent: formatFixed(100 / analysis.pDelta.criticalLoadFactor, 0),
+        })}</small>
+        <small>{t('pdelta.criticalFactorNote')}</small>
+        {analysis.pDelta.stabilityWarning ? <small className="is-warning">{t('pdelta.discretizationHint')}</small> : null}
+      </> : null}
+      {analysis.pDelta.failureReason ? <small className="is-warning">{t('pdelta.failureReason', { reason: analysis.pDelta.failureReason })}</small> : null}
     </section> : null}
     <div className="global-extrema-grid">
       {(['axial', 'shear', 'moment'] as const).map((quantity) => {
