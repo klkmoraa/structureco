@@ -84,6 +84,18 @@ const enumAt = <T extends string>(value: unknown, path: string, values: readonly
     : fail(path, `valor no permitido; use ${values.join(', ')}.`);
 };
 
+/** Optional per-project P-Delta overrides; every field is optional and merged over the defaults. */
+const normalizePDeltaConfig = (input: unknown, path: string): ProjectSettings['pDeltaConfig'] => {
+  if (input === undefined) return undefined;
+  const raw = objectAt(input, path);
+  const result: NonNullable<ProjectSettings['pDeltaConfig']> = {};
+  for (const key of ['maxLoadSteps', 'maxIterationsPerStep', 'equilibriumTolerance', 'displacementTolerance', 'stepReductionFactor', 'minimumStep'] as const) {
+    const value = optionalFiniteAt(raw[key], `${path}.${key}`);
+    if (value !== undefined) result[key] = value;
+  }
+  return Object.keys(result).length ? result : undefined;
+};
+
 const uniqueId = (id: string, ids: Set<string>, path: string) => {
   if (ids.has(id)) fail(path, `el identificador "${id}" está repetido.`);
   ids.add(id);
@@ -160,6 +172,13 @@ const normalizeSettings = (input: unknown): ProjectSettings => {
     deformedScale: finiteAt(raw.deformedScale, 'settings.deformedScale', defaults.deformedScale),
     diagramSide: enumAt(raw.diagramSide, 'settings.diagramSide', ['positive', 'negative'] as const, defaults.diagramSide),
     calculationMode: enumAt(raw.calculationMode, 'settings.calculationMode', ['complete', 'classroom'] as const, defaults.calculationMode),
+    // Second-order settings must survive persistence, import and undo like any
+    // other analysis input: dropping them silently reverted every reloaded
+    // project to first order while the selector still had to be re-picked.
+    analysisMode: raw.analysisMode === undefined
+      ? defaults.analysisMode
+      : enumAt(raw.analysisMode, 'settings.analysisMode', ['first-order', 'p-delta'] as const),
+    pDeltaConfig: normalizePDeltaConfig(raw.pDeltaConfig, 'settings.pDeltaConfig'),
   };
   if (settings.gridSize <= 0) fail('settings.gridSize', 'debe ser mayor que cero.');
   if (settings.diagramScale <= 0) fail('settings.diagramScale', 'debe ser mayor que cero.');

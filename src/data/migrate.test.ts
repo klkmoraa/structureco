@@ -88,3 +88,34 @@ describe('project schema migration and validation', () => {
     expect(() => normalizeProject(oversized)).toThrow(/excede 20000 caracteres/);
   });
 });
+
+describe('P-Delta settings survive normalization', () => {
+  it('conserva analysisMode y pDeltaConfig al recargar, importar o deshacer', () => {
+    // Sin esto, `normalizeProject` los descartaba en silencio y todo proyecto
+    // reabierto volvía a primer orden con el selector aún en P-Delta.
+    const source = createDefaultProject();
+    const configured = {
+      ...source,
+      settings: {
+        ...source.settings,
+        analysisMode: 'p-delta' as const,
+        pDeltaConfig: { maxLoadSteps: 20, minimumStep: 1 / 128 },
+      },
+    };
+    const normalized = normalizeProject(JSON.parse(JSON.stringify(configured)));
+    expect(normalized.settings.analysisMode).toBe('p-delta');
+    expect(normalized.settings.pDeltaConfig).toEqual({ maxLoadSteps: 20, minimumStep: 1 / 128 });
+  });
+
+  it('un proyecto sin ajustes P-Delta sigue siendo válido y de primer orden', () => {
+    const normalized = normalizeProject(JSON.parse(JSON.stringify(createDefaultProject())));
+    expect(normalized.settings.analysisMode).toBeUndefined();
+    expect(normalized.settings.pDeltaConfig).toBeUndefined();
+  });
+
+  it('rechaza un analysisMode desconocido en vez de aceptarlo', () => {
+    const source = createDefaultProject();
+    const broken = { ...source, settings: { ...source.settings, analysisMode: 'segundo-orden' } };
+    expect(() => normalizeProject(JSON.parse(JSON.stringify(broken)))).toThrow();
+  });
+});

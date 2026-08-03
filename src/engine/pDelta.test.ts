@@ -363,12 +363,6 @@ describe('P-Delta: configuración por defecto', () => {
 // Fase 2: defectos reales reproducidos antes de corregirlos.
 // ---------------------------------------------------------------------------
 
-/** Cantiléver rígido: desplazamientos ~1e-6 m, donde el piso absoluto `max(1, ‖u‖)` degrada el criterio relativo a absoluto. */
-const stiffCantilever = (): ProjectModel => {
-  const project = cantilever(1, 200e6, 1e-3, 0.5);
-  return withTipLoads(project, -50, 0.05);
-};
-
 describe('P-Delta fase 2: criterios de convergencia', () => {
   it('el criterio de desplazamiento es relativo a la escala del modelo, no absoluto', () => {
     // Prueba directa del defecto: un piso `Math.max(1, ‖u‖)` en unidades base
