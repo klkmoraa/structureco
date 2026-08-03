@@ -114,7 +114,7 @@ npm run typecheck && npm run lint && npm run verify:protected && npm test && npm
 | typecheck | ✅ |
 | lint (oxlint) | ✅ |
 | verify:protected | ✅ 26 archivos (línea base refrescada — expansión autorizada) |
-| suite completa | ✅ **86 archivos / 595 pruebas** (línea base de la sesión anterior: 85/578) |
+| suite completa | ✅ **86 archivos / 600 pruebas** tras la revisión independiente (línea base de la sesión anterior: 85/578; primera pasada de esta sesión: 86/595) |
 | build | ✅ |
 
 Verificación manual en navegador (dev server propio):
@@ -175,6 +175,45 @@ b3e1e0c feat(engine): implementar análisis P-Delta de segundo orden para pórti
 - **Mensajes de diagnóstico** (`pDelta.ts`) son siempre en español,
   igual que el resto de mensajes del motor (`ValidationIssue`) — no pasan por
   el catálogo i18n, consistente con la convención ya existente.
+
+## Revisión independiente (subagente) y hallazgos reales corregidos
+
+Se usó el tercer subagente previsto en el plan original (revisión adversarial
+del diff completo, sin contexto de la sesión). Encontró 5 hallazgos; 4 eran
+reales y se corrigieron, uno quedó documentado como limitación no confirmada:
+
+1. **(Bloqueante, corregido)** `analyzeProject` sella `reliability` en el
+   resultado *antes* de que `pDelta` exista en el objeto, así que todo
+   resultado P-Delta real leía como `unreliable` por el mismo residuo de
+   equilibrio de primer orden que ya se había relajado en `solver.ts` — el
+   arreglo de `reliability.ts` de esta sesión nunca se activaba. Se corrigió
+   recalculando `reliability` en `pDelta.ts` después de adjuntar `pDelta`.
+2. **(Bloqueante, corregido)** `respondsAgainstFirstOrder` rechazaba cualquier
+   modelo con desplazamiento nulo en ambos vectores (producto punto = 0 ≤ 0)
+   — es decir, **cualquier modelo completamente restringido o sin carga**,
+   el estado exacto en que está un proyecto recién cambiado a P-Delta. Se
+   corrigió con una guarda de magnitud (si el vector de referencia de primer
+   orden es ~0, el chequeo no aplica) y, adicionalmente, usando como
+   referencia el primer orden de *cada paso de carga* en vez de uno fijo en
+   λ=1 (evita también la premisa rota de que la dirección de primer orden es
+   independiente de λ cuando hay asentamientos absolutos).
+3. **(Corregido)** El umbral absoluto de `conditionEstimate > 1e10` para la
+   advertencia de estabilidad nunca se activaba en la práctica — medido: solo
+   ~1.4×10⁶ incluso a 0.99·Pcr. Se reemplazó por la razón contra la condición
+   de primer orden del mismo modelo (`> 20`), calibrada empíricamente
+   (razón≈1 lejos de la crítica, ≈100+ cerca de ella).
+4. **(Corregido)** `pDeltaActive` en `solver.ts` era verdadero para un `Map`
+   vacío (proyecto sin miembros `frame`), relajando checks de equilibrio que
+   no tenían nada que ver con P-Delta. Ahora exige `.size > 0`.
+5. **(No confirmado, no instanciado)** Posible interacción entre
+   asentamientos prescritos por caso de carga y el escalado por λ — mitigada
+   como efecto colateral del punto 2 (referencia de primer orden por paso),
+   no se construyó un caso de prueba dedicado.
+
+5 pruebas nuevas en `pDelta.test.ts` (sección "hallazgos de la revisión
+independiente") demuestran cada corrección con un caso que fallaba antes del
+arreglo. Suite completa tras los arreglos: **86 archivos / 600 pruebas**
+(22 en `pDelta.test.ts`, antes 17).
 
 ## Instrucciones para que Codex revise el trabajo
 
