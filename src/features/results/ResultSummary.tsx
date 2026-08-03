@@ -9,7 +9,7 @@ import { downloadResultsCsv } from '../../utils/resultsExport';
 import { useClassroomSession } from '../../store/ClassroomSessionContext';
 import { formatResultNumber, formatResultValue } from './resultFormatting';
 import { useI18n } from '../../i18n/useI18n';
-import { formatScientific } from '../../utils/numberFormat';
+import { formatFixed, formatScientific } from '../../utils/numberFormat';
 
 const diagramTab: Record<DiagramQuantity, ResultTab> = { axial: 'axial', shear: 'shear', moment: 'moment' };
 const diagramSymbol: Record<DiagramQuantity, string> = { axial: 'N', shear: 'V', moment: 'M' };
@@ -82,6 +82,13 @@ export const ResultSummary = () => {
         <button disabled={comparisonBusy} onClick={compare}>{comparisonBusy ? <RefreshCw className="spin" size={15} /> : <GitCompareArrows size={15} />} {scenarios ? t('results.updateComparison') : t('results.compareCases')}</button>
       </div>
     </header>
+    {analysis.pDelta ? <section className="p-delta-summary" aria-label={t('pdelta.summaryTitle')}>
+      <strong>{t('pdelta.summaryTitle')}</strong>
+      <span className={analysis.pDelta.converged ? 'is-resolved' : 'is-warning'}>{analysis.pDelta.converged ? t('pdelta.converged') : t('pdelta.notConverged')}</span>
+      <small>{t('pdelta.iterationsSummary', { steps: analysis.pDelta.loadStepsUsed, iterations: analysis.pDelta.totalIterations })}</small>
+      {typeof analysis.pDelta.amplificationFactor === 'number' ? <small>{t('pdelta.amplification', { factor: formatFixed(analysis.pDelta.amplificationFactor, 3) })}</small> : null}
+      {analysis.pDelta.stabilityWarning ? <small className="is-warning">{analysis.pDelta.stabilityWarning}</small> : null}
+    </section> : null}
     <div className="global-extrema-grid">
       {(['axial', 'shear', 'moment'] as const).map((quantity) => {
         const item = summary.diagrams[quantity]?.absolute;

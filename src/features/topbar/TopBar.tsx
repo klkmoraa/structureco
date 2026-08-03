@@ -33,6 +33,9 @@ import { useClassroomSession } from '../../store/ClassroomSessionContext';
 import { presentExample } from '../welcome/examplePresentation';
 import { APP_VERSION } from '../../appVersion';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
+import { DEFAULT_PDELTA_CONFIG } from '../../engine/pDelta';
+import type { TranslationKey } from '../../i18n/catalogs';
+import type { PDeltaConfig } from '../../types';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
 
@@ -327,6 +330,15 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
           <option value="complete">{t('analysis.modeComplete')}</option>
         </select>
         <select
+          className="compact-select analysis-order-select"
+          aria-label={t('analysis.order')}
+          value={project.settings.analysisMode ?? 'first-order'}
+          onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, analysisMode: event.target.value as 'first-order' | 'p-delta' } }))}
+        >
+          <option value="first-order">{t('analysis.orderFirst')}</option>
+          <option value="p-delta">{t('analysis.orderPDelta')}</option>
+        </select>
+        <select
           className="compact-select units-select"
           aria-label={t('units.label')}
           value={project.settings.units}
@@ -379,6 +391,8 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
               </div>
               <label className="mobile-menu-field overflow-case"><span>{t('analysis.caseOrCombination')}</span><select value={selectedCombinationId} onChange={(event) => setSelectedCombinationId(event.target.value)}><option value="">{t('analysis.activeCases')}</option>{project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}</select></label>
               <label className="mobile-menu-field overflow-mode"><span>{t('analysis.mode')}</span><select value={project.settings.calculationMode ?? 'complete'} onChange={(event) => { updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } })); setShowMobileMenu(false); }}><option value="classroom">{t('analysis.modeClassroom')}</option><option value="complete">{t('analysis.modeComplete')}</option></select></label>
+              <label className="mobile-menu-field overflow-analysis-order"><span>{t('analysis.order')}</span><select value={project.settings.analysisMode ?? 'first-order'} onChange={(event) => { updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, analysisMode: event.target.value as 'first-order' | 'p-delta' } })); setShowMobileMenu(false); }}><option value="first-order">{t('analysis.orderFirst')}</option><option value="p-delta">{t('analysis.orderPDelta')}</option></select></label>
+              {(project.settings.analysisMode ?? 'first-order') === 'p-delta' ? <PDeltaAdvancedConfig /> : null}
               <label className="mobile-menu-field overflow-units"><span>{t('units.label')}</span><select value={project.settings.units} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units } }))}><option value="kN-m">kN · m</option><option value="N-mm">N · mm</option><option value="kgf-m">kgf · m</option><option value="kip-ft">kip · ft</option></select></label>
               <label className="mobile-menu-field"><span>{t('language.label')}</span><select value={language} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, language: event.target.value as 'es' | 'en' } }))}><option value="es">{t('language.es')}</option><option value="en">{t('language.en')}</option></select></label>
               <button onClick={() => { setTheme(theme === 'light' ? 'dark' : 'light'); setShowMobileMenu(false); }}>{theme === 'light' ? <Moon size={17} /> : <Sun size={17} />} {theme === 'light' ? t('theme.dark') : t('theme.light')}</button>
@@ -430,5 +444,43 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
         }}
       /></Suspense> : null}
     </header>
+  );
+};
+
+const PDELTA_FIELDS: Array<{ key: keyof PDeltaConfig; labelKey: TranslationKey; step?: number }> = [
+  { key: 'maxLoadSteps', labelKey: 'pdelta.maxLoadSteps', step: 1 },
+  { key: 'maxIterationsPerStep', labelKey: 'pdelta.maxIterationsPerStep', step: 1 },
+  { key: 'equilibriumTolerance', labelKey: 'pdelta.equilibriumTolerance' },
+  { key: 'displacementTolerance', labelKey: 'pdelta.displacementTolerance' },
+  { key: 'stepReductionFactor', labelKey: 'pdelta.stepReductionFactor' },
+  { key: 'minimumStep', labelKey: 'pdelta.minimumStep' },
+];
+
+const PDeltaAdvancedConfig = () => {
+  const { project, updateProjectView } = useProject();
+  const { t } = useI18n();
+  const config = { ...DEFAULT_PDELTA_CONFIG, ...project.settings.pDeltaConfig };
+  const setField = (key: keyof PDeltaConfig, value: number) => {
+    if (!Number.isFinite(value)) return;
+    updateProjectView((draft) => ({
+      ...draft,
+      settings: { ...draft.settings, pDeltaConfig: { ...draft.settings.pDeltaConfig, [key]: value } },
+    }));
+  };
+  return (
+    <details className="mobile-menu-field overflow-pdelta-advanced">
+      <summary>{t('pdelta.advancedConfig')}</summary>
+      {PDELTA_FIELDS.map(({ key, labelKey, step }) => (
+        <label className="mobile-menu-field" key={key}>
+          <span>{t(labelKey)}</span>
+          <input
+            type="number"
+            value={config[key]}
+            step={step ?? 'any'}
+            onChange={(event) => setField(key, event.target.valueAsNumber)}
+          />
+        </label>
+      ))}
+    </details>
   );
 };
