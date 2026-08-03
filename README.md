@@ -4,11 +4,14 @@ Aplicación web local-first para modelar, analizar y aprender estructuras planas
 2D. Integra un editor gráfico, un motor matricial independiente de la interfaz y
 resultados trazables desde el modelo hasta las matrices, reacciones y diagramas.
 
-Versión estable: **0.8.0**, cierre del rediseño UX/UI canvas-first.
-Rediseño visual integral 2026-08: dirección "Mesa Modular + Laboratorio
-Nocturno + Instrumento de Precisión" con claridad inspirada en principios
-Apple e identidad propia de ingeniería estructural (ver
-[docs/design-system/](docs/design-system/PALETTE.md)).
+Versión estable: **0.8.1**, endurecimiento de seguridad, presentación numérica,
+exportación y CI local sobre el rediseño UX/UI canvas-first de 0.8.0. Sin
+cambios en el motor de cálculo salvo un ajuste de presentación de texto
+autorizado explícitamente (ver [CHANGELOG.md](CHANGELOG.md) y
+[docs/releases/0.8.1/STATUS.md](docs/releases/0.8.1/STATUS.md)).
+Dirección visual "Mesa Modular + Laboratorio Nocturno + Instrumento de
+Precisión" con claridad inspirada en principios Apple e identidad propia de
+ingeniería estructural (ver [docs/design-system/](docs/design-system/PALETTE.md)).
 
 ![Workspace de structureCo 0.8.0 en desktop](docs/ux-redesign/evidence/phase-14/after/phase14-chromium-desktop-1536x960-light.png)
 

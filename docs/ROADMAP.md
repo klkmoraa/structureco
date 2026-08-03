@@ -1,11 +1,18 @@
 # Roadmap de producto — structureCo
 
-## Release actual — 0.8.0
+## Release actual — 0.8.1
 
-El incremento endurece el producto sin ampliar su teoría física más allá del
-análisis estático 2D lineal-elástico. El rediseño UX/UI de Fases 0 a 15 se cerró
-como una release canvas-first, responsive y accesible, con preview previo,
-rollback documentado y promoción controlada.
+Programa de endurecimiento sobre el rediseño canvas-first de 0.8.0: seguridad
+de importación, política numérica única, fidelidad de exportación SVG/PNG,
+memoria PDF editorial, invariantes del motor, rendimiento medido y CI
+preparado localmente. Sin ampliar la teoría física más allá del análisis
+estático 2D lineal-elástico, y sin cambios en el motor salvo un ajuste de
+presentación de texto autorizado explícitamente. Detalle completo por slice en
+[docs/releases/0.8.1/STATUS.md](releases/0.8.1/STATUS.md).
+
+El rediseño UX/UI de Fases 0 a 15 (0.8.0) se cerró como una release
+canvas-first, responsive y accesible, con preview previo, rollback documentado
+y promoción controlada.
 
 ## Capacidades funcionales consolidadas
 

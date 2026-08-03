@@ -4,9 +4,10 @@ Todos los cambios notables de structureCo se documentan en este archivo. Los
 detalles de ejecución UX/UI permanecen en
 `docs/ux-redesign/CHANGELOG_UX.md`.
 
-## No publicado — programa de endurecimiento 0.8.1 (local, sin publicar)
+## 0.8.1 — 2026-08-02 · Programa de endurecimiento (certificado localmente, sin publicar)
 
-Trabajo 100% local; no se ha usado GitHub. Detalle completo por slice en
+Versión certificada en local. **No se ha usado GitHub**: sin push, sin tag, sin release, sin
+deploy. Detalle completo por slice en
 [docs/releases/0.8.1/STATUS.md](docs/releases/0.8.1/STATUS.md).
 
 ### Corregido
