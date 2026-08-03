@@ -308,8 +308,35 @@ const solveLoadStep = (
   };
 };
 
-const globalDisplacementMeasure = (displacements: readonly number[]): number =>
-  displacements.reduce((max, value) => Math.max(max, Math.abs(value)), 0);
+/**
+ * Worst second-order amplification across the degrees of freedom that actually
+ * move under first order.
+ *
+ * A single `max|u₂| / max|u₁|` ratio is misleading whenever one DOF family
+ * dominates the vector: for a stiff column the axial shortening (unchanged by
+ * P-Delta) is orders of magnitude larger than the sway, so that ratio reports
+ * ×1.000 while the sway genuinely doubles — measured 1.0000 reported against a
+ * true 1.9794. Taking the largest per-DOF ratio instead reports the governing
+ * amplification, which is the quantity design codes call B₂.
+ *
+ * DOFs that barely move under first order are excluded: their ratio is
+ * numerically meaningless, not physically large.
+ */
+const amplificationOf = (second: readonly number[], first: readonly number[]): number | undefined => {
+  if (second.length !== first.length) return undefined;
+  let reference = 0;
+  for (const value of first) reference = Math.max(reference, Math.abs(value));
+  if (!(reference > 0)) return undefined;
+  const floor = reference * 1e-6;
+  let worst = 0;
+  let counted = false;
+  for (let i = 0; i < first.length; i += 1) {
+    if (Math.abs(first[i]) <= floor) continue;
+    worst = Math.max(worst, Math.abs(second[i]) / Math.abs(first[i]));
+    counted = true;
+  }
+  return counted ? worst : undefined;
+};
 
 /**
  * Estimated elastic critical load factor for the *current load pattern*.
@@ -444,7 +471,6 @@ export const analyzeProjectPDelta = (
       },
     };
   }
-  const firstOrderMeasure = globalDisplacementMeasure(firstOrder.displacements);
 
   let lambdaAchieved = 0;
   let stepSize = 1;
@@ -486,8 +512,7 @@ export const analyzeProjectPDelta = (
   }
 
   const finalResult = lastConverged.analysisResult;
-  const finalMeasure = globalDisplacementMeasure(finalResult.displacements);
-  const amplificationFactor = firstOrderMeasure > 1e-9 ? finalMeasure / firstOrderMeasure : undefined;
+  const amplificationFactor = amplificationOf(finalResult.displacements, firstOrder.displacements);
   const lastIteration = history.at(-1);
   // The condition-number ratio previously used here was measured failing in
   // both directions — it misses 0.90·Pcr (ratio 9.7) and 0.95·Pcr (19.3, under
