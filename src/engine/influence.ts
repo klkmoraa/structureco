@@ -1,6 +1,7 @@
-import type { AnalysisResult, DiagramQuantity, MemberModel, ProjectModel } from '../types';
+import type { AnalysisResult, DiagramQuantity, MemberModel, ProjectModel, ReliabilityLevel } from '../types';
 import { evaluateDiagramAt, evaluatePolynomial, rootsInInterval } from './diagram';
 import { solveLinearSystem } from './math';
+import { isTrustedForCombination, resolveReliability, worstLevel } from './reliability';
 import { analyzeProject } from './solver';
 
 const GEOMETRY_EPS = 1e-10;
@@ -56,6 +57,16 @@ export interface InfluenceSolverDiagnostics {
   maxConditionEstimate: number;
   maxForwardErrorBound: number;
   minReliableDigits: number;
+  /** Worst reliability level observed across every moving-load analysis. */
+  worstReliability: ReliabilityLevel;
+}
+
+export interface RejectedInfluenceInterval {
+  pathStart: number;
+  pathEnd: number;
+  depth: number;
+  maxAbsoluteError: number;
+  maxRelativeError: number;
 }
 
 export interface InfluenceFitDiagnostics {
@@ -65,6 +76,46 @@ export interface InfluenceFitDiagnostics {
   interpolationRelativeResidual: number;
   interpolationPivotRatio: number;
   validations: InfluenceValidationPoint[];
+  /** True only when every interval satisfied its tolerance. */
+  accepted: boolean;
+  /** Number of interval splits performed while chasing the tolerance. */
+  subdivisions: number;
+  maxSubdivisionDepth: number;
+  toleranceRelative: number;
+  toleranceAbsolute: number;
+  rejectedIntervals: RejectedInfluenceInterval[];
+}
+
+/** Acceptance limits applied to the piecewise-cubic reconstruction. */
+export interface InfluenceFitLimits {
+  /** An interval fails only when it exceeds both tolerances at a check point. */
+  maxRelativeError: number;
+  maxAbsoluteError: number;
+  /** Maximum number of successive halvings of one interval. */
+  maxSubdivisions: number;
+}
+
+/**
+ * The reconstruction is exact for this element library, so these limits are a
+ * guard against numerical degradation rather than against discretization: they
+ * sit far above double-precision round-off and far below any error that could
+ * change an engineering decision.
+ */
+export const DEFAULT_INFLUENCE_FIT_LIMITS: InfluenceFitLimits = {
+  maxRelativeError: 1e-6,
+  maxAbsoluteError: 1e-9,
+  maxSubdivisions: 4,
+};
+
+/** Thrown when a line cannot meet its tolerance; it must never reach the app as valid. */
+export class InfluenceFitError extends Error {
+  readonly fit: InfluenceFitDiagnostics;
+
+  constructor(message: string, fit: InfluenceFitDiagnostics) {
+    super(message);
+    this.name = 'InfluenceFitError';
+    this.fit = fit;
+  }
 }
 
 export interface InfluenceSegment {
@@ -146,6 +197,7 @@ interface AnalysisAccumulator {
   maxConditionEstimate: number;
   maxForwardErrorBound: number;
   minReliableDigits: number;
+  worstReliability: ReliabilityLevel;
 }
 
 const finiteMaximum = (current: number, value: number | undefined): number =>
@@ -283,7 +335,7 @@ const quantityName = (quantity: InfluenceQuantity): DiagramQuantity => {
   return 'moment';
 };
 
-const recordAnalysis = (accumulator: AnalysisAccumulator, result: AnalysisResult): void => {
+const recordAnalysis = (accumulator: AnalysisAccumulator, result: AnalysisResult): ReliabilityLevel => {
   accumulator.analyses += 1;
   accumulator.maxEquilibriumResidual = finiteMaximum(accumulator.maxEquilibriumResidual, result.equilibrium.normalizedResidual);
   accumulator.maxStructuralResidual = finiteMaximum(accumulator.maxStructuralResidual, result.residualNorm);
@@ -291,6 +343,9 @@ const recordAnalysis = (accumulator: AnalysisAccumulator, result: AnalysisResult
   accumulator.maxConditionEstimate = finiteMaximum(accumulator.maxConditionEstimate, result.conditionEstimate);
   accumulator.maxForwardErrorBound = finiteMaximum(accumulator.maxForwardErrorBound, result.forwardErrorBound);
   accumulator.minReliableDigits = finiteMinimum(accumulator.minReliableDigits, result.reliableDigits);
+  const level = resolveReliability(result).level;
+  accumulator.worstReliability = worstLevel(accumulator.worstReliability, level);
+  return level;
 };
 
 const solveUnitResponse = (
@@ -318,10 +373,13 @@ const solveUnitResponse = (
     }],
   };
   const result = analyzeProject(loaded);
-  recordAnalysis(diagnostics, result);
-  if (!result.success) {
-    const message = result.issues.filter((issue) => issue.severity === 'error').map((issue) => issue.message).join(' ');
-    throw new Error(`No se pudo resolver la carga unitaria en ${pathPosition}: ${message || 'análisis fallido'}`);
+  const level = recordAnalysis(diagnostics, result);
+  if (!result.success || !isTrustedForCombination(level)) {
+    const reliability = resolveReliability(result);
+    const message = result.issues.filter((issue) => issue.severity === 'error').map((issue) => issue.message).join(' ')
+      || reliability.reasons[0]
+      || 'análisis fallido';
+    throw new Error(`No se pudo resolver la carga unitaria en ${pathPosition}: ${message}`);
   }
   const targetResult = result.memberResults.find((member) => member.memberId === target.memberId);
   if (!targetResult) throw new Error(`El análisis no devolvió resultados para el miembro objetivo ${target.memberId}.`);
@@ -407,7 +465,15 @@ export const buildInfluenceLine = (
   memberIds: readonly string[],
   target: InfluenceTarget,
   startNodeId?: string,
+  limits: Partial<InfluenceFitLimits> = {},
 ): InfluenceLine => {
+  const fitLimits: InfluenceFitLimits = { ...DEFAULT_INFLUENCE_FIT_LIMITS, ...limits };
+  if (!(fitLimits.maxRelativeError >= 0) || !(fitLimits.maxAbsoluteError >= 0)) {
+    throw new Error('Las tolerancias de ajuste de la línea de influencia deben ser finitas y no negativas.');
+  }
+  if (!Number.isInteger(fitLimits.maxSubdivisions) || fitLimits.maxSubdivisions < 0) {
+    throw new Error('El límite de subdivisión de la línea de influencia debe ser un entero no negativo.');
+  }
   const path = orderInfluencePath(project, memberIds, startNodeId);
   const targetMember = project.members.find((member) => member.id === target.memberId);
   if (!targetMember || targetMember.type === 'rigid') throw new Error(`No existe un miembro deformable objetivo ${target.memberId}.`);
@@ -437,27 +503,35 @@ export const buildInfluenceLine = (
     maxConditionEstimate: 0,
     maxForwardErrorBound: 0,
     minReliableDigits: Number.POSITIVE_INFINITY,
+    worstReliability: 'reliable',
   };
   const validations: InfluenceValidationPoint[] = [];
   const segments: InfluenceSegment[] = [];
+  const rejectedIntervals: RejectedInfluenceInterval[] = [];
   let interpolationConditionEstimate = 0;
   let interpolationRelativeResidual = 0;
   let interpolationPivotRatio = 0;
+  let subdivisions = 0;
+  let maxSubdivisionDepth = 0;
 
-  for (let index = 0; index < breakpoints.length - 1; index += 1) {
-    const pathStart = breakpoints[index];
-    const pathEnd = breakpoints[index + 1];
+  /**
+   * Fits one interval and certifies it at two independent interior positions.
+   * A check point fails only when it exceeds both the absolute and the relative
+   * tolerance: near a zero of the line a relative error alone means nothing.
+   */
+  const fitAndValidate = (
+    pathStart: number,
+    pathEnd: number,
+    pathMember: OrderedInfluenceMember,
+    depth: number,
+  ): void => {
     const length = pathEnd - pathStart;
-    if (length <= tolerance) continue;
-    const pathMember = pathMemberAt(path, (pathStart + pathEnd) / 2);
-    if (!pathMember) throw new Error('No se pudo localizar un tramo de trayectoria.');
+    if (length <= tolerance) return;
+    maxSubdivisionDepth = Math.max(maxSubdivisionDepth, depth);
     const fitPositions = FIT_ABSCISSAE.map((fraction) => pathStart + fraction * length);
     const fitValues = fitPositions.map((position) =>
       solveUnitResponse(base, pathMember, position, normalizedTarget, analysisDiagnostics));
     const fitted = fitCubic(fitPositions, fitValues, pathStart, length);
-    interpolationConditionEstimate = Math.max(interpolationConditionEstimate, fitted.solved.conditionEstimate);
-    interpolationRelativeResidual = Math.max(interpolationRelativeResidual, fitted.solved.relativeResidual);
-    interpolationPivotRatio = Math.max(interpolationPivotRatio, fitted.solved.pivotRatio);
     const segment: InfluenceSegment = {
       memberId: pathMember.memberId,
       pathStart,
@@ -466,24 +540,59 @@ export const buildInfluenceLine = (
       memberXEnd: memberXAt(pathMember, pathEnd),
       coefficients: fitted.coefficients,
     };
-    segments.push(segment);
 
-    for (const fraction of VALIDATION_ABSCISSAE) {
+    const checks: InfluenceValidationPoint[] = VALIDATION_ABSCISSAE.map((fraction) => {
       const position = pathStart + fraction * length;
       const expected = solveUnitResponse(base, pathMember, position, normalizedTarget, analysisDiagnostics);
       const predicted = segmentValue(segment, position);
       const absoluteError = Math.abs(expected - predicted);
-      const relativeError = absoluteError / Math.max(1e-14, Math.abs(expected), Math.abs(predicted));
-      validations.push({
+      return {
         position,
         memberId: pathMember.memberId,
         memberX: memberXAt(pathMember, position),
         expected,
         fitted: predicted,
         absoluteError,
-        relativeError,
+        relativeError: absoluteError / Math.max(1e-14, Math.abs(expected), Math.abs(predicted)),
+      };
+    });
+    const worstAbsolute = Math.max(0, ...checks.map((check) => check.absoluteError));
+    const worstRelative = Math.max(0, ...checks.map((check) => check.relativeError));
+    const meetsTolerance = checks.every((check) =>
+      check.absoluteError <= fitLimits.maxAbsoluteError || check.relativeError <= fitLimits.maxRelativeError);
+
+    if (!meetsTolerance && depth < fitLimits.maxSubdivisions) {
+      // Halve the interval and certify each half independently.
+      subdivisions += 1;
+      const midpoint = pathStart + length / 2;
+      fitAndValidate(pathStart, midpoint, pathMember, depth + 1);
+      fitAndValidate(midpoint, pathEnd, pathMember, depth + 1);
+      return;
+    }
+
+    interpolationConditionEstimate = Math.max(interpolationConditionEstimate, fitted.solved.conditionEstimate);
+    interpolationRelativeResidual = Math.max(interpolationRelativeResidual, fitted.solved.relativeResidual);
+    interpolationPivotRatio = Math.max(interpolationPivotRatio, fitted.solved.pivotRatio);
+    segments.push(segment);
+    validations.push(...checks);
+    if (!meetsTolerance) {
+      rejectedIntervals.push({
+        pathStart,
+        pathEnd,
+        depth,
+        maxAbsoluteError: worstAbsolute,
+        maxRelativeError: worstRelative,
       });
     }
+  };
+
+  for (let index = 0; index < breakpoints.length - 1; index += 1) {
+    const pathStart = breakpoints[index];
+    const pathEnd = breakpoints[index + 1];
+    if (pathEnd - pathStart <= tolerance) continue;
+    const pathMember = pathMemberAt(path, (pathStart + pathEnd) / 2);
+    if (!pathMember) throw new Error('No se pudo localizar un tramo de trayectoria.');
+    fitAndValidate(pathStart, pathEnd, pathMember, 0);
   }
 
   if (!segments.length) throw new Error('La trayectoria no produjo intervalos de influencia.');
@@ -500,22 +609,39 @@ export const buildInfluenceLine = (
       jumps.push({ position, left, right, delta });
     }
   }
-  const provisional = { segments, path };
-  const extrema = findInfluenceLineExtrema(provisional);
+  const fit: InfluenceFitDiagnostics = {
+    maxAbsoluteError: Math.max(0, ...validations.map((validation) => validation.absoluteError)),
+    maxRelativeError: Math.max(0, ...validations.map((validation) => validation.relativeError)),
+    interpolationConditionEstimate,
+    interpolationRelativeResidual,
+    interpolationPivotRatio,
+    validations,
+    accepted: rejectedIntervals.length === 0,
+    subdivisions,
+    maxSubdivisionDepth,
+    toleranceRelative: fitLimits.maxRelativeError,
+    toleranceAbsolute: fitLimits.maxAbsoluteError,
+    rejectedIntervals,
+  };
+  if (!fit.accepted) {
+    const worst = rejectedIntervals.reduce((critical, interval) =>
+      interval.maxRelativeError > critical.maxRelativeError ? interval : critical);
+    throw new InfluenceFitError(
+      `El ajuste de la línea de influencia no alcanzó la tolerancia exigida tras ${fitLimits.maxSubdivisions} subdivisiones: `
+      + `el intervalo [${worst.pathStart.toPrecision(6)}, ${worst.pathEnd.toPrecision(6)}] conserva un error absoluto de `
+      + `${worst.maxAbsoluteError.toExponential(3)} y relativo de ${worst.maxRelativeError.toExponential(3)}. `
+      + 'La línea se rechaza y no debe usarse.',
+      fit,
+    );
+  }
+  const extrema = findInfluenceLineExtrema({ segments, path });
   return {
     target: normalizedTarget,
     path,
     segments,
     jumps,
     ...extrema,
-    fit: {
-      maxAbsoluteError: Math.max(0, ...validations.map((validation) => validation.absoluteError)),
-      maxRelativeError: Math.max(0, ...validations.map((validation) => validation.relativeError)),
-      interpolationConditionEstimate,
-      interpolationRelativeResidual,
-      interpolationPivotRatio,
-      validations,
-    },
+    fit,
     solver: {
       ...analysisDiagnostics,
       minReliableDigits: Number.isFinite(analysisDiagnostics.minReliableDigits)
