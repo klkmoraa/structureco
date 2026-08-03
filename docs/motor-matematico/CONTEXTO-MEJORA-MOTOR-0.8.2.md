@@ -226,13 +226,13 @@ Verificación final:
 | --- | --- |
 | `npm run typecheck` | sin errores |
 | `npm run lint` (oxlint) | sin hallazgos |
-| `npm test` | **82 archivos / 557 pruebas, todas en verde** |
+| `npm test` | **83 archivos / 573 pruebas, todas en verde** |
 | `npm run build` | correcto (`tsc -b` + vite) |
 | `npm run verify:protected` | frontera intacta tras `--update` autorizado |
 
-Línea base 78/530 → 82/557 (incluye la prueba de cobertura por nodo de §7.5 y la
-de fusión de acciones concentradas de §7.6). No se desactivó ninguna prueba, no
-quedaron `console.log`
+Línea base 78/530 → 83/573 (incluye la prueba de cobertura por nodo de §7.5, la
+de fusión de acciones concentradas de §7.6 y las 16 de calibración empírica de
+§7.2). No se desactivó ninguna prueba, no quedaron `console.log`
 ni archivos temporales (el archivo de sondeo `__probe.test.ts` se eliminó).
 
 ---
@@ -290,12 +290,20 @@ Ver `git log`. Ninguna operación remota: sin `push`, sin PR, sin `fetch`.
    siempre por `resolveReliability`. El riesgo sigue siendo real para código
    futuro, así que se deja documentado en vez de intentar prohibirlo en tiempo de
    compilación (el campo debe poder faltar en datos históricos).
-2. **Los umbrales son una elección de ingeniería, no una demostración.** Están
-   calibrados contra los umbrales de advertencia que el solver ya aplicaba, y un
-   modelo sano típico queda muy por debajo (κ₁ ≈ 3e3, residuo ≈ 1e-16). Si algún
-   modelo legítimo empieza a clasificarse `limited` por `condition`, el umbral de
-   1e10 es el primer candidato a revisar; conviene hacerlo con evidencia, no por
-   comodidad.
+2. ~~Los umbrales son una elección de ingeniería, no una demostración.~~
+   **Resuelto con evidencia empírica.** `reliabilityCalibration.test.ts` corre
+   diez modelos de referencia legítimos y ya verificados —viga simple, pórtico
+   con nudos rígidos, armadura triangular, voladizo con peso propio, conexión
+   semirrígida con zonas rígidas colineales, viga profunda Timoshenko, apoyo
+   elástico normal inclinado y los cuatro marcos de Hibbeler 4-39 a 4-42— y
+   confirma que los diez se clasifican `reliable` sin ninguna comprobación
+   degradada. Una segunda prueba mide el margen real: en los diez modelos,
+   `condition` queda por debajo de `1e-3 × limitedAbove` (es decir, κ₁ está al
+   menos 1000 veces por debajo de `1e10`) y `backward-error` por debajo de
+   `1e-2 × limitedAbove`. Esto no demuestra que el umbral sea óptimo, pero
+   reemplaza la intuición ("un modelo sano típico...") por una cifra
+   reproducible: si algún modelo legítimo futuro se acerca a ese margen, esta
+   prueba es donde debe añadirse antes de tocar el umbral.
 3. **La UI todavía no muestra el nivel de confiabilidad.** El motor lo publica y
    el resumen de escenarios ya no cuenta los fallidos como resueltos, pero no hay
    un indicador `reliable/limited/unreliable` en pantalla ni en el PDF. Era
