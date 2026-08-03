@@ -4,6 +4,7 @@ import { useProject, type ResultTab } from '../../store/ProjectContext';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../../engine/diagram';
 import { evaluateEducationalAssertions, type EducationalAssertionEvaluation } from '../../engine/educationalAssertions';
 import { buildDiagramEnvelope, evaluateEnvelopeAt } from '../../engine/envelope';
+import { resolveReliability } from '../../engine/reliability';
 import { useScenarioAnalysis } from '../../engine/useScenarioAnalysis';
 import type { DiagramQuantity, DiagramSegment, EducationalAssertionTarget, MatrixTrace, MemberResult, ProjectModel } from '../../types';
 import { toDisplay, unitLabel } from '../../engine/units';
@@ -141,12 +142,19 @@ export const ResultsPanel = () => {
     ...family,
     tabs: family.tabs.map((id) => availableTabs.find((tab) => tab.id === id)).filter((tab): tab is (typeof tabs)[number] => Boolean(tab)),
   })).filter((family) => family.tabs.length > 0);
+  // success only means no error-severity issue was raised; it says nothing about
+  // whether the numbers can be trusted. reliability.level is the answer to that.
+  const reliability = analysis ? resolveReliability(analysis) : null;
   const analysisState = isAnalyzing
     ? t('results.stateAnalyzing')
     : !analysis
       ? t('results.stateReady')
       : analysis.success
-        ? t('results.stateResolved')
+        ? reliability?.level === 'limited'
+          ? t('results.stateResolvedLimited')
+          : reliability?.level === 'unreliable'
+            ? t('results.stateResolvedUnreliable')
+            : t('results.stateResolved')
         : t('results.stateReview');
   const mobileResultLabel = analysis
     ? `${t(activeTab.labelKey)} · ${resultContext.label}`
@@ -459,7 +467,7 @@ export const ResultsPanel = () => {
         <div className="results-commandbar__context">
           <span>{t('results.center')}</span>
           <strong>{resultContext.label}</strong>
-          <small role="status" aria-live="polite" aria-atomic="true" className={analysis?.success ? 'is-resolved' : analysis && !analysis.success ? 'is-warning' : ''}>{analysisState}</small>
+          <small role="status" aria-live="polite" aria-atomic="true" title={reliability?.governing?.message} className={analysis?.success ? (reliability && reliability.level !== 'reliable' ? 'is-warning' : 'is-resolved') : analysis && !analysis.success ? 'is-warning' : ''}>{analysisState}</small>
         </div>
         <div className="results-mode-control" role="group" aria-label={t('results.modeGroup')}>
           {(['compact', 'expanded', 'focused'] as const).map((mode) => <button
@@ -650,7 +658,17 @@ const DiagramView = ({ type, memberResult, memberId }: { type: DiagramQuantity; 
   const cursorRight = cursorX === null ? null : evaluateDiagramAt(memberResult.diagramSegments, memberResult.diagramJumps, cursorX, 'right');
   const cursorPoint = cursorRight ?? cursorLeft;
   const cursorJump = cursorX === null ? null : memberResult.diagramJumps.find((jump) => Math.abs(jump.x - cursorX) <= Math.max(L, 1) * 1e-8);
-  const envelopeCursor = envelopeMode && envelope && cursorX !== null ? evaluateEnvelopeAt(envelope, cursorX) : null;
+  // evaluateEnvelopeAt takes an explicit side because at a discontinuity the two
+  // lateral limits are different numbers; both are computed so a jump can be
+  // shown instead of silently picking the right-hand value.
+  const envelopeCursorLeft = envelopeMode && envelope && cursorX !== null ? evaluateEnvelopeAt(envelope, cursorX, 'left') : null;
+  const envelopeCursorRight = envelopeMode && envelope && cursorX !== null ? evaluateEnvelopeAt(envelope, cursorX, 'right') : null;
+  const envelopeCursor = envelopeCursorRight ?? envelopeCursorLeft;
+  const envelopeJumpTolerance = 1e-9 * maxAbs;
+  const envelopeCursorJump = Boolean(envelopeCursorLeft && envelopeCursorRight && (
+    Math.abs(envelopeCursorLeft.minimum - envelopeCursorRight.minimum) > envelopeJumpTolerance
+    || Math.abs(envelopeCursorLeft.maximum - envelopeCursorRight.maximum) > envelopeJumpTolerance
+  ));
   const xTicks = [0, .25, .5, .75, 1].map((ratio) => ratio * L);
   const memberOptions = analysis?.memberResults ?? [];
   const pointerX = (event: ReactPointerEvent<SVGSVGElement>) => {
@@ -694,7 +712,7 @@ const DiagramView = ({ type, memberResult, memberId }: { type: DiagramQuantity; 
       {envelopeMode && envelope ? <><path className="envelope-line minimum" d={envelopePath('minimum')} fill="none" /><path className="envelope-line maximum" d={envelopePath('maximum')} fill="none" /></> : null}
       {displayCritical.map((point, index) => <g className={`chart-critical ${point.kind}`} key={`${point.kind}-${point.side}-${point.x}-${index}`}><circle cx={sx(point.x)} cy={sy(point.value)} r={point.kind === 'zero' ? 4 : 3.2} /><text x={sx(point.x)} y={sy(point.value) + (point.value >= 0 ? -8 : 14)} textAnchor={point.x < L * .08 ? 'start' : point.x > L * .92 ? 'end' : 'middle'}>{point.kind === 'zero' ? '0' : formatFixed(displayValue(point.value), 2)}</text></g>)}
       {cursorPoint ? <g className={`chart-hover ${pinnedX === null ? '' : 'pinned'}`}><line x1={sx(cursorPoint.x)} y1="16" x2={sx(cursorPoint.x)} y2={height - 18} /><circle cx={sx(cursorPoint.x)} cy={sy(cursorPoint[type])} r="4" /></g> : null}
-    </svg>{cursorPoint ? <div className={`diagram-cursor-readout ${cursorJump ? 'at-jump' : ''}`} role={pinnedX !== null ? 'status' : undefined} aria-live={pinnedX !== null ? 'polite' : undefined} aria-atomic={pinnedX !== null ? true : undefined}><span className="cursor-position"><b>x</b>{formatFixed(toDisplay(cursorPoint.x, units, 'length'), 3)} {unitLabel(units, 'length')}</span>{envelopeCursor ? <><span className="envelope-min"><b>{t('results.minimum')}</b>{formatFixed(displayValue(envelopeCursor.minimum), 3)} {unit}</span><span className="envelope-max"><b>{t('results.maximum')}</b>{formatFixed(displayValue(envelopeCursor.maximum), 3)} {unit}</span><small>{envelopeCursor.minimumScenario} → {envelopeCursor.maximumScenario}</small></> : <><span className="axial-text"><b>N</b>{formatFixed(toDisplay(cursorPoint.axial, units, 'force'), 3)} {unitLabel(units, 'force')}</span><span className="shear-text"><b>V</b>{formatFixed(toDisplay(cursorPoint.shear, units, 'force'), 3)} {unitLabel(units, 'force')}</span><span className="moment-text"><b>M</b>{formatFixed(toDisplay(cursorPoint.moment, units, 'moment'), 3)} {unitLabel(units, 'moment')}</span>{cursorJump && cursorLeft && cursorRight ? <small>{t('results.discontinuityReading', { left: formatFixed(displayValue(cursorLeft[type]), 3), right: formatFixed(displayValue(cursorRight[type]), 3), unit })}</small> : null}</>}</div> : <div className="diagram-cursor-placeholder">{t('results.exactDiagramCursor')}</div>}</div>
+    </svg>{cursorPoint ? <div className={`diagram-cursor-readout ${cursorJump || envelopeCursorJump ? 'at-jump' : ''}`} role={pinnedX !== null ? 'status' : undefined} aria-live={pinnedX !== null ? 'polite' : undefined} aria-atomic={pinnedX !== null ? true : undefined}><span className="cursor-position"><b>x</b>{formatFixed(toDisplay(cursorPoint.x, units, 'length'), 3)} {unitLabel(units, 'length')}</span>{envelopeCursor ? <><span className="envelope-min"><b>{t('results.minimum')}</b>{formatFixed(displayValue(envelopeCursor.minimum), 3)} {unit}</span><span className="envelope-max"><b>{t('results.maximum')}</b>{formatFixed(displayValue(envelopeCursor.maximum), 3)} {unit}</span><small>{envelopeCursor.minimumScenario} → {envelopeCursor.maximumScenario}</small>{envelopeCursorJump && envelopeCursorLeft && envelopeCursorRight ? <><small>{t('results.envelopeDiscontinuityReading', { quantity: t('results.minimum'), left: formatFixed(displayValue(envelopeCursorLeft.minimum), 3), right: formatFixed(displayValue(envelopeCursorRight.minimum), 3), unit })}</small><small>{t('results.envelopeDiscontinuityReading', { quantity: t('results.maximum'), left: formatFixed(displayValue(envelopeCursorLeft.maximum), 3), right: formatFixed(displayValue(envelopeCursorRight.maximum), 3), unit })}</small></> : null}</> : <><span className="axial-text"><b>N</b>{formatFixed(toDisplay(cursorPoint.axial, units, 'force'), 3)} {unitLabel(units, 'force')}</span><span className="shear-text"><b>V</b>{formatFixed(toDisplay(cursorPoint.shear, units, 'force'), 3)} {unitLabel(units, 'force')}</span><span className="moment-text"><b>M</b>{formatFixed(toDisplay(cursorPoint.moment, units, 'moment'), 3)} {unitLabel(units, 'moment')}</span>{cursorJump && cursorLeft && cursorRight ? <small>{t('results.discontinuityReading', { left: formatFixed(displayValue(cursorLeft[type]), 3), right: formatFixed(displayValue(cursorRight[type]), 3), unit })}</small> : null}</>}</div> : <div className="diagram-cursor-placeholder">{t('results.exactDiagramCursor')}</div>}</div>
   </div>;
 };
 

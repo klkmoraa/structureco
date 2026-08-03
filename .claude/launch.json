@@ -12,6 +12,12 @@
       "runtimeExecutable": "npm.cmd",
       "runtimeArgs": ["run", "preview", "--", "--port", "4173"],
       "port": 4173
+    },
+    {
+      "name": "structureco-dev-verify",
+      "runtimeExecutable": "npm.cmd",
+      "runtimeArgs": ["run", "dev"],
+      "autoPort": true
     }
   ]
 }
