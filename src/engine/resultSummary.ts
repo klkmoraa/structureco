@@ -53,6 +53,8 @@ export type ReactionComponent = 'rx' | 'ry' | 'rm' | 'supportNormalReaction' | '
 export interface NodeReactionEnvelope {
   nodeId: string;
   components: Partial<Record<ReactionComponent, ScalarEnvelope>>;
+  /** True only if every contributing scenario reported this node. */
+  complete: boolean;
 }
 
 export interface ReactionEnvelope extends EnvelopeCoverage {
@@ -197,37 +199,43 @@ export const summarizeAnalysisResults = (analysis: AnalysisResult): GlobalResult
 export const buildReactionEnvelope = (scenarios: AnalysisScenario[]): ReactionEnvelope => {
   const selection = selectEnvelopeScenarios(scenarios);
   const contributing = selection.included;
-  const coverage: EnvelopeCoverage = {
-    complete: selection.excluded.length === 0,
-    includedScenarioIds: contributing.map((scenario) => scenario.id),
-    excludedScenarios: selection.excluded,
-    level: contributing.length ? worstLevel(...contributing.map((scenario) => scenario.status)) : 'failed',
-  };
   const nodeIds: string[] = [];
   const seen = new Set<string>();
   for (const scenario of contributing) for (const node of scenario.result.nodeResults) {
     if (!seen.has(node.nodeId)) { seen.add(node.nodeId); nodeIds.push(node.nodeId); }
   }
-  return {
-    ...coverage,
-    nodes: nodeIds.map((nodeId) => {
-      const components = Object.fromEntries(REACTION_COMPONENTS.flatMap((component) => {
-        const values = contributing.flatMap((scenario) => {
-          const node = scenario.result.nodeResults.find((item) => item.nodeId === nodeId);
-          const value = node?.[component];
-          return typeof value === 'number' && Number.isFinite(value)
-            ? [{ value, scenarioId: scenario.id, scenarioName: scenario.name }]
-            : [];
-        });
-        if (!values.length) return [];
-        return [[component, {
-          minimum: values.reduce((best, item) => item.value < best.value ? item : best),
-          maximum: values.reduce((best, item) => item.value > best.value ? item : best),
-        } satisfies ScalarEnvelope]];
-      })) as Partial<Record<ReactionComponent, ScalarEnvelope>>;
-      return { nodeId, components };
-    }),
+  // Every scenario of one project reports every project node, so this gap
+  // cannot occur through analyzeProjectScenarios. It guards a caller that
+  // assembles AnalysisScenario[] by hand from mismatched projects: without it,
+  // a node missing from one included scenario would silently reduce that node's
+  // envelope to whichever scenarios happened to report it, while `complete`
+  // stayed true because scenario selection itself was complete.
+  const nodes = nodeIds.map((nodeId) => {
+    const reportingScenarios = contributing.filter((scenario) =>
+      scenario.result.nodeResults.some((node) => node.nodeId === nodeId));
+    const components = Object.fromEntries(REACTION_COMPONENTS.flatMap((component) => {
+      const values = reportingScenarios.flatMap((scenario) => {
+        const node = scenario.result.nodeResults.find((item) => item.nodeId === nodeId);
+        const value = node?.[component];
+        return typeof value === 'number' && Number.isFinite(value)
+          ? [{ value, scenarioId: scenario.id, scenarioName: scenario.name }]
+          : [];
+      });
+      if (!values.length) return [];
+      return [[component, {
+        minimum: values.reduce((best, item) => item.value < best.value ? item : best),
+        maximum: values.reduce((best, item) => item.value > best.value ? item : best),
+      } satisfies ScalarEnvelope]];
+    })) as Partial<Record<ReactionComponent, ScalarEnvelope>>;
+    return { nodeId, components, complete: reportingScenarios.length === contributing.length };
+  });
+  const coverage: EnvelopeCoverage = {
+    complete: selection.excluded.length === 0 && nodes.every((node) => node.complete),
+    includedScenarioIds: contributing.map((scenario) => scenario.id),
+    excludedScenarios: selection.excluded,
+    level: contributing.length ? worstLevel(...contributing.map((scenario) => scenario.status)) : 'failed',
   };
+  return { ...coverage, nodes };
 };
 
 const binomial = (n: number, k: number): number => {

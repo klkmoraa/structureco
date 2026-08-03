@@ -142,7 +142,9 @@ En `src/engine/solver.ts`:
   `level`) se incorpora a `DiagramEnvelope`, `ReactionEnvelope` y
   `DeformationEnvelope`. `complete` es `false` en cuanto falte un escenario.
 - Las tres envolventes se construyen únicamente con escenarios `reliable` o
-  `limited`.
+  `limited`. `ReactionEnvelope` además exige, nodo por nodo, que todos los
+  escenarios incluidos lo hayan reportado (`NodeReactionEnvelope.complete`,
+  ver riesgo §7.5 — resuelto en esta misma fase).
 
 ### 3.3 Discontinuidades — `diagram.ts`, `envelope.ts`, `resultSummary.ts`
 
@@ -224,11 +226,12 @@ Verificación final:
 | --- | --- |
 | `npm run typecheck` | sin errores |
 | `npm run lint` (oxlint) | sin hallazgos |
-| `npm test` | **82 archivos / 555 pruebas, todas en verde** |
+| `npm test` | **82 archivos / 556 pruebas, todas en verde** |
 | `npm run build` | correcto (`tsc -b` + vite) |
 | `npm run verify:protected` | frontera intacta tras `--update` autorizado |
 
-Línea base 78/530 → 82/555. No se desactivó ninguna prueba, no quedaron `console.log`
+Línea base 78/530 → 82/556 (incluye la prueba de cobertura por nodo de §7.5). No se
+desactivó ninguna prueba, no quedaron `console.log`
 ni archivos temporales (el archivo de sondeo `__probe.test.ts` se eliminó).
 
 ---
@@ -295,9 +298,17 @@ Ver `git log`. Ninguna operación remota: sin `push`, sin PR, sin `fetch`.
    ya acepta `side`, pero `ResultsPanel` lo llama con el valor por omisión
    (`right`); mostrar los dos límites en el lector de envolvente requiere trabajo
    de interfaz.
-5. **`ReactionEnvelope.complete` solo cubre escenarios.** No detecta que un nodo
-   exista en un escenario y no en otro; hoy todos los escenarios comparten
-   topología, así que no puede ocurrir, pero la garantía no está escrita.
+5. ~~`ReactionEnvelope.complete` solo cubría escenarios.~~ **Resuelto.**
+   `NodeReactionEnvelope` gana `complete`: verdadero solo si todos los escenarios
+   incluidos reportaron ese nodo. `ReactionEnvelope.complete` ahora exige además
+   que todos los nodos sean `complete`. Con `analyzeProjectScenarios` esto nunca
+   puede fallar (todo escenario reporta cada nodo de `project.nodes`), pero
+   `buildReactionEnvelope` acepta cualquier `AnalysisScenario[]` que un llamador
+   construya a mano, y sin esta comprobación un nodo ausente de un escenario
+   incluido reducía en silencio su envolvente a los escenarios que sí lo
+   reportaban mientras `complete` seguía en `true`. Prueba en
+   `resultSummary.test.ts` (`'tolera escenarios sin el mismo conjunto de nodos,
+   pero señala la cobertura parcial'`).
 6. **La asignación de saltos a la frontera más cercana** fusiona dos acciones
    concentradas separadas por menos de `1e-10·L` en una sola frontera. Es el
    comportamiento deseado (esa distancia es la definición de "coincidentes"), pero

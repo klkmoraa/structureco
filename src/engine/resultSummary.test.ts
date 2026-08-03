@@ -118,12 +118,33 @@ describe('envolvente de reacciones', () => {
     expect(node.components.supportTangentialReaction).toBeUndefined();
   });
 
-  it('tolera escenarios sin el mismo conjunto de nodos', () => {
+  it('tolera escenarios sin el mismo conjunto de nodos, pero señala la cobertura parcial', () => {
+    // Two included scenarios that disagree on topology should never happen for
+    // scenarios of the same project (analyzeProjectScenarios always reports every
+    // project.nodes entry), but buildReactionEnvelope accepts any AnalysisScenario[]
+    // a caller assembles by hand, so the guarantee has to hold defensively too.
     const scenarios = [
       scenario('A', 'A', memberResult(), [nodeResult('N1', { rx: 1 })]),
       scenario('B', 'B', memberResult(), [nodeResult('N2', { rx: 2 })]),
     ];
-    expect(buildReactionEnvelope(scenarios).nodes.map((node) => node.nodeId)).toEqual(['N1', 'N2']);
+    const envelope = buildReactionEnvelope(scenarios);
+    expect(envelope.nodes.map((node) => node.nodeId)).toEqual(['N1', 'N2']);
+    // Neither node was reported by both included scenarios, so neither is complete.
+    expect(envelope.nodes.every((node) => node.complete)).toBe(false);
+    expect(envelope.nodes.find((node) => node.nodeId === 'N1')!.complete).toBe(false);
+    expect(envelope.nodes.find((node) => node.nodeId === 'N2')!.complete).toBe(false);
+    // A per-node gap must also be visible at the top level, not just buried per node.
+    expect(envelope.complete).toBe(false);
+  });
+
+  it('marca los nodos y la envolvente como completos cuando todos los escenarios incluidos coinciden en topología', () => {
+    const scenarios = [
+      scenario('A', 'A', memberResult(), [nodeResult('N1', { rx: 1 }), nodeResult('N2', { rx: 3 })]),
+      scenario('B', 'B', memberResult(), [nodeResult('N1', { rx: 2 }), nodeResult('N2', { rx: 4 })]),
+    ];
+    const envelope = buildReactionEnvelope(scenarios);
+    expect(envelope.nodes.every((node) => node.complete)).toBe(true);
+    expect(envelope.complete).toBe(true);
   });
 });
 
