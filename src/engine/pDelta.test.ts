@@ -370,26 +370,37 @@ const stiffCantilever = (): ProjectModel => {
 };
 
 describe('P-Delta fase 2: criterios de convergencia', () => {
-  it('no declara convergencia por un piso absoluto cuando el modelo es rígido', () => {
-    // Un piso `Math.max(1, ‖u‖)` en unidades base convierte un criterio
-    // relativo en absoluto: con ‖u‖~1e-6 m, un cambio real del 1 % entre
-    // iteraciones se reporta como ~2e-8 y pasa una tolerancia de 1e-6.
-    const result = analyzeProjectPDelta(stiffCantilever(), undefined, {
-      displacementTolerance: 1e-10, equilibriumTolerance: 1e-10, maxIterationsPerStep: 40,
-    });
-    expect(result.pDelta?.converged).toBe(true);
-    // El criterio debe seguir siendo relativo a la escala del propio modelo:
-    // el incremento final reportado no puede ser un número "pequeño" que en
-    // realidad represente una fracción grande del desplazamiento total.
-    expect(result.pDelta!.finalDisplacementIncrement).toBeLessThanOrEqual(1e-10);
+  it('el criterio de desplazamiento es relativo a la escala del modelo, no absoluto', () => {
+    // Prueba directa del defecto: un piso `Math.max(1, ‖u‖)` en unidades base
+    // convierte el criterio en absoluto para todo modelo por debajo de él. Se
+    // comparan dos modelos con el MISMO problema adimensional cuyos
+    // desplazamientos difieren en órdenes de magnitud; si el criterio fuese
+    // absoluto, el rígido convergería por su escala y no por su precisión, y
+    // ambos reportarían incrementos finales incomparables.
+    const flexible = analyzeProjectPDelta(withTipLoads(cantilever(4, E, 8e-5, 0.01), -0.5 * Pcr, H));
+    const stiffI = 8e-3;
+    const stiffPcr = (Math.PI ** 2 * E * stiffI) / (2 * 4) ** 2;
+    const stiff = analyzeProjectPDelta(withTipLoads(cantilever(4, E, stiffI, 0.01), -0.5 * stiffPcr, H));
+    expect(flexible.pDelta?.converged).toBe(true);
+    expect(stiff.pDelta?.converged).toBe(true);
+    // Mismo problema adimensional ⇒ misma amplificación gobernante pese a que
+    // los desplazamientos difieran en dos órdenes de magnitud.
+    close(stiff.pDelta!.amplificationFactor!, flexible.pDelta!.amplificationFactor!, 1e-6);
+    // Y el mismo número de iteraciones: la convergencia la decide la física
+    // adimensional, no la magnitud en metros.
+    expect(stiff.pDelta!.totalIterations).toBe(flexible.pDelta!.totalIterations);
   });
 
-  it('reporta el residuo de equilibrio además del cambio axial', () => {
+  it('reporta el cambio axial y el residuo de equilibrio como datos trazables', () => {
     const result = analyzeProjectPDelta(withTipLoads(cantilever(L, E, I), -0.5 * Pcr, H));
     expect(result.pDelta?.converged).toBe(true);
-    expect(Number.isFinite(result.pDelta!.finalEquilibriumResidual)).toBe(true);
-    expect(result.pDelta!.finalEquilibriumResidual).toBeLessThan(1e-6);
     expect(Number.isFinite(result.pDelta!.finalAxialChange)).toBe(true);
+    expect(result.pDelta!.finalAxialChange).toBeLessThanOrEqual(DEFAULT_PDELTA_CONFIG.equilibriumTolerance);
+    // `finalEquilibriumResidual` es el residuo algebraico del sistema lineal
+    // congelado, no el desequilibrio no lineal: se publica para trazabilidad y
+    // NO se usa como criterio, porque vale ~1e-17 y jamás podría fallar.
+    expect(Number.isFinite(result.pDelta!.finalEquilibriumResidual)).toBe(true);
+    expect(result.pDelta!.finalEquilibriumResidual).toBeLessThan(1e-10);
   });
 });
 
