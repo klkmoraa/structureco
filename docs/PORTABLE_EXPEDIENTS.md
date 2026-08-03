@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-structureCo 0.7 genera una memoria de cálculo legible y, a la vez, conserva el
+structureCo genera una memoria de cálculo legible y, a la vez, conserva el
 modelo y los resultados exactos para reabrirlos sin interpretar dibujos ni usar
 OCR. El flujo se encuentra en **Importar archivo** y en el menú **Exportar**.
 
@@ -15,6 +15,9 @@ La parte visible contiene:
 - una página visual independiente para cada diagrama global `N`, `V` y `M`;
 - operaciones claras por miembro, funciones polinómicas exactas por tramo,
   unidades activas, extremos y posiciones críticas;
+- una página propia de unidades, convenciones de signo, alcance del análisis y
+  limitaciones declaradas, para que el documento se pueda leer sin depender de
+  la aplicación;
 - una secuencia resumida del procedimiento desde el modelo hasta la
   verificación;
 - un anexo técnico con geometría, cargas, reacciones, desplazamientos,
@@ -54,7 +57,19 @@ confirmación humana. Esto evita inventar DCL o esfuerzos a partir de una imagen
 
 ## Límites y seguridad
 
-- PDF: máximo 25 MB y 120 páginas desde el centro de importación.
+- PDF: máximo 25 MB y 120 páginas desde el centro de importación; hasta 24
+  adjuntos examinados, 20 MB cada uno.
+- `.structureco`: máximo 40 MB; hasta 32 entradas por paquete, 64 MB
+  descomprimidos por entrada, 128 MB descomprimidos en total, relación de
+  compresión máxima 120:1 (protección contra zip bombs). JSON plano: 20 MB.
+  Toda ruta interna se valida contra `../`, rutas absolutas y profundidad
+  excesiva antes de leerse. Ver `src/utils/fileGuards.ts` y
+  `src/utils/portableSecurity.test.ts`.
+- El tamaño se comprueba antes de leer el archivo completo (`Blob.slice` sobre
+  la firma), no después.
+- Una inspección de archivo pesada puede cancelarse desde el centro de
+  importación; el resultado de una inspección abandonada nunca sobrescribe el
+  de una selección posterior.
 - Se usa el build `legacy` de PDF.js para compatibilidad amplia con Safari.
 - Los binarios PDF no se guardan en `localStorage`; solo se procesan en memoria.
 - En iOS se intenta la hoja nativa de compartir y se mantiene descarga como

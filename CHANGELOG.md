@@ -4,6 +4,60 @@ Todos los cambios notables de structureCo se documentan en este archivo. Los
 detalles de ejecución UX/UI permanecen en
 `docs/ux-redesign/CHANGELOG_UX.md`.
 
+## No publicado — programa de endurecimiento 0.8.1 (local, sin publicar)
+
+Trabajo 100% local; no se ha usado GitHub. Detalle completo por slice en
+[docs/releases/0.8.1/STATUS.md](docs/releases/0.8.1/STATUS.md).
+
+### Corregido
+
+- **Seguridad de importación**: `.structureco`/PDF/JSON se rechazan por tamaño
+  antes de leerse por completo; los paquetes `.structureco` tienen presupuesto
+  de entradas, tamaño descomprimido y relación de compresión (protección
+  contra zip bombs). 50 pruebas adversariales nuevas.
+- **Exportación SVG/PNG**: el SVG exportado ya no depende de la hoja de
+  estilos de la aplicación — resuelve clases y variables CSS a valores
+  computados antes de servirse como archivo independiente. El PNG rasteriza
+  ese mismo SVG a su tamaño final, sin escalar una versión pequeña.
+- **Memoria PDF**: la versión de la aplicación ya no queda fija en un
+  literal desactualizado; el documento declara unidades, convenciones de
+  signo, alcance y limitaciones en una página propia, y el ruido de coma
+  flotante (`-2.93915e-15 kN` en una viga sin acción axial) ya no se publica
+  como cantidad medible, ni en la interfaz ni en el texto que el motor
+  escribe a la explicación.
+- **Centro de importación**: una inspección de archivo pesada ya puede
+  cancelarse (antes el botón de retroceso quedaba deshabilitado sin
+  alternativa); el paso de confirmación muestra el texto de carga correcto
+  en vez de reutilizar el de inspección.
+- **Contraste**: seis parejas de color sólido (acción, éxito, error en
+  ambos temas) que incumplían WCAG AA por literales `#fff` codificados a
+  mano en `styles.css` ahora usan tokens medidos y verificados por prueba.
+
+### Cambiado
+
+- Política numérica unificada en `utils/numberFormat.ts`: ocho contextos de
+  presentación (canvas, inspector, tabla, tooltip, informe, anexo,
+  portapapeles) reemplazan cinco formateadores independientes con umbrales
+  incompatibles.
+- Los paneles del workspace se comunican mediante una fachada de comandos
+  tipada (`workspaceCommands.ts`) en vez de `CustomEvent` con nombres
+  escritos a mano.
+
+### Añadido
+
+- Suite de 12 invariantes deterministas del motor (homogeneidad, inversión,
+  subdivisión de miembro, traslación, rotación, round-trip) — no reemplazan
+  los casos analíticos ni la comparación con FTool, los complementan.
+- Presupuestos de rendimiento medidos y reproducibles (`scripts/measure-performance.mjs`).
+- Gate de CI preparado localmente (`.github/workflows/`, no conectado a GitHub).
+
+### Preservado
+
+- Motor matemático, unidades internas, signos, defaults físicos, topología y
+  formato de proyecto. La frontera protegida se verificó archivo por archivo
+  en cada slice; el único cambio dentro de `src/engine/**` fue autorizado
+  explícitamente por el usuario y es de presentación de texto, no de cálculo.
+
 ## No publicado — 2026-08-02 · Rediseño visual integral
 
 ### Añadido

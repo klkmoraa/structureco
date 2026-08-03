@@ -1,6 +1,6 @@
 # Arquitectura frontend — structureCo
 
-> Estado documentado a 2026-08-02 (release base 0.8.0, rediseño visual 2026-08 aplicado en la capa de tokens).
+> Estado documentado a 2026-08-02 (release base 0.8.0, rediseño visual 2026-08 aplicado en la capa de tokens; actualizado durante el programa de endurecimiento 0.8.1 — ver `docs/releases/0.8.1/STATUS.md`).
 > Stack: React 19 + TypeScript, Vite 8, Vitest, oxlint. Sin router (una sola vista con estado `welcome | workspace`), sin gestor de estado externo (Context API).
 
 ## 1 · Árbol de arranque
@@ -33,7 +33,7 @@ src/main.tsx
 
 `AppShellLayout` expone el estado de layout como data-attributes (`data-inspector-collapsed`, `data-full-canvas`, `data-tool-rail-compact`) y la variable `--inspector-w`; incluye skip-link a `#workspace-canvas`. **No conoce dominio**: solo ordena nodos React.
 
-Coordinación móvil: eventos de ventana `structureco:collapse-mobile-results` / `structureco:expand-mobile-results` arbitran entre inspector modal y panel de resultados; el shell marca `inert` + `aria-hidden` el fondo cuando el inspector móvil está abierto y sincroniza `--sc-visual-viewport-*` con `visualViewport` (teclado iOS).
+Coordinación móvil: el shell, el dock de resultados, el canvas, TopBar y la guía de Aula intercambian intenciones (no estado) a través de una fachada de comandos tipada, `src/features/workspace/workspaceCommands.ts` (0.8.1): `emitWorkspaceCommand('collapse-mobile-results')` / `onWorkspaceCommand('expand-mobile-results', handler)`, además de `focus-object`, `fit-canvas`, `export-svg` y `export-png`. El transporte sigue siendo `CustomEvent` en `window` con los mismos nombres de siempre — la fachada sólo tipa el payload y centraliza el nombre del evento, que antes se escribía a mano en 27 sitios. El shell marca `inert` + `aria-hidden` el fondo cuando el inspector móvil está abierto y sincroniza `--sc-visual-viewport-*` con `visualViewport` (teclado iOS).
 
 `StructuralCanvas` es el **canvas real e intocable** desde el rediseño: la capa 2026-08 de `styles.css` se limita a microinteracciones sobre superficies existentes sin alterar estructura funcional ni comportamiento.
 
@@ -103,7 +103,7 @@ La frontera inversa está **verificada por test**: `src/ui/dependencyBoundary.te
 
 | Capa | Ubicación | Regla |
 | --- | --- | --- |
-| Tokens | `src/styles/tokens.css` (+ contrato `tokens.test.ts`) | Fuente única de color/tipografía/espaciado/motion; alias de compatibilidad para CSS legado |
+| Tokens | `src/design-system/tokens.css` (+ contrato `tokens.test.ts`) | Fuente única de color/tipografía/espaciado/motion; alias de compatibilidad para CSS legado. Desde 0.8.1, `tokens.test.ts` también prohíbe cualquier literal de color opaco y limita `rgba()` a sombras/velos en `styles.css` |
 | Librería de componentes | `src/ui/*` + `ui.css` (clases `sc-*`) | Aislada del dominio (ver §7); laboratorio en `/__components` |
 | Iconos propios | `src/design-system/icons/structural.tsx` | Glifos de ingeniería; genéricos vía lucide-react |
 | Superficies de la app | `src/features/**` + `styles.css` | Consumen librería y tokens; `styles.css` cierra con la capa "REDISEÑO 2026-08" (microinteracciones, cascada al final del archivo) |
@@ -129,10 +129,23 @@ La reorganización frontend se ejecutó como parte del rediseño visual integral
   verde tras la migración, junto con typecheck, lint y build.
 - El handoff histórico **T09 — Consolidación arquitectónica**
   (`docs/superpowers/handoffs/structureco-2026-07-29/`) contemplaba además una
-  fachada de comandos sobre `ProjectContext`; esa parte sigue pendiente y
-  fuera del alcance del rediseño visual.
+  fachada de comandos para coordinar los paneles del workspace. Esa parte se
+  completó en el programa 0.8.1 (S04): ver `workspaceCommands.ts` en §2. No
+  reemplaza `ProjectContext` — sigue siendo el único dueño del modelo — sólo
+  tipa las intenciones entre paneles que antes viajaban como cadenas sueltas.
 
-## 10 · Calidad
+## 10 · Utilidades transversales (`src/utils/`, ampliadas en 0.8.1)
 
-- `npm run verify` = oxlint + vitest + build TS/Vite. Suites QA por fase (`qa*.mjs`, Playwright).
-- Tests co-ubicados (`*.test.ts[x]`) incluyendo contratos de tokens, frontera de dependencias, foco modal, y verificación numérica del motor.
+| Módulo | Responsabilidad |
+| --- | --- |
+| `fileGuards.ts` | Presupuestos de tamaño/entradas/compresión para PDF, `.structureco` y JSON; rechazo temprano por firma de archivo antes de leer el contenido completo |
+| `numberFormat.ts` | Política numérica única (8 contextos: canvas, chart, inspector, table, tooltip, report, annex, clipboard); `numericPolicy.test.ts` falla el build si `features/**` vuelve a usar `toFixed`/`toPrecision`/`toExponential` crudos |
+| `svgExport.ts` | Serialización de SVG independiente de la hoja de estilos: resuelve clases y variables CSS a valores computados antes de exportar |
+| `export.ts` | `exportSvgElement`/`exportSvgAsPng` sobre `svgExport.ts`; `rasterScaleFor` acota la resolución del PNG al límite de canvas del navegador sin reducir nunca por debajo de 1× |
+
+## 11 · Calidad
+
+- `npm run verify` = oxlint + frontera matemática protegida (`scripts/check-protected-baseline.mjs`) + vitest + build TS/Vite.
+- `.github/workflows/ci.yml` (gate rápido, automático) y `.github/workflows/release-qa.yml` (gate completo con Chromium + WebKit, sólo manual) preparados localmente en 0.8.1 — no conectados a GitHub. Ver `docs/releases/0.8.1/CI.md`.
+- Suites QA por fase (`qa*.mjs`, Playwright); `qa.mjs` y `qa-webkit.mjs` son las que ejercitan el gate completo actual.
+- Tests co-ubicados (`*.test.ts[x]`) incluyendo contratos de tokens, frontera de dependencias, foco modal, política numérica, presupuestos de importación y verificación numérica del motor (invariantes deterministas, `src/engine/invariants.test.ts`).

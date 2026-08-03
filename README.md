@@ -100,15 +100,24 @@ Vite mostrará la dirección local disponible, normalmente
 npm run verify
 npm run qa
 npm run qa:webkit
-npm run qa:phase14
 ```
 
-`verify` ejecuta lint, pruebas automatizadas y build. `qa` recorre la interfaz en
-Chromium para escritorio y móvil. `qa:webkit` valida el centro de importación y
-la lectura de PDF nativo con perfiles iPhone/iPad en WebKit. `qa:phase14` cubre
-el candidato en Chromium/WebKit para desktop, tablet y móvil, incluidos análisis,
-Resultados, Inspector, Aula e importación/exportación. El cierre 0.8.0 aprobó
-384 de 384 pruebas en 66 archivos.
+`verify` ejecuta lint, la frontera matemática protegida, pruebas automatizadas y
+build. `qa` recorre la interfaz en Chromium para escritorio y móvil. `qa:webkit`
+valida el centro de importación, la lectura de PDF nativo y objetivos táctiles
+≥44px con perfiles iPhone/iPad en WebKit (emulación de dispositivo real, no solo
+redimensionar la ventana). Ambos se ejecutan localmente y en verde; ver
+[docs/releases/0.8.1/CI.md](docs/releases/0.8.1/CI.md) para el detalle y para
+los workflows de GitHub Actions preparados (aún no conectados).
+
+Los scripts `qa:phase2` … `qa:phase14` son checkpoints históricos del rediseño
+0.8.0; no forman parte del gate de 0.8.1.
+
+Estado real de la suite (2 de agosto de 2026, programa de endurecimiento 0.8.1):
+**530 pruebas en 78 archivos**, todas en verde. Ver
+[docs/releases/0.8.1/STATUS.md](docs/releases/0.8.1/STATUS.md) para el detalle
+por slice y [docs/releases/0.8.1/PERFORMANCE.md](docs/releases/0.8.1/PERFORMANCE.md)
+para presupuestos de rendimiento medidos, no estimados.
 
 ## Publicar en Netlify
 
@@ -143,6 +152,15 @@ a producción. El vínculo local con el sitio no se versiona.
 - [Tokens históricos 0.8.0](docs/ux-redesign/DESIGN_TOKENS.md)
 - [Biblioteca de componentes (histórico 0.8.0)](docs/ux-redesign/COMPONENTS.md)
 - [Contribuir](CONTRIBUTING.md)
+
+### Programa de endurecimiento 0.8.1 (local, sin publicar)
+
+- [Estado por slice](docs/releases/0.8.1/STATUS.md)
+- [Modo de trabajo local](docs/releases/0.8.1/LOCAL_MODE.md)
+- [Auditoría de dirección visual](docs/releases/0.8.1/DESIGN_AUDIT.md)
+- [Política de verificación numérica del motor](docs/releases/0.8.1/VERIFICATION_POLICY.md)
+- [Rendimiento medido y presupuestos](docs/releases/0.8.1/PERFORMANCE.md)
+- [CI preparado localmente](docs/releases/0.8.1/CI.md)
 
 ## Arquitectura
 
