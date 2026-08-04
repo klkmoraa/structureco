@@ -21,6 +21,13 @@ FADE_OUT_START=$(awk "BEGIN{printf \"%.3f\", $DUR - $FADE_OUT}")
 # Three stacked low partials (A1, E2, A2) — a hollow fifth, no third, so the
 # bed reads as instrumentation rather than as music with a key/mood.
 # Lowpass at 320Hz keeps it under the SFX; the slow tremolo keeps it breathing.
+#
+# The bed is loudness-targeted rather than set by a raw gain figure: a fixed
+# `volume=` on stacked sines is guesswork, and getting it wrong by a few dB is
+# the difference between a bed you feel and one nobody can hear. -30 LUFS sits
+# audibly under the sound marks (which land around -27) without competing.
+BED_LUFS=-30
+
 ffmpeg -y -v error \
   -f lavfi -i "sine=frequency=55:duration=$DUR:sample_rate=48000" \
   -f lavfi -i "sine=frequency=82.41:duration=$DUR:sample_rate=48000" \
@@ -32,7 +39,7 @@ ffmpeg -y -v error \
     [a0][a1][a2]amix=inputs=3:normalize=0[mix]; \
     [mix]lowpass=f=320,\
       tremolo=f=0.14:d=0.22,\
-      volume=0.10,\
+      loudnorm=I=$BED_LUFS:TP=-6:LRA=7,\
       afade=t=in:st=0:d=$FADE_IN,\
       afade=t=out:st=$FADE_OUT_START:d=$FADE_OUT,\
       aformat=sample_fmts=s16:channel_layouts=stereo[out]" \
