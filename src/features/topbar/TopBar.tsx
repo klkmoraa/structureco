@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   Check,
   ChevronDown,
@@ -73,6 +74,15 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
   } = useProject();
   const { language, t } = useI18n();
   const classroomSession = useClassroomSession();
+  const reducedMotion = useReducedMotion();
+  const popoverMotionProps = reducedMotion
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.01 } }
+    : {
+      initial: { opacity: 0, y: -10, scale: 0.95 },
+      animate: { opacity: 1, y: 0, scale: 1 },
+      exit: { opacity: 0, scale: 0.95, transition: { duration: 0.1 } },
+      transition: { type: 'spring' as const, stiffness: 400, damping: 30 },
+    };
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -315,20 +325,22 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
           tabIndex={0}
           title={storageDescription}
         >{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />} <span>{storageLabel}</span><small id={storageDescriptionId} className="autosave-state__description">{storageDescription}</small></span>
-        {showProjectMenu ? (
-          <div className="popover project-menu" role="menu" aria-label={t('project.openExamples')} onKeyDown={onMenuKeyDown}>
-            <button role="menuitem" onClick={() => { const next = createBlankProject(); replaceProject({ ...next, settings: { ...next.settings, language } }); setShowProjectMenu(false); }}>
-              <FilePlus2 size={17} /> {t('project.new')}
-            </button>
-            {exampleProjects.map((example) => {
-              const copy = presentExample(example.name, example.description, t);
-              return <button role="menuitem" key={example.name} onClick={() => { const next = example.build(); replaceProject({ ...next, settings: { ...next.settings, language } }); setShowProjectMenu(false); }}>
-                <span className="menu-copy"><strong>{copy.name}</strong><small>{copy.description}</small></span>
-              </button>;
-            })}
-            <button role="menuitem" onClick={() => { setImportCenterOpen(true); setShowProjectMenu(false); }}><FolderOpen size={17} /> {t('project.importJson')}</button>
-          </div>
-        ) : null}
+        <AnimatePresence>
+          {showProjectMenu ? (
+            <motion.div {...popoverMotionProps} className="popover project-menu" role="menu" aria-label={t('project.openExamples')} onKeyDown={onMenuKeyDown}>
+              <button role="menuitem" onClick={() => { const next = createBlankProject(); replaceProject({ ...next, settings: { ...next.settings, language } }); setShowProjectMenu(false); }}>
+                <FilePlus2 size={17} /> {t('project.new')}
+              </button>
+              {exampleProjects.map((example) => {
+                const copy = presentExample(example.name, example.description, t);
+                return <button role="menuitem" key={example.name} onClick={() => { const next = example.build(); replaceProject({ ...next, settings: { ...next.settings, language } }); setShowProjectMenu(false); }}>
+                  <span className="menu-copy"><strong>{copy.name}</strong><small>{copy.description}</small></span>
+                </button>;
+              })}
+              <button role="menuitem" onClick={() => { setImportCenterOpen(true); setShowProjectMenu(false); }}><FolderOpen size={17} /> {t('project.importJson')}</button>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
 
       <div className="topbar-zone topbar-context-zone" data-topbar-zone="context" aria-label={t('analysis.caseOrCombination')}>
@@ -391,58 +403,77 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
         />
         <div className="export-wrap">
           <IconButton ref={exportMenuButtonRef} className="icon-button" label={t('export.label')} title={t('export.label')} aria-expanded={showExportMenu} aria-haspopup="menu" onClick={toggleExportMenu}><Download size={19} /></IconButton>
-          {showExportMenu ? (
-            <div className="popover export-menu" role="menu" aria-label={t('export.label')} onKeyDown={onMenuKeyDown}>
-              <button role="menuitem" onClick={() => { exportProjectJson(project); emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' }); setShowExportMenu(false); }}><Save size={16} /> {t('export.projectJson')}</button>
-              <button role="menuitem" onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
-              <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
-              <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
-              <button role="menuitem" onClick={() => { emitWorkspaceCommand('export-svg'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowExportMenu(false); }}>{t('export.imageSvg')}</button>
-              <button role="menuitem" onClick={() => { emitWorkspaceCommand('export-png'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowExportMenu(false); }}>{t('export.imagePng')}</button>
-              <button role="menuitem" onClick={() => { window.print(); setShowExportMenu(false); }}>{t('export.print')}</button>
-            </div>
-          ) : null}
+          <AnimatePresence>
+            {showExportMenu ? (
+              <motion.div {...popoverMotionProps} className="popover export-menu" role="menu" aria-label={t('export.label')} onKeyDown={onMenuKeyDown}>
+                <button role="menuitem" onClick={() => { exportProjectJson(project); emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' }); setShowExportMenu(false); }}><Save size={16} /> {t('export.projectJson')}</button>
+                <button role="menuitem" onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
+                <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
+                <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
+                <button role="menuitem" onClick={() => { emitWorkspaceCommand('export-svg'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowExportMenu(false); }}>{t('export.imageSvg')}</button>
+                <button role="menuitem" onClick={() => { emitWorkspaceCommand('export-png'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowExportMenu(false); }}>{t('export.imagePng')}</button>
+                <button role="menuitem" onClick={() => { window.print(); setShowExportMenu(false); }}>{t('export.print')}</button>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </div>
         <div className="mobile-actions-wrap utility-actions-wrap">
           <IconButton ref={mobileMenuButtonRef} className="icon-button mobile-more-button utility-more-button" label={t('actions.more')} aria-expanded={showMobileMenu} aria-haspopup="dialog" onClick={toggleMobileMenu}><MoreHorizontal size={20} /></IconButton>
-          {showMobileMenu ? (
-            <div className="popover mobile-actions-menu utility-actions-menu" role="dialog" aria-label={t('actions.more')}>
-              <div className="mobile-history-actions overflow-history" role="group" aria-label={t('history.label')}>
-                <button onClick={undo} disabled={!canUndo}><Undo2 size={17} /> {t('history.undo')}</button>
-                <button onClick={redo} disabled={!canRedo}><Redo2 size={17} /> {t('history.redo')}</button>
-              </div>
-              <label className="mobile-menu-field overflow-case"><span>{t('analysis.caseOrCombination')}</span><select value={selectedCombinationId} onChange={(event) => setSelectedCombinationId(event.target.value)}><option value="">{t('analysis.activeCases')}</option>{project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}</select></label>
-              <label className="mobile-menu-field overflow-mode"><span>{t('analysis.mode')}</span><select value={project.settings.calculationMode ?? 'complete'} onChange={(event) => { updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } })); setShowMobileMenu(false); }}><option value="classroom">{t('analysis.modeClassroom')}</option><option value="complete">{t('analysis.modeComplete')}</option></select></label>
-              <label className="mobile-menu-field overflow-analysis-order"><span>{t('analysis.order')}</span><select value={project.settings.analysisMode ?? 'first-order'} onChange={(event) => { updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, analysisMode: event.target.value as 'first-order' | 'p-delta' } })); setShowMobileMenu(false); }}><option value="first-order">{t('analysis.orderFirst')}</option><option value="p-delta">{t('analysis.orderPDelta')}</option></select></label>
-              {(project.settings.analysisMode ?? 'first-order') === 'p-delta' ? <PDeltaAdvancedConfig /> : null}
-              <label className="mobile-menu-field overflow-units"><span>{t('units.label')}</span><select value={project.settings.units} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units } }))}><option value="kN-m">kN · m</option><option value="N-mm">N · mm</option><option value="kgf-m">kgf · m</option><option value="kip-ft">kip · ft</option></select></label>
-              <label className="mobile-menu-field"><span>{t('language.label')}</span><select value={language} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, language: event.target.value as 'es' | 'en' } }))}><option value="es">{t('language.es')}</option><option value="en">{t('language.en')}</option></select></label>
-              <button onClick={() => { setTheme(theme === 'light' ? 'dark' : 'light'); setShowMobileMenu(false); }}>{theme === 'light' ? <Moon size={17} /> : <Sun size={17} />} {theme === 'light' ? t('theme.dark') : t('theme.light')}</button>
-              {layoutActions ? <div className="overflow-layout-actions" role="group" aria-label={t('shell.viewLayout')}>
-                <button onClick={() => { layoutActions.onToggleInspector(); setShowMobileMenu(false); }}>
-                  {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? <PanelRightOpen size={17} /> : <PanelRightClose size={17} />}
-                  {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? t('shell.showInspector') : t('shell.hideInspector')}
-                </button>
-                <button onClick={() => { layoutActions.onToggleFullCanvas(); setShowMobileMenu(false); }}>
-                  {layoutActions.fullCanvas ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
-                  {layoutActions.fullCanvas ? t('shell.exitFullCanvas') : t('shell.fullCanvas')}
-                </button>
-                <button className="overflow-toolrail-action" onClick={() => { layoutActions.onToggleToolRail(); setShowMobileMenu(false); }}>
-                  {layoutActions.toolRailCompact ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
-                  {layoutActions.toolRailCompact ? t('shell.expandToolRail') : t('shell.compactToolRail')}
-                </button>
-              </div> : null}
-              <button onClick={() => { exportProjectJson(project); emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' }); setShowMobileMenu(false); }}><Save size={16} /> {t('export.json')}</button>
-              <button onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
-              <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
-              <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
-              <button onClick={() => { emitWorkspaceCommand('export-svg'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowMobileMenu(false); }}><Download size={16} /> {t('export.svg')}</button>
-              <button onClick={() => { emitWorkspaceCommand('export-png'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowMobileMenu(false); }}><Download size={16} /> {t('export.png')}</button>
-              <button onClick={() => { window.print(); setShowMobileMenu(false); }}>{t('export.print')}</button>
-              <div className={`mobile-storage-state ${storageHasError || storageState === 'offline' ? 'error' : ''}`} data-storage-state={storageState} role="status" aria-live="polite" aria-atomic="true">{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}<span><strong>{storageLabel}</strong><small>{storageDescription}</small></span></div>
-              {exportError ? <div className="portable-export-error" role="alert">{exportError}</div> : null}
-            </div>
-          ) : null}
+          <AnimatePresence>
+            {showMobileMenu ? (
+              <motion.div {...popoverMotionProps} className="popover mobile-actions-menu utility-actions-menu" role="dialog" aria-label={t('actions.more')}>
+                <div className="mobile-history-actions overflow-history" role="group" aria-label={t('history.label')}>
+                  <button onClick={undo} disabled={!canUndo}><Undo2 size={17} /> {t('history.undo')}</button>
+                  <button onClick={redo} disabled={!canRedo}><Redo2 size={17} /> {t('history.redo')}</button>
+                </div>
+
+                <div className="menu-section">
+                  <div className="menu-section-title">{t('menu.sectionAnalysis')}</div>
+                  <label className="mobile-menu-field overflow-case"><span>{t('analysis.caseOrCombination')}</span><select value={selectedCombinationId} onChange={(event) => setSelectedCombinationId(event.target.value)}><option value="">{t('analysis.activeCases')}</option>{project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}</select></label>
+                  <label className="mobile-menu-field overflow-mode"><span>{t('analysis.mode')}</span><select value={project.settings.calculationMode ?? 'complete'} onChange={(event) => { updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } })); setShowMobileMenu(false); }}><option value="classroom">{t('analysis.modeClassroom')}</option><option value="complete">{t('analysis.modeComplete')}</option></select></label>
+                  <label className="mobile-menu-field overflow-analysis-order"><span>{t('analysis.order')}</span><select value={project.settings.analysisMode ?? 'first-order'} onChange={(event) => { updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, analysisMode: event.target.value as 'first-order' | 'p-delta' } })); setShowMobileMenu(false); }}><option value="first-order">{t('analysis.orderFirst')}</option><option value="p-delta">{t('analysis.orderPDelta')}</option></select></label>
+                  {(project.settings.analysisMode ?? 'first-order') === 'p-delta' ? <PDeltaAdvancedConfig /> : null}
+                </div>
+
+                <div className="menu-section">
+                  <div className="menu-section-title">{t('menu.sectionPreferences')}</div>
+                  <label className="mobile-menu-field overflow-units"><span>{t('units.label')}</span><select value={project.settings.units} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units } }))}><option value="kN-m">kN · m</option><option value="N-mm">N · mm</option><option value="kgf-m">kgf · m</option><option value="kip-ft">kip · ft</option></select></label>
+                  <label className="mobile-menu-field"><span>{t('language.label')}</span><select value={language} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, language: event.target.value as 'es' | 'en' } }))}><option value="es">{t('language.es')}</option><option value="en">{t('language.en')}</option></select></label>
+                  <button onClick={() => { setTheme(theme === 'light' ? 'dark' : 'light'); setShowMobileMenu(false); }}>{theme === 'light' ? <Moon size={17} /> : <Sun size={17} />} {theme === 'light' ? t('theme.dark') : t('theme.light')}</button>
+                </div>
+
+                {layoutActions ? <div className="menu-section overflow-layout-actions" role="group" aria-label={t('shell.viewLayout')}>
+                  <div className="menu-section-title">{t('menu.sectionViews')}</div>
+                  <button onClick={() => { layoutActions.onToggleInspector(); setShowMobileMenu(false); }}>
+                    {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? <PanelRightOpen size={17} /> : <PanelRightClose size={17} />}
+                    {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? t('shell.showInspector') : t('shell.hideInspector')}
+                  </button>
+                  <button onClick={() => { layoutActions.onToggleFullCanvas(); setShowMobileMenu(false); }}>
+                    {layoutActions.fullCanvas ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
+                    {layoutActions.fullCanvas ? t('shell.exitFullCanvas') : t('shell.fullCanvas')}
+                  </button>
+                  <button className="overflow-toolrail-action" onClick={() => { layoutActions.onToggleToolRail(); setShowMobileMenu(false); }}>
+                    {layoutActions.toolRailCompact ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
+                    {layoutActions.toolRailCompact ? t('shell.expandToolRail') : t('shell.compactToolRail')}
+                  </button>
+                </div> : null}
+
+                <div className="menu-section">
+                  <div className="menu-section-title">{t('menu.sectionExport')}</div>
+                  <button onClick={() => { exportProjectJson(project); emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' }); setShowMobileMenu(false); }}><Save size={16} /> {t('export.json')}</button>
+                  <button onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
+                  <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
+                  <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
+                  <button onClick={() => { emitWorkspaceCommand('export-svg'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowMobileMenu(false); }}><Download size={16} /> {t('export.svg')}</button>
+                  <button onClick={() => { emitWorkspaceCommand('export-png'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowMobileMenu(false); }}><Download size={16} /> {t('export.png')}</button>
+                  <button onClick={() => { window.print(); setShowMobileMenu(false); }}>{t('export.print')}</button>
+                </div>
+
+                <div className={`mobile-storage-state ${storageHasError || storageState === 'offline' ? 'error' : ''}`} data-storage-state={storageState} role="status" aria-live="polite" aria-atomic="true">{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}<span><strong>{storageLabel}</strong><small>{storageDescription}</small></span></div>
+                {exportError ? <div className="portable-export-error" role="alert">{exportError}</div> : null}
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </div>
         <Button
           className={`analyze-button${isAnalyzing ? ' analyzing' : ''}`}
