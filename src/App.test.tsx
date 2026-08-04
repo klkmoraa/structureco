@@ -70,7 +70,7 @@ describe('structureCo app shell', () => {
     expect(exampleFrame).toBeTruthy();
     expect(screen.getByRole('button', { name: /Simply supported beam.*8 m beam/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Triangular truss.*statically determinate truss/i })).toBeTruthy();
-    const cards = [...container.querySelectorAll('.welcome-example-card')].map((card) => card.textContent).join(' ');
+    const cards = [...container.querySelectorAll('.welcome-template-card')].map((card) => card.textContent).join(' ');
     expect(cards).not.toMatch(/Pórtico de ejemplo|Viga simplemente apoyada|Armadura triangular/);
 
     await user.click(exampleFrame);
