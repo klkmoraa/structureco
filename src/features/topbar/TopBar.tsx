@@ -468,19 +468,21 @@ const PDeltaAdvancedConfig = () => {
     }));
   };
   return (
-    <details className="mobile-menu-field overflow-pdelta-advanced">
+    <details className="pdelta-advanced-details">
       <summary>{t('pdelta.advancedConfig')}</summary>
-      {PDELTA_FIELDS.map(({ key, labelKey, step }) => (
-        <label className="mobile-menu-field" key={key}>
-          <span>{t(labelKey)}</span>
-          <input
-            type="number"
-            value={config[key]}
-            step={step ?? 'any'}
-            onChange={(event) => setField(key, event.target.valueAsNumber)}
-          />
-        </label>
-      ))}
+      <div className="pdelta-advanced-content">
+        {PDELTA_FIELDS.map(({ key, labelKey, step }) => (
+          <label className="mobile-menu-field" key={key}>
+            <span>{t(labelKey)}</span>
+            <input
+              type="number"
+              value={config[key]}
+              step={step ?? 'any'}
+              onChange={(event) => setField(key, event.target.valueAsNumber)}
+            />
+          </label>
+        ))}
+      </div>
     </details>
   );
 };
