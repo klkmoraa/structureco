@@ -230,7 +230,18 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .node-object.learning-highlight .node-dot { fill: var(--axis); stroke: var(--canvas-bg); stroke-width: 3; r: 10px; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--axis) 70%, transparent)); }
 .node-object.member-start .node-dot { fill: var(--accent-soft); stroke: var(--accent); r: 10px; }
 .node-object text { font-size: 12px; font-weight: 600; fill: var(--text); paint-order: stroke; stroke: var(--canvas-bg); stroke-width: 4px; }
-.support-symbol { stroke: var(--member); fill: none; vector-effect: non-scaling-stroke; }
+.support-symbol { stroke: var(--member); fill: none; vector-effect: non-scaling-stroke; transition: stroke var(--motion-fast) var(--ease-native), filter var(--motion-fast) var(--ease-native); }
+.support-symbol .support-body-fill { fill: color-mix(in srgb, var(--surface) 92%, var(--canvas-bg)); stroke: var(--member); }
+.support-symbol .support-pin-dot { fill: var(--canvas-bg); stroke: var(--member); stroke-width: 1.8px; }
+.support-symbol .support-roller-wheel { fill: var(--canvas-bg); stroke: var(--member); }
+.support-symbol .support-baseplate { stroke: var(--member); }
+.support-symbol .support-spring-coil, .support-symbol .support-spring-arc { stroke: var(--member); }
+.support-symbol:hover .support-body-fill { fill: color-mix(in srgb, var(--accent) 18%, var(--surface)); stroke: var(--accent); }
+.support-symbol:hover .support-pin-dot, .support-symbol:hover .support-roller-wheel, .support-symbol:hover .support-baseplate, .support-symbol:hover .support-spring-coil { stroke: var(--accent); }
+.support-symbol:hover { stroke: var(--accent); filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--accent) 30%, transparent)); }
+.support-symbol.selected { stroke: var(--selection); }
+.support-symbol.selected .support-body-fill { fill: color-mix(in srgb, var(--selection) 20%, var(--surface)); stroke: var(--selection); }
+.support-symbol.selected .support-pin-dot, .support-symbol.selected .support-roller-wheel, .support-symbol.selected .support-baseplate { stroke: var(--selection); }
 .support-selection-frame { fill:color-mix(in srgb,var(--selection) 8%,transparent); stroke:var(--selection); stroke-width:1.5; stroke-dasharray:4 3; vector-effect:non-scaling-stroke; }
 .load-symbol { stroke: var(--force); fill: none; stroke-width: 2.2; cursor: pointer; }
 .load-symbol text, .distributed-symbol text { fill: var(--force); stroke: none; font-size: 12px; font-weight: 600; paint-order: stroke; stroke: var(--canvas-bg); stroke-width: 4px; }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { X } from 'lucide-react';
 import { useProject } from '../../store/ProjectContext';
-import type { DiagramPoint, DiagramQuantity, MemberLoad, MemberModel, NodeModel, Selection, Tool } from '../../types';
+import type { DiagramPoint, DiagramQuantity, MemberLoad, MemberModel, NodeModel, Selection, SupportType, Tool } from '../../types';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../../engine/diagram';
 import { buildLeftCutEquilibrium } from '../../engine/cut';
 import { resolveMemberLocalLoads } from '../../engine/solver';
@@ -1511,47 +1511,119 @@ export const StructuralCanvas = ({
     if (node.support.type === 'none') return null;
     const p = toScreen(node.x, node.y);
     const selected = selectionVisualState.nodeIds.includes(node.id);
+
     if (node.support.type === 'fixed') {
-      return <g key={node.id} className={`support-symbol${selected ? ' selected' : ''}`} transform={`translate(${p.x} ${p.y})`}>{selected ? <rect className="support-selection-frame" x="-21" y="-5" width="42" height="25" rx="6" /> : null}<line x1="-15" y1="8" x2="15" y2="8" strokeWidth="3" />{[-12, -6, 0, 6, 12].map((x) => <line key={x} x1={x} y1="8" x2={x - 5} y2="15" />)}</g>;
+      const rotation = node.support.angleDeg ?? 0;
+      return (
+        <g key={node.id} className={`support-symbol support-fixed${selected ? ' selected' : ''}`} transform={`translate(${p.x} ${p.y}) rotate(${rotation})`} data-support-id={node.id}>
+          {selected ? <rect className="support-selection-frame" x="-22" y="-4" width="44" height="22" rx="6" /> : null}
+          <line x1="-18" y1="7" x2="18" y2="7" className="support-baseplate" strokeWidth="2.4" strokeLinecap="round" />
+          {[-14, -8, -2, 4, 10, 16].map((x) => <line key={x} x1={x} y1="7" x2={x - 5} y2="14" strokeWidth="1.4" strokeLinecap="round" />)}
+          <line x1="0" y1="0" x2="0" y2="7" strokeWidth="2" />
+          <circle cx="0" cy="0" r="2.2" className="support-pin-dot" />
+        </g>
+      );
     }
-    const rotation = node.support.type === 'roller' ? (node.support.angleDeg ?? 90) - 90 : 0;
-    return (
-      <g key={node.id} className={`support-symbol${selected ? ' selected' : ''}`} transform={`translate(${p.x} ${p.y}) rotate(${rotation})`}>
-        {selected ? <rect className="support-selection-frame" x="-21" y="-5" width="42" height="42" rx="7" /> : null}
-        <path d="M 0 5 L -12 22 L 12 22 Z" fill="none" strokeWidth="1.8" />
-        {node.support.type === 'roller' ? <><circle cx="-6" cy="26" r="3" fill="none" /><circle cx="6" cy="26" r="3" fill="none" /><line x1="-16" y1="31" x2="16" y2="31" /></> : <line x1="-16" y1="24" x2="16" y2="24" />}
-      </g>
-    );
+
+    if (node.support.type === 'pin') {
+      const rotation = node.support.angleDeg ?? 0;
+      return (
+        <g key={node.id} className={`support-symbol support-pin${selected ? ' selected' : ''}`} transform={`translate(${p.x} ${p.y}) rotate(${rotation})`} data-support-id={node.id}>
+          {selected ? <rect className="support-selection-frame" x="-20" y="-4" width="40" height="32" rx="7" /> : null}
+          <polygon points="0,0 -12,18 12,18" className="support-body-fill" strokeWidth="1.8" strokeLinejoin="round" />
+          <line x1="-16" y1="18" x2="16" y2="18" className="support-baseplate" strokeWidth="2" strokeLinecap="round" />
+          {[-12, -6, 0, 6, 12].map((x) => <line key={x} x1={x} y1="18" x2={x - 5} y2="24" strokeWidth="1.4" strokeLinecap="round" />)}
+          <circle cx="0" cy="0" r="2.4" className="support-pin-dot" />
+        </g>
+      );
+    }
+
+    if (node.support.type === 'roller') {
+      const rotation = (node.support.angleDeg ?? 90) - 90;
+      return (
+        <g key={node.id} className={`support-symbol support-roller${selected ? ' selected' : ''}`} transform={`translate(${p.x} ${p.y}) rotate(${rotation})`} data-support-id={node.id}>
+          {selected ? <rect className="support-selection-frame" x="-21" y="-4" width="42" height="35" rx="7" /> : null}
+          <polygon points="0,0 -11,15 11,15" className="support-body-fill" strokeWidth="1.8" strokeLinejoin="round" />
+          <line x1="-13" y1="15" x2="13" y2="15" strokeWidth="1.8" strokeLinecap="round" />
+          <circle cx="-5.5" cy="18.5" r="2.8" className="support-roller-wheel" strokeWidth="1.5" />
+          <circle cx="5.5" cy="18.5" r="2.8" className="support-roller-wheel" strokeWidth="1.5" />
+          <line x1="-17" y1="21.5" x2="17" y2="21.5" className="support-baseplate" strokeWidth="2" strokeLinecap="round" />
+          {[-12, -6, 0, 6, 12].map((x) => <line key={x} x1={x} y1="21.5" x2={x - 5} y2="26.5" strokeWidth="1.4" strokeLinecap="round" />)}
+          <circle cx="0" cy="0" r="2.4" className="support-pin-dot" />
+        </g>
+      );
+    }
+
+    if (node.support.type === 'custom') {
+      const rotation = node.support.angleDeg ?? 0;
+      const hasSpring = Boolean(
+        node.support.spring && (node.support.spring.kx || node.support.spring.ky || node.support.spring.kr || node.support.spring.kNormal),
+      );
+      return (
+        <g key={node.id} className={`support-symbol support-custom${selected ? ' selected' : ''}`} transform={`translate(${p.x} ${p.y}) rotate(${rotation})`} data-support-id={node.id}>
+          {selected ? <rect className="support-selection-frame" x="-22" y="-6" width="44" height="38" rx="7" /> : null}
+          {hasSpring ? (
+            <>
+              {node.support.spring?.kr ? (
+                <path d="M -8 -2 A 8 8 0 1 1 8 -2" fill="none" strokeWidth="1.8" strokeDasharray="3 2" className="support-spring-arc" />
+              ) : null}
+              <path d="M 0 0 L 0 4 L -5 7 L 5 11 L -5 15 L 5 19 L 0 22 L 0 25" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="support-spring-coil" />
+              <line x1="-15" y1="25" x2="15" y2="25" className="support-baseplate" strokeWidth="2" strokeLinecap="round" />
+              {[-10, -4, 2, 8].map((x) => <line key={x} x1={x} y1="25" x2={x - 4} y2="30" strokeWidth="1.4" strokeLinecap="round" />)}
+            </>
+          ) : (
+            <>
+              <line x1="-16" y1="-8" x2="16" y2="-8" strokeWidth="1.8" strokeDasharray="3 2" />
+              <line x1="-16" y1="8" x2="16" y2="8" strokeWidth="1.8" strokeDasharray="3 2" />
+              <rect x="-10" y="-5" width="20" height="10" rx="3" className="support-body-fill" strokeWidth="1.8" />
+            </>
+          )}
+          <circle cx="0" cy="0" r="2.4" className="support-pin-dot" />
+        </g>
+      );
+    }
+
+    return null;
   };
 
+  /** Presentation-only gap so reaction arrows/labels never cross the support glyph they sit next to. */
+  const reactionClearanceFor = (type: SupportType): { bottom: number; side: number } => ({
+    bottom: type === 'roller' ? 28 : type === 'pin' || type === 'custom' ? 25 : type === 'fixed' ? 16 : 8,
+    side: type === 'none' ? 8 : type === 'fixed' ? 20 : 18,
+  });
+
   const renderReaction = (node: NodeModel) => {
-    if (!resultsAllowed || resultTab !== 'reactions' || !analysis?.success) return null;
+    if (!resultsAllowed || !analysis?.success) return null;
     const result = nodeResultMap.get(node.id);
     if (!result) return null;
     const p = toScreen(node.x, node.y);
+    const { bottom: bottomClearance, side: sideClearance } = reactionClearanceFor(node.support.type);
     const elements = [];
     const descriptions: string[] = [];
     if (Math.abs(result.rx) > 1e-8) {
       const direction = Math.sign(result.rx);
-      const length = 52;
+      const length = 48;
       descriptions.push(`Rx = ${formatFixed(toDisplay(result.rx, units, 'force'), 3)} ${forceLabel}`);
       elements.push(
-        <line key="rx" data-reaction-component="rx" x1={p.x - direction * length} y1={p.y} x2={p.x - direction * 8} y2={p.y} markerEnd="url(#arrow-blue)" />,
+        <line key="rx" data-reaction-component="rx" x1={p.x - direction * (sideClearance + length)} y1={p.y} x2={p.x - direction * sideClearance} y2={p.y} markerEnd="url(#arrow-blue)" />,
       );
     }
     if (Math.abs(result.ry) > 1e-8) {
       const screenDirection = -Math.sign(result.ry);
-      const length = 52;
+      const length = 48;
       descriptions.push(`Ry = ${formatFixed(toDisplay(result.ry, units, 'force'), 3)} ${forceLabel}`);
       elements.push(
-        <line key="ry" data-reaction-component="ry" x1={p.x} y1={p.y - screenDirection * length} x2={p.x} y2={p.y - screenDirection * 8} markerEnd="url(#arrow-blue)" />,
+        screenDirection < 0
+          ? <line key="ry" data-reaction-component="ry" x1={p.x} y1={p.y + bottomClearance + length} x2={p.x} y2={p.y + bottomClearance} markerEnd="url(#arrow-blue)" />
+          : <line key="ry" data-reaction-component="ry" x1={p.x} y1={p.y + bottomClearance} x2={p.x} y2={p.y + bottomClearance + length} markerEnd="url(#arrow-blue)" />,
       );
     }
     if (Math.abs(result.rm) > 1e-8) {
       const clockwise = result.rm < 0;
+      const r = Math.max(28, bottomClearance + 6);
       const path = clockwise
-        ? `M ${p.x - 22} ${p.y - 3} A 23 23 0 1 0 ${p.x + 18} ${p.y - 13}`
-        : `M ${p.x + 22} ${p.y - 3} A 23 23 0 1 1 ${p.x - 18} ${p.y - 13}`;
+        ? `M ${p.x - 22} ${p.y - 10} A ${r} ${r} 0 1 0 ${p.x + 20} ${p.y - 14}`
+        : `M ${p.x + 22} ${p.y - 10} A ${r} ${r} 0 1 1 ${p.x - 20} ${p.y - 14}`;
       descriptions.push(`Mᵣ = ${formatFixed(toDisplay(result.rm, units, 'moment'), 3)} ${momentLabel}`);
       elements.push(<path key="moment" d={path} markerEnd="url(#arrow-blue)" />);
     }
@@ -1814,24 +1886,24 @@ export const StructuralCanvas = ({
   }
 
   if (layers.results && layers.labels && resultsAllowed && project.settings.showResultValues && analysis?.success) {
-    if (resultTab === 'reactions') {
-      for (const node of project.nodes) {
-        const result = nodeResultMap.get(node.id);
-        if (!result) continue;
-        const point = toScreen(node.x, node.y);
-        if (Math.abs(result.rx) > 1e-8) {
-          const direction = Math.sign(result.rx);
-          smartLabelCandidates.push({ id: `reaction:${node.id}:rx`, text: `Rx = ${formatFixed(toDisplay(result.rx, units, 'force'), 3)} ${forceLabel}`, anchor: { x: point.x - direction * 64, y: point.y - 10 }, priority: 1, tone: 'axial', preferredOffset: { x: 0, y: 0 } });
-        }
-        if (Math.abs(result.ry) > 1e-8) {
-          const screenDirection = -Math.sign(result.ry);
-          smartLabelCandidates.push({ id: `reaction:${node.id}:ry`, text: `Ry = ${formatFixed(toDisplay(result.ry, units, 'force'), 3)} ${forceLabel}`, anchor: { x: point.x + 10, y: point.y - screenDirection * 64 }, priority: 1, tone: 'axial', preferredOffset: { x: 0, y: 0 } });
-        }
-        if (Math.abs(result.rm) > 1e-8) {
-          smartLabelCandidates.push({ id: `reaction:${node.id}:rm`, text: `Mᵣ = ${formatFixed(toDisplay(result.rm, units, 'moment'), 3)} ${momentLabel}`, anchor: { x: point.x, y: point.y - 38 }, priority: 1, tone: 'moment', preferredOffset: { x: 0, y: 0 } });
-        }
+    for (const node of project.nodes) {
+      const result = nodeResultMap.get(node.id);
+      if (!result) continue;
+      const point = toScreen(node.x, node.y);
+      const { bottom: bottomClearance, side: sideClearance } = reactionClearanceFor(node.support.type);
+      if (Math.abs(result.rx) > 1e-8) {
+        const direction = Math.sign(result.rx);
+        smartLabelCandidates.push({ id: `reaction:${node.id}:rx`, text: `Rx = ${formatFixed(toDisplay(result.rx, units, 'force'), 3)} ${forceLabel}`, anchor: { x: point.x - direction * (sideClearance + 24), y: point.y - 14 }, priority: 1, tone: 'axial', preferredOffset: { x: 0, y: 0 } });
       }
-    } else if (['axial', 'shear', 'moment'].includes(resultTab) && project.settings.showResultOverlay) {
+      if (Math.abs(result.ry) > 1e-8) {
+        smartLabelCandidates.push({ id: `reaction:${node.id}:ry`, text: `Ry = ${formatFixed(toDisplay(result.ry, units, 'force'), 3)} ${forceLabel}`, anchor: { x: point.x + 18, y: point.y + bottomClearance + 24 }, priority: 1, tone: 'axial', preferredOffset: { x: 0, y: 0 } });
+      }
+      if (Math.abs(result.rm) > 1e-8) {
+        smartLabelCandidates.push({ id: `reaction:${node.id}:rm`, text: `Mᵣ = ${formatFixed(toDisplay(result.rm, units, 'moment'), 3)} ${momentLabel}`, anchor: { x: point.x, y: point.y - 38 }, priority: 1, tone: 'moment', preferredOffset: { x: 0, y: 0 } });
+      }
+    }
+
+    if (['axial', 'shear', 'moment'].includes(resultTab) && project.settings.showResultOverlay) {
       const quantity = resultTab as DiagramQuantity;
       const side = project.settings.diagramSide === 'negative' ? -1 : 1;
       for (const member of project.members) {
