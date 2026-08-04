@@ -57,3 +57,4 @@ motion/*/snapshots/
 motion/*/*.mp4
 motion/*/*.webm
 motion/*/.hyperframes/
+motion/*/work-*/

@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>structureCo — Del Modelo al Resultado</title>
+    <script src="vendor/gsap.min.js"></script>
+    <style>
+      :root {
+        --bg: #060b09;
+        --grid: #202a2b;
+        --member: #f1f5f4;
+        --accent: #39d4a2;
+        --surface-1: #101915;
+        --surface-2: #16231d;
+        --border: #2c3539;
+        --text-primary: #f2f7f4;
+        --text-secondary: #b8c8c0;
+        --text-muted: #91a299;
+        --load: #ff7d66;
+        --shear: #78dc94;
+        --moment: #ff79ac;
+        --deformed: #5bdae2;
+        --reaction: #9baaff;
+        --dimension: #ffd56a;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      .clip {
+        position: absolute;
+        inset: 0;
+      }
+      .bg-plate {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse 1300px 850px at 50% 42%, #0a1512 0%, var(--bg) 65%);
+      }
+
+      /* stage holds the whole model so it can lift when results open */
+      .stage {
+        position: absolute;
+        inset: 0;
+        transform-origin: 50% 40%;
+        will-change: transform;
+      }
+      .layer {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .member {
+        fill: none;
+        stroke: var(--member);
+        stroke-width: 4;
+        stroke-linecap: round;
+      }
+      .node {
+        fill: var(--bg);
+        stroke: var(--accent);
+        stroke-width: 3.5;
+        opacity: 0;
+        transform-box: fill-box;
+        transform-origin: 50% 50%;
+      }
+      .support {
+        fill: none;
+        stroke: var(--text-secondary);
+        stroke-width: 2.5;
+      }
+      .axis-x {
+        stroke: var(--load);
+        stroke-width: 3;
+        fill: none;
+      }
+      .axis-y {
+        stroke: var(--accent);
+        stroke-width: 3;
+        fill: none;
+      }
+      .load-arrow {
+        stroke: var(--load);
+        stroke-width: 3.5;
+        fill: none;
+        stroke-linecap: round;
+      }
+      .dist-arrow {
+        stroke: var(--shear);
+        stroke-width: 2.5;
+        fill: none;
+        stroke-linecap: round;
+      }
+      .reaction-arrow {
+        stroke: var(--reaction);
+        stroke-width: 4;
+        fill: none;
+        stroke-linecap: round;
+      }
+      .deformed-path {
+        fill: none;
+        stroke: var(--deformed);
+        stroke-width: 3;
+      }
+      .moment-path {
+        fill: none;
+        stroke: var(--moment);
+        stroke-width: 3.5;
+      }
+      .moment-fill {
+        fill: rgba(255, 121, 172, 0.14);
+        stroke: none;
+      }
+      .dim-line {
+        stroke: var(--dimension);
+        stroke-width: 1.5;
+        fill: none;
+        opacity: 0.75;
+      }
+      .pulse-line {
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 7;
+        stroke-linecap: round;
+        opacity: 0;
+      }
+
+      /* ---- app-styled chips (mirrors the real canvas labels) ---- */
+      .chip {
+        position: absolute;
+        display: inline-flex;
+        align-items: center;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 5px 11px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 21px;
+        font-weight: 700;
+        white-space: nowrap;
+        opacity: 0;
+      }
+      .chip.node-tag {
+        color: var(--text-secondary);
+        font-size: 19px;
+      }
+      .chip.load {
+        color: var(--load);
+      }
+      .chip.dist {
+        color: var(--shear);
+      }
+      .chip.dim {
+        color: var(--dimension);
+      }
+      .chip.reaction {
+        color: var(--reaction);
+      }
+
+      /* ---- analyse button (mirrors the real topbar action) ---- */
+      .analyse-btn {
+        position: absolute;
+        left: 810px;
+        top: 838px;
+        width: 300px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        background: var(--accent);
+        color: #06140f;
+        border-radius: 10px;
+        padding: 16px 34px;
+        font-size: 26px;
+        font-weight: 700;
+        opacity: 0;
+        overflow: hidden;
+      }
+      .analyse-btn .tri {
+        width: 0;
+        height: 0;
+        border-left: 15px solid #06140f;
+        border-top: 9px solid transparent;
+        border-bottom: 9px solid transparent;
+      }
+      .btn-sweep {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 120px;
+        height: 100%;
+        background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+        opacity: 0;
+      }
+
+      /* ---- results panel (mirrors "Centro Analítico") ---- */
+      .results-panel {
+        position: absolute;
+        left: 260px;
+        top: 700px;
+        width: 1400px;
+        height: 296px;
+        background: var(--surface-1);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 18px 28px;
+        opacity: 0;
+      }
+      .panel-eyebrow {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        color: var(--text-muted);
+        text-transform: uppercase;
+      }
+      .panel-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-top: 4px;
+      }
+      .panel-tabs {
+        display: flex;
+        gap: 30px;
+        margin-top: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border);
+      }
+      .tab {
+        font-size: 19px;
+        font-weight: 600;
+        color: var(--text-muted);
+      }
+      .tab.active {
+        color: var(--moment);
+      }
+      .diagram-holder {
+        position: relative;
+        margin-top: 10px;
+        height: 146px;
+      }
+
+      /* ---- inspector values ---- */
+      .inspector {
+        position: absolute;
+        left: 1358px;
+        top: 214px;
+        width: 300px;
+        background: var(--surface-1);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px 18px;
+        opacity: 0;
+      }
+      .insp-label {
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        color: var(--text-muted);
+        text-transform: uppercase;
+      }
+      .insp-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-top: 11px;
+      }
+      .insp-key {
+        font-size: 18px;
+        color: var(--text-secondary);
+      }
+      .insp-val {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      /* ---- scene copy ---- */
+      .beat {
+        position: absolute;
+        left: 360px;
+        top: 916px;
+        width: 1200px;
+        text-align: center;
+        font-size: 76px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+        opacity: 0;
+      }
+      .closing {
+        position: absolute;
+        left: 200px;
+        top: 452px;
+        width: 1520px;
+        text-align: center;
+        font-size: 60px;
+        font-weight: 750;
+        line-height: 1.22;
+        letter-spacing: -0.018em;
+        color: var(--text-primary);
+        opacity: 0;
+      }
+      .vignette {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse 1450px 980px at 50% 50%, transparent 48%, #030503 100%);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-width="1920"
+      data-height="1080"
+      data-duration="30"
+    >
+      <section id="scene" class="clip" data-start="0" data-duration="30" data-track-index="1">
+        <div class="bg-plate"></div>
+
+        <div class="stage" id="stage">
+          <svg class="layer" id="grid" viewBox="0 0 1920 1080" style="opacity: 0" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="gp" width="60" height="60" patternUnits="userSpaceOnUse">
+                <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#202a2b" stroke-width="1" />
+              </pattern>
+            </defs>
+            <rect width="1920" height="1080" fill="url(#gp)" />
+          </svg>
+
+          <svg class="layer" id="axes" viewBox="0 0 1920 1080" style="opacity: 0" xmlns="http://www.w3.org/2000/svg">
+            <path class="axis-y" d="M 300 800 L 300 720" />
+            <path class="axis-y" d="M 293 730 L 300 716 L 307 730" />
+            <path class="axis-x" d="M 300 800 L 380 800" />
+            <path class="axis-x" d="M 370 793 L 384 800 L 370 807" />
+          </svg>
+
+          <svg class="layer" id="model" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+            <path id="momFill" class="moment-fill" opacity="0" d="M 660 380 Q 960 620 1260 380 Z" />
+            <path id="momPath" class="moment-path" d="M 660 380 Q 960 620 1260 380" />
+
+            <path id="defPath" class="deformed-path" d="M 660 660 L 652 380 Q 960 470 1268 380 L 1260 660" />
+
+            <path id="m1" class="member" d="M 660 660 L 660 380" />
+            <path id="m2" class="member" d="M 1260 660 L 1260 380" />
+            <path id="m3" class="member" d="M 660 380 L 1260 380" />
+
+            <path id="pulse" class="pulse-line" d="M 660 660 L 660 380 L 1260 380 L 1260 660" />
+
+            <path id="s1" class="support" d="M 660 660 L 634 700 L 686 700 Z M 626 708 L 694 708" />
+            <path id="s2" class="support" d="M 1260 660 L 1234 700 L 1286 700 Z M 1226 708 L 1294 708" />
+
+            <path id="p1" class="load-arrow" d="M 660 268 L 660 358" opacity="0" />
+            <path id="p1h" class="load-arrow" d="M 650 344 L 660 360 L 670 344" opacity="0" />
+            <path id="p2" class="load-arrow" d="M 1260 268 L 1260 358" opacity="0" />
+            <path id="p2h" class="load-arrow" d="M 1250 344 L 1260 360 L 1270 344" opacity="0" />
+
+            <g id="distGroup" opacity="0">
+              <path class="dist-arrow" d="M 760 300 L 760 366" />
+              <path class="dist-arrow" d="M 752 354 L 760 368 L 768 354" />
+              <path class="dist-arrow" d="M 860 300 L 860 366" />
+              <path class="dist-arrow" d="M 852 354 L 860 368 L 868 354" />
+              <path class="dist-arrow" d="M 960 300 L 960 366" />
+              <path class="dist-arrow" d="M 952 354 L 960 368 L 968 354" />
+              <path class="dist-arrow" d="M 1060 300 L 1060 366" />
+              <path class="dist-arrow" d="M 1052 354 L 1060 368 L 1068 354" />
+              <path class="dist-arrow" d="M 1160 300 L 1160 366" />
+              <path class="dist-arrow" d="M 1152 354 L 1160 368 L 1168 354" />
+              <path class="dist-arrow" d="M 760 300 L 1160 300" />
+            </g>
+
+            <g id="reactGroup" opacity="0">
+              <path class="reaction-arrow" d="M 660 764 L 660 694" />
+              <path class="reaction-arrow" d="M 650 708 L 660 692 L 670 708" />
+              <path class="reaction-arrow" d="M 1260 764 L 1260 694" />
+              <path class="reaction-arrow" d="M 1250 708 L 1260 692 L 1270 708" />
+            </g>
+
+            <g id="dimGroup" opacity="0">
+              <path class="dim-line" d="M 596 380 L 596 660 M 588 380 L 604 380 M 588 660 L 604 660" />
+              <path class="dim-line" d="M 660 244 L 1260 244 M 660 236 L 660 252 M 1260 236 L 1260 252" />
+            </g>
+
+            <circle id="n1" class="node" cx="660" cy="660" r="10" />
+            <circle id="n2" class="node" cx="1260" cy="660" r="10" />
+            <circle id="n3" class="node" cx="660" cy="380" r="10" />
+            <circle id="n4" class="node" cx="1260" cy="380" r="10" />
+          </svg>
+
+        </div>
+
+        <div class="vignette"></div>
+
+        <!-- canvas labels ride above the vignette so their values stay legible,
+             but share the stage's transform so the model reads as one object -->
+        <div class="stage" id="chipStage">
+          <div class="chip node-tag" id="tagN1" style="left: 580px; top: 676px">N1</div>
+          <div class="chip node-tag" id="tagN2" style="left: 1292px; top: 676px">N2</div>
+          <div class="chip node-tag" id="tagN3" style="left: 580px; top: 352px">N3</div>
+          <div class="chip node-tag" id="tagN4" style="left: 1292px; top: 352px">N4</div>
+
+          <div class="chip load" id="chipP" style="left: 456px; top: 256px">P = 20.00 kN</div>
+          <div class="chip dist" id="chipW" style="left: 838px; top: 232px">w = 15.00 kN/m</div>
+          <div class="chip dim" id="chipH" style="left: 448px; top: 498px">4.000 m</div>
+          <div class="chip dim" id="chipL" style="left: 898px; top: 178px">6.000 m</div>
+          <div class="chip reaction" id="chipR" style="left: 1292px; top: 748px">R = 65.00 kN</div>
+        </div>
+
+        <div class="analyse-btn" id="analyseBtn">
+          <span class="tri"></span>
+          <span>Analizar</span>
+          <span class="btn-sweep" id="btnSweep"></span>
+        </div>
+
+        <div class="results-panel" id="resultsPanel">
+          <div class="panel-eyebrow">Centro analítico</div>
+          <div class="panel-title">Diagrama de momento flector</div>
+          <div class="panel-tabs">
+            <span class="tab">Axial</span>
+            <span class="tab">Cortante</span>
+            <span class="tab active">Momento</span>
+            <span class="tab">Deformada</span>
+            <span class="tab">Reacciones</span>
+          </div>
+          <div class="diagram-holder">
+            <svg viewBox="0 0 1340 146" preserveAspectRatio="none" style="width: 100%; height: 100%" xmlns="http://www.w3.org/2000/svg">
+              <line x1="40" y1="22" x2="1300" y2="22" stroke="#2c3539" stroke-width="1.5" />
+              <path id="panelMom" fill="none" stroke="#ff79ac" stroke-width="3" d="M 40 22 Q 670 206 1300 22" />
+            </svg>
+          </div>
+        </div>
+
+        <div class="inspector" id="inspector">
+          <div class="insp-label">Valores derivados</div>
+          <div class="insp-row"><span class="insp-key">N máx</span><span class="insp-val" id="vN">—</span></div>
+          <div class="insp-row"><span class="insp-key">V máx</span><span class="insp-val" id="vV">—</span></div>
+          <div class="insp-row"><span class="insp-key">M máx</span><span class="insp-val" id="vM">—</span></div>
+        </div>
+
+        <div class="beat" id="beat1">Modela.</div>
+        <div class="beat" id="beat2">Analiza.</div>
+        <div class="beat" id="beat3">Comprende.</div>
+        <div class="closing" id="closing">Todo el comportamiento estructural, en un mismo espacio.</div>
+      </section>
+
+      <audio id="bed" src="assets/bed.mp3" data-start="0" data-duration="30" data-track-index="10" data-volume="0.9"></audio>
+
+      <audio id="sfx-n1" src="assets/click-soft.mp3" data-start="3.00" data-duration="0.36" data-track-index="11" data-volume="0.28"></audio>
+      <audio id="sfx-n2" src="assets/click-soft.mp3" data-start="3.70" data-duration="0.36" data-track-index="11" data-volume="0.28"></audio>
+      <audio id="sfx-n3" src="assets/click-soft.mp3" data-start="4.40" data-duration="0.36" data-track-index="11" data-volume="0.28"></audio>
+      <audio id="sfx-n4" src="assets/click-soft.mp3" data-start="5.10" data-duration="0.36" data-track-index="11" data-volume="0.28"></audio>
+
+      <audio id="sfx-m1" src="assets/click.mp3" data-start="6.50" data-duration="0.36" data-track-index="12" data-volume="0.22"></audio>
+      <audio id="sfx-m2" src="assets/click.mp3" data-start="7.40" data-duration="0.36" data-track-index="12" data-volume="0.22"></audio>
+      <audio id="sfx-m3" src="assets/click.mp3" data-start="8.30" data-duration="0.36" data-track-index="12" data-volume="0.22"></audio>
+      <audio id="sfx-s" src="assets/click.mp3" data-start="9.60" data-duration="0.36" data-track-index="12" data-volume="0.18"></audio>
+
+      <audio id="sfx-load1" src="assets/click-soft.mp3" data-start="11.20" data-duration="0.36" data-track-index="13" data-volume="0.24"></audio>
+      <audio id="sfx-load2" src="assets/click-soft.mp3" data-start="12.30" data-duration="0.36" data-track-index="13" data-volume="0.24"></audio>
+
+      <audio id="sfx-press" src="assets/click.mp3" data-start="16.60" data-duration="0.36" data-track-index="14" data-volume="0.34"></audio>
+      <audio id="sfx-run" src="assets/ping.mp3" data-start="17.40" data-duration="1.32" data-track-index="15" data-volume="0.30"></audio>
+      <audio id="sfx-solve" src="assets/impact-bass-2.mp3" data-start="19.00" data-duration="2.59" data-track-index="16" data-volume="0.30"></audio>
+
+      <audio id="sfx-panel" src="assets/whoosh-short.mp3" data-start="22.40" data-duration="0.57" data-track-index="17" data-volume="0.32"></audio>
+      <audio id="sfx-close" src="assets/chime.mp3" data-start="27.60" data-duration="2.40" data-track-index="18" data-volume="0.16"></audio>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      function prep(id) {
+        const el = document.getElementById(id);
+        const len = el.getTotalLength();
+        el.style.strokeDasharray = `${len}`;
+        el.style.strokeDashoffset = `${len}`;
+        return len;
+      }
+      ["m1", "m2", "m3", "s1", "s2", "defPath", "momPath", "panelMom"].forEach(prep);
+      const pulseLen = prep("pulse");
+
+      // ---------- 0–2.5s · the empty grid ----------
+      tl.to("#grid", { opacity: 0.45, duration: 1.3, ease: "power2.out" }, 0.2);
+      tl.to("#axes", { opacity: 0.9, duration: 0.7, ease: "power3.out" }, 1.1);
+      tl.to("#beat1", { opacity: 1, duration: 0.7, ease: "power3.out" }, 2.2);
+
+      // ---------- 3–6s · nodes ----------
+      [
+        ["n1", "tagN1"],
+        ["n2", "tagN2"],
+        ["n3", "tagN3"],
+        ["n4", "tagN4"],
+      ].forEach(([n, tag], i) => {
+        const at = 3.0 + i * 0.7;
+        tl.fromTo(`#${n}`, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, at);
+        tl.fromTo(`#${tag}`, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, at + 0.18);
+      });
+
+      // ---------- 6.5–10.2s · members + supports ----------
+      ["m1", "m2", "m3"].forEach((m, i) => {
+        tl.to(`#${m}`, { strokeDashoffset: 0, duration: 0.85, ease: "power2.out" }, 6.5 + i * 0.9);
+      });
+      tl.to("#s1", { strokeDashoffset: 0, duration: 0.6, ease: "power2.out" }, 9.6);
+      tl.to("#s2", { strokeDashoffset: 0, duration: 0.6, ease: "power2.out" }, 9.6);
+
+      // ---------- 11–14.5s · loads ----------
+      tl.to("#p1", { opacity: 1, duration: 0.4, ease: "power3.out" }, 11.2);
+      tl.to("#p1h", { opacity: 1, duration: 0.4, ease: "power3.out" }, 11.2);
+      tl.to("#p2", { opacity: 1, duration: 0.4, ease: "power3.out" }, 11.4);
+      tl.to("#p2h", { opacity: 1, duration: 0.4, ease: "power3.out" }, 11.4);
+      tl.fromTo("#chipP", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 11.5);
+
+      tl.to("#distGroup", { opacity: 1, duration: 0.6, ease: "power3.out" }, 12.3);
+      tl.fromTo("#chipW", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 12.6);
+
+      tl.to("#dimGroup", { opacity: 1, duration: 0.5, ease: "power2.out" }, 13.5);
+      tl.fromTo("#chipH", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 13.7);
+      tl.fromTo("#chipL", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 13.9);
+
+      // ---------- 15–18.5s · run the analysis ----------
+      tl.to("#beat1", { opacity: 0, duration: 0.45, ease: "power2.in" }, 14.9);
+      tl.to("#beat2", { opacity: 1, duration: 0.6, ease: "power3.out" }, 15.3);
+
+      tl.to("#analyseBtn", { opacity: 1, duration: 0.5, ease: "power3.out" }, 15.6);
+      tl.fromTo("#btnSweep", { opacity: 0, x: -140 }, { opacity: 1, x: 300, duration: 0.85, ease: "power2.inOut" }, 16.0);
+      tl.to("#btnSweep", { opacity: 0, duration: 0.25, ease: "power2.in" }, 16.85);
+      tl.to("#analyseBtn", { scale: 0.965, duration: 0.12, ease: "power2.out" }, 16.6);
+      tl.to("#analyseBtn", { scale: 1, duration: 0.3, ease: "power3.out" }, 16.72);
+
+      tl.set("#pulse", { opacity: 0.85 }, 17.35);
+      tl.fromTo(
+        "#pulse",
+        { strokeDasharray: `140 ${pulseLen}`, strokeDashoffset: pulseLen },
+        { strokeDashoffset: -140, duration: 1.5, ease: "power1.inOut" },
+        17.4,
+      );
+      tl.to("#pulse", { opacity: 0, duration: 0.3, ease: "power2.in" }, 18.75);
+      tl.to("#analyseBtn", { opacity: 0, y: 14, duration: 0.5, ease: "power2.in" }, 18.4);
+
+      // ---------- 19–21.5s · the structure responds ----------
+      tl.to("#defPath", { strokeDashoffset: 0, duration: 1.4, ease: "power2.out" }, 19.0);
+      tl.to("#reactGroup", { opacity: 1, duration: 0.6, ease: "power3.out" }, 20.0);
+      tl.fromTo("#chipR", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }, 20.3);
+
+      // ---------- 21.6–26s · results organise themselves ----------
+      tl.to("#beat2", { opacity: 0, duration: 0.45, ease: "power2.in" }, 21.4);
+      tl.to("#stage, #chipStage", { scale: 0.78, y: -104, duration: 1.5, ease: "power2.inOut" }, 21.6);
+      tl.to("#chipR", { opacity: 0, duration: 0.5, ease: "power2.in" }, 21.6);
+
+      tl.fromTo("#resultsPanel", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.9, ease: "power3.out" }, 22.4);
+      tl.to("#panelMom", { strokeDashoffset: 0, duration: 1.5, ease: "power2.out" }, 23.1);
+      tl.to("#momPath", { strokeDashoffset: 0, duration: 1.5, ease: "power2.out" }, 23.1);
+      tl.to("#momFill", { opacity: 1, duration: 0.9, ease: "power2.out" }, 24.1);
+
+      tl.fromTo("#inspector", { opacity: 0, x: 28 }, { opacity: 1, x: 0, duration: 0.8, ease: "power3.out" }, 24.2);
+
+      const vals = [
+        ["vN", 7.79, " kN", 2],
+        ["vV", 45.0, " kN", 1],
+        ["vM", 36.35, " kN·m", 2],
+      ];
+      vals.forEach(([id, target, unit, dp], i) => {
+        const proxy = { v: 0 };
+        const el = document.getElementById(id);
+        tl.to(
+          proxy,
+          {
+            v: target,
+            duration: 1.1,
+            ease: "power2.out",
+            onUpdate: () => {
+              el.textContent = proxy.v.toFixed(dp) + unit;
+            },
+          },
+          24.6 + i * 0.22,
+        );
+      });
+
+      // ---------- 26–30s · comprehension + close ----------
+      tl.to("#beat3", { opacity: 1, duration: 0.6, ease: "power3.out" }, 25.9);
+      tl.to("#beat3", { opacity: 0, duration: 0.45, ease: "power2.in" }, 27.2);
+
+      tl.to("#stage, #chipStage", { opacity: 0, duration: 1.1, ease: "power2.in" }, 27.3);
+      tl.to("#resultsPanel", { opacity: 0, duration: 1.1, ease: "power2.in" }, 27.3);
+      tl.to("#inspector", { opacity: 0, duration: 1.1, ease: "power2.in" }, 27.3);
+      tl.to("#closing", { opacity: 1, duration: 1.0, ease: "power3.out" }, 27.9);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

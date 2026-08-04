@@ -18,7 +18,13 @@ Documentación de preproducción para la campaña de marca. Fuente de verdad vis
 **Elementos UI reales confirmados** (no inventar nada fuera de esta lista):
 Topbar (logo S, nombre de proyecto, "Local", "Casos activos", selector de unidades kN·m, deshacer/rehacer, sincronía, descarga, botón "Analizar"); rail de herramientas (Navegar: Seleccionar/Desplazar; Crear: Nodo/Miembro/Apoyo; Cargas: Puntual/Distribuida/Momento; Anotar: Cota/Corte; Editar: Dividir miembro); canvas con retícula, snap/grid, nodos etiquetados (N1, N2…), apoyos (símbolo de pin/rodillo), acotaciones ámbar; Centro Analítico inferior (Estado: Resumen/Reacciones; Esfuerzos: Axial/Cortante/Momento; Forma: Deformada; Avanzado: Influencia; Comprender: Aprender; Avisos); Inspector derecho (propiedades, valores derivados N máx/V máx/M máx); Modo Aula (pasos Construye→Define→Predice→Analiza→Compara→Concluye, tarjeta "Tu hipótesis antes del cálculo"); Centro de Importación (pasos Archivo→Inspección→Contenido→Destino→Confirmar→Resultado; formatos JSON structureCo, PDF inteligente, Expediente .structureco); footer de aviso ("herramienta educativa y de apoyo... no sustituye la revisión de un profesional responsable").
 
-**Diseño sonoro compartido:** pulso grave de 40-60Hz para golpes de marca; clic seco y corto al colocar nodo; "snap" metálico suave al conectar miembro; barrido de aire (whoosh filtrado, sin silbido agudo) en transiciones de cámara; tono ascendente breve de dos notas al ejecutar análisis; impacto contenido (sin reverberación larga) al revelar el logotipo. Sin música épica de librería genérica, sin SFX de videojuego.
+**Diseño sonoro compartido (implementado):** pulso grave de 40-60Hz para golpes de marca; clic seco y corto al colocar nodo; "snap" metálico suave al conectar miembro; barrido de aire (whoosh filtrado, sin silbido agudo) en transiciones de cámara; tono ascendente breve al ejecutar análisis; impacto contenido (sin reverberación larga) al revelar el logotipo. Sin música épica de librería genérica, sin SFX de videojuego.
+
+Realización técnica:
+- **Lecho atmosférico** (`motion/_shared/make-audio.sh`): sintetizado con ffmpeg, no tomado de una librería de stock. Tres parciales graves (A1 55Hz + E2 82.41Hz + A2 110Hz) — una quinta hueca sin tercera, para que lea como instrumentación y no como música con tonalidad/estado de ánimo. Filtro paso-bajo a 320Hz, trémolo lentísimo (0.14Hz) para que respire, fades de 2s/2.5s. Determinista: los mismos argumentos producen siempre el mismo archivo. Se genera a la duración exacta de cada video.
+- **Efectos** (`motion/_shared/sfx/`): seleccionados de la librería local incluida en la skill `media-use`. Usados: `click-soft` (colocar nodo), `click` (conectar miembro / confirmar), `whoosh-short` y `whoosh-cinematic` (barridos de cámara y transiciones), `impact-bass-1`/`impact-bass-2` (marca, carga que cae, análisis resuelto), `ping` (valor crítico, ejecución del análisis), `chime` (resolución de cierre). Descartados deliberadamente por no encajar con la dirección: `sparkle`, `pop`, `glitch-*`, `error`, `notification`, `typing`.
+- **Mezcla**: el lecho va pre-atenuado en el propio archivo; los efectos se sitúan entre 0.15 y 0.45 de volumen según jerarquía narrativa. Cada SFX vive en su propia pista (`data-track-index` 10+) para evitar solapamientos en la misma pista.
+- **Sin voz en off**: la colección es íntegramente visual + diseño sonoro, según el brief.
 
 **Regla de formatos:** todo texto y elemento crítico vive dentro del 80% central del frame (safe area) para sobrevivir el recorte de 16:9 a 9:16/1:1. Las adaptaciones verticales/cuadradas reencuadran el mismo timeline (mismo timing, distinta composición de cámara), no son videos nuevos.
 
@@ -233,6 +239,26 @@ Topbar (logo S, nombre de proyecto, "Local", "Casos activos", selector de unidad
 
 ## Plan de producción
 
-1. **Piloto:** Video 01 completo en 16:9 (HyperFrames) para validar look, tipografía, paleta y ritmo antes de escalar.
-2. **Lote:** una vez aprobado el piloto, producir Videos 02–10 en 16:9 con el mismo sistema visual/proyecto compartido.
-3. **Segunda pasada:** adaptar cada master aprobado a 9:16 y 1:1 reencuadrando dentro del área segura ya definida por video.
+1. **Piloto:** Video 01 completo en 16:9 (HyperFrames) para validar look, tipografía, paleta y ritmo antes de escalar. — *Aprobado.*
+2. **Lote:** Videos 02–10 en 16:9 con el mismo sistema visual y diseño sonoro. — *Producido.*
+3. **Segunda pasada:** adaptar cada master a 9:16 y 1:1 reencuadrando dentro del área segura ya definida por video. — *Pendiente.*
+
+## Estructura del repositorio
+
+```
+motion/
+  _shared/
+    make-audio.sh        generador determinista del lecho atmosférico
+    sfx/                 paleta de efectos de la campaña
+  01-brand-reveal/       …hasta 10-teaser/
+    index.html           composición HyperFrames (DOM + timeline GSAP)
+    assets/              bed.mp3 a medida + SFX del video
+    vendor/gsap.min.js   GSAP vendorizado (el CDN está bloqueado por política de red)
+    BRIEF.md, frame.md   intención y verdad de marca (solo en 01)
+```
+
+Comandos por proyecto: `npm run check` (lint + runtime + layout + motion + contraste) y `npx hyperframes render -f 30 -q standard -o <salida>.mp4`.
+
+## Estado de verificación
+
+Los diez proyectos pasan `hyperframes check` sin errores: contraste WCAG AA en todo el texto en pantalla, sin solapamientos de texto, sin oclusiones, timelines seek-safe y deterministas (sin relojes, sin aleatoriedad sin semilla, sin peticiones de red en tiempo de render).
