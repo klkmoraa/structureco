@@ -1,6 +1,6 @@
 # Espaciado, forma, elevación y densidad — Sistema de diseño structureCo
 
-> Fuente de verdad: `src/styles/tokens.css` (secciones 4, 6 y 7), `src/ui/ui.css`, `src/styles.css`.
+> Fuente de verdad: `src/design-system/tokens.css` (secciones 4, 6 y 7), `src/design-system/components/ui.css`, `src/styles.css`.
 > Principio "Mesa Modular": paneles organizados con medidas fijas y previsibles; densidad profesional compacta pero legible.
 
 ## Escala de espaciado (base 4px)

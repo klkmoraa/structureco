@@ -1,6 +1,6 @@
 # Tipografía — Sistema de diseño structureCo
 
-> Fuente de verdad: `src/styles/tokens.css` (sección 5, "Instrumento de Precisión"), `src/ui/ui.css`, `src/components/inspector/numericFormatting.ts`.
+> Fuente de verdad: `src/design-system/tokens.css` (sección 5, "Instrumento de Precisión"), `src/design-system/components/ui.css`, `src/features/inspector/numericFormatting.ts`.
 > Decisión heredada **D-010** (`docs/ux-redesign/DECISIONS.md`): pila local/sistema existente, **sin descarga remota ni archivos de fuente nuevos**.
 
 ## Pilas de fuente

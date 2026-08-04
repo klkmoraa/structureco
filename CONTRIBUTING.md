@@ -29,8 +29,11 @@ las capas separadas de valor almacenado, valor presentado y borrador.
 
 ## Interfaz y accesibilidad
 
-- Reutiliza los tokens de `src/styles/tokens.css` y los componentes documentados
-  en `docs/ux-redesign/COMPONENTS.md`.
+- Reutiliza los tokens de `src/design-system/tokens.css` y los componentes
+  documentados en `docs/ux-redesign/COMPONENTS.md`.
+- Para animar, lee primero `docs/design-system/MOTION.md`: CSS es el
+  predeterminado, y la librería (`m.*`, nunca `motion.*`) se reserva para
+  salidas y reflow de listas.
 - Mantén el canvas como documento principal y la complejidad progresiva.
 - Verifica Light/Dark, español/inglés, desktop/tablet/móvil, teclado, touch,
   foco visible, focus trap, Escape, retorno de foco y `prefers-reduced-motion`.
@@ -43,6 +46,11 @@ El gate mínimo para cualquier cambio es:
 ```bash
 npm run verify
 ```
+
+Incluye `verify:perf`, que **falla** si la carga inicial supera su techo
+declarado. Si lo rompes, mira qué archivos aparecen como `inicial` en
+`node scripts/measure-performance.mjs`: casi siempre es una dependencia que
+entró al chunk de entrada por un import ansioso.
 
 Los cambios de interfaz deben añadir el recorrido pertinente:
 
