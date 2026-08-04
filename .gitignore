@@ -48,3 +48,12 @@ structureco-sites/
 structureCo/
 structureCo-contexto-total-autocontenido-*/
 structureCo-documentacion-integral-*/
+
+# HyperFrames motion-graphics campaign (motion/*)
+.claude/skills/
+.agents/
+motion/*/node_modules/
+motion/*/snapshots/
+motion/*/*.mp4
+motion/*/*.webm
+motion/*/.hyperframes/

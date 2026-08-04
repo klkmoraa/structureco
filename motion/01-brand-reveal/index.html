@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>structureCo — Revelación de Marca</title>
+    <script src="vendor/gsap.min.js"></script>
+    <style>
+      :root {
+        --bg: #060b09;
+        --grid: #202a2b;
+        --grid-strong: #2c3539;
+        --member: #f1f5f4;
+        --accent: #39d4a2;
+        --logo-fill: #157a55;
+        --text-primary: #f2f7f4;
+        --text-secondary: #b8c8c0;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      .clip {
+        position: absolute;
+        inset: 0;
+      }
+
+      /* ---------- background plate ---------- */
+      .bg-plate {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse 1200px 800px at 50% 46%, #0a1512 0%, var(--bg) 62%);
+      }
+      .vignette {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse 1400px 950px at 50% 50%, transparent 45%, #04070600 55%, #030503 100%);
+        pointer-events: none;
+      }
+
+      /* ---------- camera wrapper (multi-phase-camera pattern) ---------- */
+      .camera {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        transform-origin: 50% 50%;
+        will-change: transform;
+      }
+      .content {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+      }
+
+      /* ---------- grid layer ---------- */
+      .grid-layer {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+      }
+
+      /* ---------- truss layer (nodes + members) ---------- */
+      .truss-layer {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .truss-layer .member {
+        fill: none;
+        stroke: var(--member);
+        stroke-width: 3;
+        stroke-linecap: round;
+        opacity: 0.92;
+      }
+      .truss-layer .node {
+        fill: var(--bg);
+        stroke: var(--accent);
+        stroke-width: 3.5;
+        opacity: 0;
+        transform-box: fill-box;
+        transform-origin: 50% 50%;
+      }
+      .truss-layer .support {
+        fill: none;
+        stroke: var(--text-secondary);
+        stroke-width: 2.5;
+        opacity: 0.85;
+      }
+
+      /* ---------- logo glyph ---------- */
+      .glyph-wrap {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 220px;
+        height: 220px;
+        margin-left: -110px;
+        margin-top: -110px;
+        transform: scale(0.86);
+        transform-origin: 50% 50%;
+        opacity: 0;
+        z-index: 3;
+      }
+      .glyph-glow {
+        position: absolute;
+        inset: -140px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(57, 212, 162, 0.55) 0%, rgba(57, 212, 162, 0.16) 42%, rgba(57, 212, 162, 0) 72%);
+        opacity: 0;
+        z-index: 2;
+      }
+      .glyph-wrap svg {
+        position: relative;
+        z-index: 3;
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      /* ---------- wordmark block ---------- */
+      .wordlock {
+        position: absolute;
+        left: 50%;
+        top: 690px;
+        transform: translateX(-50%);
+        text-align: center;
+        z-index: 4;
+      }
+      .wordmark {
+        font-family: "Inter", sans-serif;
+        font-weight: 800;
+        font-size: 64px;
+        letter-spacing: -0.01em;
+        color: var(--text-primary);
+        opacity: 0;
+        transform: translateY(16px);
+      }
+      .tagline {
+        margin-top: 14px;
+        font-family: "Inter", sans-serif;
+        font-weight: 550;
+        font-size: 24px;
+        color: var(--text-secondary);
+        opacity: 0;
+        transform: translateY(12px);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-width="1920"
+      data-height="1080"
+      data-duration="14"
+    >
+      <section id="scene" class="clip" data-start="0" data-duration="14" data-track-index="1">
+        <div class="bg-plate"></div>
+
+        <div class="camera" id="camera">
+          <div class="content">
+            <svg class="grid-layer" id="grid" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="gridPattern" width="48" height="48" patternUnits="userSpaceOnUse">
+                  <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#202a2b" stroke-width="1" />
+                </pattern>
+              </defs>
+              <rect width="1920" height="1080" fill="url(#gridPattern)" />
+              <line x1="960" y1="0" x2="960" y2="1080" stroke="#2c3539" stroke-width="1" />
+              <line x1="0" y1="540" x2="1920" y2="540" stroke="#2c3539" stroke-width="1" />
+            </svg>
+
+            <svg class="truss-layer" id="trussSvg" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+              <!-- members (structural lines) -->
+              <path id="m1" class="member" d="M 700 700 L 700 420" />
+              <path id="m2" class="member" d="M 1220 700 L 1220 420" />
+              <path id="m3" class="member" d="M 700 420 L 960 340" />
+              <path id="m4" class="member" d="M 960 340 L 1220 420" />
+              <path id="m5" class="member" d="M 700 700 L 820 560" />
+              <path id="m6" class="member" d="M 820 560 L 960 340" />
+              <path id="m7" class="member" d="M 1220 700 L 1100 560" />
+              <path id="m8" class="member" d="M 1100 560 L 960 340" />
+
+              <!-- supports (pin symbol, matches the app's real support glyph) -->
+              <path id="s1" class="support" d="M 700 700 L 678 736 L 722 736 Z" />
+              <path id="s2" class="support" d="M 1220 700 L 1198 736 L 1242 736 Z" />
+
+              <!-- nodes -->
+              <circle id="n1" class="node" cx="700" cy="700" r="9" />
+              <circle id="n2" class="node" cx="1220" cy="700" r="9" />
+              <circle id="n3" class="node" cx="700" cy="420" r="9" />
+              <circle id="n4" class="node" cx="1220" cy="420" r="9" />
+              <circle id="n5" class="node" cx="960" cy="340" r="9" />
+              <circle id="n6" class="node" cx="820" cy="560" r="9" />
+              <circle id="n7" class="node" cx="1100" cy="560" r="9" />
+            </svg>
+
+            <div class="glyph-wrap" id="glyphWrap">
+              <div class="glyph-glow" id="glyphGlow" data-layout-allow-overflow="true"></div>
+              <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <rect width="64" height="64" rx="15" fill="#157a55" />
+                <path
+                  fill="#fff"
+                  d="M43.5 13.5H29C20.6 13.5 15.5 18 15.5 24.8c0 6.4 4.7 10.4 12.9 10.4h7.4c4.1 0 6.2 1.6 6.2 4.5 0 3-2.3 4.8-6.5 4.8H18V52h17.8C44.1 52 49 47.3 49 39.8c0-6.7-4.6-10.7-12.8-10.7h-7.4c-4.2 0-6.3-1.5-6.3-4.2 0-2.5 2.3-4.1 6.7-4.1h14.3v-7.3Z"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="vignette"></div>
+
+        <div class="wordlock" id="wordlock">
+          <div class="wordmark" id="wordmark">structureCo</div>
+          <div class="tagline" id="tagline">De lo complejo a lo claro.</div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // ---- measure + prep member strokes (svg-path-draw) ----
+      const memberIds = ["m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8"];
+      const memberLens = {};
+      memberIds.forEach((id) => {
+        const el = document.getElementById(id);
+        const len = el.getTotalLength();
+        memberLens[id] = len;
+        el.style.strokeDasharray = `${len}`;
+        el.style.strokeDashoffset = `${len}`;
+      });
+
+      const supportIds = ["s1", "s2"];
+      supportIds.forEach((id) => {
+        const el = document.getElementById(id);
+        const len = el.getTotalLength();
+        el.style.strokeDasharray = `${len}`;
+        el.style.strokeDashoffset = `${len}`;
+      });
+
+      // ---- Phase 0: grid ignites, single soft flicker (0.0 - 1.6s) ----
+      tl.fromTo("#grid", { opacity: 0 }, { opacity: 0.55, duration: 0.18, ease: "power1.out" }, 0.15);
+      tl.to("#grid", { opacity: 0.16, duration: 0.22, ease: "power1.in" }, 0.4);
+      tl.to("#grid", { opacity: 0.34, duration: 0.8, ease: "power2.out" }, 0.75);
+
+      // ---- Phase 1: nodes pop in one by one (1.1 - 4.2s) ----
+      const nodeIds = ["n1", "n2", "n3", "n4", "n5", "n6", "n7"];
+      const NODE_START = 1.1;
+      const NODE_STAGGER = 0.42;
+      const NODE_POP_DUR = 0.5;
+      nodeIds.forEach((id, i) => {
+        tl.fromTo(
+          `#${id}`,
+          { scale: 0, opacity: 0 },
+          { scale: 1, opacity: 1, duration: NODE_POP_DUR, ease: "power3.out" },
+          NODE_START + i * NODE_STAGGER,
+        );
+      });
+
+      // ---- Phase 2: members draw on, staggered overlapping segments (3.9 - 7.3s) ----
+      const MEMBER_START = 3.9;
+      const MEMBER_STAGGER = 0.42;
+      const MEMBER_DRAW_DUR = 0.55;
+      memberIds.forEach((id, i) => {
+        tl.to(
+          `#${id}`,
+          { strokeDashoffset: 0, duration: MEMBER_DRAW_DUR, ease: "power2.out" },
+          MEMBER_START + i * MEMBER_STAGGER,
+        );
+      });
+
+      // supports draw on right after their columns land
+      tl.to("#s1", { strokeDashoffset: 0, duration: 0.35, ease: "power2.out" }, MEMBER_START + 0.5);
+      tl.to("#s2", { strokeDashoffset: 0, duration: 0.35, ease: "power2.out" }, MEMBER_START + 0.5);
+
+      // ---- Phase 3: camera push-in toward the fixed center (7.0 - 10.0s) ----
+      const camera = { scale: 1 };
+      const cameraEl = document.getElementById("camera");
+      tl.to(
+        camera,
+        {
+          scale: 1.34,
+          duration: 3.0,
+          ease: "power2.inOut",
+          onUpdate: () => {
+            cameraEl.style.transform = `scale(${camera.scale})`;
+          },
+        },
+        7.0,
+      );
+
+      // ---- Phase 4: the armature simplifies away (8.0 - 9.5s) ----
+      tl.to("#trussSvg", { opacity: 0, duration: 1.5, ease: "power2.in" }, 8.0);
+      tl.to("#grid", { opacity: 0.12, duration: 1.5, ease: "power2.in" }, 8.0);
+
+      // ---- Phase 5: the glyph solidifies, clean fill, no overshoot (9.2 - 10.4s) ----
+      tl.to(
+        "#glyphWrap",
+        { opacity: 1, scale: 1, duration: 1.2, ease: "power3.out" },
+        9.2,
+      );
+
+      // ---- Phase 6: subtle glow bloom, pulse-on-arrival then settle (9.6 - 12.4s) ----
+      const glow = document.getElementById("glyphGlow");
+      tl.fromTo(
+        "#glyphGlow",
+        { opacity: 0, scale: 0.85 },
+        { opacity: 0.5, scale: 1.05, duration: 0.9, ease: "power2.out" },
+        9.6,
+      );
+      tl.to("#glyphGlow", { opacity: 0.22, scale: 1, duration: 1.1, ease: "power2.inOut" }, 10.5);
+      const breathe = { p: 0 };
+      tl.to(
+        breathe,
+        {
+          p: Math.PI * 2,
+          duration: 2.0,
+          ease: "none",
+          onUpdate: () => {
+            const s = Math.sin(breathe.p);
+            glow.style.opacity = String(0.22 + s * 0.05);
+          },
+        },
+        11.6,
+      );
+
+      // ---- Phase 7: wordmark + tagline (11.3 - 13.4s) ----
+      tl.to("#wordmark", { opacity: 1, y: 0, duration: 0.9, ease: "power3.out" }, 11.3);
+      tl.to("#tagline", { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }, 11.9);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
