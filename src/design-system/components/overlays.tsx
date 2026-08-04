@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 
 export interface TooltipProps {
   content: ReactNode;
@@ -94,7 +94,7 @@ export const Popover = ({
     >{trigger}</button>
     <AnimatePresence>
       {open ? (
-        <motion.section
+        <m.section
           key={id}
           id={id}
           initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.96 }}
@@ -106,7 +106,7 @@ export const Popover = ({
           aria-label={label}
         >
           {children}
-        </motion.section>
+        </m.section>
       ) : null}
     </AnimatePresence>
   </div>;
@@ -257,7 +257,7 @@ const ModalSurface = ({
   return createPortal(
     <AnimatePresence>
       {open ? (
-        <motion.div
+        <m.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -268,7 +268,7 @@ const ModalSurface = ({
             if (event.target === event.currentTarget) onOpenChange(false);
           }}
         >
-          <motion.section
+          <m.section
             ref={surfaceRef}
             {...surfaceMotionProps}
             className={`sc-modal-surface sc-modal-surface--${kind}${kind === 'drawer' ? ` sc-modal-surface--${side}` : ''}${className ? ` ${className}` : ''}`}
@@ -287,8 +287,8 @@ const ModalSurface = ({
             </header>
             <div className="sc-modal-surface__body">{children}</div>
             {footer ? <footer className="sc-modal-surface__footer">{footer}</footer> : null}
-          </motion.section>
-        </motion.div>
+          </m.section>
+        </m.div>
       ) : null}
     </AnimatePresence>,
     document.body,

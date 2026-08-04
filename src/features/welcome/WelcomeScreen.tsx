@@ -13,7 +13,7 @@ import {
   Triangle,
   Upload,
 } from 'lucide-react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import { createBlankProject, exampleProjects } from '../../data/defaultProject';
 import { useProject } from '../../store/ProjectContext';
 import { exportProjectJson } from '../../utils/export';
@@ -104,7 +104,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
         </header>
 
         <div className="welcome-content">
-          <motion.section className="welcome-hero" aria-labelledby="welcome-title" {...fadeInUp(0)}>
+          <m.section className="welcome-hero" aria-labelledby="welcome-title" {...fadeInUp(0)}>
             <div className="welcome-badge-pill">
               <Sparkles size={14} />
               <span>{t('welcome.badgePill')}</span>
@@ -120,7 +120,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
             </div>
 
             <div className="welcome-hero-launcher" onPointerEnter={onPreloadWorkspace} onFocusCapture={onPreloadWorkspace} onTouchStart={onPreloadWorkspace}>
-              <motion.button whileHover={hoverLift} whileTap={pressDown} className="welcome-launcher-card welcome-launcher-card--primary" onClick={openBlankProject}>
+              <m.button whileHover={hoverLift} whileTap={pressDown} className="welcome-launcher-card welcome-launcher-card--primary" onClick={openBlankProject}>
                 <div className="welcome-launcher-icon"><Compass size={24} /></div>
                 <div className="welcome-launcher-info">
                   <div className="welcome-launcher-header">
@@ -130,9 +130,9 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
                   <small>{t('welcome.launcherFreeCanvasDescription')}</small>
                 </div>
                 <ArrowRight size={18} className="welcome-launcher-arrow" />
-              </motion.button>
+              </m.button>
 
-              <motion.button whileHover={hoverLift} whileTap={pressDown} className="welcome-launcher-card welcome-launcher-card--classroom" onClick={() => setExerciseDialogOpen(true)}>
+              <m.button whileHover={hoverLift} whileTap={pressDown} className="welcome-launcher-card welcome-launcher-card--classroom" onClick={() => setExerciseDialogOpen(true)}>
                 <div className="welcome-launcher-icon"><GraduationCap size={24} /></div>
                 <div className="welcome-launcher-info">
                   <div className="welcome-launcher-header">
@@ -142,9 +142,9 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
                   <small>{t('welcome.launcherClassroomDescription')}</small>
                 </div>
                 <ArrowRight size={18} className="welcome-launcher-arrow" />
-              </motion.button>
+              </m.button>
 
-              <motion.button whileHover={hoverLift} whileTap={pressDown} className="welcome-launcher-card welcome-launcher-card--recent" onClick={onOpenWorkspace}>
+              <m.button whileHover={hoverLift} whileTap={pressDown} className="welcome-launcher-card welcome-launcher-card--recent" onClick={onOpenWorkspace}>
                 <div className="welcome-launcher-icon"><FolderOpen size={24} /></div>
                 <div className="welcome-launcher-info">
                   <div className="welcome-launcher-header">
@@ -154,11 +154,11 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
                   <strong>{project.name}</strong>
                 </div>
                 <ArrowRight size={18} className="welcome-launcher-arrow" />
-              </motion.button>
+              </m.button>
             </div>
-          </motion.section>
+          </m.section>
 
-          <motion.section className="welcome-showcase" aria-labelledby="welcome-showcase-title" {...fadeInUp(80)}>
+          <m.section className="welcome-showcase" aria-labelledby="welcome-showcase-title" {...fadeInUp(80)}>
             <div className="welcome-showcase-header">
               <div>
                 <h2 id="welcome-showcase-title">{t('welcome.otherWays')}</h2>
@@ -171,13 +171,13 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
               </div>
             </div>
 
-            <motion.button whileHover={reducedMotion ? undefined : { scale: 1.01, y: -1 }} whileTap={reducedMotion ? undefined : { scale: 0.99 }} className="welcome-import-card" onClick={() => setImportCenterOpen(true)}>
+            <m.button whileHover={reducedMotion ? undefined : { scale: 1.01, y: -1 }} whileTap={reducedMotion ? undefined : { scale: 0.99 }} className="welcome-import-card" onClick={() => setImportCenterOpen(true)}>
               <div className="welcome-import-icon"><Upload size={22} /></div>
               <div className="welcome-import-text">
                 <strong>{t('welcome.import')}</strong>
                 <small>{t('welcome.importDescription')}</small>
               </div>
-            </motion.button>
+            </m.button>
 
             <div className="welcome-templates-grid">
               <AnimatePresence mode="popLayout">
@@ -186,7 +186,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
                   const Icon = meta.icon;
                   const copy = presentExample(example.name, example.description, t);
                   return (
-                    <motion.button
+                    <m.button
                       key={example.name}
                       layout
                       {...templateMotion}
@@ -207,12 +207,12 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
                         <span>{t('welcome.loadModel')}</span>
                         <ArrowRight size={14} />
                       </div>
-                    </motion.button>
+                    </m.button>
                   );
                 })}
               </AnimatePresence>
             </div>
-          </motion.section>
+          </m.section>
 
           <section className="welcome-workflow" aria-labelledby="welcome-workflow-title">
             <div className="welcome-workflow-header">

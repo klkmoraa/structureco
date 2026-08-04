@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import {
   Check,
   ChevronDown,
@@ -327,7 +327,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
         >{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />} <span>{storageLabel}</span><small id={storageDescriptionId} className="autosave-state__description">{storageDescription}</small></span>
         <AnimatePresence>
           {showProjectMenu ? (
-            <motion.div {...popoverMotionProps} className="popover project-menu" role="menu" aria-label={t('project.openExamples')} onKeyDown={onMenuKeyDown}>
+            <m.div {...popoverMotionProps} className="popover project-menu" role="menu" aria-label={t('project.openExamples')} onKeyDown={onMenuKeyDown}>
               <button role="menuitem" onClick={() => { const next = createBlankProject(); replaceProject({ ...next, settings: { ...next.settings, language } }); setShowProjectMenu(false); }}>
                 <FilePlus2 size={17} /> {t('project.new')}
               </button>
@@ -338,7 +338,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
                 </button>;
               })}
               <button role="menuitem" onClick={() => { setImportCenterOpen(true); setShowProjectMenu(false); }}><FolderOpen size={17} /> {t('project.importJson')}</button>
-            </motion.div>
+            </m.div>
           ) : null}
         </AnimatePresence>
       </div>
@@ -405,7 +405,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
           <IconButton ref={exportMenuButtonRef} className="icon-button" label={t('export.label')} title={t('export.label')} aria-expanded={showExportMenu} aria-haspopup="menu" onClick={toggleExportMenu}><Download size={19} /></IconButton>
           <AnimatePresence>
             {showExportMenu ? (
-              <motion.div {...popoverMotionProps} className="popover export-menu" role="menu" aria-label={t('export.label')} onKeyDown={onMenuKeyDown}>
+              <m.div {...popoverMotionProps} className="popover export-menu" role="menu" aria-label={t('export.label')} onKeyDown={onMenuKeyDown}>
                 <button role="menuitem" onClick={() => { exportProjectJson(project); emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' }); setShowExportMenu(false); }}><Save size={16} /> {t('export.projectJson')}</button>
                 <button role="menuitem" onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
                 <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
@@ -413,7 +413,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
                 <button role="menuitem" onClick={() => { emitWorkspaceCommand('export-svg'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowExportMenu(false); }}>{t('export.imageSvg')}</button>
                 <button role="menuitem" onClick={() => { emitWorkspaceCommand('export-png'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowExportMenu(false); }}>{t('export.imagePng')}</button>
                 <button role="menuitem" onClick={() => { window.print(); setShowExportMenu(false); }}>{t('export.print')}</button>
-              </motion.div>
+              </m.div>
             ) : null}
           </AnimatePresence>
         </div>
@@ -421,7 +421,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
           <IconButton ref={mobileMenuButtonRef} className="icon-button mobile-more-button utility-more-button" label={t('actions.more')} aria-expanded={showMobileMenu} aria-haspopup="dialog" onClick={toggleMobileMenu}><MoreHorizontal size={20} /></IconButton>
           <AnimatePresence>
             {showMobileMenu ? (
-              <motion.div {...popoverMotionProps} className="popover mobile-actions-menu utility-actions-menu" role="dialog" aria-label={t('actions.more')}>
+              <m.div {...popoverMotionProps} className="popover mobile-actions-menu utility-actions-menu" role="dialog" aria-label={t('actions.more')}>
                 <div className="mobile-history-actions overflow-history" role="group" aria-label={t('history.label')}>
                   <button onClick={undo} disabled={!canUndo}><Undo2 size={17} /> {t('history.undo')}</button>
                   <button onClick={redo} disabled={!canRedo}><Redo2 size={17} /> {t('history.redo')}</button>
@@ -471,7 +471,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
 
                 <div className={`mobile-storage-state ${storageHasError || storageState === 'offline' ? 'error' : ''}`} data-storage-state={storageState} role="status" aria-live="polite" aria-atomic="true">{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}<span><strong>{storageLabel}</strong><small>{storageDescription}</small></span></div>
                 {exportError ? <div className="portable-export-error" role="alert">{exportError}</div> : null}
-              </motion.div>
+              </m.div>
             ) : null}
           </AnimatePresence>
         </div>

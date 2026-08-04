@@ -58,7 +58,7 @@ jobs:
         run: npm run build
 
       - name: Presupuestos de rendimiento
-        run: node scripts/measure-performance.mjs
+        run: npm run verify:perf
 
       - name: Conservar el build en caso de fallo
         if: failure()

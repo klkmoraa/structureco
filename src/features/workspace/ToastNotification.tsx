@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2, CircleAlert, Info, TriangleAlert, X } from 'lucide-react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import { useI18n } from '../../i18n/useI18n';
 import { onWorkspaceCommand } from './workspaceCommands';
 
@@ -46,7 +46,7 @@ export const ToastNotification = () => {
               : toast.tone === 'error' ? CircleAlert
                 : Info;
           return (
-            <motion.div
+            <m.div
               key={toast.id}
               layout
               initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.94 }}
@@ -71,7 +71,7 @@ export const ToastNotification = () => {
               >
                 <X size={14} />
               </button>
-            </motion.div>
+            </m.div>
           );
         })}
       </AnimatePresence>
