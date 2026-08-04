@@ -3,6 +3,7 @@ import {
   Check,
   ChevronDown,
   CloudOff,
+  Copy,
   Download,
   FileArchive,
   FileText,
@@ -26,6 +27,7 @@ import { createBlankProject, exampleProjects } from '../../data/defaultProject';
 import { useI18n } from '../../i18n/useI18n';
 import { useProject } from '../../store/ProjectContext';
 import { exportProjectJson } from '../../utils/export';
+import { normalizeProject } from '../../data/migrate';
 import { AnalysisStatus } from './AnalysisStatus';
 import { BrandMark } from './BrandMark';
 import { Button, IconButton } from '../../design-system/components/controls';
@@ -77,6 +79,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
   const [importCenterOpen, setImportCenterOpen] = useState(false);
   const [portableExport, setPortableExport] = useState<'pdf' | 'bundle' | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [jsonCopyState, setJsonCopyState] = useState<'idle' | 'copied' | 'downloaded'>('idle');
   const [projectNameDraft, setProjectNameDraft] = useState(project.name);
   const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine !== false);
   const topbarRef = useRef<HTMLElement>(null);
@@ -245,6 +248,30 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
     }
   };
 
+  const handleCopyJson = async () => {
+    const payload = JSON.stringify(normalizeProject(project), null, 2);
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(payload);
+        setJsonCopyState('copied');
+      } else {
+        exportProjectJson(project);
+        setJsonCopyState('downloaded');
+      }
+    } catch {
+      exportProjectJson(project);
+      setJsonCopyState('downloaded');
+    }
+    window.setTimeout(() => setJsonCopyState('idle'), 1800);
+  };
+
+  const copyJsonLabel = jsonCopyState === 'copied'
+    ? t('export.copySuccessful')
+    : jsonCopyState === 'downloaded'
+      ? t('export.copyFallbackDownloaded')
+      : t('export.copyData');
+  const copyJsonIcon = jsonCopyState === 'copied' ? <Check size={16} /> : jsonCopyState === 'downloaded' ? <Save size={16} /> : <Copy size={16} />;
+
   return (
     <header ref={topbarRef} className="topbar">
       <div className="brand-block topbar-zone topbar-document-zone" data-topbar-zone="document">
@@ -373,6 +400,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
           {showExportMenu ? (
             <div className="popover export-menu" role="menu" aria-label={t('export.label')} onKeyDown={onMenuKeyDown}>
               <button role="menuitem" onClick={() => { exportProjectJson(project); setShowExportMenu(false); }}><Save size={16} /> {t('export.projectJson')}</button>
+              <button role="menuitem" onClick={() => void handleCopyJson()}>{copyJsonIcon} {copyJsonLabel}</button>
               <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
               <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
               <button role="menuitem" onClick={() => { emitWorkspaceCommand('export-svg'); setShowExportMenu(false); }}>{t('export.imageSvg')}</button>
@@ -411,6 +439,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
                 </button>
               </div> : null}
               <button onClick={() => { exportProjectJson(project); setShowMobileMenu(false); }}><Save size={16} /> {t('export.json')}</button>
+              <button onClick={() => void handleCopyJson()}>{copyJsonIcon} {copyJsonLabel}</button>
               <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
               <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
               <button onClick={() => { emitWorkspaceCommand('export-svg'); setShowMobileMenu(false); }}><Download size={16} /> {t('export.svg')}</button>

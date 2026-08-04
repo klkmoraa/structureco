@@ -113,6 +113,43 @@ describe('TopBar portable export', () => {
   });
 });
 
+describe('TopBar copy project JSON', () => {
+  it('copies the normalized project JSON to the clipboard when available', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
+    Object.defineProperty(window.navigator, 'clipboard', { configurable: true, value: { writeText } });
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
+
+    await user.click(screen.getByRole('button', { name: 'Exportar' }));
+    await user.click(screen.getByRole('menuitem', { name: /Copiar datos/ }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    const [payload] = writeText.mock.calls[0];
+    expect(() => JSON.parse(payload)).not.toThrow();
+    await screen.findByRole('menuitem', { name: '¡Copiado!' });
+
+    // @ts-expect-error test-only cleanup of a jsdom property defined above
+    delete window.navigator.clipboard;
+  });
+
+  it('falls back to downloading the file when the clipboard is unavailable', async () => {
+    const user = userEvent.setup();
+    Object.defineProperty(window, 'isSecureContext', { configurable: true, value: false });
+    const createObjectURL = vi.fn().mockReturnValue('blob:mock');
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL });
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL });
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
+
+    await user.click(screen.getByRole('button', { name: 'Exportar' }));
+    await user.click(screen.getByRole('menuitem', { name: /Copiar datos/ }));
+
+    await waitFor(() => expect(createObjectURL).toHaveBeenCalledOnce());
+    await screen.findByRole('menuitem', { name: 'Portapapeles no disponible: se descargó el archivo' });
+  });
+});
+
 describe('TopBar information architecture', () => {
   it('announces local-first and offline states without relying on color', async () => {
     const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);
