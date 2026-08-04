@@ -102,8 +102,15 @@ No se consumen directamente. Se listan como referencia de las ramps.
 | `--sc-color-state-critical` | `#b3261e` | `#ff8a80` | Severidad crítica (escalón sobre error) | — | Sin cambios en v2; medir antes de usarlo como texto pequeño |
 | `--sc-color-state-info` / `-loading` | `#345fd6` | `#86a8ff` | Información / progreso | — | = focus |
 | `--sc-color-state-stale` | = warning | = warning | Resultados desactualizados | — | Alias |
-| `--sc-color-state-valid` / `-invalid` | `#1c9560` / = error | `#45c98a` / `#f26b6b` | Validación de formularios | — | **Nota:** estos dos alias quedaron con el verde/rojo de la v1 (no se tocaron en la migración v2 porque el PDF de paleta no los mencionaba explícitamente); revisar si deben converger con `state-success`/`state-error` en una futura pasada |
 | `--sc-color-state-pending` | `#5f736a` | `#8d9895` | Estados pendientes/neutros | — | = text-muted |
+
+`--sc-color-state-valid` y `--sc-color-state-invalid` se eliminaron el
+2026-08-03. La migración v2 los había dejado con los valores de la v1 y este
+documento pedía revisar si debían converger con `state-success`/`state-error`;
+al revisarlo se comprobó que **ningún archivo del proyecto los consumía**. La
+validación de formularios usa `--sc-color-state-error-foreground`
+(`.sc-field__error` en `ui.css`), no estos alias. Se quitaron en vez de
+recalibrarlos: eran tokens muertos que solo podían volver a desincronizarse.
 
 ## 7 · Técnicos / estructurales (canvas y diagramas)
 
@@ -156,9 +163,9 @@ Explícitos por tema, **nunca producidos por inversión**.
 | `--sc-color-canvas-grid` | `#e7ece9` | `#202a2b` | Cuadrícula fina (siempre por debajo del miembro y de resultados) |
 | `--sc-color-canvas-grid-strong` | `#d8dfdb` | `#2c3539` | Cuadrícula mayor |
 | `--sc-color-canvas-member` | `#16211c` | `#f1f5f4` | Trazo de miembros y apoyos |
-| `--sc-color-canvas-node-fill` | `#fafcfb` | `#0c1012` | Relleno de nodos (= fondo del canvas Día; Noche difiere levemente de `bg-canvas` porque no se resincronizó en la migración v2 — revisar) |
+| `--sc-color-canvas-node-fill` | `#fafcfb` | `#060b09` | Relleno de nodos (= `bg-canvas` en ambos temas; el contorno lo aporta `canvas-member`) |
 
-`--sc-color-bg-canvas` Noche pasó a `#060b09`, pero `--sc-color-canvas-node-fill` Noche se quedó en `#0c1012` (valor v1). No es un error funcional — solo el relleno de nodo queda ligeramente más claro que el fondo del canvas — pero conviene igualarlos en una futura pasada si se busca coherencia total. La exportación SVG (`src/utils/svgExport.ts`) sí se resincronizó con el nuevo `bg-canvas` Noche (`#060b09`).
+`--sc-color-canvas-node-fill` Noche se resincronizó con `--sc-color-bg-canvas` (`#060b09`) el 2026-08-03, cerrando la deuda que había dejado la migración v2: ahora el relleno de nodo iguala el fondo del canvas en ambos temas, igual que ya ocurría en Día. La exportación SVG (`src/utils/svgExport.ts`) usa ese mismo valor.
 
 ## 8 · Herramientas (rail)
 

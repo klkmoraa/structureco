@@ -96,8 +96,6 @@
   --sc-color-state-info: var(--sc-blue-500);
   --sc-color-state-stale: var(--sc-amber-500);
   --sc-color-state-loading: var(--sc-blue-500);
-  --sc-color-state-valid: #1c9560;
-  --sc-color-state-invalid: var(--sc-red-500);
   --sc-color-state-pending: #6f7b75;
   --sc-color-state-warning-foreground: #8a4f00;
   --sc-color-state-error-foreground: var(--sc-red-700);
@@ -430,8 +428,6 @@
   --sc-color-state-info: #86a8ff;
   --sc-color-state-stale: #f0aa3c;
   --sc-color-state-loading: #86a8ff;
-  --sc-color-state-valid: #45c98a;
-  --sc-color-state-invalid: #f26b6b;
   --sc-color-state-pending: #8d9895;
   --sc-color-state-warning-foreground: var(--sc-color-state-warning);
   --sc-color-state-error-foreground: var(--sc-color-state-error);
@@ -449,7 +445,7 @@
   --sc-color-canvas-grid: #202a2b;
   --sc-color-canvas-grid-strong: #2c3539;
   --sc-color-canvas-member: #f1f5f4;
-  --sc-color-canvas-node-fill: #0c1012;
+  --sc-color-canvas-node-fill: #060b09;
   --sc-color-overlay-soft: rgba(0, 0, 0, 0.34);
   --sc-color-overlay-sheet: rgba(0, 0, 0, 0.46);
   --sc-color-overlay-strong: rgba(0, 0, 0, 0.68);
