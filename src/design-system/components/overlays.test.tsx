@@ -78,7 +78,7 @@ describe('component-library overlays', () => {
     await user.click(trigger);
     expect(screen.getByRole('dialog', { name: 'Preferencias' })).toBeTruthy();
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('dialog', { name: 'Preferencias' })).toBeNull();
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Preferencias' })).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 
@@ -97,7 +97,7 @@ describe('component-library overlays', () => {
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Aceptar' }));
 
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('dialog', { name: 'Confirmación' })).toBeNull();
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Confirmación' })).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(trigger));
     expect(document.body.style.overflow).toBe('');
   });

@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 export interface TooltipProps {
   content: ReactNode;
@@ -55,6 +56,7 @@ export const Popover = ({
   const id = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     if (!open) return undefined;
@@ -90,7 +92,23 @@ export const Popover = ({
       disabled={disabled}
       onClick={() => onOpenChange(!open)}
     >{trigger}</button>
-    {open ? <section id={id} className="sc-popover__surface" role="dialog" aria-label={label}>{children}</section> : null}
+    <AnimatePresence>
+      {open ? (
+        <motion.section
+          key={id}
+          id={id}
+          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.96 }}
+          animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+          exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.96 }}
+          transition={reducedMotion ? { duration: 0.01 } : { duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+          className="sc-popover__surface"
+          role="dialog"
+          aria-label={label}
+        >
+          {children}
+        </motion.section>
+      ) : null}
+    </AnimatePresence>
   </div>;
 };
 
@@ -210,36 +228,69 @@ const ModalSurface = ({
   const descriptionId = useId();
   const surfaceRef = useRef<HTMLElement>(null);
   useModalFocus(open, onOpenChange, surfaceRef);
+  const reducedMotion = useReducedMotion();
 
-  if (!open || typeof document === 'undefined') return null;
+  if (typeof document === 'undefined') return null;
+
+  const isDrawer = kind === 'drawer';
+  const drawerAxis: Record<NonNullable<ModalSurfaceProps['side']>, { hidden: Record<string, string>; visible: Record<string, number> }> = {
+    right: { hidden: { x: '100%' }, visible: { x: 0 } },
+    left: { hidden: { x: '-100%' }, visible: { x: 0 } },
+    bottom: { hidden: { y: '100%' }, visible: { y: 0 } },
+  };
+  const surfaceMotionProps = reducedMotion
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.01 } }
+    : isDrawer
+      ? {
+        initial: drawerAxis[side].hidden,
+        animate: drawerAxis[side].visible,
+        exit: drawerAxis[side].hidden,
+        transition: { type: 'spring' as const, stiffness: 380, damping: 32 },
+      }
+      : {
+        initial: { opacity: 0, scale: 0.94, y: 8 },
+        animate: { opacity: 1, scale: 1, y: 0 },
+        exit: { opacity: 0, scale: 0.94, y: 8 },
+        transition: { type: 'spring' as const, stiffness: 400, damping: 30 },
+      };
+
   return createPortal(
-    <div
-      className={`sc-overlay sc-overlay--${kind}`}
-      data-ui-overlay={kind}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onOpenChange(false);
-      }}
-    >
-      <section
-        ref={surfaceRef}
-        className={`sc-modal-surface sc-modal-surface--${kind}${kind === 'drawer' ? ` sc-modal-surface--${side}` : ''}${className ? ` ${className}` : ''}`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={description ? descriptionId : undefined}
-        tabIndex={-1}
-      >
-        <header className="sc-modal-surface__header">
-          <div>
-            <h2 id={titleId}>{title}</h2>
-            {description ? <p id={descriptionId}>{description}</p> : null}
-          </div>
-          <button type="button" className="sc-modal-surface__close" aria-label={closeLabel} onClick={() => onOpenChange(false)}><X size={18} /></button>
-        </header>
-        <div className="sc-modal-surface__body">{children}</div>
-        {footer ? <footer className="sc-modal-surface__footer">{footer}</footer> : null}
-      </section>
-    </div>,
+    <AnimatePresence>
+      {open ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={reducedMotion ? { duration: 0.01 } : { duration: 0.2 }}
+          className={`sc-overlay sc-overlay--${kind}`}
+          data-ui-overlay={kind}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) onOpenChange(false);
+          }}
+        >
+          <motion.section
+            ref={surfaceRef}
+            {...surfaceMotionProps}
+            className={`sc-modal-surface sc-modal-surface--${kind}${kind === 'drawer' ? ` sc-modal-surface--${side}` : ''}${className ? ` ${className}` : ''}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            aria-describedby={description ? descriptionId : undefined}
+            tabIndex={-1}
+          >
+            <header className="sc-modal-surface__header">
+              <div>
+                <h2 id={titleId}>{title}</h2>
+                {description ? <p id={descriptionId}>{description}</p> : null}
+              </div>
+              <button type="button" className="sc-modal-surface__close" aria-label={closeLabel} onClick={() => onOpenChange(false)}><X size={18} /></button>
+            </header>
+            <div className="sc-modal-surface__body">{children}</div>
+            {footer ? <footer className="sc-modal-surface__footer">{footer}</footer> : null}
+          </motion.section>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>,
     document.body,
   );
 };

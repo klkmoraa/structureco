@@ -300,6 +300,12 @@
     color var(--sc-motion-control) var(--sc-ease-standard),
     box-shadow var(--sc-motion-control) var(--sc-ease-standard),
     transform var(--sc-motion-control) var(--sc-ease-standard);
+  /** Same as --sc-transition-control but without `transform` — for elements whose transform is already driven by motion's own spring, so the two don't fight over the same property. */
+  --sc-transition-control-no-transform:
+    background-color var(--sc-motion-control) var(--sc-ease-standard),
+    border-color var(--sc-motion-control) var(--sc-ease-standard),
+    color var(--sc-motion-control) var(--sc-ease-standard),
+    box-shadow var(--sc-motion-control) var(--sc-ease-standard);
   --sc-transition-theme:
     background-color var(--sc-motion-standard) var(--sc-ease-standard),
     border-color var(--sc-motion-standard) var(--sc-ease-standard),
@@ -312,6 +318,7 @@
   --sc-z-sheet: 70;
   --sc-z-popover: 80;
   --sc-z-modal: 1200;
+  --sc-z-toast: 1300;
 
   /* ------------------------------------------------------------------ */
   /* 8 · ALIAS DE COMPATIBILIDAD (migración por rol)                     */
