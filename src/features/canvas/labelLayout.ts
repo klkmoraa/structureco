@@ -29,7 +29,7 @@ export interface PlacedSmartLabel extends SmartLabelCandidate {
 export type SmartLabelDetail = 'essential' | 'standard' | 'detailed';
 
 const LABEL_HEIGHT = 22;
-const LABEL_GAP = 4;
+const LABEL_GAP = 8;
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
@@ -47,7 +47,7 @@ const defaultMinimumScale = (priority: SmartLabelPriority): number => {
 };
 
 const estimatedWidth = (text: string, availableWidth: number): number =>
-  Math.min(availableWidth, Math.max(30, text.length * 6.15 + 16));
+  Math.min(availableWidth, Math.max(34, text.length * 6.5 + 18));
 
 const rectAt = (
   candidate: SmartLabelCandidate,

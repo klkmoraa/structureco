@@ -196,17 +196,18 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .smart-label-layer { pointer-events:none; }
 .smart-label { color:var(--muted); }
 .smart-label rect {
-  fill:color-mix(in srgb,var(--surface) 91%,transparent);
-  stroke:color-mix(in srgb,currentColor 34%,var(--border));
-  stroke-width:1;
+  fill:color-mix(in srgb,var(--surface) 98%,var(--canvas-bg));
+  stroke:color-mix(in srgb,currentColor 35%,var(--border));
+  stroke-width:1.2;
+  filter:drop-shadow(0 1px 3px color-mix(in srgb,var(--text) 10%,transparent));
   vector-effect:non-scaling-stroke;
 }
-.smart-label text { fill:currentColor; font-size:10px; font-weight:680; letter-spacing:.01em; }
-.smart-label.priority-0 text,.smart-label.priority-1 text { font-weight:760; }
-.smart-label.priority-3 { opacity:.88; }
-.smart-label-leader { stroke:currentColor; stroke-width:1; stroke-dasharray:3 3; opacity:.62; vector-effect:non-scaling-stroke; }
+.smart-label text { fill:currentColor; font-size:10.5px; font-weight:720; letter-spacing:.015em; font-feature-settings:"tnum"; }
+.smart-label.priority-0 text,.smart-label.priority-1 text { font-weight:780; }
+.smart-label.priority-3 { opacity:.92; }
+.smart-label-leader { stroke:currentColor; stroke-width:1.2; stroke-dasharray:3 3; opacity:.65; vector-effect:non-scaling-stroke; }
 .smart-label.tone-selection { color:var(--selection); }
-.smart-label.tone-selection rect { fill:color-mix(in srgb,var(--selection) 10%,var(--surface)); stroke-width:1.5; }
+.smart-label.tone-selection rect { fill:color-mix(in srgb,var(--selection) 12%,var(--surface)); stroke:var(--selection); stroke-width:1.6; }
 .smart-label.tone-force { color:var(--force); }
 .smart-label.tone-shear { color:var(--shear); }
 .smart-label.tone-moment { color:var(--moment); }
