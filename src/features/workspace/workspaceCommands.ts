@@ -34,6 +34,13 @@ export interface WorkspaceCommands {
   'export-svg': void;
   /** Export the structural canvas as a raster image. */
   'export-png': void;
+  /** Show a toast notification on screen. */
+  'show-toast': {
+    message: string;
+    description?: string;
+    tone?: 'success' | 'info' | 'warning' | 'error';
+    durationMs?: number;
+  };
 }
 
 export type WorkspaceCommand = keyof WorkspaceCommands;

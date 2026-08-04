@@ -6,6 +6,7 @@ import { StructuralCanvas } from '../canvas/StructuralCanvas';
 import { ToolRail } from '../canvas/ToolRail';
 import { TopBar } from '../topbar/TopBar';
 import { ClassroomGuide } from '../classroom/ClassroomGuide';
+import { ToastNotification } from './ToastNotification';
 import { useI18n } from '../../i18n/useI18n';
 import { useProject } from '../../store/ProjectContext';
 import { createPersistedEditorLayerState, editorLayerReducer, persistEditorLayerState } from '../canvas/editorLayers';
@@ -129,6 +130,7 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
           if (window.matchMedia('(max-width: 1023px)').matches) openMobileInspector();
         }} />
         <ResultsPanel />
+        <ToastNotification />
       </>}
     backdrop={mobileInspectorOpen ? <button className="mobile-inspector-backdrop" aria-hidden="true" tabIndex={-1} onClick={closeMobileInspector} /> : null}
     inspector={<Inspector

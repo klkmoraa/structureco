@@ -10,6 +10,7 @@ import { useClassroomSession } from '../../store/ClassroomSessionContext';
 import { formatResultNumber, formatResultValue } from './resultFormatting';
 import { useI18n } from '../../i18n/useI18n';
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
+import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 
 const diagramTab: Record<DiagramQuantity, ResultTab> = { axial: 'axial', shear: 'shear', moment: 'moment' };
 const diagramSymbol: Record<DiagramQuantity, string> = { axial: 'N', shear: 'V', moment: 'M' };
@@ -77,7 +78,7 @@ export const ResultSummary = () => {
     <header className="result-summary-header">
       <div><strong>{t('results.globalSummaryTitle')}</strong><span>{t('results.globalSummaryHint')}</span></div>
       <div className="result-summary-actions">
-        <button onClick={() => downloadResultsCsv(project, analysis)}><Download size={15} /> CSV</button>
+        <button onClick={() => { downloadResultsCsv(project, analysis); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); }}><Download size={15} /> CSV</button>
         <button onClick={() => window.print()}><Printer size={15} /> {t('results.printPdf')}</button>
         <button disabled={comparisonBusy} onClick={compare}>{comparisonBusy ? <RefreshCw className="spin" size={15} /> : <GitCompareArrows size={15} />} {scenarios ? t('results.updateComparison') : t('results.compareCases')}</button>
       </div>

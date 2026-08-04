@@ -7,6 +7,7 @@ import { PROJECT_BACKUP_KEY, PROJECT_STORAGE_KEY } from '../../data/projectStora
 import { ClassroomSessionProvider } from '../../store/ClassroomSessionContext';
 import { ProjectProvider } from '../../store/ProjectContext';
 import { TopBar } from './TopBar';
+import { onWorkspaceCommand } from '../workspace/workspaceCommands';
 
 const TopBarHarness = ({ children }: { children: React.ReactNode }) => <ProjectProvider><ClassroomSessionProvider projectId="topbar-test">{children}</ClassroomSessionProvider></ProjectProvider>;
 
@@ -119,6 +120,8 @@ describe('TopBar copy project JSON', () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
     Object.defineProperty(window.navigator, 'clipboard', { configurable: true, value: { writeText } });
+    const toasts: unknown[] = [];
+    const unsubscribe = onWorkspaceCommand('show-toast', (payload) => toasts.push(payload));
     render(<TopBarHarness><TopBar /></TopBarHarness>);
 
     await user.click(screen.getByRole('button', { name: 'Exportar' }));
@@ -127,8 +130,10 @@ describe('TopBar copy project JSON', () => {
     await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
     const [payload] = writeText.mock.calls[0];
     expect(() => JSON.parse(payload)).not.toThrow();
-    await screen.findByRole('menuitem', { name: '¡Copiado!' });
+    await waitFor(() => expect(toasts).toEqual([expect.objectContaining({ message: '¡Copiado!', tone: 'success' })]));
+    await waitFor(() => expect(screen.queryByRole('menu', { name: 'Exportar' })).toBeNull());
 
+    unsubscribe();
     // @ts-expect-error test-only cleanup of a jsdom property defined above
     delete window.navigator.clipboard;
   });
@@ -140,13 +145,20 @@ describe('TopBar copy project JSON', () => {
     const revokeObjectURL = vi.fn();
     Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL });
     Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL });
+    const toasts: unknown[] = [];
+    const unsubscribe = onWorkspaceCommand('show-toast', (payload) => toasts.push(payload));
     render(<TopBarHarness><TopBar /></TopBarHarness>);
 
     await user.click(screen.getByRole('button', { name: 'Exportar' }));
     await user.click(screen.getByRole('menuitem', { name: /Copiar datos/ }));
 
     await waitFor(() => expect(createObjectURL).toHaveBeenCalledOnce());
-    await screen.findByRole('menuitem', { name: 'Portapapeles no disponible: se descargó el archivo' });
+    await waitFor(() => expect(toasts).toEqual([expect.objectContaining({
+      message: 'Portapapeles no disponible: se descargó el archivo',
+      tone: 'info',
+    })]));
+
+    unsubscribe();
   });
 });
 

@@ -79,7 +79,6 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
   const [importCenterOpen, setImportCenterOpen] = useState(false);
   const [portableExport, setPortableExport] = useState<'pdf' | 'bundle' | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
-  const [jsonCopyState, setJsonCopyState] = useState<'idle' | 'copied' | 'downloaded'>('idle');
   const [projectNameDraft, setProjectNameDraft] = useState(project.name);
   const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine !== false);
   const topbarRef = useRef<HTMLElement>(null);
@@ -239,6 +238,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
         const bundle = await portable.createPortableBundle(project, exportAnalysis, options);
         await portable.shareOrDownloadPortableBytes(bundle.bytes, bundle.filename, portable.STRUCTURECO_BUNDLE_MIME, t('portable.bundleShareTitle', { name: project.name }));
       }
+      emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' });
       setShowExportMenu(false);
       setShowMobileMenu(false);
     } catch (error) {
@@ -253,24 +253,18 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(payload);
-        setJsonCopyState('copied');
+        emitWorkspaceCommand('show-toast', { message: t('export.copySuccessful'), description: project.name, tone: 'success' });
       } else {
         exportProjectJson(project);
-        setJsonCopyState('downloaded');
+        emitWorkspaceCommand('show-toast', { message: t('export.copyFallbackDownloaded'), description: project.name, tone: 'info' });
       }
     } catch {
       exportProjectJson(project);
-      setJsonCopyState('downloaded');
+      emitWorkspaceCommand('show-toast', { message: t('export.copyFallbackDownloaded'), description: project.name, tone: 'info' });
     }
-    window.setTimeout(() => setJsonCopyState('idle'), 1800);
+    setShowExportMenu(false);
+    setShowMobileMenu(false);
   };
-
-  const copyJsonLabel = jsonCopyState === 'copied'
-    ? t('export.copySuccessful')
-    : jsonCopyState === 'downloaded'
-      ? t('export.copyFallbackDownloaded')
-      : t('export.copyData');
-  const copyJsonIcon = jsonCopyState === 'copied' ? <Check size={16} /> : jsonCopyState === 'downloaded' ? <Save size={16} /> : <Copy size={16} />;
 
   return (
     <header ref={topbarRef} className="topbar">
@@ -399,12 +393,12 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
           <IconButton ref={exportMenuButtonRef} className="icon-button" label={t('export.label')} title={t('export.label')} aria-expanded={showExportMenu} aria-haspopup="menu" onClick={toggleExportMenu}><Download size={19} /></IconButton>
           {showExportMenu ? (
             <div className="popover export-menu" role="menu" aria-label={t('export.label')} onKeyDown={onMenuKeyDown}>
-              <button role="menuitem" onClick={() => { exportProjectJson(project); setShowExportMenu(false); }}><Save size={16} /> {t('export.projectJson')}</button>
-              <button role="menuitem" onClick={() => void handleCopyJson()}>{copyJsonIcon} {copyJsonLabel}</button>
+              <button role="menuitem" onClick={() => { exportProjectJson(project); emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' }); setShowExportMenu(false); }}><Save size={16} /> {t('export.projectJson')}</button>
+              <button role="menuitem" onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
               <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
               <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
-              <button role="menuitem" onClick={() => { emitWorkspaceCommand('export-svg'); setShowExportMenu(false); }}>{t('export.imageSvg')}</button>
-              <button role="menuitem" onClick={() => { emitWorkspaceCommand('export-png'); setShowExportMenu(false); }}>{t('export.imagePng')}</button>
+              <button role="menuitem" onClick={() => { emitWorkspaceCommand('export-svg'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowExportMenu(false); }}>{t('export.imageSvg')}</button>
+              <button role="menuitem" onClick={() => { emitWorkspaceCommand('export-png'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowExportMenu(false); }}>{t('export.imagePng')}</button>
               <button role="menuitem" onClick={() => { window.print(); setShowExportMenu(false); }}>{t('export.print')}</button>
             </div>
           ) : null}
@@ -438,12 +432,12 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
                   {layoutActions.toolRailCompact ? t('shell.expandToolRail') : t('shell.compactToolRail')}
                 </button>
               </div> : null}
-              <button onClick={() => { exportProjectJson(project); setShowMobileMenu(false); }}><Save size={16} /> {t('export.json')}</button>
-              <button onClick={() => void handleCopyJson()}>{copyJsonIcon} {copyJsonLabel}</button>
+              <button onClick={() => { exportProjectJson(project); emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' }); setShowMobileMenu(false); }}><Save size={16} /> {t('export.json')}</button>
+              <button onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
               <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
               <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
-              <button onClick={() => { emitWorkspaceCommand('export-svg'); setShowMobileMenu(false); }}><Download size={16} /> {t('export.svg')}</button>
-              <button onClick={() => { emitWorkspaceCommand('export-png'); setShowMobileMenu(false); }}><Download size={16} /> {t('export.png')}</button>
+              <button onClick={() => { emitWorkspaceCommand('export-svg'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowMobileMenu(false); }}><Download size={16} /> {t('export.svg')}</button>
+              <button onClick={() => { emitWorkspaceCommand('export-png'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowMobileMenu(false); }}><Download size={16} /> {t('export.png')}</button>
               <button onClick={() => { window.print(); setShowMobileMenu(false); }}>{t('export.print')}</button>
               <div className={`mobile-storage-state ${storageHasError || storageState === 'offline' ? 'error' : ''}`} data-storage-state={storageState} role="status" aria-live="polite" aria-atomic="true">{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}<span><strong>{storageLabel}</strong><small>{storageDescription}</small></span></div>
               {exportError ? <div className="portable-export-error" role="alert">{exportError}</div> : null}
