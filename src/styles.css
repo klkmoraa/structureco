@@ -34,6 +34,18 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 .welcome-continue-link { border:0; color:var(--text); display:inline-flex; align-items:center; gap:8px; padding:10px 20px; border-radius:999px; font-size:13px; font-weight:650; border:1px solid var(--border); background:var(--surface); box-shadow:var(--sc-shadow-raised); transition:all var(--sc-motion-fast) var(--sc-ease-standard); cursor:pointer; }
 .welcome-continue-link:hover { color:var(--accent); border-color:var(--accent); transform:translateY(-1px); box-shadow:0 6px 16px color-mix(in srgb, var(--accent) 22%, transparent); }
 .welcome-content { width:min(1200px,calc(100% - 48px)); margin:0 auto; padding:clamp(40px,6vh,72px) 0 48px; display:grid; grid-template-columns:minmax(0,1.15fr) minmax(380px,1fr); gap:48px 64px; }
+/* Entrada de las secciones: en CSS a propósito. Es una animación de montaje, y las
+   capacidades de `motion` se cargan tras el primer pintado (ver `motionFeatures.ts`),
+   así que conducirla desde JS dejaría las secciones invisibles hasta que llegaran. */
+.welcome-hero, .welcome-showcase { animation:sc-fade-up var(--sc-motion-slow) var(--sc-ease-enter) both; }
+.welcome-showcase { animation-delay:80ms; }
+@keyframes sc-fade-up { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+/* Se anula por completo, no solo la duración: el token reducido deja la duración en
+   0.001ms pero conserva el retardo escalonado, y con `fill: both` eso mantiene la sección
+   en su estado inicial (invisible) durante ese retardo. */
+@media (prefers-reduced-motion: reduce) {
+  .welcome-hero, .welcome-showcase { animation:none; }
+}
 
 .welcome-hero { align-self:start; display:flex; flex-direction:column; }
 .welcome-badge-pill { display:inline-flex; align-items:center; gap:7px; padding:6px 14px; border-radius:999px; background:color-mix(in srgb, var(--accent) 12%, var(--surface)); color:var(--accent); font-size:12px; font-weight:700; width:fit-content; margin-bottom:18px; border:1px solid color-mix(in srgb, var(--accent) 28%, transparent); box-shadow:0 2px 8px color-mix(in srgb, var(--accent) 15%, transparent); }

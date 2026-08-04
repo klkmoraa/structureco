@@ -80,9 +80,6 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
   const nodeCount = project.nodes.length;
   const memberCount = project.members.length;
 
-  const fadeInUp = (delayMs: number) => reducedMotion
-    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.01 } }
-    : { initial: { opacity: 0, y: 16 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.35, delay: delayMs / 1000, ease: 'easeOut' as const } };
   const hoverLift = reducedMotion ? undefined : { scale: 1.015, y: -2 };
   const pressDown = reducedMotion ? undefined : { scale: 0.985 };
   const templateMotion = reducedMotion
@@ -104,7 +101,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
         </header>
 
         <div className="welcome-content">
-          <m.section className="welcome-hero" aria-labelledby="welcome-title" {...fadeInUp(0)}>
+          <section className="welcome-hero" aria-labelledby="welcome-title">
             <div className="welcome-badge-pill">
               <Sparkles size={14} />
               <span>{t('welcome.badgePill')}</span>
@@ -156,9 +153,9 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
                 <ArrowRight size={18} className="welcome-launcher-arrow" />
               </m.button>
             </div>
-          </m.section>
+          </section>
 
-          <m.section className="welcome-showcase" aria-labelledby="welcome-showcase-title" {...fadeInUp(80)}>
+          <section className="welcome-showcase" aria-labelledby="welcome-showcase-title">
             <div className="welcome-showcase-header">
               <div>
                 <h2 id="welcome-showcase-title">{t('welcome.otherWays')}</h2>
@@ -180,7 +177,12 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
             </m.button>
 
             <div className="welcome-templates-grid">
-              <AnimatePresence mode="popLayout">
+              {/* `initial={false}`: en el primer montaje las tarjetas aparecen ya en su
+                  estado final. Las capacidades de animación se cargan de forma asíncrona
+                  (ver `motionFeatures.ts`), así que un `initial` con `opacity: 0` en el
+                  montaje deja la vitrina invisible si las capacidades aún no llegaron.
+                  Los cambios de filtro posteriores sí animan con normalidad. */}
+              <AnimatePresence mode="popLayout" initial={false}>
                 {filteredExamples.map((example) => {
                   const meta = EXAMPLE_META[example.name] ?? DEFAULT_EXAMPLE_META;
                   const Icon = meta.icon;
@@ -212,7 +214,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
                 })}
               </AnimatePresence>
             </div>
-          </m.section>
+          </section>
 
           <section className="welcome-workflow" aria-labelledby="welcome-workflow-title">
             <div className="welcome-workflow-header">
