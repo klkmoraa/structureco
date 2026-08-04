@@ -43,8 +43,13 @@ OFFSET=$(get target_offset)
 
 # Pass 2 — apply, with the measured values so the correction is exact and
 # deterministic rather than the single-pass estimate.
+#
+# alimiter after loudnorm is a hard guarantee, not a duplicate: when a quiet
+# master needs a large lift, loudnorm's linear mode can overshoot its own TP
+# ceiling and hand back a clipped file (measured: one piece came out at
+# +1.6 dBFS). The limiter makes the ceiling hold whatever the required gain.
 ffmpeg -y -v error -i "$IN" \
-  -af "loudnorm=I=$TARGET_I:TP=$TARGET_TP:LRA=$TARGET_LRA:measured_I=$I:measured_TP=$TP:measured_LRA=$LRA:measured_thresh=$THRESH:offset=$OFFSET:linear=true:print_format=summary" \
+  -af "loudnorm=I=$TARGET_I:TP=$TARGET_TP:LRA=$TARGET_LRA:measured_I=$I:measured_TP=$TP:measured_LRA=$LRA:measured_thresh=$THRESH:offset=$OFFSET:linear=true:print_format=summary,alimiter=limit=0.84:level=false" \
   -c:v copy -c:a aac -b:a 192k "$OUT" 2>/dev/null
 
 if [ "$INPLACE" = "1" ]; then
