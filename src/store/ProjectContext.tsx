@@ -1,59 +1,22 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { unavailableAnalysis } from '../engine/analysisFailure';
 import type { AnalysisWorkerRequest, AnalysisWorkerResponse } from '../engine/analysisWorkerProtocol';
 import { normalizeProject } from '../data/migrate';
 import { loadProjectFromStorage, saveProjectToStorage } from '../data/projectStorage';
 import { repairProjectTopology } from '../data/modelOperations';
-import type { AnalysisResult, DiagramQuantity, ProjectModel, Selection, ThemeMode, Tool } from '../types';
+import type { AnalysisResult, ProjectModel, Selection, ThemeMode, Tool } from '../types';
+import { ProjectModelContext, useProjectModel, type ProjectModelContextValue } from './ProjectModelContext';
+import { ProjectAnalysisContext, useProjectAnalysis, type ProjectAnalysisContextValue, type InfluenceCanvasState } from './ProjectAnalysisContext';
+import { WorkspaceUIContext, useWorkspaceUI, type WorkspaceUIContextValue, type ResultCursor, type ResultTab } from './WorkspaceUIContext';
 
-export type ResultTab = 'summary' | 'reactions' | 'axial' | 'shear' | 'moment' | 'influence' | 'deformed' | 'learn' | 'issues';
-export interface ResultCursor { memberId: string; x: number; pinned: boolean }
-export interface InfluenceCanvasState {
-  pathMemberIds: string[];
-  target: { memberId: string; x: number; quantity: DiagramQuantity };
-  source?: { memberId: string; ratio: number; ordinate: number };
-}
-
-interface ProjectContextValue {
-  project: ProjectModel;
-  analysis: AnalysisResult | null;
-  activeTool: Tool;
-  selection: Selection;
-  theme: ThemeMode;
-  resultTab: ResultTab;
-  selectedCombinationId: string;
-  isAnalyzing: boolean;
-  learningFocus: { nodeIds: string[]; memberIds: string[] } | null;
-  resultCursor: ResultCursor | null;
-  influenceCanvasState: InfluenceCanvasState | null;
-  canUndo: boolean;
-  canRedo: boolean;
-  storageIssue: 'recovered' | 'load-failed' | 'save-failed' | null;
-  storageMessage: string | null;
-  renameProject: (name: string) => void;
-  setActiveTool: (tool: Tool) => void;
-  setSelection: (selection: Selection) => void;
-  setTheme: (theme: ThemeMode) => void;
-  setResultTab: (tab: ResultTab) => void;
-  setSelectedCombinationId: (id: string) => void;
-  setLearningFocus: (focus: { nodeIds: string[]; memberIds: string[] } | null) => void;
-  setResultCursor: (cursor: ResultCursor | null) => void;
-  setInfluenceCanvasState: (state: InfluenceCanvasState | null) => void;
-  updateProject: (updater: (project: ProjectModel) => ProjectModel, analyzeAfter?: boolean) => void;
-  updateProjectView: (updater: (project: ProjectModel) => ProjectModel) => void;
-  beginProjectTransaction: () => void;
-  updateProjectTransient: (updater: (project: ProjectModel) => ProjectModel) => void;
-  moveNodeTransient: (nodeId: string, point: { x: number; y: number }) => void;
-  commitProjectTransaction: () => void;
-  cancelProjectTransaction: () => void;
-  replaceProject: (project: ProjectModel, restoredAnalysis?: AnalysisResult) => void;
-  undo: () => void;
-  redo: () => void;
-  analyze: () => void;
-  clearAnalysis: () => void;
-}
-
-const ProjectContext = createContext<ProjectContextValue | null>(null);
+// oxlint-disable-next-line react/only-export-components
+export { useProjectModel } from './ProjectModelContext';
+// oxlint-disable-next-line react/only-export-components
+export { useProjectAnalysis } from './ProjectAnalysisContext';
+// oxlint-disable-next-line react/only-export-components
+export { useWorkspaceUI } from './WorkspaceUIContext';
+export type { ResultTab, ResultCursor } from './WorkspaceUIContext';
+export type { InfluenceCanvasState } from './ProjectAnalysisContext';
 
 const runFallbackAnalysis = async (project: ProjectModel, combinationId: string) => {
   const { analyzeProjectAuto } = await import('../engine/pDelta');
@@ -376,21 +339,46 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setSelection(null);
   }, [future, invalidateAnalysis, project, setSelection]);
 
-  const value = useMemo<ProjectContextValue>(() => ({
-    project, analysis, activeTool, selection, theme, resultTab, selectedCombinationId, isAnalyzing, learningFocus, resultCursor, influenceCanvasState,
-    canUndo: past.length > 0, canRedo: future.length > 0,
-    storageIssue: storageState.issue, storageMessage: storageState.message,
-    setActiveTool, setSelection, setTheme, setResultTab, setSelectedCombinationId, setLearningFocus, setResultCursor, setInfluenceCanvasState, renameProject,
-    updateProject, updateProjectView, beginProjectTransaction, updateProjectTransient, moveNodeTransient, commitProjectTransaction, cancelProjectTransaction,
-    replaceProject, undo, redo, analyze, clearAnalysis: invalidateAnalysis,
-  }), [project, analysis, activeTool, selection, theme, resultTab, selectedCombinationId, isAnalyzing, learningFocus, resultCursor, influenceCanvasState, past.length, future.length, storageState.issue, storageState.message, setSelection, setSelectedCombinationId, renameProject, updateProject, updateProjectView, beginProjectTransaction, updateProjectTransient, moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo, analyze, invalidateAnalysis]);
+  const modelValue = useMemo<ProjectModelContextValue>(() => ({
+    project,
+    canUndo: past.length > 0,
+    canRedo: future.length > 0,
+    storageIssue: storageState.issue,
+    storageMessage: storageState.message,
+    renameProject, updateProject, updateProjectView, beginProjectTransaction, updateProjectTransient,
+    moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo,
+  }), [project, past.length, future.length, storageState.issue, storageState.message, renameProject, updateProject, updateProjectView, beginProjectTransaction, updateProjectTransient, moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo]);
 
-  return <ProjectContext.Provider value={value}>{children}</ProjectContext.Provider>;
+  const analysisValue = useMemo<ProjectAnalysisContextValue>(() => ({
+    analysis, isAnalyzing, selectedCombinationId, learningFocus, influenceCanvasState,
+    setSelectedCombinationId, setLearningFocus, setInfluenceCanvasState, analyze, clearAnalysis: invalidateAnalysis,
+  }), [analysis, isAnalyzing, selectedCombinationId, learningFocus, influenceCanvasState, setSelectedCombinationId, analyze, invalidateAnalysis]);
+
+  const uiValue = useMemo<WorkspaceUIContextValue>(() => ({
+    activeTool, selection, theme, resultTab, resultCursor,
+    setActiveTool, setSelection, setTheme, setResultTab, setResultCursor,
+  }), [activeTool, selection, theme, resultTab, resultCursor, setSelection]);
+
+  return (
+    <ProjectModelContext.Provider value={modelValue}>
+      <ProjectAnalysisContext.Provider value={analysisValue}>
+        <WorkspaceUIContext.Provider value={uiValue}>
+          {children}
+        </WorkspaceUIContext.Provider>
+      </ProjectAnalysisContext.Provider>
+    </ProjectModelContext.Provider>
+  );
 };
 
+/**
+ * Back-compat facade combining the three focused contexts into the original shape.
+ * Prefer {@link useProjectModel}, {@link useProjectAnalysis} or {@link useWorkspaceUI} in new code:
+ * this subscribes to all three and re-renders on any change to any of them.
+ */
 // oxlint-disable-next-line react/only-export-components
-export const useProject = (): ProjectContextValue => {
-  const context = useContext(ProjectContext);
-  if (!context) throw new Error('useProject debe utilizarse dentro de ProjectProvider.');
-  return context;
+export const useProject = () => {
+  const model = useProjectModel();
+  const analysis = useProjectAnalysis();
+  const ui = useWorkspaceUI();
+  return useMemo(() => ({ ...model, ...analysis, ...ui }), [model, analysis, ui]);
 };

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { X } from 'lucide-react';
 import { useProject } from '../../store/ProjectContext';
-import type { DiagramPoint, DiagramQuantity, MemberLoad, MemberModel, NodeModel, Selection, SupportType, Tool } from '../../types';
-import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../../engine/diagram';
+import type { DiagramPoint, DiagramQuantity, MemberModel, NodeModel, Selection, Tool } from '../../types';
+import { evaluateDiagramAt } from '../../engine/diagram';
 import { buildLeftCutEquilibrium } from '../../engine/cut';
 import { resolveMemberLocalLoads } from '../../engine/solver';
 import { fromDisplay, toDisplay, unitLabel } from '../../engine/units';
@@ -42,8 +42,11 @@ import { cameraToFitBounds, canvasSafeInsetsFor, canvasSafeRect } from './canvas
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { CanvasChrome } from './CanvasChrome';
 import { layoutSmartLabels, smartLabelDetailForScale, type SmartLabelCandidate } from './labelLayout';
-import { buildCanvasSelectionVisualState, selectionEnvelopeForPoints, selectionEnvelopeHandles } from './selectionVisuals';
+import { buildCanvasSelectionVisualState, selectionEnvelopeForPoints } from './selectionVisuals';
 import { onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
+import { CanvasGeometryLayer, flexibleRatioFromGross, grossRatioFromFlexible, type StructuralTarget } from './CanvasGeometryLayer';
+import { CanvasResultLayer, diagramPixelScaleFor, reactionClearanceFor } from './CanvasResultLayer';
+import { CanvasInteractionLayer } from './CanvasInteractionLayer';
 
 type Camera = CanvasCamera;
 
@@ -67,13 +70,6 @@ interface SelectionBox {
   current: { x: number; y: number };
   additive: boolean;
 }
-
-type StructuralTarget =
-  | { kind: 'background' }
-  | { kind: 'node'; id: string }
-  | { kind: 'member'; id: string }
-  | { kind: 'nodalLoad'; id: string }
-  | { kind: 'memberLoad'; id: string };
 
 type CanvasInteraction =
   | { kind: 'idle' }
@@ -123,15 +119,6 @@ const toolLabelKeys: Record<Tool, TranslationKey> = {
   delete: 'toolbar.delete',
 };
 
-const snapLabelKeys: Record<SnapKind, TranslationKey> = {
-  node: 'canvas.snapNode',
-  midpoint: 'canvas.snapMidpoint',
-  intersection: 'canvas.snapIntersection',
-  perpendicular: 'canvas.snapPerpendicular',
-  target: 'canvas.snapTarget',
-  grid: 'canvas.snapGrid',
-};
-
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 const nextId = (prefix: string, ids: string[]) => {
@@ -141,10 +128,6 @@ const nextId = (prefix: string, ids: string[]) => {
 };
 
 const supportCycle = ['none', 'pin', 'roller', 'fixed'] as const;
-
-const arrowPath = (x1: number, y1: number, x2: number, y2: number) => (
-  <line x1={x1} y1={y1} x2={x2} y2={y2} markerEnd="url(#arrow-purple)" />
-);
 
 export const StructuralCanvas = ({
   onRequestInspector,
@@ -777,7 +760,7 @@ export const StructuralCanvas = ({
       const nj = nodeMap.get(member.j)!;
       const dx = nj.x - ni.x; const dy = nj.y - ni.y;
       const grossRatio = clamp(((p.x - ni.x) * dx + (p.y - ni.y) * dy) / (dx * dx + dy * dy), 0, 1);
-      const ratio = flexibleRatioFromGross(member, grossRatio);
+      const ratio = flexibleRatioFromGross(nodeMap, member, grossRatio);
       const id = nextId('ML', project.memberLoads.map((load) => load.id));
       const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
       updateProject((draft) => {
@@ -794,7 +777,7 @@ export const StructuralCanvas = ({
       const nj = nodeMap.get(member.j)!;
       const dx = nj.x - ni.x; const dy = nj.y - ni.y;
       const grossRatio = clamp(((p.x - ni.x) * dx + (p.y - ni.y) * dy) / (dx * dx + dy * dy), 0, 1);
-      const ratio = flexibleRatioFromGross(member, grossRatio);
+      const ratio = flexibleRatioFromGross(nodeMap, member, grossRatio);
       const id = nextId('ML', project.memberLoads.map((load) => load.id));
       const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
       updateProject((draft) => {
@@ -1219,24 +1202,6 @@ export const StructuralCanvas = ({
     return evaluateDiagramAt(result.diagramSegments, result.diagramJumps, localX, 'right');
   };
 
-  const flexibleRatioFromGross = (member: MemberModel, grossRatio: number) => {
-    const ni = nodeMap.get(member.i)!;
-    const nj = nodeMap.get(member.j)!;
-    const grossLength = Math.hypot(nj.x - ni.x, nj.y - ni.y);
-    const startOffset = member.rigidOffsetI ?? 0;
-    const flexibleLength = Math.max(grossLength - startOffset - (member.rigidOffsetJ ?? 0), 1e-12);
-    return clamp((grossRatio * grossLength - startOffset) / flexibleLength, 0, 1);
-  };
-
-  const grossRatioFromFlexible = (member: MemberModel, flexibleRatio: number) => {
-    const ni = nodeMap.get(member.i)!;
-    const nj = nodeMap.get(member.j)!;
-    const grossLength = Math.hypot(nj.x - ni.x, nj.y - ni.y);
-    const startOffset = member.rigidOffsetI ?? 0;
-    const flexibleLength = Math.max(grossLength - startOffset - (member.rigidOffsetJ ?? 0), 0);
-    return grossLength > 0 ? (startOffset + flexibleRatio * flexibleLength) / grossLength : flexibleRatio;
-  };
-
   const showCut = (event: ReactPointerEvent, member: MemberModel) => {
     if (!resultsAllowed || !analysis?.success || cut?.pinned) return;
     const rect = svgRef.current!.getBoundingClientRect();
@@ -1260,241 +1225,11 @@ export const StructuralCanvas = ({
     return maximum;
   }, [analysis, resultTab]);
 
-  const diagramPixelScaleFor = (result: NonNullable<typeof analysis>['memberResults'][number]) => {
-    if (project.settings.diagramScaleMode !== 'individual') return (68 * project.settings.diagramScale) / globalDiagramMax;
-    const key = resultTab === 'axial' ? 'axial' : resultTab === 'shear' ? 'shear' : 'moment';
-    let maximum = 1e-9;
-    for (const point of result.criticalPoints) {
-      if (point.quantity === key) maximum = Math.max(maximum, Math.abs(point.value));
-    }
-    return (68 * project.settings.diagramScale) / maximum;
-  };
-
-  const diagramPath = (member: MemberModel) => {
-    const result = resultMap.get(member.id);
-    const ni = nodeMap.get(member.i); const nj = nodeMap.get(member.j);
-    if (!resultsAllowed || !project.settings.showResultOverlay || !result || !ni || !nj || !['axial', 'shear', 'moment'].includes(resultTab) || !result.diagramSegments.length) return null;
-    const dx = nj.x - ni.x; const dy = nj.y - ni.y;
-    const L = Math.hypot(dx, dy); const tx = dx / L; const ty = dy / L;
-    const side = project.settings.diagramSide === 'negative' ? -1 : 1;
-    const nx = -ty * side; const ny = tx * side;
-    const key = resultTab as DiagramQuantity;
-    const diagramPixelScale = diagramPixelScaleFor(result);
-    const locate = (x: number, value: number) => {
-      const grossX = (result.startOffset ?? 0) + x;
-      const bx = ni.x + tx * grossX;
-      const by = ni.y + ty * grossX;
-      const offsetModel = (value * diagramPixelScale) / camera.scale;
-      return toScreen(bx + nx * offsetModel, by + ny * offsetModel);
-    };
-    const baselineStart = toScreen(ni.x + tx * (result.startOffset ?? 0), ni.y + ty * (result.startOffset ?? 0));
-    const baselineEnd = toScreen(ni.x + tx * ((result.startOffset ?? 0) + result.length), ni.y + ty * ((result.startOffset ?? 0) + result.length));
-    const firstControl = segmentBezierControls(result.diagramSegments[0], key);
-    const firstPoint = locate(firstControl.x0, firstControl.y0);
-    const fillCommands = [`M ${baselineStart.x} ${baselineStart.y}`, `L ${firstPoint.x} ${firstPoint.y}`];
-    const lineCommands = [`M ${firstPoint.x} ${firstPoint.y}`];
-    const jumpCommands: string[] = [`M ${baselineStart.x} ${baselineStart.y} L ${firstPoint.x} ${firstPoint.y}`];
-    let lastPoint = firstPoint;
-    result.diagramSegments.forEach((segment, index) => {
-      const control = segmentBezierControls(segment, key);
-      const c1 = locate(control.c1x, control.c1y);
-      const c2 = locate(control.c2x, control.c2y);
-      const endPoint = locate(control.x1, control.y1);
-      const curve = `C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${endPoint.x} ${endPoint.y}`;
-      fillCommands.push(curve);
-      lineCommands.push(curve);
-      lastPoint = endPoint;
-      const next = result.diagramSegments[index + 1];
-      if (next && Math.abs(next.x0 - segment.x1) < 1e-8) {
-        const nextControl = segmentBezierControls(next, key);
-        if (Math.abs(nextControl.y0 - control.y1) > 1e-10) {
-          const rightPoint = locate(nextControl.x0, nextControl.y0);
-          const jump = `L ${rightPoint.x} ${rightPoint.y}`;
-          fillCommands.push(jump);
-          lineCommands.push(jump);
-          jumpCommands.push(`M ${endPoint.x} ${endPoint.y} L ${rightPoint.x} ${rightPoint.y}`);
-          lastPoint = rightPoint;
-        }
-      }
-    });
-    fillCommands.push(`L ${baselineEnd.x} ${baselineEnd.y}`, 'Z');
-    jumpCommands.push(`M ${lastPoint.x} ${lastPoint.y} L ${baselineEnd.x} ${baselineEnd.y}`);
-    return <g key={member.id} className={`diagram-shape ${key}`}>
-      <path d={fillCommands.join(' ')} className="diagram-fill" />
-      <path d={lineCommands.join(' ')} className="diagram-line-exact" />
-      <path d={jumpCommands.join(' ')} className="diagram-jumps" />
-    </g>;
-  };
-
-  const deformedPath = (member: MemberModel) => {
-    const result = resultMap.get(member.id);
-    const ni = nodeMap.get(member.i); const nj = nodeMap.get(member.j);
-    if (!result || !ni || !nj || member.type === 'rigid' || !result.deformation.length) return '';
-    const dx = nj.x - ni.x; const dy = nj.y - ni.y; const L = Math.hypot(dx, dy);
-    const c = dx / L; const s = dy / L;
-    const scale = project.settings.deformedScale;
-    const curved = result.deformation.map((point) => {
-      const grossX = (result.startOffset ?? 0) + point.x;
-      const gx = ni.x + c * grossX + scale * (c * point.u - s * point.v);
-      const gy = ni.y + s * grossX + scale * (s * point.u + c * point.v);
-      return toScreen(gx, gy);
-    });
-    const iResult = nodeResultMap.get(member.i);
-    const jResult = nodeResultMap.get(member.j);
-    const displacedI = toScreen(ni.x + scale * (iResult?.ux ?? 0), ni.y + scale * (iResult?.uy ?? 0));
-    const displacedJ = toScreen(nj.x + scale * (jResult?.ux ?? 0), nj.y + scale * (jResult?.uy ?? 0));
-    const all = [displacedI, ...curved, displacedJ];
-    return all.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
-  };
-
-  const renderResultCursor = () => {
-    if (!resultsAllowed || !resultCursor || !analysis?.success) return null;
-    const member = memberMap.get(resultCursor.memberId);
-    const result = resultMap.get(resultCursor.memberId);
-    if (!member || !result) return null;
-    const ni = nodeMap.get(member.i);
-    const nj = nodeMap.get(member.j);
-    if (!ni || !nj) return null;
-    const dx = nj.x - ni.x;
-    const dy = nj.y - ni.y;
-    const grossLength = Math.hypot(dx, dy);
-    if (grossLength <= 1e-12) return null;
-    const c = dx / grossLength;
-    const s = dy / grossLength;
-    const x = Math.max(0, Math.min(result.length, resultCursor.x));
-    const grossX = (result.startOffset ?? 0) + x;
-    const base = { x: ni.x + c * grossX, y: ni.y + s * grossX };
-    let screen = toScreen(base.x, base.y);
-    let label = `x ${formatFixed(toDisplay(x, units, 'length'), 3)} ${lengthLabel}`;
-    if (['axial', 'shear', 'moment'].includes(resultTab)) {
-      const quantity = resultTab as DiagramQuantity;
-      const value = evaluateDiagramAt(result.diagramSegments, result.diagramJumps, x, 'right')?.[quantity] ?? 0;
-      const side = project.settings.diagramSide === 'negative' ? -1 : 1;
-      const nx = -s * side;
-      const ny = c * side;
-      const offsetModel = value * diagramPixelScaleFor(result) / camera.scale;
-      screen = toScreen(base.x + nx * offsetModel, base.y + ny * offsetModel);
-      const displayQuantity = quantity === 'moment' ? 'moment' as const : 'force' as const;
-      label = `${quantity === 'axial' ? 'N' : quantity === 'shear' ? 'V' : 'M'} ${formatFixed(toDisplay(value, units, displayQuantity), 3)} ${unitLabel(units, displayQuantity)}`;
-    } else if (resultTab === 'deformed' && result.deformationSegments.length) {
-      const response = evaluateDeformationAt(result.deformationSegments, x);
-      if (response) {
-        const scale = project.settings.deformedScale;
-        screen = toScreen(base.x + scale * (c * response.u - s * response.v), base.y + scale * (s * response.u + c * response.v));
-        label = `v ${formatScientific(toDisplay(response.v, units, 'length'), 2)} ${lengthLabel}`;
-      }
-    }
-    return <g className="result-cursor-marker" transform={`translate(${screen.x} ${screen.y})`} pointerEvents="none"><circle r="6" /><path d="M-13 0H13M0-13V13" /><g transform="translate(10 -31)"><rect width={Math.max(90, label.length * 5.5)} height="22" rx="7" /><text x="8" y="15">{label}</text></g></g>;
-  };
-
-  const renderInfluenceOverlay = () => {
-    if (!resultsAllowed || resultTab !== 'influence' || !analysis?.success || !influenceCanvasState) return null;
-    const path = influenceCanvasState.pathMemberIds.flatMap((memberId) => {
-      const member = memberMap.get(memberId);
-      const result = resultMap.get(memberId);
-      const ni = member ? nodeMap.get(member.i) : undefined;
-      const nj = member ? nodeMap.get(member.j) : undefined;
-      if (!member || !result || !ni || !nj) return [];
-      const grossLength = Math.hypot(nj.x - ni.x, nj.y - ni.y);
-      if (grossLength <= 1e-12) return [];
-      const c = (nj.x - ni.x) / grossLength;
-      const s = (nj.y - ni.y) / grossLength;
-      const start = result.startOffset ?? 0;
-      const a = toScreen(ni.x + c * start, ni.y + s * start);
-      const b = toScreen(ni.x + c * (start + result.length), ni.y + s * (start + result.length));
-      return [{ memberId, a, b }];
-    });
-    const source = (() => {
-      const marker = influenceCanvasState.source;
-      if (!marker) return null;
-      const member = memberMap.get(marker.memberId);
-      const result = resultMap.get(marker.memberId);
-      const ni = member ? nodeMap.get(member.i) : undefined;
-      const nj = member ? nodeMap.get(member.j) : undefined;
-      if (!member || !result || !ni || !nj) return null;
-      const grossLength = Math.hypot(nj.x - ni.x, nj.y - ni.y);
-      if (grossLength <= 1e-12) return null;
-      const c = (nj.x - ni.x) / grossLength;
-      const s = (nj.y - ni.y) / grossLength;
-      const localX = (result.startOffset ?? 0) + Math.max(0, Math.min(1, marker.ratio)) * result.length;
-      const point = toScreen(ni.x + c * localX, ni.y + s * localX);
-      const ordinate = influenceCanvasState.target.quantity === 'moment'
-        ? `${formatFixed(toDisplay(marker.ordinate, units, 'length'), 4)} ${lengthLabel}`
-        : formatFixed(marker.ordinate, 4);
-      return { point, ordinate };
-    })();
-    const target = (() => {
-      const marker = influenceCanvasState.target;
-      const member = memberMap.get(marker.memberId);
-      const result = resultMap.get(marker.memberId);
-      const ni = member ? nodeMap.get(member.i) : undefined;
-      const nj = member ? nodeMap.get(member.j) : undefined;
-      if (!member || !result || !ni || !nj) return null;
-      const grossLength = Math.hypot(nj.x - ni.x, nj.y - ni.y);
-      if (grossLength <= 1e-12) return null;
-      const c = (nj.x - ni.x) / grossLength;
-      const s = (nj.y - ni.y) / grossLength;
-      const x = Math.max(0, Math.min(result.length, marker.x));
-      const localX = (result.startOffset ?? 0) + x;
-      const point = toScreen(ni.x + c * localX, ni.y + s * localX);
-      return { point, nx: -s, ny: c, label: `${marker.quantity === 'axial' ? 'N' : marker.quantity === 'shear' ? 'V' : 'M'} · x ${formatFixed(toDisplay(x, units, 'length'), 3)} ${lengthLabel}` };
-    })();
-    return <g className="influence-canvas-overlay" pointerEvents="none">
-      {path.map((item) => <line key={item.memberId} className="influence-path" x1={item.a.x} y1={item.a.y} x2={item.b.x} y2={item.b.y} />)}
-      {target ? <g className="influence-target"><line x1={target.point.x - target.nx * 16} y1={target.point.y + target.ny * 16} x2={target.point.x + target.nx * 16} y2={target.point.y - target.ny * 16} /><circle cx={target.point.x} cy={target.point.y} r="4" /><text x={target.point.x + 10} y={target.point.y - 18}>{target.label}</text></g> : null}
-      {source ? <g className="influence-unit-load"><line x1={source.point.x} y1={source.point.y - 55} x2={source.point.x} y2={source.point.y - 8} markerEnd="url(#arrow-purple)" /><circle cx={source.point.x} cy={source.point.y} r="5" /><text x={source.point.x + (source.point.x > size.width * 0.65 ? -10 : 10)} y={source.point.y - 62} textAnchor={source.point.x > size.width * 0.65 ? 'end' : 'start'}>{formatFixed(toDisplay(1, units, 'force'), 3)} {forceLabel} · ψ {source.ordinate}</text></g> : null}
-    </g>;
-  };
-
   const mechanismPixelScale = useMemo(() => {
     let maximum = 0;
     for (const node of mechanismMap.values()) maximum = Math.max(maximum, Math.hypot(node.ux, node.uy));
     return maximum > 1e-14 ? 72 / maximum : 0;
   }, [mechanismMap]);
-  const mechanismScreenPoint = (node: NodeModel) => {
-    const point = toScreen(node.x, node.y);
-    const mode = mechanismMap.get(node.id);
-    if (!mode) return point;
-    return {
-      x: point.x + mode.ux * mechanismPixelScale,
-      y: point.y - mode.uy * mechanismPixelScale,
-    };
-  };
-
-  const renderMechanism = () => {
-    if (analysis?.success !== false || !analysis.mechanism?.nodes.length) return null;
-    return (
-      <g className="mechanism-layer" aria-label={t('canvas.mechanismMode')}>
-        {project.members.map((member) => {
-          const ni = nodeMap.get(member.i); const nj = nodeMap.get(member.j);
-          if (!ni || !nj) return null;
-          const a = mechanismScreenPoint(ni); const b = mechanismScreenPoint(nj);
-          return <line key={`mechanism-${member.id}`} className="mechanism-member" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />;
-        })}
-        {project.nodes.map((node) => {
-          const mode = mechanismMap.get(node.id);
-          if (!mode || mode.normalizedAmplitude < 1e-6) return null;
-          const original = toScreen(node.x, node.y);
-          const moved = mechanismScreenPoint(node);
-          const translationPixels = Math.hypot(moved.x - original.x, moved.y - original.y);
-          return (
-            <g key={`mechanism-node-${node.id}`} className="mechanism-node">
-              {translationPixels > 3 ? <line x1={original.x} y1={original.y} x2={moved.x} y2={moved.y} markerEnd="url(#arrow-mechanism)" /> : null}
-              {translationPixels <= 3 && Math.abs(mode.rz) > 1e-12 ? <path d={`M ${original.x - 16} ${original.y} A 16 16 0 1 ${mode.rz >= 0 ? 1 : 0} ${original.x + 13} ${original.y - 9}`} markerEnd="url(#arrow-mechanism)" /> : null}
-              <circle cx={moved.x} cy={moved.y} r={5 + 3 * mode.normalizedAmplitude} />
-              <text x={moved.x + 10} y={moved.y - 9}>{node.id} · {mode.dominantDof} · {formatFixed((100 * mode.normalizedAmplitude), 0)}%</text>
-            </g>
-          );
-        })}
-        <g className="mechanism-caption" transform="translate(18 24)">
-          <rect width="230" height="42" rx="8" />
-          <text x="12" y="17">{t('canvas.mechanismDetected', { nullity: analysis.mechanism.nullity })}</text>
-          <text x="12" y="32">{t('canvas.mechanismNormalized')}</text>
-        </g>
-      </g>
-    );
-  };
-
   const grid = useMemo(() => {
     if (!project.settings.showGrid) return null;
     const step = project.settings.gridSize * camera.scale;
@@ -1507,129 +1242,6 @@ export const StructuralCanvas = ({
     return <g className="grid-lines">{lines}</g>;
   }, [camera, project.settings.gridSize, project.settings.showGrid, size]);
 
-  const renderSupport = (node: NodeModel) => {
-    if (node.support.type === 'none') return null;
-    const p = toScreen(node.x, node.y);
-    const selected = selectionVisualState.nodeIds.includes(node.id);
-
-    if (node.support.type === 'fixed') {
-      const rotation = node.support.angleDeg ?? 0;
-      return (
-        <g key={node.id} className={`support-symbol support-fixed${selected ? ' selected' : ''}`} transform={`translate(${p.x} ${p.y}) rotate(${rotation})`} data-support-id={node.id}>
-          {selected ? <rect className="support-selection-frame" x="-22" y="-4" width="44" height="22" rx="6" /> : null}
-          <line x1="-18" y1="7" x2="18" y2="7" className="support-baseplate" strokeWidth="2.4" strokeLinecap="round" />
-          {[-14, -8, -2, 4, 10, 16].map((x) => <line key={x} x1={x} y1="7" x2={x - 5} y2="14" strokeWidth="1.4" strokeLinecap="round" />)}
-          <line x1="0" y1="0" x2="0" y2="7" strokeWidth="2" />
-          <circle cx="0" cy="0" r="2.2" className="support-pin-dot" />
-        </g>
-      );
-    }
-
-    if (node.support.type === 'pin') {
-      const rotation = node.support.angleDeg ?? 0;
-      return (
-        <g key={node.id} className={`support-symbol support-pin${selected ? ' selected' : ''}`} transform={`translate(${p.x} ${p.y}) rotate(${rotation})`} data-support-id={node.id}>
-          {selected ? <rect className="support-selection-frame" x="-20" y="-4" width="40" height="32" rx="7" /> : null}
-          <polygon points="0,0 -12,18 12,18" className="support-body-fill" strokeWidth="1.8" strokeLinejoin="round" />
-          <line x1="-16" y1="18" x2="16" y2="18" className="support-baseplate" strokeWidth="2" strokeLinecap="round" />
-          {[-12, -6, 0, 6, 12].map((x) => <line key={x} x1={x} y1="18" x2={x - 5} y2="24" strokeWidth="1.4" strokeLinecap="round" />)}
-          <circle cx="0" cy="0" r="2.4" className="support-pin-dot" />
-        </g>
-      );
-    }
-
-    if (node.support.type === 'roller') {
-      const rotation = (node.support.angleDeg ?? 90) - 90;
-      return (
-        <g key={node.id} className={`support-symbol support-roller${selected ? ' selected' : ''}`} transform={`translate(${p.x} ${p.y}) rotate(${rotation})`} data-support-id={node.id}>
-          {selected ? <rect className="support-selection-frame" x="-21" y="-4" width="42" height="35" rx="7" /> : null}
-          <polygon points="0,0 -11,15 11,15" className="support-body-fill" strokeWidth="1.8" strokeLinejoin="round" />
-          <line x1="-13" y1="15" x2="13" y2="15" strokeWidth="1.8" strokeLinecap="round" />
-          <circle cx="-5.5" cy="18.5" r="2.8" className="support-roller-wheel" strokeWidth="1.5" />
-          <circle cx="5.5" cy="18.5" r="2.8" className="support-roller-wheel" strokeWidth="1.5" />
-          <line x1="-17" y1="21.5" x2="17" y2="21.5" className="support-baseplate" strokeWidth="2" strokeLinecap="round" />
-          {[-12, -6, 0, 6, 12].map((x) => <line key={x} x1={x} y1="21.5" x2={x - 5} y2="26.5" strokeWidth="1.4" strokeLinecap="round" />)}
-          <circle cx="0" cy="0" r="2.4" className="support-pin-dot" />
-        </g>
-      );
-    }
-
-    if (node.support.type === 'custom') {
-      const rotation = node.support.angleDeg ?? 0;
-      const hasSpring = Boolean(
-        node.support.spring && (node.support.spring.kx || node.support.spring.ky || node.support.spring.kr || node.support.spring.kNormal),
-      );
-      return (
-        <g key={node.id} className={`support-symbol support-custom${selected ? ' selected' : ''}`} transform={`translate(${p.x} ${p.y}) rotate(${rotation})`} data-support-id={node.id}>
-          {selected ? <rect className="support-selection-frame" x="-22" y="-6" width="44" height="38" rx="7" /> : null}
-          {hasSpring ? (
-            <>
-              {node.support.spring?.kr ? (
-                <path d="M -8 -2 A 8 8 0 1 1 8 -2" fill="none" strokeWidth="1.8" strokeDasharray="3 2" className="support-spring-arc" />
-              ) : null}
-              <path d="M 0 0 L 0 4 L -5 7 L 5 11 L -5 15 L 5 19 L 0 22 L 0 25" fill="none" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="support-spring-coil" />
-              <line x1="-15" y1="25" x2="15" y2="25" className="support-baseplate" strokeWidth="2" strokeLinecap="round" />
-              {[-10, -4, 2, 8].map((x) => <line key={x} x1={x} y1="25" x2={x - 4} y2="30" strokeWidth="1.4" strokeLinecap="round" />)}
-            </>
-          ) : (
-            <>
-              <line x1="-16" y1="-8" x2="16" y2="-8" strokeWidth="1.8" strokeDasharray="3 2" />
-              <line x1="-16" y1="8" x2="16" y2="8" strokeWidth="1.8" strokeDasharray="3 2" />
-              <rect x="-10" y="-5" width="20" height="10" rx="3" className="support-body-fill" strokeWidth="1.8" />
-            </>
-          )}
-          <circle cx="0" cy="0" r="2.4" className="support-pin-dot" />
-        </g>
-      );
-    }
-
-    return null;
-  };
-
-  /** Presentation-only gap so reaction arrows/labels never cross the support glyph they sit next to. */
-  const reactionClearanceFor = (type: SupportType): { bottom: number; side: number } => ({
-    bottom: type === 'roller' ? 28 : type === 'pin' || type === 'custom' ? 25 : type === 'fixed' ? 16 : 8,
-    side: type === 'none' ? 8 : type === 'fixed' ? 20 : 18,
-  });
-
-  const renderReaction = (node: NodeModel) => {
-    if (!resultsAllowed || !analysis?.success) return null;
-    const result = nodeResultMap.get(node.id);
-    if (!result) return null;
-    const p = toScreen(node.x, node.y);
-    const { bottom: bottomClearance, side: sideClearance } = reactionClearanceFor(node.support.type);
-    const elements = [];
-    const descriptions: string[] = [];
-    if (Math.abs(result.rx) > 1e-8) {
-      const direction = Math.sign(result.rx);
-      const length = 48;
-      descriptions.push(`Rx = ${formatFixed(toDisplay(result.rx, units, 'force'), 3)} ${forceLabel}`);
-      elements.push(
-        <line key="rx" data-reaction-component="rx" x1={p.x - direction * (sideClearance + length)} y1={p.y} x2={p.x - direction * sideClearance} y2={p.y} markerEnd="url(#arrow-blue)" />,
-      );
-    }
-    if (Math.abs(result.ry) > 1e-8) {
-      const screenDirection = -Math.sign(result.ry);
-      const length = 48;
-      descriptions.push(`Ry = ${formatFixed(toDisplay(result.ry, units, 'force'), 3)} ${forceLabel}`);
-      elements.push(
-        screenDirection < 0
-          ? <line key="ry" data-reaction-component="ry" x1={p.x} y1={p.y + bottomClearance + length} x2={p.x} y2={p.y + bottomClearance} markerEnd="url(#arrow-blue)" />
-          : <line key="ry" data-reaction-component="ry" x1={p.x} y1={p.y + bottomClearance} x2={p.x} y2={p.y + bottomClearance + length} markerEnd="url(#arrow-blue)" />,
-      );
-    }
-    if (Math.abs(result.rm) > 1e-8) {
-      const clockwise = result.rm < 0;
-      const r = Math.max(28, bottomClearance + 6);
-      const path = clockwise
-        ? `M ${p.x - 22} ${p.y - 10} A ${r} ${r} 0 1 0 ${p.x + 20} ${p.y - 14}`
-        : `M ${p.x + 22} ${p.y - 10} A ${r} ${r} 0 1 1 ${p.x - 20} ${p.y - 14}`;
-      descriptions.push(`Mᵣ = ${formatFixed(toDisplay(result.rm, units, 'moment'), 3)} ${momentLabel}`);
-      elements.push(<path key="moment" d={path} markerEnd="url(#arrow-blue)" />);
-    }
-    return elements.length ? <g key={node.id} className="reaction-symbol" data-node-id={node.id}><title>{descriptions.join(' · ')}</title>{elements}</g> : null;
-  };
-
   const handleLoadKeyDown = (event: ReactKeyboardEvent<SVGGElement>, target: Selection) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
@@ -1637,84 +1249,7 @@ export const StructuralCanvas = ({
     onRequestInspector?.();
   };
 
-  const renderNodalLoad = (load: typeof project.nodalLoads[number]) => {
-    const node = nodeMap.get(load.nodeId);
-    if (!node) return null;
-    const p = toScreen(node.x, node.y);
-    const magnitude = Math.hypot(load.fx, load.fy);
-    const selected = selectionVisualState.nodalLoadId === load.id;
-    if (magnitude > 1e-9) {
-      const ux = load.fx / magnitude; const uy = -load.fy / magnitude;
-      const length = 54;
-      const start = { x: p.x - ux * length, y: p.y - uy * length };
-      const end = { x: p.x - ux * 8, y: p.y - uy * 8 };
-      return (
-        <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="nodalLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.pointLoadAria', { id: load.id, target: load.nodeId, value: formatFixed(toDisplay(magnitude, units, 'force'), 2), unit: forceLabel })} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'nodalLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'nodalLoad', id: load.id })}>
-          {selected ? <line className="load-selection-halo" x1={start.x} y1={start.y} x2={end.x} y2={end.y} /> : null}
-          <line className="load-hit" x1={start.x} y1={start.y} x2={end.x} y2={end.y} />
-          {arrowPath(start.x, start.y, end.x, end.y)}
-        </g>
-      );
-    }
-    if (Math.abs(load.mz) > 1e-9) {
-      const momentPath = `M ${p.x - 20} ${p.y - 8} A 22 22 0 1 1 ${p.x + 17} ${p.y - 14}`;
-      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="nodalLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.momentLoadAria', { id: load.id, target: load.nodeId, value: formatFixed(toDisplay(load.mz, units, 'moment'), 2), unit: momentLabel })} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'nodalLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'nodalLoad', id: load.id })}>
-        {selected ? <path className="load-selection-halo" d={momentPath} /> : null}
-        <path className="load-hit" d={momentPath} />
-        <path d={momentPath} fill="none" markerEnd="url(#arrow-purple)" />
-      </g>;
-    }
-    return null;
-  };
-
-  const renderMemberLoad = (load: MemberLoad) => {
-    const member = memberMap.get(load.memberId); if (!member) return null;
-    const ni = nodeMap.get(member.i)!; const nj = nodeMap.get(member.j)!;
-    const dx = nj.x - ni.x; const dy = nj.y - ni.y; const L = Math.hypot(dx, dy);
-    const selected = selectionVisualState.memberLoadId === load.id;
-    if (load.type === 'point') {
-      const r = grossRatioFromFlexible(member, load.position ?? 0.5); const base = toScreen(ni.x + dx * r, ni.y + dy * r);
-      const px = load.px ?? 0; const py = load.py ?? 0; const mag = Math.hypot(px, py) || 1;
-      let gx = px; let gy = py;
-      if (load.coordinateSystem === 'local') { const c = dx / L; const s = dy / L; gx = c * px - s * py; gy = s * px + c * py; }
-      const ux = gx / mag; const uy = -gy / mag;
-      const start = { x: base.x - ux * 52, y: base.y - uy * 52 };
-      const end = { x: base.x - ux * 7, y: base.y - uy * 7 };
-      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.pointLoadAria', { id: load.id, target: load.memberId, value: formatFixed(toDisplay(mag, units, 'force'), 2), unit: forceLabel })} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <line className="load-selection-halo" x1={start.x} y1={start.y} x2={end.x} y2={end.y} /> : null}<line className="load-hit" x1={start.x} y1={start.y} x2={end.x} y2={end.y} />{arrowPath(start.x, start.y, end.x, end.y)}</g>;
-    }
-    if (load.type === 'moment') {
-      const r = grossRatioFromFlexible(member, load.position ?? 0.5);
-      const base = toScreen(ni.x + dx * r, ni.y + dy * r);
-      const clockwise = (load.moment ?? 0) < 0;
-      const path = clockwise
-        ? `M ${base.x - 22} ${base.y - 3} A 23 23 0 1 0 ${base.x + 18} ${base.y - 13}`
-        : `M ${base.x + 22} ${base.y - 3} A 23 23 0 1 1 ${base.x - 18} ${base.y - 13}`;
-      return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.momentLoadAria', { id: load.id, target: load.memberId, value: formatFixed(toDisplay(load.moment ?? 0, units, 'moment'), 2), unit: momentLabel })} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <path className="load-selection-halo" d={path} /> : null}<path className="load-hit" d={path} /><path d={path} markerEnd="url(#arrow-purple)" /></g>;
-    }
-    const visibleLoadedLength = L * camera.scale * Math.abs(load.end - load.start);
-    const count = Math.max(3, Math.min(9, Math.round(visibleLoadedLength / 34) + 1));
-    const arrows = [];
-    for (let i = 0; i < count; i += 1) {
-      const flexibleRatio = load.start + (load.end - load.start) * (i / (count - 1));
-      const r = grossRatioFromFlexible(member, flexibleRatio);
-      const base = toScreen(ni.x + dx * r, ni.y + dy * r);
-      const qx = (load.qxStart ?? 0) + ((load.qxEnd ?? load.qxStart ?? 0) - (load.qxStart ?? 0)) * (i / (count - 1));
-      const qy = (load.qyStart ?? 0) + ((load.qyEnd ?? load.qyStart ?? 0) - (load.qyStart ?? 0)) * (i / (count - 1));
-      let gx = qx; let gy = qy;
-      if (load.coordinateSystem === 'local') { const c = dx / L; const s = dy / L; gx = c * qx - s * qy; gy = s * qx + c * qy; }
-      const mag = Math.hypot(gx, gy) || 1; const ux = gx / mag; const uy = -gy / mag;
-      const length = 33 + 12 * (mag / Math.max(Math.abs(load.qyStart ?? 0), Math.abs(load.qyEnd ?? 0), Math.abs(load.qxStart ?? 0), Math.abs(load.qxEnd ?? 0), 1));
-      arrows.push(<line key={i} x1={base.x - ux * length} y1={base.y - uy * length} x2={base.x - ux * 5} y2={base.y - uy * 5} markerEnd="url(#arrow-green)" />);
-    }
-    const qStartMagnitude = Math.hypot(load.qxStart ?? 0, load.qyStart ?? 0);
-    const qEndMagnitude = Math.hypot(load.qxEnd ?? load.qxStart ?? 0, load.qyEnd ?? load.qyStart ?? 0);
-    const average = (qStartMagnitude + qEndMagnitude) / 2;
-    const hitStartRatio = grossRatioFromFlexible(member, load.start);
-    const hitEndRatio = grossRatioFromFlexible(member, load.end);
-    const hitStart = toScreen(ni.x + dx * hitStartRatio, ni.y + dy * hitStartRatio);
-    const hitEnd = toScreen(ni.x + dx * hitEndRatio, ni.y + dy * hitEndRatio);
-    return <g key={load.id} className={`distributed-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.distributedLoadAria', { id: load.id, target: load.memberId, value: formatFixed(toDisplay(average, units, 'distributedForce'), 2), unit: distributedLabel })} aria-pressed={selected} onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => handleLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <line className="load-selection-halo" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} /> : null}<line className="load-hit" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} />{arrows}</g>;
-  };
+  const onCutLeave = useCallback(() => setCut((current) => current?.pinned ? current : null), []);
 
   const smartLabelCandidates: SmartLabelCandidate[] = [];
   const selectedNodeIds = selectionVisualState.nodeIds;
@@ -1815,7 +1350,7 @@ export const StructuralCanvas = ({
       const priority = selected ? 0 as const : 1 as const;
       const tone = selected ? 'selection' as const : load.type === 'distributed' ? 'shear' as const : load.type === 'moment' ? 'moment' as const : 'force' as const;
       if (load.type === 'point') {
-        const ratio = grossRatioFromFlexible(member, load.position ?? 0.5);
+        const ratio = grossRatioFromFlexible(nodeMap, member, load.position ?? 0.5);
         const base = toScreen(ni.x + dx * ratio, ni.y + dy * ratio);
         const px = load.px ?? 0;
         const py = load.py ?? 0;
@@ -1840,7 +1375,7 @@ export const StructuralCanvas = ({
           forceVisible: selected,
         });
       } else if (load.type === 'moment') {
-        const ratio = grossRatioFromFlexible(member, load.position ?? 0.5);
+        const ratio = grossRatioFromFlexible(nodeMap, member, load.position ?? 0.5);
         const base = toScreen(ni.x + dx * ratio, ni.y + dy * ratio);
         smartLabelCandidates.push({
           id: `member-moment:${load.id}`,
@@ -1852,7 +1387,7 @@ export const StructuralCanvas = ({
           forceVisible: selected,
         });
       } else {
-        const ratio = grossRatioFromFlexible(member, (load.start + load.end) / 2);
+        const ratio = grossRatioFromFlexible(nodeMap, member, (load.start + load.end) / 2);
         const base = toScreen(ni.x + dx * ratio, ni.y + dy * ratio);
         const qx = ((load.qxStart ?? 0) + (load.qxEnd ?? load.qxStart ?? 0)) / 2;
         const qy = ((load.qyStart ?? 0) + (load.qyEnd ?? load.qyStart ?? 0)) / 2;
@@ -1933,7 +1468,7 @@ export const StructuralCanvas = ({
           const grossX = (result.startOffset ?? 0) + point.x;
           const baseX = ni.x + tx * grossX;
           const baseY = ni.y + ty * grossX;
-          const offsetModel = point.value * diagramPixelScaleFor(result) / camera.scale;
+          const offsetModel = point.value * diagramPixelScaleFor(project, resultTab, globalDiagramMax, result) / camera.scale;
           const anchor = toScreen(baseX + nx * offsetModel, baseY + ny * offsetModel);
           const outward = point.value * side >= 0 ? 1 : -1;
           smartLabelCandidates.push({
@@ -2003,132 +1538,139 @@ export const StructuralCanvas = ({
           <marker id="arrow-mechanism" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--warning)" /></marker>
         </defs>
         {grid}
-        {snapPreview ? (() => {
-          const point = toScreen(snapPreview.x, snapPreview.y);
-          const label = t(snapLabelKeys[snapPreview.kind]);
-          return <g className={`snap-glyph ${snapPreview.kind}`} transform={`translate(${point.x} ${point.y})`} pointerEvents="none"><circle r="8" /><path d="M-12 0H12M0-12V12" /><text x="12" y="-11">{label}</text></g>;
-        })() : null}
-        {selectionBox ? (() => {
-          const start = toScreen(selectionBox.start.x, selectionBox.start.y);
-          const current = toScreen(selectionBox.current.x, selectionBox.current.y);
-          const crossing = selectionBox.current.x < selectionBox.start.x;
-          const x = Math.min(start.x, current.x);
-          const y = Math.min(start.y, current.y);
-          return <g className={`selection-marquee-group ${crossing ? 'crossing' : 'window'}`}><rect className="selection-marquee" x={x} y={y} width={Math.abs(current.x - start.x)} height={Math.abs(current.y - start.y)} /><g className="selection-marquee-label" transform={`translate(${x + 8} ${y + 8})`}><rect width={crossing ? 54 : 58} height="20" rx="6" /><text x="7" y="14">{t(crossing ? 'canvas.crossingSelection' : 'canvas.windowSelection')}</text></g></g>;
-        })() : null}
-        {memberStart && snapPreview ? (() => {
-          const startNode = nodeMap.get(memberStart);
-          if (!startNode) return null;
-          const start = toScreen(startNode.x, startNode.y);
-          const end = toScreen(snapPreview.x, snapPreview.y);
-          return <g className="member-preview" pointerEvents="none"><line x1={start.x} y1={start.y} x2={end.x} y2={end.y} /><text x={(start.x + end.x) / 2} y={(start.y + end.y) / 2 - 10}>{formatFixed(toDisplay(Math.hypot(snapPreview.x - startNode.x, snapPreview.y - startNode.y), units, 'length'), 3)} {lengthLabel}</text></g>;
-        })() : null}
+        <CanvasInteractionLayer
+          slot="preview"
+          snapPreview={snapPreview}
+          selectionBox={selectionBox}
+          memberStartId={memberStart}
+          nodeMap={nodeMap}
+          toScreen={toScreen}
+          units={units}
+          lengthLabel={lengthLabel}
+          multiSelectionEnvelope={multiSelectionEnvelope}
+          selectionCount={selectionVisualState.count}
+          size={size}
+          t={t}
+        />
 
-        {layers.results ? <g className="diagram-layer">{project.members.map(diagramPath)}</g> : null}
-        {layers.results && resultsAllowed && resultTab === 'deformed' && analysis?.success ? <g className="deformed-layer">{project.members.map((member) => <path key={member.id} d={deformedPath(member)} />)}</g> : null}
-        {layers.results ? renderResultCursor() : null}
-        {layers.diagnostics ? renderMechanism() : null}
+        <CanvasResultLayer
+          slot="diagrams"
+          project={project}
+          analysis={analysis}
+          resultTab={resultTab}
+          resultsAllowed={resultsAllowed}
+          resultCursor={resultCursor}
+          influenceCanvasState={influenceCanvasState}
+          camera={camera}
+          toScreen={toScreen}
+          nodeMap={nodeMap}
+          memberMap={memberMap}
+          resultMap={resultMap}
+          nodeResultMap={nodeResultMap}
+          mechanismMap={mechanismMap}
+          mechanismPixelScale={mechanismPixelScale}
+          globalDiagramMax={globalDiagramMax}
+          units={units}
+          lengthLabel={lengthLabel}
+          forceLabel={forceLabel}
+          momentLabel={momentLabel}
+          showResults={layers.results}
+          showDiagnostics={layers.diagnostics}
+          size={size}
+          t={t}
+        />
 
-        <g className="member-layer">
-          {project.members.map((member) => {
-            const ni = nodeMap.get(member.i); const nj = nodeMap.get(member.j); if (!ni || !nj) return null;
-            const a = toScreen(ni.x, ni.y); const b = toScreen(nj.x, nj.y);
-            const selected = selectedMemberIds.includes(member.id);
-            const learningHighlighted = learningFocus?.memberIds.includes(member.id) ?? false;
-            return (
-              <g
-                key={member.id}
-                data-structure-object
-                data-structure-kind="member"
-                data-structure-id={member.id}
-                className={`member-object ${selected ? 'selected' : ''} ${learningHighlighted ? 'learning-highlight' : ''} ${member.type}`}
-                role="button"
-                tabIndex={0}
-                aria-keyshortcuts="Enter Space"
-                aria-label={t('canvas.memberAria', { id: member.id, i: member.i, j: member.j })}
-                aria-pressed={selected}
-                onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'member', id: member.id })}
-                onKeyDown={(event: ReactKeyboardEvent<SVGGElement>) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    setSelection({ kind: 'member', id: member.id });
-                  }
-                }}
-                onPointerMove={(event) => showCut(event, member)}
-                onPointerLeave={() => setCut((current) => current?.pinned ? current : null)}
-              >
-                {selected ? <line className="member-selection-halo" x1={a.x} y1={a.y} x2={b.x} y2={b.y} /> : null}
-                <line className="member-hit" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
-                <line className="member-line" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />
-                {member.type === 'frame' && ((member.rigidOffsetI ?? 0) > 0 || (member.rigidOffsetJ ?? 0) > 0) ? (() => {
-                  const length = Math.hypot(nj.x - ni.x, nj.y - ni.y);
-                  const ti = length > 0 ? (member.rigidOffsetI ?? 0) / length : 0;
-                  const tj = length > 0 ? (member.rigidOffsetJ ?? 0) / length : 0;
-                  const faceI = toScreen(ni.x + (nj.x - ni.x) * ti, ni.y + (nj.y - ni.y) * ti);
-                  const faceJ = toScreen(nj.x - (nj.x - ni.x) * tj, nj.y - (nj.y - ni.y) * tj);
-                  return <g className="rigid-zone-layer"><line x1={a.x} y1={a.y} x2={faceI.x} y2={faceI.y} /><line x1={faceJ.x} y1={faceJ.y} x2={b.x} y2={b.y} /><circle cx={faceI.x} cy={faceI.y} r="3" /><circle cx={faceJ.x} cy={faceJ.y} r="3" /></g>;
-                })() : null}
-                {layers.dimensions && project.settings.showLocalAxes ? (() => {
-                  const mx = (a.x + b.x) / 2; const my = (a.y + b.y) / 2;
-                  const length = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y));
-                  const ux = (b.x - a.x) / length; const uy = (b.y - a.y) / length;
-                  const vx = uy; const vy = -ux;
-                  return <g className="local-axes"><line x1={mx} y1={my} x2={mx + ux * 34} y2={my + uy * 34} /><line x1={mx} y1={my} x2={mx + vx * 27} y2={my + vy * 27} /><text x={mx + ux * 41} y={my + uy * 41}>x</text><text x={mx + vx * 34} y={my + vy * 34}>y</text></g>;
-                })() : null}
-              </g>
-            );
-          })}
-        </g>
+        <CanvasGeometryLayer
+          slot="members"
+          project={project}
+          nodeMap={nodeMap}
+          memberMap={memberMap}
+          toScreen={toScreen}
+          camera={camera}
+          selectionVisualState={selectionVisualState}
+          learningFocus={learningFocus}
+          memberStartId={memberStart}
+          layers={layers}
+          loadsLayerVisible={loadsLayerVisible}
+          resultTab={resultTab}
+          units={units}
+          forceLabel={forceLabel}
+          momentLabel={momentLabel}
+          distributedLabel={distributedLabel}
+          t={t}
+          onObjectPointerDown={handleObjectPointerDown}
+          onSelect={setSelection}
+          onLoadKeyDown={handleLoadKeyDown}
+          onShowCut={showCut}
+          onCutLeave={onCutLeave}
+        />
 
-        {layers.results ? renderInfluenceOverlay() : null}
+        <CanvasResultLayer
+          slot="annotations"
+          project={project}
+          analysis={analysis}
+          resultTab={resultTab}
+          resultsAllowed={resultsAllowed}
+          resultCursor={resultCursor}
+          influenceCanvasState={influenceCanvasState}
+          camera={camera}
+          toScreen={toScreen}
+          nodeMap={nodeMap}
+          memberMap={memberMap}
+          resultMap={resultMap}
+          nodeResultMap={nodeResultMap}
+          mechanismMap={mechanismMap}
+          mechanismPixelScale={mechanismPixelScale}
+          globalDiagramMax={globalDiagramMax}
+          units={units}
+          lengthLabel={lengthLabel}
+          forceLabel={forceLabel}
+          momentLabel={momentLabel}
+          showResults={layers.results}
+          showDiagnostics={layers.diagnostics}
+          size={size}
+          t={t}
+        />
 
-        {layers.results ? <g className="reaction-layer">{project.nodes.map(renderReaction)}</g> : null}
-        <g className="support-layer">{project.nodes.map(renderSupport)}</g>
-        {loadsLayerVisible && project.settings.showLoads && resultTab !== 'influence' ? <g className="load-layer">{project.memberLoads.map(renderMemberLoad)}{project.nodalLoads.map(renderNodalLoad)}</g> : null}
+        <CanvasGeometryLayer
+          slot="objects"
+          project={project}
+          nodeMap={nodeMap}
+          memberMap={memberMap}
+          toScreen={toScreen}
+          camera={camera}
+          selectionVisualState={selectionVisualState}
+          learningFocus={learningFocus}
+          memberStartId={memberStart}
+          layers={layers}
+          loadsLayerVisible={loadsLayerVisible}
+          resultTab={resultTab}
+          units={units}
+          forceLabel={forceLabel}
+          momentLabel={momentLabel}
+          distributedLabel={distributedLabel}
+          t={t}
+          onObjectPointerDown={handleObjectPointerDown}
+          onSelect={setSelection}
+          onLoadKeyDown={handleLoadKeyDown}
+          onShowCut={showCut}
+          onCutLeave={onCutLeave}
+        />
 
-        <g className="node-layer">
-          {project.nodes.map((node) => {
-            const p = toScreen(node.x, node.y);
-            const selected = selectedNodeIds.includes(node.id);
-            const start = memberStart === node.id;
-            const learningHighlighted = learningFocus?.nodeIds.includes(node.id) ?? false;
-            return (
-              <g
-                key={node.id}
-                className={`node-object ${selected ? 'selected' : ''} ${start ? 'member-start' : ''} ${learningHighlighted ? 'learning-highlight' : ''}`}
-                data-structure-object
-                data-structure-kind="node"
-                data-structure-id={node.id}
-                role="button"
-                tabIndex={0}
-                aria-keyshortcuts="Enter Space"
-                aria-label={t('canvas.nodeAria', { id: node.id, x: formatFixed(node.x, 3), y: formatFixed(node.y, 3) })}
-                aria-pressed={selected}
-                onPointerDown={(event) => handleObjectPointerDown(event, { kind: 'node', id: node.id })}
-                onKeyDown={(event: ReactKeyboardEvent<SVGGElement>) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    setSelection({ kind: 'node', id: node.id });
-                  }
-                }}
-              >
-                {selected ? <><circle className="node-selection-halo" cx={p.x} cy={p.y} r="14" /><path className="node-selection-cross" d={`M ${p.x - 18} ${p.y} H ${p.x + 18} M ${p.x} ${p.y - 18} V ${p.y + 18}`} /></> : null}
-                <circle className="node-hit" cx={p.x} cy={p.y} r="20" />
-                <circle className="node-dot" cx={p.x} cy={p.y} r="7" />
-                {node.internalHinge ? <circle className="internal-hinge-symbol" cx={p.x} cy={p.y} r="11" /> : null}
-              </g>
-            );
-          })}
-        </g>
-
-        {multiSelectionEnvelope ? <g className="multi-selection-envelope" data-multi-selection-envelope data-selection-count={selectionVisualState.count} aria-hidden="true">
-          <rect className="multi-selection-frame" x={multiSelectionEnvelope.x} y={multiSelectionEnvelope.y} width={multiSelectionEnvelope.width} height={multiSelectionEnvelope.height} rx="8" />
-          {selectionEnvelopeHandles(multiSelectionEnvelope).map((handle, index) => <rect key={index} className="multi-selection-handle" x={handle.x - 4} y={handle.y - 4} width="8" height="8" rx="2" />)}
-          <g className="multi-selection-badge" transform={`translate(${Math.min(Math.max(8, multiSelectionEnvelope.x + 8), Math.max(8, size.width - 142))} ${multiSelectionEnvelope.y >= 34 ? multiSelectionEnvelope.y - 28 : multiSelectionEnvelope.y + 8})`}>
-            <rect width="134" height="22" rx="7" />
-            <text x="9" y="15">{t('inspector.selectedCount', { count: selectionVisualState.count })}</text>
-          </g>
-        </g> : null}
+        <CanvasInteractionLayer
+          slot="overlay"
+          snapPreview={snapPreview}
+          selectionBox={selectionBox}
+          memberStartId={memberStart}
+          nodeMap={nodeMap}
+          toScreen={toScreen}
+          units={units}
+          lengthLabel={lengthLabel}
+          multiSelectionEnvelope={multiSelectionEnvelope}
+          selectionCount={selectionVisualState.count}
+          size={size}
+          t={t}
+        />
 
         <g className="smart-label-layer" data-label-detail={smartLabelDetailForScale(camera.scale)} aria-hidden="true">
           {placedSmartLabels.map((label) => {
