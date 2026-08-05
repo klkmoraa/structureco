@@ -2,11 +2,79 @@
 
 # Refactorización Declarativa del Módulo de Expedientes y Memorias PDF
 
-# En evaluación
+# Implementada
 
 # 2026-08-05
 
 # PDF / Arquitectura
+
+---
+
+> ## Nota de implementación (2026-08-05)
+>
+> Propuesta implementada. La superficie pública (`createCalculationReport`,
+> `createCalculationReportBlob`, `CalculationReportOptions`, `CalculationReportArtifact`) quedó
+> intacta — `portable.ts` la re-exporta con `export *` —, no se agregaron dependencias y la
+> frontera matemática protegida no se tocó.
+>
+> ### 1. Estructura resultante
+> `src/utils/calculationPdf.ts` pasó de **1.058 líneas** (un solo closure donde ~20 rutinas de dibujo
+> capturaban las mismas variables mutables `page` e `y`) a **~90 líneas** de orquestación. La maquetación
+> vive en 13 módulos bajo `src/utils/pdf/`:
+>
+> | Módulo | Responsabilidad |
+> |---|---|
+> | `reportContext.ts` | `ReportContext`, tipos de color/fuentes/paleta e índices del modelo |
+> | `pdfGlyphs.ts` | Transliteración WinAnsi y ajuste de línea |
+> | `pdfFormat.ts` | Política numérica y textual del informe |
+> | `pdfBuilder.ts` | `PdfLayout`: cursor vertical, saltos de página, `text`/`heading`/`row`/`rule`, pies |
+> | `pdfMath.ts` | Tipografía de fórmulas (super/subíndices, ajuste al ancho) |
+> | `pdfChrome.ts` | Cabecera de marca, banda de sección, paneles y tarjetas KPI |
+> | `pdfDiagrams.ts` | DCL global, tiras N/V/M por miembro y diagrama global de cantidad |
+> | `pdfCover.ts` | Página ejecutiva |
+> | `pdfQuantitySection.ts` | Páginas N, V y M |
+> | `pdfScopeSection.ts` | Unidades, convenciones, alcance y limitaciones |
+> | `pdfProcedureSection.ts` | Procedimiento y cálculos |
+> | `pdfAnnexSection.ts` | Anexo técnico verificable (secciones 1–6) |
+> | `pdfPayloadSection.ts` | Metadatos del documento y adjunto reimportable |
+>
+> `PdfLayout` es el único dueño del estado mutable del documento; las secciones leen `layout.page` en el
+> momento de dibujar, de modo que un salto de página nunca deja arte huérfano en la página anterior.
+>
+> ### 2. Fidelidad verificada, no supuesta
+> Antes de tocar el archivo se capturó una línea base con los dos fixtures que usan las pruebas
+> (`createHibbelerStyleDiagramPractice` y `createHibbelerTributaryBeam`), hasheando con SHA-256 la
+> **lista de operadores PDF de cada página** (texto *y* vectores) extraída con PDF.js — las fechas de
+> metadatos cambian en cada guardado, así que comparar bytes crudos no sirve. Resultado tras el refactor:
+>
+> - Mismo número de páginas (9 y 10), mismo número de operadores por página (p. ej. 1.860 en la página 6).
+> - Hash idéntico en **todas** las páginas salvo una diferencia intencional (ver punto 3).
+> - `payload.checksum.value` y el nombre de archivo idénticos.
+> - `scripts/inspect-pdf.mjs`: **0 hallazgos** antes y después (sin desbordes de margen, sin páginas
+>   vacías, sin glifos perdidos, cabecera y pie en todas las páginas).
+>
+> ### 3. Mejoras aplicadas
+> - **Índices del modelo** (`ModelIndex`): `project.nodes.find` / `project.members.find` /
+>   `analysis.memberResults.find` se ejecutaban dentro de bucles sobre miembros y cargas — coste O(n·m)
+>   por página. Ahora son mapas construidos una vez, conservando la semántica de «primera coincidencia»
+>   de `find`.
+> - **Proyección modelo → página unificada**: el bloque *bounding box → escala uniforme → offsets
+>   centrados* estaba escrito dos veces con paddings distintos; ahora es un único helper parametrizado.
+> - **Defecto editorial corregido**: la página de «Procedimiento y cálculos» repetía el índice de sección
+>   `05` de «Unidades y convenciones»; pasa a `06`. Es la única diferencia visible del documento y se
+>   corrigió con autorización explícita del usuario.
+> - `PdfColor` como alias con nombre en lugar de `ReturnType<typeof rgb>` repetido.
+>
+> ### 4. Fuera de alcance / observaciones
+> - **`PdfTable` no se implementó**: el documento no tiene tablas — usa filas `label: valor` y paneles
+>   dibujados. Un componente de tabla sin consumidor habría sido código muerto.
+> - **`PdfVectorCanvas` (SVG → `pdf-lib`) no aplica**: el flujo PDF no consume SVG, dibuja directo desde
+>   el modelo. Lo único realmente duplicado era la proyección, ya unificada.
+> - **Unificar el trazado vectorial del canvas web con el del PDF** sigue pendiente: son React/SVG con
+>   interacción y sistema de coordenadas propios frente a `pdf-lib`; es una decisión de arquitectura
+>   mayor y no se forzó aquí.
+> - El presupuesto de bundle no se movió: 630 240 bytes eager antes y después; `pdf-lib` sigue detrás del
+>   `import()` dinámico porque todos los módulos nuevos lo importan solo como tipos.
 
 # Resumen ejecutivo
 
@@ -151,6 +219,11 @@ Valida la propuesta contra el código real antes de modificar archivos.
 
 Implementa únicamente el alcance aprobado: refactoriza `src/utils/calculationPdf.ts` dividiéndolo en helper declarativos de maquetación bajo `src/utils/pdf/` sin alterar el formato ni la firma del payload JSON incrustado.
 
+CRITERIO DE MEJORA AUTÓNOMA:
+- Si al analizar el código real o durante la implementación detectas una oportunidad de mejora directa (técnica, de rendimiento o de calidad de código) que enriquezca la solución sin alterar la lógica de negocio ni romper la frontera matemática, agrégala.
+- Si detectas una mejora más compleja que requiera una decisión de arquitectura mayor, no la fuerces; explícala brevemente en el informe final.
+- Si la solución de la propuesta ya es óptima y suficiente, implementa estrictamente lo necesario sin añadir complejidad innecesaria ni código superfluo.
+
 Conserva los comportamientos y restricciones indicados en el documento.
 
 Ejecuta lint, tests y validación de PDF (`npm run verify` y `npm run inspect:pdf`).
@@ -159,5 +232,6 @@ Al terminar:
 - resume los cambios
 - lista los archivos modificados y creados
 - indica las pruebas ejecutadas
+- documenta si aplicaste alguna mejora adicional o te apegaste estrictamente al plan
 - actualiza el estado de la propuesta a Implementada
 - mueve el documento a `Antigravity-propuestas/implementadas/AG-003-refactor-modulo-expedientes-pdf.md`
