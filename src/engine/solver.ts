@@ -22,6 +22,7 @@ import {
   type LocalMemberLoad,
 } from './diagram';
 import { compareGeneralizedLoads, integrateIndependentMemberSourceLoads } from './loadAudit';
+import { profileEnd, profileStart } from './performanceProfiler';
 import { classifyAnalysisReliability } from './reliability';
 import {
   addToMatrix,
@@ -1246,6 +1247,7 @@ export const analyzeProject = (
   const pDeltaActive = Boolean(options?.pDeltaAxialForces?.size);
   let mechanism: NonNullable<AnalysisResult['mechanism']> | undefined;
   try {
+    const assemblyStart = profileStart();
     const nodes = getNodeMap(project);
     const nodeIndex = new Map(project.nodes.map((node, index) => [node.id, index]));
     const ndof = project.nodes.length * 3;
@@ -1510,7 +1512,9 @@ export const analyzeProject = (
     const diagonalScale = A.map((row) => 1 / Math.sqrt(Math.max(...row.map(Math.abs), Number.MIN_VALUE)));
     const scaledA = A.map((row, i) => row.map((value, j) => value * diagonalScale[i] * diagonalScale[j]));
     const scaledB = b.map((value, i) => value * diagonalScale[i]);
+    profileEnd('assembly', assemblyStart);
     let solved: ReturnType<typeof solveLinearSystem>;
+    const linearSolveStart = profileStart();
     try {
       solved = solveLinearSystem(scaledA, scaledB);
     } catch (error) {
@@ -1551,6 +1555,7 @@ export const analyzeProject = (
       }
       throw error;
     }
+    profileEnd('linearSolve', linearSolveStart);
     const solution = solved.x.map((value, index) => value * diagonalScale[index]);
     const U = solution.slice(0, ndof);
     const lambda = solution.slice(ndof);
@@ -1678,6 +1683,7 @@ export const analyzeProject = (
       mz: normalizedActivityResidual(loadDifference.mz, loadMomentFamilyActivity, loadMomentFamilyActivity),
     };
     const resultantResidual = Math.max(normalizedDifference.fx, normalizedDifference.fy, normalizedDifference.mz);
+    const memberAuditStart = profileStart();
     const memberAudits = elementAssemblies.map((assembly) => {
       const independent = integrateIndependentMemberSourceLoads(project, assembly.member, factors);
       const sourceMechanical = independent?.mechanical ?? Array(6).fill(Number.NaN);
@@ -1713,6 +1719,7 @@ export const analyzeProject = (
       memberAudits,
       normalizedResidual: Math.max(resultantResidual, criticalMemberAudit?.normalizedResidual ?? 0),
     };
+    profileEnd('auditAndReliability', memberAuditStart);
     if (loadAudit.normalizedResidual > 1e-8) {
       issues.push({
         id: 'load-assembly-audit',
@@ -1741,6 +1748,7 @@ export const analyzeProject = (
         .map((value, index) => value - assembly.localLoadOriginal[index]);
       assembly.released.forEach((index) => { localEndForces[index] = 0; });
       const localLabels = [`${assembly.member.id}.ui`, `${assembly.member.id}.vi`, `${assembly.member.id}.θi`, `${assembly.member.id}.uj`, `${assembly.member.id}.vj`, `${assembly.member.id}.θj`];
+      const elementTraceStart = profileStart();
       elementTraces.push({
         memberId: assembly.member.id,
         dofIndices: [...assembly.indices],
@@ -1761,7 +1769,10 @@ export const analyzeProject = (
         localDisplacements: [...localD],
         localEndForces: [...localEndForces],
       });
+      profileEnd('educationTrace', elementTraceStart);
+      const diagramsStart = profileStart();
       const exact = buildExactDiagrams(localEndForces, assembly.loads, assembly.geometry.L);
+      profileEnd('diagrams', diagramsStart);
       const EA = assembly.member.E * assembly.member.A;
       const EI = assembly.member.E * assembly.member.I;
       const shearRigidity = assembly.member.beamTheory === 'timoshenko'
@@ -1784,11 +1795,13 @@ export const analyzeProject = (
       };
       addConnectionSpringEnergy(assembly.member.rotationalSpringI, 2);
       addConnectionSpringEnergy(assembly.member.rotationalSpringJ, 5);
+      const deformationsStart = profileStart();
       const deformation = buildDeformationCurve(exact.segments, assembly.member, localD, {
         axialStrain: assembly.initialAxialStrain,
         curvature: assembly.initialCurvature,
         shearRigidity: Number.isFinite(shearRigidity) ? shearRigidity : undefined,
       });
+      profileEnd('deformations', deformationsStart);
       const axial = exact.points.map((point) => point.axial);
       const shear = exact.points.map((point) => point.shear);
       const moment = exact.points.map((point) => point.moment);
@@ -2008,6 +2021,7 @@ export const analyzeProject = (
       return energy + contribution;
     }, 0);
     const strainEnergy = memberStrainEnergy + nodalSpringEnergy;
+    const educationTraceStart = profileStart();
     const educationTrace = {
       schemaVersion: 1 as const,
       formulation: project.members.some((member) => member.beamTheory === 'timoshenko') ? 'linear-static-mixed-beam' as const : 'linear-static-euler-bernoulli' as const,
@@ -2041,6 +2055,7 @@ export const analyzeProject = (
         strainEnergy,
       },
     };
+    profileEnd('educationTrace', educationTraceStart);
 
     // A zero computed residual does not imply more information than IEEE-754
     // double precision can carry. Include the condition-amplified round-off
@@ -2074,10 +2089,16 @@ export const analyzeProject = (
       loadAudit,
       educationTrace,
     };
-    const analysis: AnalysisResult = { ...partial, explanation: explanationSteps(project, partial) };
+    const explanationStart = profileStart();
+    const explanation = explanationSteps(project, partial);
+    profileEnd('explanation', explanationStart);
+    const analysis: AnalysisResult = { ...partial, explanation };
     // Finishing is not the same as being trustworthy: classify the run against
     // every independent numeric check before publishing it.
-    return { ...analysis, reliability: classifyAnalysisReliability(analysis) };
+    const reliabilityStart = profileStart();
+    const reliability = classifyAnalysisReliability(analysis);
+    profileEnd('auditAndReliability', reliabilityStart);
+    return { ...analysis, reliability };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Error desconocido durante el análisis.';
     const singular = message.toLowerCase().includes('singular') || message.toLowerCase().includes('mecanismo');

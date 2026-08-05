@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { analyzeProject } from './solver';
 import { evaluateDiagramAt } from './diagram';
-import type { MemberModel, ProjectModel } from '../types';
+import { beginProfiling, endProfiling, type PhaseTimings } from './performanceProfiler';
+import type { MemberModel, NodeModel, ProjectModel } from '../types';
 
 const settings: ProjectModel['settings'] = {
   units: 'kN-m', language: 'es', gridSize: 1, snap: true, showGrid: true,
@@ -445,4 +446,163 @@ describe('benchmarks cerrados de vigas y marcos', () => {
     close(displacementAtCFromB, displacementAtBFromC, 3e-7, 1e-12);
   });
 
+});
+
+// AG-011: perfilado de fases del análisis completo. `beginProfiling`/`endProfiling` son
+// opt-in (ver performanceProfiler.ts) y no afectan las pruebas de arriba, que nunca los llaman.
+describe('perfilado de fases del analisis completo (AG-011)', () => {
+  /** Cadena de vanos: el modelo mas barato para crecer grados de libertad (igual que performance.test.ts). */
+  const continuousBeamModel = (spans: number): ProjectModel => {
+    const nodes: NodeModel[] = [];
+    const members: MemberModel[] = [];
+    for (let index = 0; index <= spans; index += 1) {
+      nodes.push({
+        id: `N${index}`, x: index * 4, y: 0,
+        support: index === 0 ? { type: 'pin' } : index % 4 === 0 ? { type: 'roller' } : { type: 'none' },
+      });
+    }
+    for (let index = 0; index < spans; index += 1) {
+      members.push({ id: `M${index}`, i: `N${index}`, j: `N${index + 1}`, type: 'frame', E: 200e6, A: 0.02, I: 8e-5 });
+    }
+    return {
+      ...project(),
+      id: `beam-${spans}`, name: `beam-${spans}`,
+      nodes, members,
+      memberLoads: members.map((member) => ({
+        id: `w${member.id}`, memberId: member.id, caseId: 'LC1', type: 'distributed' as const,
+        coordinateSystem: 'global' as const, lengthBasis: 'real' as const,
+        start: 0, end: 1, qyStart: -10, qyEnd: -10,
+      })),
+    };
+  };
+
+  /** Portico multi-piso, empotrado en la base: nodos en malla, columnas + vigas. */
+  const portalFrameModel = (bays: number, stories: number): ProjectModel => {
+    const bayWidth = 5;
+    const storyHeight = 3.5;
+    const nodeId = (bay: number, story: number) => `B${bay}S${story}`;
+    const nodes: NodeModel[] = [];
+    for (let story = 0; story <= stories; story += 1) {
+      for (let bay = 0; bay <= bays; bay += 1) {
+        nodes.push({
+          id: nodeId(bay, story), x: bay * bayWidth, y: story * storyHeight,
+          support: story === 0 ? { type: 'fixed' } : { type: 'none' },
+        });
+      }
+    }
+    const members: MemberModel[] = [];
+    for (let story = 0; story < stories; story += 1) {
+      for (let bay = 0; bay <= bays; bay += 1) {
+        members.push({ id: `C${bay}-${story}`, i: nodeId(bay, story), j: nodeId(bay, story + 1), type: 'frame', E: 200e6, A: 0.03, I: 1.2e-4 });
+      }
+    }
+    for (let story = 1; story <= stories; story += 1) {
+      for (let bay = 0; bay < bays; bay += 1) {
+        members.push({ id: `G${bay}-${story}`, i: nodeId(bay, story), j: nodeId(bay + 1, story), type: 'frame', E: 200e6, A: 0.02, I: 8e-5 });
+      }
+    }
+    const nodalLoads = nodes
+      .filter((node) => node.y > 0 && node.x === 0)
+      .map((node, index) => ({ id: `H${index}`, nodeId: node.id, caseId: 'LC1', fx: 5, fy: 0, mz: 0 }));
+    const memberLoads = members
+      .filter((member) => member.id.startsWith('G'))
+      .map((member) => ({
+        id: `w${member.id}`, memberId: member.id, caseId: 'LC1', type: 'distributed' as const,
+        coordinateSystem: 'global' as const, lengthBasis: 'real' as const,
+        start: 0, end: 1, qyStart: -8, qyEnd: -8,
+      }));
+    return { ...project(), id: `frame-${bays}x${stories}`, name: `frame-${bays}x${stories}`, nodes, members, nodalLoads, memberLoads };
+  };
+
+  /**
+   * Cercha Pratt de cordones paralelos: `panels` paneles cuadrados totalmente triangulados
+   * (cordon inferior/superior + vertical + diagonal en cada panel), estaticamente
+   * determinada exacta (m + r = 2n) para cualquier `panels >= 1`.
+   */
+  const trussModel = (panels: number): ProjectModel => {
+    const panelWidth = 3;
+    const height = 3;
+    const truss = (id: string, i: string, j: string): MemberModel => ({ id, i, j, type: 'truss', E: 200e6, A: 0.005, I: 0 });
+    const nodes: NodeModel[] = [];
+    for (let index = 0; index <= panels; index += 1) {
+      nodes.push({
+        id: `L${index}`, x: index * panelWidth, y: 0,
+        support: index === 0 ? { type: 'pin' } : index === panels ? { type: 'roller', angleDeg: 90 } : { type: 'none' },
+      });
+      nodes.push({ id: `U${index}`, x: index * panelWidth, y: height, support: { type: 'none' } });
+    }
+    const members: MemberModel[] = [];
+    for (let index = 0; index < panels; index += 1) {
+      members.push(truss(`BC${index}`, `L${index}`, `L${index + 1}`));
+      members.push(truss(`TC${index}`, `U${index}`, `U${index + 1}`));
+      members.push(truss(`D${index}`, `L${index}`, `U${index + 1}`));
+    }
+    for (let index = 0; index <= panels; index += 1) {
+      members.push(truss(`V${index}`, `L${index}`, `U${index}`));
+    }
+    const nodalLoads = nodes
+      .filter((node) => node.id.startsWith('L') && node.id !== 'L0' && node.id !== `L${panels}`)
+      .map((node, index) => ({ id: `P${index}`, nodeId: node.id, caseId: 'LC1', fx: 0, fy: -15, mz: 0 }));
+    return { ...project(), id: `truss-${panels}`, name: `truss-${panels}`, nodes, members, nodalLoads };
+  };
+
+  const NAMED_PHASES = ['assembly', 'linearSolve', 'diagrams', 'deformations', 'auditAndReliability', 'explanation', 'educationTrace'] as const;
+
+  const printPhaseTable = (label: string, memberCount: number, timings: PhaseTimings) => {
+    const accounted = NAMED_PHASES.reduce((sum, phase) => sum + timings[phase], 0);
+    const other = Math.max(0, timings.total - accounted);
+    const rows = [
+      ...NAMED_PHASES.map((phase) => ({
+        fase: phase, ms: Number(timings[phase].toFixed(2)), '%': Number(((timings[phase] / timings.total) * 100).toFixed(1)),
+      })),
+      { fase: 'sin instrumentar', ms: Number(other.toFixed(2)), '%': Number(((other / timings.total) * 100).toFixed(1)) },
+    ];
+    // eslint-disable-next-line no-console
+    console.log(`\n[AG-011] ${label} — ${memberCount} miembros — total ${timings.total.toFixed(1)} ms`);
+    // eslint-disable-next-line no-console
+    console.table(rows);
+  };
+
+  const profiled = (model: ProjectModel) => {
+    beginProfiling();
+    const result = analyzeProject(model);
+    const timings = endProfiling();
+    return { result, timings };
+  };
+
+  it('registra tiempos por fase con suma coherente con el total', () => {
+    const { result, timings } = profiled(continuousBeamModel(20));
+    expect(result.success).toBe(true);
+    NAMED_PHASES.forEach((phase) => expect(timings[phase]).toBeGreaterThanOrEqual(0));
+    const accounted = NAMED_PHASES.reduce((sum, phase) => sum + timings[phase], 0);
+    expect(accounted).toBeLessThanOrEqual(timings.total + 1);
+    expect(timings.assembly).toBeGreaterThan(0);
+    expect(timings.linearSolve).toBeGreaterThan(0);
+    expect(timings.diagrams).toBeGreaterThan(0);
+  });
+
+  // Fase 2 de AG-011: medicion real en vigas continuas, porticos y cerchas de ~50/150/300
+  // miembros. Deliberadamente gateada por variable de entorno para no alargar `npm test`/
+  // `npm run verify` con nueve analisis pesados en cada corrida; ejecutar con
+  // `STRUCTURECO_PROFILE_ANALYSIS=1 npx vitest run src/engine/benchmarks.test.ts` para ver la
+  // tabla completa por consola.
+  it('mide la distribucion de tiempos en vigas, porticos y cerchas de 50/150/300 miembros', () => {
+    if (process.env.STRUCTURECO_PROFILE_ANALYSIS !== '1') return;
+    const scenarios: Array<{ label: string; model: ProjectModel }> = [
+      { label: 'viga continua (50 vanos)', model: continuousBeamModel(50) },
+      { label: 'viga continua (150 vanos)', model: continuousBeamModel(150) },
+      { label: 'viga continua (300 vanos)', model: continuousBeamModel(300) },
+      { label: 'portico 4x6 (~50 miembros)', model: portalFrameModel(4, 6) },
+      { label: 'portico 7x10 (~150 miembros)', model: portalFrameModel(7, 10) },
+      { label: 'portico 9x16 (~300 miembros)', model: portalFrameModel(9, 16) },
+      { label: 'cercha Pratt 12 paneles (~50 miembros)', model: trussModel(12) },
+      { label: 'cercha Pratt 37 paneles (~150 miembros)', model: trussModel(37) },
+      { label: 'cercha Pratt 75 paneles (~300 miembros)', model: trussModel(75) },
+    ];
+    for (const scenario of scenarios) {
+      const { result, timings } = profiled(scenario.model);
+      expect(result.success).toBe(true);
+      printPhaseTable(scenario.label, result.memberResults.length, timings);
+    }
+  }, 120_000);
 });
