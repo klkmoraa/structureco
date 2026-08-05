@@ -83,6 +83,20 @@ const PHONE_RESULTS_QUERY = '(max-width: 700px)';
 const isMobileResultsViewport = () => typeof window !== 'undefined' && Boolean(window.matchMedia?.(MOBILE_RESULTS_QUERY).matches);
 const isPhoneResultsViewport = () => typeof window !== 'undefined' && Boolean(window.matchMedia?.(PHONE_RESULTS_QUERY).matches);
 
+// WorkspaceShell already tracks window.visualViewport (keyboard-aware, unlike
+// window.innerHeight) and publishes it as --sc-visual-viewport-height on the
+// shell element. Reading that here keeps the resizable panel's bounds correct
+// when the on-screen keyboard opens, without a second resize listener.
+const getViewportHeightPx = (referenceElement: HTMLElement | null): number => {
+  if (typeof window === 'undefined') return 0;
+  if (referenceElement) {
+    const raw = window.getComputedStyle(referenceElement).getPropertyValue('--sc-visual-viewport-height');
+    const parsed = Number.parseFloat(raw);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  return window.innerHeight;
+};
+
 export const ResultsPanel = () => {
   const { project, analysis, resultTab, setResultTab, analyze, selection, isAnalyzing, setInfluenceCanvasState } = useProject();
   const { t } = useI18n();
@@ -265,7 +279,7 @@ export const ResultsPanel = () => {
     const update = (event: MediaQueryListEvent) => {
       setIsMobile(event.matches);
       if (event.matches) {
-        setHeight(Math.min(330, window.innerHeight * 0.4));
+        setHeight(Math.min(330, getViewportHeightPx(panelRef.current) * 0.4));
         setMobileExpanded(false);
       } else setMobileExpanded(true);
     };
@@ -309,7 +323,7 @@ export const ResultsPanel = () => {
     if (isMobile) return;
     if (panelMode === 'compact') setHeight(190);
     else if (panelMode === 'expanded') setHeight((current) => Math.max(current, 320));
-    else setHeight(window.innerHeight * 0.72);
+    else setHeight(getViewportHeightPx(panelRef.current) * 0.72);
   }, [isMobile, panelMode]);
   useEffect(() => {
     if (isMobile && panelMode === 'focused') setPanelMode('expanded');
@@ -396,9 +410,9 @@ export const ResultsPanel = () => {
 
   const onPointerMove = (event: ReactPointerEvent) => {
     if (!drag) return;
-    scheduleHeight(Math.max(150, Math.min(window.innerHeight * 0.72, drag.height + drag.y - event.clientY)));
+    scheduleHeight(Math.max(150, Math.min(getViewportHeightPx(panelRef.current) * 0.72, drag.height + drag.y - event.clientY)));
   };
-  const resizeBy = (delta: number) => setHeight((current) => Math.max(150, Math.min(window.innerHeight * 0.72, current + delta)));
+  const resizeBy = (delta: number) => setHeight((current) => Math.max(150, Math.min(getViewportHeightPx(panelRef.current) * 0.72, current + delta)));
   const choosePanelMode = (next: ResultsPanelMode, launcher: HTMLButtonElement) => {
     if (next === 'focused' && panelMode !== 'focused') {
       previousPanelModeRef.current = panelMode;
@@ -454,13 +468,13 @@ export const ResultsPanel = () => {
         aria-label={t('results.resize')}
         aria-orientation="horizontal"
         aria-valuemin={150}
-        aria-valuemax={Math.round(window.innerHeight * 0.72)}
+        aria-valuemax={Math.round(getViewportHeightPx(panelRef.current) * 0.72)}
         aria-valuenow={Math.round(height)}
         onKeyDown={(event) => {
           if (event.key === 'ArrowUp') { event.preventDefault(); resizeBy(event.shiftKey ? 48 : 16); }
           if (event.key === 'ArrowDown') { event.preventDefault(); resizeBy(event.shiftKey ? -48 : -16); }
           if (event.key === 'Home') { event.preventDefault(); setHeight(150); }
-          if (event.key === 'End') { event.preventDefault(); setHeight(window.innerHeight * 0.72); }
+          if (event.key === 'End') { event.preventDefault(); setHeight(getViewportHeightPx(panelRef.current) * 0.72); }
         }}
         onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); setPanelMode('expanded'); setDrag({ y: event.clientY, height }); }}
       ><GripHorizontal size={22} /></button>
