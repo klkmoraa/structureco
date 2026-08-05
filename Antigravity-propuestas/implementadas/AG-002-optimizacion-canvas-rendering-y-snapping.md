@@ -2,11 +2,71 @@
 
 # Optimización de Renderizado SVG del Canvas y Algoritmos de Snapping mediante Índice Espacial R-Tree
 
-# En evaluación
+# Implementada
 
 # 2026-08-05
 
 # Rendimiento / Canvas
+
+---
+
+> ## Nota de implementación (2026-08-05)
+>
+> Propuesta implementada. La firma pública y los tipos (`SnapCandidate`, `SnapKind`, `SnapSegment`,
+> `SnapOptions`, `SnapResult`) quedaron intactos; no se agregaron dependencias.
+>
+> ### 1. Broad-phase espacial en `buildIntersectionSnapCandidates`
+> Cuadrícula uniforme de cubetas (máx. 64×64 celdas, eje dimensionado como `√M`) que indexa las cajas
+> envolventes de los miembros. Solo los pares que comparten celda llegan a la prueba exacta de producto
+> cruzado, con un rechazo AABB adicional antes de la geometría. Dos segmentos que se cruzan tienen cajas
+> traslapadas y por tanto comparten al menos una celda, así que **no se pierde ningún candidato**. Los
+> vecinos se emiten en orden ascendente de índice, de modo que el orden del arreglo resultante y de
+> `sourceIds` es idéntico al del barrido exhaustivo anterior.
+>
+> ### 2. Índice de puntos para colapsar coincidencias
+> El `candidates.find(...)` lineal (que hacía el deduplicado cuadrático) se sustituyó por un hash espacial
+> numérico con celdas de `2·epsilon` y consulta 3×3. Las colisiones de hash son inocuas porque toda
+> coincidencia se confirma con la distancia exacta, y se conserva la semántica de *primer* duplicado.
+> Se aplica en el constructor de intersecciones y en el de perpendiculares.
+>
+> ### 3. Barrido sin asignaciones en `resolveSnap`
+> Se eliminó la cadena `concat → filter → map → filter → sort` (4 arreglos + un objeto por candidato en
+> cada `pointermove`). Ahora es un solo recorrido con rechazo por eje X antes de calcular la distancia
+> completa, que mantiene únicamente el mejor candidato. El desempate (rango → distancia → orden de
+> aparición) es exactamente el del `sort` estable previo.
+>
+> ### 4. Perpendiculares memoizadas en el canvas
+> `buildPerpendicularSnapCandidates` dependía solo del origen de dibujo y de la geometría, nunca del
+> puntero, pero se reconstruía en cada `pointermove`. Ahora vive en un `useMemo` junto a
+> `baseSnapCandidates`, y `snapPoint` reutiliza los arreglos memoizados sin copiarlos cuando no hay nada
+> que fusionar ni excluir.
+>
+> ### Mediciones (banco determinista, celosía aleatoria densa)
+>
+> | Escenario | Antes | Después |
+> |---|---|---|
+> | Intersecciones, M=150 (2 841 cruces) | 38,0 ms | 19,7 ms |
+> | Intersecciones, M=500 (29 272 cruces) | 10 298 ms | 393 ms |
+> | `resolveSnap` sobre 3 141 candidatos | 0,264 ms | 0,024 ms |
+> | **Coste total por `pointermove`, M=150** | **0,412 ms** | **0,018 ms** |
+>
+> El criterio de aceptación de $< 2\text{ms}$ por frame para 150 miembros se cumple con margen amplio
+> (0,018 ms). El caso M=500 es el techo que ya imponía `StructuralCanvas` y solo se paga al cambiar el
+> modelo, no por frame.
+>
+> ### Fuera de alcance / observaciones
+> - La **Fase 3 de la propuesta (capa SVG memoizada)** ya estaba satisfecha por AG-001:
+>   `CanvasGeometryLayer`, `CanvasResultLayer` y `CanvasInteractionLayer` ya separan la estructura física
+>   del puntero y las guías. No se tocó nada ahí.
+> - El diagnóstico original decía que `buildIntersectionSnapCandidates` corría en cada `pointermove`; en
+>   el código real ya estaba memoizada por revisión del modelo y limitada a `≤ 500` segmentos. El coste
+>   por frame real estaba en `resolveSnap` y en las perpendiculares, que es donde se concentró el trabajo.
+> - Mejora no aplicada por requerir decisión de arquitectura: acotar las perpendiculares a los miembros
+>   cercanos al puntero exigiría pasar la posición del puntero (o un radio) a
+>   `buildPerpendicularSnapCandidates`, lo que cambia su firma pública y su semántica. Con la memoización
+>   el coste por frame ya es nulo, así que no se justifica.
+
+---
 
 # Resumen ejecutivo
 
@@ -144,6 +204,11 @@ Valida la propuesta contra el código real antes de modificar archivos.
 
 Implementa únicamente el alcance aprobado: optimiza la búsqueda de candidatos de snapping en `src/utils/snapping.ts` mediante filtrado broad-phase/spatial grid sin alterar la firma pública ni los tipos.
 
+CRITERIO DE MEJORA AUTÓNOMA:
+- Si al analizar el código real o durante la implementación detectas una oportunidad de mejora directa (técnica, de rendimiento o de calidad de código) que enriquezca la solución sin alterar la lógica de negocio ni romper la frontera matemática, agrégala.
+- Si detectas una mejora más compleja que requiera una decisión de arquitectura mayor, no la fuerces; explícala brevemente en el informe final.
+- Si la solución de la propuesta ya es óptima y suficiente, implementa estrictamente lo necesario sin añadir complejidad innecesaria ni código superfluo.
+
 Conserva los comportamientos y restricciones indicados en el documento.
 
 Ejecuta lint, tests y build (`npm run verify`).
@@ -152,5 +217,6 @@ Al terminar:
 - resume los cambios
 - lista los archivos modificados
 - indica las pruebas ejecutadas
+- documenta si aplicaste alguna mejora adicional o te apegaste estrictamente al plan
 - actualiza el estado de la propuesta a Implementada
 - mueve el documento a `Antigravity-propuestas/implementadas/AG-002-optimizacion-canvas-rendering-y-snapping.md`

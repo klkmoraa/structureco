@@ -50,6 +50,9 @@ import { CanvasInteractionLayer } from './CanvasInteractionLayer';
 
 type Camera = CanvasCamera;
 
+/** Shared empty list so the memoised snap candidates keep a stable identity. */
+const EMPTY_SNAP_CANDIDATES: SnapCandidate[] = [];
+
 interface Size {
   width: number;
   height: number;
@@ -218,6 +221,14 @@ export const StructuralCanvas = ({
     }
     return candidates;
   }, [project.nodes, project.settings.snapTargets, snapSegments]);
+  const drawingOrigin = useMemo(() => (memberStart ? nodeMap.get(memberStart) ?? null : null), [memberStart, nodeMap]);
+  // Perpendicular feet only depend on the drawing origin and the geometry, never
+  // on the pointer, so they are built per model revision instead of per frame.
+  const perpendicularSnapCandidates = useMemo<SnapCandidate[]>(() => (
+    drawingOrigin && (project.settings.snapTargets?.perpendicular ?? true)
+      ? buildPerpendicularSnapCandidates(drawingOrigin, snapSegments)
+      : EMPTY_SNAP_CANDIDATES
+  ), [drawingOrigin, project.settings.snapTargets, snapSegments]);
   const resultMap = useMemo(() => new Map((analysis?.memberResults ?? []).map((result) => [result.memberId, result])), [analysis]);
   const nodeResultMap = useMemo(() => new Map((analysis?.nodeResults ?? []).map((result) => [result.nodeId, result])), [analysis]);
   const mechanismMap = useMemo(() => new Map((analysis?.mechanism?.nodes ?? []).map((node) => [node.nodeId, node])), [analysis?.mechanism]);
@@ -439,10 +450,14 @@ export const StructuralCanvas = ({
   }, [project.name, showCanvasFeedback, t]);
 
   const snapPoint = useCallback((point: { x: number; y: number }, excludedNodeId?: string) => {
-    const drawingOrigin = memberStart ? nodeMap.get(memberStart) : null;
-    const perpendicular = drawingOrigin && (project.settings.snapTargets?.perpendicular ?? true) ? buildPerpendicularSnapCandidates(drawingOrigin, snapSegments) : [];
-    const candidates = [...baseSnapCandidates, ...perpendicular]
-      .filter((candidate) => !excludedNodeId || !(candidate.kind === 'node' && candidate.sourceIds?.includes(excludedNodeId)));
+    // Reuse the memoised arrays untouched whenever nothing has to be merged or
+    // excluded: a pointer move should not copy the whole candidate list.
+    const merged = perpendicularSnapCandidates.length
+      ? [...baseSnapCandidates, ...perpendicularSnapCandidates]
+      : baseSnapCandidates;
+    const candidates = excludedNodeId
+      ? merged.filter((candidate) => !(candidate.kind === 'node' && candidate.sourceIds?.includes(excludedNodeId)))
+      : merged;
     const result = resolveSnap(point, {
       enabled: project.settings.snap,
       gridSize: project.settings.gridSize,
@@ -459,7 +474,7 @@ export const StructuralCanvas = ({
     const nextPreview = result.kind === 'none' ? null : { ...result.point, kind: result.kind };
     setSnapPreview((current) => current?.kind === nextPreview?.kind && current?.x === nextPreview?.x && current?.y === nextPreview?.y ? current : nextPreview);
     return result.point;
-  }, [baseSnapCandidates, camera.scale, memberStart, nodeMap, project.settings.gridSize, project.settings.snap, project.settings.snapTargets, snapSegments]);
+  }, [baseSnapCandidates, camera.scale, drawingOrigin, perpendicularSnapCandidates, project.settings.gridSize, project.settings.snap, project.settings.snapTargets]);
 
   const modelPointFromClient = useCallback((clientX: number, clientY: number, excludedNodeId?: string) => {
     const local = localScreenPoint(clientX, clientY);

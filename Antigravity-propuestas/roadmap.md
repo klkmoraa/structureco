@@ -8,17 +8,17 @@ Este roadmap establece la secuencia óptima para implementar las propuestas de m
 
 ```text
 [FASE 1: Fundamentos de UX & Frontend]
-  ├── AG-004: UX/UI Responsive y Paneles Táctiles
-  └── AG-001: Rediseño de Estado Global y Desacoplamiento de Canvas
+  ├── AG-004: UX/UI Responsive y Paneles Táctiles — ✅ Implementada
+  └── AG-001: Rediseño de Estado Global y Desacoplamiento de Canvas — ✅ Implementada
          |
          v
 [FASE 2: Rendimiento Visual y Generación de Expedientes]
-  ├── AG-002: Optimización SVG & Snapping R-Tree
+  ├── AG-002: Optimización SVG & Snapping R-Tree — ✅ Implementada
   └── AG-003: Refactorización Declarativa del Módulo PDF
          |
          v
-[FASE 3: Optimización del Core Matemático y Escalabilidad]
-  └── AG-005: Solucionador de Matriz Dispersa (Sparse LDLT/Cholesky)
+[FASE 3: Escalabilidad del Motor Matemático]
+  └── AG-005: Solucionador de Matriz Dispersa (Sparse LDLT/Cholesky) — ✅ Implementada
 ```
 
 ---
@@ -26,34 +26,31 @@ Este roadmap establece la secuencia óptima para implementar las propuestas de m
 ## Detalle por Fase
 
 ### Fase 1: Fundamentos de UX y Arquitectura de Estado
-1. **AG-004 (UX/UI Responsive y Paneles Táctiles)**:
-   - *Razón*: Resuelve inmediatamente problemas de usabilidad móvil y desbordamientos en pantallas pequeñas sin tocar la lógica del motor ni la frontera protegida.
-   - *Impacto*: Alto impacto en el usuario de iOS/Android y pantallas táctiles.
-2. **AG-001 (Rediseño de Estado Global y Desacoplamiento de Canvas)**:
-   - *Razón*: Descompone `ProjectContext.tsx` y `StructuralCanvas.tsx`, estableciendo la base modular sobre la cual se aplicarán optimizaciones posteriores.
+1. **AG-004 (UX/UI Responsive y Paneles Táctiles)** — ✅ **Implementada** (2026-08-05):
+   - *Resultado*: Migración exitosa de `ResultsPanel` a CSS Container Queries (`@container results-panel (max-width: 560px)`), unidades `dvh` e integración de targets táctiles $\ge 44\text{px}$ bajo `@media (pointer:coarse)`.
+2. **AG-001 (Rediseño de Estado Global y Desacoplamiento de Canvas)** — ✅ **Implementada** (2026-08-05):
+   - *Resultado*: División de contextos React (`ProjectModelContext`, `ProjectAnalysisContext`, `WorkspaceUIContext`), conservación de fachada `useProject()` y descomposición de `StructuralCanvas.tsx` en `CanvasGeometryLayer`, `CanvasResultLayer` y `CanvasInteractionLayer`.
 
 ### Fase 2: Rendimiento Visual y Publicación Editorial
-3. **AG-002 (Optimización SVG & Snapping R-Tree)**:
-   - *Dependencia*: AG-001 (requiere que el Canvas esté modularizado en capas).
-   - *Impacto*: Mantiene 60 FPS durante la interacción y arrastre de nodos en modelos complejos.
+3. **AG-002 (Optimización SVG & Snapping R-Tree)** — ✅ **Implementada** (2026-08-05):
+   - *Dependencia*: AG-001 (desbloqueada gracias a las sub-capas del Canvas; la capa SVG memoizada de la
+     Fase 3 ya quedó cubierta allí).
+   - *Resultado*: Cuadrícula espacial de broad-phase en `buildIntersectionSnapCandidates`, hash de puntos
+     para el deduplicado, barrido sin asignaciones en `resolveSnap` y perpendiculares memoizadas por
+     revisión del modelo. Coste por `pointermove` con 150 miembros: 0,412 ms → 0,018 ms, muy por debajo
+     del presupuesto de 2 ms.
 4. **AG-003 (Refactorización Declarativa del Módulo PDF)**:
    - *Razón*: Limpia la deuda técnica de 1,600+ líneas imperativas en `calculationPdf.ts`, haciendo mantenible la generación de informes editoriales sin riesgo para la UI.
 
 ### Fase 3: Escalabilidad del Motor Matemático
 5. **AG-005 (Solucionador de Matriz Dispersa - Sparse Solver)** — ✅ **Implementada** (2026-08-05, Fase A):
-   - *Ejecutada fuera de orden*, antes que las fases 1 y 2, por petición directa del usuario.
-   - *Resultado*: factorización 5x más rápida, pero el análisis completo apenas cambia porque
-     el sistema lineal solo representaba el 10 % del tiempo. La premisa de matriz definida
-     positiva del documento original era incorrecta (el sistema real es simétrico indefinido)
-     y se corrigió durante la implementación.
-   - *Lección para el roadmap*: **medir antes de optimizar**. AG-005 se priorizó asumiendo que
-     el solucionador era el cuello de botella; no lo era. El seguimiento natural es AG-011
-     (perfilar el análisis completo), no AG-012 (Fase B del solver disperso).
+   - *Ejecutada fuera de orden por petición del usuario*.
+   - *Resultado*: Factorización 5x más rápida. Se identificó la necesidad de AG-011 para medir el $90\%$ del tiempo de análisis restante.
 
 ---
 
 ## Cambios Rápidos vs. Cambios de Alto Riesgo
 
-- **Cambios Rápidos (Quick Wins)**: AG-004, AG-003.
-- **Cambios Estructurales de Medio Riesgo**: AG-001, AG-002.
-- **Cambios de Alto Riesgo (Frontera Protegida)**: AG-005 (requiere verificación estricta contra `PROTECTED_BASELINE.sha256` y suite Vitest).
+- **Cambios Rápidos (Quick Wins)**: AG-004 (✅), AG-003.
+- **Cambios Estructurales de Medio Riesgo**: AG-001 (✅), AG-002.
+- **Cambios de Alto Riesgo (Frontera Protegida)**: AG-005 (✅).
