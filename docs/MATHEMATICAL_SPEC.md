@@ -595,11 +595,32 @@ El sistema aumentado se equilibra simétricamente. Si `D` es diagonal y
 DAD\,y=Db, \qquad x=Dy
 \]
 
-El escalamiento simétrico conserva la simetría del sistema. La matriz equilibrada
-se factoriza mediante LU con pivoteo parcial escalado. Después se aplica
-refinamiento iterativo usando el residuo `r=b-Ax`. Se utiliza esta ruta porque las
-restricciones cinemáticas producen una matriz aumentada simétrica indefinida; una
-factorización de Cholesky simple no es válida para ese sistema.
+El escalamiento simétrico conserva la simetría del sistema. Después de resolver se
+aplica refinamiento iterativo usando el residuo `r=b-Ax`.
+
+La matriz equilibrada se factoriza por una de dos vías. Las restricciones cinemáticas
+producen una matriz aumentada simétrica **indefinida**, sobre la que una factorización
+de Cholesky simple no es válida. Sin embargo, una fila de restricción con diagonal nula
+y un único coeficiente significativo es la condición de Dirichlet `c·x_j = b_i`: tanto
+`x_j` como su multiplicador `x_i` se despejan fuera del sistema lineal. Eliminarlas
+—apoyos empotrados, articulados y de restricción directa, filas contables y apoyos
+deslizantes alineados a los ejes— deja un bloque de rigidez definido positivo que sí
+admite una factorización `L·D·Lᵀ` sin pivoteo, almacenada en formato disperso por filas
+(CSR) y reordenada con Cuthill-McKee inverso para acotar el rellenado.
+
+Esa vía se abandona, y se factoriza la matriz original completa mediante LU con pivoteo
+parcial escalado, siempre que: el sistema sea pequeño, sobrevivan restricciones de varios
+grados (vínculos rígidos, apoyos deslizantes inclinados), el rellenado simbólico crezca
+más allá del beneficio, o cualquier pivote resulte no positivo. Este último caso incluye
+mecanismos y rigidez geométrica cerca de una carga crítica, donde el bloque reducido deja
+de ser definido positivo.
+
+La elección no es observable desde el resultado: el residuo, la estimación de condición y
+el refinamiento se miden siempre contra la matriz original.
+
+Un coeficiente por debajo de `1e-12` respecto al mayor de su propia fila se considera
+nulo para esta clasificación. La distinción importa porque un apoyo deslizante vertical
+construye su fila con `cos(π/2)`, que vale `6.1e-17` y no cero exacto.
 
 El condicionamiento se diagnostica con una estimación de `κ₁(A)=||A||₁||A⁻¹||₁`
 mediante iteraciones de Hager sobre la matriz equilibrada. La relación de pivotes
@@ -1023,7 +1044,9 @@ No debe confundirse el motor actual con un programa general de diseño estructur
 - cables, elementos solo a tensión y arcos no lineales;
 - trenes móviles con carga distribuida o carga viva interior/exterior;
 - envolventes móviles simultáneas para todos los cortes;
-- solución matricial dispersa;
+- factorización dispersa del sistema aumentado completo (la vía dispersa cubre el bloque
+  reducido; los vínculos rígidos y los apoyos deslizantes inclinados siguen resolviéndose
+  con la factorización densa, ver §11);
 - diseño normativo de acero, concreto o madera;
 
 ## 18. Referencias conceptuales

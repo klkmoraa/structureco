@@ -76,6 +76,27 @@ acelera por encima de 300 miembros. El exponente empírico pasa de ≈1,5 en mod
 
 Es coherente con una factorización densa. **No se promete escalabilidad más allá de lo medido.**
 
+### Vía dispersa (0.8.2)
+
+Medido sobre la viga continua de 300 vanos (980 incógnitas en el sistema aumentado), en la
+misma máquina y con la misma metodología:
+
+| Etapa | Densa | Dispersa |
+|---|---:|---:|
+| Factorización | 180 ms | 36 ms |
+| `solveLinearSystem` completo | 303 ms | 143 ms |
+| Análisis completo (`analyzeProject`) | ~3 060 ms | ~2 900 ms |
+
+La factorización es unas 5 veces más rápida y la resolución completa algo más del doble.
+El análisis completo apenas cambia: **el sistema lineal era el 10 % del tiempo y ahora es
+el 4,5 %**. El coste dominante a este tamaño está fuera del solucionador lineal, de modo que
+acelerarlo más no acelera la aplicación. Identificar ese coste es trabajo aparte y no se
+ha medido aquí.
+
+La estimación de condición coincide con la de la vía densa hasta la decimotercera cifra
+(1 293 831,434578906 frente a 1 293 831,434578983), por lo que la clasificación de
+confiabilidad no cambia de vía a vía.
+
 ## 3. Presupuestos declarados
 
 Los presupuestos están comprobados en `src/engine/performance.test.ts` y son deliberadamente

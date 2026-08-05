@@ -120,11 +120,19 @@ consultar, solo el diagnóstico del rechazo.
 
 ## Precisión y tamaño de modelo
 
-El solucionador utiliza matrices densas. El análisis principal y la comparación
-de escenarios se ejecutan en Web Workers para no bloquear la interfaz, pero no
-existe todavía un backend disperso. El coste de memoria y tiempo sigue creciendo
-con el cuadrado y el cubo del número de grados de libertad, por lo que no se
-promete escalabilidad para modelos grandes.
+El ensamblaje utiliza matrices densas. La resolución del sistema aumentado emplea
+una factorización dispersa cuando las restricciones del modelo lo permiten —apoyos
+alineados a los ejes— y vuelve a la factorización densa en el resto de los casos
+(vínculos rígidos, apoyos deslizantes inclinados) y siempre que el bloque reducido
+deje de ser definido positivo. El análisis principal y la comparación de escenarios
+se ejecutan en Web Workers para no bloquear la interfaz.
+
+La vía dispersa acelera la factorización del sistema lineal, no el análisis completo:
+medido sobre una viga continua de 300 vanos (980 incógnitas), la factorización baja de
+180 ms a 36 ms y la resolución completa de 303 ms a 143 ms, sobre un análisis total de
+unos 2,9 s. El resto del coste está fuera del solucionador lineal. El consumo de memoria
+del ensamblaje sigue creciendo con el cuadrado del número de grados de libertad, por lo
+que no se promete escalabilidad para modelos grandes.
 
 Geometrías extremadamente pequeñas, rigideces separadas por muchos órdenes de
 magnitud, resortes casi rígidos o sistemas próximos a un mecanismo pueden degradar
