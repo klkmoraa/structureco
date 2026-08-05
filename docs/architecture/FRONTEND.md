@@ -142,6 +142,23 @@ La reorganización frontend se ejecutó como parte del rediseño visual integral
 | `numberFormat.ts` | Política numérica única (8 contextos: canvas, chart, inspector, table, tooltip, report, annex, clipboard); `numericPolicy.test.ts` falla el build si `features/**` vuelve a usar `toFixed`/`toPrecision`/`toExponential` crudos |
 | `svgExport.ts` | Serialización de SVG independiente de la hoja de estilos: resuelve clases y variables CSS a valores computados antes de exportar |
 | `export.ts` | `exportSvgElement`/`exportSvgAsPng` sobre `svgExport.ts`; `rasterScaleFor` acota la resolución del PNG al límite de canvas del navegador sin reducir nunca por debajo de 1× |
+| `pdf/` | Maquetación declarativa de la memoria de cálculo (0.8.2, AG-003): `PdfLayout` es el único dueño del cursor vertical y de los saltos de página; `pdfChrome`/`pdfMath`/`pdfDiagrams` dan el vocabulario visual y hay un módulo por sección del documento. `calculationPdf.ts` queda como orquestador. Todos importan `pdf-lib` **sólo como tipos** — el `import()` dinámico del orquestador es lo que mantiene la librería fuera del chunk inicial |
+
+## 10 bis · Geometría compartida entre renderizadores (`src/graphics/`, 0.8.2)
+
+`structureGeometry.ts` es el núcleo geométrico en **espacio-modelo** que consumen los dos renderizadores de la estructura: el canvas web (React/SVG, con cámara de pan/zoom) y la memoria de cálculo (`pdf-lib`, con encaje a caja). Es puro: sin React, sin `pdf-lib`, sin píxeles ni unidades de página.
+
+| Función | Qué responde |
+| --- | --- |
+| `memberAxis(member, i, j)` | Dirección, cosenos directores, normal unitaria `(-s, c)` y luz flexible descontando los brazos rígidos |
+| `grossRatioFromFlexible` / `flexibleRatioFromGross` | Conversión entre la estación del tramo flexible (lo que guardan `MemberLoad.position/start/end`) y la posición sobre el miembro completo |
+| `grossRatioAtPoint` | Proyección de un puntero sobre el miembro, acotada a sus extremos |
+| `pointAtGrossRatio` / `lerpPoint` | Interpolación en espacio-modelo y en el espacio ya proyectado del renderizador |
+| `toGlobalVector` | Rotación de un vector en ejes locales a ejes globales |
+| `distributedIntensityAt` | Intensidad interpolada de una carga distribuida |
+| `modelBounds` | Caja envolvente, entrada de todo encaje a vista (`cameraToFitBounds` en el canvas, `createProjection` en el PDF) |
+
+**Lo que deliberadamente NO se unificó**: el vocabulario visual de cada renderizador. El canvas dibuja glifos SVG de apoyo, curvas Bézier exactas (`segmentBezierControls`), flechas con `marker-end` y longitudes en píxeles dependientes del zoom; el PDF dibuja barbas de flecha a mano, polilíneas muestreadas y longitudes en puntos de página. Son políticas de presentación distintas por buenas razones, no duplicación. Tampoco se fusionaron los dos encajes a vista: el del canvas acota la escala y respeta los insets del chrome, el del PDF centra en una caja con padding fijo.
 
 ## 11 · Calidad
 

@@ -4,6 +4,7 @@ import type { InfluenceCanvasState, ResultCursor, ResultTab } from '../../store/
 import type { CanvasCamera } from './canvasInteraction';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../../engine/diagram';
 import { toDisplay, unitLabel } from '../../engine/units';
+import { memberAxis } from '../../graphics/structureGeometry';
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
 import type { TranslationKey } from '../../i18n/catalogs';
 
@@ -71,10 +72,10 @@ const CanvasResultLayerImpl = ({
     const result = resultMap.get(member.id);
     const ni = nodeMap.get(member.i); const nj = nodeMap.get(member.j);
     if (!resultsAllowed || !project.settings.showResultOverlay || !result || !ni || !nj || !['axial', 'shear', 'moment'].includes(resultTab) || !result.diagramSegments.length) return null;
-    const dx = nj.x - ni.x; const dy = nj.y - ni.y;
-    const L = Math.hypot(dx, dy); const tx = dx / L; const ty = dy / L;
+    const axis = memberAxis(member, ni, nj);
+    const tx = axis.c; const ty = axis.s;
     const side = project.settings.diagramSide === 'negative' ? -1 : 1;
-    const nx = -ty * side; const ny = tx * side;
+    const nx = axis.normal.x * side; const ny = axis.normal.y * side;
     const key = resultTab as DiagramQuantity;
     const diagramPixelScale = scaleFor(result);
     const locate = (x: number, value: number) => {
@@ -127,8 +128,7 @@ const CanvasResultLayerImpl = ({
     const result = resultMap.get(member.id);
     const ni = nodeMap.get(member.i); const nj = nodeMap.get(member.j);
     if (!result || !ni || !nj || member.type === 'rigid' || !result.deformation.length) return '';
-    const dx = nj.x - ni.x; const dy = nj.y - ni.y; const L = Math.hypot(dx, dy);
-    const c = dx / L; const s = dy / L;
+    const { c, s } = memberAxis(member, ni, nj);
     const scale = project.settings.deformedScale;
     const curved = result.deformation.map((point) => {
       const grossX = (result.startOffset ?? 0) + point.x;
@@ -152,12 +152,9 @@ const CanvasResultLayerImpl = ({
     const ni = nodeMap.get(member.i);
     const nj = nodeMap.get(member.j);
     if (!ni || !nj) return null;
-    const dx = nj.x - ni.x;
-    const dy = nj.y - ni.y;
-    const grossLength = Math.hypot(dx, dy);
-    if (grossLength <= 1e-12) return null;
-    const c = dx / grossLength;
-    const s = dy / grossLength;
+    const axis = memberAxis(member, ni, nj);
+    if (axis.length <= 1e-12) return null;
+    const { c, s } = axis;
     const x = Math.max(0, Math.min(result.length, resultCursor.x));
     const grossX = (result.startOffset ?? 0) + x;
     const base = { x: ni.x + c * grossX, y: ni.y + s * grossX };
@@ -167,8 +164,8 @@ const CanvasResultLayerImpl = ({
       const quantity = resultTab as DiagramQuantity;
       const value = evaluateDiagramAt(result.diagramSegments, result.diagramJumps, x, 'right')?.[quantity] ?? 0;
       const side = project.settings.diagramSide === 'negative' ? -1 : 1;
-      const nx = -s * side;
-      const ny = c * side;
+      const nx = axis.normal.x * side;
+      const ny = axis.normal.y * side;
       const offsetModel = value * scaleFor(result) / camera.scale;
       screen = toScreen(base.x + nx * offsetModel, base.y + ny * offsetModel);
       const displayQuantity = quantity === 'moment' ? 'moment' as const : 'force' as const;
@@ -192,10 +189,9 @@ const CanvasResultLayerImpl = ({
       const ni = member ? nodeMap.get(member.i) : undefined;
       const nj = member ? nodeMap.get(member.j) : undefined;
       if (!member || !result || !ni || !nj) return [];
-      const grossLength = Math.hypot(nj.x - ni.x, nj.y - ni.y);
-      if (grossLength <= 1e-12) return [];
-      const c = (nj.x - ni.x) / grossLength;
-      const s = (nj.y - ni.y) / grossLength;
+      const axis = memberAxis(member, ni, nj);
+      if (axis.length <= 1e-12) return [];
+      const { c, s } = axis;
       const start = result.startOffset ?? 0;
       const a = toScreen(ni.x + c * start, ni.y + s * start);
       const b = toScreen(ni.x + c * (start + result.length), ni.y + s * (start + result.length));
@@ -209,10 +205,9 @@ const CanvasResultLayerImpl = ({
       const ni = member ? nodeMap.get(member.i) : undefined;
       const nj = member ? nodeMap.get(member.j) : undefined;
       if (!member || !result || !ni || !nj) return null;
-      const grossLength = Math.hypot(nj.x - ni.x, nj.y - ni.y);
-      if (grossLength <= 1e-12) return null;
-      const c = (nj.x - ni.x) / grossLength;
-      const s = (nj.y - ni.y) / grossLength;
+      const axis = memberAxis(member, ni, nj);
+      if (axis.length <= 1e-12) return null;
+      const { c, s } = axis;
       const localX = (result.startOffset ?? 0) + Math.max(0, Math.min(1, marker.ratio)) * result.length;
       const point = toScreen(ni.x + c * localX, ni.y + s * localX);
       const ordinate = influenceCanvasState.target.quantity === 'moment'
@@ -227,10 +222,9 @@ const CanvasResultLayerImpl = ({
       const ni = member ? nodeMap.get(member.i) : undefined;
       const nj = member ? nodeMap.get(member.j) : undefined;
       if (!member || !result || !ni || !nj) return null;
-      const grossLength = Math.hypot(nj.x - ni.x, nj.y - ni.y);
-      if (grossLength <= 1e-12) return null;
-      const c = (nj.x - ni.x) / grossLength;
-      const s = (nj.y - ni.y) / grossLength;
+      const axis = memberAxis(member, ni, nj);
+      if (axis.length <= 1e-12) return null;
+      const { c, s } = axis;
       const x = Math.max(0, Math.min(result.length, marker.x));
       const localX = (result.startOffset ?? 0) + x;
       const point = toScreen(ni.x + c * localX, ni.y + s * localX);

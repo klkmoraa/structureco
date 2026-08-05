@@ -4,6 +4,13 @@ import type { CanvasSelectionVisualState } from './selectionVisuals';
 import type { EditorLayerState } from './editorLayers';
 import type { ResultTab } from '../../store/ProjectContext';
 import { toDisplay } from '../../engine/units';
+import {
+  distributedIntensityAt,
+  grossRatioFromFlexible,
+  memberAxis,
+  pointAtGrossRatio,
+  toGlobalVector,
+} from '../../graphics/structureGeometry';
 import { formatFixed } from '../../utils/numberFormat';
 import type { TranslationKey } from '../../i18n/catalogs';
 
@@ -20,26 +27,6 @@ type Translate = (key: TranslationKey, variables?: Record<string, string | numbe
 const arrowPath = (x1: number, y1: number, x2: number, y2: number) => (
   <line x1={x1} y1={y1} x2={x2} y2={y2} markerEnd="url(#arrow-purple)" />
 );
-
-// oxlint-disable-next-line react/only-export-components
-export const flexibleRatioFromGross = (nodeMap: Map<string, NodeModel>, member: MemberModel, grossRatio: number) => {
-  const ni = nodeMap.get(member.i)!;
-  const nj = nodeMap.get(member.j)!;
-  const grossLength = Math.hypot(nj.x - ni.x, nj.y - ni.y);
-  const startOffset = member.rigidOffsetI ?? 0;
-  const flexibleLength = Math.max(grossLength - startOffset - (member.rigidOffsetJ ?? 0), 1e-12);
-  return Math.min(1, Math.max(0, (grossRatio * grossLength - startOffset) / flexibleLength));
-};
-
-// oxlint-disable-next-line react/only-export-components
-export const grossRatioFromFlexible = (nodeMap: Map<string, NodeModel>, member: MemberModel, flexibleRatio: number) => {
-  const ni = nodeMap.get(member.i)!;
-  const nj = nodeMap.get(member.j)!;
-  const grossLength = Math.hypot(nj.x - ni.x, nj.y - ni.y);
-  const startOffset = member.rigidOffsetI ?? 0;
-  const flexibleLength = Math.max(grossLength - startOffset - (member.rigidOffsetJ ?? 0), 0);
-  return grossLength > 0 ? (startOffset + flexibleRatio * flexibleLength) / grossLength : flexibleRatio;
-};
 
 /** Presentation-only geometry: nodes, members, supports and loads. Selection/edit intents flow out via callback props. */
 export interface CanvasGeometryLayerProps {
@@ -189,38 +176,37 @@ const CanvasGeometryLayerImpl = ({
     const target = memberMap.get(load.memberId);
     if (!target) return null;
     const ni = nodeMap.get(target.i)!; const nj = nodeMap.get(target.j)!;
-    const dx = nj.x - ni.x; const dy = nj.y - ni.y; const L = Math.hypot(dx, dy);
+    const axis = memberAxis(target, ni, nj);
+    const stationOf = (flexibleRatio: number) => {
+      const point = pointAtGrossRatio(axis, grossRatioFromFlexible(axis, flexibleRatio));
+      return toScreen(point.x, point.y);
+    };
     const selected = selectionVisualState.memberLoadId === load.id;
     if (load.type === 'point') {
-      const r = grossRatioFromFlexible(nodeMap, target, load.position ?? 0.5); const base = toScreen(ni.x + dx * r, ni.y + dy * r);
+      const base = stationOf(load.position ?? 0.5);
       const px = load.px ?? 0; const py = load.py ?? 0; const mag = Math.hypot(px, py) || 1;
-      let gx = px; let gy = py;
-      if (load.coordinateSystem === 'local') { const c = dx / L; const s = dy / L; gx = c * px - s * py; gy = s * px + c * py; }
+      const [gx, gy] = toGlobalVector(axis, load.coordinateSystem, px, py);
       const ux = gx / mag; const uy = -gy / mag;
       const start = { x: base.x - ux * 52, y: base.y - uy * 52 };
       const end = { x: base.x - ux * 7, y: base.y - uy * 7 };
       return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.pointLoadAria', { id: load.id, target: load.memberId, value: formatFixed(toDisplay(mag, units, 'force'), 2), unit: forceLabel })} aria-pressed={selected} onPointerDown={(event) => onObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => onLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <line className="load-selection-halo" x1={start.x} y1={start.y} x2={end.x} y2={end.y} /> : null}<line className="load-hit" x1={start.x} y1={start.y} x2={end.x} y2={end.y} />{arrowPath(start.x, start.y, end.x, end.y)}</g>;
     }
     if (load.type === 'moment') {
-      const r = grossRatioFromFlexible(nodeMap, target, load.position ?? 0.5);
-      const base = toScreen(ni.x + dx * r, ni.y + dy * r);
+      const base = stationOf(load.position ?? 0.5);
       const clockwise = (load.moment ?? 0) < 0;
       const path = clockwise
         ? `M ${base.x - 22} ${base.y - 3} A 23 23 0 1 0 ${base.x + 18} ${base.y - 13}`
         : `M ${base.x + 22} ${base.y - 3} A 23 23 0 1 1 ${base.x - 18} ${base.y - 13}`;
       return <g key={load.id} className={`load-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.momentLoadAria', { id: load.id, target: load.memberId, value: formatFixed(toDisplay(load.moment ?? 0, units, 'moment'), 2), unit: momentLabel })} aria-pressed={selected} onPointerDown={(event) => onObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => onLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <path className="load-selection-halo" d={path} /> : null}<path className="load-hit" d={path} /><path d={path} markerEnd="url(#arrow-purple)" /></g>;
     }
-    const visibleLoadedLength = L * camera.scale * Math.abs(load.end - load.start);
+    const visibleLoadedLength = axis.length * camera.scale * Math.abs(load.end - load.start);
     const count = Math.max(3, Math.min(9, Math.round(visibleLoadedLength / 34) + 1));
     const arrows = [];
     for (let i = 0; i < count; i += 1) {
-      const flexibleRatio = load.start + (load.end - load.start) * (i / (count - 1));
-      const r = grossRatioFromFlexible(nodeMap, target, flexibleRatio);
-      const base = toScreen(ni.x + dx * r, ni.y + dy * r);
-      const qx = (load.qxStart ?? 0) + ((load.qxEnd ?? load.qxStart ?? 0) - (load.qxStart ?? 0)) * (i / (count - 1));
-      const qy = (load.qyStart ?? 0) + ((load.qyEnd ?? load.qyStart ?? 0) - (load.qyStart ?? 0)) * (i / (count - 1));
-      let gx = qx; let gy = qy;
-      if (load.coordinateSystem === 'local') { const c = dx / L; const s = dy / L; gx = c * qx - s * qy; gy = s * qx + c * qy; }
+      const t = i / (count - 1);
+      const base = stationOf(load.start + (load.end - load.start) * t);
+      const { qx, qy } = distributedIntensityAt(load, t);
+      const [gx, gy] = toGlobalVector(axis, load.coordinateSystem, qx, qy);
       const mag = Math.hypot(gx, gy) || 1; const ux = gx / mag; const uy = -gy / mag;
       const length = 33 + 12 * (mag / Math.max(Math.abs(load.qyStart ?? 0), Math.abs(load.qyEnd ?? 0), Math.abs(load.qxStart ?? 0), Math.abs(load.qxEnd ?? 0), 1));
       arrows.push(<line key={i} x1={base.x - ux * length} y1={base.y - uy * length} x2={base.x - ux * 5} y2={base.y - uy * 5} markerEnd="url(#arrow-green)" />);
@@ -228,10 +214,8 @@ const CanvasGeometryLayerImpl = ({
     const qStartMagnitude = Math.hypot(load.qxStart ?? 0, load.qyStart ?? 0);
     const qEndMagnitude = Math.hypot(load.qxEnd ?? load.qxStart ?? 0, load.qyEnd ?? load.qyStart ?? 0);
     const average = (qStartMagnitude + qEndMagnitude) / 2;
-    const hitStartRatio = grossRatioFromFlexible(nodeMap, target, load.start);
-    const hitEndRatio = grossRatioFromFlexible(nodeMap, target, load.end);
-    const hitStart = toScreen(ni.x + dx * hitStartRatio, ni.y + dy * hitStartRatio);
-    const hitEnd = toScreen(ni.x + dx * hitEndRatio, ni.y + dy * hitEndRatio);
+    const hitStart = stationOf(load.start);
+    const hitEnd = stationOf(load.end);
     return <g key={load.id} className={`distributed-symbol${selected ? ' selected' : ''}`} data-structure-object data-structure-kind="memberLoad" data-structure-id={load.id} role="button" tabIndex={0} aria-keyshortcuts="Enter Space" aria-label={t('canvas.distributedLoadAria', { id: load.id, target: load.memberId, value: formatFixed(toDisplay(average, units, 'distributedForce'), 2), unit: distributedLabel })} aria-pressed={selected} onPointerDown={(event) => onObjectPointerDown(event, { kind: 'memberLoad', id: load.id })} onKeyDown={(event) => onLoadKeyDown(event, { kind: 'memberLoad', id: load.id })}>{selected ? <line className="load-selection-halo" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} /> : null}<line className="load-hit" x1={hitStart.x} y1={hitStart.y} x2={hitEnd.x} y2={hitEnd.y} />{arrows}</g>;
   };
 

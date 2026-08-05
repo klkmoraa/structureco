@@ -44,7 +44,16 @@ import { CanvasChrome } from './CanvasChrome';
 import { layoutSmartLabels, smartLabelDetailForScale, type SmartLabelCandidate } from './labelLayout';
 import { buildCanvasSelectionVisualState, selectionEnvelopeForPoints } from './selectionVisuals';
 import { onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
-import { CanvasGeometryLayer, flexibleRatioFromGross, grossRatioFromFlexible, type StructuralTarget } from './CanvasGeometryLayer';
+import { CanvasGeometryLayer, type StructuralTarget } from './CanvasGeometryLayer';
+import {
+  flexibleRatioFromGross,
+  grossRatioAtPoint,
+  grossRatioFromFlexible,
+  memberAxis,
+  modelBounds,
+  pointAtGrossRatio,
+  toGlobalVector,
+} from '../../graphics/structureGeometry';
 import { CanvasResultLayer, diagramPixelScaleFor, reactionClearanceFor } from './CanvasResultLayer';
 import { CanvasInteractionLayer } from './CanvasInteractionLayer';
 
@@ -357,15 +366,9 @@ export const StructuralCanvas = ({
 
   const fitModel = useCallback(() => {
     if (!project.nodes.length || !size.width || !size.height) return;
-    const xs = project.nodes.map((node) => node.x);
-    const ys = project.nodes.map((node) => node.y);
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
     const viewport = { width: size.width, height: size.height };
     updateCamera(cameraToFitBounds(
-      { minX, maxX, minY, maxY },
+      modelBounds(project.nodes),
       viewport,
       canvasSafeInsetsFor(viewport),
     ));
@@ -773,9 +776,8 @@ export const StructuralCanvas = ({
       const p = screenToModelPoint(localScreenPoint(client.x, client.y), cameraRef.current);
       const ni = nodeMap.get(member.i)!;
       const nj = nodeMap.get(member.j)!;
-      const dx = nj.x - ni.x; const dy = nj.y - ni.y;
-      const grossRatio = clamp(((p.x - ni.x) * dx + (p.y - ni.y) * dy) / (dx * dx + dy * dy), 0, 1);
-      const ratio = flexibleRatioFromGross(nodeMap, member, grossRatio);
+      const axis = memberAxis(member, ni, nj);
+      const ratio = flexibleRatioFromGross(axis, grossRatioAtPoint(axis, p));
       const id = nextId('ML', project.memberLoads.map((load) => load.id));
       const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
       updateProject((draft) => {
@@ -790,9 +792,8 @@ export const StructuralCanvas = ({
       const p = screenToModelPoint(localScreenPoint(client.x, client.y), cameraRef.current);
       const ni = nodeMap.get(member.i)!;
       const nj = nodeMap.get(member.j)!;
-      const dx = nj.x - ni.x; const dy = nj.y - ni.y;
-      const grossRatio = clamp(((p.x - ni.x) * dx + (p.y - ni.y) * dy) / (dx * dx + dy * dy), 0, 1);
-      const ratio = flexibleRatioFromGross(nodeMap, member, grossRatio);
+      const axis = memberAxis(member, ni, nj);
+      const ratio = flexibleRatioFromGross(axis, grossRatioAtPoint(axis, p));
       const id = nextId('ML', project.memberLoads.map((load) => load.id));
       const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
       updateProject((draft) => {
@@ -1223,8 +1224,7 @@ export const StructuralCanvas = ({
     const model = toModel(event.clientX - rect.left, event.clientY - rect.top);
     const ni = nodeMap.get(member.i)!;
     const nj = nodeMap.get(member.j)!;
-    const dx = nj.x - ni.x; const dy = nj.y - ni.y;
-    const ratio = clamp(((model.x - ni.x) * dx + (model.y - ni.y) * dy) / (dx * dx + dy * dy), 0, 1);
+    const ratio = grossRatioAtPoint(memberAxis(member, ni, nj), model);
     setCut({ memberId: member.id, ratio, point: memberValueAt(member.id, ratio), clientX: event.clientX, clientY: event.clientY, pinned: false });
   };
 
@@ -1356,28 +1356,22 @@ export const StructuralCanvas = ({
       const ni = member ? nodeMap.get(member.i) : undefined;
       const nj = member ? nodeMap.get(member.j) : undefined;
       if (!member || !ni || !nj) continue;
-      const dx = nj.x - ni.x;
-      const dy = nj.y - ni.y;
-      const length = Math.hypot(dx, dy);
-      if (length <= 1e-12) continue;
+      const axis = memberAxis(member, ni, nj);
+      if (axis.length <= 1e-12) continue;
+      const stationOf = (flexibleRatio: number) => {
+        const point = pointAtGrossRatio(axis, grossRatioFromFlexible(axis, flexibleRatio));
+        return toScreen(point.x, point.y);
+      };
       const selected = selectionVisualState.memberLoadId === load.id;
       if (!selected && !layers.labels) continue;
       const priority = selected ? 0 as const : 1 as const;
       const tone = selected ? 'selection' as const : load.type === 'distributed' ? 'shear' as const : load.type === 'moment' ? 'moment' as const : 'force' as const;
       if (load.type === 'point') {
-        const ratio = grossRatioFromFlexible(nodeMap, member, load.position ?? 0.5);
-        const base = toScreen(ni.x + dx * ratio, ni.y + dy * ratio);
+        const base = stationOf(load.position ?? 0.5);
         const px = load.px ?? 0;
         const py = load.py ?? 0;
         const magnitude = Math.hypot(px, py) || 1;
-        let gx = px;
-        let gy = py;
-        if (load.coordinateSystem === 'local') {
-          const c = dx / length;
-          const s = dy / length;
-          gx = c * px - s * py;
-          gy = s * px + c * py;
-        }
+        const [gx, gy] = toGlobalVector(axis, load.coordinateSystem, px, py);
         const ux = gx / magnitude;
         const uy = -gy / magnitude;
         smartLabelCandidates.push({
@@ -1390,8 +1384,7 @@ export const StructuralCanvas = ({
           forceVisible: selected,
         });
       } else if (load.type === 'moment') {
-        const ratio = grossRatioFromFlexible(nodeMap, member, load.position ?? 0.5);
-        const base = toScreen(ni.x + dx * ratio, ni.y + dy * ratio);
+        const base = stationOf(load.position ?? 0.5);
         smartLabelCandidates.push({
           id: `member-moment:${load.id}`,
           text: `M = ${formatFixed(toDisplay(load.moment ?? 0, units, 'moment'), 2)} ${momentLabel}`,
@@ -1402,18 +1395,11 @@ export const StructuralCanvas = ({
           forceVisible: selected,
         });
       } else {
-        const ratio = grossRatioFromFlexible(nodeMap, member, (load.start + load.end) / 2);
-        const base = toScreen(ni.x + dx * ratio, ni.y + dy * ratio);
+        const base = stationOf((load.start + load.end) / 2);
+        // The label states the mean intensity of the span, not the value at its midpoint.
         const qx = ((load.qxStart ?? 0) + (load.qxEnd ?? load.qxStart ?? 0)) / 2;
         const qy = ((load.qyStart ?? 0) + (load.qyEnd ?? load.qyStart ?? 0)) / 2;
-        let gx = qx;
-        let gy = qy;
-        if (load.coordinateSystem === 'local') {
-          const c = dx / length;
-          const s = dy / length;
-          gx = c * qx - s * qy;
-          gy = s * qx + c * qy;
-        }
+        const [gx, gy] = toGlobalVector(axis, load.coordinateSystem, qx, qy);
         const magnitude = Math.hypot(gx, gy) || 1;
         const ux = gx / magnitude;
         const uy = -gy / magnitude;
@@ -1461,14 +1447,13 @@ export const StructuralCanvas = ({
         const ni = nodeMap.get(member.i);
         const nj = nodeMap.get(member.j);
         if (!result || !ni || !nj) continue;
-        const dx = nj.x - ni.x;
-        const dy = nj.y - ni.y;
-        const length = Math.hypot(dx, dy);
+        const axis = memberAxis(member, ni, nj);
+        const length = axis.length;
         if (length <= 1e-12) continue;
-        const tx = dx / length;
-        const ty = dy / length;
-        const nx = -ty * side;
-        const ny = tx * side;
+        const tx = axis.c;
+        const ty = axis.s;
+        const nx = axis.normal.x * side;
+        const ny = axis.normal.y * side;
         const quantityUnit = quantity === 'moment' ? momentLabel : forceLabel;
         const displayQuantity = quantity === 'moment' ? 'moment' as const : 'force' as const;
         const points = result.criticalPoints

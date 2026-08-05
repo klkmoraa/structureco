@@ -8,6 +8,14 @@
  */
 import type { AnalysisResult, DiagramQuantity, NodeModel } from '../../types';
 import { toDisplay, unitLabel } from '../../engine/units';
+import {
+  distributedIntensityAt,
+  grossRatioFromFlexible,
+  lerpPoint,
+  memberAxis,
+  modelBounds,
+  toGlobalVector,
+} from '../../graphics/structureGeometry';
 import { pdfText } from './pdfGlyphs';
 import {
   clearDisplay,
@@ -33,10 +41,7 @@ interface Projection {
 
 /** Uniform model -> page transform that centres the structure inside `plot`. */
 const createProjection = (nodes: readonly NodeModel[], plot: PlotBox): Projection => {
-  const xs = nodes.map((node) => node.x);
-  const ys = nodes.map((node) => node.y);
-  const minX = Math.min(...xs); const maxX = Math.max(...xs);
-  const minY = Math.min(...ys); const maxY = Math.max(...ys);
+  const { minX, maxX, minY, maxY } = modelBounds(nodes);
   const scale = Math.min(
     (plot.right - plot.left) / Math.max(maxX - minX, 1),
     (plot.top - plot.bottom) / Math.max(maxY - minY, 1),
@@ -131,24 +136,12 @@ export const drawGlobalDcl = (context: ReportContext, height = 168, includeReact
     const screenStart = point(member.i);
     const screenEnd = point(member.j);
     if (!startNode || !endNode || !screenStart || !screenEnd) continue;
-    const modelDx = endNode.x - startNode.x;
-    const modelDy = endNode.y - startNode.y;
-    const memberLength = Math.hypot(modelDx, modelDy);
-    if (!(memberLength > 0)) continue;
-    const startOffset = member.rigidOffsetI ?? 0;
-    const endOffset = member.rigidOffsetJ ?? 0;
-    const flexibleLength = memberLength - startOffset - endOffset;
-    if (!(flexibleLength > 0)) continue;
-    const c = modelDx / memberLength;
-    const s = modelDy / memberLength;
-    const at = (ratio: number) => ({
-      x: screenStart.x + (screenEnd.x - screenStart.x) * ratio,
-      y: screenStart.y + (screenEnd.y - screenStart.y) * ratio,
-    });
-    const atFlexibleRatio = (ratio: number) => at((startOffset + ratio * flexibleLength) / memberLength);
-    const globalVector = (x: number, y: number): [number, number] => load.coordinateSystem === 'local'
-      ? [c * x - s * y, s * x + c * y]
-      : [x, y];
+    const axis = memberAxis(member, startNode, endNode);
+    if (!(axis.length > 0)) continue;
+    if (!(axis.flexibleLength > 0)) continue;
+    const atFlexibleRatio = (ratio: number) => lerpPoint(screenStart, screenEnd, grossRatioFromFlexible(axis, ratio));
+    const globalVector = (x: number, y: number): [number, number] =>
+      toGlobalVector(axis, load.coordinateSystem, x, y);
     const actionColor = rgb(0.05, 0.48, 0.23);
     if (load.type === 'distributed') {
       const startRatio = Math.min(load.start, load.end);
@@ -158,9 +151,8 @@ export const drawGlobalDcl = (context: ReportContext, height = 168, includeReact
       for (let arrowIndex = 0; arrowIndex < count; arrowIndex += 1) {
         const t = arrowIndex / (count - 1);
         const ratio = startRatio + (endRatio - startRatio) * t;
-        const qx = ((load.qxStart ?? 0) + ((load.qxEnd ?? load.qxStart ?? 0) - (load.qxStart ?? 0)) * t) * factor;
-        const qy = ((load.qyStart ?? 0) + ((load.qyEnd ?? load.qyStart ?? 0) - (load.qyStart ?? 0)) * t) * factor;
-        const [gx, gy] = globalVector(qx, qy);
+        const intensity = distributedIntensityAt(load, t);
+        const [gx, gy] = globalVector(intensity.qx * factor, intensity.qy * factor);
         const tail = drawArrow(layout, atFlexibleRatio(ratio), gx, gy, actionColor, 16);
         if (tail) arrowTails.push(tail);
       }
@@ -287,15 +279,14 @@ export const drawGlobalQuantityDiagram = (
     const start = modelPoint(ni.x, ni.y); const end = modelPoint(nj.x, nj.y);
     page.drawLine({ start, end, thickness: member.type === 'rigid' ? 3.2 : 2.2, color: rgb(0.42, 0.49, 0.45) });
     const result = index.memberResult(member.id);
-    const totalLength = Math.hypot(nj.x - ni.x, nj.y - ni.y);
+    const axis = memberAxis(member, ni, nj);
+    const totalLength = axis.length;
     if (!result || result.diagram.length < 2 || totalLength <= 0 || member.type === 'rigid') continue;
-    const ux = (nj.x - ni.x) / totalLength;
-    const uy = (nj.y - ni.y) / totalLength;
-    const normal = { x: -uy, y: ux };
+    const normal = axis.normal;
     const startOffset = result.startOffset ?? member.rigidOffsetI ?? 0;
     const diagramPoints = result.diagram.map((entry) => {
       const ratio = Math.min(1, Math.max(0, (startOffset + entry.x) / totalLength));
-      const base = { x: start.x + (end.x - start.x) * ratio, y: start.y + (end.y - start.y) * ratio };
+      const base = lerpPoint(start, end, ratio);
       const diagramOffset = side * entry[quantity] / maximum * amplitude;
       return { entry, base, curve: { x: base.x + normal.x * diagramOffset, y: base.y + normal.y * diagramOffset } };
     });
@@ -309,7 +300,7 @@ export const drawGlobalQuantityDiagram = (
     const critical = result.criticalPoints.filter((point) => point.quantity === quantity).sort((a, b) => Math.abs(b.value) - Math.abs(a.value))[0];
     if (critical) {
       const ratio = Math.min(1, Math.max(0, (startOffset + critical.x) / totalLength));
-      const base = { x: start.x + (end.x - start.x) * ratio, y: start.y + (end.y - start.y) * ratio };
+      const base = lerpPoint(start, end, ratio);
       const diagramOffset = side * critical.value / maximum * amplitude;
       labelCandidates.push({ value: critical.value, x: base.x + normal.x * diagramOffset, y: base.y + normal.y * diagramOffset, memberId: member.id, station: critical.x });
     }

@@ -7,6 +7,7 @@
  */
 import type { DiagramQuantity, MatrixTrace, MemberLoad, ProjectModel } from '../../types';
 import { toDisplay, unitLabel, type UnitQuantity } from '../../engine/units';
+import { memberAxis } from '../../graphics/structureGeometry';
 import { formatNearZero, formatNumber } from '../numberFormat';
 import type { ModelIndex } from './reportContext';
 
@@ -71,7 +72,7 @@ export const flexibleMemberLength = (index: ModelIndex, memberId: string): numbe
   const ni = index.node(member.i);
   const nj = index.node(member.j);
   if (!ni || !nj) return undefined;
-  return Math.hypot(nj.x - ni.x, nj.y - ni.y) - (member.rigidOffsetI ?? 0) - (member.rigidOffsetJ ?? 0);
+  return memberAxis(member, ni, nj).flexibleLength;
 };
 
 export const memberLoadDescription = (project: ProjectModel, index: ModelIndex, load: MemberLoad): string => {
