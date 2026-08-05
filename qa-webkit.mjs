@@ -100,7 +100,7 @@ const verifyWelcomeScroll = async (page) => {
   const reachability = await welcome.evaluate((element) => {
     element.scrollTop = element.scrollHeight;
     const footer = element.querySelector('.welcome-footer')?.getBoundingClientRect();
-    const steps = element.querySelector('.welcome-steps')?.getBoundingClientRect();
+    const steps = element.querySelector('.welcome-workflow')?.getBoundingClientRect();
     const fullyVisible = (rect) => Boolean(rect && rect.top >= -1 && rect.bottom <= window.innerHeight + 1);
     return {
       footerReachable: fullyVisible(footer),
