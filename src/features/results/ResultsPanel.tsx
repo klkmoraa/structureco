@@ -808,7 +808,7 @@ const MatrixView = ({ title, trace }: { title: string; trace: MatrixTrace }) => 
 };
 
 const EducationExplorer = () => {
-  const { analysis, project, selection, setSelection, setLearningFocus } = useProject();
+  const { analysis, project, selection, setSelection, setLearningFocus, ensureEducationTrace } = useProject();
   const { t } = useI18n();
   const trace = analysis?.educationTrace;
   const [stage, setStage] = useState<'model' | 'dofs' | 'element' | 'assembly' | 'verify'>('model');
@@ -820,7 +820,10 @@ const EducationExplorer = () => {
     else setLearningFocus(null);
     return () => setLearningFocus(null);
   }, [elementId, setLearningFocus, stage]);
-  if (!trace) return null;
+  // The interactive analysis run skips the matrix trace for speed (AG-013);
+  // this tab is the one place that reads it, so it fetches it on demand here.
+  useEffect(() => { void ensureEducationTrace(); }, [ensureEducationTrace, analysis]);
+  if (!trace) return analysis?.success ? <div className="results-view-loading" role="status" aria-label={t('results.loadingTrace')}><LoaderCircle className="spin" size={20} aria-hidden="true" /><span>{t('results.loadingTrace')}</span></div> : null;
   const element = trace.elements.find((item) => item.memberId === elementId) ?? trace.elements[0];
   const stages = [
     { id: 'model' as const, label: t('results.stageModel') },

@@ -6,6 +6,8 @@ export interface AnalysisWorkerRequest {
   requestId: number;
   project: ProjectModel;
   combinationId?: string | null;
+  /** Defaults to `true` (see `analyzeProject`); the interactive canvas path passes `false`. */
+  includeEducationTrace?: boolean;
 }
 
 export interface AnalysisWorkerSuccess {
@@ -34,7 +36,7 @@ export const handleAnalysisWorkerRequest = (request: AnalysisWorkerRequest): Ana
     return {
       type: 'analysis-result',
       requestId: request.requestId,
-      result: analyzeProjectAuto(request.project, combination),
+      result: analyzeProjectAuto(request.project, combination, { includeEducationTrace: request.includeEducationTrace }),
     };
   } catch (error) {
     return {

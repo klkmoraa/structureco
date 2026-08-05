@@ -23,6 +23,13 @@ export interface ProjectAnalysisContextValue {
   setInfluenceCanvasState: (state: InfluenceCanvasState | null) => void;
   analyze: () => void;
   clearAnalysis: () => void;
+  /**
+   * Lazily computes and merges `educationTrace` onto the current analysis when
+   * it is missing — `analyze()` runs the interactive path without it (see
+   * AG-013). No-op (resolves the existing result) once the trace is already
+   * present or the current run is unsuccessful.
+   */
+  ensureEducationTrace: () => Promise<AnalysisResult | null>;
 }
 
 export const ProjectAnalysisContext = createContext<ProjectAnalysisContextValue | null>(null);

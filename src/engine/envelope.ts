@@ -140,7 +140,10 @@ export const analyzeProjectScenarios = (project: ProjectModel): AnalysisScenario
     })),
   ];
   return requested.map(({ combination, ...scenario }) => {
-    const result = analyzeProject(project, combination);
+    // No scenario/envelope consumer ever reads `.educationTrace` — only the
+    // single "Aprender" tab on the primary analysis does, and it fetches its
+    // own trace on demand (see ProjectContext.ensureEducationTrace).
+    const result = analyzeProject(project, combination, { includeEducationTrace: false });
     const reliability = resolveReliability(result);
     const trusted = reliability.usable && isTrustedForCombination(reliability.level);
     return {

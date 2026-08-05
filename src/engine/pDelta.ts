@@ -231,13 +231,16 @@ const solveLoadStep = (
   startingAxialForces: Map<string, number>,
   frameMemberIds: readonly string[],
   config: PDeltaConfig,
+  includeEducationTrace: boolean,
 ): StepOutcome => {
   const scaled = scaleCombination(project, combination, lambda);
   // The direction reference is this *step's own* first-order response, not a
   // single lambda=1 baseline: an absolute `support.prescribed` settlement
   // does not scale with lambda, so the first-order direction at a partial
   // load level is not simply a shrunk copy of the full-combination one.
-  const stepFirstOrder = analyzeProject(project, scaled);
+  // Purely a reference vector for `relativeVectorChange`/amplification below —
+  // never published — so it never needs the education trace.
+  const stepFirstOrder = analyzeProject(project, scaled, { includeEducationTrace: false });
   const firstOrderDisplacements = stepFirstOrder.success ? stepFirstOrder.displacements : [];
   // Physical scale this step's convergence is measured against; see
   // `relativeVectorChange`.
@@ -249,7 +252,11 @@ const solveLoadStep = (
   let lastResult: AnalysisResult | null = null;
 
   for (let iteration = 1; iteration <= config.maxIterationsPerStep; iteration += 1) {
-    const result = analyzeProject(project, scaled, { pDeltaAxialForces: axialForces });
+    // Every iteration but the converged one is thrown away, so the caller's
+    // `includeEducationTrace` intent is honored on all of them alike — building
+    // it only on a guessed-final iteration would risk publishing a stale trace
+    // if that guess were wrong.
+    const result = analyzeProject(project, scaled, { pDeltaAxialForces: axialForces, includeEducationTrace });
     lastResult = result;
     if (!result.success) {
       return {
@@ -377,7 +384,9 @@ export const analyzeProjectPDelta = (
   project: ProjectModel,
   combination?: LoadCombination | null,
   configOverride?: Partial<PDeltaConfig>,
+  options?: { includeEducationTrace?: boolean },
 ): AnalysisResult => {
+  const includeEducationTrace = options?.includeEducationTrace ?? true;
   const config: PDeltaConfig = { ...resolvePDeltaConfig(project), ...configOverride };
   // Validated before any solving: an unbounded `maxIterationsPerStep` would
   // spin the inner loop forever, and a non-finite tolerance can never be met,
@@ -402,7 +411,7 @@ export const analyzeProjectPDelta = (
   }
   const frameMemberIds = project.members.filter((member) => member.type === 'frame').map((member) => member.id);
 
-  const firstOrder = analyzeProject(project, combination);
+  const firstOrder = analyzeProject(project, combination, { includeEducationTrace });
   if (!firstOrder.success) {
     return {
       ...firstOrder,
@@ -433,7 +442,7 @@ export const analyzeProjectPDelta = (
     }
     attempts += 1;
     const target = Math.min(1, lambdaAchieved + stepSize);
-    const outcome = solveLoadStep(project, combination, target, loadStepsUsed + 1, axialForces, frameMemberIds, config);
+    const outcome = solveLoadStep(project, combination, target, loadStepsUsed + 1, axialForces, frameMemberIds, config, includeEducationTrace);
     history.push(...outcome.history);
     totalIterations += outcome.iterations;
     if (outcome.converged) {
@@ -542,5 +551,11 @@ const buildFailureResult = (
 };
 
 /** Dispatches to the mode the project is configured for; every other caller keeps calling `analyzeProject` directly. */
-export const analyzeProjectAuto = (project: ProjectModel, combination?: LoadCombination | null): AnalysisResult =>
-  project.settings.analysisMode === 'p-delta' ? analyzeProjectPDelta(project, combination) : analyzeProject(project, combination);
+export const analyzeProjectAuto = (
+  project: ProjectModel,
+  combination?: LoadCombination | null,
+  options?: { includeEducationTrace?: boolean },
+): AnalysisResult =>
+  project.settings.analysisMode === 'p-delta'
+    ? analyzeProjectPDelta(project, combination, undefined, options)
+    : analyzeProject(project, combination, options);

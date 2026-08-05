@@ -71,6 +71,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
     redo,
     analyze,
     setSelectedCombinationId,
+    ensureEducationTrace,
   } = useProject();
   const { language, t } = useI18n();
   const classroomSession = useClassroomSession();
@@ -238,6 +239,10 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
       if (!exportAnalysis) {
         const { analyzeProject } = await import('../../engine/solver');
         exportAnalysis = analyzeProject(project, selectedCombination ?? null);
+      } else if (!exportAnalysis.educationTrace) {
+        // The interactive analysis run skips the matrix trace for speed
+        // (AG-013); the report annex needs it, so fetch it here on demand.
+        exportAnalysis = await ensureEducationTrace() ?? exportAnalysis;
       }
       const portable = await import('../../utils/portable');
       const options = { appVersion: APP_VERSION, scenarioName, scenarioFactors, includeEducationTrace: true };

@@ -605,4 +605,47 @@ describe('perfilado de fases del analisis completo (AG-011)', () => {
       printPhaseTable(scenario.label, result.memberResults.length, timings);
     }
   }, 120_000);
+
+  // AG-013: `educationTrace` (elementos + K/C) ahora es opt-out via
+  // `includeEducationTrace: false`, para que el lienzo interactivo no pague el
+  // costo medido arriba en cada edicion. Verifica en un modelo barato que
+  // desactivar la traza no cambia ningun resultado numerico (paridad exigida
+  // por la propuesta) y mide el speedup real en el caso de 300 miembros.
+  it('includeEducationTrace: false omite la traza sin alterar ningun resultado numerico', () => {
+    const model = continuousBeamModel(20);
+    const withTrace = analyzeProject(model);
+    const withoutTrace = analyzeProject(model, undefined, { includeEducationTrace: false });
+    expect(withTrace.success && withoutTrace.success).toBe(true);
+    expect(withTrace.educationTrace).toBeDefined();
+    expect(withoutTrace.educationTrace).toBeUndefined();
+    expect(withoutTrace.displacements).toEqual(withTrace.displacements);
+    expect(withoutTrace.residualNorm).toBe(withTrace.residualNorm);
+    withoutTrace.nodeResults.forEach((node, index) => {
+      expect(node).toEqual(withTrace.nodeResults[index]);
+    });
+    withoutTrace.memberResults.forEach((member, index) => {
+      expect(member).toEqual(withTrace.memberResults[index]);
+    });
+  });
+
+  it('mide el speedup de includeEducationTrace:false en un modelo de 300 miembros', () => {
+    if (process.env.STRUCTURECO_PROFILE_ANALYSIS !== '1') return;
+    const model = continuousBeamModel(300);
+    const runs = 3;
+    const timeOf = (includeEducationTrace: boolean) => {
+      const samples: number[] = [];
+      for (let i = 0; i < runs; i += 1) {
+        const start = performance.now();
+        const result = analyzeProject(model, undefined, { includeEducationTrace });
+        samples.push(performance.now() - start);
+        expect(result.success).toBe(true);
+      }
+      return Math.min(...samples);
+    };
+    const before = timeOf(true);
+    const after = timeOf(false);
+    // eslint-disable-next-line no-console
+    console.log(`\n[AG-013] viga continua (300 vanos) — antes (con traza) ${before.toFixed(1)} ms · despues (sin traza) ${after.toFixed(1)} ms · speedup ${(before / after).toFixed(2)}x`);
+    expect(after).toBeLessThan(before);
+  }, 60_000);
 });

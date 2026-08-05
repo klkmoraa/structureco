@@ -372,7 +372,10 @@ const solveUnitResponse = (
       position: memberX / pathMember.length,
     }],
   };
-  const result = analyzeProject(loaded);
+  // Only a single scalar ordinate is read from `result` below; the influence
+  // sweep calls this once per sample point along the path, so skipping the
+  // education trace here removes a large, entirely unused cost.
+  const result = analyzeProject(loaded, undefined, { includeEducationTrace: false });
   const level = recordAnalysis(diagnostics, result);
   if (!result.success || !isTrustedForCombination(level)) {
     const reliability = resolveReliability(result);

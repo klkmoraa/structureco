@@ -1,6 +1,7 @@
 import type {
   AnalysisResult,
   ElementTrace,
+  EducationTrace,
   ExplanationStep,
   GlobalResultant,
   LoadAudit,
@@ -1228,12 +1229,21 @@ const abortedResult = abortedAnalysis;
 export const analyzeProject = (
   project: ProjectModel,
   combination?: LoadCombination | null,
-  options?: { pDeltaAxialForces?: Map<string, number> },
+  options?: { pDeltaAxialForces?: Map<string, number>; includeEducationTrace?: boolean },
 ): AnalysisResult => {
   const issues = validateProject(project);
   if (issues.some((issue) => issue.severity === 'error')) {
     return abortedResult(issues);
   }
+  // Building `educationTrace` means scanning the full ndof×ndof stiffness and
+  // constraint matrices cell by cell — AG-011 measured that at 58-64% of total
+  // analysis time on ~300-member models, far more than the actual linear solve.
+  // It is a purely presentational/educational artifact (never read by the
+  // solution vector, diagrams, audits or reliability classification below), so
+  // every caller that does not show it can skip building it. Defaults to `true`
+  // so every existing caller — tests, PDF export, the "Aprender" tab — keeps
+  // seeing it unless it explicitly opts out for an interactive/discarded run.
+  const includeEducationTrace = options?.includeEducationTrace ?? true;
 
   // Every first-order-geometry audit below (global equilibrium, load audit,
   // per-member diagram closure) compares against the *undeformed* geometry;
@@ -1747,29 +1757,31 @@ export const analyzeProject = (
       const localEndForces = multiplyMatrixVector(assembly.localStiffnessOriginal, localD)
         .map((value, index) => value - assembly.localLoadOriginal[index]);
       assembly.released.forEach((index) => { localEndForces[index] = 0; });
-      const localLabels = [`${assembly.member.id}.ui`, `${assembly.member.id}.vi`, `${assembly.member.id}.θi`, `${assembly.member.id}.uj`, `${assembly.member.id}.vj`, `${assembly.member.id}.θj`];
-      const elementTraceStart = profileStart();
-      elementTraces.push({
-        memberId: assembly.member.id,
-        dofIndices: [...assembly.indices],
-        dofLabels: assembly.indices.map((index) => dofLabels[index]),
-        length: assembly.geometry.L,
-        grossLength: assembly.grossLength,
-        c: assembly.geometry.c,
-        s: assembly.geometry.s,
-        releasedLocalDofs: [...assembly.released],
-        transformation: toMatrixTrace(assembly.transform, localLabels, assembly.indices.map((index) => dofLabels[index])),
-        localStiffnessOriginal: toMatrixTrace(assembly.localStiffnessOriginal, localLabels, localLabels),
-        localStiffnessEffective: toMatrixTrace(assembly.localStiffnessEffective, localLabels, localLabels),
-        globalStiffnessContribution: toMatrixTrace(assembly.globalStiffness, assembly.indices.map((index) => dofLabels[index]), assembly.indices.map((index) => dofLabels[index])),
-        localEquivalentLoadOriginal: [...assembly.localLoadOriginal],
-        localEquivalentLoadEffective: [...assembly.localLoadEffective],
-        globalEquivalentLoadContribution: [...assembly.globalLoad],
-        globalDisplacements: [...globalD],
-        localDisplacements: [...localD],
-        localEndForces: [...localEndForces],
-      });
-      profileEnd('educationTrace', elementTraceStart);
+      if (includeEducationTrace) {
+        const localLabels = [`${assembly.member.id}.ui`, `${assembly.member.id}.vi`, `${assembly.member.id}.θi`, `${assembly.member.id}.uj`, `${assembly.member.id}.vj`, `${assembly.member.id}.θj`];
+        const elementTraceStart = profileStart();
+        elementTraces.push({
+          memberId: assembly.member.id,
+          dofIndices: [...assembly.indices],
+          dofLabels: assembly.indices.map((index) => dofLabels[index]),
+          length: assembly.geometry.L,
+          grossLength: assembly.grossLength,
+          c: assembly.geometry.c,
+          s: assembly.geometry.s,
+          releasedLocalDofs: [...assembly.released],
+          transformation: toMatrixTrace(assembly.transform, localLabels, assembly.indices.map((index) => dofLabels[index])),
+          localStiffnessOriginal: toMatrixTrace(assembly.localStiffnessOriginal, localLabels, localLabels),
+          localStiffnessEffective: toMatrixTrace(assembly.localStiffnessEffective, localLabels, localLabels),
+          globalStiffnessContribution: toMatrixTrace(assembly.globalStiffness, assembly.indices.map((index) => dofLabels[index]), assembly.indices.map((index) => dofLabels[index])),
+          localEquivalentLoadOriginal: [...assembly.localLoadOriginal],
+          localEquivalentLoadEffective: [...assembly.localLoadEffective],
+          globalEquivalentLoadContribution: [...assembly.globalLoad],
+          globalDisplacements: [...globalD],
+          localDisplacements: [...localD],
+          localEndForces: [...localEndForces],
+        });
+        profileEnd('educationTrace', elementTraceStart);
+      }
       const diagramsStart = profileStart();
       const exact = buildExactDiagrams(localEndForces, assembly.loads, assembly.geometry.L);
       profileEnd('diagrams', diagramsStart);
@@ -1999,62 +2011,64 @@ export const analyzeProject = (
       });
     }
 
-    const matrixDetail = ndof <= 90 ? 'full' as const : 'summary' as const;
-    const reactionVector = project.nodes.flatMap((node) => {
-      const result = nodeResults.find((candidate) => candidate.nodeId === node.id)!;
-      return [result.rx, result.ry, result.rm];
-    });
-    const nodalSpringEnergy = project.nodes.reduce((energy, node, index) => {
-      const spring = node.support.spring;
-      if (!spring) return energy;
-      const ux = U[index * 3];
-      const uy = U[index * 3 + 1];
-      const rz = U[index * 3 + 2];
-      let contribution = 0.5 * (spring.kx ?? 0) * ux ** 2
-        + 0.5 * (spring.ky ?? 0) * uy ** 2
-        + 0.5 * (spring.kr ?? 0) * rz ** 2;
-      if (spring.kNormal) {
-        const angle = ((spring.angleDeg ?? 90) * Math.PI) / 180;
-        const normalDisplacement = Math.cos(angle) * ux + Math.sin(angle) * uy;
-        contribution += 0.5 * spring.kNormal * normalDisplacement ** 2;
-      }
-      return energy + contribution;
-    }, 0);
-    const strainEnergy = memberStrainEnergy + nodalSpringEnergy;
     const educationTraceStart = profileStart();
-    const educationTrace = {
-      schemaVersion: 1 as const,
-      formulation: project.members.some((member) => member.beamTheory === 'timoshenko') ? 'linear-static-mixed-beam' as const : 'linear-static-euler-bernoulli' as const,
-      dofs: dofLabels.map((label, index) => {
-        const component = (['ux', 'uy', 'rz'] as const)[index % 3];
-        const directConstraint = constraintDefinitions.find((definition) => {
-          const nonzero = definition.row.map((value, dof) => ({ value, dof })).filter((entry) => Math.abs(entry.value) > EPS);
-          return nonzero.length === 1 && nonzero[0].dof === index;
-        });
-        return {
-          index,
-          nodeId: project.nodes[Math.floor(index / 3)].id,
-          component,
-          label,
-          displacement: U[index],
-          appliedLoad: F[index],
-          reaction: reactionVector[index],
-          residual: equilibriumResidual[index],
-          constrained: C.some((row) => Math.abs(row[index]) > EPS),
-          prescribedValue: directConstraint?.value,
-        };
-      }),
-      elements: elementTraces,
-      assembly: {
-        stiffness: toMatrixTrace(K, dofLabels, dofLabels, matrixDetail),
-        load: [...F],
-        constraintMatrix: toMatrixTrace(C, C.map((_, index) => `C${index + 1}`), dofLabels, matrixDetail),
-        constraintValues: constraintDefinitions.map((definition) => definition.value),
-        diagonalScale: diagonalScale.slice(0, ndof),
-        matrixDetail,
-        strainEnergy,
-      },
-    };
+    const educationTrace: EducationTrace | undefined = includeEducationTrace ? (() => {
+      const matrixDetail = ndof <= 90 ? 'full' as const : 'summary' as const;
+      const reactionVector = project.nodes.flatMap((node) => {
+        const result = nodeResults.find((candidate) => candidate.nodeId === node.id)!;
+        return [result.rx, result.ry, result.rm];
+      });
+      const nodalSpringEnergy = project.nodes.reduce((energy, node, index) => {
+        const spring = node.support.spring;
+        if (!spring) return energy;
+        const ux = U[index * 3];
+        const uy = U[index * 3 + 1];
+        const rz = U[index * 3 + 2];
+        let contribution = 0.5 * (spring.kx ?? 0) * ux ** 2
+          + 0.5 * (spring.ky ?? 0) * uy ** 2
+          + 0.5 * (spring.kr ?? 0) * rz ** 2;
+        if (spring.kNormal) {
+          const angle = ((spring.angleDeg ?? 90) * Math.PI) / 180;
+          const normalDisplacement = Math.cos(angle) * ux + Math.sin(angle) * uy;
+          contribution += 0.5 * spring.kNormal * normalDisplacement ** 2;
+        }
+        return energy + contribution;
+      }, 0);
+      const strainEnergy = memberStrainEnergy + nodalSpringEnergy;
+      return {
+        schemaVersion: 1 as const,
+        formulation: project.members.some((member) => member.beamTheory === 'timoshenko') ? 'linear-static-mixed-beam' as const : 'linear-static-euler-bernoulli' as const,
+        dofs: dofLabels.map((label, index) => {
+          const component = (['ux', 'uy', 'rz'] as const)[index % 3];
+          const directConstraint = constraintDefinitions.find((definition) => {
+            const nonzero = definition.row.map((value, dof) => ({ value, dof })).filter((entry) => Math.abs(entry.value) > EPS);
+            return nonzero.length === 1 && nonzero[0].dof === index;
+          });
+          return {
+            index,
+            nodeId: project.nodes[Math.floor(index / 3)].id,
+            component,
+            label,
+            displacement: U[index],
+            appliedLoad: F[index],
+            reaction: reactionVector[index],
+            residual: equilibriumResidual[index],
+            constrained: C.some((row) => Math.abs(row[index]) > EPS),
+            prescribedValue: directConstraint?.value,
+          };
+        }),
+        elements: elementTraces,
+        assembly: {
+          stiffness: toMatrixTrace(K, dofLabels, dofLabels, matrixDetail),
+          load: [...F],
+          constraintMatrix: toMatrixTrace(C, C.map((_, index) => `C${index + 1}`), dofLabels, matrixDetail),
+          constraintValues: constraintDefinitions.map((definition) => definition.value),
+          diagonalScale: diagonalScale.slice(0, ndof),
+          matrixDetail,
+          strainEnergy,
+        },
+      };
+    })() : undefined;
     profileEnd('educationTrace', educationTraceStart);
 
     // A zero computed residual does not imply more information than IEEE-754

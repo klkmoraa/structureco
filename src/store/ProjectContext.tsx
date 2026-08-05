@@ -18,10 +18,10 @@ export { useWorkspaceUI } from './WorkspaceUIContext';
 export type { ResultTab, ResultCursor } from './WorkspaceUIContext';
 export type { InfluenceCanvasState } from './ProjectAnalysisContext';
 
-const runFallbackAnalysis = async (project: ProjectModel, combinationId: string) => {
+const runFallbackAnalysis = async (project: ProjectModel, combinationId: string, includeEducationTrace: boolean) => {
   const { analyzeProjectAuto } = await import('../engine/pDelta');
   const combination = project.combinations.find((item) => item.id === combinationId) ?? null;
-  return analyzeProjectAuto(project, combination);
+  return analyzeProjectAuto(project, combination, { includeEducationTrace });
 };
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
@@ -54,6 +54,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   }));
   const projectRef = useRef(project);
   const selectionRef = useRef(selection);
+  const analysisRef = useRef(analysis);
   const transactionStartRef = useRef<ProjectModel | null>(null);
   const analysisTimerRef = useRef<number | null>(null);
   const analysisRevisionRef = useRef(0);
@@ -66,6 +67,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => { projectRef.current = project; }, [project]);
   useEffect(() => { selectionRef.current = selection; }, [selection]);
+  useEffect(() => { analysisRef.current = analysis; }, [analysis]);
 
   const invalidateAnalysis = useCallback(() => {
     analysisRevisionRef.current += 1;
@@ -162,7 +164,9 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     const runFallback = () => {
       analysisTimerRef.current = window.setTimeout(() => {
         analysisTimerRef.current = null;
-        void runFallbackAnalysis(source, selectedCombinationId)
+        // Interactive edits never need the education trace up front — the
+        // "Aprender" tab and PDF export fetch it on demand (AG-013).
+        void runFallbackAnalysis(source, selectedCombinationId, false)
           .then(complete)
           .catch((error: unknown) => fail(error instanceof Error ? error.message : 'No se pudo completar el análisis estructural.'));
       }, 0);
@@ -194,12 +198,68 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         else fail(event.data.message);
       };
       worker.onerror = fallbackOnce;
-      const request: AnalysisWorkerRequest = { type: 'analyze', requestId: requestRevision, project: source, combinationId: selectedCombinationId || null };
+      const request: AnalysisWorkerRequest = { type: 'analyze', requestId: requestRevision, project: source, combinationId: selectedCombinationId || null, includeEducationTrace: false };
       worker.postMessage(request);
     } catch {
       runFallback();
     }
   }, [selectedCombinationId, setSelection]);
+
+  // Standalone worker-or-fallback runner for `ensureEducationTrace`: unlike
+  // `analyze()` above, this never touches history, selection or the revision
+  // counter that governs the main interactive analysis — it only computes one
+  // extra result, on demand, to read its `educationTrace` off of.
+  const runAnalysisWithTrace = useCallback((source: ProjectModel, combinationId: string): Promise<AnalysisResult> => {
+    return new Promise((resolve, reject) => {
+      const runFallback = () => {
+        void runFallbackAnalysis(source, combinationId, true).then(resolve).catch(reject);
+      };
+      if (typeof Worker === 'undefined') {
+        runFallback();
+        return;
+      }
+      try {
+        const worker = new Worker(new URL('../workers/analysis.worker.ts', import.meta.url), { type: 'module' });
+        let settled = false;
+        const fallbackOnce = () => {
+          if (settled) return;
+          settled = true;
+          worker.terminate();
+          runFallback();
+        };
+        worker.onmessage = (event: MessageEvent<AnalysisWorkerResponse>) => {
+          if (settled) return;
+          settled = true;
+          worker.terminate();
+          if (event.data.type === 'analysis-result') resolve(event.data.result);
+          else reject(new Error(event.data.message));
+        };
+        worker.onerror = fallbackOnce;
+        const request: AnalysisWorkerRequest = { type: 'analyze', requestId: 0, project: source, combinationId: combinationId || null, includeEducationTrace: true };
+        worker.postMessage(request);
+      } catch {
+        runFallback();
+      }
+    });
+  }, []);
+
+  const ensureEducationTrace = useCallback(async (): Promise<AnalysisResult | null> => {
+    const target = analysisRef.current;
+    if (!target || !target.success || target.educationTrace) return target;
+    try {
+      const withTrace = await runAnalysisWithTrace(projectRef.current, selectedCombinationId);
+      // The project (or a fresh `analyze()` run) may have moved on while this
+      // was in flight; only splice the trace onto the exact result it was
+      // requested for, never onto whatever is current now.
+      if (analysisRef.current !== target || !withTrace.educationTrace) return null;
+      const merged = { ...target, educationTrace: withTrace.educationTrace };
+      analysisRef.current = merged;
+      setAnalysis(merged);
+      return merged;
+    } catch {
+      return null;
+    }
+  }, [runAnalysisWithTrace, selectedCombinationId]);
 
   const setSelectedCombinationId = useCallback((id: string) => {
     if (id === selectedCombinationId) return;
@@ -230,7 +290,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       // on top of a newer edit.
       const requestRevision = analysisRevisionRef.current;
       window.setTimeout(() => {
-        void runFallbackAnalysis(next, selectedCombinationId)
+        void runFallbackAnalysis(next, selectedCombinationId, false)
           .then((result) => { if (analysisRevisionRef.current === requestRevision) setAnalysis(result); })
           .catch((error: unknown) => {
             if (analysisRevisionRef.current !== requestRevision) return;
@@ -352,7 +412,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const analysisValue = useMemo<ProjectAnalysisContextValue>(() => ({
     analysis, isAnalyzing, selectedCombinationId, learningFocus, influenceCanvasState,
     setSelectedCombinationId, setLearningFocus, setInfluenceCanvasState, analyze, clearAnalysis: invalidateAnalysis,
-  }), [analysis, isAnalyzing, selectedCombinationId, learningFocus, influenceCanvasState, setSelectedCombinationId, analyze, invalidateAnalysis]);
+    ensureEducationTrace,
+  }), [analysis, isAnalyzing, selectedCombinationId, learningFocus, influenceCanvasState, setSelectedCombinationId, analyze, invalidateAnalysis, ensureEducationTrace]);
 
   const uiValue = useMemo<WorkspaceUIContextValue>(() => ({
     activeTool, selection, theme, resultTab, resultCursor,
