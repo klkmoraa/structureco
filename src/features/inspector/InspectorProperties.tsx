@@ -13,6 +13,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import { repairProjectTopology } from '../../data/modelOperations';
+import type { StandardMaterial } from '../../data/standardMaterials';
+import type { StandardSection } from '../../data/standardSections';
 import { fromDisplay, toDisplay, unitLabel, type UnitQuantity } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import { useClassroomSession } from '../../store/ClassroomSessionContext';
@@ -27,7 +29,9 @@ import type {
   ValidationIssue,
 } from '../../types';
 import { InspectorNumericField } from './InspectorNumericField';
+import { MaterialPresetSelector } from './MaterialPresetSelector';
 import { formatInspectorValue } from './numericFormatting';
+import { SectionPresetSelector } from './SectionPresetSelector';
 import {
   InspectorAdvancedProperties,
   InspectorDerivedList,
@@ -229,6 +233,23 @@ export const InspectorProperties = () => {
       member.releases ??= {};
       member.releases[key] = Boolean(value);
     }
+    return draft;
+  });
+
+  const applyMaterialPreset = (material: StandardMaterial) => updateProject((draft) => {
+    const member = draft.members.find((item) => item.id === selectedMember?.id);
+    if (!member) return draft;
+    member.E = material.elasticModulus;
+    member.G = material.shearModulus;
+    member.density = material.density;
+    return draft;
+  });
+
+  const applySectionPreset = (section: StandardSection) => updateProject((draft) => {
+    const member = draft.members.find((item) => item.id === selectedMember?.id);
+    if (!member) return draft;
+    member.A = section.area;
+    member.I = section.inertiaX;
     return draft;
   });
 
@@ -512,6 +533,8 @@ export const InspectorProperties = () => {
             <option value="frame">{t('inspector.frame')}</option><option value="truss">{t('inspector.truss')}</option><option value="rigid">{t('inspector.rigid')}</option>
           </SelectField>
           {selectedMember.type !== 'rigid' && !classroomMode ? <>
+            <MaterialPresetSelector units={units} onSelect={applyMaterialPreset} />
+            <SectionPresetSelector units={units} onSelect={applySectionPreset} />
             <PhysicalNumberField label="E" value={selectedMember.E} units={units} quantity="elasticModulus" resetKey={`${selectionKey}:E`} hint={t('inspector.domainValidatesE')} onCommit={(value) => updateMember('E', value)} />
             <PhysicalNumberField label="A" value={selectedMember.A} units={units} quantity="area" resetKey={`${selectionKey}:A`} hint={t('inspector.domainValidatesA')} onCommit={(value) => updateMember('A', value)} />
             <PhysicalNumberField label="I" value={selectedMember.I} units={units} quantity="inertia" resetKey={`${selectionKey}:I`} hint={selectedMember.type === 'frame' ? t('inspector.domainValidatesI') : t('inspector.inertiaCompatibilityHint')} onCommit={(value) => updateMember('I', value)} />
