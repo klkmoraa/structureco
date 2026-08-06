@@ -289,9 +289,6 @@ Debajo de `--sc-shadow-sheet`, añade:
 
      La tinta es grafito verdoso diluido, nunca negro: sobre un fondo cálido el
      negro puro ensucia y delata el degradado. */
-  --sc-clay-ink: 58, 70, 64;
-  --sc-clay-light: 255, 255, 255;
-
   --sc-shadow-clay-xs:
     0 1px 2px rgba(58, 70, 64, 0.05),
     0 2px 6px rgba(58, 70, 64, 0.04),
@@ -338,9 +335,6 @@ Dentro de `:root[data-theme='dark']`, debajo de `--sc-shadow-sheet`, añade:
      gana: sin un canto visible los paneles se funden con el fondo. La luz
      interior pasa de blanca a un velo de marca muy tenue; el blanco puro sobre
      grafito se lee como un arañazo. */
-  --sc-clay-ink: 0, 0, 0;
-  --sc-clay-light: 120, 160, 145;
-
   --sc-shadow-clay-xs:
     0 1px 2px rgba(0, 0, 0, 0.30),
     inset 1px 1px 2px rgba(120, 160, 145, 0.05),
