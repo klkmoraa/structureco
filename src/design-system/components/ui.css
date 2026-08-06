@@ -594,3 +594,22 @@
 @media (prefers-reduced-motion: reduce) {
   .sc-spinner__ring { animation: none; opacity: 0.72; }
 }
+
+/* Superficie clay. La materia entera viene de tokens: una sombra escrita aquí
+   a mano no seguiría al tema y `tokens.test.ts` la rechazaría. */
+.sc-surface {
+  background: var(--sc-gradient-clay);
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-xl);
+  transition: var(--sc-transition-control);
+}
+
+.sc-surface[data-level='flat'] {
+  background: var(--sc-color-surface-1);
+  border-color: var(--sc-color-border-soft);
+  box-shadow: none;
+}
+
+.sc-surface[data-level='raised'] { box-shadow: var(--sc-shadow-clay-md); }
+.sc-surface[data-level='floating'] { box-shadow: var(--sc-shadow-clay-floating); }
+.sc-surface[data-pressed='true'] { box-shadow: var(--sc-shadow-clay-pressed); }
