@@ -335,12 +335,21 @@ describe('AG-015 premium visual layer contract', () => {
     // Four layers per surface: outer shadow down-right, inner highlight
     // up-left, inner shadow down-right, and the 1px edge. Two of them are
     // `inset`; a level that forgot them would read as a flat card with a blur.
-    for (const level of ['--sc-shadow-clay-sm', '--sc-shadow-clay-md', '--sc-shadow-clay-lg']) {
-      const value = rootTokens.declarations.get(level) ?? '';
-      expect((value.match(/inset/g) ?? []).length, level).toBeGreaterThanOrEqual(2);
+    // Both themes must hold this shape independently — Night recalibrates the
+    // values but not the structure, and a regression in either block has to
+    // fail here, not just in Day.
+    for (const [themeLabel, theme] of [
+      ['light', rootTokens],
+      ['dark', darkTokens],
+    ] as const) {
+      for (const level of ['--sc-shadow-clay-sm', '--sc-shadow-clay-md', '--sc-shadow-clay-lg']) {
+        const value = theme.declarations.get(level) ?? '';
+        expect((value.match(/inset/g) ?? []).length, `${themeLabel} ${level}`).toBeGreaterThanOrEqual(2);
+      }
+      // Pressed inverts: it is inset-only, or it would still look like it floats.
+      expect(theme.declarations.get('--sc-shadow-clay-pressed'), `${themeLabel} --sc-shadow-clay-pressed`)
+        .not.toMatch(/(^|,)\s*0\s+\d+px/);
     }
-    // Pressed inverts: it is inset-only, or it would still look like it floats.
-    expect(rootTokens.declarations.get('--sc-shadow-clay-pressed')).not.toMatch(/(^|,)\s*0\s+\d+px/);
   });
 
   it('reserves a hero radius above the card scale', () => {
