@@ -1,5 +1,5 @@
-import { useMemo, type CSSProperties } from 'react';
-import { buildPortal, type Face, type MaterialId } from '../../graphics/isometricPortal';
+import { useEffect, useMemo, useRef, type CSSProperties } from 'react';
+import { buildPortal, projectIso, DEFAULT_PORTAL, type Face, type MaterialId } from '../../graphics/isometricPortal';
 import { formatFixed } from '../../utils/numberFormat';
 
 /**
@@ -42,21 +42,129 @@ const toPath = (face: Face) =>
     .join(' ')} Z`;
 
 /**
- * Rejilla del suelo: 9 líneas por eje (i de -4 a 4), igual que el boceto
- * original, pero con las coordenadas recalculadas proyectando con
- * `projectIso` un rectángulo de mundo que rodea la huella real de las bases
- * (`x: [-9, 159]`, `z: [-9, 31]` con `DEFAULT_PORTAL`) más un margen de 20
- * unidades. Los coeficientes son literales (no llaman a `projectIso` en
- * tiempo de ejecución) porque la rejilla es decorativa y fija: no depende de
- * `dims`, así que no hace falta recalcularla por render.
+ * Rejilla del suelo: 9 líneas por eje (i de -4 a 4), igual densidad que el
+ * boceto original, pero proyectadas en vivo con `projectIso` sobre un
+ * rectángulo de mundo que rodea la huella real de las bases (más
+ * `GRID_MARGIN`). Nada de coeficientes escritos a mano: si `ISO_X`/`ISO_Y`,
+ * el signo de la proyección o la geometría del pórtico cambian en
+ * `isometricPortal.ts`, la rejilla se recalcula sola en vez de quedar
+ * desincronizada en silencio.
  */
 const GRID_INDICES = [-4, -3, -2, -1, 0, 1, 2, 3, 4];
 
+/** Margen, en unidades de mundo, alrededor de la huella de las bases para la
+ * rejilla de suelo — el plano se ve más grande que el objeto que sostiene. */
+const GRID_MARGIN = 20;
+
+/** Fracción del bounding-box en pantalla de cada pie que cubre su sombra de
+ * contacto. Elegida por muestreo Monte Carlo (4000 puntos) contra las 4
+ * esquinas proyectadas de cada pie: s=0.75 cubre el 85% del pie con sólo 3%
+ * de fuga fuera de él (s=0.65 → 67%/0%, s=0.85 → 95%/16%, s=1.00 → 100%/36%).
+ * Detalle completo en el informe de la ronda de corrección 1/5. */
+const CONTACT_SHADOW_SCALE = 0.75;
+
+interface FootprintBox { x: number; z: number; w: number; d: number }
+
+/** Huella en planta (y=0) de la base de una columna, con las mismas fórmulas
+ * (`centreOffset`, `columnX`) que `buildPortal` usa para colocar la caja
+ * `base-*-lower` — no números sueltos. */
+const footprintOf = (columnIndex: 0 | 1): FootprintBox => {
+  const { baseWidth, columnWidth, span } = DEFAULT_PORTAL;
+  const centreOffset = (baseWidth - columnWidth) / 2;
+  const columnX = [0, span - columnWidth];
+  return { x: columnX[columnIndex] - centreOffset, z: -centreOffset, w: baseWidth, d: baseWidth };
+};
+
+/** Proyecta las 4 esquinas de una huella y devuelve la elipse de sombra de
+ * contacto que ajusta `CONTACT_SHADOW_SCALE` a su bounding-box en pantalla. */
+const contactEllipseOf = (footprint: FootprintBox) => {
+  const corners = [
+    projectIso({ x: footprint.x, y: 0, z: footprint.z }),
+    projectIso({ x: footprint.x + footprint.w, y: 0, z: footprint.z }),
+    projectIso({ x: footprint.x + footprint.w, y: 0, z: footprint.z + footprint.d }),
+    projectIso({ x: footprint.x, y: 0, z: footprint.z + footprint.d }),
+  ];
+  const xs = corners.map((p) => p.x);
+  const ys = corners.map((p) => p.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  return {
+    cx: (minX + maxX) / 2,
+    cy: (minY + maxY) / 2,
+    rx: ((maxX - minX) / 2) * CONTACT_SHADOW_SCALE,
+    ry: ((maxY - minY) / 2) * CONTACT_SHADOW_SCALE,
+  };
+};
+
+/** Umbral bajo el cual no se registra ningún listener de puntero: sin hover
+ * fino (táctil) o con `prefers-reduced-motion`, la inclinación no debe
+ * costar nada ni animarse nunca. */
+const canTilt = () =>
+  Boolean(window.matchMedia?.('(hover: hover) and (pointer: fine)').matches) &&
+  !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
 export const StructuralPortalHero = () => {
-  const faces = useMemo(() => buildPortal(), []);
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  const { faces, groundLines, footEllipses } = useMemo(() => {
+    const faces = buildPortal();
+    const footprints: [FootprintBox, FootprintBox] = [footprintOf(0), footprintOf(1)];
+    const footEllipses = footprints.map(contactEllipseOf);
+
+    const xMin = Math.min(...footprints.map((f) => f.x)) - GRID_MARGIN;
+    const xMax = Math.max(...footprints.map((f) => f.x + f.w)) + GRID_MARGIN;
+    const zMin = Math.min(...footprints.map((f) => f.z)) - GRID_MARGIN;
+    const zMax = Math.max(...footprints.map((f) => f.z + f.d)) + GRID_MARGIN;
+
+    const groundLines = GRID_INDICES.map((i) => {
+      const t = (i + 4) / 8;
+      const xAt = xMin + t * (xMax - xMin);
+      const zAt = zMin + t * (zMax - zMin);
+      return {
+        i,
+        constX: { p1: projectIso({ x: xAt, y: 0, z: zMin }), p2: projectIso({ x: xAt, y: 0, z: zMax }) },
+        constZ: { p1: projectIso({ x: xMin, y: 0, z: zAt }), p2: projectIso({ x: xMax, y: 0, z: zAt }) },
+      };
+    });
+
+    return { faces, groundLines, footEllipses };
+  }, []);
+
+  /* Inclinación con el puntero: sin `setState`, cero re-render de React por
+     movimiento. Se escribe directamente en `node.style` vía la ref. Nunca se
+     registra un listener en táctil ni con `prefers-reduced-motion`, y el
+     `return` del efecto limpia ambos al desmontar. */
+  useEffect(() => {
+    const node = svgRef.current;
+    if (!node || !canTilt()) return undefined;
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const rect = node.getBoundingClientRect();
+      const relX = rect.width > 0 ? ((event.clientX - rect.left) / rect.width) * 2 - 1 : 0;
+      const relY = rect.height > 0 ? ((event.clientY - rect.top) / rect.height) * 2 - 1 : 0;
+      node.style.setProperty('--tilt-x', String(Math.min(1, Math.max(-1, relX))));
+      node.style.setProperty('--tilt-y', String(Math.min(1, Math.max(-1, relY))));
+    };
+
+    const handlePointerLeave = () => {
+      node.style.setProperty('--tilt-x', '0');
+      node.style.setProperty('--tilt-y', '0');
+    };
+
+    node.addEventListener('pointermove', handlePointerMove);
+    node.addEventListener('pointerleave', handlePointerLeave);
+
+    return () => {
+      node.removeEventListener('pointermove', handlePointerMove);
+      node.removeEventListener('pointerleave', handlePointerLeave);
+    };
+  }, []);
 
   return (
     <svg
+      ref={svgRef}
       className="portal-hero"
       viewBox="-90 -190 290 325"
       preserveAspectRatio="xMidYMid meet"
@@ -68,17 +176,27 @@ export const StructuralPortalHero = () => {
       {/* Suelo cuadriculado. Una rejilla, no una textura: sitúa el objeto en un
           plano sin competir con él. */}
       <g className="portal-hero__ground">
-        {GRID_INDICES.map((i) => (
+        {groundLines.map(({ i, constX, constZ }) => (
           <g key={i}>
-            <line x1={22.517 * i + 90.067} y1={13 * i + 23} x2={22.517 * i + 20.785} y2={13 * i + 63} />
-            <line x1={-8.66 * i - 34.641} y1={5 * i - 9} x2={-8.66 * i + 145.492} y2={5 * i + 95} />
+            <line x1={constX.p1.x} y1={constX.p1.y} x2={constX.p2.x} y2={constX.p2.y} />
+            <line x1={constZ.p1.x} y1={constZ.p1.y} x2={constZ.p2.x} y2={constZ.p2.y} />
           </g>
         ))}
       </g>
 
-      {/* Sombra de contacto: una elipse difuminada bajo la huella de las bases.
-          Un filtro de sombra real sobre 36 paths costaría más de lo que aporta. */}
-      <ellipse className="portal-hero__contact" cx="55" cy="43" rx="90" ry="24" />
+      {/* Sombra de contacto: una elipse difuminada por pie, no una bajo todo
+          el pórtico — las dos zapatas están separadas por el vano y una sola
+          sombra caería en el hueco entre ambas. */}
+      {footEllipses.map((ellipse, index) => (
+        <ellipse
+          key={index}
+          className="portal-hero__contact"
+          cx={ellipse.cx}
+          cy={ellipse.cy}
+          rx={ellipse.rx}
+          ry={ellipse.ry}
+        />
+      ))}
 
       {faces.map((face) => (
         <path

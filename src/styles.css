@@ -109,9 +109,9 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 .welcome-highlight-item { display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:650; color:var(--muted); background:var(--sc-surface-glass); padding:7px 13px; border-radius:var(--sc-radius-pill); border:1px solid var(--border-soft); box-shadow:var(--sc-ring-inset); }
 .welcome-highlight-item svg { color:var(--accent); flex:0 0 auto; }
 
-/* Figura de firma: pórtico biempotrado bajo carga repartida, con su diagrama
-   de momentos y su deformada, en la misma codificación de color del lienzo. */
-.welcome-hero-figure { position:relative; display:grid; place-items:center; min-width:0; }
+/* Figura de firma: pórtico clay isométrico generado por código
+   (`StructuralPortalHero`), en la misma codificación de color del lienzo. */
+.welcome-hero-figure { position:relative; display:grid; place-items:center; min-width:0; perspective:1100px; }
 .welcome-hero-figure::before { content:''; position:absolute; inset:4% 0 12%; border-radius:50%; background:radial-gradient(closest-side, color-mix(in srgb, var(--accent) 20%, transparent), transparent); filter:blur(26px); pointer-events:none; }
 /* Pórtico clay. El sombreado por cara llega como `--face-shade` (0 sombra,
    1 luz) y se aplica con `brightness`, de modo que un solo token de material
@@ -138,7 +138,11 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 }
 
 .portal-hero__ground line {
-  stroke: var(--sc-color-border-soft);
+  /* border-strong, no border-soft: contra --sc-color-bg-app, border-soft da
+     1.06:1 (Día) / 1.27:1 (Noche) — invisible. border-strong casi dobla el
+     contraste en ambos temas (1.82:1 / 2.45:1) sin tocar el color del
+     pórtico. Sigue siendo decorativo (no hay texto que exija AA 4.5:1). */
+  stroke: var(--sc-color-border-strong);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
 }
@@ -150,11 +154,8 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 }
 
 /* Inclinación con el puntero: 2° como máximo, conducida por el contenedor.
-   No rota sola, no hay parallax, y en táctil no existe. */
-.welcome-hero-figure {
-  perspective: 1100px;
-}
-
+   No rota sola, no hay parallax, y en táctil no existe (`perspective` vive
+   en la declaración única de `.welcome-hero-figure`, arriba). */
 @media (hover: hover) and (pointer: fine) {
   .welcome-hero-figure .portal-hero {
     transform: rotateX(calc(var(--tilt-y, 0) * 2deg)) rotateY(calc(var(--tilt-x, 0) * 2deg));
