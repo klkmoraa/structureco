@@ -680,6 +680,24 @@ Expected: FAIL — no existe `./isometricPortal`.
 
 - [ ] **Step 3: Implementar `isometricPortal.ts`**
 
+> **Corrección post-revisión (2026-08-06).** El bloque de código de abajo tenía dos defectos
+> demostrados numéricamente durante la revisión de esta tarea. Si lo transcribes literalmente,
+> obtienes un pórtico roto. Los dos:
+>
+> 1. `boxFaces` emite la cara `−x` (`corner(0, …)` como `${id}:left`), pero `depth = x+y+z`
+>    sitúa al observador en el octante `+x/+y/+z`, donde las caras visibles son `+x`, `+y`,
+>    `+z`. Medido por muestreo: las tres caras cubren el 54,3 % de la silueta de la columna
+>    con un 45,7 % pintado dos veces. Debe emitirse la cara `+x`.
+> 2. `LIGHT` apunta al octante `−x/+y/−z`, opuesto a esa cámara. Corregido el punto 1, las dos
+>    caras laterales caen ambas al suelo ambiental exacto (0,3400 las dos) y el pórtico sale
+>    sin volumen. `LIGHT` debe apuntar a `+x/+y`, conservando su proyección de 145° en el plano
+>    de pantalla.
+>
+> Además, `projectIso` debe llevar el signo como `x: (v.x - v.z) * ISO_X` para que su
+> orientación coincida con la de `buildPortal`; y el dintel debe repartir la junta de 1,5 sólo
+> entre módulos, no dejar el último 1,5 corto por la derecha. La versión en `main` es la buena;
+> este bloque queda como registro de dónde estuvo el fallo.
+
 ```ts
 /**
  * Geometría del pórtico clay de la bienvenida.
