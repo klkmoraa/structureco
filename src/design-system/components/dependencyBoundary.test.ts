@@ -1,15 +1,18 @@
 /// <reference types="node" />
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const componentSources = [
-  './controls.tsx',
-  './disclosure.tsx',
-  './editor.tsx',
-  './feedback.tsx',
-  './overlays.tsx',
-].map((path) => ({ path, source: readFileSync(new URL(path, import.meta.url), 'utf8') }));
+// Dynamically discover all component source files (*.tsx, *.ts) excluding tests and specs.
+// This ensures that new components like Surface are automatically covered by the boundary check.
+const componentFiles = readdirSync(new URL('.', import.meta.url))
+  .filter((file) => /\.(tsx?|ts)$/.test(file) && !/\.(test|spec)\.(tsx?|ts)$/.test(file))
+  .sort();
+
+const componentSources = componentFiles.map((file) => ({
+  path: `./${file}`,
+  source: readFileSync(new URL(file, import.meta.url), 'utf8'),
+}));
 
 const uiCss = readFileSync(new URL('./ui.css', import.meta.url), 'utf8');
 
