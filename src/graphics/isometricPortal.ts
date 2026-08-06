@@ -52,27 +52,45 @@ export const DEFAULT_PORTAL: PortalDimensions = {
   span: 150,
 };
 
-/** Isométrica clásica 2:1. `y` del mundo sube; en pantalla, baja. */
+/**
+ * Isométrica clásica 2:1. `y` del mundo sube; en pantalla, baja. `depth` (ver
+ * `boxFaces`) sitúa al observador en el octante +x/+y/+z: `+x` proyecta hacia
+ * la derecha de pantalla, `+z` hacia la izquierda — así lo espera todo lo que
+ * usa esta proyección, `buildPortal` incluido, así que el signo vive aquí y
+ * en ningún otro sitio.
+ */
 const ISO_X = Math.cos(Math.PI / 6);
 const ISO_Y = Math.sin(Math.PI / 6);
 
 export const projectIso = (v: Vec3): Point2 => ({
-  x: (v.z - v.x) * ISO_X,
+  x: (v.x - v.z) * ISO_X,
   y: (v.x + v.z) * ISO_Y - v.y,
 });
 
-/** Luz normalizada arriba-izquierda-frente. Coincide con los 145° de la materia clay. */
+/**
+ * Luz normalizada, en el octante +x/+y/+z que de verdad ve la cámara (ver
+ * `boxFaces`). Sigue entrando por arriba-izquierda de PANTALLA — su
+ * proyección vía `projectIso` cae en (x negativo, y negativo) — que es la
+ * misma dirección de 145° de la materia clay, medida ahora en los ejes de
+ * mundo correctos.
+ */
 const LIGHT: Vec3 = (() => {
-  const raw = { x: -0.55, y: 0.75, z: -0.37 };
+  const raw = { x: 0.37, y: 0.75, z: 0.55 };
   const length = Math.hypot(raw.x, raw.y, raw.z);
   return { x: raw.x / length, y: raw.y / length, z: raw.z / length };
 })();
 
-/** Normales de las tres caras visibles en isométrica. Las ocultas no se emiten. */
+/**
+ * Normales de las tres caras visibles desde el octante +x/+y/+z. `left` y
+ * `right` nombran dónde cae la cara EN PANTALLA, no el eje de mundo: con
+ * `projectIso` proyectando `screen.x = (x - z) * ISO_X`, la cara `+z` queda a
+ * la izquierda y la cara `+x` a la derecha (comprobado en
+ * `isometricPortal.test.ts`, no es una convención arbitraria).
+ */
 const NORMALS: Record<'top' | 'left' | 'right', Vec3> = {
   top: { x: 0, y: 1, z: 0 },
-  left: { x: -1, y: 0, z: 0 },
-  right: { x: 0, y: 0, z: 1 },
+  left: { x: 0, y: 0, z: 1 },
+  right: { x: 1, y: 0, z: 0 },
 };
 
 /**
@@ -88,24 +106,19 @@ const shadeOf = (normal: Vec3) => {
 interface Box { x: number; y: number; z: number; w: number; h: number; d: number }
 
 /**
- * Emite las tres caras visibles de una caja. Las otras tres quedan fuera:
- * en isométrica sin transparencia nunca se ven, y emitirlas duplicaría el
- * número de `<path>` del SVG sin cambiar un píxel.
+ * Emite las tres caras visibles de una caja desde el octante +x/+y/+z (la
+ * cámara que implica `depth`, ver más abajo): `+y` (top), `+z` (left) y `+x`
+ * (right). Las otras tres (−x, −y, −z) quedan fuera: en isométrica sin
+ * transparencia nunca se ven, y emitirlas duplicaría el número de `<path>`
+ * del SVG sin cambiar un píxel — pero emitir la trasera EN LUGAR de la
+ * delantera sí cambia píxeles (y mal): por eso `right` usa `dx = w`, no
+ * `dx = 0`. El orden de vértices de cada cara está elegido para que las tres
+ * giren en el mismo sentido en pantalla y para que no se solapen ni dejen
+ * huecos entre sí — ambas cosas las comprueba `isometricPortal.test.ts`.
  */
 const boxFaces = (id: string, material: MaterialId, box: Box): Face[] => {
   const { x, y, z, w, h, d } = box;
-  /*
-   * `projectIso` invierte x en pantalla (screen-x = (z - x) * ISO_X, ver su
-   * propio test "mirrors x and z"). Como las dos columnas se separan a lo
-   * largo de +x mundial, sin corregir esto la columna que crece con `span`
-   * se desplazaría hacia la IZQUIERDA en pantalla — lo contrario de lo que
-   * pide un pórtico "más ancho". Se refleja aquí, sólo para el ensamblado
-   * del pórtico, sin tocar `projectIso` (frontera ya testeada tal cual).
-   */
-  const corner = (dx: number, dy: number, dz: number) => {
-    const p = projectIso({ x: x + dx, y: y + dy, z: z + dz });
-    return { x: -p.x, y: p.y };
-  };
+  const corner = (dx: number, dy: number, dz: number) => projectIso({ x: x + dx, y: y + dy, z: z + dz });
   const depth = x + y + z + (w + h + d) / 2;
 
   return [
@@ -121,14 +134,14 @@ const boxFaces = (id: string, material: MaterialId, box: Box): Face[] => {
       material,
       shade: shadeOf(NORMALS.left),
       depth,
-      points: [corner(0, h, 0), corner(0, h, d), corner(0, 0, d), corner(0, 0, 0)],
+      points: [corner(0, h, d), corner(w, h, d), corner(w, 0, d), corner(0, 0, d)],
     },
     {
       id: `${id}:right`,
       material,
       shade: shadeOf(NORMALS.right),
       depth,
-      points: [corner(0, h, d), corner(w, h, d), corner(w, 0, d), corner(0, 0, d)],
+      points: [corner(w, h, 0), corner(w, 0, 0), corner(w, 0, d), corner(w, h, d)],
     },
   ];
 };
@@ -165,12 +178,16 @@ export const buildPortal = (dims: PortalDimensions = DEFAULT_PORTAL): Face[] => 
   }
 
   /* Dintel dividido en módulos. Se emiten como cajas independientes para que
-     la junta entre módulos exista de verdad y no sea una línea pintada. */
+     la junta entre módulos exista de verdad y no sea una línea pintada. La
+     junta de 1.5 es SÓLO interior, entre módulos: el primero arranca a ras
+     de la columna izquierda (x=0) y el último termina a ras de la columna
+     derecha (x=span), sin comerse 1.5 del borde exterior. */
   const beamY = bhh + bhh * 0.7 + ch + 5;
-  const moduleWidth = span / beamModules;
+  const beamGap = 1.5;
+  const moduleWidth = (span - beamGap * (beamModules - 1)) / beamModules;
   for (let i = 0; i < beamModules; i += 1) {
     faces.push(...boxFaces(`beam:${i}`, 'beam', {
-      x: i * moduleWidth, y: beamY, z: 0, w: moduleWidth - 1.5, h: bh, d: cd,
+      x: i * (moduleWidth + beamGap), y: beamY, z: 0, w: moduleWidth, h: bh, d: cd,
     }));
   }
 

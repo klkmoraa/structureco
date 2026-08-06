@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildPortal, projectIso, DEFAULT_PORTAL, type Face } from './isometricPortal';
+import { buildPortal, projectIso, DEFAULT_PORTAL, type Face, type Point2 } from './isometricPortal';
 
 describe('projectIso', () => {
   it('sends the world origin to the projection origin', () => {
@@ -69,5 +69,101 @@ describe('buildPortal', () => {
 
   it('is deterministic', () => {
     expect(buildPortal()).toEqual(buildPortal());
+  });
+});
+
+describe('buildPortal face geometry integrity', () => {
+  const faces = buildPortal();
+
+  /** Area con signo (shoelace). El signo codifica el sentido de giro en pantalla. */
+  const shoelace = (pts: Point2[]) => {
+    let sum = 0;
+    for (let i = 0; i < pts.length; i += 1) {
+      const a = pts[i];
+      const b = pts[(i + 1) % pts.length];
+      sum += a.x * b.y - b.x * a.y;
+    }
+    return sum;
+  };
+
+  const pointInPolygon = (p: Point2, poly: Point2[]) => {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i, i += 1) {
+      const a = poly[i];
+      const b = poly[j];
+      const crosses = a.y > p.y !== b.y > p.y &&
+        p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x;
+      if (crosses) inside = !inside;
+    }
+    return inside;
+  };
+
+  /** Envolvente convexa (monotone chain). La silueta de una caja isométrica es
+   *  siempre convexa, así que sirve como referencia exacta de "dentro/fuera". */
+  const convexHull = (points: Point2[]): Point2[] => {
+    const pts = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
+    const cross = (o: Point2, a: Point2, b: Point2) =>
+      (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+    const half = (list: Point2[]) => {
+      const hull: Point2[] = [];
+      for (const p of list) {
+        while (hull.length >= 2 && cross(hull[hull.length - 2], hull[hull.length - 1], p) <= 0) hull.pop();
+        hull.push(p);
+      }
+      hull.pop();
+      return hull;
+    };
+    return half(pts).concat(half([...pts].reverse()));
+  };
+
+  /** Agrupa las caras por caja: `${id}:top`/`:left`/:`right` -> `${id}`. */
+  const boxGroups = () => {
+    const groups = new Map<string, Face[]>();
+    for (const f of faces) {
+      const boxId = f.id.split(':').slice(0, -1).join(':');
+      if (!groups.has(boxId)) groups.set(boxId, []);
+      groups.get(boxId)!.push(f);
+    }
+    return groups;
+  };
+
+  it('winds all three faces of every box the same way on screen', () => {
+    for (const [boxId, group] of boxGroups()) {
+      const signs = group.map((f) => Math.sign(shoelace(f.points)));
+      expect(new Set(signs).size, `${boxId}: signos ${signs.join(',')}`).toBe(1);
+    }
+  });
+
+  it('covers every box silhouette exactly once, without gaps or overlap', () => {
+    for (const [boxId, group] of boxGroups()) {
+      const allPoints = group.flatMap((f) => f.points);
+      const hull = convexHull(allPoints);
+      const minX = Math.min(...allPoints.map((p) => p.x));
+      const maxX = Math.max(...allPoints.map((p) => p.x));
+      const minY = Math.min(...allPoints.map((p) => p.y));
+      const maxY = Math.max(...allPoints.map((p) => p.y));
+
+      const steps = 30;
+      let sampled = 0;
+      let uncovered = 0;
+      let overlapped = 0;
+      for (let ix = 0; ix <= steps; ix += 1) {
+        for (let iy = 0; iy <= steps; iy += 1) {
+          const p = {
+            x: minX + ((maxX - minX) * ix) / steps,
+            y: minY + ((maxY - minY) * iy) / steps,
+          };
+          if (!pointInPolygon(p, hull)) continue;
+          sampled += 1;
+          const hits = group.filter((f) => pointInPolygon(p, f.points)).length;
+          if (hits === 0) uncovered += 1;
+          if (hits >= 2) overlapped += 1;
+        }
+      }
+
+      expect(sampled, `${boxId}: muestreo vacío`).toBeGreaterThan(0);
+      expect(uncovered / sampled, `${boxId}: fracción sin cubrir`).toBeLessThan(0.05);
+      expect(overlapped / sampled, `${boxId}: fracción solapada`).toBeLessThan(0.05);
+    }
   });
 });
