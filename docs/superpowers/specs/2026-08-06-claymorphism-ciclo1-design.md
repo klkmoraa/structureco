@@ -82,7 +82,19 @@ encargo: *"sin sombras decorativas, máximo contraste técnico"*.
 `ComponentLab` respetan esa frontera. `StructuralPortalHero` vive en `features/welcome/`, no
 en `design-system/`, precisamente para no atarlo a esa restricción sin necesidad.
 
-### 3.4 · Sin dependencias nuevas
+### 3.4 · El contrato de tokens es ejecutable
+
+`src/design-system/tokens.test.ts` no es documentación: es el arnés que gobierna este ciclo.
+Impone, entre otras cosas, que ningún CSS de componente contenga un color opaco literal ni
+consuma primitivas de color; que `rgba()` sólo aparezca en sombras, filtros y velos; que toda
+referencia `var(--sc-…)` resuelva; que las reglas `.welcome*` no lleven elevación sin
+tokenizar; y los suelos de contraste ya citados.
+
+Esto obliga a una disciplina concreta: **toda la materia clay se declara en `tokens.css`**.
+Una sombra clay escrita a mano dentro de una regla `.welcome-*` de `styles.css` rompe el test
+en dos sitios a la vez. Es exactamente el comportamiento que se busca.
+
+### 3.5 · Sin dependencias nuevas
 
 No se añade ninguna dependencia en este ciclo. El encargo autorizaba `three` y sus
 compañeros de forma condicional (*"únicamente si son necesarias"*); la decisión de §2.1
@@ -105,20 +117,34 @@ Rampa verde nueva, derivada de la referencia y ajustada por contraste medido:
 ```
 --sc-green-50 : #eff9f5
 --sc-green-100: #ddf4ec
+--sc-green-200: #b6e5d4
 --sc-green-300: #57c7a4
---sc-green-400: #27ad83
---sc-green-500: #0b9270   /* rellenos, superficies de acción */
---sc-green-600: #08795e   /* texto sobre claro — 6.3:1 sobre #fbfaf8 */
---sc-green-700: #06614b
+--sc-green-400: #27ad83   /* decorativo: caras claras del pórtico */
+--sc-green-500: #0b9270   /* decorativo: caras base del pórtico, halos */
+--sc-green-600: #08795e   /* acción primaria — blanco encima = 5.37:1 */
+--sc-green-700: #06614b   /* hover — blanco encima = 7.45:1 */
+--sc-green-800: #054c3b   /* pressed */
 ```
 
-Neutros: de grafito frío a cálido (`#f4f3f0` app, `#f8f8f6` workspace, `#fbfaf8` superficie
-1, `#ffffff` superficie elevada, `#ecedea` superficie pulsada). Azul (`#5caee9` / `#e2f2fd`)
-y lavanda (`#9677db` / `#eee8fc`) entran como acentos secundarios, acotados a contenedores de
-icono y a la identidad del Modo Aula. El verde sigue siendo la identidad.
+**Corrección medida.** La referencia sugiere `#0b9270` como verde de acción, pero con texto
+blanco encima da **3.92:1**, por debajo del suelo de 4.5:1 que `tokens.test.ts` impone sobre
+la pareja `--sc-color-action-foreground` / `--sc-color-action-primary`. La acción primaria es
+por tanto `#08795e` (5.37:1). `#0b9270` y `#27ad83` quedan como **decorativos**: caras del
+pórtico, halos y superficies suaves, nunca bajo texto blanco.
 
-Todo valor de texto se valida contra su fondo real antes de fijarse. Los grises de texto no
-bajan de 4.5:1 para cuerpo ni de 3:1 para texto grande.
+La misma medición descarta el azul de la referencia como color de foco: `#5caee9` sobre
+superficie da **2.32:1** frente al suelo de 3:1. El foco y la selección conservan los azules
+oscuros ya medidos. `#5caee9` / `#e2f2fd` y `#9677db` / `#eee8fc` entran **sólo** como
+acentos decorativos en contenedores de icono; el violeta sólido del Modo Aula conserva su
+valor actual, que sí está medido contra su primer plano.
+
+Neutros: de grafito frío a cálido (`#f4f3f0` app, `#f8f8f6` workspace, `#fbfaf8` superficie
+1, `#ffffff` superficie elevada, `#ecedea` superficie pulsada). Texto primario `#24272b`
+(14.4:1), secundario `#666d70` (5.05:1), muted `#6b7274` (4.70:1) — todos medidos sobre
+`#fbfaf8`. El verde sigue siendo la identidad.
+
+Ningún valor de texto se fija sin validarlo contra su fondo real. El suelo es 4.5:1 para
+cuerpo y 3:1 para texto grande e indicadores.
 
 **§4 · Forma.**
 La escala de radios se ensancha en el tramo alto y se congela en el bajo:
