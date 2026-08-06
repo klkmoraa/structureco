@@ -21,7 +21,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { APP_VERSION } from '../../appVersion';
 import { NewExerciseDialog } from './NewExerciseDialog';
 import { BrandMark } from '../topbar/BrandMark';
-import { WelcomeStructureArt } from './WelcomeStructureArt';
+import { StructuralPortalHero } from './StructuralPortalHero';
 import { presentExample } from './examplePresentation';
 import type { TranslationKey } from '../../i18n/catalogs';
 
@@ -136,7 +136,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
             </div>
 
             <div className="welcome-hero-figure">
-              <WelcomeStructureArt />
+              <StructuralPortalHero />
             </div>
           </section>
 

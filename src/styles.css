@@ -113,37 +113,59 @@ button:disabled { cursor: not-allowed; opacity: .62; }
    de momentos y su deformada, en la misma codificación de color del lienzo. */
 .welcome-hero-figure { position:relative; display:grid; place-items:center; min-width:0; }
 .welcome-hero-figure::before { content:''; position:absolute; inset:4% 0 12%; border-radius:50%; background:radial-gradient(closest-side, color-mix(in srgb, var(--accent) 20%, transparent), transparent); filter:blur(26px); pointer-events:none; }
-.welcome-art { position:relative; width:100%; max-width:460px; height:auto; overflow:visible; }
-.welcome-art__frame line { stroke:var(--member); stroke-width:5.5; stroke-linecap:round; }
-.welcome-art__support line { stroke:var(--member); stroke-width:2.5; stroke-linecap:round; }
-.welcome-art__node circle { fill:var(--node-fill); stroke:var(--member); stroke-width:3; }
-.welcome-art__load line { stroke:var(--force); stroke-width:1.8; }
-.welcome-art__load path { fill:none; stroke:var(--force); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
-.welcome-art__load .welcome-art__load-rail { stroke-width:2.6; }
-.welcome-art__moment-fill { fill:color-mix(in srgb, var(--moment) 24%, transparent); }
-.welcome-art__moment-line { fill:none; stroke:var(--moment); stroke-width:2.6; stroke-linejoin:round; }
-.welcome-art__deformed { fill:none; stroke:var(--deformed); stroke-width:2.4; stroke-dasharray:7 8; stroke-linecap:round; opacity:.9; }
+/* Pórtico clay. El sombreado por cara llega como `--face-shade` (0 sombra,
+   1 luz) y se aplica con `brightness`, de modo que un solo token de material
+   produce sus tres caras y el tema no necesita duplicar valores.
 
-/* Secuencia de entrada de la figura: primero se traza la estructura, luego
-   aparecen nudos y apoyos, cae la carga, florece el diagrama y por último
-   entra la deformada, que se queda respirando. En CSS por la misma razón
-   que la entrada de las secciones: es una animación de montaje. */
-.welcome-art__frame line { stroke-dasharray:1; stroke-dashoffset:1; animation:sc-art-draw 900ms var(--sc-ease-enter) 120ms forwards; }
-.welcome-art__support, .welcome-art__node { transform-box:fill-box; transform-origin:center; animation:sc-art-pop 420ms var(--sc-spring-soft) 780ms both; }
-.welcome-art__load { animation:sc-art-drop 460ms var(--sc-ease-enter) 980ms both; }
-.welcome-art__moment { transform-box:fill-box; transform-origin:50% 67%; animation:sc-art-bloom 560ms var(--sc-ease-emphasized) 1180ms both; }
-.welcome-art__deformed { animation:sc-art-fade 520ms var(--sc-ease-enter) 1440ms both, sc-art-breathe 7s ease-in-out 2s infinite; }
-@keyframes sc-art-draw { to { stroke-dashoffset:0; } }
-@keyframes sc-art-pop { from { opacity:0; transform:scale(.82); } to { opacity:1; transform:scale(1); } }
-@keyframes sc-art-drop { from { opacity:0; transform:translateY(-12px); } to { opacity:1; transform:translateY(0); } }
-@keyframes sc-art-bloom { from { opacity:0; transform:scaleY(.04); } to { opacity:1; transform:scaleY(1); } }
-@keyframes sc-art-fade { from { opacity:0; } to { opacity:.9; } }
-@keyframes sc-art-breathe { 0%,100% { transform:translateY(0); } 50% { transform:translateY(3px); } }
-@media (prefers-reduced-motion: reduce) {
-  .welcome-art__frame line { stroke-dasharray:none; stroke-dashoffset:0; }
-  .welcome-art__frame line, .welcome-art__support, .welcome-art__node,
-  .welcome-art__load, .welcome-art__moment, .welcome-art__deformed { animation:none; }
+   La fórmula está calibrada contra los tres shades reales que emite
+   `isometricPortal.ts` para `DEFAULT_PORTAL` (cara superior 0.8345, lateral
+   izquierda 0.7027, lateral derecha 0.5840), no contra el rango teórico
+   completo [0.34, 1]: con una recta que pasa por (0.584 → 0.72) y
+   (0.8345 → 1.15) las tres caras quedan en 0.72 / 0.93 / 1.15 — separadas por
+   ~0.2 cada una, así que se leen como volumen. Una recta calibrada sobre
+   [0,1] completo (p.ej. 0.72 + 0.38·shade) comprime esas mismas tres caras en
+   0.94-1.04 y la figura se aplana. */
+.portal-hero {
+  width: 100%;
+  height: auto;
+  max-width: 440px;
+  overflow: visible;
 }
+
+.portal-hero__face {
+  filter: brightness(calc(1.72 * var(--face-shade, 1) - 0.283));
+  stroke: none;
+}
+
+.portal-hero__ground line {
+  stroke: var(--sc-color-border-soft);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.portal-hero__contact {
+  fill: var(--sc-color-border-strong);
+  opacity: 0.16;
+  filter: blur(14px);
+}
+
+/* Inclinación con el puntero: 2° como máximo, conducida por el contenedor.
+   No rota sola, no hay parallax, y en táctil no existe. */
+.welcome-hero-figure {
+  perspective: 1100px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .welcome-hero-figure .portal-hero {
+    transform: rotateX(calc(var(--tilt-y, 0) * 2deg)) rotateY(calc(var(--tilt-x, 0) * 2deg));
+    transition: transform var(--sc-motion-standard) var(--sc-ease-standard);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-hero-figure .portal-hero { transform: none; }
+}
+
 @media (forced-colors: active) {
   .welcome-title-accent { background:none; color:CanvasText; -webkit-text-fill-color:CanvasText; }
 }
@@ -739,7 +761,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
      la sección: se centra, se acota y cede el ancho al texto. */
   .welcome-hero { grid-template-columns:1fr; gap:26px; }
   .welcome-hero-figure { order:2; }
-  .welcome-art { max-width:400px; }
+  .portal-hero { max-width:400px; }
   .welcome-hero-launcher { grid-template-columns:1fr; }
   .welcome-launcher-card { grid-template-columns:auto minmax(0,1fr) auto; grid-template-areas:"icon info arrow"; align-items:center; gap:14px; padding:16px 18px; }
   .welcome-workflow { padding:24px 20px; }
@@ -1313,7 +1335,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
   .welcome-content { width:calc(100% - 32px); padding:28px 0 26px; gap:32px; }
   .welcome-hero-subtitle { margin-top:16px; }
   .welcome-features-highlights { margin-top:20px; }
-  .welcome-art { max-width:340px; }
+  .portal-hero { max-width:340px; }
   .welcome-showcase-header { align-items:flex-start; flex-direction:column; }
   .welcome-workflow { padding:24px 18px; border-radius:var(--sc-radius-xl); }
   .welcome-workflow-steps { grid-template-columns:1fr; gap:18px; }

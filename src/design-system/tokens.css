@@ -164,6 +164,14 @@
   --sc-color-overlay-sheet: rgba(2, 10, 6, 0.34);
   --sc-color-overlay-strong: rgba(5, 18, 11, 0.58);
 
+  /* Materiales del pórtico del hero. Son roles de ilustración, no de interfaz:
+     nada de texto se apoya en ellos, así que se eligen por lectura de volumen
+     y no por contraste. */
+  --sc-color-clay-ivory: #f0ece2;
+  --sc-color-clay-ivory-deep: #e3ddcf;
+  --sc-color-clay-mint: #6fb99a;
+  --sc-color-clay-mint-deep: #4f9e80;
+
   /* ------------------------------------------------------------------ */
   /* 3 · ROLES TÉCNICOS DEL DOMINIO (valores verificados 0.8.0)          */
   /* ------------------------------------------------------------------ */
@@ -611,6 +619,11 @@
   --sc-color-overlay-soft: rgba(0, 0, 0, 0.34);
   --sc-color-overlay-sheet: rgba(0, 0, 0, 0.46);
   --sc-color-overlay-strong: rgba(0, 0, 0, 0.68);
+
+  --sc-color-clay-ivory: #b9b5ab;
+  --sc-color-clay-ivory-deep: #a29e94;
+  --sc-color-clay-mint: #57c7a4;
+  --sc-color-clay-mint-deep: #3d9c7d;
 
   --sc-color-technical-load: #ff7d66;
   --sc-color-technical-axial: #6bcbf1;
