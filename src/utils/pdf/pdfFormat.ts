@@ -62,6 +62,23 @@ export const clearDisplay = (project: ProjectModel, value: number, quantity: Uni
   return `${clearNumber(displayValue, displayReference)} ${unitLabel(project.settings.units, quantity)}`;
 };
 
+/**
+ * Table variants of `display` and `clearDisplay`.
+ *
+ * Inside a table the unit belongs once in the header, not once per cell: repeating " kN" down
+ * forty rows costs the column its alignment and tells the reader nothing new.
+ */
+export const unitFor = (project: ProjectModel, quantity: UnitQuantity): string => unitLabel(project.settings.units, quantity);
+
+export const displayCell = (project: ProjectModel, value: number, quantity: UnitQuantity): string =>
+  number(toDisplay(value, project.settings.units, quantity));
+
+export const clearCell = (project: ProjectModel, value: number, quantity: UnitQuantity, reference = 1): string => {
+  const displayValue = toDisplay(value, project.settings.units, quantity);
+  const displayReference = Math.max(1, Math.abs(toDisplay(reference, project.settings.units, quantity)));
+  return clearNumber(displayValue, displayReference);
+};
+
 const loadBasisLabel = (basis: MemberLoad['lengthBasis']): string => basis === 'horizontal'
   ? 'proyeccion horizontal'
   : basis === 'vertical' ? 'proyeccion vertical' : 'longitud real';

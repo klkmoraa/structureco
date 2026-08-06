@@ -158,6 +158,31 @@ for (const deviceName of ['iPhone 13', 'iPad Pro 11']) {
   await dialog.getByRole('button', { name: /Abrir proyecto/i }).click();
   await page.locator('.app-shell').waitFor({ state: 'visible' });
   const importedName = await page.getByLabel('Nombre del proyecto').inputValue();
+  // AG-014: the 44px floor used to be measured on the import footer alone, so a control
+  // anywhere else could shrink unnoticed — the source link of an academic exercise sat at
+  // 296x33 because the coarse-pointer rule covered buttons, inputs and selects but not
+  // anchors. This sweeps every interactive element the workspace actually renders.
+  const undersizedTargets = await page.evaluate(() => {
+    const selector = 'button, a[href], input:not([type=hidden]), select, textarea, [role=tab], summary';
+    return [...document.querySelectorAll(selector)]
+      .filter((element) => {
+        const style = getComputedStyle(element);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        if (element.closest('[hidden],[aria-hidden="true"],[inert]')) return false;
+        const box = element.getBoundingClientRect();
+        return box.width > 0 && box.height > 0;
+      })
+      .map((element) => {
+        const box = element.getBoundingClientRect();
+        const name = (element.getAttribute('aria-label') || element.textContent || '').trim().slice(0, 40);
+        return { name, width: Math.round(box.width), height: Math.round(box.height) };
+      })
+      // Half a pixel of slack: sub-pixel layout can land a 44px control on 43.99.
+      .filter((entry) => entry.width < 43.5 || entry.height < 43.5);
+  });
+  if (undersizedTargets.length) {
+    console.log(`  targets tactiles por debajo de 44px en ${deviceName}:`, JSON.stringify(undersizedTargets));
+  }
   await page.getByLabel('Ir al inicio').click();
   await page.getByRole('button', { name: /Importar archivo/i }).click();
   const nativeDialog = page.getByRole('dialog', { name: /Trae un proyecto con contexto/i });
@@ -178,6 +203,7 @@ for (const deviceName of ['iPhone 13', 'iPad Pro 11']) {
     nativePdfRecognized,
     importedName,
     touchTargetsAtLeast44: controls.every((control) => control.width >= 44 && control.height >= 44),
+    workspaceTouchTargetsAtLeast44: undersizedTargets.length === 0,
     ...(welcomeScroll ? {
       welcomeHasScrollableOverflow: welcomeScroll.hasScrollableOverflow,
       welcomeScrollIncreased: welcomeScroll.scrollIncreased,

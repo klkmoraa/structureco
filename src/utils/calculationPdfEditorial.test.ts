@@ -113,8 +113,11 @@ describe('memoria de calculo: calidad editorial', () => {
     // said "|N| MAX. 0 kip". The document must not contradict itself.
     const { pages } = await buildReport();
     const all = pages.map((page) => page.text).join('\n');
-    expect(all).toMatch(/N axial: min=0 kip; max=0 kip/);
-    expect(all).toMatch(/Equilibrio: Fx=0, Fy=0, M=0/);
+    // The annex sets these as table rows since AG-014, so the cells arrive separated by the
+    // column gap rather than by "min=/max=" labels. What is guarded is unchanged: both
+    // extremes read as an exact 0.
+    expect(all).toMatch(/N axial\s+0\s+0\s+kip/);
+    expect(all).toMatch(/Equilibrio\s+Fx=0, Fy=0, M=0/);
     // Only one context may legitimately carry a value that small: the solver's own
     // precision figures, where the exponent *is* the information.
     //
@@ -134,9 +137,19 @@ describe('memoria de calculo: calidad editorial', () => {
   it('acompana cada cifra de una unidad, sin mezclar unidades base y de presentacion', async () => {
     const { pages } = await buildReport();
     const all = pages.map((page) => page.text).join('\n');
-    // Local end forces used to print bare base-unit numbers next to a table in kip.
-    expect(all).toMatch(/Extremos locales: Fx_i=[^,]+ kip/);
-    expect(all).toMatch(/M_i=[^,]+ kip x ft/);
+    // Local end forces used to print bare base-unit numbers next to a table in kip. Each
+    // component now owns a column whose header carries the unit, so a force column and a
+    // moment column cannot end up sharing one.
+    expect(all).toMatch(/Fx_i \(kip\)/);
+    expect(all).toMatch(/M_i \(kip x ft\)/);
+    expect(all).toMatch(/M_j \(kip x ft\)/);
+    // And the values under them stay converted: this beam's end shear is 2.5 kip, the same
+    // figure the cover reports, not the 11.1 kN the engine holds internally.
+    expect(all).toMatch(/M_j \(kip x ft\)\s+0\s+2\.5\s+0/);
+    expect(all).toMatch(/REACCION MAX\. 2\.5 kip/);
+    // Reactions and displacements likewise declare their unit once, in the header.
+    expect(all).toMatch(/Rx \(kip\)\s+Ry \(kip\)\s+M \(kip x ft\)/);
+    expect(all).toMatch(/Ux \(ft\)\s+Uy \(ft\)\s+Rz \(rad\)/);
   }, 60_000);
 
   it('adjunta el expediente reimportable y su checksum', async () => {

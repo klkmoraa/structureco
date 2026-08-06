@@ -6,6 +6,7 @@ import { createBlankProject, createHibbelerStyleDiagramPractice } from '../../da
 import { PROJECT_STORAGE_KEY } from '../../data/projectStorage';
 import { createSimpleBeamExercise } from '../../education/exerciseTemplates';
 import { ClassroomSessionProvider, useClassroomSession } from '../../store/ClassroomSessionContext';
+import { formatSignificant } from '../../utils/numberFormat';
 import { ProjectProvider, useProject } from '../../store/ProjectContext';
 import type { ProjectModel } from '../../types';
 import { ResultsPanel } from './ResultsPanel';
@@ -538,4 +539,44 @@ describe('Results analytical center', () => {
     expect(await screen.findByRole('heading', { name: 'Tu hipótesis antes del cálculo' })).toBeTruthy();
     expect(screen.queryByText('Estructura inestable o mecanismo')).toBeNull();
   }, 10_000);
+
+  it('substitutes the real member properties into the element stiffness terms', async () => {
+    const user = userEvent.setup();
+    const project = createHibbelerStyleDiagramPractice();
+    renderResults(project);
+
+    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
+    await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+    await user.click(screen.getByRole('tab', { name: 'Aprender' }));
+    await user.click(screen.getByRole('tab', { name: 'Elemento' }));
+
+    const panel = await screen.findByRole('tabpanel', { name: 'Elemento' }, { timeout: 5000 });
+    const block = panel.querySelector<HTMLElement>('.education-numerical-substitution');
+    expect(block).toBeTruthy();
+
+    // The substitution is only worth showing if it is the member's own data: the E, A and I
+    // on screen must be the ones stored in the model, not a template's placeholder.
+    const member = project.members[0];
+    const inputs = [...block!.querySelectorAll('.education-substitution-inputs > div')]
+      .map((entry) => entry.textContent ?? '');
+    expect(inputs.some((text) => text.startsWith('E'))).toBe(true);
+    expect(inputs.some((text) => text.startsWith('A'))).toBe(true);
+    expect(inputs.some((text) => text.startsWith('I'))).toBe(true);
+
+    // The substituted expression must carry the member's stored values verbatim — that is the
+    // difference between explaining the matrix and printing a second, unrelated calculation.
+    const rows = [...block!.querySelectorAll('tbody tr')].filter((row) => !row.classList.contains('substitution-group'));
+    expect(rows.length).toBeGreaterThanOrEqual(5);
+    const axialRow = rows[0];
+    expect(axialRow.querySelector('code')?.textContent).toBe('k₁₁');
+    const axialSubstitution = axialRow.querySelector('.substitution-values')?.textContent ?? '';
+    expect(axialSubstitution).toContain(formatSignificant(member.E, 4, 'inspector'));
+    expect(axialSubstitution).toContain(formatSignificant(member.A, 4, 'inspector'));
+    expect(axialRow.querySelector('.substitution-result')?.textContent).toMatch(/kN\/m$/);
+
+    // Both group labels from the proposal must be present, so the reader can tell which
+    // terms belong to axial behaviour and which to bending.
+    expect(within(block!).getByText('Rigidez axial')).toBeTruthy();
+    expect(within(block!).getByText('Rigidez a flexión')).toBeTruthy();
+  }, 15_000);
 });

@@ -8,7 +8,7 @@
  * a page break replaces it.
  */
 import type { PDFDocument, PDFFont, PDFPage } from 'pdf-lib';
-import { wrapText } from './pdfGlyphs';
+import { pdfText, wrapText } from './pdfGlyphs';
 import type { PdfColor, ReportFonts, ReportPalette, RgbFactory } from './reportContext';
 
 export const PAGE_SIZE: [number, number] = [595.28, 841.89];
@@ -16,6 +16,46 @@ export const MARGIN = 48;
 export const CONTENT_BOTTOM = 52;
 
 export type HeadingLevel = 1 | 2;
+
+export interface PdfTableColumn {
+  header: string;
+  /** Fixed width in points. Wins over `flex`. */
+  width?: number;
+  /** Share of the width left over by the fixed columns. Defaults to 1. */
+  flex?: number;
+  /** Numbers belong on the right, so a column of them can be compared by eye. */
+  align?: 'left' | 'right';
+}
+
+export interface PdfTableOptions {
+  size?: number;
+  indent?: number;
+  /** Alternating row tint. On by default; turn it off for two- or three-row tables. */
+  zebra?: boolean;
+}
+
+const CELL_PAD_X = 5;
+const CELL_PAD_Y = 3.4;
+
+/**
+ * Distributes `available` across the columns.
+ *
+ * Fixed columns are served first and the rest share the remainder by weight. A table whose
+ * fixed columns alone exceed the page was mis-declared; an even split keeps it readable
+ * instead of printing negative widths that overlap into the margin.
+ */
+export const resolveColumnWidths = (columns: readonly PdfTableColumn[], available: number): number[] => {
+  if (!columns.length) return [];
+  const fixed = columns.reduce((sum, column) => sum + (column.width ?? 0), 0);
+  const remaining = available - fixed;
+  const flexTotal = columns.reduce((sum, column) => column.width === undefined ? sum + (column.flex ?? 1) : sum, 0);
+  if (remaining < 0 || (flexTotal === 0 && fixed > available)) {
+    return columns.map(() => available / columns.length);
+  }
+  return columns.map((column) => column.width !== undefined
+    ? column.width
+    : flexTotal === 0 ? 0 : remaining * (column.flex ?? 1) / flexTotal);
+};
 
 export class PdfLayout {
   readonly doc: PDFDocument;
@@ -79,6 +119,86 @@ export class PdfLayout {
     this.y -= level === 1 ? 8 : 4;
     this.text(content, size, this.fonts.bold, level === 1 ? this.palette.forest : this.palette.forestDeep);
     if (level === 1) this.rule();
+  }
+
+  /**
+   * Ruled table with a repeating header.
+   *
+   * The annex used to print every list as `label: value` prose, which reads acceptably for a
+   * two-line summary and very badly for forty nodes: the reader cannot compare a column that
+   * does not exist. Cells wrap inside their own column, rows keep their cells on one baseline
+   * grid, and a row that no longer fits starts a fresh page under a repeated header rather
+   * than being split across the fold.
+   */
+  table(columns: readonly PdfTableColumn[], rows: readonly (readonly string[])[], options: PdfTableOptions = {}): void {
+    if (!columns.length) return;
+    const size = options.size ?? 7.6;
+    const indent = options.indent ?? 0;
+    const zebra = options.zebra ?? true;
+    const left = MARGIN + indent;
+    const widths = resolveColumnWidths(columns, this.contentWidth - indent);
+    const offsets = widths.reduce<number[]>((positions, width, index) => [...positions, positions[index] + width], [left]);
+    const lineHeight = size * 1.32;
+    const headerHeight = lineHeight + CELL_PAD_Y * 2;
+
+    const drawHeader = () => {
+      this.page.drawRectangle({
+        x: left,
+        y: this.y - headerHeight,
+        width: widths.reduce((sum, width) => sum + width, 0),
+        height: headerHeight,
+        color: this.palette.forestSoft,
+      });
+      columns.forEach((column, index) => {
+        const text = pdfText(column.header);
+        const width = this.fonts.bold.widthOfTextAtSize(text, size);
+        const x = column.align === 'right'
+          ? offsets[index] + widths[index] - CELL_PAD_X - width
+          : offsets[index] + CELL_PAD_X;
+        this.page.drawText(text, { x, y: this.y - CELL_PAD_Y - size, size, font: this.fonts.bold, color: this.palette.forestDeep });
+      });
+      this.y -= headerHeight;
+    };
+
+    this.ensure(headerHeight + lineHeight + CELL_PAD_Y * 2);
+    drawHeader();
+
+    rows.forEach((row, rowIndex) => {
+      const cells = columns.map((_, index) => wrapText(String(row[index] ?? ''), this.fonts.regular, size, Math.max(1, widths[index] - CELL_PAD_X * 2)));
+      const height = Math.max(1, ...cells.map((lines) => lines.length)) * lineHeight + CELL_PAD_Y * 2;
+      // `ensure` alone would break the page and leave the continuation rows headerless.
+      if (this.y - height < CONTENT_BOTTOM) {
+        this.newPage();
+        drawHeader();
+      }
+      if (zebra && rowIndex % 2 === 1) {
+        this.page.drawRectangle({
+          x: left,
+          y: this.y - height,
+          width: widths.reduce((sum, width) => sum + width, 0),
+          height,
+          color: this.rgb(0.965, 0.972, 0.978),
+        });
+      }
+      cells.forEach((lines, index) => {
+        const column = columns[index];
+        lines.forEach((line, lineIndex) => {
+          const width = this.fonts.regular.widthOfTextAtSize(line, size);
+          const x = column.align === 'right'
+            ? offsets[index] + widths[index] - CELL_PAD_X - width
+            : offsets[index] + CELL_PAD_X;
+          this.page.drawText(line, { x, y: this.y - CELL_PAD_Y - size - lineIndex * lineHeight, size, font: this.fonts.regular, color: this.palette.ink });
+        });
+      });
+      this.y -= height;
+      this.page.drawLine({
+        start: { x: left, y: this.y },
+        end: { x: left + widths.reduce((sum, width) => sum + width, 0), y: this.y },
+        thickness: 0.4,
+        color: this.palette.rule,
+      });
+    });
+    this.y -= 9;
   }
 
   /** `label: value` entry of the technical annex. */

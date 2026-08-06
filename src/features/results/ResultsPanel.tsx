@@ -7,7 +7,7 @@ import { buildDiagramEnvelope, evaluateEnvelopeAt } from '../../engine/envelope'
 import { analysisSignature } from '../../engine/projectSignature';
 import { resolveReliability } from '../../engine/reliability';
 import { useScenarioAnalysis } from '../../engine/useScenarioAnalysis';
-import type { DiagramQuantity, DiagramSegment, EducationalAssertionTarget, MatrixTrace, MemberResult, ProjectModel } from '../../types';
+import type { DiagramQuantity, DiagramSegment, EducationalAssertionTarget, MatrixTrace, MemberModel, MemberResult, ProjectModel } from '../../types';
 import { toDisplay, unitLabel } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import type { TranslationKey } from '../../i18n/catalogs';
@@ -15,6 +15,7 @@ import { ResultSummary } from './ResultSummary';
 import { useClassroomSession } from '../../store/ClassroomSessionContext';
 import { deriveClassroomProgress, type ClassroomProgressStepId } from '../../education/classroomProgress';
 import { formatResultNumber } from './resultFormatting';
+import { buildStiffnessSubstitution } from './stiffnessSubstitution';
 import { formatFixed, formatScientific, formatSignificant } from '../../utils/numberFormat';
 import { ClassroomPredictionForm } from '../classroom/ClassroomPredictionForm';
 import { emitWorkspaceCommand, onWorkspaceCommand } from '../workspace/workspaceCommands';
@@ -807,6 +808,51 @@ const MatrixView = ({ title, trace }: { title: string; trace: MatrixTrace }) => 
   return <div className="matrix-view"><div className="matrix-view-heading"><strong>{title}</strong><span>{trace.rows} × {trace.columns}</span></div>{trace.rows > rowLimit || trace.columns > columnLimit ? <small>{t('results.partialMatrix')}</small> : null}<div className="matrix-scroll"><table aria-label={title}><thead><tr><th>{t('results.dof')}</th>{trace.columnLabels.slice(0, columnLimit).map((label) => <th key={label} scope="col">{label}</th>)}</tr></thead><tbody>{trace.rowLabels.slice(0, rowLimit).map((label, row) => <tr key={label}><th scope="row">{label}</th>{Array.from({ length: columnLimit }, (_, column) => { const value = values.get(`${row}:${column}`) ?? 0; return <td className={value === 0 ? 'zero' : ''} key={`${row}-${column}`}>{value === 0 ? '·' : formatScientific(value, 2)}</td>; })}</tr>)}</tbody></table></div></div>;
 };
 
+/**
+ * The step between the symbolic formula and the assembled matrix.
+ *
+ * `MatrixView` above already prints kˡ as finished numbers; on its own it shows *that* an
+ * entry is 3.61e4, never *why*. Each row here restates the formula in force, substitutes the
+ * member's own E, A, I and L, and lands on a number the reader can find in that grid — the
+ * arithmetic stays in base units precisely so the two agree on screen.
+ */
+const NumericalSubstitution = ({ member, length }: { member: MemberModel; length: number }) => {
+  const { t } = useI18n();
+  const { terms, inputs, phi, theory } = useMemo(() => buildStiffnessSubstitution(member, length), [member, length]);
+  if (!terms.length) return null;
+  const axialTerms = terms.filter((term) => term.id === 'axial');
+  const bendingTerms = terms.filter((term) => term.id !== 'axial');
+  const group = (label: string, rows: typeof terms) => rows.length ? <tbody key={label}>
+    <tr className="substitution-group"><th colSpan={4} scope="colgroup">{label}</th></tr>
+    {rows.map((term) => <tr key={term.id}>
+      <td><code>{term.entry}</code></td>
+      <td className="substitution-formula">{term.formula}</td>
+      <td className="substitution-values">{term.substitution}</td>
+      <td className="substitution-result"><strong>{formatSignificant(term.value, 5)}</strong> <span>{term.unit}</span></td>
+    </tr>)}
+  </tbody> : null;
+  return <div className="education-numerical-substitution">
+    <div className="education-substitution-heading">
+      <div><strong>{t('results.numericalSubstitutionTitle')}</strong><small>{t('results.numericalSubstitutionSubtitle')}</small></div>
+      <span>{theory === 'timoshenko' ? `${t('results.shearFactorPhi')} = ${formatSignificant(phi, 4)}` : 'Φ = 0'}</span>
+    </div>
+    <dl className="education-substitution-inputs">{inputs.map((input) => <div key={input.id}>
+      <dt>{input.symbol}</dt><dd>{formatSignificant(input.value, 5)} <span>{input.unit}</span></dd>
+    </div>)}</dl>
+    <div className="table-wrap"><table className="results-table education-substitution-table">
+      <thead><tr>
+        <th scope="col">{t('results.substitutionEntry')}</th>
+        <th scope="col">{t('results.substitutionFormula')}</th>
+        <th scope="col">{t('results.substitutionValues')}</th>
+        <th scope="col">{t('results.substitutionResult')}</th>
+      </tr></thead>
+      {group(t('results.axialStiffnessLabel'), axialTerms)}
+      {group(t('results.bendingStiffnessLabel'), bendingTerms)}
+    </table></div>
+    <small>{member.type === 'truss' ? t('results.substitutionTrussNote') : t('results.substitutionBaseUnits')}</small>
+  </div>;
+};
+
 const EducationExplorer = () => {
   const { analysis, project, selection, setSelection, setLearningFocus, ensureEducationTrace } = useProject();
   const { t } = useI18n();
@@ -825,6 +871,7 @@ const EducationExplorer = () => {
   useEffect(() => { void ensureEducationTrace(); }, [ensureEducationTrace, analysis]);
   if (!trace) return analysis?.success ? <div className="results-view-loading" role="status" aria-label={t('results.loadingTrace')}><LoaderCircle className="spin" size={20} aria-hidden="true" /><span>{t('results.loadingTrace')}</span></div> : null;
   const element = trace.elements.find((item) => item.memberId === elementId) ?? trace.elements[0];
+  const elementMember = element ? project.members.find((item) => item.id === element.memberId) : undefined;
   const stages = [
     { id: 'model' as const, label: t('results.stageModel') },
     { id: 'dofs' as const, label: t('results.stageDofs') },
@@ -851,7 +898,7 @@ const EducationExplorer = () => {
   return <section ref={explorerRef} className="education-explorer" aria-label={t('results.stiffnessExplorer')}><div className="education-explorer-heading"><div><strong>{t('results.stiffnessExplorer')}</strong><small>{t('results.stiffnessExplorerSubtitle')}</small></div><span>{trace.formulation === 'linear-static-mixed-beam' ? 'Euler–Bernoulli + Timoshenko' : 'Euler–Bernoulli'}</span></div><div className="education-stage-tabs" role="tablist" aria-label={t('results.methodStages')}>{stages.map((item, index) => <button id={`education-stage-tab-${item.id}`} type="button" role="tab" aria-selected={stage === item.id} aria-controls={`education-stage-panel-${item.id}`} tabIndex={stage === item.id ? 0 : -1} data-education-stage-tab={item.id} className={stage === item.id ? 'active' : ''} key={item.id} onClick={() => setStage(item.id)} onKeyDown={(event) => onStageKeyDown(event, index)}>{item.label}</button>)}</div>
     {stage === 'model' ? <div id="education-stage-panel-model" className="education-stage" role="tabpanel" aria-labelledby="education-stage-tab-model"><div className="education-kpis"><div><span>{t('results.nodes')}</span><strong>{project.nodes.length}</strong></div><div><span>{t('results.members')}</span><strong>{project.members.length}</strong></div><div><span>{t('results.dofs')}</span><strong>{trace.dofs.length}</strong></div><div><span>{t('results.constraints')}</span><strong>{trace.assembly.constraintMatrix.rows}</strong></div></div><div className="equation-block">[ K  Cᵀ ; C  0 ] [ U ; λ ] = [ F ; g ]</div><p>{t('results.stiffnessMethodSummary')}</p></div> : null}
     {stage === 'dofs' ? <div id="education-stage-panel-dofs" className="education-stage table-wrap" role="tabpanel" aria-labelledby="education-stage-tab-dofs"><table className="results-table dof-table"><thead><tr><th>{t('results.dof')}</th><th>{t('results.state')}</th><th>U</th><th>F</th><th>R</th><th>{t('results.residual')}</th></tr></thead><tbody>{trace.dofs.map((dof) => <tr key={dof.index}><td><button type="button" className="result-object-link" aria-label={t('results.showNodeForDof', { node: dof.nodeId, dof: dof.label })} onClick={() => focusDof(dof.nodeId)}><strong>{dof.label}</strong></button></td><td>{dof.constrained ? dof.prescribedValue ? t('results.prescribed') : t('results.constrained') : t('results.free')}</td><td>{formatScientific(dof.displacement, 3)}</td><td>{formatScientific(dof.appliedLoad, 3)}</td><td>{formatScientific(dof.reaction, 3)}</td><td>{formatScientific(dof.residual, 2)}</td></tr>)}</tbody></table></div> : null}
-    {stage === 'element' && element ? <div id="education-stage-panel-element" className="education-stage" role="tabpanel" aria-labelledby="education-stage-tab-element"><div className="education-element-controls"><label><span>{t('results.member')}</span><select value={element.memberId} onChange={(event) => { setElementId(event.target.value); setSelection({ kind: 'member', id: event.target.value }); }}>{trace.elements.map((item) => <option key={item.memberId} value={item.memberId}>{item.memberId}</option>)}</select></label><label><span>{t('results.matrix')}</span><select value={elementMatrix} onChange={(event) => setElementMatrix(event.target.value as typeof elementMatrix)}><option value="local">{t('results.matrixOptionLocal')}</option><option value="condensed">{t('results.matrixOptionReleased')}</option><option value="transform">{t('results.matrixOptionTransform')}</option><option value="global">{t('results.matrixOptionGlobal')}</option></select></label></div><div className="education-kpis"><div><span>{t('results.flexibleLength')}</span><strong>{formatSignificant(element.length, 5)} m</strong></div><div><span>cos θ</span><strong>{formatSignificant(element.c, 4)}</strong></div><div><span>{t('results.sineTheta')}</span><strong>{formatSignificant(element.s, 4)}</strong></div><div><span>{t('results.releasedDofs')}</span><strong>{element.releasedLocalDofs.length ? element.releasedLocalDofs.join(', ') : '—'}</strong></div></div><MatrixView title={elementMatrix === 'local' ? t('results.localStiffnessMatrix') : elementMatrix === 'condensed' ? t('results.releasedStiffnessMatrix') : elementMatrix === 'transform' ? t('results.transformationMatrix') : t('results.globalContributionMatrix')} trace={elementMatrix === 'local' ? element.localStiffnessOriginal : elementMatrix === 'condensed' ? element.localStiffnessEffective : elementMatrix === 'transform' ? element.transformation : element.globalStiffnessContribution} /><div className="equation-block">qˡ = kˡ dˡ − fˡ₀</div></div> : null}
+    {stage === 'element' && element ? <div id="education-stage-panel-element" className="education-stage" role="tabpanel" aria-labelledby="education-stage-tab-element"><div className="education-element-controls"><label><span>{t('results.member')}</span><select value={element.memberId} onChange={(event) => { setElementId(event.target.value); setSelection({ kind: 'member', id: event.target.value }); }}>{trace.elements.map((item) => <option key={item.memberId} value={item.memberId}>{item.memberId}</option>)}</select></label><label><span>{t('results.matrix')}</span><select value={elementMatrix} onChange={(event) => setElementMatrix(event.target.value as typeof elementMatrix)}><option value="local">{t('results.matrixOptionLocal')}</option><option value="condensed">{t('results.matrixOptionReleased')}</option><option value="transform">{t('results.matrixOptionTransform')}</option><option value="global">{t('results.matrixOptionGlobal')}</option></select></label></div><div className="education-kpis"><div><span>{t('results.flexibleLength')}</span><strong>{formatSignificant(element.length, 5)} m</strong></div><div><span>cos θ</span><strong>{formatSignificant(element.c, 4)}</strong></div><div><span>{t('results.sineTheta')}</span><strong>{formatSignificant(element.s, 4)}</strong></div><div><span>{t('results.releasedDofs')}</span><strong>{element.releasedLocalDofs.length ? element.releasedLocalDofs.join(', ') : '—'}</strong></div></div>{elementMember ? <NumericalSubstitution member={elementMember} length={element.length} /> : null}<MatrixView title={elementMatrix === 'local' ? t('results.localStiffnessMatrix') : elementMatrix === 'condensed' ? t('results.releasedStiffnessMatrix') : elementMatrix === 'transform' ? t('results.transformationMatrix') : t('results.globalContributionMatrix')} trace={elementMatrix === 'local' ? element.localStiffnessOriginal : elementMatrix === 'condensed' ? element.localStiffnessEffective : elementMatrix === 'transform' ? element.transformation : element.globalStiffnessContribution} /><div className="equation-block">qˡ = kˡ dˡ − fˡ₀</div></div> : null}
     {stage === 'assembly' ? <div id="education-stage-panel-assembly" className="education-stage" role="tabpanel" aria-labelledby="education-stage-tab-assembly"><div className="education-kpis"><div><span>{t('results.detail')}</span><strong>{trace.assembly.matrixDetail === 'full' ? t('results.full') : t('results.summary')}</strong></div><div><span>{t('results.strainEnergy')}</span><strong>{formatScientific(trace.assembly.strainEnergy, 3)}</strong></div><div><span>‖F‖∞</span><strong>{formatScientific(Math.max(0, ...trace.assembly.load.map(Math.abs)), 3)}</strong></div></div><MatrixView title={t('results.globalStiffnessMatrix')} trace={trace.assembly.stiffness} /><MatrixView title={t('results.constraintMatrix')} trace={trace.assembly.constraintMatrix} /></div> : null}
     {stage === 'verify' ? <div id="education-stage-panel-verify" className="education-stage verification-grid" role="tabpanel" aria-labelledby="education-stage-tab-verify"><div className={(analysis?.residualNorm ?? 1) < 1e-8 ? 'passed' : 'warning'}><span>{t('results.algebraicEquilibrium')}</span><strong>{formatScientific(analysis?.residualNorm, 3)}</strong><small>{t('results.normalizedEquilibriumResidual')}</small></div><div className={(analysis?.constraintResidual ?? 1) < 1e-9 ? 'passed' : 'warning'}><span>{t('results.compatibility')}</span><strong>{formatScientific(analysis?.constraintResidual, 3)}</strong><small>{t('results.normalizedCompatibilityResidual')}</small></div><div className={(analysis?.linearResidual ?? 1) < 1e-12 ? 'passed' : 'warning'}><span>{t('results.linearSolver')}</span><strong>{formatScientific(analysis?.linearResidual, 3)}</strong><small>{t('results.refinementCount', { count: analysis?.refinementIterations ?? 0 })}</small></div><div className={(analysis?.forwardErrorBound ?? 1) < 1e-6 ? 'passed' : 'warning'}><span>{t('results.errorBound')}</span><strong>{formatScientific(analysis?.forwardErrorBound, 3)}</strong><small>{t('results.reliableDigits', { digits: formatFixed(analysis?.reliableDigits, 1) ?? '0' })}</small></div></div> : null}
   </section>;

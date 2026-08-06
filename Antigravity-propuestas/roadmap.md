@@ -22,7 +22,7 @@ Este roadmap establece la secuencia óptima para implementar las propuestas de m
   ├── AG-011: Perfilado del Análisis Completo para Localizar Cuellos de Botella — ✅ Implementada
   ├── AG-013: Generación Diferida (Lazy Loading) de Trazas Educativas `educationTrace` — ✅ Implementada
   ├── AG-009: Presets de Materiales y Perfiles Estructurales AISC / Eurocódigo — ✅ Implementada
-  └── AG-014 (Fases A/B/C/D): Plan Maestro de UX, Presets, Modo Aula y PDF — 🚀 En Ejecución Paso a Paso
+  └── AG-014 (Plan Maestro Consolidado): UX Móvil, Modo Aula y PDF — ✅ Implementada
 ```
 
 ---
@@ -30,6 +30,4 @@ Este roadmap establece la secuencia óptima para implementar las propuestas de m
 ## Detalle por Fase (AG-014 Plan Maestro de UX)
 
 - **AG-014A (Fase 1)**: Presets de Materiales/Perfiles y Explicador de Casos de Cargas — ✅ **Implementada**.
-- **AG-014B (Fase 2)**: Sustitución Numérica con Datos Reales en Modo Aula — 📋 En Lista.
-- **AG-014C (Fase 3)**: Rediseño Responsive Móvil y Ajustes de Interfaz — 📋 En Lista.
-- **AG-014D (Fase 4)**: Rediseño Editorial del Expediente PDF y Anexo Técnico Verificable — 📋 En Lista.
+- **AG-014 Consolidada (Fases 2, 3 y 4)**: Sustitución Numérica en Aula, Rediseño Móvil y Expediente PDF Editorial — ✅ **Implementada** (2026-08-05). El diagnóstico de las Fases 3 y 4.1 no se reproducía contra el código real; ver notas en la propuesta y en `reports/2026-08-05-2300-ag014-consolidada.md`.
