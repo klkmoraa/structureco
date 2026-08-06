@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultProject } from '../../data/defaultProject';
 import { PROJECT_STORAGE_KEY } from '../../data/projectStorage';
+import { findStandardSection } from '../../data/standardSections';
 import { ClassroomSessionProvider } from '../../store/ClassroomSessionContext';
 import { ProjectProvider, useProject } from '../../store/ProjectContext';
 import type { ProjectModel, Selection, UnitSystemId } from '../../types';
@@ -59,6 +60,7 @@ const selections: Array<{ label: string; value: Selection }> = [
   { label: 'Seleccionar nodo N4', value: { kind: 'node', id: 'N4' } },
   { label: 'Seleccionar apoyo N1', value: { kind: 'node', id: 'N1' } },
   { label: 'Seleccionar miembro M1', value: { kind: 'member', id: 'M1' } },
+  { label: 'Seleccionar miembro M2', value: { kind: 'member', id: 'M2' } },
   { label: 'Seleccionar vínculo rígido MR', value: { kind: 'member', id: 'MR' } },
   { label: 'Seleccionar carga nodal NL1', value: { kind: 'nodalLoad', id: 'NL1' } },
   { label: 'Seleccionar carga distribuida ML1', value: { kind: 'memberLoad', id: 'ML1' } },
@@ -377,6 +379,82 @@ describe('Inspector selection variants', () => {
     const panel = screen.getByRole('tabpanel', { name: 'Inspector' });
     expect(within(panel).queryByRole('textbox')).toBeNull();
     expect(within(panel).queryByRole('combobox')).toBeNull();
+  });
+});
+
+describe('Inspector preset selectors and load-case guidance', () => {
+  const materialSelect = () => screen.getByRole('combobox', { name: /Material estándar|Standard material/ }) as HTMLSelectElement;
+  const sectionSelect = () => screen.getByRole('combobox', { name: /Perfil comercial|Commercial section/ }) as HTMLSelectElement;
+
+  it('keeps the chosen material and commercial section visible after applying them', async () => {
+    const user = userEvent.setup();
+    renderInspector();
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+
+    expect(materialSelect().value).toBe('');
+    await user.selectOptions(materialSelect(), 'steel-a992');
+    expect(materialSelect().value).toBe('steel-a992');
+    expect(storedNumber('M1 E almacenado')).toBe(200e6);
+
+    await user.selectOptions(sectionSelect(), 'w12x26');
+    expect(sectionSelect().value).toBe('w12x26');
+  });
+
+  it('does not carry the chosen preset over to another member with identical properties', async () => {
+    const user = userEvent.setup();
+    const project = createInspectorProject();
+    const section = findStandardSection('w12x26');
+    const twin = project.members.find((member) => member.id === 'M2');
+    if (section && twin) {
+      twin.A = section.area;
+      twin.I = section.inertiaX;
+    }
+    renderInspector(project);
+
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+    await user.selectOptions(sectionSelect(), 'w12x26');
+    expect(sectionSelect().value).toBe('w12x26');
+
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M2' }));
+    expect(sectionSelect().value).toBe('');
+  });
+
+  it('drops the preset label once the member stops matching the catalog values', async () => {
+    const user = userEvent.setup();
+    renderInspector();
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+    await user.selectOptions(sectionSelect(), 'w12x26');
+
+    const area = screen.getByRole('textbox', { name: 'A' });
+    await user.clear(area);
+    await user.type(area, '0.02');
+    await user.keyboard('{Enter}');
+
+    expect(sectionSelect().value).toBe('');
+  });
+
+  it('lists compact preset labels translated to the project language', async () => {
+    const user = userEvent.setup();
+    const project = createInspectorProject();
+    project.settings = { ...project.settings, language: 'en' };
+    renderInspector(project);
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+
+    expect(materialSelect().textContent).toContain('ASTM A992');
+    expect(materialSelect().textContent).not.toContain('Acero estructural');
+    expect(sectionSelect().textContent).toContain('Concrete beam 20×30 cm');
+    expect(sectionSelect().textContent).not.toContain('Viga Concreto');
+  });
+
+  it('explains what a load case is in the nodal and member load forms', async () => {
+    const user = userEvent.setup();
+    renderInspector();
+
+    await user.click(screen.getByRole('button', { name: 'Seleccionar carga nodal NL1' }));
+    expect(screen.getByText(/¿Qué es un caso de carga\?/)).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Seleccionar carga distribuida ML1' }));
+    expect(screen.getByText(/¿Qué es un caso de carga\?/)).toBeTruthy();
   });
 });
 

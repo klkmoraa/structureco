@@ -533,8 +533,9 @@ export const InspectorProperties = () => {
             <option value="frame">{t('inspector.frame')}</option><option value="truss">{t('inspector.truss')}</option><option value="rigid">{t('inspector.rigid')}</option>
           </SelectField>
           {selectedMember.type !== 'rigid' && !classroomMode ? <>
-            <MaterialPresetSelector units={units} onSelect={applyMaterialPreset} />
-            <SectionPresetSelector units={units} onSelect={applySectionPreset} />
+            {/* `key` remonta los selectores al cambiar de miembro: el preset elegido pertenece al miembro activo, no al panel. */}
+            <MaterialPresetSelector key={`${selectionKey}:material`} units={units} current={{ E: selectedMember.E, G: selectedMember.G, density: selectedMember.density }} onSelect={applyMaterialPreset} />
+            <SectionPresetSelector key={`${selectionKey}:section`} units={units} current={{ A: selectedMember.A, I: selectedMember.I }} onSelect={applySectionPreset} />
             <PhysicalNumberField label="E" value={selectedMember.E} units={units} quantity="elasticModulus" resetKey={`${selectionKey}:E`} hint={t('inspector.domainValidatesE')} onCommit={(value) => updateMember('E', value)} />
             <PhysicalNumberField label="A" value={selectedMember.A} units={units} quantity="area" resetKey={`${selectionKey}:A`} hint={t('inspector.domainValidatesA')} onCommit={(value) => updateMember('A', value)} />
             <PhysicalNumberField label="I" value={selectedMember.I} units={units} quantity="inertia" resetKey={`${selectionKey}:I`} hint={selectedMember.type === 'frame' ? t('inspector.domainValidatesI') : t('inspector.inertiaCompatibilityHint')} onCommit={(value) => updateMember('I', value)} />
@@ -567,6 +568,7 @@ export const InspectorProperties = () => {
     {selectedNodalLoad ? <>
       <InspectorPropertyGroup title={t('inspector.frequentProperties')} description={t('inspector.nodalLoadFrequentDescription')}>
         <SelectField label={t('inspector.case')} value={selectedNodalLoad.caseId} onChange={(value) => updateNodalLoad('caseId', value)}>{project.loadCases.map((loadCase) => <option key={loadCase.id} value={loadCase.id}>{loadCase.name}</option>)}</SelectField>
+        <InspectorHelper>{t('inspector.loadCaseHelp')}</InspectorHelper>
         <PhysicalNumberField label={t('inspector.horizontalFx')} value={selectedNodalLoad.fx} units={units} quantity="force" resetKey={`${selectionKey}:fx`} onCommit={(value) => updateNodalLoad('fx', value)} />
         <PhysicalNumberField label={t('inspector.verticalFy')} value={selectedNodalLoad.fy} units={units} quantity="force" resetKey={`${selectionKey}:fy`} onCommit={(value) => updateNodalLoad('fy', value)} />
         <PhysicalNumberField label={t('inspector.momentMz')} value={selectedNodalLoad.mz} units={units} quantity="moment" resetKey={`${selectionKey}:mz`} onCommit={(value) => updateNodalLoad('mz', value)} />
@@ -584,6 +586,7 @@ export const InspectorProperties = () => {
       <InspectorPropertyGroup title={t('inspector.frequentProperties')} description={t('inspector.memberLoadFrequentDescription')}>
         <SelectField label={t('inspector.type')} value={selectedMemberLoad.type} onChange={(value) => updateMemberLoad('type', value)}><option value="distributed">{t('inspector.distributed')}</option><option value="point">{t('inspector.point')}</option><option value="moment">{t('inspector.moment')}</option></SelectField>
         <SelectField label={t('inspector.case')} value={selectedMemberLoad.caseId} onChange={(value) => updateMemberLoad('caseId', value)}>{project.loadCases.map((loadCase) => <option key={loadCase.id} value={loadCase.id}>{loadCase.name}</option>)}</SelectField>
+        <InspectorHelper>{t('inspector.loadCaseHelp')}</InspectorHelper>
         <div className="segmented-control" role="group" aria-label={t('inspector.coordinateSystem')}>
           {[{ value: 'global', label: t('inspector.global') }, { value: 'local', label: t('inspector.local') }].map((option) => <button type="button" key={option.value} aria-pressed={selectedMemberLoad.coordinateSystem === option.value} className={selectedMemberLoad.coordinateSystem === option.value ? 'active' : ''} onClick={() => updateMemberLoad('coordinateSystem', option.value)}>{option.label}</button>)}
         </div>

@@ -4,13 +4,15 @@ Este documento registra todas las oportunidades de mejora identificadas en **str
 
 ---
 
-## Propuestas Prioritarias (En Evaluación)
+## Propuestas Prioritarias (En Evaluación / Aprobadas)
 
 | ID | Nombre | Categoría | Prioridad | Complejidad | Estado | Dependencias | Descripción Breve |
 |---|---|---|---|---|---|---|---|
-| **AG-006** | Sistema de Undo/Redo Granular y Transacciones de Selección | UX / Store | Media | Media | En evaluación | AG-001 | Aislar el historial de deshacer/rehacer a mutaciones estructurales sin resetear ni perder la selección de UI. |
-| **AG-007** | Modulación de Catálogos i18n con Carga Diferida (Lazy Loading) | Rendimiento / i18n | Media | Baja | En evaluación | Ninguna | Cargar diferidamente `es.json` y `en.json` reduciendo $\sim 60\text{ KB}$ de bundle inicial. |
-| **AG-008** | Cobertura de Pruebas Visuales Automatizadas de Diagramas N-V-M con Playwright | Testing / QA | Media | Media | En evaluación | Ninguna | Integrar Visual Regression Testing pixel a pixel para diagramas de esfuerzos en Playwright. |
+| **AG-014A** | Fase 1: Presets de Materiales/Perfiles y Casos de Carga | UX / Inspector | Alta | Baja | **Implementada** | AG-009 | Retención de nombres en selectores y guía intuitiva de casos de carga. |
+| **AG-014B** | Fase 2: Sustitución Numérica con Datos Reales en Modo Aula | Educación / Aula | Alta | Baja | En evaluación | AG-014A | Ecuaciones de rigidez sustituidas explícitamente con números reales del modelo. |
+| **AG-014C** | Fase 3: Rediseño Responsive Móvil y Ajustes de Interfaz | UX / Mobile | Alta | Media | En evaluación | AG-014A | Eliminación de amontonamiento en móviles, unidades `dvh` y targets táctiles $\ge 44\text{px}$. |
+| **AG-014D** | Fase 4: Rediseño Editorial del Expediente PDF y Anexo | PDF / Publicación | Alta | Media | En evaluación | AG-014A | Expediente PDF con maquetación ejecutiva y Anexo Técnico Verificable pulido. |
+| **AG-006** | Sistema de Undo/Redo Granular y Transacciones de Selección | UX / Store | Media | Media | En evaluación | AG-001 | Aislar el historial de deshacer/rehacer a mutaciones estructurales sin resetear la selección de UI. |
 
 ---
 
