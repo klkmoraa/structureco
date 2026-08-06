@@ -21,8 +21,7 @@ Este roadmap establece la secuencia óptima para implementar las propuestas de m
   ├── AG-005: Solucionador de Matriz Dispersa (Sparse LDLT/Cholesky) — ✅ Implementada
   ├── AG-011: Perfilado del Análisis Completo para Localizar Cuellos de Botella — ✅ Implementada
   ├── AG-013: Generación Diferida (Lazy Loading) de Trazas Educativas `educationTrace` — ✅ Implementada
-  ├── AG-009: Presets de Materiales y Perfiles Estructurales AISC / Eurocódigo
-  └── AG-010: Exportación Vectorial CAD a Formato DXF
+  └── AG-009: Presets de Materiales y Perfiles Estructurales AISC / Eurocódigo — ✅ Implementada
 ```
 
 ---
@@ -39,11 +38,6 @@ Este roadmap establece la secuencia óptima para implementar las propuestas de m
 
 ### Fase 3: Escalabilidad del Motor y Funcionalidades Profesionales
 5. **AG-005 (Solucionador de Matriz Dispersa - Sparse Solver)** — ✅ **Implementada** (2026-08-05, Fase A).
-6. **AG-011 (Perfilado del Motor)** — ✅ **Implementada** (2026-08-05):
-   - *Hallazgo Revolucionario*: Descubrió que `educationTrace` consume del $58\%$ al $64\%$ del tiempo total.
-7. **AG-013 (Lazy Loading de Trazas Educativas `educationTrace`)** — ✅ **Implementada** (2026-08-05):
-   - *Mayor impacto de rendimiento medido*: viga de 300 vanos $1976\text{ ms} \to 768\text{ ms}$ (**2.57x**), sin generación diferida en P-Delta, envolventes ni líneas de influencia.
-8. **AG-009 (Presets de Materiales y Perfiles AISC)**:
-   - *Impacto*: Catálogo comercial directo en el Inspector (Acero A36/A992, perfiles IPE/W/HSS).
-9. **AG-010 (Exportación DXF para CAD)**:
-   - *Impacto*: Exportación directa para AutoCAD, Revit y FTOOL.
+6. **AG-011 (Perfilado del Motor)** — ✅ **Implementada** (2026-08-05).
+7. **AG-013 (Lazy Loading de Trazas Educativas `educationTrace`)** — ✅ **Implementada** (2026-08-05).
+8. **AG-009 (Presets de Materiales y Perfiles AISC / Eurocódigo)** — ✅ **Implementada** (2026-08-05).

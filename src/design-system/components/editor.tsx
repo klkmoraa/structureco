@@ -1,10 +1,10 @@
 import {
-  forwardRef,
   useId,
   useMemo,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
+  type Ref,
 } from 'react';
 import { CheckCircle2, Circle, CircleAlert, Clock3, TriangleAlert } from 'lucide-react';
 import { Spinner } from './feedback';
@@ -22,9 +22,10 @@ export interface ToolButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
   loadingLabel?: string;
   tone?: ToolTone;
   compact?: boolean;
+  ref?: Ref<HTMLButtonElement>;
 }
 
-export const ToolButton = forwardRef<HTMLButtonElement, ToolButtonProps>(function ToolButton({
+export function ToolButton({
   label,
   icon,
   shortcut,
@@ -39,8 +40,9 @@ export const ToolButton = forwardRef<HTMLButtonElement, ToolButtonProps>(functio
   disabled,
   type = 'button',
   role,
+  ref,
   ...props
-}, ref) {
+}: ToolButtonProps) {
   return <button
     {...props}
     ref={ref}
@@ -57,7 +59,7 @@ export const ToolButton = forwardRef<HTMLButtonElement, ToolButtonProps>(functio
     <span className="sc-tool-button__copy"><strong>{label}</strong>{detail && !compact ? <small>{detail}</small> : null}</span>
     {shortcut && !compact ? <kbd>{shortcut}</kbd> : null}
   </button>;
-});
+}
 
 export interface ToolGroupProps {
   title: string;
@@ -141,9 +143,10 @@ export interface UnitFieldProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   onValueChange: (value: string) => void;
   hint?: string;
   error?: string;
+  ref?: Ref<HTMLInputElement>;
 }
 
-export const UnitField = forwardRef<HTMLInputElement, UnitFieldProps>(function UnitField({
+export function UnitField({
   label,
   value,
   unit,
@@ -152,8 +155,9 @@ export const UnitField = forwardRef<HTMLInputElement, UnitFieldProps>(function U
   error,
   id: providedId,
   className = '',
+  ref,
   ...props
-}, ref) {
+}: UnitFieldProps) {
   const generatedId = useId();
   const id = providedId ?? `sc-unit-field-${generatedId}`;
   const messageId = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
@@ -176,7 +180,7 @@ export const UnitField = forwardRef<HTMLInputElement, UnitFieldProps>(function U
     </span>
     {error ? <small id={messageId} className="sc-unit-field__error" role="alert">{error}</small> : hint ? <small id={messageId}>{hint}</small> : null}
   </div>;
-});
+}
 
 export interface ResultMetricProps {
   label: string;

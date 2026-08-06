@@ -1,10 +1,10 @@
 import {
-  forwardRef,
   useId,
   useRef,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
+  type Ref,
   type SelectHTMLAttributes,
 } from 'react';
 import { ChevronDown } from 'lucide-react';
@@ -21,9 +21,10 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   leadingIcon?: ReactNode;
   trailingIcon?: ReactNode;
   fullWidth?: boolean;
+  ref?: Ref<HTMLButtonElement>;
 }
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
+export function Button({
   variant = 'secondary',
   size = 'md',
   loading = false,
@@ -36,8 +37,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   type = 'button',
   'aria-label': ariaLabel,
   children,
+  ref,
   ...props
-}, ref) {
+}: ButtonProps) {
   return <button
     {...props}
     ref={ref}
@@ -51,7 +53,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <span className="sc-button__label">{children}</span>
     {!loading && trailingIcon ? <span className="sc-button__icon" aria-hidden="true">{trailingIcon}</span> : null}
   </button>;
-});
+}
 
 export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'aria-label'> {
   label: string;
@@ -59,9 +61,10 @@ export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
   size?: ControlSize;
   loading?: boolean;
   loadingLabel?: string;
+  ref?: Ref<HTMLButtonElement>;
 }
 
-export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton({
+export function IconButton({
   label,
   variant = 'ghost',
   size = 'md',
@@ -71,8 +74,9 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
   disabled,
   type = 'button',
   children,
+  ref,
   ...props
-}, ref) {
+}: IconButtonProps) {
   return <button
     {...props}
     ref={ref}
@@ -84,7 +88,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
   >
     {loading ? <Spinner size="sm" label={loadingLabel} decorative /> : children}
   </button>;
-});
+}
 
 interface FieldFrameProps {
   label: string;
@@ -97,9 +101,10 @@ interface FieldFrameProps {
 
 export interface FieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'prefix'>, FieldFrameProps {
   controlSize?: ControlSize;
+  ref?: Ref<HTMLInputElement>;
 }
 
-export const Field = forwardRef<HTMLInputElement, FieldProps>(function Field({
+export function Field({
   label,
   hint,
   error,
@@ -110,8 +115,9 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(function Field({
   className = '',
   id: providedId,
   'aria-describedby': ariaDescribedBy,
+  ref,
   ...props
-}, ref) {
+}: FieldProps) {
   const generatedId = useId();
   const id = providedId ?? `sc-field-${generatedId}`;
   const hintId = hint ? `${id}-hint` : undefined;
@@ -128,13 +134,14 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(function Field({
     {hint ? <small id={hintId} className="sc-field__hint">{hint}</small> : null}
     {error ? <small id={errorId} className="sc-field__error" role="alert">{error}</small> : null}
   </div>;
-});
+}
 
 export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'prefix'>, FieldFrameProps {
   controlSize?: ControlSize;
+  ref?: Ref<HTMLSelectElement>;
 }
 
-export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select({
+export function Select({
   label,
   hint,
   error,
@@ -146,8 +153,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   id: providedId,
   'aria-describedby': ariaDescribedBy,
   children,
+  ref,
   ...props
-}, ref) {
+}: SelectProps) {
   const generatedId = useId();
   const id = providedId ?? `sc-select-${generatedId}`;
   const hintId = hint ? `${id}-hint` : undefined;
@@ -164,7 +172,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
     {hint ? <small id={hintId} className="sc-field__hint">{hint}</small> : null}
     {error ? <small id={errorId} className="sc-field__error" role="alert">{error}</small> : null}
   </div>;
-});
+}
 
 export interface SegmentedOption {
   value: string;

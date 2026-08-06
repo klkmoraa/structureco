@@ -1,4 +1,4 @@
-import { forwardRef, type CSSProperties, type ReactNode } from 'react';
+import type { CSSProperties, ReactNode, Ref } from 'react';
 
 export interface AppShellLayoutProps {
   projectId: string;
@@ -14,6 +14,7 @@ export interface AppShellLayoutProps {
   fullCanvas?: boolean;
   toolRailCompact?: boolean;
   inspectorWidth?: number;
+  ref?: Ref<HTMLDivElement>;
 }
 
 /**
@@ -21,7 +22,7 @@ export interface AppShellLayoutProps {
  * WorkspaceShell and are injected through slots so this component can only
  * arrange existing surfaces.
  */
-export const AppShellLayout = forwardRef<HTMLDivElement, AppShellLayoutProps>(function AppShellLayout({
+export function AppShellLayout({
   projectId,
   skipLabel,
   topBar,
@@ -35,7 +36,8 @@ export const AppShellLayout = forwardRef<HTMLDivElement, AppShellLayoutProps>(fu
   fullCanvas = false,
   toolRailCompact = false,
   inspectorWidth,
-}, ref) {
+  ref,
+}: AppShellLayoutProps) {
   return <div
     ref={ref}
     className="app-shell workspace-screen"
@@ -58,4 +60,4 @@ export const AppShellLayout = forwardRef<HTMLDivElement, AppShellLayoutProps>(fu
     </div>
     {footer}
   </div>;
-});
+}
