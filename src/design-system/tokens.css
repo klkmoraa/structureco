@@ -47,18 +47,20 @@
      chunk de entrada sin pagar su sitio. Los valores intermedios de la familia
      están documentados en docs/design-system/PALETTE.md. */
 
-  /* Identidad esmeralda: la acción. Más profunda y más viva que el pino
-     anterior, alineada con el `theme-color` declarado en index.html. */
-  --sc-green-50: #e4f5ee;
-  --sc-green-100: #c3e9db;
-  --sc-green-200: #93d7bf;
-  --sc-green-300: #54bf9d;
-  --sc-green-400: #18a077;
-  --sc-green-500: #00795f;
-  --sc-green-600: #00614c;
-  --sc-green-700: #004b3b;
-  --sc-green-800: #003a2d;
-  --sc-green-900: #002b21;
+  /* Identidad esmeralda clay. Los escalones 400-500 son DECORATIVOS: viven en
+     el pórtico del hero, en halos y en superficies suaves. Nunca bajo texto
+     blanco — #0b9270 con blanco mide 3,92:1 y el suelo del contrato es 4,5:1.
+     La acción arranca en el 600. */
+  --sc-green-50: #eff9f5;
+  --sc-green-100: #ddf4ec;
+  --sc-green-200: #b6e5d4;
+  --sc-green-300: #57c7a4;
+  --sc-green-400: #27ad83;
+  --sc-green-500: #0b9270;
+  --sc-green-600: #08795e;  /* blanco encima = 5,37:1 */
+  --sc-green-700: #06614b;  /* blanco encima = 7,45:1 */
+  --sc-green-800: #054c3b;
+  --sc-green-900: #033a2d;
 
   /* Cian de trazo: la segunda dimensión de marca. Vive en el dibujo
      técnico y en los gradientes de identidad, nunca en controles. */
@@ -80,38 +82,50 @@
   --sc-amber-500: #d88408;
   --sc-plum-500: #7c4db2;
 
+  /* Acentos decorativos de la referencia clay. Sólo contenedores de icono y
+     fondos suaves: ninguno alcanza el suelo de 3:1 como color de foco, así que
+     no se usan para foco, selección ni estado. */
+  --sc-sky-100: #e2f2fd;
+  --sc-sky-500: #5caee9;
+  --sc-lilac-100: #eee8fc;
+  --sc-lilac-500: #9677db;
+
   /* ------------------------------------------------------------------ */
   /* 2 · ROLES SEMÁNTICOS — TEMA DÍA (papel de grafito)                  */
   /* ------------------------------------------------------------------ */
-  --sc-color-bg-app: #eaf0ed;
+  --sc-color-bg-app: #f4f3f0;
   --sc-color-bg-canvas: #fafcfb;
-  --sc-color-surface-1: var(--sc-white);
-  --sc-color-surface-2: #e1e9e5;
+  --sc-color-surface-1: #fbfaf8;
+  --sc-color-surface-2: #f4f3f0;
   --sc-color-surface-elevated: var(--sc-white);
-  --sc-color-surface-inset: #dbe4df;
-  --sc-color-surface-toolbar: #f8fbfa;
+  --sc-color-surface-pressed: #ecedea;
+  --sc-color-surface-inset: #eceae6;
+  --sc-color-surface-toolbar: #f8f8f6;
   --sc-color-surface-input: var(--sc-white);
 
-  --sc-color-text-primary: #0c1a15;
-  --sc-color-text-secondary: #3a4f47;
-  --sc-color-text-muted: #5b6f66;
-  --sc-color-text-disabled: #93a09a;
+  --sc-color-text-primary: #24272b;    /* 14,4:1 sobre surface-1 */
+  --sc-color-text-secondary: #666d70;  /*  5,05:1 */
+  --sc-color-text-muted: #6b7274;      /*  4,70:1 */
+  --sc-color-text-disabled: #9aa0a1;
   --sc-color-text-inverse: var(--sc-white);
   --sc-color-text-link: var(--sc-blue-600);
-  --sc-color-text-technical: #445450;
-  --sc-color-text-unit: #78857f;
+  --sc-color-text-technical: #4a5153;
+  --sc-color-text-unit: #7b8284;
 
-  --sc-color-border: #c8d4ce;
-  --sc-color-border-soft: #e3eae6;
-  --sc-color-border-strong: #93a49c;
-  --sc-color-divider: #dfe7e3;
+  --sc-color-border: #e0ded9;
+  --sc-color-border-soft: #eeece8;
+  --sc-color-border-strong: #b9b6af;
+  --sc-color-divider: #e8e6e1;
 
-  --sc-color-action-primary: var(--sc-green-500);
-  --sc-color-action-hover: var(--sc-green-600);
-  --sc-color-action-pressed: var(--sc-green-700);
+  --sc-color-action-primary: var(--sc-green-600);
+  --sc-color-action-hover: var(--sc-green-700);
+  --sc-color-action-pressed: var(--sc-green-800);
   --sc-color-action-foreground: var(--sc-white);
   --sc-color-action-subtle: var(--sc-green-50);
   --sc-color-brand-secondary: var(--sc-cyan-600);
+
+  --sc-color-accent-blue-soft: var(--sc-sky-100);
+  --sc-color-accent-violet-soft: var(--sc-lilac-100);
 
   --sc-color-focus: var(--sc-blue-500);
   --sc-color-info: var(--sc-blue-500);
@@ -482,35 +496,39 @@
  * y el anillo de canto pasa de luz blanca a luz de marca.
  */
 :root[data-theme='dark'] {
-  --sc-color-bg-app: #070d0b;
+  --sc-color-bg-app: #121916;
   --sc-color-bg-canvas: #060b09;
-  --sc-color-surface-1: #0f1614;
-  --sc-color-surface-2: #16201d;
-  --sc-color-surface-elevated: #1d2825;
-  --sc-color-surface-inset: #0a100e;
-  --sc-color-surface-toolbar: #111a17;
-  --sc-color-surface-input: #111a17;
+  --sc-color-surface-1: #1b2420;
+  --sc-color-surface-2: #202b26;
+  --sc-color-surface-elevated: #25312b;
+  --sc-color-surface-pressed: #151d1a;
+  --sc-color-surface-inset: #151d1a;
+  --sc-color-surface-toolbar: #1b2420;
+  --sc-color-surface-input: #1b2420;
 
-  --sc-color-text-primary: #f3f8f6;
-  --sc-color-text-secondary: #b6c6bf;
-  --sc-color-text-muted: #8ea099;
+  --sc-color-text-primary: #f2f5f3;
+  --sc-color-text-secondary: #b6c0bb;
+  --sc-color-text-muted: #93a09a;
   --sc-color-text-disabled: #66716d;
   --sc-color-text-inverse: #0b1310;
   --sc-color-text-link: #8db4ff;
   --sc-color-text-technical: #bfcac5;
   --sc-color-text-unit: #929d98;
 
-  --sc-color-border: #26312d;
-  --sc-color-border-soft: #1c2522;
-  --sc-color-border-strong: #43594f;
+  --sc-color-border: #2e3a35;
+  --sc-color-border-soft: #232e29;
+  --sc-color-border-strong: #4a5a53;
   --sc-color-divider: #1a2320;
 
-  --sc-color-action-primary: #2fd39b;
-  --sc-color-action-hover: #4de0ae;
-  --sc-color-action-pressed: #22b382;
+  --sc-color-action-primary: #45c69a;
+  --sc-color-action-hover: #6ed7b2;
+  --sc-color-action-pressed: #35b088;
   --sc-color-action-foreground: #06140f;
-  --sc-color-action-subtle: #10241d;
+  --sc-color-action-subtle: #163027;
   --sc-color-brand-secondary: var(--sc-cyan-300);
+
+  --sc-color-accent-blue-soft: #1d2c38;
+  --sc-color-accent-violet-soft: #272138;
 
   --sc-color-focus: #86a8ff;
   --sc-color-info: #86a8ff;
