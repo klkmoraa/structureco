@@ -312,4 +312,38 @@ describe('AG-015 premium visual layer contract', () => {
       .map((declaration) => declaration.trim());
     expect(offenders).toEqual([]);
   });
+
+  it('declares the clay elevation scale in both themes', () => {
+    const clay = [
+      '--sc-shadow-clay-xs',
+      '--sc-shadow-clay-sm',
+      '--sc-shadow-clay-md',
+      '--sc-shadow-clay-lg',
+      '--sc-shadow-clay-floating',
+      '--sc-shadow-clay-pressed',
+    ];
+    for (const token of clay) {
+      expect(rootTokens.declarations.has(token), `light ${token}`).toBe(true);
+      // Night cannot inherit Day's clay: an inner highlight tuned for warm
+      // porcelain reads as a scratch over graphite, and the outer shadow has to
+      // shrink because there is no light left for it to remove.
+      expect(darkTokens.declarations.has(token), `dark ${token}`).toBe(true);
+    }
+  });
+
+  it('lights every clay surface from the same direction', () => {
+    // Four layers per surface: outer shadow down-right, inner highlight
+    // up-left, inner shadow down-right, and the 1px edge. Two of them are
+    // `inset`; a level that forgot them would read as a flat card with a blur.
+    for (const level of ['--sc-shadow-clay-sm', '--sc-shadow-clay-md', '--sc-shadow-clay-lg']) {
+      const value = rootTokens.declarations.get(level) ?? '';
+      expect((value.match(/inset/g) ?? []).length, level).toBeGreaterThanOrEqual(2);
+    }
+    // Pressed inverts: it is inset-only, or it would still look like it floats.
+    expect(rootTokens.declarations.get('--sc-shadow-clay-pressed')).not.toMatch(/(^|,)\s*0\s+\d+px/);
+  });
+
+  it('reserves a hero radius above the card scale', () => {
+    expect(rootTokens.declarations.has('--sc-radius-hero')).toBe(true);
+  });
 });

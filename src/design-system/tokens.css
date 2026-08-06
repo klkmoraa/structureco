@@ -244,13 +244,17 @@
   --sc-focus-ring-width: 3px;
   --sc-focus-ring-width-compact: 2px;
   --sc-focus-ring-offset: 2px;
-  --sc-radius-xs: 6px;
-  --sc-radius-sm: 8px;
-  --sc-radius-md: 10px;
-  --sc-radius-lg: 14px;
-  --sc-radius-xl: 20px;
-  --sc-radius-2xl: 28px;
-  --sc-radius-sheet: 20px;
+  /* Los tres primeros escalones gobiernan campos numéricos, filas del inspector
+     y tablas de resultados: no suben. Redondear una rejilla de datos la vuelve
+     más difícil de escanear, no más amable. */
+  --sc-radius-xs: 8px;
+  --sc-radius-sm: 12px;
+  --sc-radius-md: 14px;
+  --sc-radius-lg: 22px;
+  --sc-radius-xl: 28px;
+  --sc-radius-2xl: 36px;
+  --sc-radius-hero: 40px;
+  --sc-radius-sheet: 28px;
   --sc-radius-pill: 999px;
 
   /* ------------------------------------------------------------------ */
@@ -283,6 +287,50 @@
   --sc-shadow-sheet:
     0 -2px 8px rgba(8, 24, 16, 0.08),
     0 -18px 48px rgba(8, 24, 16, 0.18);
+
+  /* ---- Materia clay -------------------------------------------------
+     Una superficie clay son cuatro capas y una sola fuente de luz, a 145°
+     (arriba-izquierda). En orden: sombra exterior difusa abajo-derecha, luz
+     interior arriba-izquierda, sombra interior abajo-derecha, y el canto de
+     1px que separa la superficie del fondo.
+
+     La tinta es grafito verdoso diluido, nunca negro: sobre un fondo cálido el
+     negro puro ensucia y delata el degradado. */
+  --sc-shadow-clay-xs:
+    0 1px 2px rgba(58, 70, 64, 0.05),
+    0 2px 6px rgba(58, 70, 64, 0.04),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.70),
+    inset -1px -1px 2px rgba(107, 128, 117, 0.05);
+  --sc-shadow-clay-sm:
+    0 2px 5px rgba(58, 70, 64, 0.06),
+    0 6px 14px rgba(58, 70, 64, 0.05),
+    inset 1px 1px 3px rgba(255, 255, 255, 0.82),
+    inset -1px -2px 4px rgba(107, 128, 117, 0.06);
+  --sc-shadow-clay-md:
+    0 3px 8px rgba(58, 70, 64, 0.06),
+    0 12px 28px rgba(58, 70, 64, 0.10),
+    inset 2px 2px 4px rgba(255, 255, 255, 0.90),
+    inset -2px -3px 6px rgba(107, 128, 117, 0.08);
+  --sc-shadow-clay-lg:
+    0 4px 12px rgba(58, 70, 64, 0.07),
+    0 20px 44px rgba(58, 70, 64, 0.11),
+    inset 2px 3px 6px rgba(255, 255, 255, 0.92),
+    inset -3px -4px 9px rgba(107, 128, 117, 0.09);
+  --sc-shadow-clay-floating:
+    0 6px 16px rgba(58, 70, 64, 0.08),
+    0 28px 64px rgba(58, 70, 64, 0.14),
+    inset 2px 3px 6px rgba(255, 255, 255, 0.90),
+    inset -3px -4px 10px rgba(107, 128, 117, 0.10);
+  /* Pulsado: la luz se invierte. Sólo capas interiores — cualquier sombra
+     exterior lo devolvería a parecer que flota. */
+  --sc-shadow-clay-pressed:
+    inset 3px 4px 8px rgba(58, 70, 64, 0.12),
+    inset -2px -2px 5px rgba(255, 255, 255, 0.78);
+
+  --sc-clay-edge: 1px solid rgba(255, 255, 255, 0.78);
+  --sc-gradient-clay: linear-gradient(145deg,
+    color-mix(in srgb, var(--sc-color-surface-elevated) 96%, transparent),
+    color-mix(in srgb, var(--sc-color-surface-2) 96%, transparent));
 
   /* Vidrio: una superficie translúcida necesita saturar lo que hay detrás,
      o el desenfoque la deja lechosa. */
@@ -598,6 +646,39 @@
   --sc-shadow-sheet:
     0 -2px 10px rgba(0, 0, 0, 0.4),
     0 -18px 52px rgba(0, 0, 0, 0.52);
+
+  /* En Noche la sombra pierde trabajo —no queda luz que quitar— y el borde lo
+     gana: sin un canto visible los paneles se funden con el fondo. La luz
+     interior pasa de blanca a un velo de marca muy tenue; el blanco puro sobre
+     grafito se lee como un arañazo. */
+  --sc-shadow-clay-xs:
+    0 1px 2px rgba(0, 0, 0, 0.30),
+    inset 1px 1px 2px rgba(120, 160, 145, 0.05),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.22);
+  --sc-shadow-clay-sm:
+    0 2px 6px rgba(0, 0, 0, 0.34),
+    inset 1px 1px 3px rgba(120, 160, 145, 0.06),
+    inset -1px -2px 4px rgba(0, 0, 0, 0.26);
+  --sc-shadow-clay-md:
+    0 4px 14px rgba(0, 0, 0, 0.38),
+    inset 2px 2px 4px rgba(120, 160, 145, 0.07),
+    inset -2px -3px 6px rgba(0, 0, 0, 0.30);
+  --sc-shadow-clay-lg:
+    0 8px 24px rgba(0, 0, 0, 0.42),
+    inset 2px 3px 6px rgba(120, 160, 145, 0.08),
+    inset -3px -4px 9px rgba(0, 0, 0, 0.32);
+  --sc-shadow-clay-floating:
+    0 12px 36px rgba(0, 0, 0, 0.48),
+    inset 2px 3px 6px rgba(120, 160, 145, 0.08),
+    inset -3px -4px 10px rgba(0, 0, 0, 0.34);
+  --sc-shadow-clay-pressed:
+    inset 3px 4px 8px rgba(0, 0, 0, 0.44),
+    inset -2px -2px 5px rgba(120, 160, 145, 0.06);
+
+  --sc-clay-edge: 1px solid rgba(120, 160, 145, 0.14);
+  --sc-gradient-clay: linear-gradient(145deg,
+    color-mix(in srgb, var(--sc-color-surface-elevated) 96%, transparent),
+    color-mix(in srgb, var(--sc-color-surface-1) 96%, transparent));
 
   /* El vidrio en Noche oscurece en vez de aclarar: una capa translúcida
      clara sobre grafito produce niebla, no cristal. */
