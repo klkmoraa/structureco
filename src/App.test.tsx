@@ -307,7 +307,10 @@ describe('structureCo app shell', () => {
     const menu = await openUtilityMenu(user);
     await user.selectOptions(within(menu).getByRole('combobox', { name: /idioma/i }), 'en');
     expect(screen.getByTestId('diagram-chart')).toBeTruthy();
-  });
+    // Misma holgura que el resto de recorridos que montan la app, analizan y
+    // luego teclean: es el test más pesado del archivo y con el timeout por
+    // defecto de 5 s vivía al borde bajo carga de suite completa.
+  }, 10_000);
 
   it('does not run canvas shortcuts while the mobile inspector is modal', async () => {
     const user = userEvent.setup();

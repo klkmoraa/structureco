@@ -16,8 +16,8 @@ Este documento registra todas las oportunidades de mejora identificadas en **str
 
 | ID | Nombre | Categoría | Estado | Resultado |
 |---|---|---|---|---|
-| **AG-014 Consolidada** | Fases 2, 3 y 4: Sustitución en Aula, Táctil ≥44px y Anexo PDF Editorial | UX / Educación / PDF | **Implementada** (2026-08-05) | Sustitución numérica verificada contra `frameLocalStiffness()`; primitiva `table()` en `PdfLayout` y anexo reglado; suelo táctil para `a[href]`. Las Fases 3 y 4.1 no reproducían su diagnóstico — ver notas en la propuesta. |
-| **AG-014A** | Fase 1: Presets de Materiales/Perfiles y Casos de Carga | UX / Inspector | **Implementada** (2026-08-05) | Retención de nombres en selectores optimizada y guía intuitiva de casos de carga integrada. |
+| **AG-015** | Refactorización Premium del Sistema de Diseño (WOW UX/UI) | UX / UI / Estética | **Implementada** (2026-08-06) | Dirección visual "Mesa de dibujo": paleta v3, escala de display, materia tokenizada (vidrio/anillos/halos/gradientes) y bienvenida reescrita sobre una pieza de firma. Sin Inter/JetBrains descargadas — D-010 lo prohíbe; se usan las familias variables del sistema. |
+| **AG-014 (Total)** | Plan Maestro de UX, Modo Aula y Expedientes | UX / Educación / PDF | **Implementada** (2026-08-05) | Selectores con memoria, táctil garantizado, sustitución de fórmulas y PDF en formato de tablas ejecutivas resueltos exitosamente. |
 | **AG-001** | Rediseño de Gestión de Estado Global y Desacoplamiento de Componentes Canvas | Arquitectura | **Implementada** (2026-08-05) | Segregación de contextos React y descomposición de `StructuralCanvas.tsx`. |
 | **AG-002** | Optimización de Renderizado SVG del Canvas y Algoritmos de Snapping | Rendimiento | **Implementada** (2026-08-05) | Cuadrícula espacial de broad-phase, coste por `pointermove` 0,412 ms → 0,018 ms. |
 | **AG-003** | Refactorización Declarativa del Módulo de Expedientes y Memorias PDF | PDF | **Implementada** (2026-08-05) | Descomposición en 13 módulos bajo `src/utils/pdf/`. |

@@ -1,20 +1,38 @@
 /*
  * structureCo · Design tokens
  * ---------------------------------------------------------------------------
- * Dirección visual: "Mesa Modular" (organización) + "Laboratorio Nocturno"
- * (modo Noche) + "Instrumento de Precisión" (rigor tipográfico/numérico),
- * con claridad inspirada en principios Apple pero identidad propia de
- * ingeniería estructural.
+ * Dirección visual (AG-015): "Mesa de dibujo".
+ *
+ * El referente no es un dashboard, es la mesa de un calculista: papel de
+ * grafito, trazo de tinta, y sobre él un instrumento de precisión. De ahí
+ * salen las tres decisiones que gobiernan todo lo demás:
+ *
+ *   · Suelo de grafito, no de menta. Los neutros son una familia fría de bajo
+ *     croma para que el blanco de una superficie sea un escalón real de
+ *     elevación y no un matiz.
+ *   · Dos tonos de marca. El esmeralda (`--sc-green-*`) manda la acción; el
+ *     cian de trazo (`--sc-cyan-*`) es la segunda dimensión, reservada al
+ *     dibujo técnico y a los gradientes de identidad. Nunca compiten por el
+ *     mismo trabajo.
+ *   · La materia es token. Vidrio, anillos, halos y gradientes viven aquí
+ *     (§5) y no como literales por componente, porque cada uno se mide
+ *     distinto en Día y en Noche.
  *
  * Capas:
- *   1. Primitivas (ramps de color, escalas). Nunca se consumen directo.
+ *   1. Primitivas (rampas de color, escalas). Nunca se consumen directo.
  *   2. Roles semánticos (--sc-color-*). Los componentes consumen esto.
  *   3. Roles técnicos del dominio (cargas, diagramas, reacciones...).
- *   4. Alias de compatibilidad (--app-bg, --accent...) para CSS existente.
+ *   4. Forma, espaciado y tamaños.
+ *   5. Materia: elevación, vidrio, anillos, halos, gradientes.
+ *   6. Tipografía (display + interfaz + numérica).
+ *   7. Controles, layout y densidad.
+ *   8. Motion y apilamiento.
+ *   9. Alias de compatibilidad (--app-bg, --accent...) para CSS existente.
  *
  * Los colores técnicos de diagramas conservan los valores verificados
- * WCAG AA del release 0.8.0 (COLOR_ACCESSIBILITY.md). No los alteres sin
- * volver a medir contraste en ambos temas.
+ * WCAG AA del release 0.8.0 (COLOR_ACCESSIBILITY.md), y `--sc-color-bg-canvas`
+ * se mantiene sin tocar en ambos temas porque es el fondo contra el que se
+ * midieron. No los alteres sin volver a medir contraste en ambos temas.
  */
 
 :root {
@@ -24,17 +42,28 @@
   --sc-white: #ffffff;
   --sc-black: #000000;
 
-  /* Identidad verde/teal (pino calibrado) */
-  --sc-green-50: #ddf4ec;
-  --sc-green-100: #c5ede1;
-  --sc-green-200: #97dec9;
-  --sc-green-300: #5acaad;
-  --sc-green-400: #24a88a;
-  --sc-green-500: #007a67;
-  --sc-green-600: #006158;
-  --sc-green-700: #004a40;
-  --sc-green-800: #003b33;
-  --sc-green-900: #002b24;
+  /* El grafito frío (el papel y la tinta) no se declara como rampa: sólo dos
+     de sus escalones tienen consumidor, y una rampa que nadie usa viaja en el
+     chunk de entrada sin pagar su sitio. Los valores intermedios de la familia
+     están documentados en docs/design-system/PALETTE.md. */
+
+  /* Identidad esmeralda: la acción. Más profunda y más viva que el pino
+     anterior, alineada con el `theme-color` declarado en index.html. */
+  --sc-green-50: #e4f5ee;
+  --sc-green-100: #c3e9db;
+  --sc-green-200: #93d7bf;
+  --sc-green-300: #54bf9d;
+  --sc-green-400: #18a077;
+  --sc-green-500: #00795f;
+  --sc-green-600: #00614c;
+  --sc-green-700: #004b3b;
+  --sc-green-800: #003a2d;
+  --sc-green-900: #002b21;
+
+  /* Cian de trazo: la segunda dimensión de marca. Vive en el dibujo
+     técnico y en los gradientes de identidad, nunca en controles. */
+  --sc-cyan-300: #8ccfe9;
+  --sc-cyan-600: #0e6b8f;
 
   /* Azul de interacción (selección / foco / información) */
   --sc-blue-100: #e8effd;
@@ -52,37 +81,37 @@
   --sc-plum-500: #7c4db2;
 
   /* ------------------------------------------------------------------ */
-  /* 2 · ROLES SEMÁNTICOS — TEMA DÍA (editorial, porcelana técnica)      */
+  /* 2 · ROLES SEMÁNTICOS — TEMA DÍA (papel de grafito)                  */
   /* ------------------------------------------------------------------ */
-  --sc-color-bg-app: #eef4f1;
+  --sc-color-bg-app: #eaf0ed;
   --sc-color-bg-canvas: #fafcfb;
   --sc-color-surface-1: var(--sc-white);
-  --sc-color-surface-2: #e4ece8;
+  --sc-color-surface-2: #e1e9e5;
   --sc-color-surface-elevated: var(--sc-white);
-  --sc-color-surface-inset: #dde7e2;
-  --sc-color-surface-toolbar: #fbfcfc;
+  --sc-color-surface-inset: #dbe4df;
+  --sc-color-surface-toolbar: #f8fbfa;
   --sc-color-surface-input: var(--sc-white);
 
-  --sc-color-text-primary: #10231b;
-  --sc-color-text-secondary: #3f554b;
-  --sc-color-text-muted: #5f736a;
-  --sc-color-text-disabled: #939c97;
+  --sc-color-text-primary: #0c1a15;
+  --sc-color-text-secondary: #3a4f47;
+  --sc-color-text-muted: #5b6f66;
+  --sc-color-text-disabled: #93a09a;
   --sc-color-text-inverse: var(--sc-white);
   --sc-color-text-link: var(--sc-blue-600);
-  --sc-color-text-technical: #46534d;
-  --sc-color-text-unit: #7b8781;
+  --sc-color-text-technical: #445450;
+  --sc-color-text-unit: #78857f;
 
-  --sc-color-border: #cbd6d0;
-  --sc-color-border-soft: #e6ebe8;
-  --sc-color-border-strong: #96a69e;
-  --sc-color-divider: #e2e8e4;
+  --sc-color-border: #c8d4ce;
+  --sc-color-border-soft: #e3eae6;
+  --sc-color-border-strong: #93a49c;
+  --sc-color-divider: #dfe7e3;
 
   --sc-color-action-primary: var(--sc-green-500);
   --sc-color-action-hover: var(--sc-green-600);
   --sc-color-action-pressed: var(--sc-green-700);
   --sc-color-action-foreground: var(--sc-white);
   --sc-color-action-subtle: var(--sc-green-50);
-  --sc-color-brand-secondary: var(--sc-green-700);
+  --sc-color-brand-secondary: var(--sc-cyan-600);
 
   --sc-color-focus: var(--sc-blue-500);
   --sc-color-info: var(--sc-blue-500);
@@ -132,6 +161,9 @@
   --sc-color-technical-reaction: #4a5fd1;
   --sc-color-technical-dimension: #8a6800;
   --sc-color-technical-axis: #8b4d2f;
+  /* Alias del rol distribuido: la codificación del canvas usa el color de
+     cortante para la carga repartida, y la interfaz necesita nombrarlo. */
+  --sc-color-technical-distributed: var(--sc-color-technical-shear);
 
   /* Roles estructurales formalizados (Sección 12 del sistema).
      Mapean sobre los técnicos verificados; los roles "reservados"
@@ -175,7 +207,7 @@
   --sc-color-tool-destructive: var(--sc-color-state-error);
 
   /* ------------------------------------------------------------------ */
-  /* 4 · ESPACIADO, TAMAÑOS, FORMA, ELEVACIÓN                            */
+  /* 4 · ESPACIADO, TAMAÑOS Y FORMA                                      */
   /* ------------------------------------------------------------------ */
   --sc-space-1: 4px;
   --sc-space-2: 8px;
@@ -198,45 +230,96 @@
   --sc-focus-ring-width: 3px;
   --sc-focus-ring-width-compact: 2px;
   --sc-focus-ring-offset: 2px;
+  --sc-radius-xs: 6px;
   --sc-radius-sm: 8px;
   --sc-radius-md: 10px;
   --sc-radius-lg: 14px;
+  --sc-radius-xl: 20px;
+  --sc-radius-2xl: 28px;
   --sc-radius-sheet: 20px;
+  --sc-radius-pill: 999px;
 
-  /* Elevación en capas (difusa + contacto), calibrada por tema. */
+  /* ------------------------------------------------------------------ */
+  /* 5 · MATERIA: elevación, vidrio, anillos, halos, gradientes          */
+  /* ------------------------------------------------------------------ */
+  /* La sombra es tinta de marca diluida, no negro. Sobre porcelana el negro
+     puro ensucia; un grafito verdoso mantiene el aire del papel. */
   --sc-shadow-raised:
-    0 1px 2px rgba(9, 24, 18, 0.05),
-    0 4px 12px rgba(9, 24, 18, 0.06);
+    0 1px 1px rgba(11, 31, 24, 0.04),
+    0 3px 8px rgba(11, 31, 24, 0.05);
+  --sc-shadow-lifted:
+    0 2px 4px rgba(11, 31, 24, 0.05),
+    0 12px 26px rgba(11, 31, 24, 0.09),
+    0 28px 60px rgba(11, 31, 24, 0.07);
   --sc-shadow-floating:
-    0 2px 6px rgba(14, 34, 25, 0.07),
-    0 16px 44px rgba(14, 34, 25, 0.12);
+    0 2px 6px rgba(11, 31, 24, 0.06),
+    0 16px 44px rgba(11, 31, 24, 0.11);
   --sc-shadow-modal:
-    0 8px 24px rgba(10, 26, 19, 0.14),
-    0 28px 80px rgba(10, 26, 19, 0.26);
+    0 8px 24px rgba(9, 26, 20, 0.13),
+    0 32px 84px rgba(9, 26, 20, 0.24);
   --sc-shadow-popover:
-    0 2px 8px rgba(10, 26, 19, 0.08),
-    0 12px 32px rgba(10, 26, 19, 0.14);
+    0 2px 8px rgba(9, 26, 20, 0.07),
+    0 14px 34px rgba(9, 26, 20, 0.13);
   /* Contacto: separa un control activo de su carril sin sugerir que flota. */
-  --sc-shadow-contact: 0 1px 3px rgba(14, 37, 24, 0.10);
+  --sc-shadow-contact: 0 1px 3px rgba(11, 31, 24, 0.10);
   /* drop-shadow() sólo admite una capa, así que la elevación flotante tiene una
      variante propia para elementos con forma recortada. */
-  --sc-shadow-drop: 0 12px 26px rgba(14, 37, 24, 0.16);
+  --sc-shadow-drop: 0 12px 26px rgba(11, 31, 24, 0.16);
   /* Hoja inferior: la luz cae desde arriba, así que su sombra sube. */
   --sc-shadow-sheet:
     0 -2px 8px rgba(8, 24, 16, 0.08),
     0 -18px 48px rgba(8, 24, 16, 0.18);
 
+  /* Vidrio: una superficie translúcida necesita saturar lo que hay detrás,
+     o el desenfoque la deja lechosa. */
+  --sc-surface-glass: color-mix(in srgb, var(--sc-color-surface-1) 72%, transparent);
+  --sc-surface-glass-strong: color-mix(in srgb, var(--sc-color-surface-1) 88%, transparent);
+  --sc-surface-glass-border: color-mix(in srgb, var(--sc-white) 66%, transparent);
+  --sc-blur-glass: blur(20px) saturate(1.6);
+  --sc-blur-chrome: blur(14px) saturate(1.3);
+
+  /* Anillos: 1px de luz interior en el borde superior. Es lo que separa una
+     tarjeta "plana con sombra" de una tarjeta con canto. */
+  --sc-ring-inset: inset 0 1px 0 color-mix(in srgb, var(--sc-white) 72%, transparent);
+  --sc-ring-focus: 0 0 0 var(--sc-focus-ring-width) color-mix(in srgb, var(--sc-color-focus) 30%, transparent);
+
+  /* Halos: color de marca proyectado. Sólo en estados activos o hover. */
+  --sc-glow-accent: 0 10px 30px color-mix(in srgb, var(--sc-color-action-primary) 24%, transparent);
+  --sc-glow-aula: 0 10px 30px color-mix(in srgb, var(--sc-color-aula) 24%, transparent);
+
+  /* Gradientes de identidad. `display` es el único sitio donde el cian y el
+     esmeralda comparten un mismo trazo. */
+  --sc-gradient-brand-soft: linear-gradient(150deg,
+    color-mix(in srgb, var(--sc-color-action-primary) 10%, var(--sc-color-surface-1)),
+    var(--sc-color-surface-1) 62%);
+  /* Arranca ya en marca. Una versión anterior empezaba en el color del texto
+     y la palabra acentuada se partía en dos: la mitad parecía tinta y la otra
+     mitad acento, que se lee como fallo de render y no como decisión. */
+  --sc-gradient-display: linear-gradient(102deg,
+    var(--sc-color-action-primary) 4%,
+    var(--sc-color-brand-secondary) 96%);
+  --sc-gradient-sheen: linear-gradient(180deg,
+    color-mix(in srgb, var(--sc-white) 64%, transparent),
+    transparent 46%);
+
   /* ------------------------------------------------------------------ */
-  /* 5 · TIPOGRAFÍA (Instrumento de Precisión)                           */
+  /* 6 · TIPOGRAFÍA (Instrumento de Precisión)                           */
   /* ------------------------------------------------------------------ */
-  --sc-font-ui: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --sc-font-heading: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Las familias `Variable Display` / `Variable Text` de Windows 11 y las
+     `SF Pro` de Apple traen tamaños ópticos reales: la de display ajusta el
+     interletrado y adelgaza los remates a 64px, la de texto los engorda a
+     12px. Es la mejora tipográfica más grande disponible sin descargar una
+     fuente, y el sistema local-first no puede pedir una a la red. */
+  --sc-font-display: "Segoe UI Variable Display", "SF Pro Display", Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --sc-font-ui: "Segoe UI Variable Text", "SF Pro Text", Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --sc-font-heading: var(--sc-font-display);
   --sc-font-mono: ui-monospace, "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   --sc-font-weight-regular: 400;
   --sc-font-weight-medium: 550;
   --sc-font-weight-semibold: 650;
   --sc-font-weight-bold: 750;
   --sc-font-weight-heavy: 800;
+  --sc-font-weight-display: 720;
   --sc-font-size-caption: 10px;
   --sc-font-size-technical: 12px;
   --sc-font-size-label: 12px;
@@ -245,18 +328,26 @@
   --sc-font-size-subtitle: 15px;
   --sc-font-size-panel: 17px;
   --sc-font-size-screen: 26px;
+  /* Escala de display: sólo la usan superficies editoriales (bienvenida,
+     estados vacíos grandes). La interfaz de trabajo no crece con la ventana. */
+  --sc-font-size-display-xl: clamp(2.625rem, 1.55rem + 4.3vw, 4.25rem);
+  --sc-font-size-display-md: 1.3125rem;
+  --sc-font-size-lead: clamp(1rem, 0.93rem + 0.32vw, 1.1875rem);
+  --sc-line-height-display: 1.015;
   --sc-line-height-tight: 1.2;
   --sc-line-height-compact: 1.35;
   --sc-line-height-body: 1.5;
   --sc-line-height-control: 1.25;
+  --sc-tracking-display: -0.038em;
   --sc-tracking-tight: -0.025em;
   --sc-tracking-control: -0.008em;
   --sc-tracking-technical: 0.01em;
+  --sc-tracking-eyebrow: 0.16em;
   --sc-numeric-variant: tabular-nums lining-nums;
   --sc-numeric-features: "tnum" 1, "lnum" 1, "cv02" 1, "cv03" 1, "cv04" 1, "cv11" 1;
 
   /* ------------------------------------------------------------------ */
-  /* 6 · CONTROLES, LAYOUT Y DENSIDAD (Mesa Modular)                     */
+  /* 7 · CONTROLES, LAYOUT Y DENSIDAD (Mesa Modular)                     */
   /* ------------------------------------------------------------------ */
   --sc-control-height-sm: 36px;
   --sc-control-height-md: 40px;
@@ -268,6 +359,7 @@
   --sc-layout-inspector-compact: 290px;
   --sc-layout-results: 285px;
   --sc-layout-gutter: 18px;
+  --sc-layout-reading: 1200px;
 
   /* Densidades: la profesional es compacta pero legible; la táctil se
      activa por breakpoint/pointer, Aula usa la cómoda. */
@@ -276,7 +368,7 @@
   --sc-density-row-touch: 44px;
 
   /* ------------------------------------------------------------------ */
-  /* 7 · MOTION Y APILAMIENTO                                            */
+  /* 8 · MOTION Y APILAMIENTO                                            */
   /* ------------------------------------------------------------------ */
   --sc-motion-instant: 70ms;
   --sc-motion-press: 70ms;
@@ -284,6 +376,7 @@
   --sc-motion-control: 160ms;
   --sc-motion-standard: 220ms;
   --sc-motion-slow: 360ms;
+  --sc-motion-reveal: 620ms;
   --sc-motion-loading: 800ms;
   --sc-ease-standard: cubic-bezier(.22, 1, .36, 1);
   --sc-ease-enter: cubic-bezier(.22, 1, .36, 1);
@@ -319,7 +412,7 @@
   --sc-z-toast: 1300;
 
   /* ------------------------------------------------------------------ */
-  /* 8 · ALIAS DE COMPATIBILIDAD (migración por rol)                     */
+  /* 9 · ALIAS DE COMPATIBILIDAD (migración por rol)                     */
   /* ------------------------------------------------------------------ */
   --app-bg: var(--sc-color-bg-app);
   --surface: var(--sc-color-surface-1);
@@ -338,6 +431,7 @@
   --accent-pressed: var(--sc-color-action-pressed);
   --accent-soft: color-mix(in srgb, var(--sc-color-action-primary) 10%, var(--sc-color-surface-1));
   --accent-foreground: var(--sc-color-action-foreground);
+  --brand-secondary: var(--sc-color-brand-secondary);
   --focus: var(--sc-color-focus);
   --selection: var(--sc-color-selection-stroke);
   --selection-soft: var(--sc-color-selection);
@@ -383,38 +477,40 @@
  * TEMA NOCHE · "Laboratorio Nocturno"
  * Grafito frío profundo (nunca negro puro), capas diferenciadas por
  * elevación real, acentos medidos, texto sin brillo excesivo.
- * No es una inversión del Día: cada rol se reasigna a mano.
+ * No es una inversión del Día: cada rol se reasigna a mano, y la materia
+ * (§5) se vuelve a medir entera — el vidrio se oscurece en vez de aclararse
+ * y el anillo de canto pasa de luz blanca a luz de marca.
  */
 :root[data-theme='dark'] {
-  --sc-color-bg-app: #08110e;
+  --sc-color-bg-app: #070d0b;
   --sc-color-bg-canvas: #060b09;
-  --sc-color-surface-1: #101915;
-  --sc-color-surface-2: #16231d;
-  --sc-color-surface-elevated: #232a2e;
-  --sc-color-surface-inset: #131719;
-  --sc-color-surface-toolbar: #14191c;
-  --sc-color-surface-input: #14191c;
+  --sc-color-surface-1: #0f1614;
+  --sc-color-surface-2: #16201d;
+  --sc-color-surface-elevated: #1d2825;
+  --sc-color-surface-inset: #0a100e;
+  --sc-color-surface-toolbar: #111a17;
+  --sc-color-surface-input: #111a17;
 
-  --sc-color-text-primary: #f2f7f4;
-  --sc-color-text-secondary: #b8c8c0;
-  --sc-color-text-muted: #91a299;
-  --sc-color-text-disabled: #67716e;
-  --sc-color-text-inverse: #101416;
+  --sc-color-text-primary: #f3f8f6;
+  --sc-color-text-secondary: #b6c6bf;
+  --sc-color-text-muted: #8ea099;
+  --sc-color-text-disabled: #66716d;
+  --sc-color-text-inverse: #0b1310;
   --sc-color-text-link: #8db4ff;
-  --sc-color-text-technical: #c0cac6;
-  --sc-color-text-unit: #939e9a;
+  --sc-color-text-technical: #bfcac5;
+  --sc-color-text-unit: #929d98;
 
-  --sc-color-border: #2c3539;
-  --sc-color-border-soft: #222b2e;
-  --sc-color-border-strong: #466054;
-  --sc-color-divider: #1f272a;
+  --sc-color-border: #26312d;
+  --sc-color-border-soft: #1c2522;
+  --sc-color-border-strong: #43594f;
+  --sc-color-divider: #1a2320;
 
-  --sc-color-action-primary: #39d4a2;
-  --sc-color-action-hover: #3bcb9a;
-  --sc-color-action-pressed: #27ac80;
+  --sc-color-action-primary: #2fd39b;
+  --sc-color-action-hover: #4de0ae;
+  --sc-color-action-pressed: #22b382;
   --sc-color-action-foreground: #06140f;
-  --sc-color-action-subtle: #12261f;
-  --sc-color-brand-secondary: #6cc6a4;
+  --sc-color-action-subtle: #10241d;
+  --sc-color-brand-secondary: var(--sc-cyan-300);
 
   --sc-color-focus: #86a8ff;
   --sc-color-info: #86a8ff;
@@ -433,7 +529,7 @@
   --sc-color-state-error-foreground: var(--sc-color-state-error);
 
   /* En Noche el relleno es claro, así que el primer plano se invierte a tinta.
-     Medido: #45c98a con #06140f = 8,95:1; #f26b6b con #1a0e0e = 6,20:1. */
+     Medido: #7ad96b con #06140f = 12,54:1; #ff7586 con #1a0e0e = 6,85:1. */
   --sc-color-success-solid: var(--sc-color-state-success);
   --sc-color-success-on-solid: #06140f;
   --sc-color-error-solid: var(--sc-color-state-error);
@@ -464,22 +560,38 @@
   --sc-color-critical-point: #e7bd55;
 
   --sc-shadow-raised:
-    0 1px 2px rgba(0, 0, 0, 0.4),
-    0 6px 18px rgba(0, 0, 0, 0.32);
+    0 1px 2px rgba(0, 0, 0, 0.42),
+    0 6px 18px rgba(0, 0, 0, 0.34);
+  --sc-shadow-lifted:
+    0 2px 6px rgba(0, 0, 0, 0.46),
+    0 14px 32px rgba(0, 0, 0, 0.44),
+    0 32px 70px rgba(0, 0, 0, 0.4);
   --sc-shadow-floating:
-    0 2px 8px rgba(0, 0, 0, 0.42),
-    0 18px 52px rgba(0, 0, 0, 0.46);
+    0 2px 8px rgba(0, 0, 0, 0.44),
+    0 18px 52px rgba(0, 0, 0, 0.48);
   --sc-shadow-modal:
-    0 10px 28px rgba(0, 0, 0, 0.5),
-    0 28px 86px rgba(0, 0, 0, 0.62);
+    0 10px 28px rgba(0, 0, 0, 0.52),
+    0 32px 90px rgba(0, 0, 0, 0.64);
   --sc-shadow-popover:
-    0 2px 10px rgba(0, 0, 0, 0.44),
-    0 14px 40px rgba(0, 0, 0, 0.5);
-  --sc-shadow-contact: 0 1px 3px rgba(0, 0, 0, 0.42);
+    0 2px 10px rgba(0, 0, 0, 0.46),
+    0 16px 42px rgba(0, 0, 0, 0.52);
+  --sc-shadow-contact: 0 1px 3px rgba(0, 0, 0, 0.44);
   --sc-shadow-drop: 0 12px 26px rgba(0, 0, 0, 0.5);
   --sc-shadow-sheet:
     0 -2px 10px rgba(0, 0, 0, 0.4),
     0 -18px 52px rgba(0, 0, 0, 0.52);
+
+  /* El vidrio en Noche oscurece en vez de aclarar: una capa translúcida
+     clara sobre grafito produce niebla, no cristal. */
+  --sc-surface-glass: color-mix(in srgb, var(--sc-color-surface-1) 76%, transparent);
+  --sc-surface-glass-strong: color-mix(in srgb, var(--sc-color-surface-1) 92%, transparent);
+  --sc-surface-glass-border: color-mix(in srgb, var(--sc-color-border-strong) 52%, transparent);
+  --sc-ring-inset: inset 0 1px 0 color-mix(in srgb, var(--sc-color-action-primary) 14%, transparent);
+  --sc-glow-accent: 0 10px 34px color-mix(in srgb, var(--sc-color-action-primary) 20%, transparent);
+  --sc-glow-aula: 0 10px 34px color-mix(in srgb, var(--sc-color-aula) 22%, transparent);
+  --sc-gradient-sheen: linear-gradient(180deg,
+    color-mix(in srgb, var(--sc-color-action-primary) 10%, transparent),
+    transparent 46%);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -490,6 +602,7 @@
     --sc-motion-control: 0.001ms;
     --sc-motion-standard: 0.001ms;
     --sc-motion-slow: 0.001ms;
+    --sc-motion-reveal: 0.001ms;
     --sc-motion-loading: 0.001ms;
     --sc-ease-emphasized: linear;
     --sc-spring-soft: linear;

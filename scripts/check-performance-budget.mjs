@@ -28,18 +28,28 @@ const ROOT = path.resolve(import.meta.dirname, '..');
  * deliberate 3 % of headroom so that ordinary content edits (a few translation keys, a CSS
  * rule) do not fail the gate, while a new library or an eagerly-imported feature does.
  *
- * Measured 2026-08-03 after moving the animation feature bundle out of the entry chunk
- * (`LazyMotion` + `m` components): 629 337 bytes, 169 132 gzip.
+ * Measured 2026-08-06 after the AG-015 visual overhaul: 651 107 bytes, 174 355 gzip.
+ *
+ * Why the ceiling moved. The previous pair (648 000 / 174 000) came from a 2026-08-03
+ * measurement of 629 337 / 169 132. By the time AG-015 started, `main` already measured
+ * 639 791 / 171 997 — three feature commits had quietly eaten 10 454 bytes of that 3 % of
+ * headroom without ever tripping the gate, which is exactly the drift this script exists to
+ * make visible. AG-015 itself adds 11 316 bytes / 2 358 gzip: a restructured token layer and
+ * a rewritten welcome surface, both of which are pure CSS in the entry chunk. That cost is
+ * deliberate and was authorised as a design decision, so the ceiling is re-based on the new
+ * measurement rather than the redesign being trimmed to fit a stale number.
  *
  * KNOWN DEBT: this is still above the 0.8.1 baseline of 556 000 bytes / 148 531 gzip. The
  * gap is the animation core (`m` + `AnimatePresence` + `LazyMotion`) that the welcome
- * screen pulls into the entry chunk. Lowering this ceiling requires moving the welcome
- * screen's animations back to CSS; until that decision is made, the ceiling holds the line
- * where it is instead of letting it drift further.
+ * screen pulls into the entry chunk. AG-015 deliberately drove its new hero animation from
+ * CSS instead of `motion` so as not to deepen that debt, but the card hovers and the
+ * `AnimatePresence` filter reflow still need it. Lowering this ceiling means porting those
+ * two to CSS as well; until that decision is made, the ceiling holds the line where it is
+ * instead of letting it drift further.
  */
 const BUDGET = {
-  eagerBytes: 648_000,
-  eagerGzip: 174_000,
+  eagerBytes: 670_000,
+  eagerGzip: 179_500,
 };
 
 let report;

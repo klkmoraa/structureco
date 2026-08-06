@@ -22,12 +22,18 @@ Este roadmap establece la secuencia óptima para implementar las propuestas de m
   ├── AG-011: Perfilado del Análisis Completo para Localizar Cuellos de Botella — ✅ Implementada
   ├── AG-013: Generación Diferida (Lazy Loading) de Trazas Educativas `educationTrace` — ✅ Implementada
   ├── AG-009: Presets de Materiales y Perfiles Estructurales AISC / Eurocódigo — ✅ Implementada
-  └── AG-014 (Plan Maestro Consolidado): UX Móvil, Modo Aula y PDF — ✅ Implementada
+  └── AG-014: Plan Maestro Consolidado de UX, Modo Aula y PDF — ✅ Implementada
+         |
+         v
+[FASE 4: Refinamiento Premium y WOW Effect]
+  └── AG-015: Refactorización Premium del Sistema de Diseño (WOW UX/UI) — ✅ Implementada
 ```
 
 ---
 
-## Detalle por Fase (AG-014 Plan Maestro de UX)
+## Detalle por Fase Actual
 
-- **AG-014A (Fase 1)**: Presets de Materiales/Perfiles y Explicador de Casos de Cargas — ✅ **Implementada**.
-- **AG-014 Consolidada (Fases 2, 3 y 4)**: Sustitución Numérica en Aula, Rediseño Móvil y Expediente PDF Editorial — ✅ **Implementada** (2026-08-05). El diagnóstico de las Fases 3 y 4.1 no se reproducía contra el código real; ver notas en la propuesta y en `reports/2026-08-05-2300-ag014-consolidada.md`.
+- **AG-015 (Fase 4 - Premium Design)** — ✅ Implementada 2026-08-06. Dirección visual **"Mesa de dibujo"**: paleta v3 (neutros de grafito, esmeralda, segundo tono cian), escala tipográfica de display, capa de materia tokenizada (vidrio, anillos, halos, gradientes) y pantalla de bienvenida reescrita alrededor de una pieza de firma que dibuja un pórtico biempotrado con su diagrama de momentos. Reporte: `reports/2026-08-06-0036-ag015-premium-ui.md`.
+  - **Divergencia respecto a lo anticipado en este roadmap:** no se incorporaron Inter ni JetBrains como fuentes descargadas. La decisión **D-010** (`docs/ux-redesign/DECISIONS.md`) prohíbe `@font-face` y CDN en esta app local-first. En su lugar se usan las familias variables con tamaño óptico ya presentes en el sistema (`Segoe UI Variable Display`/`Text`, `SF Pro Display`/`Text`), que dan el salto tipográfico sin descargar nada. Si se quiere Inter de verdad habría que revisar D-010 primero.
+  - Glassmorphism y microanimaciones sí entraron, pero tokenizados y con `prefers-reduced-motion` / `prefers-reduced-transparency` respetados.
+  - Queda abierto: el techo de rendimiento se re-baseó (ver reporte) y el core de animación sigue en el chunk de entrada.

@@ -21,6 +21,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { APP_VERSION } from '../../appVersion';
 import { NewExerciseDialog } from './NewExerciseDialog';
 import { BrandMark } from '../topbar/BrandMark';
+import { WelcomeStructureArt } from './WelcomeStructureArt';
 import { presentExample } from './examplePresentation';
 import type { TranslationKey } from '../../i18n/catalogs';
 
@@ -51,6 +52,19 @@ const ACADEMIC_EXAMPLE_NAMES = new Set(['Hibbeler · carga tributaria Fig. 2–1
 
 type TemplateFilter = 'all' | 'academic' | 'models';
 
+/**
+ * Separa la última palabra del titular para teñirla con el gradiente de marca.
+ * Se hace sobre el texto ya traducido —y no con dos claves de i18n— porque el
+ * énfasis es una decisión tipográfica, no de contenido: cualquier idioma nuevo
+ * lo hereda sin tener que partir la frase en el catálogo. El texto renderizado
+ * sigue siendo idéntico al de la clave, así que el nombre accesible no cambia.
+ */
+const splitEmphasis = (title: string) => {
+  const lastSpace = title.trimEnd().lastIndexOf(' ');
+  if (lastSpace <= 0) return { lead: '', emphasis: title };
+  return { lead: title.slice(0, lastSpace), emphasis: title.slice(lastSpace + 1) };
+};
+
 export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeScreenProps) => {
   const { project, replaceProject } = useProject();
   const { language, t } = useI18n();
@@ -79,6 +93,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
 
   const nodeCount = project.nodes.length;
   const memberCount = project.members.length;
+  const { lead, emphasis } = splitEmphasis(t('welcome.title'));
 
   const hoverLift = reducedMotion ? undefined : { scale: 1.015, y: -2 };
   const pressDown = reducedMotion ? undefined : { scale: 0.985 };
@@ -91,7 +106,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
       <div className="welcome-base" inert={exerciseDialogOpen || importCenterOpen} aria-hidden={exerciseDialogOpen || importCenterOpen || undefined}>
         <header className="welcome-header">
           <div className="welcome-brand" aria-label="structureCo">
-            <BrandMark size={38} />
+            <BrandMark size={34} />
             <strong><span>structure</span>Co</strong>
             <span className="welcome-version-tag">v{APP_VERSION}</span>
           </div>
@@ -102,58 +117,69 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
 
         <div className="welcome-content">
           <section className="welcome-hero" aria-labelledby="welcome-title">
-            <div className="welcome-badge-pill">
-              <Sparkles size={14} />
-              <span>{t('welcome.badgePill')}</span>
+            <div className="welcome-hero-copy">
+              <p className="welcome-badge-pill">
+                <Sparkles size={14} />
+                <span>{t('welcome.badgePill')}</span>
+              </p>
+
+              <h1 id="welcome-title">
+                {lead ? `${lead} ` : null}<em className="welcome-title-accent">{emphasis}</em>
+              </h1>
+              <p className="welcome-hero-subtitle">{t('welcome.subtitle')}</p>
+
+              <ul className="welcome-features-highlights">
+                <li className="welcome-highlight-item"><CheckCircle2 size={15} /><span>{t('welcome.highlightStiffnessMethod')}</span></li>
+                <li className="welcome-highlight-item"><CheckCircle2 size={15} /><span>{t('welcome.highlightVerified')}</span></li>
+                <li className="welcome-highlight-item"><CheckCircle2 size={15} /><span>{t('welcome.highlightPdfExport')}</span></li>
+              </ul>
             </div>
 
-            <h1 id="welcome-title">{t('welcome.title')}</h1>
-            <p className="welcome-hero-subtitle">{t('welcome.subtitle')}</p>
-
-            <div className="welcome-features-highlights">
-              <div className="welcome-highlight-item"><CheckCircle2 size={15} /><span>{t('welcome.highlightStiffnessMethod')}</span></div>
-              <div className="welcome-highlight-item"><CheckCircle2 size={15} /><span>{t('welcome.highlightVerified')}</span></div>
-              <div className="welcome-highlight-item"><CheckCircle2 size={15} /><span>{t('welcome.highlightPdfExport')}</span></div>
-            </div>
-
-            <div className="welcome-hero-launcher" onPointerEnter={onPreloadWorkspace} onFocusCapture={onPreloadWorkspace} onTouchStart={onPreloadWorkspace}>
-              <m.button whileHover={hoverLift} whileTap={pressDown} className="welcome-launcher-card welcome-launcher-card--primary" onClick={openBlankProject}>
-                <div className="welcome-launcher-icon"><Compass size={24} /></div>
-                <div className="welcome-launcher-info">
-                  <div className="welcome-launcher-header">
-                    <strong>{t('welcome.fullProject')}</strong>
-                    <span className="welcome-pill-badge">{t('welcome.pillFreeCanvas')}</span>
-                  </div>
-                  <small>{t('welcome.launcherFreeCanvasDescription')}</small>
-                </div>
-                <ArrowRight size={18} className="welcome-launcher-arrow" />
-              </m.button>
-
-              <m.button whileHover={hoverLift} whileTap={pressDown} className="welcome-launcher-card welcome-launcher-card--classroom" onClick={() => setExerciseDialogOpen(true)}>
-                <div className="welcome-launcher-icon"><GraduationCap size={24} /></div>
-                <div className="welcome-launcher-info">
-                  <div className="welcome-launcher-header">
-                    <strong>{t('welcome.newExercise')}</strong>
-                    <span className="welcome-pill-badge welcome-pill-badge--aula">{t('welcome.pillClassroomMode')}</span>
-                  </div>
-                  <small>{t('welcome.launcherClassroomDescription')}</small>
-                </div>
-                <ArrowRight size={18} className="welcome-launcher-arrow" />
-              </m.button>
-
-              <m.button whileHover={hoverLift} whileTap={pressDown} className="welcome-launcher-card welcome-launcher-card--recent" onClick={onOpenWorkspace}>
-                <div className="welcome-launcher-icon"><FolderOpen size={24} /></div>
-                <div className="welcome-launcher-info">
-                  <div className="welcome-launcher-header">
-                    <small>{t('welcome.continueProject')}</small>
-                    <span className="welcome-project-stats">{t('welcome.projectStats', { nodes: nodeCount, members: memberCount })}</span>
-                  </div>
-                  <strong>{project.name}</strong>
-                </div>
-                <ArrowRight size={18} className="welcome-launcher-arrow" />
-              </m.button>
+            <div className="welcome-hero-figure">
+              <WelcomeStructureArt />
             </div>
           </section>
+
+          {/* `div`, no `section`: tres botones que se describen solos no necesitan
+              ser una región del documento, y etiquetarla obligaría a inventar un
+              nombre accesible que no aporta nada sobre lo que ya dicen los botones. */}
+          <div className="welcome-hero-launcher" onPointerEnter={onPreloadWorkspace} onFocusCapture={onPreloadWorkspace} onTouchStart={onPreloadWorkspace}>
+            <m.button whileHover={hoverLift} whileTap={pressDown} className="welcome-launcher-card welcome-launcher-card--primary" onClick={openBlankProject}>
+              <span className="welcome-launcher-icon"><Compass size={22} /></span>
+              <span className="welcome-launcher-info">
+                <span className="welcome-launcher-header">
+                  <strong>{t('welcome.fullProject')}</strong>
+                  <span className="welcome-pill-badge">{t('welcome.pillFreeCanvas')}</span>
+                </span>
+                <small>{t('welcome.launcherFreeCanvasDescription')}</small>
+              </span>
+              <ArrowRight size={18} className="welcome-launcher-arrow" />
+            </m.button>
+
+            <m.button whileHover={hoverLift} whileTap={pressDown} className="welcome-launcher-card welcome-launcher-card--classroom" onClick={() => setExerciseDialogOpen(true)}>
+              <span className="welcome-launcher-icon"><GraduationCap size={22} /></span>
+              <span className="welcome-launcher-info">
+                <span className="welcome-launcher-header">
+                  <strong>{t('welcome.newExercise')}</strong>
+                  <span className="welcome-pill-badge welcome-pill-badge--aula">{t('welcome.pillClassroomMode')}</span>
+                </span>
+                <small>{t('welcome.launcherClassroomDescription')}</small>
+              </span>
+              <ArrowRight size={18} className="welcome-launcher-arrow" />
+            </m.button>
+
+            <m.button whileHover={hoverLift} whileTap={pressDown} className="welcome-launcher-card welcome-launcher-card--recent" onClick={onOpenWorkspace}>
+              <span className="welcome-launcher-icon"><FolderOpen size={22} /></span>
+              <span className="welcome-launcher-info">
+                <span className="welcome-launcher-header">
+                  <small>{t('welcome.continueProject')}</small>
+                  <span className="welcome-project-stats">{t('welcome.projectStats', { nodes: nodeCount, members: memberCount })}</span>
+                </span>
+                <strong>{project.name}</strong>
+              </span>
+              <ArrowRight size={18} className="welcome-launcher-arrow" />
+            </m.button>
+          </div>
 
           <section className="welcome-showcase" aria-labelledby="welcome-showcase-title">
             <div className="welcome-showcase-header">
@@ -169,11 +195,12 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
             </div>
 
             <m.button whileHover={reducedMotion ? undefined : { scale: 1.01, y: -1 }} whileTap={reducedMotion ? undefined : { scale: 0.99 }} className="welcome-import-card" onClick={() => setImportCenterOpen(true)}>
-              <div className="welcome-import-icon"><Upload size={22} /></div>
-              <div className="welcome-import-text">
+              <span className="welcome-import-icon"><Upload size={20} /></span>
+              <span className="welcome-import-text">
                 <strong>{t('welcome.import')}</strong>
                 <small>{t('welcome.importDescription')}</small>
-              </div>
+              </span>
+              <ArrowRight size={16} className="welcome-launcher-arrow" />
             </m.button>
 
             <div className="welcome-templates-grid">
@@ -197,18 +224,18 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
                       className="welcome-template-card"
                       onClick={() => openExample(example.build)}
                     >
-                      <div className="welcome-template-top">
+                      <span className="welcome-template-top">
                         <span className={`welcome-category-badge ${meta.badgeClass}`}>{t(meta.categoryKey)}</span>
                         <Icon size={18} className="welcome-template-icon" />
-                      </div>
-                      <div className="welcome-template-body">
+                      </span>
+                      <span className="welcome-template-body">
                         <strong>{copy.name}</strong>
                         <small>{copy.description}</small>
-                      </div>
-                      <div className="welcome-template-footer">
+                      </span>
+                      <span className="welcome-template-footer">
                         <span>{t('welcome.loadModel')}</span>
                         <ArrowRight size={14} />
-                      </div>
+                      </span>
                     </m.button>
                   );
                 })}
@@ -221,20 +248,20 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
               <Cpu size={18} />
               <h2 id="welcome-workflow-title">{t('welcome.stepsTitle')}</h2>
             </div>
-            <div className="welcome-workflow-steps">
-              <div className="welcome-workflow-step">
-                <div className="welcome-step-num">1</div>
+            <ol className="welcome-workflow-steps">
+              <li className="welcome-workflow-step">
+                <span className="welcome-step-num">1</span>
                 <div className="welcome-step-content"><strong>{t('welcome.model')}</strong><p>{t('welcome.modelDescription')}</p></div>
-              </div>
-              <div className="welcome-workflow-step">
-                <div className="welcome-step-num">2</div>
+              </li>
+              <li className="welcome-workflow-step">
+                <span className="welcome-step-num">2</span>
                 <div className="welcome-step-content"><strong>{t('welcome.load')}</strong><p>{t('welcome.loadDescription')}</p></div>
-              </div>
-              <div className="welcome-workflow-step">
-                <div className="welcome-step-num">3</div>
+              </li>
+              <li className="welcome-workflow-step">
+                <span className="welcome-step-num">3</span>
                 <div className="welcome-step-content"><strong>{t('welcome.analyze')}</strong><p>{t('welcome.analyzeDescription')}</p></div>
-              </div>
-            </div>
+              </li>
+            </ol>
           </section>
         </div>
 

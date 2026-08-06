@@ -8,6 +8,7 @@ const readCss = (url: URL) => readFileSync(url, 'utf8').replace(/\r\n/g, '\n');
 
 const tokensCss = readCss(new URL('./tokens.css', import.meta.url));
 const stylesCss = readCss(new URL('../styles.css', import.meta.url));
+const uiCss = readCss(new URL('./components/ui.css', import.meta.url));
 
 const blockFor = (pattern: RegExp) => {
   const match = tokensCss.match(pattern);
@@ -202,7 +203,7 @@ describe('Phase 4 design-token contract', () => {
   });
 
   it('does not consume primitive color tokens from component CSS', () => {
-    expect(stylesCss).not.toMatch(/var\(--sc-(?:white|black|green-\d+|blue-\d+|violet-\d+|orange-\d+|red-\d+|amber-\d+)\)/);
+    expect(stylesCss).not.toMatch(/var\(--sc-(?:white|black|green-\d+|cyan-\d+|slate-\d+|blue-\d+|violet-\d+|orange-\d+|red-\d+|amber-\d+)\)/);
   });
 
   it('never hardcodes an opaque color in component CSS', () => {
@@ -222,6 +223,93 @@ describe('Phase 4 design-token contract', () => {
         offenders.push(declaration.slice(0, 80));
       }
     }
+    expect(offenders).toEqual([]);
+  });
+});
+
+/**
+ * `--sc-*` custom properties injected at runtime rather than declared in `tokens.css`.
+ * `WorkspaceShell` writes these from `visualViewport` on every resize, so the stylesheet
+ * legitimately reads them with a fallback and the static check must not flag them.
+ */
+const RUNTIME_INJECTED_TOKENS = new Set([
+  '--sc-visual-viewport-height',
+  '--sc-visual-viewport-top',
+  '--sc-visual-viewport-bottom',
+]);
+
+const referencedTokens = (css: string) => {
+  const local = new Set([...css.matchAll(/(--[\w-]+)\s*:/g)].map((match) => match[1]));
+  return [...css.matchAll(/var\(\s*(--sc-[\w-]+)/g)]
+    .map((match) => match[1])
+    .filter((name) => !local.has(name) && !RUNTIME_INJECTED_TOKENS.has(name));
+};
+
+describe('AG-015 premium visual layer contract', () => {
+  const declared = new Set([...tokensCss.matchAll(/(--[\w-]+)\s*:/g)].map((match) => match[1]));
+
+  it.each([
+    ['styles.css', stylesCss],
+    ['ui.css', uiCss],
+  ] as const)('resolves every design token %s references', (_label, css) => {
+    // A `var(--sc-…)` typo does not fail the build, it silently renders the property
+    // invalid — which is how `.welcome-badge--beam` shipped with an unstyled badge.
+    const missing = [...new Set(referencedTokens(css))].filter((name) => !declared.has(name));
+    expect(missing).toEqual([]);
+  });
+
+  it('declares the display typography scale the marketing surfaces need', () => {
+    const display = [
+      '--sc-font-display',
+      '--sc-font-size-display-xl',
+      '--sc-font-size-display-md',
+      '--sc-font-size-lead',
+      '--sc-line-height-display',
+      '--sc-tracking-display',
+      '--sc-tracking-eyebrow',
+      '--sc-font-weight-display',
+    ];
+    for (const token of display) expect(rootTokens.declarations.has(token), token).toBe(true);
+  });
+
+  it('declares materials — glass, rings, glows and gradients — as tokens, not per-component literals', () => {
+    const materials = [
+      '--sc-surface-glass',
+      '--sc-surface-glass-border',
+      '--sc-blur-glass',
+      '--sc-ring-inset',
+      '--sc-glow-accent',
+      '--sc-glow-aula',
+      '--sc-shadow-lifted',
+      '--sc-gradient-brand-soft',
+      '--sc-gradient-display',
+      '--sc-gradient-sheen',
+    ];
+    for (const token of materials) expect(rootTokens.declarations.has(token), token).toBe(true);
+  });
+
+  it('recalibrates every material Dark cannot inherit from Day', () => {
+    // Translucency and glow read inverted across themes: a scrim tuned for porcelain
+    // turns milky over graphite, and an accent halo that reads as light in Day reads
+    // as haze in Night. Each of these must be re-measured, not inherited.
+    const recalibrated = [
+      '--sc-surface-glass',
+      '--sc-surface-glass-border',
+      '--sc-ring-inset',
+      '--sc-glow-accent',
+      '--sc-shadow-lifted',
+    ];
+    for (const token of recalibrated) expect(darkTokens.declarations.has(token), token).toBe(true);
+  });
+
+  it('keeps the welcome surface free of untokenized elevation', () => {
+    // The previous welcome cards hardcoded `rgba(0,0,0,.15)`, which is invisible against
+    // the Night ground: elevation has to come from the theme-calibrated shadow tokens.
+    const welcomeRules = [...stylesCss.matchAll(/^[^\n{]*\.welcome[^\n{]*\{([^}]*)\}/gm)];
+    const offenders = welcomeRules
+      .flatMap((rule) => rule[1].split(';'))
+      .filter((declaration) => /box-shadow/.test(declaration) && /rgba?\(/.test(declaration))
+      .map((declaration) => declaration.trim());
     expect(offenders).toEqual([]);
   });
 });

@@ -1,7 +1,15 @@
 # Paleta — Sistema de diseño structureCo
 
-> Fuente de verdad: `src/design-system/tokens.css` (paleta v2, 2026-08-03). Contrastes recalculados en esta revisión (ver `reports/` para el detalle de la migración v1 → v2).
-> Dirección visual: "Mesa Modular" + "Laboratorio Nocturno" + "Instrumento de Precisión", con identidad propia verde/teal de ingeniería estructural — ahora con un teal más profio, un modo Noche más profundo y una carga puntual salmón-coral en vez de naranja.
+> Fuente de verdad: `src/design-system/tokens.css` (paleta v3, 2026-08-06, AG-015). Contrastes recalculados en esta revisión (ver `reports/` para el detalle de las migraciones v1 → v2 → v3).
+> Dirección visual: **"Mesa de dibujo"** — papel de grafito, trazo de tinta y un instrumento de precisión encima. Sustituye a "Mesa Modular"; conserva "Laboratorio Nocturno" para el tema Noche y el rigor numérico de "Instrumento de Precisión".
+
+Lo que cambió en v3:
+
+- **Suelo de grafito, no de menta.** Los neutros pasan de una familia teñida de verde claro a un gris frío de croma bajo, para que el blanco de una superficie sea un escalón real de elevación y no un matiz.
+- **Esmeralda en vez de pino.** `--sc-color-action-primary` pasa de `#007a67` a `#00795f`, alineado con el `theme-color` que `index.html` ya declaraba.
+- **Segundo tono de marca.** Se añade el cian de trazo (`--sc-cyan-*`) como `--sc-color-brand-secondary`. Vive en el dibujo técnico y en el gradiente de display; **nunca** en controles.
+- **La materia es token** (nueva sección 11): vidrio, anillos, halos y gradientes dejan de ser literales por componente.
+- Sin cambios: `--sc-color-bg-canvas`, toda la capa técnica (sección 7) y los pares sólidos de éxito/error. Son la base de medida del release 0.8.0 y mover el lienzo obligaría a re-verificar los ocho roles técnicos.
 
 ## Arquitectura de capas
 
@@ -23,7 +31,9 @@ No se consumen directamente. Se listan como referencia de las ramps.
 | Token | Valor | Notas |
 | --- | --- | --- |
 | `--sc-white` / `--sc-black` | `#ffffff` / `#000000` | El Noche nunca usa negro puro como fondo. |
-| `--sc-green-50…900` | `#ddf4ec`, `#c5ede1`, `#97dec9`, `#5acaad`, `#24a88a`, `#007a67`, `#006158`, `#004a40`, `#003b33`, `#002b24` | Identidad verde/teal ("pino calibrado"), re-anclada al nuevo `--sc-green-500` (`#007a67`, antes `#0a7e5e`) conservando la misma familia de matiz/relación de pasos. |
+| `--sc-green-50…900` | `#e4f5ee`, `#c3e9db`, `#93d7bf`, `#54bf9d`, `#18a077`, `#00795f`, `#00614c`, `#004b3b`, `#003a2d`, `#002b21` | Identidad esmeralda (v3). Re-anclada a `--sc-green-500` = `#00795f` (antes `#007a67` teal-pino), conservando la relación de pasos. |
+| `--sc-cyan-300/600` | `#8ccfe9`, `#0e6b8f` | **Nuevo en v3.** Cian de trazo: segunda dimensión de marca. Sólo alimenta `--sc-color-brand-secondary` (600 en Día, 300 en Noche). Los escalones intermedios de la familia (`#dcf0fa`, `#3fa9cf`, `#1a86ae`, `#0a536f`) están documentados aquí pero **no se declaran**: una rampa sin consumidor viaja en el chunk de entrada sin pagar su sitio. |
+| Familia grafito | `#fafcfb`, `#f4f8f6`, `#eaf0ed`, `#dde5e1`, `#c8d4ce`, `#a3b2ab`, `#7c8b85`, `#5b6b64`, `#41504a`, `#2a3833`, `#16211d`, `#0b1310` | **Nuevo en v3.** Gris frío de croma bajo que sustituye a los neutros mentolados. Por la misma razón que el cian, no se declara como rampa: sólo los escalones con consumidor viven en `tokens.css`, escritos directamente sobre el rol semántico. |
 | `--sc-blue-100/300/500/600/700` | `#e8effd`, `#9dbdf6`, `#345fd6`, `#294db7`, `#1847ab` | Azul de interacción: selección / foco / información. `500`/`600` se movieron a un azul más editorial (antes `#2867e8` / `#1e56cc`). |
 | `--sc-violet-500` | `#7357d8` | Acento Aula (sin cambios: se mantiene distinto a propósito del resto de la paleta). |
 | `--sc-coral-500` | `#c85a45` | **Renombrado** desde `--sc-orange-500` (`#e25d32`). Carga puntual — salmón-coral, ya no naranja. |
@@ -35,12 +45,12 @@ No se consumen directamente. Se listan como referencia de las ramps.
 
 | Token | Día | Noche | Uso previsto | Uso prohibido | Contraste |
 | --- | --- | --- | --- | --- | --- |
-| `--sc-color-action-primary` | `#007a67` (green-500) | `#39d4a2` | Botón primario, CTA, activo de marca, línea de influencia, snap/hover del canvas | Estados de éxito de formularios (usar `state-success`), foco de teclado (usar azul) | 5.28:1 Día / 9.97:1 Noche contra `action-foreground` |
-| `--sc-color-action-hover` | `#006158` (green-600) | `#3bcb9a` | Hover del primario | Texto suelto | Recalibrado junto al nuevo `green-500` |
-| `--sc-color-action-pressed` | `#004a40` (green-700) | `#27ac80` | Pressed del primario | — | Recalibrado junto al nuevo `green-500` |
+| `--sc-color-action-primary` | `#00795f` (green-500) | `#2fd39b` | Botón primario, CTA, activo de marca, línea de influencia, snap/hover del canvas | Estados de éxito de formularios (usar `state-success`), foco de teclado (usar azul) | 5.38:1 Día / 9.79:1 Noche contra `action-foreground` |
+| `--sc-color-brand-secondary` | `#0e6b8f` (cyan-600) | `#8ccfe9` (cyan-300) | Segundo tono de marca: dibujo técnico de la bienvenida y `--sc-gradient-display` | Controles, estados, cualquier cosa accionable (ese trabajo es del esmeralda) | 5.97:1 Día / 10.67:1 Noche sobre `surface-1` |
+| `--sc-color-action-hover` | `#00614c` (green-600) | `#4de0ae` | Hover del primario | Texto suelto | En Noche ahora **aclara** sobre el primario; antes lo oscurecía, que es el gesto contrario al esperado |
+| `--sc-color-action-pressed` | `#004b3b` (green-700) | `#22b382` | Pressed del primario | — | Recalibrado junto al nuevo `green-500` |
 | `--sc-color-action-foreground` | `#ffffff` | `#06140f` | Texto/icono sobre fondos de acción | Sobre superficies claras | Par de `action-primary` |
-| `--sc-color-action-subtle` | `#ddf4ec` (green-50) | `#12261f` | Fondos suaves de acción (chips, hovers tenues) | Como color de texto | Fondo, no requiere 4.5:1 propio |
-| `--sc-color-brand-secondary` | `#004a40` (green-700) | `#6cc6a4` | Marca secundaria, detalles editoriales | Botones de estado | — |
+| `--sc-color-action-subtle` | `#e4f5ee` (green-50) | `#10241d` | Fondos suaves de acción (chips, hovers tenues) | Como color de texto | Fondo, no requiere 4.5:1 propio |
 | `--sc-color-aula` | `#7357d8` (violet-500) | `#9a83f0` | Identidad del modo Aula (guía, insignias) | Estados de error/warning | Sin cambios en v2 |
 | `--sc-color-aula-foreground` | `#ffffff` | `#171121` | Texto sobre fondo Aula | — | Par de `aula` |
 
@@ -48,36 +58,36 @@ No se consumen directamente. Se listan como referencia de las ramps.
 
 | Token | Día | Noche | Uso previsto | Uso prohibido |
 | --- | --- | --- | --- | --- |
-| `--sc-color-bg-app` | `#eef4f1` | `#08110e` | Fondo global de la aplicación | Fondos de tarjetas (usar surface-1/2) |
+| `--sc-color-bg-app` | `#eaf0ed` | `#070d0b` | Fondo global de la aplicación | Fondos de tarjetas (usar surface-1/2) |
 | `--sc-color-bg-canvas` | `#fafcfb` | `#060b09` | Fondo del lienzo estructural; base de validación de la paleta técnica | Paneles de UI |
-| `--sc-color-surface-1` | `#ffffff` | `#101915` | Superficie base de paneles y tarjetas | — |
-| `--sc-color-surface-2` | `#e4ece8` | `#16231d` | Superficie secundaria: fondos de segmented, hovers, iconos contenedores | Texto |
-| `--sc-color-surface-elevated` | `#ffffff` | `#232a2e` | Popovers, diálogos, drawers (elevación real: en Noche es más clara que surface-1) | Fondos planos extensos |
-| `--sc-color-surface-inset` | `#dde7e2` | `#131719` | Superficies hundidas (wells, áreas rebajadas) | — |
-| `--sc-color-surface-toolbar` | `#fbfcfc` | `#14191c` | Rail de herramientas y topbar | — |
-| `--sc-color-surface-input` | `#ffffff` | `#14191c` | Fondo de campos de entrada | — |
+| `--sc-color-surface-1` | `#ffffff` | `#0f1614` | Superficie base de paneles y tarjetas | — |
+| `--sc-color-surface-2` | `#e1e9e5` | `#16201d` | Superficie secundaria: fondos de segmented, hovers, iconos contenedores | Texto |
+| `--sc-color-surface-elevated` | `#ffffff` | `#1d2825` | Popovers, diálogos, drawers (elevación real: en Noche es más clara que surface-1) | Fondos planos extensos |
+| `--sc-color-surface-inset` | `#dbe4df` | `#0a100e` | Superficies hundidas (wells, áreas rebajadas) | — |
+| `--sc-color-surface-toolbar` | `#f8fbfa` | `#111a17` | Rail de herramientas y topbar | — |
+| `--sc-color-surface-input` | `#ffffff` | `#111a17` | Fondo de campos de entrada | — |
 
 ### Bordes y divisores
 
 | Token | Día | Noche | Uso previsto |
 | --- | --- | --- | --- |
-| `--sc-color-border` | `#cbd6d0` | `#2c3539` | Borde estándar de controles y paneles |
-| `--sc-color-border-soft` | `#e6ebe8` | `#222b2e` | Bordes de baja jerarquía (headers de modal, filas) |
-| `--sc-color-border-strong` | `#96a69e` | `#466054` | Bordes enfatizados, scrollbars |
-| `--sc-color-divider` | `#e2e8e4` | `#1f272a` | Líneas divisorias puras |
+| `--sc-color-border` | `#c8d4ce` | `#26312d` | Borde estándar de controles y paneles |
+| `--sc-color-border-soft` | `#e3eae6` | `#1c2522` | Bordes de baja jerarquía (headers de modal, filas) |
+| `--sc-color-border-strong` | `#93a49c` | `#43594f` | Bordes enfatizados, scrollbars |
+| `--sc-color-divider` | `#dfe7e3` | `#1a2320` | Líneas divisorias puras |
 
 ## 4 · Texto
 
 | Token | Día | Noche | Uso previsto | Uso prohibido | Contraste |
 | --- | --- | --- | --- | --- | --- |
-| `--sc-color-text-primary` | `#10231b` | `#f2f7f4` | Texto principal, títulos, valores decisivos | — | 16.43:1 / 16.54:1 |
-| `--sc-color-text-secondary` | `#3f554b` | `#b8c8c0` | Párrafos secundarios, descripciones, instrucciones | — | 8.04:1 / 10.29:1 |
-| `--sc-color-text-muted` | `#5f736a` | `#91a299` | **Solo** metadatos auxiliares de tamaño suficiente | Párrafos, instrucciones o valores que afecten una decisión (usar secondary/primary) | Regla explícita en COLOR_ACCESSIBILITY.md |
-| `--sc-color-text-disabled` | `#939c97` | `#67716e` | Controles deshabilitados | Nunca comunica información indispensable por sí solo | Exento de AA por estado |
-| `--sc-color-text-inverse` | `#ffffff` | `#101416` | Texto sobre fondos oscuros/claros invertidos (tooltips) | — | — |
+| `--sc-color-text-primary` | `#0c1a15` | `#f3f8f6` | Texto principal, títulos, valores decisivos | — | 17.88:1 / 17.09:1 |
+| `--sc-color-text-secondary` | `#3a4f47` | `#b6c6bf` | Párrafos secundarios, descripciones, instrucciones | — | 8.79:1 / 10.32:1 |
+| `--sc-color-text-muted` | `#5b6f66` | `#8ea099` | **Solo** metadatos auxiliares de tamaño suficiente | Párrafos, instrucciones o valores que afecten una decisión (usar secondary/primary) | Regla explícita en COLOR_ACCESSIBILITY.md |
+| `--sc-color-text-disabled` | `#93a09a` | `#66716d` | Controles deshabilitados | Nunca comunica información indispensable por sí solo | Exento de AA por estado |
+| `--sc-color-text-inverse` | `#ffffff` | `#0b1310` | Texto sobre fondos oscuros/claros invertidos (tooltips) | — | — |
 | `--sc-color-text-link` | `#294db7` (blue-600) | `#8db4ff` | Enlaces | Botones primarios | 7.40:1 Día (verificado en el PDF de paleta v2) |
-| `--sc-color-text-technical` | `#46534d` | `#c0cac6` | Texto técnico de apoyo (etiquetas de magnitudes) | — | — |
-| `--sc-color-text-unit` | `#7b8781` | `#939e9a` | Unidades junto a valores numéricos | Valores en sí | — |
+| `--sc-color-text-technical` | `#445450` | `#bfcac5` | Texto técnico de apoyo (etiquetas de magnitudes) | — | — |
+| `--sc-color-text-unit` | `#78857f` | `#929d98` | Unidades junto a valores numéricos | Valores en sí | — |
 
 ## 5 · Interacción, foco y selección
 
@@ -195,6 +205,25 @@ Tres niveles fijos; nunca se usa un negro arbitrario en el componente. Sin cambi
 ## 10 · Alias de compatibilidad (capa 4)
 
 Para CSS existente en migración por rol: `--app-bg`, `--surface`, `--surface-2`, `--surface-3` (derivado con `color-mix`), `--canvas-bg`, `--text`, `--muted`, `--muted-strong`, `--subtle`, `--border`, `--border-soft`, `--shadow`, `--accent(-hover/-pressed/-soft/-foreground)`, `--focus`, `--selection(-soft)`, `--axial`, `--shear`, `--moment`, `--force`, `--dimension`, `--axis`, `--deformed`, `--reaction`, `--warning`, `--error`, `--danger`, `--success`, `--grid(-strong)`, `--member`, `--node-fill`, `--radius-*`, `--topbar-h`, `--toolbar-w`, `--inspector-w`, `--motion-*`, `--ease-*`. Todos resuelven a tokens `--sc-*`; el objetivo es retirarlos conforme cada superficie migra. Todos siguen apuntando a los mismos roles semánticos tras la migración v2 — ningún alias cambió de destino, solo el valor final que resuelven.
+
+## 11 · Materia (nuevo en v3)
+
+Vidrio, anillos, halos y gradientes son tokens, no literales por componente: cada uno se mide distinto en Día y en Noche, y dejarlos sueltos garantiza que el tema oscuro herede una decisión tomada para porcelana.
+
+| Token | Día | Noche | Uso previsto | Uso prohibido |
+| --- | --- | --- | --- | --- |
+| `--sc-surface-glass` | `surface-1` al 72% | `surface-1` al 76% | Barras y paneles translúcidos sobre contenido | Superficies con texto largo encima |
+| `--sc-surface-glass-strong` | `surface-1` al 88% | `surface-1` al 92% | Topbar y pie: cristal que sí soporta texto | — |
+| `--sc-surface-glass-border` | blanco al 66% | `border-strong` al 52% | Canto de una superficie de vidrio | — |
+| `--sc-blur-glass` / `--sc-blur-chrome` | `blur(20px) saturate(1.6)` / `blur(14px) saturate(1.3)` | idénticos | Desenfoque de cristal. **La saturación no es opcional**: sin ella el desenfoque deja el lienzo lechoso justo donde el ojo compara colores de diagrama | — |
+| `--sc-ring-inset` | luz blanca al 72% | acento al 14% | 1px de canto interior superior en todo lo que se eleva | Elementos planos |
+| `--sc-glow-accent` / `--sc-glow-aula` | acento/violeta al 24% | al 20% / 22% | Halo de marca **sólo en hover o estado activo** | Reposo |
+| `--sc-ring-focus` | foco al 30% | hereda | Halo de foco tokenizado | Sustituir el `outline` de foco |
+| `--sc-gradient-brand-soft` | esmeralda 10% → surface | hereda | Relleno de la tarjeta de acción primaria | Fondos extensos |
+| `--sc-gradient-display` | esmeralda → cian | hereda | **Un único uso**: la palabra acentuada del titular de bienvenida | Cualquier segundo sitio: repetido deja de leerse como acento |
+| `--sc-gradient-sheen` | blanco 64% → transparente | acento 10% → transparente | Brillo superior de tarjetas y botón primario | — |
+
+Elevación: `--sc-shadow-raised` → `--sc-shadow-lifted` (nuevo en v3, para hover de tarjeta) → `--sc-shadow-floating` → `--sc-shadow-popover` → `--sc-shadow-modal`. En Día la tinta de sombra es grafito verdoso (`rgba(11, 31, 24, …)`), no negro puro: sobre porcelana el negro ensucia.
 
 ## Regla transversal: no depender solo del color
 
