@@ -186,6 +186,14 @@ async function verifyTopbarClayMaterial(page) {
   };
 }
 
+async function verifyToolRailClayMaterial(page, viewport) {
+  const material = await readClayMaterial(page, '.toolbar');
+  return {
+    [`toolRail${viewport}HasNoBackdropFilter`]: material.backdropFilter === 'none',
+    [`toolRail${viewport}HasClayShadow`]: material.boxShadow.includes('inset'),
+  };
+}
+
 async function verifyWelcomeClayMaterial(page) {
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 
@@ -366,6 +374,7 @@ async function desktop() {
   await verifyWelcomeClayMaterial(page);
   await enterWorkspace(page, { example: true });
   Object.assign(out.checks, await verifyTopbarClayMaterial(page));
+  Object.assign(out.checks, await verifyToolRailClayMaterial(page, 'Desktop'));
   out.checks.title = await page.title();
   out.checks.structureCo = await page.locator('.brand-name').isVisible();
   out.checks.canvas = await page.locator('svg.structural-canvas').isVisible();
@@ -542,6 +551,7 @@ async function mobile() {
   await page.reload({ waitUntil: 'networkidle' });
   await verifyWelcomeMobileScroll(page, cdp, { width: 430, height: 932 });
   await enterWorkspace(page, { example: true });
+  Object.assign(out.checks, await verifyToolRailClayMaterial(page, 'Mobile'));
   const metrics = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, sh: document.documentElement.scrollHeight, ch: document.documentElement.clientHeight }));
   out.metrics.mobile = metrics;
   out.checks.mobileNoHorizontalOverflow = metrics.sw <= metrics.cw + 1;

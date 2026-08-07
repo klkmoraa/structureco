@@ -555,7 +555,7 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .menu-copy small { color: var(--muted); font-size: var(--sc-font-size-label); line-height: 1.4; }
 
 .workspace { min-height: 0; flex: 1; display: grid; grid-template-columns: var(--toolbar-w) minmax(0, 1fr) var(--inspector-w); position:relative; isolation:isolate; }
-.toolbar { border-right: 1px solid var(--border); background: var(--sc-color-surface-toolbar); padding: 12px 10px; display: flex; flex-direction: column; gap: 4px; min-height: 0; z-index: 10; overflow-y:auto; overscroll-behavior:contain; }
+.toolbar { padding: 12px 10px; display: flex; flex-direction: column; gap: 4px; min-height: 0; z-index: 10; overflow-y:auto; overscroll-behavior:contain; }
 .desktop-tool-list { display:contents; }
 .mobile-tool-dock,.mobile-tool-palette,.mobile-tool-sheet-backdrop,.results-mobile-toggle,.results-sheet-backdrop { display:none; }
 .tool-button { min-height: 56px; width: 100%; border: 0; background: transparent; border-radius: 8px; display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 7px; text-align: left; padding: 0 11px; color: var(--text); }
@@ -956,7 +956,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .analyze-button { min-width:var(--sc-control-height-touch); width:var(--sc-control-height-touch); height:var(--sc-control-height-touch); padding:0; }
   .analyze-button > .sc-button__label { display:none; }
   .workspace { grid-template-columns: 1fr; grid-template-rows:minmax(0,1fr) auto; }
-  .toolbar { position:absolute; z-index:25; left:10px; right:10px; bottom:calc(30px + env(safe-area-inset-bottom)); height:52px; border:1px solid var(--border); border-radius:13px; box-shadow:var(--shadow); flex-direction:row; gap:2px; padding:4px; overflow-x:auto; overflow-y:hidden; background:color-mix(in srgb,var(--surface) 92%,transparent); backdrop-filter:blur(16px); }
+  .toolbar { position:absolute; z-index:25; left:10px; right:10px; bottom:calc(30px + env(safe-area-inset-bottom)); height:52px; border-radius:13px; flex-direction:row; gap:2px; padding:4px; overflow-x:auto; overflow-y:hidden; }
   .tool-button { min-width:44px; width:44px; height:44px; min-height:44px; }
   .toolbar .tool-button svg { width:19px; height:19px; }
   .toolbar-spacer,.selection-tip { display:none; }
@@ -1389,10 +1389,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
     padding:5px max(7px,env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom)) max(7px,env(safe-area-inset-left));
     border-width:1px 0 0;
     border-radius:0;
-    background:color-mix(in srgb,var(--surface) 96%,transparent);
-    box-shadow:var(--sc-shadow-sheet);
     overflow:visible;
-    backdrop-filter:blur(18px);
   }
   .desktop-tool-list,.toolbar-spacer,.selection-tip { display:none; }
   .mobile-tool-dock {
@@ -1699,8 +1696,8 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 @media (prefers-reduced-transparency:reduce) {
-  .toolbar,.welcome-header,.popover,.canvas-mode-badge,.canvas-result-legend,.mobile-inspector-toggle,.import-center-backdrop,.new-exercise-backdrop,.mobile-inspector-backdrop,.results-sheet-backdrop,.quick-entry-bar,.cut-tooltip,.welcome-workflow,.welcome-footer,.welcome-badge-pill,.welcome-highlight-item,.welcome-filter-tabs,.welcome-import-card { backdrop-filter:none!important; }
-  .toolbar,.welcome-header,.popover,.canvas-mode-badge,.canvas-result-legend,.mobile-inspector-toggle,.quick-entry-bar,.cut-tooltip,.welcome-workflow,.welcome-footer { background:var(--surface)!important; }
+  .welcome-header,.popover,.canvas-mode-badge,.canvas-result-legend,.mobile-inspector-toggle,.import-center-backdrop,.new-exercise-backdrop,.mobile-inspector-backdrop,.results-sheet-backdrop,.quick-entry-bar,.cut-tooltip,.welcome-workflow,.welcome-footer,.welcome-badge-pill,.welcome-highlight-item,.welcome-filter-tabs,.welcome-import-card { backdrop-filter:none!important; }
+  .welcome-header,.popover,.canvas-mode-badge,.canvas-result-legend,.mobile-inspector-toggle,.quick-entry-bar,.cut-tooltip,.welcome-workflow,.welcome-footer { background:var(--surface)!important; }
 }
 
 @media (prefers-reduced-motion:reduce) {
