@@ -40,3 +40,12 @@ El rail de herramientas era el siguiente consumidor del workspace que debía aba
 Por instrucción del checkpoint, después de completar mutación/restauración no se lanzaron más comandos de gate. El controlador queda a cargo de la revisión visual desktop/compact/mobile Light/Dark, los full gates frescos y la comprobación post-cambio de diff/frontera. No se lanzó dev server manual, navegador interactivo, WebKit, suite completa ni push.
 
 Concern no bloqueante: los checks preexistentes de `:active` en welcome flaquearon durante varias corridas. Se hizo únicamente la repetición permitida en cada gate previo al checkpoint, se documentó la deuda y no se cambió el arnés.
+
+## Cierre del controlador (2026-08-07 13:18)
+
+- Revisión independiente: APPROVED, sin Critical, Important ni Minor.
+- Playwright Day/Night PASS en 1536×960, 1200×800 y 390×844. Geometría observada: rail 164 px, compacto 76 px y dock móvil 390×58 px; todos dentro del viewport, con gradiente clay, canto, al menos tres capas/dos `inset`, sin backdrop y con halo activo visible. Consola y errores de página vacíos.
+- Pipeline completo con timeout diagnóstico ya documentado: lint, frontera 29/29, Vitest 97 archivos/738 pruebas, build y presupuesto 664811/670000 bytes y 178313/179500 gzip.
+- QA fresco: una primera ejecución falló solo el muestreo `welcomeimportCardActiveTransformIsPressedTranslate`; la repetición inmediata pasó toda la matriz, incluidas las cuatro keys de tool rail, con consola/página limpias. La estabilización del arnés permanece en Tarea 10.
+
+La tarea queda cerrada; no se hizo push.
