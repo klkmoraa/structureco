@@ -1,0 +1,53 @@
+/* La materia clay componible.
+ *
+ * Se declara UNA VEZ por rol de elevación, aplicada por lista de selectores.
+ * Cambiar la materia es editar un bloque aquí, no perseguir siete reglas
+ * repartidas por `styles.css`. Cada tarea de vestido añade sus propios
+ * selectores al grupo que le corresponde.
+ *
+ * Se importa desde `App.tsx` DESPUÉS de `styles.css`, así que queda en el
+ * chunk de entrada (nunca sufre el retraso del chunk lazy de `ui.css`) y
+ * gana la cascada a todo `styles.css` sin necesitar `!important`.
+ *
+ * Un elemento sólo tiene un valor de `data-level` a la vez, así que los tres
+ * grupos de nivel no compiten entre sí. `[data-pressed='true']` sí puede
+ * coexistir con un nivel, y por eso va al final: gana la cascada por orden de
+ * aparición cuando ambos atributos están presentes en el mismo elemento.
+ *
+ * `Surface` (`design-system/components/surface.tsx`) emite `data-level` y
+ * `data-pressed`. Cualquier otro selector puede sumarse a un grupo sin pasar
+ * por `Surface`: por eso `[data-level='…']` genérico también engancha marcado
+ * que no usa el componente React. */
+
+/* flat: sin volumen. Zonas técnicas densas — tablas, filas del inspector,
+   el lienzo. Es el nivel por defecto en esas zonas, no una excepción. */
+.sc-surface[data-level='flat'],
+[data-level='flat'] {
+  background: var(--sc-color-surface-1);
+  border: 1px solid var(--sc-color-border-soft);
+  box-shadow: none;
+}
+
+/* raised: la superficie normal — paneles, barras, tarjetas. */
+.sc-surface[data-level='raised'],
+[data-level='raised'] {
+  background: var(--sc-gradient-clay);
+  border: var(--sc-clay-edge);
+  box-shadow: var(--sc-shadow-clay-md);
+}
+
+/* floating: lo que se despega del plano — popovers, hojas, menús. */
+.sc-surface[data-level='floating'],
+[data-level='floating'] {
+  background: var(--sc-gradient-clay);
+  border: var(--sc-clay-edge);
+  box-shadow: var(--sc-shadow-clay-floating);
+}
+
+/* pressed: invierte la iluminación. Coexiste con cualquier nivel — por eso
+   va al final y sólo toca lo que un estado pulsado necesita cambiar. */
+.sc-surface[data-pressed='true'],
+[data-pressed='true'] {
+  background: var(--sc-color-surface-pressed);
+  box-shadow: var(--sc-shadow-clay-pressed);
+}

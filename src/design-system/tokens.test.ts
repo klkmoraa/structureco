@@ -355,4 +355,15 @@ describe('AG-015 premium visual layer contract', () => {
   it('reserves a hero radius above the card scale', () => {
     expect(rootTokens.declarations.has('--sc-radius-hero')).toBe(true);
   });
+
+  it('measures a canvas-chrome border that clears the non-text contrast floor in both themes', () => {
+    // Nothing else does: --sc-color-border-strong is 1.96:1 against the canvas
+    // in Day. Floating chrome (mode badge, zoom controls, quick-entry) needs
+    // its own measured border or it becomes unreadable once the glass that
+    // used to separate it from the drawing is gone.
+    expect(contrast('--sc-color-border-canvas-chrome', '--sc-color-bg-canvas', lightTheme))
+      .toBeGreaterThanOrEqual(3);
+    expect(contrast('--sc-color-border-canvas-chrome', '--sc-color-bg-canvas', darkTheme))
+      .toBeGreaterThanOrEqual(3);
+  });
 });

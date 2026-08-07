@@ -15,7 +15,7 @@ export interface SurfaceProps extends HTMLAttributes<HTMLElement> {
   level?: SurfaceLevel;
   /** Invierte la iluminación. El estilo vive en CSS; aquí sólo se expone el estado. */
   pressed?: boolean;
-  as?: 'div' | 'section' | 'article' | 'aside';
+  as?: 'div' | 'section' | 'article' | 'aside' | 'button' | 'header' | 'nav';
 }
 
 /**

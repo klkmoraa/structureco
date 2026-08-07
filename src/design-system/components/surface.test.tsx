@@ -41,4 +41,15 @@ describe('Surface', () => {
     render(<Surface aria-labelledby="t" data-testid="s" />);
     expect(screen.getByTestId('s').getAttribute('aria-labelledby')).toBe('t');
   });
+
+  it('renders as an interactive element when asked', () => {
+    render(<Surface as="button" data-testid="s" />);
+    expect(screen.getByTestId('s').tagName).toBe('BUTTON');
+  });
+
+  it('renders as header or nav for landmark surfaces', () => {
+    render(<><Surface as="header" data-testid="h" /><Surface as="nav" data-testid="n" /></>);
+    expect(screen.getByTestId('h').tagName).toBe('HEADER');
+    expect(screen.getByTestId('n').tagName).toBe('NAV');
+  });
 });

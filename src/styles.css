@@ -26,31 +26,17 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 :where(button, input, select, textarea, summary):focus-visible { outline: var(--sc-focus-ring-width) solid var(--focus); outline-offset: var(--sc-focus-ring-offset); }
 .sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
 
-/* Superficie clay (`Surface`, tarea 3). Vivía en `design-system/components/ui.css`,
-   pero ese fichero sólo lo carga `WorkspaceShell.tsx` (lazy) — así que la bienvenida,
-   que no es lazy y es la única que usa `<Surface>` hoy, no tenía esta materia en el
-   primer pintado: dependía de ganar la carrera contra el precalentamiento por
-   `requestIdleCallback`. Movida aquí (hoja siempre presente en el chunk de entrada),
-   no duplicada — nada en `ui.css` la necesitaba (`Surface`/`.sc-surface` no se usa
-   en ningún componente del workspace todavía). El orden importa: tiene que declararse
-   antes que cualquier selector que le gane la especificidad por venir después en el
-   archivo, como `.welcome-frame` más abajo, que sube su radio a `--sc-radius-hero`. */
+/* Superficie clay (`Surface`, ciclo 1). La materia (fondo, borde, sombra por
+   nivel) vive en `design-system/material.css` desde el ciclo 2 — declarada
+   una vez, compartida con el resto del workspace. Aquí sólo queda lo que es
+   forma, no materia: el radio y la transición, que sí varían por componente.
+   `.welcome-frame`, más abajo, sube el radio a `--sc-radius-hero` con igual
+   especificidad e igual gana por venir después en el archivo — sigue siendo
+   cierto, no ha cambiado. */
 .sc-surface {
-  background: var(--sc-gradient-clay);
-  border: var(--sc-clay-edge);
   border-radius: var(--sc-radius-xl);
   transition: var(--sc-transition-control);
 }
-
-.sc-surface[data-level='flat'] {
-  background: var(--sc-color-surface-1);
-  border-color: var(--sc-color-border-soft);
-  box-shadow: none;
-}
-
-.sc-surface[data-level='raised'] { box-shadow: var(--sc-shadow-clay-md); }
-.sc-surface[data-level='floating'] { box-shadow: var(--sc-shadow-clay-floating); }
-.sc-surface[data-pressed='true'] { box-shadow: var(--sc-shadow-clay-pressed); }
 
 .app-shell { height: 100%; height: 100dvh; background: var(--app-bg); color: var(--text); display: flex; flex-direction: column; }
 /* Pantalla de bienvenida · "Mesa de dibujo" (AG-015) ------------------------
