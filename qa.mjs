@@ -172,6 +172,12 @@ async function readClayMaterial(page, selector) {
     return {
       background: style.backgroundImage !== 'none' ? style.backgroundImage : style.backgroundColor,
       border: style.borderTopWidth + ' ' + style.borderTopStyle + ' ' + style.borderTopColor,
+      borderWidths: [
+        style.borderTopWidth,
+        style.borderRightWidth,
+        style.borderBottomWidth,
+        style.borderLeftWidth,
+      ].join(' '),
       boxShadow: style.boxShadow,
       backdropFilter: style.backdropFilter,
     };
@@ -188,9 +194,13 @@ async function verifyTopbarClayMaterial(page) {
 
 async function verifyToolRailClayMaterial(page, viewport) {
   const material = await readClayMaterial(page, '.toolbar');
+  const edgeContract = viewport === 'Desktop'
+    ? { key: 'toolRailDesktopHasFourSidedClayEdge', widths: '1px 1px 1px 1px' }
+    : { key: 'toolRailMobilePortraitHasTopOnlyClayEdge', widths: '1px 0px 0px 0px' };
   return {
     [`toolRail${viewport}HasNoBackdropFilter`]: material.backdropFilter === 'none',
     [`toolRail${viewport}HasClayShadow`]: material.boxShadow.includes('inset'),
+    [edgeContract.key]: material.borderWidths === edgeContract.widths,
   };
 }
 

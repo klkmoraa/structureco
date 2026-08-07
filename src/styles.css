@@ -1387,7 +1387,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
     height:calc(64px + env(safe-area-inset-bottom));
     min-height:calc(64px + env(safe-area-inset-bottom));
     padding:5px max(7px,env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom)) max(7px,env(safe-area-inset-left));
-    border-width:1px 0 0;
+    --sc-toolbar-clay-border-width:1px 0 0;
     border-radius:0;
     overflow:visible;
   }
@@ -1581,7 +1581,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
     height:100%;
     min-height:0;
     padding:max(4px,env(safe-area-inset-top)) 4px max(4px,env(safe-area-inset-bottom));
-    border-width:0 1px 0 0;
+    --sc-toolbar-clay-border-width:0 1px 0 0;
   }
   .mobile-tool-dock { grid-template-columns:1fr; align-content:center; gap:2px; }
   .mobile-tool-dock .tool-button { height:48px; min-height:48px; }
@@ -2815,7 +2815,7 @@ button:not(:disabled):active,.selection-card:active {
     grid-column:1;
     grid-row:2;
     width:100%;
-    border-width:1px 0 0;
+    --sc-toolbar-clay-border-width:1px 0 0;
   }
   .mobile-tool-dock { grid-template-columns:repeat(6,minmax(0,1fr)); align-items:stretch; gap:2px; }
   .mobile-tool-dock .tool-button > span:not(.sc-tool-button__icon) {

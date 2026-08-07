@@ -35,6 +35,7 @@
 .toolbar {
   background: var(--sc-gradient-clay);
   border: var(--sc-clay-edge);
+  border-width: var(--sc-toolbar-clay-border-width, 1px);
   box-shadow: var(--sc-shadow-clay-md);
 }
 

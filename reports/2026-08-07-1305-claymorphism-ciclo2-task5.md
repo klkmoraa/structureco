@@ -49,3 +49,19 @@ Concern no bloqueante: los checks preexistentes de `:active` en welcome flaquear
 - QA fresco: una primera ejecución falló solo el muestreo `welcomeimportCardActiveTransformIsPressedTranslate`; la repetición inmediata pasó toda la matriz, incluidas las cuatro keys de tool rail, con consola/página limpias. La estabilización del arnés permanece en Tarea 10.
 
 La tarea queda cerrada; no se hizo push.
+
+## Fix round 1 — canto responsive real bajo la cascada eager (2026-08-07 13:36)
+
+Una revisión independiente tardía detectó que el shorthand `border: var(--sc-clay-edge)` de `material.css`, importado después de `styles.css`, anulaba en estilo computado los `border-width` responsive que el reporte original daba por preservados. El código conservaba esas declaraciones, pero no su efecto: el dock móvil terminaba con canto de cuatro lados.
+
+Se corrigió con un puente de propiedad custom: el material eager consume `--sc-toolbar-clay-border-width` con fallback de 1 px en los cuatro lados, mientras `styles.css` conserva la geometría por breakpoint (portrait top-only, landscape rail right-only y small-landscape dock top-only). `qa.mjs` ahora mide los cuatro anchos mediante `getComputedStyle` y certifica por claves distintas desktop y mobile portrait.
+
+Evidencia TDD/QA:
+
+- RED con CSS sin corregir: build PASS; QA falló únicamente `toolRailMobilePortraitHasTopOnlyClayEdge`; desktop four-sided pasó.
+- GREEN: build PASS; QA PASS con `toolRailDesktopHasFourSidedClayEdge` y `toolRailMobilePortraitHasTopOnlyClayEdge` verdaderos, consola y errores de página vacíos.
+- Mutación: retirar temporalmente la asignación portrait produjo exactamente el fallo nominal mobile; se restauró.
+- Estado restaurado certificado por el controlador: build PASS y QA PASS completo con ambas claves verdaderas.
+- La restauración lógica quedó limpia en el diff de Git (10 inserciones en `qa.mjs`, 1 en `material.css`, 3 sustituciones en `styles.css`). El SHA físico cambió por normalización CRLF→LF durante la mutación; `git diff --check` no reporta errores y no existe cambio adicional de contenido.
+
+La afirmación anterior “Mobile v2 mantiene border-width” se entiende ahora como contrato computado, no mera presencia textual. No se tocó `capturas.mjs`, el motor ni comportamiento del producto; no se hizo push.
