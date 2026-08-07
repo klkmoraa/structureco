@@ -478,7 +478,7 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 
 .welcome-footer { margin-top:auto; min-height:40px; padding:9px 18px; display:flex; justify-content:center; align-items:center; gap:7px; background:var(--sc-surface-glass-strong); backdrop-filter:var(--sc-blur-chrome); -webkit-backdrop-filter:var(--sc-blur-chrome); border-top:1px solid var(--border-soft); color:var(--subtle); text-align:center; font-size:11px; }
 .welcome-footer svg { color:var(--accent); flex:0 0 auto; }
-.topbar { height: var(--topbar-h); flex: 0 0 var(--topbar-h); display: grid; grid-template-columns: minmax(270px,1fr) minmax(300px,max-content) minmax(350px,1fr); align-items: center; gap: var(--sc-space-4); padding: 0 var(--sc-layout-gutter); border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--sc-color-surface-toolbar) 92%, transparent); box-shadow:0 1px 0 color-mix(in srgb,var(--border) 62%,transparent); backdrop-filter: blur(18px); position: relative; z-index: var(--sc-z-topbar); }
+.topbar { height: var(--topbar-h); flex: 0 0 var(--topbar-h); display: grid; grid-template-columns: minmax(270px,1fr) minmax(300px,max-content) minmax(350px,1fr); align-items: center; gap: var(--sc-space-4); padding: 0 var(--sc-layout-gutter); border-bottom-width: 0; position: relative; z-index: var(--sc-z-topbar); }
 .topbar-zone,.brand-block,.top-actions,.history-controls { display:flex; align-items:center; min-width:0; }
 .brand-block { justify-self:start; gap: var(--sc-space-3); position: relative; max-width:100%; }
 .topbar-context-zone { justify-self:center; gap:var(--sc-space-1); min-width:0; }
@@ -1699,8 +1699,8 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 @media (prefers-reduced-transparency:reduce) {
-  .topbar,.toolbar,.welcome-header,.popover,.canvas-mode-badge,.canvas-result-legend,.mobile-inspector-toggle,.import-center-backdrop,.new-exercise-backdrop,.mobile-inspector-backdrop,.results-sheet-backdrop,.quick-entry-bar,.cut-tooltip,.welcome-workflow,.welcome-footer,.welcome-badge-pill,.welcome-highlight-item,.welcome-filter-tabs,.welcome-import-card { backdrop-filter:none!important; }
-  .topbar,.toolbar,.welcome-header,.popover,.canvas-mode-badge,.canvas-result-legend,.mobile-inspector-toggle,.quick-entry-bar,.cut-tooltip,.welcome-workflow,.welcome-footer { background:var(--surface)!important; }
+  .toolbar,.welcome-header,.popover,.canvas-mode-badge,.canvas-result-legend,.mobile-inspector-toggle,.import-center-backdrop,.new-exercise-backdrop,.mobile-inspector-backdrop,.results-sheet-backdrop,.quick-entry-bar,.cut-tooltip,.welcome-workflow,.welcome-footer,.welcome-badge-pill,.welcome-highlight-item,.welcome-filter-tabs,.welcome-import-card { backdrop-filter:none!important; }
+  .toolbar,.welcome-header,.popover,.canvas-mode-badge,.canvas-result-legend,.mobile-inspector-toggle,.quick-entry-bar,.cut-tooltip,.welcome-workflow,.welcome-footer { background:var(--surface)!important; }
 }
 
 @media (prefers-reduced-motion:reduce) {
@@ -2963,14 +2963,6 @@ button:not(:disabled):active,.selection-card:active {
   box-shadow:var(--sc-glow-accent), var(--sc-ring-inset);
 }
 .analyze-button.analyzing { box-shadow:var(--sc-ring-focus), var(--sc-ring-inset); }
-
-/* Cristal de la barra superior: sin saturar, el desenfoque deja el lienzo
-   lechoso justo donde el ojo compara colores de diagrama. */
-.topbar {
-  background:var(--sc-surface-glass-strong);
-  backdrop-filter:var(--sc-blur-glass);
-  -webkit-backdrop-filter:var(--sc-blur-glass);
-}
 
 /* Canto interior en todo lo que se eleva. Es un solo píxel y es la
    diferencia entre "rectángulo con sombra" y "objeto con borde". */

@@ -30,7 +30,8 @@
 
 /* raised: la superficie normal — paneles, barras, tarjetas. */
 .sc-surface[data-level='raised'],
-[data-level='raised'] {
+[data-level='raised'],
+.topbar {
   background: var(--sc-gradient-clay);
   border: var(--sc-clay-edge);
   box-shadow: var(--sc-shadow-clay-md);

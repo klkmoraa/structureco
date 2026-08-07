@@ -178,6 +178,14 @@ async function readClayMaterial(page, selector) {
   });
 }
 
+async function verifyTopbarClayMaterial(page) {
+  const material = await readClayMaterial(page, '.topbar');
+  return {
+    topbarHasNoBackdropFilter: material.backdropFilter === 'none',
+    topbarHasClayShadow: material.boxShadow.includes('inset'),
+  };
+}
+
 async function verifyWelcomeClayMaterial(page) {
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 
@@ -357,6 +365,7 @@ async function desktop() {
   await verifyWelcomeHeaderResponsive(page);
   await verifyWelcomeClayMaterial(page);
   await enterWorkspace(page, { example: true });
+  Object.assign(out.checks, await verifyTopbarClayMaterial(page));
   out.checks.title = await page.title();
   out.checks.structureCo = await page.locator('.brand-name').isVisible();
   out.checks.canvas = await page.locator('svg.structural-canvas').isVisible();
