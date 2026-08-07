@@ -51,7 +51,7 @@
 .inspector-panel,
 .inspector-summary,
 .results-panel {
-  background: var(--sc-gradient-clay);
+  background: var(--sc-color-surface-1);
   border: var(--sc-clay-edge);
   box-shadow: var(--sc-shadow-clay-md);
 }
@@ -73,9 +73,9 @@
 .welcome-filter-tabs,
 .welcome-workflow,
 .welcome-footer {
-  background: var(--sc-gradient-clay);
+  background: var(--sc-color-surface-1);
   border: var(--sc-clay-edge);
-  box-shadow: var(--sc-shadow-clay-floating);
+  box-shadow: var(--sc-shadow-clay-lg);
 }
 
 .sc-toast-card--success { border-color: color-mix(in srgb, var(--sc-color-action-primary) 40%, var(--sc-color-border-soft)); }
@@ -114,5 +114,5 @@
 }
 
 @media print {
-  .results-panel { background: transparent; border: 0; box-shadow: none; }
+  .results-panel { background:transparent !important; border:0 !important; box-shadow:none !important; }
 }

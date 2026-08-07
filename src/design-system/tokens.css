@@ -53,21 +53,21 @@
      --sc-color-clay-mint / --sc-color-clay-mint-deep, no estos escalones.
      Nunca bajo texto blanco — #0b9270 con blanco mide 3,92:1 y el suelo del
      contrato es 4,5:1. La acción arranca en el 600. */
-  --sc-green-50: #eff9f5;
-  --sc-green-100: #ddf4ec;
-  --sc-green-200: #b6e5d4;
-  --sc-green-300: #57c7a4;
-  --sc-green-400: #27ad83;
-  --sc-green-500: #0b9270;
-  --sc-green-600: #08795e;  /* blanco encima = 5,37:1 */
-  --sc-green-700: #06614b;  /* blanco encima = 7,45:1 */
-  --sc-green-800: #054c3b;
-  --sc-green-900: #033a2d;
+  --sc-green-50: #e8f5ee;
+  --sc-green-100: #d1eddf;
+  --sc-green-200: #a6ddc1;
+  --sc-green-300: #6dc49b;
+  --sc-green-400: #35ad7d;
+  --sc-green-500: #159a72;
+  --sc-green-600: #087e5c;
+  --sc-green-700: #06684c;
+  --sc-green-800: #07543f;
+  --sc-green-900: #043d2f;
 
   /* Cian de trazo: la segunda dimensión de marca. Vive en el dibujo
      técnico y en los gradientes de identidad, nunca en controles. */
-  --sc-cyan-300: #8ccfe9;
-  --sc-cyan-600: #0e6b8f;
+  --sc-cyan-300: #95d0e5;
+  --sc-cyan-600: #1f88b8;
 
   /* Azul de interacción (selección / foco / información) */
   --sc-blue-100: #e8effd;
@@ -77,11 +77,11 @@
   --sc-blue-700: #1847ab;
 
   /* Acentos de estado y dominio */
-  --sc-violet-500: #7357d8;
-  --sc-coral-500: #c85a45;
-  --sc-red-500: #c73e4d;
-  --sc-red-700: #a92f2f;
-  --sc-amber-500: #d88408;
+  --sc-violet-500: #7d63c9;
+  --sc-coral-500: #c94f3f;
+  --sc-red-500: #bd4b3e;
+  --sc-red-700: #96362d;
+  --sc-amber-500: #a87912;
   --sc-plum-500: #7c4db2;
 
   /* Acentos decorativos de la referencia clay. Sólo contenedores de icono y
@@ -93,35 +93,35 @@
   /* ------------------------------------------------------------------ */
   /* 2 · ROLES SEMÁNTICOS — TEMA DÍA (papel de grafito)                  */
   /* ------------------------------------------------------------------ */
-  --sc-color-bg-app: #f4f3f0;
-  --sc-color-bg-canvas: #fafcfb;
-  --sc-color-surface-1: #fbfaf8;
-  --sc-color-surface-2: #f4f3f0;
+  --sc-color-bg-app: #f7f4ee;
+  --sc-color-bg-canvas: #fffdf9;
+  --sc-color-surface-1: #fffcf7;
+  --sc-color-surface-2: #f7f4ee;
   --sc-color-surface-elevated: var(--sc-white);
-  --sc-color-surface-pressed: #ecedea;
-  --sc-color-surface-inset: #eceae6;
-  --sc-color-surface-toolbar: #f8f8f6;
-  --sc-color-surface-input: var(--sc-white);
+  --sc-color-surface-pressed: #ede7dd;
+  --sc-color-surface-inset: #f1ede5;
+  --sc-color-surface-toolbar: #fffcf7;
+  --sc-color-surface-input: #f7f4ee;
 
-  --sc-color-text-primary: #24272b;    /* 14,4:1 sobre surface-1 */
-  --sc-color-text-secondary: #666d70;  /*  5,05:1 */
-  --sc-color-text-muted: #6b7274;      /*  4,70:1 */
+  --sc-color-text-primary: #23312c;
+  --sc-color-text-secondary: #607068;
+  --sc-color-text-muted: #6b7871;
   --sc-color-text-disabled: #9aa0a1;
   --sc-color-text-inverse: var(--sc-white);
   --sc-color-text-link: var(--sc-blue-600);
   --sc-color-text-technical: #4a5153;
   --sc-color-text-unit: #7b8284;
 
-  --sc-color-border: #e0ded9;
-  --sc-color-border-soft: #eeece8;
-  --sc-color-border-strong: #b9b6af;
+  --sc-color-border: #ded8ce;
+  --sc-color-border-soft: #ebe5dc;
+  --sc-color-border-strong: #b9afa1;
   /* El chrome que flota sobre el lienzo (badge de modo, chips, zoom, quick-entry,
      tooltip de corte) no puede apoyarse en ningún rol de superficie o borde
      existente: --sc-color-border-strong mide 1,96:1 contra #fafcfb, y ningún otro
      rol llega a 1,3:1. Medido aparte, sin depender del desenfoque que antes lo
      separaba del dibujo. */
-  --sc-color-border-canvas-chrome: #84817a; /* 3,77:1 sobre --sc-color-bg-canvas */
-  --sc-color-divider: #e8e6e1;
+  --sc-color-border-canvas-chrome: #82786d;
+  --sc-color-divider: #e7e0d6;
 
   --sc-color-action-primary: var(--sc-green-600);
   --sc-color-action-hover: var(--sc-green-700);
@@ -162,10 +162,10 @@
   --sc-color-aula-foreground: var(--sc-white);
 
   /* Lienzo y documento: explícitos, nunca producidos por inversión. */
-  --sc-color-canvas-grid: #e7ece9;
-  --sc-color-canvas-grid-strong: #d8dfdb;
-  --sc-color-canvas-member: #16211c;
-  --sc-color-canvas-node-fill: #fafcfb;
+  --sc-color-canvas-grid: #e8e1d7;
+  --sc-color-canvas-grid-strong: #d9d0c4;
+  --sc-color-canvas-member: #23312c;
+  --sc-color-canvas-node-fill: #fffdf9;
   --sc-color-overlay-soft: rgba(4, 11, 7, 0.28);
   --sc-color-overlay-sheet: rgba(2, 10, 6, 0.34);
   --sc-color-overlay-strong: rgba(5, 18, 11, 0.58);
@@ -173,22 +173,22 @@
   /* Materiales del pórtico del hero. Son roles de ilustración, no de interfaz:
      nada de texto se apoya en ellos, así que se eligen por lectura de volumen
      y no por contraste. */
-  --sc-color-clay-ivory: #f0ece2;
-  --sc-color-clay-ivory-deep: #e3ddcf;
-  --sc-color-clay-mint: #6fb99a;
-  --sc-color-clay-mint-deep: #4f9e80;
+  --sc-color-clay-ivory: #f7f4ee;
+  --sc-color-clay-ivory-deep: #e8e1d7;
+  --sc-color-clay-mint: #159a72;
+  --sc-color-clay-mint-deep: #087e5c;
 
   /* ------------------------------------------------------------------ */
   /* 3 · ROLES TÉCNICOS DEL DOMINIO (valores verificados 0.8.0)          */
   /* ------------------------------------------------------------------ */
   --sc-color-technical-load: var(--sc-coral-500);
-  --sc-color-technical-axial: #006b9a;
-  --sc-color-technical-shear: #2f7d46;
-  --sc-color-technical-moment: #b23b6f;
-  --sc-color-technical-deformed: #007d8a;
-  --sc-color-technical-reaction: #4a5fd1;
-  --sc-color-technical-dimension: #8a6800;
-  --sc-color-technical-axis: #8b4d2f;
+  --sc-color-technical-axial: #1f88b8;
+  --sc-color-technical-shear: #4a9463;
+  --sc-color-technical-moment: #c94f3f;
+  --sc-color-technical-deformed: #7d63c9;
+  --sc-color-technical-reaction: #367db7;
+  --sc-color-technical-dimension: #8d6b16;
+  --sc-color-technical-axis: #8b5e35;
   /* Alias del rol distribuido: la codificación del canvas usa el color de
      cortante para la carga repartida, y la interfaz necesita nombrarlo. */
   --sc-color-technical-distributed: var(--sc-color-technical-shear);
@@ -264,10 +264,10 @@
   --sc-radius-xs: 8px;
   --sc-radius-sm: 12px;
   --sc-radius-md: 14px;
-  --sc-radius-lg: 22px;
-  --sc-radius-xl: 28px;
-  --sc-radius-2xl: 36px;
-  --sc-radius-hero: 40px;
+  --sc-radius-lg: 26px;
+  --sc-radius-xl: 26px;
+  --sc-radius-2xl: 32px;
+  --sc-radius-hero: 26px;
   --sc-radius-sheet: 28px;
   --sc-radius-pill: 999px;
 
@@ -276,31 +276,18 @@
   /* ------------------------------------------------------------------ */
   /* La sombra es tinta de marca diluida, no negro. Sobre porcelana el negro
      puro ensucia; un grafito verdoso mantiene el aire del papel. */
-  --sc-shadow-raised:
-    0 1px 1px rgba(11, 31, 24, 0.04),
-    0 3px 8px rgba(11, 31, 24, 0.05);
-  --sc-shadow-lifted:
-    0 2px 4px rgba(11, 31, 24, 0.05),
-    0 12px 26px rgba(11, 31, 24, 0.09),
-    0 28px 60px rgba(11, 31, 24, 0.07);
-  --sc-shadow-floating:
-    0 2px 6px rgba(11, 31, 24, 0.06),
-    0 16px 44px rgba(11, 31, 24, 0.11);
-  --sc-shadow-modal:
-    0 8px 24px rgba(9, 26, 20, 0.13),
-    0 32px 84px rgba(9, 26, 20, 0.24);
-  --sc-shadow-popover:
-    0 2px 8px rgba(9, 26, 20, 0.07),
-    0 14px 34px rgba(9, 26, 20, 0.13);
+  --sc-shadow-raised: 8px 9px 19px rgba(83, 72, 55, 0.15), -7px -7px 16px rgba(255, 255, 255, 0.92);
+  --sc-shadow-lifted: 13px 15px 34px rgba(83, 72, 55, 0.17), -10px -10px 24px rgba(255, 255, 255, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --sc-shadow-floating: 13px 15px 34px rgba(83, 72, 55, 0.17), -10px -10px 24px rgba(255, 255, 255, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --sc-shadow-modal: 16px 19px 42px rgba(83, 72, 55, 0.24), -10px -10px 24px rgba(255, 255, 255, 0.92);
+  --sc-shadow-popover: 8px 9px 19px rgba(83, 72, 55, 0.15), -7px -7px 16px rgba(255, 255, 255, 0.92);
   /* Contacto: separa un control activo de su carril sin sugerir que flota. */
-  --sc-shadow-contact: 0 1px 3px rgba(11, 31, 24, 0.10);
+  --sc-shadow-contact: 0 5px 11px color-mix(in srgb, var(--sc-color-action-primary) 28%, transparent), inset 0 1.5px 0 rgba(255, 255, 255, 0.38), inset 0 -6px 9px color-mix(in srgb, var(--sc-color-action-primary) 25%, black 20%);
   /* drop-shadow() sólo admite una capa, así que la elevación flotante tiene una
      variante propia para elementos con forma recortada. */
-  --sc-shadow-drop: 0 12px 26px rgba(11, 31, 24, 0.16);
+  --sc-shadow-drop: 8px 9px 19px rgba(83, 72, 55, 0.15);
   /* Hoja inferior: la luz cae desde arriba, así que su sombra sube. */
-  --sc-shadow-sheet:
-    0 -2px 8px rgba(8, 24, 16, 0.08),
-    0 -18px 48px rgba(8, 24, 16, 0.18);
+  --sc-shadow-sheet: 0 -8px 19px rgba(83, 72, 55, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 
   /* ---- Materia clay -------------------------------------------------
      Una superficie clay son cuatro capas y una sola fuente de luz, a 145°
@@ -315,41 +302,17 @@
 
      La tinta es grafito verdoso diluido, nunca negro: sobre un fondo cálido el
      negro puro ensucia y delata el degradado. */
-  --sc-shadow-clay-xs:
-    0 1px 2px rgba(58, 70, 64, 0.05),
-    0 2px 6px rgba(58, 70, 64, 0.04),
-    inset 1px 1px 2px rgba(255, 255, 255, 0.70),
-    inset -1px -1px 2px rgba(107, 128, 117, 0.05);
-  --sc-shadow-clay-sm:
-    0 2px 5px rgba(58, 70, 64, 0.06),
-    0 6px 14px rgba(58, 70, 64, 0.05),
-    inset 1px 1px 3px rgba(255, 255, 255, 0.82),
-    inset -1px -2px 4px rgba(107, 128, 117, 0.06);
-  --sc-shadow-clay-md:
-    0 3px 8px rgba(58, 70, 64, 0.06),
-    0 12px 28px rgba(58, 70, 64, 0.10),
-    inset 2px 2px 4px rgba(255, 255, 255, 0.90),
-    inset -2px -3px 6px rgba(107, 128, 117, 0.08);
-  --sc-shadow-clay-lg:
-    0 4px 12px rgba(58, 70, 64, 0.07),
-    0 20px 44px rgba(58, 70, 64, 0.11),
-    inset 2px 3px 6px rgba(255, 255, 255, 0.92),
-    inset -3px -4px 9px rgba(107, 128, 117, 0.09);
-  --sc-shadow-clay-floating:
-    0 6px 16px rgba(58, 70, 64, 0.08),
-    0 28px 64px rgba(58, 70, 64, 0.14),
-    inset 2px 3px 6px rgba(255, 255, 255, 0.90),
-    inset -3px -4px 10px rgba(107, 128, 117, 0.10);
+  --sc-shadow-clay-xs: 4px 5px 10px rgba(83, 72, 55, 0.12), -4px -4px 9px rgba(255, 255, 255, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.84), inset -1px -1px 3px rgba(83, 72, 55, 0.08);
+  --sc-shadow-clay-sm: 8px 9px 19px rgba(83, 72, 55, 0.15), -7px -7px 16px rgba(255, 255, 255, 0.92), inset 0 1px 0 rgba(255, 255, 255, 0.9), inset -2px -2px 5px rgba(83, 72, 55, 0.08);
+  --sc-shadow-clay-md: 13px 15px 34px rgba(83, 72, 55, 0.17), -10px -10px 24px rgba(255, 255, 255, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.9), inset -3px -3px 7px rgba(83, 72, 55, 0.09);
+  --sc-shadow-clay-lg: 16px 18px 39px rgba(83, 72, 55, 0.19), -11px -11px 26px rgba(255, 255, 255, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.9), inset -4px -4px 9px rgba(83, 72, 55, 0.1);
+  --sc-shadow-clay-floating: 16px 18px 39px rgba(83, 72, 55, 0.19), -11px -11px 26px rgba(255, 255, 255, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.9), inset -4px -4px 9px rgba(83, 72, 55, 0.1);
   /* Pulsado: la luz se invierte. Sólo capas interiores — cualquier sombra
      exterior lo devolvería a parecer que flota. */
-  --sc-shadow-clay-pressed:
-    inset 3px 4px 8px rgba(58, 70, 64, 0.12),
-    inset -2px -2px 5px rgba(255, 255, 255, 0.78);
+  --sc-shadow-clay-pressed: inset 3px 4px 8px color-mix(in srgb, var(--sc-color-action-primary) 50%, black 25%), inset -2px -2px 6px color-mix(in srgb, var(--sc-color-action-primary) 25%, white 12%);
 
-  --sc-clay-edge: 1px solid rgba(255, 255, 255, 0.78);
-  --sc-gradient-clay: linear-gradient(145deg,
-    color-mix(in srgb, var(--sc-color-surface-elevated) 96%, transparent),
-    color-mix(in srgb, var(--sc-color-surface-2) 96%, transparent));
+  --sc-clay-edge: 1px solid color-mix(in srgb, var(--sc-color-border) 58%, white);
+  --sc-gradient-clay: var(--sc-color-surface-1);
 
 
   /* Anillos: 1px de luz interior en el borde superior. Es lo que separa una
@@ -384,10 +347,10 @@
      interletrado y adelgaza los remates a 64px, la de texto los engorda a
      12px. Es la mejora tipográfica más grande disponible sin descargar una
      fuente, y el sistema local-first no puede pedir una a la red. */
-  --sc-font-display: "Segoe UI Variable Display", "SF Pro Display", Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --sc-font-ui: "Segoe UI Variable Text", "SF Pro Text", Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --sc-font-display: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sc-font-ui: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --sc-font-heading: var(--sc-font-display);
-  --sc-font-mono: ui-monospace, "Cascadia Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --sc-font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Menlo, monospace;
   --sc-font-weight-regular: 400;
   --sc-font-weight-medium: 550;
   --sc-font-weight-semibold: 650;
@@ -556,54 +519,54 @@
  * y el anillo de canto pasa de luz blanca a luz de marca.
  */
 :root[data-theme='dark'] {
-  --sc-color-bg-app: #121916;
-  --sc-color-bg-canvas: #060b09;
-  --sc-color-surface-1: #1b2420;
-  --sc-color-surface-2: #202b26;
-  --sc-color-surface-elevated: #25312b;
-  --sc-color-surface-pressed: #151d1a;
-  --sc-color-surface-inset: #151d1a;
-  --sc-color-surface-toolbar: #1b2420;
-  --sc-color-surface-input: #1b2420;
+  --sc-color-bg-app: #0a1116;
+  --sc-color-bg-canvas: #0d161b;
+  --sc-color-surface-1: #15232b;
+  --sc-color-surface-2: #0a1116;
+  --sc-color-surface-elevated: #1e313b;
+  --sc-color-surface-pressed: #101b21;
+  --sc-color-surface-inset: #0a1116;
+  --sc-color-surface-toolbar: #15232b;
+  --sc-color-surface-input: #0a1116;
 
-  --sc-color-text-primary: #f2f5f3;
-  --sc-color-text-secondary: #b6c0bb;
-  --sc-color-text-muted: #93a09a;
-  --sc-color-text-disabled: #66716d;
-  --sc-color-text-inverse: #0b1310;
-  --sc-color-text-link: #8db4ff;
-  --sc-color-text-technical: #bfcac5;
-  --sc-color-text-unit: #929d98;
+  --sc-color-text-primary: #f4f8f6;
+  --sc-color-text-secondary: #a6b6b0;
+  --sc-color-text-muted: #8fa19b;
+  --sc-color-text-disabled: #64746f;
+  --sc-color-text-inverse: #0d161b;
+  --sc-color-text-link: #95d0e5;
+  --sc-color-text-technical: #d1ddd8;
+  --sc-color-text-unit: #a6b6b0;
 
-  --sc-color-border: #2e3a35;
-  --sc-color-border-soft: #232e29;
-  --sc-color-border-strong: #4a5a53;
-  --sc-color-border-canvas-chrome: #5f6d68; /* 3,66:1 sobre --sc-color-bg-canvas */
-  --sc-color-divider: #1a2320;
+  --sc-color-border: #33474f;
+  --sc-color-border-soft: #263941;
+  --sc-color-border-strong: #58717a;
+  --sc-color-border-canvas-chrome: #58717a;
+  --sc-color-divider: #20313a;
 
-  --sc-color-action-primary: #45c69a;
-  --sc-color-action-hover: #6ed7b2;
-  --sc-color-action-pressed: #35b088;
-  --sc-color-action-foreground: #06140f;
-  --sc-color-action-subtle: #163027;
-  --sc-color-brand-secondary: var(--sc-cyan-300);
+  --sc-color-action-primary: #159a72;
+  --sc-color-action-hover: #43b88f;
+  --sc-color-action-pressed: #0f815f;
+  --sc-color-action-foreground: #0d161b;
+  --sc-color-action-subtle: #13382f;
+  --sc-color-brand-secondary: #1f88b8;
 
   --sc-color-accent-blue-soft: #1d2c38;
   --sc-color-accent-violet-soft: #272138;
 
-  --sc-color-focus: #86a8ff;
-  --sc-color-info: #86a8ff;
-  --sc-color-selection: #18385e;
-  --sc-color-selection-stroke: #78a8ff;
+  --sc-color-focus: #95d0e5;
+  --sc-color-info: #1f88b8;
+  --sc-color-selection: #173e50;
+  --sc-color-selection-stroke: #72c3df;
 
-  --sc-color-state-success: #7ad96b;
-  --sc-color-state-warning: #f0aa3c;
-  --sc-color-state-error: #ff7586;
-  --sc-color-state-critical: #ff8a80;
-  --sc-color-state-info: #86a8ff;
-  --sc-color-state-stale: #f0aa3c;
-  --sc-color-state-loading: #86a8ff;
-  --sc-color-state-pending: #8d9895;
+  --sc-color-state-success: #78be83;
+  --sc-color-state-warning: #f4d75e;
+  --sc-color-state-error: #eb8373;
+  --sc-color-state-critical: #eb8373;
+  --sc-color-state-info: #72c3df;
+  --sc-color-state-stale: #f4d75e;
+  --sc-color-state-loading: #72c3df;
+  --sc-color-state-pending: #a6b6b0;
   --sc-color-state-warning-foreground: var(--sc-color-state-warning);
   --sc-color-state-error-foreground: var(--sc-color-state-error);
 
@@ -614,94 +577,62 @@
   --sc-color-error-solid: var(--sc-color-state-error);
   --sc-color-error-on-solid: #1a0e0e;
 
-  --sc-color-aula: #9a83f0;
-  --sc-color-aula-foreground: #171121;
+  --sc-color-aula: #d27aa7;
+  --sc-color-aula-foreground: #1b1118;
 
-  --sc-color-canvas-grid: #202a2b;
-  --sc-color-canvas-grid-strong: #2c3539;
-  --sc-color-canvas-member: #f1f5f4;
-  --sc-color-canvas-node-fill: #060b09;
+  --sc-color-canvas-grid: #1e3038;
+  --sc-color-canvas-grid-strong: #2b414a;
+  --sc-color-canvas-member: #f4f8f6;
+  --sc-color-canvas-node-fill: #0d161b;
   --sc-color-overlay-soft: rgba(0, 0, 0, 0.34);
   --sc-color-overlay-sheet: rgba(0, 0, 0, 0.46);
   --sc-color-overlay-strong: rgba(0, 0, 0, 0.68);
 
-  --sc-color-clay-ivory: #b9b5ab;
-  --sc-color-clay-ivory-deep: #a29e94;
-  --sc-color-clay-mint: #57c7a4;
-  --sc-color-clay-mint-deep: #3d9c7d;
+  --sc-color-clay-ivory: #1e313b;
+  --sc-color-clay-ivory-deep: #15232b;
+  --sc-color-clay-mint: #159a72;
+  --sc-color-clay-mint-deep: #0f815f;
 
-  --sc-color-technical-load: #ff7d66;
-  --sc-color-technical-axial: #6bcbf1;
-  --sc-color-technical-shear: #78dc94;
-  --sc-color-technical-moment: #ff79ac;
-  --sc-color-technical-deformed: #5bdae2;
-  --sc-color-technical-reaction: #9baaff;
-  --sc-color-technical-dimension: #ffd56a;
-  --sc-color-technical-axis: #e6a57a;
+  --sc-color-technical-load: #eb8373;
+  --sc-color-technical-axial: #72c3df;
+  --sc-color-technical-shear: #78be83;
+  --sc-color-technical-moment: #eb8373;
+  --sc-color-technical-deformed: #ab93e8;
+  --sc-color-technical-reaction: #86b9df;
+  --sc-color-technical-dimension: #f4d75e;
+  --sc-color-technical-axis: #d8a579;
 
   --sc-color-axial-compression: #d9a7f5;
   --sc-color-envelope: #b8aaff;
   --sc-color-critical-point: #e7bd55;
 
-  --sc-shadow-raised:
-    0 1px 2px rgba(0, 0, 0, 0.42),
-    0 6px 18px rgba(0, 0, 0, 0.34);
-  --sc-shadow-lifted:
-    0 2px 6px rgba(0, 0, 0, 0.46),
-    0 14px 32px rgba(0, 0, 0, 0.44),
-    0 32px 70px rgba(0, 0, 0, 0.4);
-  --sc-shadow-floating:
-    0 2px 8px rgba(0, 0, 0, 0.44),
-    0 18px 52px rgba(0, 0, 0, 0.48);
-  --sc-shadow-modal:
-    0 10px 28px rgba(0, 0, 0, 0.52),
-    0 32px 90px rgba(0, 0, 0, 0.64);
-  --sc-shadow-popover:
-    0 2px 10px rgba(0, 0, 0, 0.46),
-    0 16px 42px rgba(0, 0, 0, 0.52);
-  --sc-shadow-contact: 0 1px 3px rgba(0, 0, 0, 0.44);
-  --sc-shadow-drop: 0 12px 26px rgba(0, 0, 0, 0.5);
-  --sc-shadow-sheet:
-    0 -2px 10px rgba(0, 0, 0, 0.4),
-    0 -18px 52px rgba(0, 0, 0, 0.52);
+  --sc-shadow-raised: 8px 9px 18px rgba(0, 0, 0, 0.5), -6px -6px 14px rgba(62, 92, 102, 0.18);
+  --sc-shadow-lifted: 14px 16px 30px rgba(0, 0, 0, 0.55), -9px -9px 20px rgba(62, 92, 102, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --sc-shadow-floating: 14px 16px 30px rgba(0, 0, 0, 0.55), -9px -9px 20px rgba(62, 92, 102, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --sc-shadow-modal: 17px 20px 38px rgba(0, 0, 0, 0.64), -9px -9px 20px rgba(62, 92, 102, 0.22);
+  --sc-shadow-popover: 8px 9px 18px rgba(0, 0, 0, 0.5), -6px -6px 14px rgba(62, 92, 102, 0.18);
+  --sc-shadow-contact: 0 5px 11px color-mix(in srgb, var(--sc-color-action-primary) 28%, transparent), inset 0 1.5px 0 rgba(255, 255, 255, 0.18), inset 0 -6px 9px color-mix(in srgb, var(--sc-color-action-primary) 25%, black 20%);
+  --sc-shadow-drop: 8px 9px 18px rgba(0, 0, 0, 0.5);
+  --sc-shadow-sheet: 0 -8px 18px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 
   /* En Noche la sombra pierde trabajo —no queda luz que quitar— y el borde lo
      gana: sin un canto visible los paneles se funden con el fondo. La luz
      interior pasa de blanca a un velo de marca muy tenue; el blanco puro sobre
      grafito se lee como un arañazo. */
-  --sc-shadow-clay-xs:
-    0 1px 2px rgba(0, 0, 0, 0.30),
-    inset 1px 1px 2px rgba(120, 160, 145, 0.05),
-    inset -1px -1px 2px rgba(0, 0, 0, 0.22);
-  --sc-shadow-clay-sm:
-    0 2px 6px rgba(0, 0, 0, 0.34),
-    inset 1px 1px 3px rgba(120, 160, 145, 0.06),
-    inset -1px -2px 4px rgba(0, 0, 0, 0.26);
-  --sc-shadow-clay-md:
-    0 4px 14px rgba(0, 0, 0, 0.38),
-    inset 2px 2px 4px rgba(120, 160, 145, 0.07),
-    inset -2px -3px 6px rgba(0, 0, 0, 0.30);
-  --sc-shadow-clay-lg:
-    0 8px 24px rgba(0, 0, 0, 0.42),
-    inset 2px 3px 6px rgba(120, 160, 145, 0.08),
-    inset -3px -4px 9px rgba(0, 0, 0, 0.32);
-  --sc-shadow-clay-floating:
-    0 12px 36px rgba(0, 0, 0, 0.48),
-    inset 2px 3px 6px rgba(120, 160, 145, 0.08),
-    inset -3px -4px 10px rgba(0, 0, 0, 0.34);
-  --sc-shadow-clay-pressed:
-    inset 3px 4px 8px rgba(0, 0, 0, 0.44),
-    inset -2px -2px 5px rgba(120, 160, 145, 0.06);
+  --sc-shadow-clay-xs: 4px 5px 10px rgba(0, 0, 0, 0.4), -4px -4px 9px rgba(62, 92, 102, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.05), inset -1px -1px 3px rgba(0, 0, 0, 0.25);
+  --sc-shadow-clay-sm: 8px 9px 18px rgba(0, 0, 0, 0.5), -6px -6px 14px rgba(62, 92, 102, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset -2px -2px 5px rgba(0, 0, 0, 0.28);
+  --sc-shadow-clay-md: 14px 16px 30px rgba(0, 0, 0, 0.55), -9px -9px 20px rgba(62, 92, 102, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset -3px -3px 7px rgba(0, 0, 0, 0.30);
+  --sc-shadow-clay-lg: 17px 19px 36px rgba(0, 0, 0, 0.58), -10px -10px 22px rgba(62, 92, 102, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset -4px -4px 9px rgba(0, 0, 0, 0.32);
+  --sc-shadow-clay-floating: 17px 19px 36px rgba(0, 0, 0, 0.58), -10px -10px 22px rgba(62, 92, 102, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset -4px -4px 9px rgba(0, 0, 0, 0.32);
+  --sc-shadow-clay-pressed: inset 3px 4px 8px color-mix(in srgb, var(--sc-color-action-primary) 50%, black 25%), inset -2px -2px 6px color-mix(in srgb, var(--sc-color-action-primary) 20%, white 12%);
 
-  --sc-clay-edge: 1px solid rgba(120, 160, 145, 0.14);
-  --sc-gradient-clay: linear-gradient(145deg,
-    color-mix(in srgb, var(--sc-color-surface-elevated) 96%, transparent),
-    color-mix(in srgb, var(--sc-color-surface-1) 96%, transparent));
+  --sc-clay-edge: 1px solid var(--sc-color-border);
+  --sc-gradient-clay: var(--sc-color-surface-1);
 
 
   --sc-ring-inset: inset 0 1px 0 color-mix(in srgb, var(--sc-color-action-primary) 14%, transparent);
-  --sc-glow-accent: 0 10px 34px color-mix(in srgb, var(--sc-color-action-primary) 20%, transparent);
-  --sc-glow-aula: 0 10px 34px color-mix(in srgb, var(--sc-color-aula) 22%, transparent);
+  --sc-glow-accent: 0 0 transparent;
+  --sc-glow-aula: 0 0 transparent;
   --sc-gradient-sheen: linear-gradient(180deg,
     color-mix(in srgb, var(--sc-color-action-primary) 10%, transparent),
     transparent 46%);
