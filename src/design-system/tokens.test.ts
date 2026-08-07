@@ -370,4 +370,14 @@ describe('AG-015 premium visual layer contract', () => {
     expect(contrast('--sc-color-border-canvas-chrome', '--sc-color-bg-canvas', darkTheme))
       .toBeGreaterThanOrEqual(3);
   });
+
+  it('keeps ui.css off the flat AG-015 shadow family', () => {
+    // ui.css is the design-system library CSS — every sc-* component's shadow
+    // should resolve to the clay scale, not the flat one clay was meant to
+    // replace. Grep, not getComputedStyle: jsdom can't render this, so the
+    // text-level check is what guards it inside `npm test`.
+    const flatShadowTokens = ['--sc-shadow-raised', '--sc-shadow-lifted', '--sc-shadow-floating', '--sc-shadow-modal', '--sc-shadow-popover', '--sc-shadow-contact', '--sc-shadow-sheet'];
+    const offenders = flatShadowTokens.filter((token) => uiCss.includes(`var(${token})`));
+    expect(offenders).toEqual([]);
+  });
 });

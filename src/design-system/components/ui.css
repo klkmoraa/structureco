@@ -218,7 +218,7 @@
 }
 .sc-segmented--sm button { min-height: var(--sc-control-height-sm); }
 .sc-segmented button:not(:disabled):hover { color: var(--sc-color-text-primary); }
-.sc-segmented button[aria-checked='true'] { background: var(--sc-color-surface-1); color: var(--sc-color-action-primary); box-shadow: var(--sc-shadow-raised); }
+.sc-segmented button[aria-checked='true'] { background: var(--sc-color-surface-1); color: var(--sc-color-action-primary); box-shadow: var(--sc-shadow-clay-sm); }
 
 /* Tooltip and popover ---------------------------------------------------- */
 
@@ -232,7 +232,7 @@
   border-radius: var(--sc-radius-sm);
   background: var(--sc-color-text-primary);
   color: var(--sc-color-bg-app);
-  box-shadow: var(--sc-shadow-floating);
+  box-shadow: var(--sc-shadow-clay-md);
   font-size: var(--sc-font-size-caption);
   line-height: var(--sc-line-height-compact);
   opacity: 0;
@@ -280,7 +280,7 @@
   border-radius: var(--sc-radius-lg);
   background: var(--sc-color-surface-elevated);
   color: var(--sc-color-text-primary);
-  box-shadow: var(--sc-shadow-floating);
+  box-shadow: var(--sc-shadow-clay-floating);
 }
 .sc-popover--start .sc-popover__surface { left: 0; }
 .sc-popover--center .sc-popover__surface { left: 50%; transform: translateX(-50%); }
@@ -308,7 +308,7 @@
   border: var(--sc-border-width) solid var(--sc-color-border);
   background: var(--sc-color-surface-elevated);
   color: var(--sc-color-text-primary);
-  box-shadow: var(--sc-shadow-modal);
+  box-shadow: var(--sc-shadow-clay-floating);
 }
 .sc-modal-surface--dialog {
   width: min(560px, calc(100vw - (var(--sc-space-5) * 2)));
@@ -556,7 +556,7 @@
 .sc-layer-toggle__copy strong { font-size: var(--sc-font-size-label); }
 .sc-layer-toggle__copy small { color: var(--sc-color-text-secondary); font-size: var(--sc-font-size-caption); line-height: var(--sc-line-height-compact); }
 .sc-layer-toggle__switch { width: 34px; height: 20px; position: relative; border-radius: 999px; background: var(--sc-color-border); transition: background-color var(--sc-motion-fast) var(--sc-ease-standard); }
-.sc-layer-toggle__switch i { width: 16px; height: 16px; position: absolute; top: 2px; left: 2px; border-radius: 50%; background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-raised); transition: transform var(--sc-motion-fast) var(--sc-ease-standard); }
+.sc-layer-toggle__switch i { width: 16px; height: 16px; position: absolute; top: 2px; left: 2px; border-radius: 50%; background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-xs); transition: transform var(--sc-motion-fast) var(--sc-ease-standard); }
 .sc-layer-toggle.is-checked .sc-layer-toggle__switch { background: var(--sc-color-action-primary); }
 .sc-layer-toggle.is-checked .sc-layer-toggle__switch i { transform: translateX(14px); }
 
