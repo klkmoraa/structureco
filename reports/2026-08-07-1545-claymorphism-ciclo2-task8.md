@@ -4,7 +4,7 @@
 **Agente:** Codex
 **Rama:** `main`
 **Base:** `686a5b6af3f6018db03fd84d15a55f0033271a52`
-**Estado:** `DONE_WITH_CONCERNS`
+**Estado:** `IMPLEMENTED_UNCERTIFIED`
 
 ## Qué cambió
 
@@ -44,9 +44,19 @@ Task 8 del plan `docs/superpowers/plans/2026-08-07-claymorphism-ciclo2.md` y el 
 
 1. **Panel fuera de `raised`: completada.** Build PASS; QA FAIL en las claves nominales del panel y sus cantos en desktop, portrait y landscape. `material.css` se restauró al SHA-256 `20AA1D301990CB64D585053B68745EBAA6610C1184578964F92829AE7077BC94`.
 2. **MatrixView fuera de `flat`: completada.** Build PASS; QA FAIL únicamente en `resultsDesktopFlatMatrixViewHasFlatMaterial`. `material.css` volvió al mismo SHA-256.
-3. **Hook landscape retirado: pendiente.** Se alcanzó a retirar sin ejecutar build/QA; por instrucción de cierre se restauró antes de reportar.
-4. **Override print retirado: pendiente.** No se inició por instrucción de cierre.
+3. **Hook landscape retirado: completada.** Build PASS; QA FAIL únicamente en `resultsPhoneLandscapePanelHasTopLeftClayGeometry`. `styles.css` se restauró byte a byte al SHA-256 `AD175A8395FCF2388A234B87F11C814CC23DEADB4DCCB5AAD3EDB1FC6A490AF7`.
+4. **Override print retirado: completada.** Build PASS; QA FAIL únicamente en las tres claves nominales de fondo, borde y sombra print. `material.css` se restauró byte a byte al SHA-256 `20AA1D301990CB64D585053B68745EBAA6610C1184578964F92829AE7077BC94`.
 
+## Corrección de revisión independiente
+
+El revisor detectó que el helper responsive aceptaba cualquier `box-shadow` distinto de `none`, mientras desktop exigía la firma clay completa. Se corrigió el contrato para reutilizar `hasRaisedClayMaterial` en los tres viewports y se añadió geometría exacta de anchos **y** estilos de borde. La prueba estricta reveló dos overrides responsive con `--sc-shadow-sheet`; se retiraron para que el material eager `--sc-shadow-clay-md` gobierne también portrait y landscape. El modo focused se preservó sin cambios.
+
+## Evidencia visual focalizada
+
+- Desktop día `1536x960`: borde `1px 0 0 0`, dos sombras inset, sin backdrop ni overflow.
+- Phone portrait noche `430x932`: panel expandido, borde `1px 0 0 0`, dos sombras inset, canvas interactivo y sin overflow.
+- Phone landscape día `690x390`: panel lateral, borde `1px 0 0 1px`, dos sombras inset, canvas interactivo y sin overflow.
+- Capturas y métricas: `.superpowers/sdd/2026-08-07-claymorphism-ciclo2/visual/task8/`.
 ## Cómo verificar
 
 Evidencia obtenida:
@@ -56,14 +66,12 @@ Evidencia obtenida:
 - `npm.cmd run verify:protected` — PASS, 29/29.
 - `npx.cmd vitest run src/design-system/tokens.test.ts` — PASS, 1 archivo y 22/22 tests.
 - `npm.cmd run build` — PASS en RED y en la implementación GREEN.
-- `node qa.mjs` — PASS completo en GREEN antes de la secuencia de mutaciones.
+- `node qa.mjs` — PASS completo final tras restaurar las cuatro mutaciones, con `console: []` y `pageErrors: []`.
 - Guardián final — 63/63 hashes protegidos idénticos; diff prohibido vacío.
 - `capturas.mjs` — sin rastrear e intacto, SHA-256 `1F2CDE477FA77BC74A16C1848F544E8C7E5435FFCF0E7A4D12D644EEA774A710`.
 - `package.json` — intacto, SHA-256 `4DFD428718F3AF11A23ABA141630DCFFB56049BE724A07F8802AE756129DA76C`.
 
 ## Pendiente / siguiente paso
 
-- Ejecutar las mutaciones 3 y 4 y restaurar por hash.
-- Repetir build + QA final después de toda la secuencia de mutaciones; el intento de build final fue interrumpido y no se usa como evidencia.
-- El controlador conserva la suite completa, WebKit y la revisión visual. El implementador no ejecutó dev visual, WebKit ni suite completa.
+- La re-revisión y las suites posteriores se omiten por instrucción expresa del usuario para acelerar el cierre.
 - No se tocaron TSX, dependencias, motor, workers, data, store, tipos, Aula/import ni `capturas.mjs`. No se hizo push.

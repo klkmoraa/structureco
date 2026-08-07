@@ -259,15 +259,9 @@ function hasRaisedClayMaterial(material) {
     material.webkitBackdropFilter === 'none';
 }
 
-function hasResponsiveRaisedResultsMaterial(material) {
-  const widths = material.borderWidths.split(' ');
-  const styles = material.borderStyles.split(' ');
-  const hasSolidEdge = widths.some((width, index) => width !== '0px' && styles[index] === 'solid');
-  return material.background.includes('linear-gradient') &&
-    hasSolidEdge &&
-    material.boxShadow !== 'none' &&
-    material.backdropFilter === 'none' &&
-    material.webkitBackdropFilter === 'none';
+function hasExactClayBorderGeometry(material, expectedWidths) {
+  return material.borderWidths === expectedWidths &&
+    material.borderStyles === 'solid solid solid solid';
 }
 
 function hasFlatClayMaterial(material, expectedSurface, expectedSoftBorder) {
@@ -494,7 +488,7 @@ async function verifyResultsClayMaterial(page) {
   checks.resultsDesktopPanelHasRaisedClayMaterial = hasRaisedClayMaterial(panel);
   checks.resultsDesktopPanelHasNoBackdropFilter =
     panel.backdropFilter === 'none' && panel.webkitBackdropFilter === 'none';
-  checks.resultsDesktopPanelHasTopOnlyClayGeometry = panel.borderWidths === '1px 0px 0px 0px';
+  checks.resultsDesktopPanelHasTopOnlyClayGeometry = hasExactClayBorderGeometry(panel, '1px 0px 0px 0px');
 
   await page.getByRole('tab', { name: 'Reacciones', exact: true }).click();
   await page.locator('.results-table').waitFor({ state: 'visible' });
@@ -555,8 +549,8 @@ async function verifyResultsPhonePortraitMaterial(page) {
     borderWidths: panel.borderWidths,
   };
   return {
-    resultsPhonePortraitPanelHasRaisedClayMaterial: hasResponsiveRaisedResultsMaterial(panel),
-    resultsPhonePortraitPanelHasTopOnlyClayGeometry: panel.borderWidths === '1px 0px 0px 0px',
+    resultsPhonePortraitPanelHasRaisedClayMaterial: hasRaisedClayMaterial(panel),
+    resultsPhonePortraitPanelHasTopOnlyClayGeometry: hasExactClayBorderGeometry(panel, '1px 0px 0px 0px'),
   };
 }
 
@@ -585,8 +579,8 @@ async function verifyResultsPhoneLandscapeMaterial() {
     };
     return {
       resultsPhoneLandscapePanelKeepsCanvasInteractive: canvasInteractive === 'true',
-      resultsPhoneLandscapePanelHasRaisedClayMaterial: hasResponsiveRaisedResultsMaterial(panel),
-      resultsPhoneLandscapePanelHasTopLeftClayGeometry: panel.borderWidths === '1px 0px 0px 1px',
+      resultsPhoneLandscapePanelHasRaisedClayMaterial: hasRaisedClayMaterial(panel),
+      resultsPhoneLandscapePanelHasTopLeftClayGeometry: hasExactClayBorderGeometry(panel, '1px 0px 0px 1px'),
     };
   } finally {
     await page.close();
