@@ -35,7 +35,7 @@
 .toolbar {
   background: var(--sc-gradient-clay);
   border: var(--sc-clay-edge);
-  border-width: var(--sc-toolbar-clay-border-width, 1px);
+  border-width: var(--toolbar-clay-border-width, 1px);
   box-shadow: var(--sc-shadow-clay-md);
 }
 
@@ -53,4 +53,25 @@
 [data-pressed='true'] {
   background: var(--sc-color-surface-pressed);
   box-shadow: var(--sc-shadow-clay-pressed);
+}
+
+/* Chrome del lienzo — lo que flota sobre el dibujo técnico (badge de modo,
+   chips, controles de zoom, status, leyenda, quick-entry, tooltip de corte,
+   panel de capas). Su relleno opaco y borde medido sustituyen el vidrio sin
+   tocar el lienzo ni sus colores técnicos. */
+.canvas-mode-badge,
+.canvas-view-chips span,
+.canvas-controls,
+.canvas-status,
+.canvas-result-legend,
+.canvas-feedback,
+.canvas-hint,
+.quick-entry-bar,
+.selection-cycle-indicator,
+.cut-tooltip,
+.canvas-layer-trigger,
+.canvas-layer-panel {
+  background: var(--sc-color-surface-2);
+  border: 1px solid var(--sc-color-border-canvas-chrome);
+  box-shadow: var(--sc-shadow-clay-floating);
 }

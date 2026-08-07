@@ -178,10 +178,25 @@ async function readClayMaterial(page, selector) {
         style.borderBottomWidth,
         style.borderLeftWidth,
       ].join(' '),
+      borderTopWidth: style.borderTopWidth,
+      borderTopStyle: style.borderTopStyle,
+      borderTopColor: style.borderTopColor,
       boxShadow: style.boxShadow,
       backdropFilter: style.backdropFilter,
+      webkitBackdropFilter: style.webkitBackdropFilter || 'none',
     };
   });
+}
+
+async function readResolvedColorToken(page, token) {
+  return page.evaluate((tokenName) => {
+    const probe = document.createElement('span');
+    probe.style.color = `var(${tokenName})`;
+    document.body.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  }, token);
 }
 
 async function verifyTopbarClayMaterial(page) {
@@ -201,6 +216,27 @@ async function verifyToolRailClayMaterial(page, viewport) {
     [`toolRail${viewport}HasNoBackdropFilter`]: material.backdropFilter === 'none',
     [`toolRail${viewport}HasClayShadow`]: material.boxShadow.includes('inset'),
     [edgeContract.key]: material.borderWidths === edgeContract.widths,
+  };
+}
+
+async function verifyCanvasChromeClayMaterial(page) {
+  const badge = await readClayMaterial(page, '.canvas-mode-badge');
+  const controls = await readClayMaterial(page, '.canvas-controls');
+  const expectedBorderColor = await readResolvedColorToken(page, '--sc-color-border-canvas-chrome');
+  const materials = [badge, controls];
+  const hasNoBackdropFilter = (material) =>
+    material.backdropFilter === 'none' && material.webkitBackdropFilter === 'none';
+  const hasMeasuredBorder = (material) =>
+    material.borderTopWidth === '1px' &&
+    material.borderTopStyle === 'solid' &&
+    material.borderTopColor === expectedBorderColor;
+  const hasFloatingClayShadow = (material) =>
+    (material.boxShadow.match(/\binset\b/g) ?? []).length >= 2;
+
+  return {
+    canvasChromeHasNoBackdropFilter: materials.every(hasNoBackdropFilter),
+    canvasChromeHasMeasuredBorder: materials.every(hasMeasuredBorder),
+    canvasChromeHasFloatingClayShadow: materials.every(hasFloatingClayShadow),
   };
 }
 
@@ -385,6 +421,7 @@ async function desktop() {
   await enterWorkspace(page, { example: true });
   Object.assign(out.checks, await verifyTopbarClayMaterial(page));
   Object.assign(out.checks, await verifyToolRailClayMaterial(page, 'Desktop'));
+  Object.assign(out.checks, await verifyCanvasChromeClayMaterial(page));
   out.checks.title = await page.title();
   out.checks.structureCo = await page.locator('.brand-name').isVisible();
   out.checks.canvas = await page.locator('svg.structural-canvas').isVisible();
