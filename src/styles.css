@@ -145,6 +145,14 @@ button:disabled { cursor: not-allowed; opacity: .62; }
   .welcome-header-desktop-only { display: none; }
   .welcome-header-menu { display: inline-flex; }
 }
+/* Marco clay que envuelve todo el contenido (Surface, tarea 3). El fondo, el
+   canto y la sombra vienen de `.sc-surface`; aquí sólo se ajustan el radio
+   —el más grande de la escala, `--sc-radius-hero`— y el respiro interior. */
+.welcome-frame {
+  border-radius: var(--sc-radius-hero);
+  padding: clamp(var(--sc-space-6), 4vw, var(--sc-space-8));
+}
+
 .welcome-content {
   width:min(var(--sc-layout-reading), calc(100% - 48px));
   margin:0 auto;
@@ -254,15 +262,49 @@ button:disabled { cursor: not-allowed; opacity: .62; }
   grid-template-areas:"icon arrow" "info info";
   align-items:start; gap:18px 12px;
   padding:20px; border-radius:var(--sc-radius-xl); text-align:left; cursor:pointer;
-  background:var(--surface); border:1px solid var(--border-soft);
-  box-shadow:var(--sc-shadow-raised), var(--sc-ring-inset);
+  background:var(--sc-gradient-clay); border:var(--sc-clay-edge);
+  box-shadow:var(--sc-shadow-clay-sm);
+  transition:var(--sc-transition-control);
 }
 .welcome-launcher-card::before { content:''; position:absolute; inset:0 0 auto; height:56%; background:var(--sc-gradient-sheen); pointer-events:none; }
-.welcome-launcher-card:hover { border-color:color-mix(in srgb, var(--launcher-accent) 48%, var(--border)); box-shadow:var(--sc-shadow-lifted), var(--sc-ring-inset); }
-.welcome-launcher-card--primary { background:var(--sc-gradient-brand-soft); border-color:color-mix(in srgb, var(--accent) 26%, var(--border-soft)); }
-.welcome-launcher-card--classroom { --launcher-accent:var(--sc-color-aula); background:linear-gradient(150deg, color-mix(in srgb, var(--sc-color-aula) 9%, var(--surface)), var(--surface) 62%); border-color:color-mix(in srgb, var(--sc-color-aula) 26%, var(--border-soft)); }
-.welcome-launcher-card--recent { --launcher-accent:var(--sc-color-info); }
-.welcome-launcher-icon { grid-area:icon; width:44px; height:44px; border-radius:var(--sc-radius-lg); display:grid; place-items:center; color:var(--launcher-accent); background:color-mix(in srgb, var(--launcher-accent) 13%, var(--surface)); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--launcher-accent) 22%, transparent); }
+/* La elevación sube en hover y se hunde en press; el borde acompaña siempre a
+   la sombra para que el estado no dependa sólo de ella. El color de dominio
+   (marca / Aula / info) vive en el icono, no en el fondo de la tarjeta. */
+.welcome-launcher-card:hover {
+  border-color:var(--sc-color-border-strong);
+  box-shadow:var(--sc-shadow-clay-lg);
+  transform:translateY(-2px);
+}
+.welcome-launcher-card:active {
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:translateY(1px);
+}
+.welcome-launcher-card:focus-visible {
+  outline:var(--sc-focus-ring-width) solid var(--sc-color-focus);
+  outline-offset:var(--sc-focus-ring-offset);
+}
+.welcome-launcher-card--classroom { --launcher-accent:var(--sc-color-aula); }
+.welcome-launcher-card--recent { --launcher-accent:var(--sc-color-text-link); }
+/* Contenedores de icono: aquí viven el azul y el lavanda de la referencia,
+   sobre un icono en el tono medido de cada dominio. */
+.welcome-launcher-icon {
+  grid-area:icon;
+  display:inline-flex; align-items:center; justify-content:center;
+  width:52px; height:52px;
+  border-radius:var(--sc-radius-lg);
+  border:var(--sc-clay-edge);
+  box-shadow:var(--sc-shadow-clay-sm);
+  background:var(--sc-color-action-subtle);
+  color:var(--sc-color-action-primary);
+}
+.welcome-launcher-card--classroom .welcome-launcher-icon {
+  background:var(--sc-color-accent-violet-soft);
+  color:var(--sc-color-aula);
+}
+.welcome-launcher-card--recent .welcome-launcher-icon {
+  background:var(--sc-color-accent-blue-soft);
+  color:var(--sc-color-text-link);
+}
 .welcome-launcher-info { grid-area:info; display:flex; flex-direction:column; gap:5px; min-width:0; }
 .welcome-launcher-header { display:flex; align-items:center; gap:10px; justify-content:space-between; }
 .welcome-launcher-header strong { font-size:16px; font-weight:750; color:var(--text); letter-spacing:var(--sc-tracking-tight); }
@@ -285,9 +327,31 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 .welcome-filter-tab.active { background:var(--surface); color:var(--accent); font-weight:750; box-shadow:var(--sc-shadow-contact); }
 
 /* Zona de importación: sigue siendo de trazo discontinuo porque eso es lo que
-   dice "aquí se suelta un archivo"; lo que cambia es la materia, no el código. */
-.welcome-import-card { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:14px; padding:15px 18px; border-radius:var(--sc-radius-lg); background:var(--sc-surface-glass); backdrop-filter:var(--sc-blur-chrome); -webkit-backdrop-filter:var(--sc-blur-chrome); border:1.5px dashed color-mix(in srgb, var(--accent) 38%, var(--border)); text-align:left; cursor:pointer; width:100%; }
-.welcome-import-card:hover { border-color:var(--accent); background:color-mix(in srgb, var(--accent) 6%, var(--surface)); box-shadow:var(--sc-glow-accent); }
+   dice "aquí se suelta un archivo"; lo que cambia es la materia (clay), no el
+   trazo. El vidrio sale: un fondo clay al 96% de opacidad no deja pasar nada
+   que el desenfoque tenga sentido en mostrar. */
+.welcome-import-card {
+  display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:14px;
+  padding:15px 18px; border-radius:var(--sc-radius-lg);
+  background:var(--sc-gradient-clay);
+  border:1.5px dashed color-mix(in srgb, var(--accent) 38%, var(--border));
+  box-shadow:var(--sc-shadow-clay-sm);
+  text-align:left; cursor:pointer; width:100%;
+  transition:var(--sc-transition-control);
+}
+.welcome-import-card:hover {
+  border-color:var(--sc-color-border-strong);
+  box-shadow:var(--sc-shadow-clay-lg);
+  transform:translateY(-2px);
+}
+.welcome-import-card:active {
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:translateY(1px);
+}
+.welcome-import-card:focus-visible {
+  outline:var(--sc-focus-ring-width) solid var(--sc-color-focus);
+  outline-offset:var(--sc-focus-ring-offset);
+}
 .welcome-import-card:hover .welcome-launcher-arrow { color:var(--accent); transform:translateX(4px); }
 .welcome-import-icon { width:40px; height:40px; border-radius:var(--sc-radius-md); display:grid; place-items:center; background:color-mix(in srgb, var(--accent) 12%, var(--surface)); color:var(--accent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent); }
 .welcome-import-text { display:flex; flex-direction:column; gap:2px; min-width:0; }
@@ -295,9 +359,36 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 .welcome-import-text small { font-size:11.5px; color:var(--muted); line-height:1.35; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 .welcome-templates-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(232px, 1fr)); gap:12px; }
-.welcome-template-card { position:relative; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; padding:16px; border-radius:var(--sc-radius-lg); background:var(--surface); border:1px solid var(--border-soft); text-align:left; gap:14px; cursor:pointer; box-shadow:var(--sc-shadow-raised), var(--sc-ring-inset); min-height:142px; }
+/* A diferencia de las otras dos tarjetas, ésta sigue siendo `m.button` con
+   `layout` (el reflow de `AnimatePresence` del filtro de plantillas, ver
+   `WelcomeScreen.tsx`): `motion` sigue escribiendo `transform` inline sobre
+   este nodo para el FLIP del filtro, y un estilo inline gana siempre sobre
+   cualquier regla de `:hover`/`:active` en CSS, tenga o no la especificidad
+   más alta — por eso usa la variante de transición sin `transform` (ver su
+   token) y por eso `:hover`/`:active`, más abajo, no incluyen desplazamiento:
+   escribirlo ahí sería una animación que Chromium real nunca reproduce
+   (comprobado en `qa.mjs`, `verifyWelcomeClayMaterial`). El borde y la
+   sombra sí cambian con el estado, así que sigue sin depender sólo de la
+   sombra. */
+.welcome-template-card {
+  position:relative; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between;
+  padding:16px; border-radius:var(--sc-radius-lg); text-align:left; gap:14px; cursor:pointer; min-height:142px;
+  background:var(--sc-gradient-clay); border:var(--sc-clay-edge);
+  box-shadow:var(--sc-shadow-clay-sm);
+  transition:var(--sc-transition-control-no-transform);
+}
 .welcome-template-card::before { content:''; position:absolute; inset:0 0 auto; height:50%; background:var(--sc-gradient-sheen); pointer-events:none; }
-.welcome-template-card:hover { border-color:color-mix(in srgb, var(--accent) 46%, var(--border)); box-shadow:var(--sc-shadow-lifted), var(--sc-ring-inset); }
+.welcome-template-card:hover {
+  border-color:var(--sc-color-border-strong);
+  box-shadow:var(--sc-shadow-clay-lg);
+}
+.welcome-template-card:active {
+  box-shadow:var(--sc-shadow-clay-pressed);
+}
+.welcome-template-card:focus-visible {
+  outline:var(--sc-focus-ring-width) solid var(--sc-color-focus);
+  outline-offset:var(--sc-focus-ring-offset);
+}
 .welcome-template-top { display:flex; align-items:center; justify-content:space-between; }
 .welcome-category-badge { font-size:10px; font-weight:750; padding:3px 8px; border-radius:var(--sc-radius-xs); text-transform:uppercase; letter-spacing:.06em; }
 .welcome-badge--academic { background:color-mix(in srgb, var(--sc-color-state-warning) 14%, transparent); color:var(--sc-color-state-warning-foreground); }
@@ -322,7 +413,8 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 .welcome-workflow-steps { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(3, 1fr); gap:28px; }
 .welcome-workflow-step { position:relative; display:grid; gap:12px; }
 .welcome-workflow-step:not(:last-child)::after { content:''; position:absolute; top:16px; left:44px; right:-28px; height:1px; background:linear-gradient(90deg, color-mix(in srgb, var(--accent) 42%, transparent), color-mix(in srgb, var(--border) 70%, transparent)); }
-.welcome-step-num { width:32px; height:32px; border-radius:var(--sc-radius-md); display:grid; place-items:center; background:color-mix(in srgb, var(--accent) 13%, var(--surface)); color:var(--accent); font-weight:800; font-size:13px; border:1px solid color-mix(in srgb, var(--accent) 26%, transparent); font-variant-numeric:var(--sc-numeric-variant); }
+/* Pasos numerados: círculos clay, coherentes con los del Modo Aula. */
+.welcome-step-num { width:32px; height:32px; border-radius:var(--sc-radius-pill); display:grid; place-items:center; background:var(--sc-gradient-clay); color:var(--sc-color-action-primary); font-weight:800; font-size:13px; border:var(--sc-clay-edge); box-shadow:var(--sc-shadow-clay-xs); font-variant-numeric:var(--sc-numeric-variant); }
 .welcome-step-content { display:flex; flex-direction:column; gap:4px; }
 .welcome-step-content strong { font-size:14px; font-weight:750; color:var(--text); }
 .welcome-step-content p { margin:0; font-size:12px; color:var(--muted); line-height:1.5; }
@@ -1060,9 +1152,6 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 .welcome-filter-tab {
   transition:var(--sc-transition-control);
 }
-.welcome-launcher-card, .welcome-import-card, .welcome-template-card {
-  transition:var(--sc-transition-control-no-transform);
-}
 :where(button, input, select, textarea, summary):focus-visible {
   outline-color:var(--focus);
 }
@@ -1204,6 +1293,8 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 @media (prefers-reduced-motion:reduce) {
   button, .icon-button, .tool-button, .compact-select, .number-control, .selection-card,
   .welcome-launcher-card, .welcome-import-card, .welcome-template-card, .welcome-filter-tab { transition:none; }
+  .welcome-launcher-card:hover, .welcome-import-card:hover, .welcome-template-card:hover,
+  .welcome-launcher-card:active, .welcome-import-card:active, .welcome-template-card:active { transform:none; }
 }
 
 /* Mobile v2 --------------------------------------------------------------- */
@@ -2846,9 +2937,6 @@ button:not(:disabled):active,.selection-card:active {
     inset 0 0 0 1px color-mix(in srgb,var(--tool-color) 22%,transparent),
     0 6px 18px color-mix(in srgb,var(--tool-color) 16%,transparent);
 }
-
-/* Aula tiene halo propio: la tarjeta de ejercicio no es una acción de marca. */
-.welcome-launcher-card--classroom:hover { box-shadow:var(--sc-glow-aula), var(--sc-ring-inset); }
 
 @media (pointer:coarse) {
   /* Los filtros de la vitrina medían 29px y quedaban fuera del suelo táctil

@@ -27,6 +27,7 @@ import { BrandMark } from '../topbar/BrandMark';
 import { StructuralPortalHero } from './StructuralPortalHero';
 import { presentExample } from './examplePresentation';
 import { Drawer } from '../../design-system/components/overlays';
+import { Surface } from '../../design-system/components/surface';
 import type { TranslationKey } from '../../i18n/catalogs';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
@@ -134,8 +135,6 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
   const memberCount = project.members.length;
   const { lead, emphasis } = splitEmphasis(t('welcome.title'));
 
-  const hoverLift = reducedMotion ? undefined : { scale: 1.015, y: -2 };
-  const pressDown = reducedMotion ? undefined : { scale: 0.985 };
   const templateMotion = reducedMotion
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.01 } }
     : { initial: { opacity: 0, scale: 0.95 }, animate: { opacity: 1, scale: 1 }, exit: { opacity: 0, scale: 0.95 }, transition: { type: 'spring' as const, stiffness: 380, damping: 28 } };
@@ -168,155 +167,155 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
           </div>
         </header>
 
-        <div className="welcome-content">
-          <section className="welcome-hero" aria-labelledby="welcome-title">
-            <div className="welcome-hero-copy">
-              <p className="welcome-badge-pill">
-                <Sparkles size={14} />
-                <span>{t('welcome.badgePill')}</span>
-              </p>
+        <Surface as="div" level="raised" className="welcome-frame">
+          <div className="welcome-content">
+            <section className="welcome-hero" aria-labelledby="welcome-title">
+              <div className="welcome-hero-copy">
+                <p className="welcome-badge-pill">
+                  <Sparkles size={14} />
+                  <span>{t('welcome.badgePill')}</span>
+                </p>
 
-              <h1 id="welcome-title">
-                {lead ? `${lead} ` : null}<em className="welcome-title-accent">{emphasis}</em>
-              </h1>
-              <p className="welcome-hero-subtitle">{t('welcome.subtitle')}</p>
+                <h1 id="welcome-title">
+                  {lead ? `${lead} ` : null}<em className="welcome-title-accent">{emphasis}</em>
+                </h1>
+                <p className="welcome-hero-subtitle">{t('welcome.subtitle')}</p>
 
-              <ul className="welcome-features-highlights">
-                <li className="welcome-highlight-item"><CheckCircle2 size={15} /><span>{t('welcome.highlightStiffnessMethod')}</span></li>
-                <li className="welcome-highlight-item"><CheckCircle2 size={15} /><span>{t('welcome.highlightVerified')}</span></li>
-                <li className="welcome-highlight-item"><CheckCircle2 size={15} /><span>{t('welcome.highlightPdfExport')}</span></li>
-              </ul>
+                <ul className="welcome-features-highlights">
+                  <li className="welcome-highlight-item"><CheckCircle2 size={15} /><span>{t('welcome.highlightStiffnessMethod')}</span></li>
+                  <li className="welcome-highlight-item"><CheckCircle2 size={15} /><span>{t('welcome.highlightVerified')}</span></li>
+                  <li className="welcome-highlight-item"><CheckCircle2 size={15} /><span>{t('welcome.highlightPdfExport')}</span></li>
+                </ul>
+              </div>
+
+              <div className="welcome-hero-figure">
+                <StructuralPortalHero />
+              </div>
+            </section>
+
+            {/* `div`, no `section`: tres botones que se describen solos no necesitan
+                ser una región del documento, y etiquetarla obligaría a inventar un
+                nombre accesible que no aporta nada sobre lo que ya dicen los botones. */}
+            <div className="welcome-hero-launcher" onPointerEnter={onPreloadWorkspace} onFocusCapture={onPreloadWorkspace} onTouchStart={onPreloadWorkspace}>
+              <button type="button" className="welcome-launcher-card welcome-launcher-card--primary" onClick={openBlankProject}>
+                <span className="welcome-launcher-icon"><Compass size={22} /></span>
+                <span className="welcome-launcher-info">
+                  <span className="welcome-launcher-header">
+                    <strong>{t('welcome.fullProject')}</strong>
+                    <span className="welcome-pill-badge">{t('welcome.pillFreeCanvas')}</span>
+                  </span>
+                  <small>{t('welcome.launcherFreeCanvasDescription')}</small>
+                </span>
+                <ArrowRight size={18} className="welcome-launcher-arrow" />
+              </button>
+
+              <button type="button" className="welcome-launcher-card welcome-launcher-card--classroom" onClick={() => setExerciseDialogOpen(true)}>
+                <span className="welcome-launcher-icon"><GraduationCap size={22} /></span>
+                <span className="welcome-launcher-info">
+                  <span className="welcome-launcher-header">
+                    <strong>{t('welcome.newExercise')}</strong>
+                    <span className="welcome-pill-badge welcome-pill-badge--aula">{t('welcome.pillClassroomMode')}</span>
+                  </span>
+                  <small>{t('welcome.launcherClassroomDescription')}</small>
+                </span>
+                <ArrowRight size={18} className="welcome-launcher-arrow" />
+              </button>
+
+              <button type="button" className="welcome-launcher-card welcome-launcher-card--recent" onClick={onOpenWorkspace}>
+                <span className="welcome-launcher-icon"><FolderOpen size={22} /></span>
+                <span className="welcome-launcher-info">
+                  <span className="welcome-launcher-header">
+                    <small>{t('welcome.continueProject')}</small>
+                    <span className="welcome-project-stats">{t('welcome.projectStats', { nodes: nodeCount, members: memberCount })}</span>
+                  </span>
+                  <strong>{project.name}</strong>
+                </span>
+                <ArrowRight size={18} className="welcome-launcher-arrow" />
+              </button>
             </div>
 
-            <div className="welcome-hero-figure">
-              <StructuralPortalHero />
-            </div>
-          </section>
+            <section className="welcome-showcase" aria-labelledby="welcome-showcase-title">
+              <div className="welcome-showcase-header">
+                <div>
+                  <h2 id="welcome-showcase-title">{t('welcome.otherWays')}</h2>
+                  <p className="welcome-showcase-sub">{t('welcome.showcaseSubtitle')}</p>
+                </div>
+                <div className="welcome-filter-tabs" role="tablist">
+                  <button className={`welcome-filter-tab${templateFilter === 'all' ? ' active' : ''}`} onClick={() => setTemplateFilter('all')} role="tab" aria-selected={templateFilter === 'all'}>{t('welcome.filterAll')}</button>
+                  <button className={`welcome-filter-tab${templateFilter === 'academic' ? ' active' : ''}`} onClick={() => setTemplateFilter('academic')} role="tab" aria-selected={templateFilter === 'academic'}>{t('welcome.filterAcademic')}</button>
+                  <button className={`welcome-filter-tab${templateFilter === 'models' ? ' active' : ''}`} onClick={() => setTemplateFilter('models')} role="tab" aria-selected={templateFilter === 'models'}>{t('welcome.filterModels')}</button>
+                </div>
+              </div>
 
-          {/* `div`, no `section`: tres botones que se describen solos no necesitan
-              ser una región del documento, y etiquetarla obligaría a inventar un
-              nombre accesible que no aporta nada sobre lo que ya dicen los botones. */}
-          <div className="welcome-hero-launcher" onPointerEnter={onPreloadWorkspace} onFocusCapture={onPreloadWorkspace} onTouchStart={onPreloadWorkspace}>
-            <m.button whileHover={hoverLift} whileTap={pressDown} className="welcome-launcher-card welcome-launcher-card--primary" onClick={openBlankProject}>
-              <span className="welcome-launcher-icon"><Compass size={22} /></span>
-              <span className="welcome-launcher-info">
-                <span className="welcome-launcher-header">
-                  <strong>{t('welcome.fullProject')}</strong>
-                  <span className="welcome-pill-badge">{t('welcome.pillFreeCanvas')}</span>
+              <button type="button" className="welcome-import-card" onClick={() => setImportCenterOpen(true)}>
+                <span className="welcome-import-icon"><Upload size={20} /></span>
+                <span className="welcome-import-text">
+                  <strong>{t('welcome.import')}</strong>
+                  <small>{t('welcome.importDescription')}</small>
                 </span>
-                <small>{t('welcome.launcherFreeCanvasDescription')}</small>
-              </span>
-              <ArrowRight size={18} className="welcome-launcher-arrow" />
-            </m.button>
+                <ArrowRight size={16} className="welcome-launcher-arrow" />
+              </button>
 
-            <m.button whileHover={hoverLift} whileTap={pressDown} className="welcome-launcher-card welcome-launcher-card--classroom" onClick={() => setExerciseDialogOpen(true)}>
-              <span className="welcome-launcher-icon"><GraduationCap size={22} /></span>
-              <span className="welcome-launcher-info">
-                <span className="welcome-launcher-header">
-                  <strong>{t('welcome.newExercise')}</strong>
-                  <span className="welcome-pill-badge welcome-pill-badge--aula">{t('welcome.pillClassroomMode')}</span>
-                </span>
-                <small>{t('welcome.launcherClassroomDescription')}</small>
-              </span>
-              <ArrowRight size={18} className="welcome-launcher-arrow" />
-            </m.button>
+              <div className="welcome-templates-grid">
+                {/* `initial={false}`: en el primer montaje las tarjetas aparecen ya en su
+                    estado final. Las capacidades de animación se cargan de forma asíncrona
+                    (ver `motionFeatures.ts`), así que un `initial` con `opacity: 0` en el
+                    montaje deja la vitrina invisible si las capacidades aún no llegaron.
+                    Los cambios de filtro posteriores sí animan con normalidad. */}
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {filteredExamples.map((example) => {
+                    const meta = EXAMPLE_META[example.name] ?? DEFAULT_EXAMPLE_META;
+                    const Icon = meta.icon;
+                    const copy = presentExample(example.name, example.description, t);
+                    return (
+                      <m.button
+                        key={example.name}
+                        layout
+                        {...templateMotion}
+                        className="welcome-template-card"
+                        onClick={() => openExample(example.build)}
+                      >
+                        <span className="welcome-template-top">
+                          <span className={`welcome-category-badge ${meta.badgeClass}`}>{t(meta.categoryKey)}</span>
+                          <Icon size={18} className="welcome-template-icon" />
+                        </span>
+                        <span className="welcome-template-body">
+                          <strong>{copy.name}</strong>
+                          <small>{copy.description}</small>
+                        </span>
+                        <span className="welcome-template-footer">
+                          <span>{t('welcome.loadModel')}</span>
+                          <ArrowRight size={14} />
+                        </span>
+                      </m.button>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
+            </section>
 
-            <m.button whileHover={hoverLift} whileTap={pressDown} className="welcome-launcher-card welcome-launcher-card--recent" onClick={onOpenWorkspace}>
-              <span className="welcome-launcher-icon"><FolderOpen size={22} /></span>
-              <span className="welcome-launcher-info">
-                <span className="welcome-launcher-header">
-                  <small>{t('welcome.continueProject')}</small>
-                  <span className="welcome-project-stats">{t('welcome.projectStats', { nodes: nodeCount, members: memberCount })}</span>
-                </span>
-                <strong>{project.name}</strong>
-              </span>
-              <ArrowRight size={18} className="welcome-launcher-arrow" />
-            </m.button>
+            <section className="welcome-workflow" aria-labelledby="welcome-workflow-title">
+              <div className="welcome-workflow-header">
+                <Cpu size={18} />
+                <h2 id="welcome-workflow-title">{t('welcome.stepsTitle')}</h2>
+              </div>
+              <ol className="welcome-workflow-steps">
+                <li className="welcome-workflow-step">
+                  <span className="welcome-step-num">1</span>
+                  <div className="welcome-step-content"><strong>{t('welcome.model')}</strong><p>{t('welcome.modelDescription')}</p></div>
+                </li>
+                <li className="welcome-workflow-step">
+                  <span className="welcome-step-num">2</span>
+                  <div className="welcome-step-content"><strong>{t('welcome.load')}</strong><p>{t('welcome.loadDescription')}</p></div>
+                </li>
+                <li className="welcome-workflow-step">
+                  <span className="welcome-step-num">3</span>
+                  <div className="welcome-step-content"><strong>{t('welcome.analyze')}</strong><p>{t('welcome.analyzeDescription')}</p></div>
+                </li>
+              </ol>
+            </section>
           </div>
-
-          <section className="welcome-showcase" aria-labelledby="welcome-showcase-title">
-            <div className="welcome-showcase-header">
-              <div>
-                <h2 id="welcome-showcase-title">{t('welcome.otherWays')}</h2>
-                <p className="welcome-showcase-sub">{t('welcome.showcaseSubtitle')}</p>
-              </div>
-              <div className="welcome-filter-tabs" role="tablist">
-                <button className={`welcome-filter-tab${templateFilter === 'all' ? ' active' : ''}`} onClick={() => setTemplateFilter('all')} role="tab" aria-selected={templateFilter === 'all'}>{t('welcome.filterAll')}</button>
-                <button className={`welcome-filter-tab${templateFilter === 'academic' ? ' active' : ''}`} onClick={() => setTemplateFilter('academic')} role="tab" aria-selected={templateFilter === 'academic'}>{t('welcome.filterAcademic')}</button>
-                <button className={`welcome-filter-tab${templateFilter === 'models' ? ' active' : ''}`} onClick={() => setTemplateFilter('models')} role="tab" aria-selected={templateFilter === 'models'}>{t('welcome.filterModels')}</button>
-              </div>
-            </div>
-
-            <m.button whileHover={reducedMotion ? undefined : { scale: 1.01, y: -1 }} whileTap={reducedMotion ? undefined : { scale: 0.99 }} className="welcome-import-card" onClick={() => setImportCenterOpen(true)}>
-              <span className="welcome-import-icon"><Upload size={20} /></span>
-              <span className="welcome-import-text">
-                <strong>{t('welcome.import')}</strong>
-                <small>{t('welcome.importDescription')}</small>
-              </span>
-              <ArrowRight size={16} className="welcome-launcher-arrow" />
-            </m.button>
-
-            <div className="welcome-templates-grid">
-              {/* `initial={false}`: en el primer montaje las tarjetas aparecen ya en su
-                  estado final. Las capacidades de animación se cargan de forma asíncrona
-                  (ver `motionFeatures.ts`), así que un `initial` con `opacity: 0` en el
-                  montaje deja la vitrina invisible si las capacidades aún no llegaron.
-                  Los cambios de filtro posteriores sí animan con normalidad. */}
-              <AnimatePresence mode="popLayout" initial={false}>
-                {filteredExamples.map((example) => {
-                  const meta = EXAMPLE_META[example.name] ?? DEFAULT_EXAMPLE_META;
-                  const Icon = meta.icon;
-                  const copy = presentExample(example.name, example.description, t);
-                  return (
-                    <m.button
-                      key={example.name}
-                      layout
-                      {...templateMotion}
-                      whileHover={reducedMotion ? undefined : { y: -2, scale: 1.015 }}
-                      whileTap={pressDown}
-                      className="welcome-template-card"
-                      onClick={() => openExample(example.build)}
-                    >
-                      <span className="welcome-template-top">
-                        <span className={`welcome-category-badge ${meta.badgeClass}`}>{t(meta.categoryKey)}</span>
-                        <Icon size={18} className="welcome-template-icon" />
-                      </span>
-                      <span className="welcome-template-body">
-                        <strong>{copy.name}</strong>
-                        <small>{copy.description}</small>
-                      </span>
-                      <span className="welcome-template-footer">
-                        <span>{t('welcome.loadModel')}</span>
-                        <ArrowRight size={14} />
-                      </span>
-                    </m.button>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          </section>
-
-          <section className="welcome-workflow" aria-labelledby="welcome-workflow-title">
-            <div className="welcome-workflow-header">
-              <Cpu size={18} />
-              <h2 id="welcome-workflow-title">{t('welcome.stepsTitle')}</h2>
-            </div>
-            <ol className="welcome-workflow-steps">
-              <li className="welcome-workflow-step">
-                <span className="welcome-step-num">1</span>
-                <div className="welcome-step-content"><strong>{t('welcome.model')}</strong><p>{t('welcome.modelDescription')}</p></div>
-              </li>
-              <li className="welcome-workflow-step">
-                <span className="welcome-step-num">2</span>
-                <div className="welcome-step-content"><strong>{t('welcome.load')}</strong><p>{t('welcome.loadDescription')}</p></div>
-              </li>
-              <li className="welcome-workflow-step">
-                <span className="welcome-step-num">3</span>
-                <div className="welcome-step-content"><strong>{t('welcome.analyze')}</strong><p>{t('welcome.analyzeDescription')}</p></div>
-              </li>
-            </ol>
-          </section>
-        </div>
+        </Surface>
 
         <footer className="welcome-footer"><Play size={13} fill="currentColor" /> {t('welcome.footer')}</footer>
       </div>

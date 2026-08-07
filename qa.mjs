@@ -120,12 +120,104 @@ async function verifyWelcomeHeaderResponsive(page) {
   if (originalViewport) await page.setViewportSize(originalViewport);
 }
 
+// Tarea 7: los hovers de las tres tarjetas del inicio dejaron de venir de
+// `motion` (whileHover/whileTap) y ahora los conduce CSS puro (:hover,
+// :active, :focus-visible). `WelcomeScreen.test.tsx` corre en jsdom sin CSS,
+// así que no puede ver si la sombra/borde/desplazamiento cambian de verdad
+// al pasar el ratón — sólo Chromium real con el CSS compilado lo demuestra.
+// También cubre un riesgo específico: `.welcome-template-card` sigue siendo
+// `m.button` con `layout` (el reflow de `AnimatePresence` del filtro), y
+// `layout` puede escribir `transform` inline sobre el nodo — un estilo
+// inline gana siempre sobre cualquier regla de `:hover` en CSS, así que si
+// eso ocurriera el desplazamiento en hover de esa tarjeta quedaría mudo pese
+// a que la regla exista.
+async function verifyWelcomeClayMaterial(page) {
+  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
+
+  const frame = await page.locator('.welcome-frame').evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { backgroundImage: style.backgroundImage, borderRadius: style.borderRadius };
+  });
+  out.checks.welcomeFrameHasClayBackground = frame.backgroundImage !== 'none';
+  out.checks.welcomeFrameHasHeroRadius = frame.borderRadius !== '0px';
+
+  const cardSelectors = {
+    launcher: '.welcome-launcher-card >> nth=0',
+    import: '.welcome-import-card',
+    template: '.welcome-template-card >> nth=0',
+  };
+
+  for (const [key, selector] of Object.entries(cardSelectors)) {
+    const locator = page.locator(selector);
+    await locator.waitFor({ state: 'visible' });
+    const readState = () => locator.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { boxShadow: style.boxShadow, borderColor: style.borderColor, transform: style.transform };
+    });
+
+    const resting = await readState();
+    await locator.hover();
+    // `transition` da tiempo a que el navegador anime a los valores finales
+    // antes de leer los estilos computados; sin esta espera el `hover` se
+    // lee a mitad de camino y el check da falso negativo.
+    await page.waitForTimeout(220);
+    const hovered = await readState();
+
+    out.checks[`welcome${key}CardHoverBoxShadowChanges`] = hovered.boxShadow !== resting.boxShadow;
+    out.checks[`welcome${key}CardHoverBorderColorChanges`] = hovered.borderColor !== resting.borderColor;
+    // `.welcome-template-card` sigue siendo `m.button` con `layout` (el reflow
+    // de `AnimatePresence` del filtro): motion posee el canal `transform` de
+    // ese nodo via estilo inline, que gana siempre sobre `:hover`/`:active`
+    // en CSS, así que ahí el desplazamiento se omite a propósito (ver el
+    // comentario en `.welcome-template-card` de `styles.css`). El borde y la
+    // sombra siguen cambiando, así que el estado no depende sólo de un signo.
+    if (key !== 'template') {
+      out.checks[`welcome${key}CardHoverTransformChanges`] = hovered.transform !== resting.transform && hovered.transform !== 'none';
+    }
+
+    const box = await locator.boundingBox();
+    if (box) {
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.waitForTimeout(80);
+      const pressed = await readState();
+      // Estas tarjetas navegan al soltar el clic sobre ellas mismas (abren un
+      // proyecto, un modal o un ejemplo). Mover el ratón fuera del elemento
+      // antes de soltar cancela el `click` — se comprueba el estado `:active`
+      // sin disparar de verdad el `onClick` y saltar de la bienvenida.
+      await page.mouse.move(0, 0);
+      await page.mouse.up();
+      out.checks[`welcome${key}CardActiveBoxShadowChanges`] = pressed.boxShadow !== hovered.boxShadow;
+    }
+  }
+
+  // El foco por teclado tiene que verse sobre las tres superficies clay
+  // nuevas: se llega con Tab de verdad (no `element.focus()`, que en
+  // Chromium no siempre dispara `:focus-visible`) hasta la primera tarjeta
+  // de lanzamiento y se lee el contorno computado.
+  await page.locator('body').evaluate((body) => body.focus());
+  let reachedLauncher = false;
+  for (let i = 0; i < 30 && !reachedLauncher; i += 1) {
+    await page.keyboard.press('Tab');
+    reachedLauncher = await page.evaluate(() => document.activeElement?.classList.contains('welcome-launcher-card') ?? false);
+  }
+  out.checks.welcomeLauncherCardReachableByTab = reachedLauncher;
+  if (reachedLauncher) {
+    const outline = await page.evaluate(() => {
+      const style = getComputedStyle(document.activeElement);
+      return { outlineStyle: style.outlineStyle, outlineWidth: style.outlineWidth };
+    });
+    out.checks.welcomeLauncherCardFocusVisibleOutline = outline.outlineStyle !== 'none' && outline.outlineWidth !== '0px';
+  }
+}
+
 async function desktop() {
   const page = await browser.newPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
   page.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`${msg.type()}: ${msg.text()}`); });
   page.on('pageerror', err => out.pageErrors.push(String(err)));
   await loadCleanApp(page);
   await verifyWelcomeHeaderResponsive(page);
+  await verifyWelcomeClayMaterial(page);
   await enterWorkspace(page, { example: true });
   out.checks.title = await page.title();
   out.checks.structureCo = await page.locator('.brand-name').isVisible();
