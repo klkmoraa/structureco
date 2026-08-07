@@ -8,14 +8,17 @@ import {
   GitCommitHorizontal,
   GraduationCap,
   Layers,
+  Menu,
+  Moon,
   Play,
   Sparkles,
+  Sun,
   Triangle,
   Upload,
 } from 'lucide-react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import { createBlankProject, exampleProjects } from '../../data/defaultProject';
-import { useProject } from '../../store/ProjectContext';
+import { useProject, useWorkspaceUI } from '../../store/ProjectContext';
 import { exportProjectJson } from '../../utils/export';
 import { useI18n } from '../../i18n/useI18n';
 import { APP_VERSION } from '../../appVersion';
@@ -23,6 +26,7 @@ import { NewExerciseDialog } from './NewExerciseDialog';
 import { BrandMark } from '../topbar/BrandMark';
 import { StructuralPortalHero } from './StructuralPortalHero';
 import { presentExample } from './examplePresentation';
+import { Drawer } from '../../design-system/components/overlays';
 import type { TranslationKey } from '../../i18n/catalogs';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
@@ -66,12 +70,46 @@ const splitEmphasis = (title: string) => {
 };
 
 export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeScreenProps) => {
-  const { project, replaceProject } = useProject();
+  const { project, replaceProject, updateProjectView } = useProject();
   const { language, t } = useI18n();
+  const { theme, setTheme } = useWorkspaceUI();
   const reducedMotion = useReducedMotion();
   const [exerciseDialogOpen, setExerciseDialogOpen] = useState(false);
   const [importCenterOpen, setImportCenterOpen] = useState(false);
   const [templateFilter, setTemplateFilter] = useState<TemplateFilter>('all');
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Un único par de controles reutilizado en dos sitios (cabecera de escritorio
+  // y drawer móvil) en vez de duplicar el JSX. Ninguno de los dos lleva `id`
+  // propio —la asociación label/control es por anidamiento—, así que montarlos
+  // dos veces (cuando el drawer está abierto) no produce colisiones de `id` ni
+  // de nombre accesible entre instancias: son elementos distintos con el mismo
+  // texto, no el mismo nodo compartido.
+  const themeControl = (
+    <button
+      className="welcome-header-icon"
+      onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+      aria-label={theme === 'light' ? t('theme.dark') : t('theme.light')}
+    >
+      {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+    </button>
+  );
+
+  const languageControl = (
+    <label className="welcome-header-language">
+      <span className="sr-only">{t('language.label')}</span>
+      <select
+        value={language}
+        onChange={(event) => updateProjectView((draft) => ({
+          ...draft,
+          settings: { ...draft.settings, language: event.target.value as 'es' | 'en' },
+        }))}
+      >
+        <option value="es">{t('language.es')}</option>
+        <option value="en">{t('language.en')}</option>
+      </select>
+    </label>
+  );
 
   const openBlankProject = () => {
     const next = createBlankProject();
@@ -110,9 +148,22 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
             <strong><span>structure</span>Co</strong>
             <span className="welcome-version-tag">v{APP_VERSION}</span>
           </div>
-          <button className="welcome-continue-link" onClick={onOpenWorkspace}>
-            <span>{t('welcome.continue')}</span> <ArrowRight size={16} />
-          </button>
+          <div className="welcome-header-actions">
+            <button className="welcome-continue-link" onClick={onOpenWorkspace}>
+              <span>{t('welcome.continue')}</span> <ArrowRight size={16} />
+            </button>
+            <div className="welcome-header-desktop-only">
+              {languageControl}
+              {themeControl}
+            </div>
+            <button
+              className="welcome-header-icon welcome-header-menu"
+              onClick={() => setMenuOpen(true)}
+              aria-label={t('welcome.menu')}
+            >
+              <Menu size={20} />
+            </button>
+          </div>
         </header>
 
         <div className="welcome-content">
@@ -280,6 +331,17 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
         }}
       /></Suspense> : null}
       <NewExerciseDialog open={exerciseDialogOpen} onClose={() => setExerciseDialogOpen(false)} onCreate={(next) => { replaceProject({ ...next, settings: { ...next.settings, language } }); setExerciseDialogOpen(false); onOpenWorkspace(); }} />
+      <Drawer
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
+        title={t('welcome.menu')}
+        side="right"
+      >
+        <div className="welcome-menu-body">
+          {languageControl}
+          {themeControl}
+        </div>
+      </Drawer>
     </main>
   );
 };

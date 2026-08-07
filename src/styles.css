@@ -73,6 +73,62 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 .welcome-continue-link:hover { color:var(--accent); border-color:color-mix(in srgb, var(--accent) 52%, var(--border)); box-shadow:var(--sc-glow-accent), var(--sc-ring-inset); }
 .welcome-continue-link svg { transition:transform var(--sc-motion-control) var(--sc-ease-standard); }
 .welcome-continue-link:hover svg { transform:translateX(3px); }
+
+/* Tema e idioma, alcanzables desde el inicio: en escritorio, junto a la marca;
+   en móvil, dentro del drawer (ver `.welcome-header-menu` más abajo). Los dos
+   controles comparten el mismo tratamiento visual clay que el resto del ciclo 1. */
+.welcome-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-2);
+}
+
+.welcome-header-desktop-only { display: flex; align-items: center; gap: var(--sc-space-2); }
+.welcome-header-menu { display: none; }
+
+.welcome-header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--sc-size-target-touch);
+  min-height: var(--sc-size-target-touch);
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-gradient-clay);
+  box-shadow: var(--sc-shadow-clay-sm);
+  color: var(--sc-color-text-secondary);
+  transition: var(--sc-transition-control);
+}
+
+.welcome-header-icon:hover { color: var(--sc-color-text-primary); box-shadow: var(--sc-shadow-clay-md); }
+.welcome-header-icon:active { box-shadow: var(--sc-shadow-clay-pressed); transform: translateY(1px); }
+
+.welcome-header-language select {
+  min-height: var(--sc-size-target-touch);
+  padding: 0 var(--sc-space-3);
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-gradient-clay);
+  box-shadow: var(--sc-shadow-clay-sm);
+  color: var(--sc-color-text-secondary);
+  transition: var(--sc-transition-control);
+}
+
+.welcome-header-language select:hover { color: var(--sc-color-text-primary); box-shadow: var(--sc-shadow-clay-md); }
+
+.welcome-menu-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-3);
+  align-items: stretch;
+}
+.welcome-menu-body .welcome-header-icon { justify-content: flex-start; gap: var(--sc-space-2); width: 100%; padding-inline: var(--sc-space-3); }
+.welcome-menu-body .welcome-header-language select { width: 100%; }
+
+@media (max-width: 767px) {
+  .welcome-header-desktop-only { display: none; }
+  .welcome-header-menu { display: inline-flex; }
+}
 .welcome-content {
   width:min(var(--sc-layout-reading), calc(100% - 48px));
   margin:0 auto;
