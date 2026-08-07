@@ -171,6 +171,8 @@ async function readClayMaterial(page, selector) {
     const style = window.getComputedStyle(el);
     return {
       background: style.backgroundImage !== 'none' ? style.backgroundImage : style.backgroundColor,
+      backgroundColor: style.backgroundColor,
+      backgroundImage: style.backgroundImage,
       border: style.borderTopWidth + ' ' + style.borderTopStyle + ' ' + style.borderTopColor,
       borderWidths: [
         style.borderTopWidth,
@@ -253,6 +255,17 @@ function hasRaisedClayMaterial(material) {
   return material.background.includes('linear-gradient') &&
     hasSolidEdge &&
     (material.boxShadow.match(/\binset\b/g) ?? []).length >= 2 &&
+    material.backdropFilter === 'none' &&
+    material.webkitBackdropFilter === 'none';
+}
+
+function hasResponsiveRaisedResultsMaterial(material) {
+  const widths = material.borderWidths.split(' ');
+  const styles = material.borderStyles.split(' ');
+  const hasSolidEdge = widths.some((width, index) => width !== '0px' && styles[index] === 'solid');
+  return material.background.includes('linear-gradient') &&
+    hasSolidEdge &&
+    material.boxShadow !== 'none' &&
     material.backdropFilter === 'none' &&
     material.webkitBackdropFilter === 'none';
 }
@@ -411,6 +424,173 @@ async function verifyInspectorResponsiveViewports() {
     }
   }
   return checks;
+}
+
+const resultsFlatFamilies = [
+  { key: 'MatrixView', selector: '.matrix-view', markup: '<section class="matrix-view"></section>' },
+  { key: 'EducationExplorer', selector: '.education-explorer', markup: '<section class="education-explorer"></section>' },
+  { key: 'DiagramCursorReadout', selector: '.diagram-cursor-readout', markup: '<div class="diagram-cursor-readout"></div>' },
+  { key: 'LearningStepsDetails', selector: '.learning-steps details', markup: '<div class="learning-steps"><details></details></div>' },
+];
+
+function hasTransparentBackground(material) {
+  return material.backgroundImage === 'none' && material.backgroundColor === 'rgba(0, 0, 0, 0)';
+}
+
+async function prepareResultsMaterialTargets(page) {
+  return page.evaluate((families) => {
+    const panel = document.querySelector('.results-panel');
+    if (!panel) throw new Error('No se encontrÃ³ el panel de resultados para medir su materia.');
+    const familySources = {};
+    let root;
+    for (const family of families) {
+      if (panel.querySelector(family.selector)) {
+        familySources[family.key] = 'real';
+        continue;
+      }
+      if (!root) {
+        root = document.createElement('div');
+        root.dataset.qaResultsFlatProbes = '';
+        root.setAttribute('aria-hidden', 'true');
+        Object.assign(root.style, {
+          position: 'fixed',
+          inset: '0 auto auto 0',
+          width: '1px',
+          height: '1px',
+          overflow: 'hidden',
+          opacity: '0',
+          pointerEvents: 'none',
+        });
+        panel.append(root);
+      }
+      const slot = document.createElement('div');
+      slot.innerHTML = family.markup;
+      const target = slot.querySelector(family.selector);
+      if (!target) throw new Error(`Probe invÃ¡lido para ${family.key}.`);
+      target.setAttribute('data-qa-results-flat-family', family.key);
+      while (slot.firstChild) root.append(slot.firstChild);
+      familySources[family.key] = 'probe';
+    }
+
+    const numericalSubstitution = panel.querySelector('.education-numerical-substitution');
+    if (numericalSubstitution) {
+      familySources.EducationNumericalSubstitution = 'real';
+    } else {
+      const explorer = panel.querySelector('.education-explorer');
+      if (!explorer) throw new Error('No se encontrÃ³ EducationExplorer para alojar el probe de sustituciÃ³n.');
+      const probe = document.createElement('section');
+      probe.className = 'education-numerical-substitution';
+      probe.dataset.qaResultsNumericalSubstitution = '';
+      explorer.append(probe);
+      familySources.EducationNumericalSubstitution = 'probe';
+    }
+    return familySources;
+  }, resultsFlatFamilies);
+}
+
+async function verifyResultsClayMaterial(page) {
+  const checks = {};
+  const panel = await readClayMaterial(page, '.results-panel');
+  checks.resultsDesktopPanelHasRaisedClayMaterial = hasRaisedClayMaterial(panel);
+  checks.resultsDesktopPanelHasNoBackdropFilter =
+    panel.backdropFilter === 'none' && panel.webkitBackdropFilter === 'none';
+  checks.resultsDesktopPanelHasTopOnlyClayGeometry = panel.borderWidths === '1px 0px 0px 0px';
+
+  await page.getByRole('tab', { name: 'Reacciones', exact: true }).click();
+  await page.locator('.results-table').waitFor({ state: 'visible' });
+  const table = await readClayMaterial(page, '.results-panel .results-table');
+  checks.resultsDesktopResultsTableHasNoContainerMaterial =
+    table.borderWidths === '0px 0px 0px 0px' && table.boxShadow === 'none';
+  checks.resultsDesktopResultsTableCellsKeepBorders = await page.locator('.results-table :is(th, td)').first().evaluate((cell) => {
+    const style = getComputedStyle(cell);
+    return style.borderBottomWidth === '1px' && style.borderBottomStyle === 'solid';
+  });
+
+  const sources = await prepareResultsMaterialTargets(page);
+  const expectedSurface = await readResolvedColorToken(page, '--sc-color-surface-1');
+  const expectedSoftBorder = await readResolvedColorToken(page, '--sc-color-border-soft');
+  try {
+    for (const family of resultsFlatFamilies) {
+      const selector = sources[family.key] === 'real'
+        ? `.results-panel ${family.selector}`
+        : `[data-qa-results-flat-family="${family.key}"]`;
+      const material = await readClayMaterial(page, selector);
+      checks[`resultsDesktopFlat${family.key}HasFlatMaterial`] =
+        hasFlatClayMaterial(material, expectedSurface, expectedSoftBorder);
+    }
+    const substitutionSelector = sources.EducationNumericalSubstitution === 'real'
+      ? '.results-panel .education-numerical-substitution'
+      : '[data-qa-results-numerical-substitution]';
+    const substitution = await readClayMaterial(page, substitutionSelector);
+    checks.resultsDesktopEducationNumericalSubstitutionIsIntegrated =
+      hasTransparentBackground(substitution) &&
+      substitution.borderWidths === '0px 0px 0px 0px' &&
+      substitution.boxShadow === 'none';
+  } finally {
+    await page.evaluate(() => {
+      document.querySelector('[data-qa-results-numerical-substitution]')?.remove();
+      document.querySelector('[data-qa-results-flat-probes]')?.remove();
+    });
+  }
+  checks.resultsDesktopFlatProbesRemoved =
+    await page.locator('[data-qa-results-flat-probes], [data-qa-results-numerical-substitution]').count() === 0;
+  out.metrics.resultsFlatFamilySources = sources;
+
+  try {
+    await page.emulateMedia({ media: 'print' });
+    const printPanel = await readClayMaterial(page, '.results-panel');
+    checks.resultsPrintPanelHasTransparentBackground = hasTransparentBackground(printPanel);
+    checks.resultsPrintPanelHasNoBorder = printPanel.borderWidths === '0px 0px 0px 0px';
+    checks.resultsPrintPanelHasNoShadow = printPanel.boxShadow === 'none';
+  } finally {
+    await page.emulateMedia({ media: 'screen' });
+  }
+  return checks;
+}
+
+async function verifyResultsPhonePortraitMaterial(page) {
+  const panel = await readClayMaterial(page, '.results-panel');
+  out.metrics.resultsPhonePortrait = {
+    ...page.viewportSize(),
+    borderWidths: panel.borderWidths,
+  };
+  return {
+    resultsPhonePortraitPanelHasRaisedClayMaterial: hasResponsiveRaisedResultsMaterial(panel),
+    resultsPhonePortraitPanelHasTopOnlyClayGeometry: panel.borderWidths === '1px 0px 0px 0px',
+  };
+}
+
+async function verifyResultsPhoneLandscapeMaterial() {
+  const page = await browser.newPage({ viewport: { width: 690, height: 390 }, deviceScaleFactor: 1 });
+  page.on('console', msg => {
+    if (['error', 'warning'].includes(msg.type())) out.console.push(`results landscape ${msg.type()}: ${msg.text()}`);
+  });
+  page.on('pageerror', err => out.pageErrors.push(`results landscape ${String(err)}`));
+  try {
+    await loadCleanApp(page);
+    await enterWorkspace(page, { example: true });
+    await page.getByRole('button', { name: 'Analizar', exact: true }).click();
+    await page.getByRole('tab', { name: 'Reacciones', exact: true }).waitFor({ state: 'visible' });
+    const resultsPanel = page.locator('.results-panel');
+    if (await resultsPanel.evaluate((panel) => panel.classList.contains('mobile-collapsed'))) {
+      await page.locator('.results-mobile-toggle').click();
+    }
+    await page.waitForFunction(() => !document.querySelector('.results-panel')?.classList.contains('mobile-collapsed'));
+    const panel = await readClayMaterial(page, '.results-panel');
+    const canvasInteractive = await resultsPanel.getAttribute('data-canvas-interactive');
+    out.metrics.resultsPhoneLandscape = {
+      ...page.viewportSize(),
+      borderWidths: panel.borderWidths,
+      canvasInteractive,
+    };
+    return {
+      resultsPhoneLandscapePanelKeepsCanvasInteractive: canvasInteractive === 'true',
+      resultsPhoneLandscapePanelHasRaisedClayMaterial: hasResponsiveRaisedResultsMaterial(panel),
+      resultsPhoneLandscapePanelHasTopLeftClayGeometry: panel.borderWidths === '1px 0px 0px 1px',
+    };
+  } finally {
+    await page.close();
+  }
 }
 
 async function verifyWelcomeClayMaterial(page) {
@@ -641,6 +821,7 @@ async function desktop() {
   await page.screenshot({ path: path.join(artifactsDir, 'desktop.png'), fullPage: false });
   await page.getByRole('button', { name: 'Analizar', exact: true }).click();
   await page.getByRole('tab', { name: 'Reacciones', exact: true }).waitFor({ state: 'visible' });
+  Object.assign(out.checks, await verifyResultsClayMaterial(page));
   await page.getByRole('tab', { name: 'Momento', exact: true }).click();
   await page.locator('.diagram-chart.moment').waitFor({ state: 'visible' });
   out.checks.momentChart = await page.locator('.diagram-chart.moment .chart-line').count() === 1;
@@ -857,6 +1038,7 @@ async function mobile() {
   await page.getByRole('button', { name: 'Analizar', exact: true }).click();
   await page.getByRole('tab', { name: 'Momento', exact: true }).click();
   await page.locator('.diagram-chart.moment').waitFor({ state: 'visible' });
+  Object.assign(out.checks, await verifyResultsPhonePortraitMaterial(page));
   const membersBeforeModalShortcut = await page.locator('.member-object').count();
   // At phone width (<=700px) results.panel is intentionally a non-modal region, not a
   // dialog: the canvas stays interactive underneath (phoneCanvasInteractive), so a
@@ -920,6 +1102,7 @@ await verifyWelcomeFirstPaintMaterial();
 await verifyWelcomeReducedMotionActive();
 await desktop();
 Object.assign(out.checks, await verifyInspectorResponsiveViewports());
+Object.assign(out.checks, await verifyResultsPhoneLandscapeMaterial());
 await influenceWorkflow();
 await mobile();
 await educationalExample();

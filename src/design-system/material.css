@@ -31,7 +31,11 @@
 .norm-source,
 .compact-toggle-grid label,
 .inspector-note,
-.load-tool-grid button {
+.load-tool-grid button,
+.matrix-view,
+.education-explorer,
+.diagram-cursor-readout,
+.learning-steps details {
   background: var(--sc-color-surface-1);
   border: 1px solid var(--sc-color-border-soft);
   box-shadow: none;
@@ -43,7 +47,8 @@
 .topbar,
 .toolbar,
 .inspector-panel,
-.inspector-summary {
+.inspector-summary,
+.results-panel {
   background: var(--sc-gradient-clay);
   border: var(--sc-clay-edge);
   box-shadow: var(--sc-shadow-clay-md);
@@ -51,6 +56,7 @@
 
 .toolbar { border-width: var(--toolbar-clay-border-width, 1px); }
 .inspector-panel { border-width: var(--inspector-clay-border-width, 1px); }
+.results-panel { border-width: var(--results-clay-border-width, 1px 0 0); }
 
 /* floating: lo que se despega del plano — popovers, hojas, menús. */
 .sc-surface[data-level='floating'],
@@ -87,4 +93,8 @@
   background: var(--sc-color-surface-2);
   border: 1px solid var(--sc-color-border-canvas-chrome);
   box-shadow: var(--sc-shadow-clay-floating);
+}
+
+@media print {
+  .results-panel { background: transparent; border: 0; box-shadow: none; }
 }
