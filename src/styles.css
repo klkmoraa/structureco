@@ -84,7 +84,6 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 }
 
 .welcome-header-desktop-only { display: flex; align-items: center; gap: var(--sc-space-2); }
-.welcome-header-menu { display: none; }
 
 .welcome-header-icon {
   display: inline-flex;
@@ -102,6 +101,14 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 
 .welcome-header-icon:hover { color: var(--sc-color-text-primary); box-shadow: var(--sc-shadow-clay-md); }
 .welcome-header-icon:active { box-shadow: var(--sc-shadow-clay-pressed); transform: translateY(1px); }
+
+/* Misma especificidad que `.welcome-header-icon` (0,1,0): tiene que ganar por
+   orden de aparición, así que esta regla va *después* de ese bloque. Antes
+   estaba antes, y `display:inline-flex` de `.welcome-header-icon` ganaba por
+   ser la declaración más tardía — el botón se veía en escritorio pese al
+   `display:none` de aquí. La media query de abajo reafirma `inline-flex` en
+   móvil por el mismo motivo: misma especificidad, aparece después. */
+.welcome-header-menu { display: none; }
 
 .welcome-header-language select {
   min-height: var(--sc-size-target-touch);
@@ -122,7 +129,14 @@ button:disabled { cursor: not-allowed; opacity: .62; }
   gap: var(--sc-space-3);
   align-items: stretch;
 }
-.welcome-menu-body .welcome-header-icon { justify-content: flex-start; gap: var(--sc-space-2); width: 100%; padding-inline: var(--sc-space-3); }
+/* `align-self: flex-start`, no `width`/`justify-content`/`gap`: ese trío estaba
+   escrito para un botón icono+texto que el JSX nunca tuvo (el botón sólo
+   lleva el icono; el texto vive en `aria-label`, no en el DOM visible), así
+   que estirarlo a `width:100%` dejaba un icono de 18px pegado al borde
+   izquierdo de una píldora vacía. Sin `align-self` heredaría `stretch` de
+   `.welcome-menu-body` igualmente; con él, vuelve a su tamaño natural de
+   44×44 y mantiene el icono centrado, igual que en la cabecera de escritorio. */
+.welcome-menu-body .welcome-header-icon { align-self: flex-start; }
 .welcome-menu-body .welcome-header-language select { width: 100%; }
 
 @media (max-width: 767px) {

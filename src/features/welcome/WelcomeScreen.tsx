@@ -87,6 +87,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
   // texto, no el mismo nodo compartido.
   const themeControl = (
     <button
+      type="button"
       className="welcome-header-icon"
       onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
       aria-label={theme === 'light' ? t('theme.dark') : t('theme.light')}
@@ -141,7 +142,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
 
   return (
     <main className="welcome-screen" data-testid="welcome-screen">
-      <div className="welcome-base" inert={exerciseDialogOpen || importCenterOpen} aria-hidden={exerciseDialogOpen || importCenterOpen || undefined}>
+      <div className="welcome-base" inert={exerciseDialogOpen || importCenterOpen || menuOpen} aria-hidden={exerciseDialogOpen || importCenterOpen || menuOpen || undefined}>
         <header className="welcome-header">
           <div className="welcome-brand" aria-label="structureCo">
             <BrandMark size={34} />
@@ -157,6 +158,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
               {themeControl}
             </div>
             <button
+              type="button"
               className="welcome-header-icon welcome-header-menu"
               onClick={() => setMenuOpen(true)}
               aria-label={t('welcome.menu')}
@@ -335,6 +337,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
         open={menuOpen}
         onOpenChange={setMenuOpen}
         title={t('welcome.menu')}
+        closeLabel={t('toolbar.close')}
         side="right"
       >
         <div className="welcome-menu-body">

@@ -39,7 +39,11 @@ describe('WelcomeScreen header', () => {
     const user = userEvent.setup();
     renderWelcome();
     await user.selectOptions(screen.getByLabelText(/idioma|language/i), 'en');
-    expect(await screen.findByRole('heading', { level: 1 })).toBeTruthy();
+    // No basta con que exista *un* h1: eso pasaría igual si `updateProjectView`
+    // fuera un no-op. Se afirma el contenido real tras el cambio de idioma
+    // (mismo idiom que `App.test.tsx`: `.textContent).toContain(...)`).
+    const heading = await screen.findByRole('heading', { level: 1 });
+    expect(heading.textContent).toContain('Analyze structures with');
   });
 
   it('keeps every header action reachable, and returns focus when the drawer closes', async () => {
@@ -55,5 +59,27 @@ describe('WelcomeScreen header', () => {
     // segundo `focus()` en el siguiente frame) — igual que ya hace la prueba
     // homóloga en `modalFocus.test.tsx`, se envuelve en `waitFor`.
     await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
+  // Red para la ronda de corrección 1/5: `themeControl`/`languageControl` se
+  // montan dos veces (cabecera de escritorio + drawer). En un navegador real
+  // sólo una copia queda en el árbol de accesibilidad porque la otra tiene
+  // `display:none` — pero jsdom no evalúa `@media` de una hoja de estilos
+  // real, así que ese contrato responsive no es observable aquí (para eso
+  // está `npm run qa`, el recorrido Playwright). Lo que SÍ es observable en
+  // jsdom es `aria-hidden`/`inert`: con el drawer abierto, `.welcome-base`
+  // (que envuelve la copia de escritorio) debe quedar marcado inaccesible,
+  // igual que ya ocurre con `exerciseDialogOpen`/`importCenterOpen`, dejando
+  // sólo la copia del drawer alcanzable por rol.
+  it('exposes exactly one theme control and one language control while the drawer is open', async () => {
+    const user = userEvent.setup();
+    renderWelcome();
+    await user.click(screen.getByRole('button', { name: /menú|menu/i }));
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    // `getByLabelText` no filtra por accesibilidad (ignora `aria-hidden`/`inert`
+    // en el ancestro), así que con el `<select>` se consulta por rol —
+    // `combobox` es su rol implícito— igual que el botón de tema.
+    expect(screen.getAllByRole('button', { name: /tema|theme/i })).toHaveLength(1);
+    expect(screen.getAllByRole('combobox', { name: /idioma|language/i })).toHaveLength(1);
   });
 });
