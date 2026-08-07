@@ -178,6 +178,12 @@ async function readClayMaterial(page, selector) {
         style.borderBottomWidth,
         style.borderLeftWidth,
       ].join(' '),
+      borderStyles: [
+        style.borderTopStyle,
+        style.borderRightStyle,
+        style.borderBottomStyle,
+        style.borderLeftStyle,
+      ].join(' '),
       borderTopWidth: style.borderTopWidth,
       borderTopStyle: style.borderTopStyle,
       borderTopColor: style.borderTopColor,
@@ -240,38 +246,171 @@ async function verifyCanvasChromeClayMaterial(page) {
   };
 }
 
-async function verifyInspectorClayMaterial(page, viewport) {
-  const panel = await readClayMaterial(page, '.inspector-panel');
-  const hasRaisedClayMaterial = (material) =>
-    material.background.includes('linear-gradient') &&
-    material.borderTopWidth === '1px' &&
-    material.borderTopStyle === 'solid' &&
+function hasRaisedClayMaterial(material) {
+  const widths = material.borderWidths.split(' ');
+  const styles = material.borderStyles.split(' ');
+  const hasSolidEdge = widths.some((width, index) => width !== '0px' && styles[index] === 'solid');
+  return material.background.includes('linear-gradient') &&
+    hasSolidEdge &&
     (material.boxShadow.match(/\binset\b/g) ?? []).length >= 2 &&
     material.backdropFilter === 'none' &&
     material.webkitBackdropFilter === 'none';
+}
 
-  if (viewport === 'Mobile') {
-    return {
-      inspectorMobilePanelHasRaisedClayMaterial: hasRaisedClayMaterial(panel),
-      inspectorMobilePanelHasTopOnlyClayEdge: panel.borderWidths === '1px 1px 0px 1px',
-    };
+function hasFlatClayMaterial(material, expectedSurface, expectedSoftBorder) {
+  return material.background === expectedSurface &&
+    material.borderTopWidth === '1px' &&
+    material.borderTopStyle === 'solid' &&
+    material.borderTopColor === expectedSoftBorder &&
+    material.boxShadow === 'none';
+}
+
+async function selectFirstInspectorMember(page) {
+  const member = page.locator('.member-object').first();
+  if (await member.getAttribute('aria-pressed') !== 'true') {
+    await member.evaluate((element) => element.focus());
+    await page.keyboard.press('Enter');
   }
+  await page.waitForFunction(() => document.querySelector('.member-object')?.getAttribute('aria-pressed') === 'true');
+}
 
-  const summary = await readClayMaterial(page, '.inspector-summary:not(.is-empty)');
-  const numberControl = await readClayMaterial(page, '.inspector-panel .number-control');
+async function openInspectorFromSelection(page) {
+  await selectFirstInspectorMember(page);
+  const panel = page.locator('.inspector-panel');
+  if (!(await panel.evaluate((element) => element.classList.contains('mobile-open')))) {
+    await page.getByLabel('Abrir inspector').click();
+  }
+  await page.locator('.inspector-panel.mobile-open').waitFor({ state: 'visible' });
+}
+
+async function verifyInspectorPanelContract(page, { viewport, geometryKey, expectedWidths }) {
+  const panel = await readClayMaterial(page, '.inspector-panel');
+  return {
+    checks: {
+      [`inspector${viewport}PanelHasRaisedClayMaterial`]: hasRaisedClayMaterial(panel),
+      [geometryKey]: panel.borderWidths === expectedWidths,
+    },
+    material: panel,
+  };
+}
+
+async function verifyInspectorSummaryContract(page, state) {
+  const summary = await readClayMaterial(page, '.inspector-summary');
+  return {
+    [`inspectorDesktop${state}SummaryHasRaisedClayMaterial`]: hasRaisedClayMaterial(summary),
+  };
+}
+
+const inspectorFlatFamilies = [
+  { key: 'SelectionCard', selector: '.selection-card', markup: '<div class="selection-card"></div>' },
+  { key: 'NumberControl', selector: '.number-control', markup: '<div class="number-control"></div>' },
+  { key: 'SelectFieldSelect', selector: '.select-field select', markup: '<label class="select-field"><select><option>QA</option></select></label>' },
+  { key: 'EffectCard', selector: '.effect-card', markup: '<div class="effect-card"></div>' },
+  { key: 'CombinationCard', selector: '.combination-card', markup: '<details class="combination-card"></details>' },
+  { key: 'NormSource', selector: '.norm-source', markup: '<div class="norm-source"></div>' },
+  { key: 'CompactToggleGridLabel', selector: '.compact-toggle-grid label', markup: '<div class="compact-toggle-grid"><label></label></div>' },
+  { key: 'InspectorNote', selector: '.inspector-note', markup: '<div class="inspector-note"></div>' },
+  { key: 'LoadToolGridButton', selector: '.load-tool-grid button', markup: '<div class="load-tool-grid"><button type="button"></button></div>' },
+];
+
+async function verifyInspectorFlatFamilies(page) {
+  const sources = await page.evaluate((families) => {
+    const panel = document.querySelector('.inspector-panel');
+    if (!panel) throw new Error('No se encontró el inspector para medir familias flat.');
+    const familySources = {};
+    let root;
+    for (const family of families) {
+      if (panel.querySelector(family.selector)) {
+        familySources[family.key] = 'real';
+        continue;
+      }
+      if (!root) {
+        root = document.createElement('div');
+        root.dataset.qaInspectorFlatProbes = '';
+        root.setAttribute('aria-hidden', 'true');
+        Object.assign(root.style, {
+          position: 'fixed',
+          inset: '0 auto auto 0',
+          width: '1px',
+          height: '1px',
+          overflow: 'hidden',
+          opacity: '0',
+          pointerEvents: 'none',
+        });
+        panel.append(root);
+      }
+      const slot = document.createElement('div');
+      slot.innerHTML = family.markup;
+      const target = slot.querySelector(family.selector);
+      if (!target) throw new Error(`Probe inválido para ${family.key}.`);
+      target.setAttribute('data-qa-inspector-flat-family', family.key);
+      while (slot.firstChild) root.append(slot.firstChild);
+      familySources[family.key] = 'probe';
+    }
+    return familySources;
+  }, inspectorFlatFamilies);
+
   const expectedSurface = await readResolvedColorToken(page, '--sc-color-surface-1');
   const expectedSoftBorder = await readResolvedColorToken(page, '--sc-color-border-soft');
-  const hasFlatMaterial = numberControl.boxShadow === 'none' &&
-    numberControl.background === expectedSurface &&
-    numberControl.borderTopWidth === '1px' &&
-    numberControl.borderTopStyle === 'solid' &&
-    numberControl.borderTopColor === expectedSoftBorder;
+  const checks = {};
+  try {
+    for (const family of inspectorFlatFamilies) {
+      const selector = sources[family.key] === 'real'
+        ? `.inspector-panel ${family.selector}`
+        : `[data-qa-inspector-flat-family="${family.key}"]`;
+      const material = await readClayMaterial(page, selector);
+      checks[`inspectorDesktopFlat${family.key}HasFlatMaterial`] =
+        hasFlatClayMaterial(material, expectedSurface, expectedSoftBorder);
+    }
+  } finally {
+    await page.evaluate(() => document.querySelector('[data-qa-inspector-flat-probes]')?.remove());
+  }
+  checks.inspectorDesktopFlatProbesRemoved =
+    await page.locator('[data-qa-inspector-flat-probes]').count() === 0;
+  return { checks, sources };
+}
 
-  return {
-    inspectorDesktopPanelHasRaisedClayMaterial: hasRaisedClayMaterial(panel),
-    inspectorDesktopSummaryHasRaisedClayMaterial: hasRaisedClayMaterial(summary),
-    inspectorDesktopNumberControlHasFlatMaterial: hasFlatMaterial,
-  };
+async function verifyInspectorResponsiveViewports() {
+  const checks = {};
+  const cases = [
+    {
+      viewport: 'Tablet',
+      size: { width: 900, height: 1024 },
+      geometryKey: 'inspectorTabletPanelHasLeftOnlyClayGeometry',
+      expectedWidths: '0px 0px 0px 1px',
+    },
+    {
+      viewport: 'Landscape',
+      size: { width: 844, height: 390 },
+      geometryKey: 'inspectorLandscapePanelHasLeftOnlyClayGeometry',
+      expectedWidths: '0px 0px 0px 1px',
+    },
+  ];
+
+  out.metrics.inspectorResponsive = {};
+  for (const current of cases) {
+    const page = await browser.newPage({ viewport: current.size, deviceScaleFactor: 1 });
+    page.on('console', msg => {
+      if (['error', 'warning'].includes(msg.type())) {
+        out.console.push(`inspector ${current.viewport.toLowerCase()} ${msg.type()}: ${msg.text()}`);
+      }
+    });
+    page.on('pageerror', err => out.pageErrors.push(`inspector ${current.viewport.toLowerCase()} ${String(err)}`));
+    try {
+      await loadCleanApp(page);
+      await enterWorkspace(page, { example: true });
+      await openInspectorFromSelection(page);
+      const result = await verifyInspectorPanelContract(page, current);
+      Object.assign(checks, result.checks);
+      out.metrics.inspectorResponsive[current.viewport.toLowerCase()] = {
+        ...current.size,
+        borderWidths: result.material.borderWidths,
+      };
+    } finally {
+      await page.close();
+    }
+  }
+  return checks;
 }
 
 async function verifyWelcomeClayMaterial(page) {
@@ -456,12 +595,23 @@ async function desktop() {
   Object.assign(out.checks, await verifyTopbarClayMaterial(page));
   Object.assign(out.checks, await verifyToolRailClayMaterial(page, 'Desktop'));
   Object.assign(out.checks, await verifyCanvasChromeClayMaterial(page));
-  const firstInspectorMember = page.locator('.member-object').first();
-  await firstInspectorMember.evaluate((element) => element.focus());
-  await page.keyboard.press('Enter');
-  await page.waitForFunction(() => document.querySelector('.member-object')?.getAttribute('aria-pressed') === 'true');
-  await page.locator('.inspector-summary:not(.is-empty)').waitFor({ state: 'visible' });
-  Object.assign(out.checks, await verifyInspectorClayMaterial(page, 'Desktop'));
+  await page.locator('.inspector-summary.is-empty').waitFor({ state: 'visible' });
+  const desktopPanel = await verifyInspectorPanelContract(page, {
+    viewport: 'Desktop',
+    geometryKey: 'inspectorDesktopPanelHasFourSidedClayGeometry',
+    expectedWidths: '1px 1px 1px 1px',
+  });
+  Object.assign(out.checks, desktopPanel.checks);
+  Object.assign(out.checks, await verifyInspectorSummaryContract(page, 'Empty'));
+  await selectFirstInspectorMember(page);
+  await page.waitForFunction(() => {
+    const summary = document.querySelector('.inspector-summary');
+    return Boolean(summary && !summary.classList.contains('is-empty'));
+  });
+  Object.assign(out.checks, await verifyInspectorSummaryContract(page, 'Selected'));
+  const flatFamilies = await verifyInspectorFlatFamilies(page);
+  Object.assign(out.checks, flatFamilies.checks);
+  out.metrics.inspectorFlatFamilySources = flatFamilies.sources;
   out.checks.title = await page.title();
   out.checks.structureCo = await page.locator('.brand-name').isVisible();
   out.checks.canvas = await page.locator('svg.structural-canvas').isVisible();
@@ -688,7 +838,12 @@ async function mobile() {
   await page.waitForTimeout(120);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await page.locator('.inspector-panel.mobile-open').waitFor({ state: 'visible' });
-  Object.assign(out.checks, await verifyInspectorClayMaterial(page, 'Mobile'));
+  const phonePanel = await verifyInspectorPanelContract(page, {
+    viewport: 'Phone',
+    geometryKey: 'inspectorPhonePanelHasBottomSheetClayGeometry',
+    expectedWidths: '1px 1px 0px 1px',
+  });
+  Object.assign(out.checks, phonePanel.checks);
   out.checks.mobileTouchPlacesLoad = await page.locator('[data-structure-kind="memberLoad"]').count() === memberLoadsBeforeTouchPlacement + 1;
   out.checks.mobileLoadEditor = await page.getByRole('dialog', { name: 'Inspector' }).getByRole('button', { name: 'Eliminar carga' }).isVisible();
   await page.getByRole('dialog', { name: 'Inspector' }).getByRole('button', { name: 'Eliminar carga' }).click();
@@ -764,6 +919,7 @@ async function educationalExample() {
 await verifyWelcomeFirstPaintMaterial();
 await verifyWelcomeReducedMotionActive();
 await desktop();
+Object.assign(out.checks, await verifyInspectorResponsiveViewports());
 await influenceWorkflow();
 await mobile();
 await educationalExample();

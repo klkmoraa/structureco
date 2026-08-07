@@ -41,3 +41,33 @@ El inspector mezclaba paneles elevados con datos técnicos densos y repetía fon
 No hay bloqueo de implementación. La carrera heredada de `:active` de welcome apareció en RED, GREEN intermedio y mutaciones; no se modificó y el QA final restaurado pasó. El controlador conserva la revisión independiente y la matriz visual Day/Night y responsive descrita en el brief.
 
 Por alcance no se abrió dev server ni navegador visual, no se ejecutó WebKit ni suite completa, no se tocaron TSX, dependencias, rutas protegidas o `capturas.mjs`, y no se hizo push.
+
+## Revisión Important — corrección sobre `9e35c96707039d1397dae25c591580ca87795e1c`
+
+**Fecha:** 2026-08-07 15:23
+
+### Correcciones
+
+- El contrato fuerte de `.inspector-summary` raised se aplica también al estado vacío real. De `.inspector-summary.is-empty` se retiraron únicamente `background` y `box-shadow`; se preservaron el contenido y `.inspector-summary.is-empty::before { background:var(--subtle); }`.
+- `qa.mjs` separa materia y geometría. Raised exige gradiente, al menos un canto solid no nulo, dos o más sombras inset y ausencia de `backdrop-filter`; la geometría se certifica aparte con `1536: 1px 1px 1px 1px`, `430: 1px 1px 0px 1px`, `900x1024: 0px 0px 0px 1px` y `844x390: 0px 0px 0px 1px`.
+- Tablet y paisaje usan páginas aisladas y abren selección/inspector por el flujo real. El summary vacío se mide antes de seleccionar; el seleccionado se vuelve a medir después.
+- Se certifican por claves nominales las nueve familias flat. `number-control` y `select-field select` se midieron en DOM real; `selection-card`, `effect-card`, `combination-card`, `norm-source`, `compact-toggle-grid label`, `inspector-note` y `load-tool-grid button` usaron probes temporales dentro del inspector, eliminados en `finally` y confirmados ausentes al terminar.
+- Se auditaron las reglas del inspector en `styles.css`: no cambió ningún estado, radio, posición, `clip-path`, safe area, tab, foco, error, disabled, selected/active, geometry ni behavior fuera de retirar la materia local que contradecía raised.
+
+### Evidencia TDD y mutaciones
+
+- RED con checks nuevos y CSS intacto: build PASS; QA FAIL únicamente en `inspectorDesktopEmptySummaryHasRaisedClayMaterial`.
+- GREEN tras retirar la materia local de `.is-empty`: build PASS y QA PASS completo.
+- Mutación A, reponer `background` y `box-shadow` en `.inspector-summary.is-empty`: FAIL nominal `inspectorDesktopEmptySummaryHasRaisedClayMaterial`.
+- Mutación B, cambiar temporalmente el hook tablet a `1px 1px 0`: tras reconstruir, FAIL nominal de `inspectorTabletPanelHasLeftOnlyClayGeometry` y `inspectorLandscapePanelHasLeftOnlyClayGeometry`. La primera corrida se descartó porque aún consumía el build de la mutación A; la repetición reconstruida ejercitó el CSS correcto. También fluctuó el check heredado `welcomeimportCardActiveTransformIsPressedTranslate`, fuera de este alcance.
+- Mutación C, retirar `.norm-source` del grupo flat: FAIL únicamente en `inspectorDesktopFlatNormSourceHasFlatMaterial`.
+- Restauración byte a byte: `src/design-system/material.css` = `528E5D6A149B61C2884A55F3A80A9335B2DF39BFA7BF481C0FBA559592927C80`; `src/styles.css` = `B451333A34F53201BB3ED4762369F79C2B364C5AB3E75CD433313094A468CD44`.
+
+### Gates finales de la revisión
+
+- `node --check qa.mjs`: PASS.
+- `npx.cmd vitest run src/design-system/tokens.test.ts`: PASS, 1 archivo y 22/22 pruebas.
+- `npm.cmd run build`: PASS.
+- `node qa.mjs`: PASS completo; las cuatro geometrías, ambos summaries y las nueve familias flat están en `true`; `console: []`, `pageErrors: []` y probes retirados.
+- Guardián final: `git diff --check` PASS; 63/63 hashes protegidos intactos; `capturas.mjs` conservó SHA-256 `1F2CDE477FA77BC74A16C1848F544E8C7E5435FFCF0E7A4D12D644EEA774A710`; el diff rastreado se limita a `qa.mjs`, `src/styles.css` y este reporte.
+- Alcance negativo: sin dev server, navegador visual, WebKit, suite completa, TSX, dependencias, `capturas.mjs`, rutas protegidas ni push.

@@ -2311,7 +2311,6 @@ button:not(:disabled):active,.selection-card:active {
   border-radius:0 3px 3px 0;
   background:var(--selection);
 }
-.inspector-summary.is-empty { background:var(--surface-2); box-shadow:none; }
 .inspector-summary.is-empty::before { background:var(--subtle); }
 .inspector-summary__identity { display:grid; grid-template-columns:38px minmax(0,1fr); align-items:center; gap:10px; min-width:0; }
 .inspector-summary__preview {
