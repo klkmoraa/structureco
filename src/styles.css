@@ -273,8 +273,9 @@ button:disabled { cursor: not-allowed; opacity: .62; }
    una transición aquí haría que el pórtico persiga al cursor con un retardo
    visible en vez de seguirlo. La transición sólo se activa con la clase
    `.portal-hero--returning`, que el componente añade en `pointerleave` para
-   suavizar el regreso a cero y quita en el siguiente `pointerenter`/
-   `pointermove` para que el rastreo vuelva a ser instantáneo. */
+   suavizar el regreso a cero y quita en el siguiente `pointermove`
+   (`handlePointerMove`, no hay listener de `pointerenter`) para que el
+   rastreo vuelva a ser instantáneo. */
 @media (hover: hover) and (pointer: fine) {
   .welcome-hero-figure .portal-hero {
     transform: rotateX(calc(var(--tilt-y, 0) * 2deg)) rotateY(calc(var(--tilt-x, 0) * 2deg));
@@ -436,13 +437,21 @@ button:disabled { cursor: not-allowed; opacity: .62; }
   border-color:var(--sc-color-border-strong);
   box-shadow:var(--sc-shadow-clay-lg);
 }
-/* Sin `transform` (motion lo posee, ver el comentario de arriba) y sin
-   depender sólo del `box-shadow`: con ratón, `:hover` ya deja el borde en
-   `--sc-color-border-strong`, así que si `:active` sólo cambiara la sombra
-   no habría ningún delta frente a "sigo encima, sin pulsar" — y con teclado
-   (Enter, sin `:hover`) el borde de reposo tampoco se movería. Un tercer
-   color de borde, distinto de ambos, garantiza que pulsar cambie algo que
-   `motion` no toca. */
+/* Sin `transform` y sin depender sólo del `box-shadow`: con ratón, `:hover`
+   ya deja el borde en `--sc-color-border-strong`, así que si `:active` sólo
+   cambiara la sombra no habría ningún delta frente a "sigo encima, sin
+   pulsar" — y con teclado (Enter, sin `:hover`) el borde de reposo tampoco
+   se movería. Un tercer color de borde, distinto de ambos, garantiza que
+   pulsar cambie algo que `motion` no toca.
+
+   Medido en Chromium real (vite preview + Playwright, mousedown sostenido
+   sobre `.welcome-template-card`), no supuesto: con `layout` activo, `motion`
+   escribe `style="transform: none"` inline sobre este nodo de forma
+   permanente — en reposo, en `:hover` y en `:active` por igual — y ese
+   inline gana siempre sobre cualquier `transform` de CSS, incluido
+   `button:not(:disabled):active { transform:scale(.975) }` (styles.css más
+   abajo). `border-color` sí es libre: no lo toca `motion`, y el valor medido
+   en `:active` es `--sc-color-action-primary` tal cual se declara aquí. */
 .welcome-template-card:active {
   box-shadow:var(--sc-shadow-clay-pressed);
   border-color:var(--sc-color-action-primary);

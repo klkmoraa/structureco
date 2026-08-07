@@ -47,10 +47,12 @@
      chunk de entrada sin pagar su sitio. Los valores intermedios de la familia
      están documentados en docs/design-system/PALETTE.md. */
 
-  /* Identidad esmeralda clay. Los escalones 400-500 son DECORATIVOS: viven en
-     el pórtico del hero, en halos y en superficies suaves. Nunca bajo texto
-     blanco — #0b9270 con blanco mide 3,92:1 y el suelo del contrato es 4,5:1.
-     La acción arranca en el 600. */
+  /* Identidad esmeralda clay. Los escalones 300-500 son la rampa de la que se
+     derivó la familia clay-mint (ver más abajo); hoy no tienen consumidor
+     `var()` directo en src/ — el pórtico del hero usa los hexes independientes
+     --sc-color-clay-mint / --sc-color-clay-mint-deep, no estos escalones.
+     Nunca bajo texto blanco — #0b9270 con blanco mide 3,92:1 y el suelo del
+     contrato es 4,5:1. La acción arranca en el 600. */
   --sc-green-50: #eff9f5;
   --sc-green-100: #ddf4ec;
   --sc-green-200: #b6e5d4;
@@ -298,9 +300,14 @@
 
   /* ---- Materia clay -------------------------------------------------
      Una superficie clay son cuatro capas y una sola fuente de luz, a 145°
-     (arriba-izquierda). En orden: sombra exterior difusa abajo-derecha, luz
-     interior arriba-izquierda, sombra interior abajo-derecha, y el canto de
-     1px que separa la superficie del fondo.
+     (arriba-izquierda, ver --sc-gradient-clay). En orden: sombra exterior
+     difusa abajo-derecha, luz interior arriba-izquierda, sombra interior
+     abajo-derecha, y el canto de 1px que separa la superficie del fondo.
+
+     El pórtico del hero proyecta esta misma fuente de luz en isométrico
+     (src/graphics/isometricPortal.ts), pero la proyección no conserva el
+     ángulo: en pantalla cae a ~151,7° en convención `linear-gradient` —
+     mismo cuadrante, ~6,7° de diferencia. No son intercambiables.
 
      La tinta es grafito verdoso diluido, nunca negro: sobre un fondo cálido el
      negro puro ensucia y delata el degradado. */

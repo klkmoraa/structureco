@@ -10,8 +10,12 @@
  * jsdom, sin render y sin WebGL — y lo que permitiría sustituir el motor de
  * pintura sin volver a derivar la geometría.
  *
- * La luz es la misma que la de la materia clay: arriba-izquierda, a 145°.
- * Si cambia en `tokens.css`, cambia aquí.
+ * La luz parte de la misma fuente que la materia clay (arriba-izquierda, a
+ * 145° en `tokens.css`), pero al proyectarla aquí con `projectIso` no cae en
+ * el mismo ángulo: medida en convención `linear-gradient`, la del pórtico
+ * queda a ~151,7° — mismo cuadrante, ~6,7° de diferencia por la proyección
+ * isométrica. Si la luz de `tokens.css` cambia, revisa también `LIGHT` más
+ * abajo.
  */
 
 export interface Vec3 { x: number; y: number; z: number }
@@ -70,9 +74,11 @@ export const projectIso = (v: Vec3): Point2 => ({
 /**
  * Luz normalizada, en el octante +x/+y/+z que de verdad ve la cámara (ver
  * `boxFaces`). Sigue entrando por arriba-izquierda de PANTALLA — su
- * proyección vía `projectIso` cae en (x negativo, y negativo) — que es la
- * misma dirección de 145° de la materia clay, medida ahora en los ejes de
- * mundo correctos.
+ * proyección vía `projectIso` cae en (x negativo, y negativo), es decir
+ * `projectIso(LIGHT) ≈ (-0,1559, -0,2900)`, que en convención
+ * `linear-gradient` es ~151,7°: mismo cuadrante que los 145° de la materia
+ * clay en `tokens.css`, pero no el mismo ángulo — la proyección isométrica
+ * lo desvía ~6,7°.
  */
 const LIGHT: Vec3 = (() => {
   const raw = { x: 0.37, y: 0.75, z: 0.55 };
@@ -84,8 +90,13 @@ const LIGHT: Vec3 = (() => {
  * Normales de las tres caras visibles desde el octante +x/+y/+z. `left` y
  * `right` nombran dónde cae la cara EN PANTALLA, no el eje de mundo: con
  * `projectIso` proyectando `screen.x = (x - z) * ISO_X`, la cara `+z` queda a
- * la izquierda y la cara `+x` a la derecha (comprobado en
- * `isometricPortal.test.ts`, no es una convención arbitraria).
+ * la izquierda y la cara `+x` a la derecha. Lo que sí fija
+ * `isometricPortal.test.ts` es que `+x` cae a la derecha de pantalla (test
+ * "is parametric: a wider span moves the right column right") y que las tres
+ * caras no se solapan ni dejan huecos entre sí; el test "mirrors x and z
+ * horizontally" sólo asserta `a.x ≈ -b.x`, simétrico en signo, y no
+ * distingue por sí solo la etiqueta `left` de la `right` — ningún test lo
+ * hace directamente.
  */
 const NORMALS: Record<'top' | 'left' | 'right', Vec3> = {
   top: { x: 0, y: 1, z: 0 },

@@ -3,10 +3,10 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-// Dynamically discover all component source files (*.tsx, *.ts) excluding tests and specs.
-// This ensures that new components like Surface are automatically covered by the boundary check.
+// Descubre dinamicamente todos los ficheros fuente de componentes (*.tsx, *.ts) excluyendo tests y specs.
+// Esto asegura que componentes nuevos como Surface queden cubiertos automaticamente por el chequeo de frontera.
 const componentFiles = readdirSync(new URL('.', import.meta.url))
-  .filter((file) => /\.(tsx?|ts)$/.test(file) && !/\.(test|spec)\.(tsx?|ts)$/.test(file))
+  .filter((file) => /\.tsx?$/.test(file) && !/\.(test|spec)\.tsx?$/.test(file))
   .sort();
 
 const componentSources = componentFiles.map((file) => ({
@@ -19,7 +19,7 @@ const uiCss = readFileSync(new URL('./ui.css', import.meta.url), 'utf8');
 describe('Phase 5 component-library boundary', () => {
   it('does not import solver, store, persistence, or domain types', () => {
     for (const { path, source } of componentSources) {
-      expect(source, path).not.toMatch(/from\s+['"]\.\.\/(?:engine|workers|store|data|types)(?:\/|['"])/);
+      expect(source, path).not.toMatch(/from\s+['"](?:\.\.\/)+(?:engine|workers|store|data|types)(?:\/|['"])/);
     }
   });
 

@@ -6,7 +6,7 @@
 
 ## Qué cambió
 
-Cierre del ciclo 1 del rediseño claymorphism (16 commits, `5be1bc5..HEAD`): paleta clay con neutros cálidos, materia de cuatro capas con luz única a 145°, primitiva `Surface`, geometría isométrica parametrizada y un pórtico clay generado por código en la pantalla de bienvenida, con tema/idioma/drawer accesibles desde la cabecera. Esta tarea (la octava y última del ciclo) no añade funcionalidad: retoma trabajo pendiente sin commitear de un agente anterior (que arregló el defecto de retardo en la inclinación del hero, predicho por la revisión de la Tarea 5), corre el gate completo, hace la comprobación visual en navegador que ninguna tarea anterior había conseguido cerrar, completa `docs/design-system/PALETTE.md` y documenta el ciclo entero.
+Cierre del ciclo 1 del rediseño claymorphism (17 commits, `5be1bc5..HEAD`): paleta clay con neutros cálidos, materia de cuatro capas con luz única a 145°, primitiva `Surface`, geometría isométrica parametrizada y un pórtico clay generado por código en la pantalla de bienvenida, con tema/idioma/drawer accesibles desde la cabecera. Esta tarea (la octava y última del ciclo) no añade funcionalidad: retoma trabajo pendiente sin commitear de un agente anterior (que arregló el defecto de retardo en la inclinación del hero, predicho por la revisión de la Tarea 5), corre el gate completo, hace la comprobación visual en navegador que ninguna tarea anterior había conseguido cerrar, completa `docs/design-system/PALETTE.md` y documenta el ciclo entero.
 
 ## Por qué
 
@@ -22,30 +22,33 @@ Cierre del ciclo 1 del rediseño claymorphism (16 commits, `5be1bc5..HEAD`): pal
 
 `capturas.mjs` (raíz, sin trackear) se dejó fuera del commit a propósito, tal como pedía la instrucción de esta ronda.
 
-## Ficheros creados/modificados en los 16 commits del ciclo completo
+## Ficheros creados/modificados en los 17 commits del ciclo completo
 
 ```
- index.html                                               |   4 +-
- qa.mjs                                                    | 238 ++++++++++++
- src/design-system/components/dependencyBoundary.test.ts  |  19 +-
- src/design-system/components/surface.test.tsx            |  44 +++
- src/design-system/components/surface.tsx                 |  42 +++
- src/design-system/components/ui.css                      |   6 +
- src/design-system/tokens.css                              | 222 +++++++----
- src/design-system/tokens.test.ts                          |  43 +++
- src/features/welcome/StructuralPortalHero.test.tsx        |  41 +++
- src/features/welcome/StructuralPortalHero.tsx              | 212 +++++++++++
- src/features/welcome/WelcomeHeader.test.tsx                 |  85 +++++
- src/features/welcome/WelcomeScreen.tsx                       | 352 +++++++++-----
- src/features/welcome/WelcomeStructureArt.tsx (borrado)        |  84 ---
- src/graphics/isometricPortal.test.ts                           | 169 ++++++++
- src/graphics/isometricPortal.ts                                 | 196 ++++++++
- src/i18n/catalogs.ts                                              |   2 +
- src/styles.css                                                    | 346 +++++++++----
- 17 files changed, 1759 insertions(+), 346 deletions(-)
+ docs/design-system/PALETTE.md                       |  62 +++-
+ .../plans/2026-08-06-claymorphism-ciclo1.md         |  18 ++
+ index.html                                          |   4 +-
+ qa.mjs                                              | 238 ++++++++++++
+ .../2026-08-07-0130-claymorphism-ciclo1-cierre.md   | 129 ++++++++
+ .../components/dependencyBoundary.test.ts           |  19 +-
+ src/design-system/components/surface.test.tsx       |  44 +++
+ src/design-system/components/surface.tsx            |  42 +++
+ src/design-system/components/ui.css                 |   6 +
+ src/design-system/tokens.css                        | 222 +++++++----
+ src/design-system/tokens.test.ts                    |  43 +++
+ src/features/welcome/StructuralPortalHero.test.tsx  |  41 +++
+ src/features/welcome/StructuralPortalHero.tsx       | 220 +++++++++++
+ src/features/welcome/WelcomeHeader.test.tsx         |  85 +++++
+ src/features/welcome/WelcomeScreen.tsx              | 352 +++++++++++---------
+ src/features/welcome/WelcomeStructureArt.tsx        |  84 -----
+ src/graphics/isometricPortal.test.ts                | 169 ++++++++++
+ src/graphics/isometricPortal.ts                     | 196 ++++++++++++
+ src/i18n/catalogs.ts                                |   2 +
+ src/styles.css                                      | 356 ++++++++++++++++++---
+ 20 files changed, 1978 insertions(+), 354 deletions(-)
 ```
 
-Nota de conteo: el brief original hablaba de "ocho commits"; el rango real `5be1bc5..HEAD` son **dieciséis** (ocho de implementación + ocho rondas de corrección post-revisión, una por tarea).
+Nota de conteo: el brief original hablaba de "ocho commits"; el rango real `5be1bc5..HEAD` son **diecisiete** (siete `feat` de implementación y diez de verificación/corrección posterior — `fix`/`test`/`docs` — repartidas en varias rondas por tarea), sobre **veinte** ficheros. La tabla anterior de esta sección omitía `docs/design-system/PALETTE.md`, el plan bajo `docs/superpowers/plans/` y este mismo reporte; queda corregida arriba con la salida real de `git diff --stat 5be1bc5..HEAD`.
 
 ## Por qué no se añadieron `three` / `@react-three/fiber` / `@react-three/drei`
 
@@ -122,7 +125,7 @@ No se verificó explícitamente `prefers-reduced-motion: reduce` con el fix de e
 ## Pendiente / siguiente paso
 
 - **Riesgo de flakiness conocido**: los checks `welcome*CardActiveTransformIsPressedTranslate` de `qa.mjs` dependen de una espera fija de 80 ms tras `mouse.down()`. Documentado desde la Tarea 7; pasaron a la primera en esta sesión, pero el riesgo sigue latente. Mitigación sugerida si empieza a fallar en CI: subir la espera o sondear `element.matches(':active')`.
-- `prefers-reduced-motion: reduce` no se re-verificó de forma explícita con el fix del tilt de esta sesión — por análisis de código no debería interactuar (la clase nueva vive dentro de la rama `hover: hover and pointer: fine`, que ya excluye reduced-motion), pero no se confirmó por observación.
+- `prefers-reduced-motion: reduce` no se re-verificó de forma explícita con el fix del tilt de esta sesión — por análisis de código no debería interactuar. Ojo: la rama `@media (hover: hover) and (pointer: fine)` de `styles.css` (donde vive `.portal-hero--returning`) **no** excluye reduced-motion por sí sola — un ratón con `prefers-reduced-motion: reduce` activo sigue cumpliendo `hover: hover and pointer: fine`. Lo que neutraliza el tilt en ese caso son dos guardas independientes: `@media (prefers-reduced-motion: reduce) { .welcome-hero-figure .portal-hero { transform: none; } }` (`styles.css:288-290`) y el guard `canTilt()` en JS (`StructuralPortalHero.tsx`), que no registra el listener de `pointermove` si `matchMedia('(prefers-reduced-motion: reduce)').matches`. El comportamiento es correcto; esta nota corrige la explicación, no confirmada por observación.
 - El comentario de `scripts/check-performance-budget.mjs` sigue prometiendo una bajada de presupuesto por portar hovers a CSS que la arquitectura actual de imports (`main.tsx`/`overlays.tsx` importando `motion/react` sin condición) hace estructuralmente imposible. Queda señalado, no corregido — fuera del alcance de esta ronda.
 - El panel de navegador embebido de esta sesión no renderizó correctamente los cambios de viewport. Si ciclos futuros van a depender de ese panel para comprobación visual, vale la pena que alguien lo investigue.
 

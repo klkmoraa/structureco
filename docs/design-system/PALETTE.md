@@ -259,12 +259,12 @@ Una superficie clay son **cuatro capas y una sola fuente de luz**, a 145° (arri
 
 | Token | Uso previsto |
 | --- | --- |
-| `--sc-shadow-clay-xs` → `-sm` → `-md` → `-lg` → `-floating` | Escala de reposo → elevación creciente (hover), seis pasos con las cuatro capas descritas arriba |
+| `--sc-shadow-clay-xs` → `-sm` → `-md` → `-lg` → `-floating` | Escala de reposo → elevación creciente (hover), cinco pasos con las cuatro capas descritas arriba |
 | `--sc-shadow-clay-pressed` | Estado `:active`. La luz se invierte: **sólo capas interiores** — cualquier sombra exterior en `:active` devolvería la superficie a parecer que flota en vez de hundirse |
 | `--sc-clay-edge` | Canto de 1px de la superficie: blanco al 78% en Día, `border-strong` al 14% en Noche |
 | `--sc-gradient-clay` | Degradado base de 145° de una superficie clay, mezclado con `color-mix()` desde `surface-elevated`/`surface-2` — nunca un color plano |
 
-Materiales de ilustración del pórtico del hero (`StructuralPortalHero.tsx`). Son roles de ilustración, no de interfaz: **ningún texto se apoya en ellos**, así que se eligen por lectura de volumen (el sombreado por cara del pórtico modula su luminosidad con `brightness()` en CSS) y no por contraste — no forman parte del contrato de `tokens.test.ts`.
+Materiales de ilustración del pórtico del hero (`StructuralPortalHero.tsx`). Son roles de ilustración, no de interfaz: **ningún texto se apoya en ellos**, así que se eligen por lectura de volumen (el sombreado por cara del pórtico modula su luminosidad con `brightness()` en CSS) y no por contraste — no forman parte del contrato de `tokens.test.ts`. El pórtico parte de la misma fuente de luz que la materia clay (arriba-izquierda), pero al proyectarla en isométrico (`src/graphics/isometricPortal.ts`) no conserva el ángulo: medida como `projectIso(LIGHT)` en convención `linear-gradient`, cae a ~151,7° — mismo cuadrante que los 145° de la materia clay, ~6,7° de diferencia. No son el mismo valor.
 
 | Token | Día | Noche | Uso previsto |
 | --- | --- | --- | --- |
