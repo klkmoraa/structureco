@@ -1,9 +1,20 @@
 # Paleta — Sistema de diseño structureCo
 
-> Fuente de verdad: `src/design-system/tokens.css` (paleta v3, 2026-08-06, AG-015). Contrastes recalculados en esta revisión (ver `reports/` para el detalle de las migraciones v1 → v2 → v3).
-> Dirección visual: **"Mesa de dibujo"** — papel de grafito, trazo de tinta y un instrumento de precisión encima. Sustituye a "Mesa Modular"; conserva "Laboratorio Nocturno" para el tema Noche y el rigor numérico de "Instrumento de Precisión".
+> Fuente de verdad: `src/design-system/tokens.css` (paleta v4 — "clay", 2026-08-06/07, ciclo 1 del rediseño claymorphism). Contrastes recalculados en esta revisión (ver `reports/` para el detalle de las migraciones v1 → v2 → v3 → v4).
+> Dirección visual: **"Clay"** — superficies moldeadas, sombra de contacto y una sola fuente de luz a 145°. La capa 2 (roles semánticos) apenas cambia; lo nuevo vive sobre todo en primitivas decorativas y en una capa de materia dedicada (§11).
 
-Lo que cambió en v3:
+## v4 — clay (este ciclo)
+
+- **`--sc-color-action-primary` sube de `--sc-green-500` a `--sc-green-600`.** La ramp esmeralda entera se recalibra (ver §1); el valor de acción pasa de `#0b9270` (el verde de la imagen de referencia) a `#08795e`. Motivo: contraste, no estética — ver "Por qué `#08795e` y no `#0b9270`" más abajo.
+- **`--sc-green-500` (`#0b9270`) y `--sc-green-400` (`#27ad83`) quedan decorativos.** Viven en el pórtico del hero, halos y superficies suaves; el contrato de `tokens.test.ts` los excluye a propósito de cualquier par medido contra `action-foreground`.
+- **Dos primitivas nuevas puramente decorativas**: `--sc-sky-*` (azul claro) y `--sc-lilac-*` (lavanda), tomadas de la imagen de referencia para los contenedores de icono de las tarjetas del inicio. Ninguna de las dos sirve como color de foco, selección o estado — ver la nota de contraste en §2.
+- **Cuatro tokens de material del pórtico** (`--sc-color-clay-ivory(-deep)`, `--sc-color-clay-mint(-deep)`): roles de ilustración, no de interfaz. Ningún texto se apoya en ellos.
+- **Materia clay** (nueva subsección en §11): seis niveles de sombra de cuatro capas (`--sc-shadow-clay-xs` → `-pressed`), un canto de superficie (`--sc-clay-edge`) y un degradado base (`--sc-gradient-clay`). Sustituye, para las superficies vestidas de clay, al sistema de elevación plano existente — no lo reemplaza globalmente.
+- Sin cambios: capas 3 (roles técnicos) y 4 (alias). El lienzo estructural no se toca en este ciclo.
+
+> **Alcance de esta revisión.** Esta pasada verifica contra `tokens.css` únicamente lo que el ciclo 1 tocó: la ramp esmeralda, `--sc-color-action-*`, las primitivas decorativas nuevas (`sky`/`lilac`) y la materia clay (§11). El resto del documento (superficies §3, texto §4, técnicos §7, …) no se ha vuelto a verificar valor por valor en esta pasada — si algo no cuadra con `tokens.css` fuera de esas áreas, `tokens.css` manda.
+
+Lo que cambió en v3 (histórico):
 
 - **Suelo de grafito, no de menta.** Los neutros pasan de una familia teñida de verde claro a un gris frío de croma bajo, para que el blanco de una superficie sea un escalón real de elevación y no un matiz.
 - **Esmeralda en vez de pino.** `--sc-color-action-primary` pasa de `#007a67` a `#00795f`, alineado con el `theme-color` que `index.html` ya declaraba.
@@ -31,7 +42,9 @@ No se consumen directamente. Se listan como referencia de las ramps.
 | Token | Valor | Notas |
 | --- | --- | --- |
 | `--sc-white` / `--sc-black` | `#ffffff` / `#000000` | El Noche nunca usa negro puro como fondo. |
-| `--sc-green-50…900` | `#e4f5ee`, `#c3e9db`, `#93d7bf`, `#54bf9d`, `#18a077`, `#00795f`, `#00614c`, `#004b3b`, `#003a2d`, `#002b21` | Identidad esmeralda (v3). Re-anclada a `--sc-green-500` = `#00795f` (antes `#007a67` teal-pino), conservando la relación de pasos. |
+| `--sc-green-50…900` | `#eff9f5`, `#ddf4ec`, `#b6e5d4`, `#57c7a4`, `#27ad83`, `#0b9270`, `#08795e`, `#06614b`, `#054c3b`, `#033a2d` | **Recalibrada en v4 (clay).** Reemplaza la ramp esmeralda de v3 entera, no solo un paso: valores más saturados y un salto de luminosidad más marcado entre el 400 y el 600 para que el 400/500 lean como "clay" decorativo (hero, halos) y el 600 en adelante lea como acción. `--sc-color-action-primary` ahora resuelve a `--sc-green-600` (`#08795e`), no a `--sc-green-500` — ver la nota de contraste en §2. |
+| `--sc-sky-100/500` | `#e2f2fd`, `#5caee9` | **Nuevo en v4.** Acento decorativo tomado de la referencia clay para el contenedor de icono de la tarjeta "Continuar proyecto". Sólo fondo/icono suave — `#5caee9` sobre superficie mide 2,32:1, por debajo del suelo de 3:1 para foco/UI esencial, así que nunca es color de foco, selección ni estado. |
+| `--sc-lilac-100/500` | `#eee8fc`, `#9677db` | **Nuevo en v4.** Igual que `--sc-sky-*` pero para la tarjeta "Modo Aula": sólo contenedor de icono y fondo suave, nunca foco ni estado. |
 | `--sc-cyan-300/600` | `#8ccfe9`, `#0e6b8f` | **Nuevo en v3.** Cian de trazo: segunda dimensión de marca. Sólo alimenta `--sc-color-brand-secondary` (600 en Día, 300 en Noche). Los escalones intermedios de la familia (`#dcf0fa`, `#3fa9cf`, `#1a86ae`, `#0a536f`) están documentados aquí pero **no se declaran**: una rampa sin consumidor viaja en el chunk de entrada sin pagar su sitio. |
 | Familia grafito | `#fafcfb`, `#f4f8f6`, `#eaf0ed`, `#dde5e1`, `#c8d4ce`, `#a3b2ab`, `#7c8b85`, `#5b6b64`, `#41504a`, `#2a3833`, `#16211d`, `#0b1310` | **Nuevo en v3.** Gris frío de croma bajo que sustituye a los neutros mentolados. Por la misma razón que el cian, no se declara como rampa: sólo los escalones con consumidor viven en `tokens.css`, escritos directamente sobre el rol semántico. |
 | `--sc-blue-100/300/500/600/700` | `#e8effd`, `#9dbdf6`, `#345fd6`, `#294db7`, `#1847ab` | Azul de interacción: selección / foco / información. `500`/`600` se movieron a un azul más editorial (antes `#2867e8` / `#1e56cc`). |
@@ -45,14 +58,27 @@ No se consumen directamente. Se listan como referencia de las ramps.
 
 | Token | Día | Noche | Uso previsto | Uso prohibido | Contraste |
 | --- | --- | --- | --- | --- | --- |
-| `--sc-color-action-primary` | `#00795f` (green-500) | `#2fd39b` | Botón primario, CTA, activo de marca, línea de influencia, snap/hover del canvas | Estados de éxito de formularios (usar `state-success`), foco de teclado (usar azul) | 5.38:1 Día / 9.79:1 Noche contra `action-foreground` |
+| `--sc-color-action-primary` | `#08795e` (green-600) | `#45c69a` | Botón primario, CTA, activo de marca, línea de influencia, snap/hover del canvas | Estados de éxito de formularios (usar `state-success`), foco de teclado (usar azul) | 5,37:1 Día / contra `action-foreground` blanco (Noche usa `action-foreground` `#06140f` sobre `#45c69a`) |
 | `--sc-color-brand-secondary` | `#0e6b8f` (cyan-600) | `#8ccfe9` (cyan-300) | Segundo tono de marca: dibujo técnico de la bienvenida y `--sc-gradient-display` | Controles, estados, cualquier cosa accionable (ese trabajo es del esmeralda) | 5.97:1 Día / 10.67:1 Noche sobre `surface-1` |
-| `--sc-color-action-hover` | `#00614c` (green-600) | `#4de0ae` | Hover del primario | Texto suelto | En Noche ahora **aclara** sobre el primario; antes lo oscurecía, que es el gesto contrario al esperado |
-| `--sc-color-action-pressed` | `#004b3b` (green-700) | `#22b382` | Pressed del primario | — | Recalibrado junto al nuevo `green-500` |
+| `--sc-color-action-hover` | `#06614b` (green-700) | `#6ed7b2` | Hover del primario | Texto suelto | Recalibrado junto al nuevo `green-600` (v4) |
+| `--sc-color-action-pressed` | `#054c3b` (green-800) | `#35b088` | Pressed del primario | — | Recalibrado junto al nuevo `green-600` (v4) |
 | `--sc-color-action-foreground` | `#ffffff` | `#06140f` | Texto/icono sobre fondos de acción | Sobre superficies claras | Par de `action-primary` |
-| `--sc-color-action-subtle` | `#e4f5ee` (green-50) | `#10241d` | Fondos suaves de acción (chips, hovers tenues) | Como color de texto | Fondo, no requiere 4.5:1 propio |
+| `--sc-color-action-subtle` | `#eff9f5` (green-50) | `#163027` | Fondos suaves de acción (chips, hovers tenues) | Como color de texto | Fondo, no requiere 4.5:1 propio |
 | `--sc-color-aula` | `#7357d8` (violet-500) | `#9a83f0` | Identidad del modo Aula (guía, insignias) | Estados de error/warning | Sin cambios en v2 |
 | `--sc-color-aula-foreground` | `#ffffff` | `#171121` | Texto sobre fondo Aula | — | Par de `aula` |
+
+### Por qué la acción primaria es `#08795e` y no el `#0b9270` de la referencia
+
+La imagen de referencia del rediseño clay usa un verde `#0b9270` para sus botones y superficies de acción. structureCo **no lo usa como `--sc-color-action-primary`**, y esto no es una preferencia estética: es una medición.
+
+- `#0b9270` con texto blanco encima mide **3,92:1**.
+- El contrato ejecutable `src/design-system/tokens.test.ts` exige **4,5:1** para el par `('--sc-color-action-foreground', '--sc-color-action-primary')` — es la misma verificación que protege cualquier otro par de texto/fondo de la interfaz, no una regla ad hoc para este ciclo.
+- `#0b9270` se queda **1,84 puntos de ratio por debajo** del suelo. No es un margen que un ajuste menor de luminosidad cierre sin cambiar el matiz perceptible del verde.
+- `--sc-green-600` (`#08795e`) sí lo cumple: **5,37:1** con blanco encima, con margen suficiente para no volver a fallar si el texto o el fondo se ajustan ligeramente en un ciclo futuro.
+
+**`#0b9270` (`--sc-green-500`) y `#27ad83` (`--sc-green-400`) no se descartan: quedan como decorativos.** Ambos viven en el pórtico del hero (`StructuralPortalHero.tsx`, vía `--sc-color-clay-mint`/`-deep`, que no son directamente estos tokens pero comparten familia), en halos y en superficies suaves — lugares donde ningún texto se apoya encima de ellos y donde 3,92:1 nunca es una preocupación de accesibilidad. Lo que no está permitido es promoverlos de vuelta a `--sc-color-action-primary`: eso es exactamente el error que este apartado documenta para que no se repita dentro de unos meses cuando alguien compare la app contra la imagen de referencia y quiera "corregir" el verde para que coincida.
+
+**Los azules y lavandas claros de la referencia tampoco sirven como color de foco.** `--sc-sky-500` (`#5caee9`) contra una superficie mide **2,32:1**, por debajo del suelo de **3:1** que exige un elemento de foco/UI esencial (WCAG 1.4.11). `--sc-color-focus` sigue siendo el azul de interacción (`--sc-blue-500`, §5), no estos acentos decorativos. `--sc-sky-*` y `--sc-lilac-*` se limitan a contenedores de icono y fondos suaves en las tarjetas del inicio (ver §1).
 
 ## 3 · Superficies
 
@@ -224,6 +250,26 @@ Vidrio, anillos, halos y gradientes son tokens, no literales por componente: cad
 | `--sc-gradient-sheen` | blanco 64% → transparente | acento 10% → transparente | Brillo superior de tarjetas y botón primario | — |
 
 Elevación: `--sc-shadow-raised` → `--sc-shadow-lifted` (nuevo en v3, para hover de tarjeta) → `--sc-shadow-floating` → `--sc-shadow-popover` → `--sc-shadow-modal`. En Día la tinta de sombra es grafito verdoso (`rgba(11, 31, 24, …)`), no negro puro: sobre porcelana el negro ensucia.
+
+### Materia clay (nuevo en v4)
+
+Sistema de elevación aparte, para las superficies vestidas de clay del inicio (`Surface`, tarjetas del launcher, tarjetas de importación/plantilla). No sustituye a la escala `--sc-shadow-raised…modal` de arriba — conviven, cada una en su propia familia de componentes.
+
+Una superficie clay son **cuatro capas y una sola fuente de luz**, a 145° (arriba-izquierda), en este orden: sombra exterior difusa abajo-derecha, luz interior arriba-izquierda, sombra interior abajo-derecha, y un canto de 1px que separa la superficie del fondo. La tinta de sombra es grafito verdoso diluido (`rgba(58, 70, 64, …)`), nunca negro puro — igual que el resto del sistema de elevación.
+
+| Token | Uso previsto |
+| --- | --- |
+| `--sc-shadow-clay-xs` → `-sm` → `-md` → `-lg` → `-floating` | Escala de reposo → elevación creciente (hover), seis pasos con las cuatro capas descritas arriba |
+| `--sc-shadow-clay-pressed` | Estado `:active`. La luz se invierte: **sólo capas interiores** — cualquier sombra exterior en `:active` devolvería la superficie a parecer que flota en vez de hundirse |
+| `--sc-clay-edge` | Canto de 1px de la superficie: blanco al 78% en Día, `border-strong` al 14% en Noche |
+| `--sc-gradient-clay` | Degradado base de 145° de una superficie clay, mezclado con `color-mix()` desde `surface-elevated`/`surface-2` — nunca un color plano |
+
+Materiales de ilustración del pórtico del hero (`StructuralPortalHero.tsx`). Son roles de ilustración, no de interfaz: **ningún texto se apoya en ellos**, así que se eligen por lectura de volumen (el sombreado por cara del pórtico modula su luminosidad con `brightness()` en CSS) y no por contraste — no forman parte del contrato de `tokens.test.ts`.
+
+| Token | Día | Noche | Uso previsto |
+| --- | --- | --- | --- |
+| `--sc-color-clay-ivory` / `-deep` | `#f0ece2` / `#e3ddcf` | `#b9b5ab` / `#a29e94` | Columnas y capitel del pórtico |
+| `--sc-color-clay-mint` / `-deep` | `#6fb99a` / `#4f9e80` | `#57c7a4` / `#3d9c7d` | Vigas y bases del pórtico |
 
 ## Regla transversal: no depender solo del color
 

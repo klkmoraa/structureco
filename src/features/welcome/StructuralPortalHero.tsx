@@ -135,12 +135,19 @@ export const StructuralPortalHero = () => {
   /* Inclinación con el puntero: sin `setState`, cero re-render de React por
      movimiento. Se escribe directamente en `node.style` vía la ref. Nunca se
      registra un listener en táctil ni con `prefers-reduced-motion`, y el
-     `return` del efecto limpia ambos al desmontar. */
+     `return` del efecto limpia ambos al desmontar.
+
+     La clase `portal-hero--returning` es lo único que decide si `transform`
+     tiene transición (ver `styles.css`): fuera mientras el puntero se mueve
+     —el pórtico debe seguir al cursor 1:1, sin persecución con retardo—,
+     puesta sólo en el instante de `pointerleave` para que el regreso a cero
+     se vea suave. */
   useEffect(() => {
     const node = svgRef.current;
     if (!node || !canTilt()) return undefined;
 
     const handlePointerMove = (event: PointerEvent) => {
+      node.classList.remove('portal-hero--returning');
       const rect = node.getBoundingClientRect();
       const relX = rect.width > 0 ? ((event.clientX - rect.left) / rect.width) * 2 - 1 : 0;
       const relY = rect.height > 0 ? ((event.clientY - rect.top) / rect.height) * 2 - 1 : 0;
@@ -149,6 +156,7 @@ export const StructuralPortalHero = () => {
     };
 
     const handlePointerLeave = () => {
+      node.classList.add('portal-hero--returning');
       node.style.setProperty('--tilt-x', '0');
       node.style.setProperty('--tilt-y', '0');
     };

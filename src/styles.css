@@ -266,10 +266,20 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 
 /* Inclinación con el puntero: 2° como máximo, conducida por el contenedor.
    No rota sola, no hay parallax, y en táctil no existe (`perspective` vive
-   en la declaración única de `.welcome-hero-figure`, arriba). */
+   en la declaración única de `.welcome-hero-figure`, arriba).
+
+   Sin `transition` en la regla base a propósito: `--tilt-x`/`--tilt-y` se
+   reescriben en cada `pointermove` (ver `StructuralPortalHero.tsx`), así que
+   una transición aquí haría que el pórtico persiga al cursor con un retardo
+   visible en vez de seguirlo. La transición sólo se activa con la clase
+   `.portal-hero--returning`, que el componente añade en `pointerleave` para
+   suavizar el regreso a cero y quita en el siguiente `pointerenter`/
+   `pointermove` para que el rastreo vuelva a ser instantáneo. */
 @media (hover: hover) and (pointer: fine) {
   .welcome-hero-figure .portal-hero {
     transform: rotateX(calc(var(--tilt-y, 0) * 2deg)) rotateY(calc(var(--tilt-x, 0) * 2deg));
+  }
+  .welcome-hero-figure .portal-hero.portal-hero--returning {
     transition: transform var(--sc-motion-standard) var(--sc-ease-standard);
   }
 }
