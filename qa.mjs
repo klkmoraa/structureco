@@ -120,6 +120,37 @@ async function verifyWelcomeHeaderResponsive(page) {
   if (originalViewport) await page.setViewportSize(originalViewport);
 }
 
+// Ronda de corrección 1/5 sobre la Tarea 7: `.sc-surface` vivía sólo en
+// `design-system/components/ui.css`, que nadie carga en el chunk de entrada
+// (sólo `WorkspaceShell.tsx`, lazy). `.welcome-frame` dependía de ganar la
+// carrera del precalentamiento por `requestIdleCallback` para tener materia
+// en el primer pintado. `loadCleanApp` usa `waitUntil:'networkidle'`, así
+// que para cuando cualquier otro check mira la página el chunk diferido
+// siempre ha llegado — la ausencia de materia en el primer pintado es
+// invisible por construcción con ese arnés. Esta función navega aparte, con
+// `waitUntil:'domcontentloaded'`, para medir el estado real antes de que la
+// red termine de traer nada diferido.
+async function verifyWelcomeFirstPaintMaterial() {
+  const page = await browser.newPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
+  await page.goto(baseURL, { waitUntil: 'domcontentloaded' });
+  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
+
+  const frame = await page.locator('.welcome-frame').evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      backgroundImage: style.backgroundImage,
+      boxShadow: style.boxShadow,
+      borderTopWidth: style.borderTopWidth,
+      borderRadius: style.borderRadius,
+    };
+  });
+  out.checks.welcomeFrameFirstPaintHasClayBackground = frame.backgroundImage !== 'none';
+  out.checks.welcomeFrameFirstPaintHasClayShadow = frame.boxShadow !== 'none';
+  out.checks.welcomeFrameFirstPaintHasClayBorder = frame.borderTopWidth !== '0px';
+  out.checks.welcomeFrameFirstPaintHasHeroRadius = frame.borderRadius === '40px';
+  await page.close();
+}
+
 // Tarea 7: los hovers de las tres tarjetas del inicio dejaron de venir de
 // `motion` (whileHover/whileTap) y ahora los conduce CSS puro (:hover,
 // :active, :focus-visible). `WelcomeScreen.test.tsx` corre en jsdom sin CSS,
@@ -139,7 +170,13 @@ async function verifyWelcomeClayMaterial(page) {
     return { backgroundImage: style.backgroundImage, borderRadius: style.borderRadius };
   });
   out.checks.welcomeFrameHasClayBackground = frame.backgroundImage !== 'none';
-  out.checks.welcomeFrameHasHeroRadius = frame.borderRadius !== '0px';
+  // Comparado contra el valor exacto esperado (--sc-radius-hero = 40px), no
+  // contra una simple ausencia de '0px': `.sc-surface` (28px, --sc-radius-xl)
+  // y `.welcome-frame` (40px) tienen la misma especificidad (0,1,0) — un
+  // '28px' pasaría el check anterior (!== '0px') igual de verde que un
+  // '40px' correcto, que es exactamente como se coló el Critical 2 sin que
+  // ningún check lo viera.
+  out.checks.welcomeFrameHasHeroRadius = frame.borderRadius === '40px';
 
   const cardSelectors = {
     launcher: '.welcome-launcher-card >> nth=0',
@@ -188,26 +225,50 @@ async function verifyWelcomeClayMaterial(page) {
       await page.mouse.move(0, 0);
       await page.mouse.up();
       out.checks[`welcome${key}CardActiveBoxShadowChanges`] = pressed.boxShadow !== hovered.boxShadow;
+      // Ronda 1/5: antes sólo se comparaba `boxShadow`, así que no veía que
+      // `transform` (launcher/import) o `borderColor` (template) en `:active`
+      // no se estaban aplicando de verdad — `button:not(:disabled):active
+      // { transform:scale(.975) }` (más específica) se comía el
+      // `translateY(1px)` de estas tarjetas en silencio, y ambos checks
+      // pasaban igual porque sólo miraban la sombra.
+      if (key === 'template') {
+        // El `transform` de esta tarjeta lo posee `motion` (layout), así que
+        // aquí el indicador de `:active` distinto de la sombra es el borde,
+        // no el desplazamiento — ver el comentario de `.welcome-template-card:active`.
+        out.checks[`welcome${key}CardActiveBorderColorChanges`] = pressed.borderColor !== hovered.borderColor;
+      } else {
+        out.checks[`welcome${key}CardActiveTransformChanges`] = pressed.transform !== hovered.transform && pressed.transform !== 'none';
+      }
     }
   }
 
   // El foco por teclado tiene que verse sobre las tres superficies clay
-  // nuevas: se llega con Tab de verdad (no `element.focus()`, que en
-  // Chromium no siempre dispara `:focus-visible`) hasta la primera tarjeta
-  // de lanzamiento y se lee el contorno computado.
+  // nuevas, no sólo la primera: se llega con Tab de verdad (no `element.focus()`,
+  // que en Chromium no siempre dispara `:focus-visible`) y se sigue avanzando
+  // en el mismo recorrido (el orden del DOM es launcher x3 → filtros →
+  // import → plantillas) para comprobar las tres, en vez de resetear el foco
+  // tres veces.
   await page.locator('body').evaluate((body) => body.focus());
-  let reachedLauncher = false;
-  for (let i = 0; i < 30 && !reachedLauncher; i += 1) {
-    await page.keyboard.press('Tab');
-    reachedLauncher = await page.evaluate(() => document.activeElement?.classList.contains('welcome-launcher-card') ?? false);
-  }
-  out.checks.welcomeLauncherCardReachableByTab = reachedLauncher;
-  if (reachedLauncher) {
-    const outline = await page.evaluate(() => {
-      const style = getComputedStyle(document.activeElement);
-      return { outlineStyle: style.outlineStyle, outlineWidth: style.outlineWidth };
-    });
-    out.checks.welcomeLauncherCardFocusVisibleOutline = outline.outlineStyle !== 'none' && outline.outlineWidth !== '0px';
+  const capitalize = (s) => s[0].toUpperCase() + s.slice(1);
+  const focusChecks = [
+    ['launcher', 'welcome-launcher-card'],
+    ['import', 'welcome-import-card'],
+    ['template', 'welcome-template-card'],
+  ];
+  for (const [key, className] of focusChecks) {
+    let reached = false;
+    for (let i = 0; i < 30 && !reached; i += 1) {
+      await page.keyboard.press('Tab');
+      reached = await page.evaluate((cls) => document.activeElement?.classList.contains(cls) ?? false, className);
+    }
+    out.checks[`welcome${capitalize(key)}CardReachableByTab`] = reached;
+    if (reached) {
+      const outline = await page.evaluate(() => {
+        const style = getComputedStyle(document.activeElement);
+        return { outlineStyle: style.outlineStyle, outlineWidth: style.outlineWidth };
+      });
+      out.checks[`welcome${capitalize(key)}CardFocusVisibleOutline`] = outline.outlineStyle !== 'none' && outline.outlineWidth !== '0px';
+    }
   }
 }
 
@@ -516,6 +577,7 @@ async function educationalExample() {
   await page.close();
 }
 
+await verifyWelcomeFirstPaintMaterial();
 await desktop();
 await influenceWorkflow();
 await mobile();

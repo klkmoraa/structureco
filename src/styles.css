@@ -26,6 +26,32 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 :where(button, input, select, textarea, summary):focus-visible { outline: var(--sc-focus-ring-width) solid var(--focus); outline-offset: var(--sc-focus-ring-offset); }
 .sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
 
+/* Superficie clay (`Surface`, tarea 3). Vivía en `design-system/components/ui.css`,
+   pero ese fichero sólo lo carga `WorkspaceShell.tsx` (lazy) — así que la bienvenida,
+   que no es lazy y es la única que usa `<Surface>` hoy, no tenía esta materia en el
+   primer pintado: dependía de ganar la carrera contra el precalentamiento por
+   `requestIdleCallback`. Movida aquí (hoja siempre presente en el chunk de entrada),
+   no duplicada — nada en `ui.css` la necesitaba (`Surface`/`.sc-surface` no se usa
+   en ningún componente del workspace todavía). El orden importa: tiene que declararse
+   antes que cualquier selector que le gane la especificidad por venir después en el
+   archivo, como `.welcome-frame` más abajo, que sube su radio a `--sc-radius-hero`. */
+.sc-surface {
+  background: var(--sc-gradient-clay);
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-xl);
+  transition: var(--sc-transition-control);
+}
+
+.sc-surface[data-level='flat'] {
+  background: var(--sc-color-surface-1);
+  border-color: var(--sc-color-border-soft);
+  box-shadow: none;
+}
+
+.sc-surface[data-level='raised'] { box-shadow: var(--sc-shadow-clay-md); }
+.sc-surface[data-level='floating'] { box-shadow: var(--sc-shadow-clay-floating); }
+.sc-surface[data-pressed='true'] { box-shadow: var(--sc-shadow-clay-pressed); }
+
 .app-shell { height: 100%; height: 100dvh; background: var(--app-bg); color: var(--text); display: flex; flex-direction: column; }
 /* Pantalla de bienvenida · "Mesa de dibujo" (AG-015) ------------------------
    El suelo es papel de delineante: retícula fina de 24px, retícula mayor de
@@ -146,8 +172,13 @@ button:disabled { cursor: not-allowed; opacity: .62; }
   .welcome-header-menu { display: inline-flex; }
 }
 /* Marco clay que envuelve todo el contenido (Surface, tarea 3). El fondo, el
-   canto y la sombra vienen de `.sc-surface`; aquí sólo se ajustan el radio
-   —el más grande de la escala, `--sc-radius-hero`— y el respiro interior. */
+   canto y la sombra vienen de `.sc-surface` (ver su declaración cerca del
+   principio de este mismo archivo); aquí sólo se ajustan el radio —el más
+   grande de la escala, `--sc-radius-hero`, que reemplaza el `--sc-radius-xl`
+   por defecto de `.sc-surface`— y el respiro interior. Misma especificidad
+   (0,1,0) que `.sc-surface`, así que el orden decide: esta regla tiene que
+   seguir apareciendo *después* que `.sc-surface` en el archivo para ganar
+   (protegido por mutación en `qa.mjs`, `verifyWelcomeClayMaterial`). */
 .welcome-frame {
   border-radius: var(--sc-radius-hero);
   padding: clamp(var(--sc-space-6), 4vw, var(--sc-space-8));
@@ -275,7 +306,13 @@ button:disabled { cursor: not-allowed; opacity: .62; }
   box-shadow:var(--sc-shadow-clay-lg);
   transform:translateY(-2px);
 }
-.welcome-launcher-card:active {
+/* `:not(:disabled)` no cambia a qué botones aplica (ninguno de los tres se
+   deshabilita) — está para ganar en especificidad (0,3,0) a la regla global
+   `button:not(:disabled):active { transform:scale(.975) }` (0,2,1, en la
+   sección "Green Frame"), que si no se lleva el `transform` por delante y
+   deja a esta tarjeta encogiéndose en vez de hundirse. Mismo patrón que ya
+   usa `.analyze-button:not(:disabled):active` en este archivo. */
+.welcome-launcher-card:not(:disabled):active {
   box-shadow:var(--sc-shadow-clay-pressed);
   transform:translateY(1px);
 }
@@ -339,12 +376,19 @@ button:disabled { cursor: not-allowed; opacity: .62; }
   text-align:left; cursor:pointer; width:100%;
   transition:var(--sc-transition-control);
 }
+/* `border-color:var(--accent)` a proposito, no `--sc-color-border-strong`
+   (el neutro que usan las otras dos tarjetas): esta es la unica de las tres
+   con un borde de color en reposo (discontinuo, acento diluido al 38%), y
+   apagarlo a gris en hover volvia la zona de soltar archivos MENOS enfatica
+   justo al apuntarla — al reves de lo que pide un target interactivo. Acento
+   a maxima intensidad en vez de diluido comunica "sueltalo aqui" con mas
+   fuerza, no menos. */
 .welcome-import-card:hover {
-  border-color:var(--sc-color-border-strong);
+  border-color:var(--accent);
   box-shadow:var(--sc-shadow-clay-lg);
   transform:translateY(-2px);
 }
-.welcome-import-card:active {
+.welcome-import-card:not(:disabled):active {
   box-shadow:var(--sc-shadow-clay-pressed);
   transform:translateY(1px);
 }
@@ -382,8 +426,16 @@ button:disabled { cursor: not-allowed; opacity: .62; }
   border-color:var(--sc-color-border-strong);
   box-shadow:var(--sc-shadow-clay-lg);
 }
+/* Sin `transform` (motion lo posee, ver el comentario de arriba) y sin
+   depender sólo del `box-shadow`: con ratón, `:hover` ya deja el borde en
+   `--sc-color-border-strong`, así que si `:active` sólo cambiara la sombra
+   no habría ningún delta frente a "sigo encima, sin pulsar" — y con teclado
+   (Enter, sin `:hover`) el borde de reposo tampoco se movería. Un tercer
+   color de borde, distinto de ambos, garantiza que pulsar cambie algo que
+   `motion` no toca. */
 .welcome-template-card:active {
   box-shadow:var(--sc-shadow-clay-pressed);
+  border-color:var(--sc-color-action-primary);
 }
 .welcome-template-card:focus-visible {
   outline:var(--sc-focus-ring-width) solid var(--sc-color-focus);
@@ -1293,8 +1345,13 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 @media (prefers-reduced-motion:reduce) {
   button, .icon-button, .tool-button, .compact-select, .number-control, .selection-card,
   .welcome-launcher-card, .welcome-import-card, .welcome-template-card, .welcome-filter-tab { transition:none; }
+  /* `:not(:disabled)` en las tres variantes de `:active`, mismo motivo que en
+     sus reglas base: sin él, (0,2,0) pierde contra la regla global
+     `button:not(:disabled):active { transform:scale(.975) }` (0,2,1) — el
+     desplazamiento quedaba anulado sólo en apariencia, `scale` seguía
+     colándose bajo movimiento reducido. */
   .welcome-launcher-card:hover, .welcome-import-card:hover, .welcome-template-card:hover,
-  .welcome-launcher-card:active, .welcome-import-card:active, .welcome-template-card:active { transform:none; }
+  .welcome-launcher-card:not(:disabled):active, .welcome-import-card:not(:disabled):active, .welcome-template-card:not(:disabled):active { transform:none; }
 }
 
 /* Mobile v2 --------------------------------------------------------------- */

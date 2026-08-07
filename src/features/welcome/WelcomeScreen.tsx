@@ -197,7 +197,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
                 ser una región del documento, y etiquetarla obligaría a inventar un
                 nombre accesible que no aporta nada sobre lo que ya dicen los botones. */}
             <div className="welcome-hero-launcher" onPointerEnter={onPreloadWorkspace} onFocusCapture={onPreloadWorkspace} onTouchStart={onPreloadWorkspace}>
-              <button type="button" className="welcome-launcher-card welcome-launcher-card--primary" onClick={openBlankProject}>
+              <button type="button" className="welcome-launcher-card" onClick={openBlankProject}>
                 <span className="welcome-launcher-icon"><Compass size={22} /></span>
                 <span className="welcome-launcher-info">
                   <span className="welcome-launcher-header">
