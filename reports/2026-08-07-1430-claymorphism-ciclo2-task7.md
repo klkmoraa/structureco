@@ -71,3 +71,15 @@ Por alcance no se abrió dev server ni navegador visual, no se ejecutó WebKit n
 - `node qa.mjs`: PASS completo; las cuatro geometrías, ambos summaries y las nueve familias flat están en `true`; `console: []`, `pageErrors: []` y probes retirados.
 - Guardián final: `git diff --check` PASS; 63/63 hashes protegidos intactos; `capturas.mjs` conservó SHA-256 `1F2CDE477FA77BC74A16C1848F544E8C7E5435FFCF0E7A4D12D644EEA774A710`; el diff rastreado se limita a `qa.mjs`, `src/styles.css` y este reporte.
 - Alcance negativo: sin dev server, navegador visual, WebKit, suite completa, TSX, dependencias, `capturas.mjs`, rutas protegidas ni push.
+
+## Cierre del controlador y revisión independiente
+
+**Fecha:** 2026-08-07 15:39
+
+- Revisión independiente inicial sobre `ebd87ec..9e35c96`: tres Important detectados (summary vacío fuera de raised, geometrías responsive incompletas y cobertura flat parcial). Corrección en `a03df6e`.
+- Re-revisión independiente sobre `9e35c96..a03df6e`: **APPROVED**, sin Critical ni Important. Queda como Minor heredado que `.number-control` es un selector flat global y también alcanza Influence Line; T7 no amplió ese acoplamiento ni cambió su resultado computado.
+- Matriz visual Chromium real: PASS en Day/Night para `1536x960`, `1366x768`, `900x1024`, `390x844` y `844x390` (10 combinaciones). Panel y summary conservaron jerarquía raised; los tres campos numéricos visibles permanecieron flat; no hubo overflow horizontal, errores de consola ni `pageerror`. Evidencia local ignorada: `.superpowers/sdd/2026-08-07-claymorphism-ciclo2/task-7-*-full.png`, `task-7-*-panel.png` y `task-7-visual-results.json`.
+- Geometrías computadas confirmadas: desktop `1px 1px 1px 1px`; tablet y paisaje corto `0px 0px 0px 1px`; teléfono `1px 1px 0px 1px`.
+- Gates frescos del controlador: lint PASS; `verify:protected` PASS (29/29); Vitest completo PASS (97 archivos, 738/738) en ejecución serial después de cerrar el servidor visual; typecheck PASS; build PASS; `verify:perf` PASS con `662430` bytes / `178309` gzip frente a techos `670000` / `179500`; `node qa.mjs` PASS completo con todas las claves T7 en `true`, `console: []` y `pageErrors: []`.
+- Una primera corrida Vitest bajo saturación del host falló exclusivamente por timeouts/microbenchmarks; App y Results pasaron después en aislamiento, el microbenchmark pasó al repetirlo aislado y la suite serial completa cerró verde. No se modificaron tests, límites ni motor para ocultar esa condición ambiental.
+- WebKit queda reservado al barrido global de T9/T10 conforme al plan. No se hizo push.
