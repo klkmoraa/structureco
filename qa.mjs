@@ -237,7 +237,18 @@ async function verifyWelcomeClayMaterial(page) {
         // no el desplazamiento — ver el comentario de `.welcome-template-card:active`.
         out.checks[`welcome${key}CardActiveBorderColorChanges`] = pressed.borderColor !== hovered.borderColor;
       } else {
-        out.checks[`welcome${key}CardActiveTransformChanges`] = pressed.transform !== hovered.transform && pressed.transform !== 'none';
+        // Ronda 2/5: comparar contra el valor EXACTO esperado, no contra
+        // "cambió y no es 'none'". Ese predicado laxo no veía el defecto
+        // real: si `button:not(:disabled):active { transform:scale(.975) }`
+        // se come el `translateY(1px)` de esta tarjeta (p. ej. porque a
+        // alguien se le va el `:not(:disabled)` de `.welcome-launcher-card:active`
+        // en `styles.css`), el valor pulsado pasa a
+        // `matrix(0.975, 0, 0, 0.975, 0, 0)` — sigue siendo distinto del de
+        // `:hover` y sigue siendo distinto de `'none'`, así que el check
+        // laxo se quedaba en verde con el defecto reintroducido. El único
+        // valor que demuestra el hundimiento correcto es la matriz de
+        // `translateY(1px)`.
+        out.checks[`welcome${key}CardActiveTransformIsPressedTranslate`] = pressed.transform === 'matrix(1, 0, 0, 1, 0, 1)';
       }
     }
   }
@@ -270,6 +281,53 @@ async function verifyWelcomeClayMaterial(page) {
       out.checks[`welcome${capitalize(key)}CardFocusVisibleOutline`] = outline.outlineStyle !== 'none' && outline.outlineWidth !== '0px';
     }
   }
+}
+
+// Ronda 2/5: el arreglo del Important 4 (el desplazamiento de `:active` se
+// anula bajo `prefers-reduced-motion:reduce`, en vez de que se cuele el
+// `scale(.975)` global) estaba medido pero no protegido — `grep` de
+// `reducedMotion` en `qa.mjs`/`qa-webkit.mjs` no daba ningún acierto. Esta
+// función abre su propia página con el contexto en `reducedMotion:'reduce'`
+// (lo que Playwright usa para emular `prefers-reduced-motion:reduce`, sin
+// tocar el sistema operativo) y exige `transform:none` exacto al pulsar.
+async function verifyWelcomeReducedMotionActive() {
+  const context = await browser.newContext({ reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  await page.goto(baseURL, { waitUntil: 'networkidle' });
+  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
+
+  const cardSelectors = {
+    launcher: '.welcome-launcher-card >> nth=0',
+    import: '.welcome-import-card',
+  };
+
+  for (const [key, selector] of Object.entries(cardSelectors)) {
+    const locator = page.locator(selector);
+    await locator.waitFor({ state: 'visible' });
+    // Ronda 2/5 (fix del propio check): sin este `hover()` previo, Chromium
+    // nunca llega a marcar `:hover`/`:active` en esta página recién creada —
+    // el `page.mouse.move` + `page.mouse.down()` en crudo no bastan para que
+    // el pseudo-estado se registre en un contexto nuevo sin interacción
+    // previa (mismo motivo por el que `verifyWelcomeClayMaterial` llama a
+    // `locator.hover()` antes de su propio press). Sin el `hover()`, el
+    // elemento se queda en su transform de reposo ('none'), la comparación
+    // `pressedTransform === 'none'` pasa siempre en verde, y el check no
+    // detecta absolutamente nada — se verificó por mutación: sin esta línea,
+    // quitar la regla `prefers-reduced-motion` que anula el `transform` de
+    // `:active` (Mutation B) no lo ponía en rojo.
+    await locator.hover();
+    const box = await locator.boundingBox();
+    if (!box) throw new Error(`No se pudo medir ${selector} bajo movimiento reducido.`);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.waitForTimeout(80);
+    const pressedTransform = await locator.evaluate((element) => getComputedStyle(element).transform);
+    await page.mouse.move(0, 0);
+    await page.mouse.up();
+    out.checks[`welcome${key === 'launcher' ? 'Launcher' : 'Import'}CardActiveTransformNoneUnderReducedMotion`] = pressedTransform === 'none';
+  }
+
+  await context.close();
 }
 
 async function desktop() {
@@ -578,6 +636,7 @@ async function educationalExample() {
 }
 
 await verifyWelcomeFirstPaintMaterial();
+await verifyWelcomeReducedMotionActive();
 await desktop();
 await influenceWorkflow();
 await mobile();
