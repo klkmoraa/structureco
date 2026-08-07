@@ -44,7 +44,7 @@ No se abrió dev server ni navegador visual, no se ejecutó WebKit ni suite comp
 
 La primera matriz Chromium sobre el modelo de ejemplo analizado con diagrama de momento confirmó el riesgo principal del spec: en desktop 1536×960 el badge heredado medía 387 px y la leyenda 260×93.6 px; al ser ahora opacos, cubrían la curva, etiquetas y parte del miembro izquierdo. El detector geométrico registró 11 intersecciones de bounding boxes persistentes. En 390×844 no hubo ninguna intersección y la composición móvil ya era correcta.
 
-Se aplicó el ajuste mínimo únicamente para `min-width:1024px`: badge normal y leyenda quedan en 156 px; la instrucción del badge conserva texto completo en el DOM y se trunca visualmente con elipsis; la leyenda oculta solo su explicación secundaria, que ya aparece en el panel de resultados. `.placing-load` queda fuera del selector y mantiene 371 px con “Toca un nodo o miembro para colocarla”. Móvil no cambió.
+Se aplicó el ajuste mínimo únicamente para `min-width:1024px`: badge normal y leyenda quedan en 156 px; la instrucción del badge conserva texto completo en el DOM y se trunca visualmente con elipsis; la leyenda compacta visualmente su explicación secundaria mediante el patrón sr-only, conservando la convención completa en el DOM y el árbol accesible. `.placing-load` queda fuera del selector y mantiene 371 px con “Toca un nodo o miembro para colocarla”. Móvil no cambió.
 
 No se modificaron `--canvas-safe-*`: la inspección del código confirmó que esas variables posicionan feedback/leyenda/quick-entry, pero no reservan espacio para el dibujo. Aumentarlas habría movido el chrome sobre más geometría, no protegido el modelo. La solución efectiva fue reducir los dos overlays persistentes del margen izquierdo.
 
@@ -65,4 +65,10 @@ Gates posteriores al fix visual:
 - `npm.cmd run verify:perf`: 662960/670000 bytes y 178286/179500 gzip.
 - `npm.cmd run verify:protected`: frontera 29/29 intacta.
 
-La revisión independiente del commit de implementación `701cceb` fue APPROVED sin hallazgos. Este fix visual se somete a re-revisión antes de cerrar la tarea. No se hizo push.
+La revisión independiente del commit de implementación `701cceb` fue APPROVED sin hallazgos. La primera re-revisión pidió conservar accesible la convención de signo: se sustituyó `display:none` por ocultación visual sr-only y se vuelve a revisar. No se hizo push.
+
+### Fix de re-revisión — convención accesible
+
+El revisor detectó que `display:none` retiraba del árbol accesible la única explicación de la convención “+y local”. Se cambió a ocultación visual sr-only. Chromium confirmó `display:block`, `position:absolute`, caja 1×1, `clip:rect(0,0,0,0)`, sin `aria-hidden`, y el snapshot ARIA conserva: “Se dibuja hacia +y local · valores positivos mantienen el color y el trazo”. La leyenda visual permanece en 156×34 px y la geometría no cambió.
+
+Tras este fix: tokens 22/22 y build PASS; presupuesto 663071/670000 bytes y 178290/179500 gzip; frontera 29/29. Dos corridas de `node qa.mjs` fallaron únicamente la carrera heredada `welcomeimportCardActiveTransformIsPressedTranslate`; ninguna tocó código welcome y la estabilización sigue asignada a T10. Los checks/material T6 ya habían pasado en el gate anterior y la matriz directa posterior quedó sin consola ni `pageErrors`.
