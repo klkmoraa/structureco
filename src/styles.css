@@ -107,7 +107,9 @@ button:disabled { cursor: not-allowed; opacity: .62; }
    estaba antes, y `display:inline-flex` de `.welcome-header-icon` ganaba por
    ser la declaración más tardía — el botón se veía en escritorio pese al
    `display:none` de aquí. La media query de abajo reafirma `inline-flex` en
-   móvil por el mismo motivo: misma especificidad, aparece después. */
+   móvil por el mismo motivo: misma especificidad, aparece después. Protegido
+   por `verifyWelcomeHeaderResponsive` en `qa.mjs` (probado en Chromium real:
+   invertir el orden reproduce el defecto y tira `welcomeHeaderMenuHiddenDesktop`). */
 .welcome-header-menu { display: none; }
 
 .welcome-header-language select {

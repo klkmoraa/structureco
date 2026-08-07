@@ -96,11 +96,36 @@ async function verifyWelcomeMobileScroll(page, cdp, { width, height }) {
   out.metrics[key] = { ...before, gestureScrollTop, bottomScrollTop: reachability.scrollTop };
 }
 
+// Única red del repo que evalúa de verdad la cascada CSS que decide si el
+// hamburguesa (`.welcome-header-menu`) y los controles de escritorio
+// (`.welcome-header-desktop-only`) se ven o no: `WelcomeHeader.test.tsx`
+// corre en jsdom, que no carga ninguna hoja de estilos (ni siquiera evalúa
+// `@media`), así que un reordenado silencioso de las reglas en `styles.css`
+// pasaría `npm run verify` en verde y sólo se vería aquí, en Chromium real.
+// Corre sobre la pantalla de bienvenida, antes de `enterWorkspace`.
+async function verifyWelcomeHeaderResponsive(page) {
+  const originalViewport = page.viewportSize();
+  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
+
+  out.checks.welcomeHeaderMenuHiddenDesktop = !(await page.locator('.welcome-header-menu').isVisible());
+  out.checks.welcomeHeaderDesktopControlsVisible = await page.locator('.welcome-header-desktop-only').isVisible();
+
+  await page.setViewportSize({ width: 390, height: originalViewport?.height ?? 844 });
+  out.checks.welcomeHeaderMenuVisibleMobile = await page.locator('.welcome-header-menu').isVisible();
+  out.checks.welcomeHeaderDesktopControlsHiddenMobile = !(await page.locator('.welcome-header-desktop-only').isVisible());
+
+  // El resto de `desktop()` mide el lienzo y el pan asumiendo el viewport
+  // original — se restaura antes de seguir para no arrastrar el ancho móvil
+  // a comprobaciones que no tienen nada que ver con la cabecera.
+  if (originalViewport) await page.setViewportSize(originalViewport);
+}
+
 async function desktop() {
   const page = await browser.newPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
   page.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`${msg.type()}: ${msg.text()}`); });
   page.on('pageerror', err => out.pageErrors.push(String(err)));
   await loadCleanApp(page);
+  await verifyWelcomeHeaderResponsive(page);
   await enterWorkspace(page, { example: true });
   out.checks.title = await page.title();
   out.checks.structureCo = await page.locator('.brand-name').isVisible();
