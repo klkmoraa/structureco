@@ -39,3 +39,30 @@ Al retirar el vidrio, el chrome técnico ya no podía depender del desenfoque de
 Por instrucción del checkpoint, una vez terminados RED/GREEN/mutación/restauración no se lanzaron gates largos adicionales. El QA GREEN ocurrió antes del renombre semánticamente neutro del hook local; el controlador debe ejecutar el QA/full gate fresco y la revisión visual sobre modelo denso en Day/Night y 390×844.
 
 No se abrió dev server ni navegador visual, no se ejecutó WebKit ni suite completa, no se tocaron safe areas, rutas protegidas o `capturas.mjs`, y no se hizo push.
+
+## Cierre del controlador y fix visual — geometría densa (2026-08-07 14:19)
+
+La primera matriz Chromium sobre el modelo de ejemplo analizado con diagrama de momento confirmó el riesgo principal del spec: en desktop 1536×960 el badge heredado medía 387 px y la leyenda 260×93.6 px; al ser ahora opacos, cubrían la curva, etiquetas y parte del miembro izquierdo. El detector geométrico registró 11 intersecciones de bounding boxes persistentes. En 390×844 no hubo ninguna intersección y la composición móvil ya era correcta.
+
+Se aplicó el ajuste mínimo únicamente para `min-width:1024px`: badge normal y leyenda quedan en 156 px; la instrucción del badge conserva texto completo en el DOM y se trunca visualmente con elipsis; la leyenda oculta solo su explicación secundaria, que ya aparece en el panel de resultados. `.placing-load` queda fuera del selector y mantiene 371 px con “Toca un nodo o miembro para colocarla”. Móvil no cambió.
+
+No se modificaron `--canvas-safe-*`: la inspección del código confirmó que esas variables posicionan feedback/leyenda/quick-entry, pero no reservan espacio para el dibujo. Aumentarlas habría movido el chrome sobre más geometría, no protegido el modelo. La solución efectiva fue reducir los dos overlays persistentes del margen izquierdo.
+
+Evidencia visual final:
+
+- Day/Night 1536×960: badge y leyenda 156 px, borde exacto de tema (`rgb(132, 129, 122)` / `rgb(95, 109, 104)`), cuatro/tres capas de sombra según tema, dos `inset`, sin backdrop; consola y errores de página vacíos.
+- 1366×768 Day: modelo, reacciones y diagrama siguen legibles; status y controles no tapan valores visibles.
+- 390×844 Day/Night: cero intersecciones, material completo y geometría móvil sin cambios.
+- Panel de capas Day/Night: 292×424 px, relleno opaco, borde medido, dos `inset`, sin blur; apertura/cierre funcional.
+- Tooltip de corte: contenido, DCL, ecuaciones y residuos visibles; su oclusión es contextual y temporal, no chrome persistente.
+- Capturas y mediciones quedan en `.superpowers/sdd/2026-08-07-claymorphism-ciclo2/task-6-*.png`.
+
+Gates posteriores al fix visual:
+
+- `npx.cmd vitest run src/design-system/tokens.test.ts`: 22/22 PASS.
+- `npm.cmd run build`: PASS.
+- `node qa.mjs`: PASS completo; checks T6 verdaderos, consola y `pageErrors` vacíos.
+- `npm.cmd run verify:perf`: 662960/670000 bytes y 178286/179500 gzip.
+- `npm.cmd run verify:protected`: frontera 29/29 intacta.
+
+La revisión independiente del commit de implementación `701cceb` fue APPROVED sin hallazgos. Este fix visual se somete a re-revisión antes de cerrar la tarea. No se hizo push.

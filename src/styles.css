@@ -1946,6 +1946,35 @@ button:not(:disabled):active,.selection-card:active {
 .canvas-hint { top:calc(var(--canvas-safe-top) + 8px); }
 .quick-entry-bar { bottom:calc(var(--canvas-safe-bottom) + 8px); }
 
+/* El chrome del lienzo es opaco desde el ciclo 2. En escritorio, el ancho
+   heredado del badge y la leyenda invadía el diagrama de momento: con vidrio
+   se alcanzaba a leer lo que quedaba debajo; con arcilla ya no. Se compactan
+   sólo los dos overlays persistentes que ocupaban el margen izquierdo. Los
+   estados de colocación conservan su ancho completo y móvil mantiene su
+   composición específica. */
+@media (min-width:1024px) {
+  .canvas-mode-badge:not(.placing-load) {
+    max-width:min(156px,calc(100% - 28px));
+    overflow:hidden;
+    white-space:nowrap;
+  }
+  .canvas-mode-badge:not(.placing-load) :is(.desktop-gesture-hint,.canvas-action-instruction) {
+    flex:1 1 auto;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .canvas-result-legend {
+    width:min(156px,calc(100% - 32px));
+    padding:7px 8px;
+    gap:3px 6px;
+  }
+  .canvas-result-legend small { display:none; }
+  .canvas-result-legend span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .canvas-result-legend i { width:16px; }
+}
+
 @media (max-width:1023px) {
   .canvas-host {
     --canvas-safe-top:116px;
