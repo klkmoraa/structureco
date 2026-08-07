@@ -240,6 +240,40 @@ async function verifyCanvasChromeClayMaterial(page) {
   };
 }
 
+async function verifyInspectorClayMaterial(page, viewport) {
+  const panel = await readClayMaterial(page, '.inspector-panel');
+  const hasRaisedClayMaterial = (material) =>
+    material.background.includes('linear-gradient') &&
+    material.borderTopWidth === '1px' &&
+    material.borderTopStyle === 'solid' &&
+    (material.boxShadow.match(/\binset\b/g) ?? []).length >= 2 &&
+    material.backdropFilter === 'none' &&
+    material.webkitBackdropFilter === 'none';
+
+  if (viewport === 'Mobile') {
+    return {
+      inspectorMobilePanelHasRaisedClayMaterial: hasRaisedClayMaterial(panel),
+      inspectorMobilePanelHasTopOnlyClayEdge: panel.borderWidths === '1px 1px 0px 1px',
+    };
+  }
+
+  const summary = await readClayMaterial(page, '.inspector-summary:not(.is-empty)');
+  const numberControl = await readClayMaterial(page, '.inspector-panel .number-control');
+  const expectedSurface = await readResolvedColorToken(page, '--sc-color-surface-1');
+  const expectedSoftBorder = await readResolvedColorToken(page, '--sc-color-border-soft');
+  const hasFlatMaterial = numberControl.boxShadow === 'none' &&
+    numberControl.background === expectedSurface &&
+    numberControl.borderTopWidth === '1px' &&
+    numberControl.borderTopStyle === 'solid' &&
+    numberControl.borderTopColor === expectedSoftBorder;
+
+  return {
+    inspectorDesktopPanelHasRaisedClayMaterial: hasRaisedClayMaterial(panel),
+    inspectorDesktopSummaryHasRaisedClayMaterial: hasRaisedClayMaterial(summary),
+    inspectorDesktopNumberControlHasFlatMaterial: hasFlatMaterial,
+  };
+}
+
 async function verifyWelcomeClayMaterial(page) {
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 
@@ -422,6 +456,12 @@ async function desktop() {
   Object.assign(out.checks, await verifyTopbarClayMaterial(page));
   Object.assign(out.checks, await verifyToolRailClayMaterial(page, 'Desktop'));
   Object.assign(out.checks, await verifyCanvasChromeClayMaterial(page));
+  const firstInspectorMember = page.locator('.member-object').first();
+  await firstInspectorMember.evaluate((element) => element.focus());
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => document.querySelector('.member-object')?.getAttribute('aria-pressed') === 'true');
+  await page.locator('.inspector-summary:not(.is-empty)').waitFor({ state: 'visible' });
+  Object.assign(out.checks, await verifyInspectorClayMaterial(page, 'Desktop'));
   out.checks.title = await page.title();
   out.checks.structureCo = await page.locator('.brand-name').isVisible();
   out.checks.canvas = await page.locator('svg.structural-canvas').isVisible();
@@ -648,6 +688,7 @@ async function mobile() {
   await page.waitForTimeout(120);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await page.locator('.inspector-panel.mobile-open').waitFor({ state: 'visible' });
+  Object.assign(out.checks, await verifyInspectorClayMaterial(page, 'Mobile'));
   out.checks.mobileTouchPlacesLoad = await page.locator('[data-structure-kind="memberLoad"]').count() === memberLoadsBeforeTouchPlacement + 1;
   out.checks.mobileLoadEditor = await page.getByRole('dialog', { name: 'Inspector' }).getByRole('button', { name: 'Eliminar carga' }).isVisible();
   await page.getByRole('dialog', { name: 'Inspector' }).getByRole('button', { name: 'Eliminar carga' }).click();

@@ -22,7 +22,16 @@
 /* flat: sin volumen. Zonas técnicas densas — tablas, filas del inspector,
    el lienzo. Es el nivel por defecto en esas zonas, no una excepción. */
 .sc-surface[data-level='flat'],
-[data-level='flat'] {
+[data-level='flat'],
+.selection-card,
+.number-control,
+.select-field select,
+.effect-card,
+.combination-card,
+.norm-source,
+.compact-toggle-grid label,
+.inspector-note,
+.load-tool-grid button {
   background: var(--sc-color-surface-1);
   border: 1px solid var(--sc-color-border-soft);
   box-shadow: none;
@@ -32,12 +41,16 @@
 .sc-surface[data-level='raised'],
 [data-level='raised'],
 .topbar,
-.toolbar {
+.toolbar,
+.inspector-panel,
+.inspector-summary {
   background: var(--sc-gradient-clay);
   border: var(--sc-clay-edge);
-  border-width: var(--toolbar-clay-border-width, 1px);
   box-shadow: var(--sc-shadow-clay-md);
 }
+
+.toolbar { border-width: var(--toolbar-clay-border-width, 1px); }
+.inspector-panel { border-width: var(--inspector-clay-border-width, 1px); }
 
 /* floating: lo que se despega del plano — popovers, hojas, menús. */
 .sc-surface[data-level='floating'],
