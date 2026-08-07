@@ -38,3 +38,13 @@ La barra superior era el primer consumidor real del workspace que debía abandon
 El controlador debe realizar la revisión visual Day/Night y ejecutar una verificación completa y un QA fresco después del review. No se lanzó dev server, navegador interactivo, WebKit ni suite completa en esta tarea.
 
 Concern no bloqueante: durante repeticiones de `qa.mjs`, el check preexistente `welcomeimportCardActiveTransformIsPressedTranslate` mostró una carrera de frame (`0.999925` frente a `1` exacto); no se alteró por estar fuera de alcance y la corrida final limpia pasó. No se hizo push.
+
+## Cierre del controlador (2026-08-07 12:50)
+
+- Revisión independiente: APPROVED, sin Critical ni Important. Minor diferido a la Tarea 9: endurecer el check para medir gradiente, canto, capas y `-webkit-backdrop-filter`.
+- Playwright real, 1536×960, Day/Night: `.topbar` mantiene 68 px de alto, gradiente clay, canto de 1 px en las cuatro aristas, dos capas `inset`, `backdrop-filter: none`, consola y errores de página vacíos. Evidencia local: `task-4-topbar-light.png` y `task-4-topbar-dark.png`.
+- Pipeline funcional equivalente: lint, frontera protegida 29/29, Vitest 738/738 con timeout diagnóstico de 15 s, build y presupuesto 665236/670000 bytes y 178357/179500 gzip.
+- `npm.cmd run verify` estricto agotó 5 s únicamente en `shows the N–V–M cursor and learning levels`; la ejecución enfocada con 15 s completó todas las aserciones en 5.70 s. El diff de esta tarea no participa en ese test (solo QA/CSS, y Vitest no carga CSS). Se difiere estabilizar el presupuesto del arnés a la Tarea 10.
+- `npm.cmd run qa` mostró la carrera de muestreo `:active` ya diagnosticada; dos ejecuciones directas consecutivas posteriores pasaron toda la matriz, incluidos `topbarHasNoBackdropFilter` y `topbarHasClayShadow`, con consola/página limpias. La estabilización del muestreo queda para la certificación final.
+
+La tarea queda cerrada visual y funcionalmente; no se hizo push.
