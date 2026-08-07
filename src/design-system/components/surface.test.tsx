@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Surface } from './surface';
 
 afterEach(() => cleanup());
@@ -51,5 +52,27 @@ describe('Surface', () => {
     render(<><Surface as="header" data-testid="h" /><Surface as="nav" data-testid="n" /></>);
     expect(screen.getByTestId('h').tagName).toBe('HEADER');
     expect(screen.getByTestId('n').tagName).toBe('NAV');
+  });
+
+  it('preserves native button props and its accessible click contract', async () => {
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+
+    render(
+      <Surface
+        as="button"
+        type="button"
+        disabled={false}
+        aria-label="Abrir controles de vista"
+        onClick={onClick}
+      />,
+    );
+
+    const button = screen.getByRole('button', { name: 'Abrir controles de vista' });
+    expect(button.getAttribute('type')).toBe('button');
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+
+    await user.click(button);
+    expect(onClick).toHaveBeenCalledTimes(1);
   });
 });

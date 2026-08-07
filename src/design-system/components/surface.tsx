@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactElement } from 'react';
+import { createElement, type ComponentPropsWithoutRef, type ElementType, type ReactElement } from 'react';
 
 /**
  * Niveles de elevación clay.
@@ -11,32 +11,41 @@ import type { HTMLAttributes, ReactElement } from 'react';
  */
 export type SurfaceLevel = 'flat' | 'raised' | 'floating';
 
-export interface SurfaceProps extends HTMLAttributes<HTMLElement> {
+export type SurfaceTag = 'div' | 'section' | 'article' | 'aside' | 'button' | 'header' | 'nav';
+
+type SurfaceOwnProps<Tag extends SurfaceTag> = {
   level?: SurfaceLevel;
   /** Invierte la iluminación. El estilo vive en CSS; aquí sólo se expone el estado. */
   pressed?: boolean;
-  as?: 'div' | 'section' | 'article' | 'aside' | 'button' | 'header' | 'nav';
-}
+  as?: Tag;
+};
+
+export type SurfaceProps<Tag extends SurfaceTag = 'div'> = SurfaceOwnProps<Tag>
+  & Omit<ComponentPropsWithoutRef<Tag>, keyof SurfaceOwnProps<Tag>>;
 
 /**
  * Envoltorio de elevación clay. Es CSS tras una API tipada: no gestiona estado
  * ni conoce el dominio, y por eso puede vivir en la librería sin cruzar la
  * frontera que `dependencyBoundary.test.ts` protege.
  */
-export const Surface = ({
+export const Surface = <Tag extends SurfaceTag = 'div'>({
   level = 'raised',
   pressed = false,
-  as: Tag = 'div',
+  as,
   className = '',
   children,
   ...rest
-}: SurfaceProps): ReactElement => (
-  <Tag
-    className={`sc-surface${className ? ` ${className}` : ''}`}
-    data-level={level}
-    data-pressed={pressed ? 'true' : undefined}
-    {...rest}
-  >
-    {children}
-  </Tag>
-);
+}: SurfaceProps<Tag>): ReactElement => {
+  const SurfaceElement: ElementType = as ?? 'div';
+
+  return createElement(
+    SurfaceElement,
+    {
+      className: `sc-surface${className ? ` ${className}` : ''}`,
+      'data-level': level,
+      'data-pressed': pressed ? 'true' : undefined,
+      ...rest,
+    },
+    children,
+  );
+};

@@ -40,6 +40,50 @@ npm.cmd run build
 
 Resultados de esta ejecución: tokens 20/20; Surface y bienvenida 26/26; frontera y tokens 23/23; suite completa 97 archivos y 735 pruebas; lint, typecheck y build correctos.
 
+## Ronda de corrección 1 — contrato polimórfico de `Surface`
+
+Se corrigió el hallazgo de tipado de `as="button"`: `SurfaceProps` ya no hereda
+de `HTMLAttributes<HTMLElement>`, sino que combina sus props propias con
+`ComponentPropsWithoutRef<Tag>`. Así conserva las props intrínsecas de cada tag
+sin ampliar el contrato de refs ni cambiar el render. El test usa un botón real
+con `type="button"`, `disabled={false}`, nombre accesible y `onClick`.
+
+### Evidencia TDD y verificación fresca
+
+RED (contra `dd47f5e` tras añadir sólo el test):
+
+```powershell
+npx.cmd vitest run src/design-system/components/surface.test.tsx
+# Test Files  1 passed (1); Tests  9 passed (9)
+
+npm.cmd run typecheck
+# src/design-system/components/surface.test.tsx(64,9): error TS2322:
+# Property 'type' does not exist on type 'IntrinsicAttributes & SurfaceProps'.
+```
+
+GREEN (tras el cambio mínimo de tipos):
+
+```powershell
+npx.cmd vitest run src/design-system/components/surface.test.tsx
+# Test Files  1 passed (1); Tests  9 passed (9)
+
+npm.cmd run typecheck
+# exit 0
+
+npm.cmd run lint
+# exit 0
+
+npx.cmd vitest run
+# Test Files  97 passed (97); Tests  736 passed (736)
+
+npm.cmd run build
+# vite v8.1.4; built in 1.94s; exit 0
+```
+
+Archivos de esta ronda: `src/design-system/components/surface.tsx`,
+`src/design-system/components/surface.test.tsx` y este reporte. No se tocaron
+rutas protegidas, dependencias ni `capturas.mjs`.
+
 ## Pendiente / siguiente paso
 
 La retirada de vidrio y la relajación de sus dos listas de contrato quedan explícitamente para la Tarea 9. No hay pendientes dentro del alcance de la Tarea 1.
