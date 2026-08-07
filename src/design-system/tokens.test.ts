@@ -9,6 +9,9 @@ const readCss = (url: URL) => readFileSync(url, 'utf8').replace(/\r\n/g, '\n');
 const tokensCss = readCss(new URL('./tokens.css', import.meta.url));
 const stylesCss = readCss(new URL('../styles.css', import.meta.url));
 const uiCss = readCss(new URL('./components/ui.css', import.meta.url));
+const materialCss = readCss(new URL('./material.css', import.meta.url));
+/** The combined text of all component CSS that is not `tokens.css`. */
+const componentCss = `${stylesCss}\n${materialCss}`;
 
 const blockFor = (pattern: RegExp) => {
   const match = tokensCss.match(pattern);
@@ -203,13 +206,13 @@ describe('Phase 4 design-token contract', () => {
   });
 
   it('does not consume primitive color tokens from component CSS', () => {
-    expect(stylesCss).not.toMatch(/var\(--sc-(?:white|black|green-\d+|cyan-\d+|slate-\d+|blue-\d+|violet-\d+|orange-\d+|red-\d+|amber-\d+)\)/);
+    expect(componentCss).not.toMatch(/var\(--sc-(?:white|black|green-\d+|cyan-\d+|slate-\d+|blue-\d+|violet-\d+|orange-\d+|red-\d+|amber-\d+)\)/);
   });
 
   it('never hardcodes an opaque color in component CSS', () => {
     // A literal foreground cannot follow the theme. `color:#fff` on `var(--accent)`
     // measured 2.37:1 in Dark, far below the 4.5:1 the tokens themselves guarantee.
-    const literals = stylesCss.match(/#[0-9a-fA-F]{3,8}\b|(?<!\/\*[^*]*)\brgb\([^)]*\)/g) ?? [];
+    const literals = componentCss.match(/#[0-9a-fA-F]{3,8}\b|(?<!\/\*[^*]*)\brgb\([^)]*\)/g) ?? [];
     expect(literals).toEqual([]);
   });
 
@@ -217,7 +220,7 @@ describe('Phase 4 design-token contract', () => {
     // `rgba()` is still allowed, but only inside box-shadow / filter / background scrims.
     // Anywhere else it would be a color decision escaping the palette.
     const offenders: string[] = [];
-    for (const match of stylesCss.matchAll(/[^;{}]*rgba\([^)]*\)[^;{}]*/g)) {
+    for (const match of componentCss.matchAll(/[^;{}]*rgba\([^)]*\)[^;{}]*/g)) {
       const declaration = match[0].trim();
       if (!/box-shadow|drop-shadow|filter|background(-color)?\s*:/.test(declaration)) {
         offenders.push(declaration.slice(0, 80));
@@ -251,6 +254,7 @@ describe('AG-015 premium visual layer contract', () => {
   it.each([
     ['styles.css', stylesCss],
     ['ui.css', uiCss],
+    ['material.css', materialCss],
   ] as const)('resolves every design token %s references', (_label, css) => {
     // A `var(--sc-…)` typo does not fail the build, it silently renders the property
     // invalid — which is how `.welcome-badge--beam` shipped with an unstyled badge.
@@ -305,7 +309,7 @@ describe('AG-015 premium visual layer contract', () => {
   it('keeps the welcome surface free of untokenized elevation', () => {
     // The previous welcome cards hardcoded `rgba(0,0,0,.15)`, which is invisible against
     // the Night ground: elevation has to come from the theme-calibrated shadow tokens.
-    const welcomeRules = [...stylesCss.matchAll(/^[^\n{]*\.welcome[^\n{]*\{([^}]*)\}/gm)];
+    const welcomeRules = [...componentCss.matchAll(/^[^\n{]*\.welcome[^\n{]*\{([^}]*)\}/gm)];
     const offenders = welcomeRules
       .flatMap((rule) => rule[1].split(';'))
       .filter((declaration) => /box-shadow/.test(declaration) && /rgba?\(/.test(declaration))

@@ -162,8 +162,27 @@ async function verifyWelcomeFirstPaintMaterial() {
 // inline gana siempre sobre cualquier regla de `:hover` en CSS, así que si
 // eso ocurriera el desplazamiento en hover de esa tarjeta quedaría mudo pese
 // a que la regla exista.
+/**
+ * Reads the real clay material for a selector through Chromium's
+ * getComputedStyle. Tasks 4-9 reuse this because jsdom does not render CSS.
+ */
+async function readClayMaterial(page, selector) {
+  return page.$eval(selector, (el) => {
+    const style = window.getComputedStyle(el);
+    return {
+      background: style.backgroundImage !== 'none' ? style.backgroundImage : style.backgroundColor,
+      border: style.borderTopWidth + ' ' + style.borderTopStyle + ' ' + style.borderTopColor,
+      boxShadow: style.boxShadow,
+      backdropFilter: style.backdropFilter,
+    };
+  });
+}
+
 async function verifyWelcomeClayMaterial(page) {
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
+
+  const frameMaterial = await readClayMaterial(page, '.welcome-frame');
+  out.checks.welcomeFrameHasNoBackdropFilter = frameMaterial.backdropFilter === 'none';
 
   const frame = await page.locator('.welcome-frame').evaluate((element) => {
     const style = getComputedStyle(element);
