@@ -351,13 +351,6 @@
     color-mix(in srgb, var(--sc-color-surface-elevated) 96%, transparent),
     color-mix(in srgb, var(--sc-color-surface-2) 96%, transparent));
 
-  /* Vidrio: una superficie translúcida necesita saturar lo que hay detrás,
-     o el desenfoque la deja lechosa. */
-  --sc-surface-glass: color-mix(in srgb, var(--sc-color-surface-1) 72%, transparent);
-  --sc-surface-glass-strong: color-mix(in srgb, var(--sc-color-surface-1) 88%, transparent);
-  --sc-surface-glass-border: color-mix(in srgb, var(--sc-white) 66%, transparent);
-  --sc-blur-glass: blur(20px) saturate(1.6);
-  --sc-blur-chrome: blur(14px) saturate(1.3);
 
   /* Anillos: 1px de luz interior en el borde superior. Es lo que separa una
      tarjeta "plana con sombra" de una tarjeta con canto. */
@@ -705,11 +698,7 @@
     color-mix(in srgb, var(--sc-color-surface-elevated) 96%, transparent),
     color-mix(in srgb, var(--sc-color-surface-1) 96%, transparent));
 
-  /* El vidrio en Noche oscurece en vez de aclarar: una capa translúcida
-     clara sobre grafito produce niebla, no cristal. */
-  --sc-surface-glass: color-mix(in srgb, var(--sc-color-surface-1) 76%, transparent);
-  --sc-surface-glass-strong: color-mix(in srgb, var(--sc-color-surface-1) 92%, transparent);
-  --sc-surface-glass-border: color-mix(in srgb, var(--sc-color-border-strong) 52%, transparent);
+
   --sc-ring-inset: inset 0 1px 0 color-mix(in srgb, var(--sc-color-action-primary) 14%, transparent);
   --sc-glow-accent: 0 10px 34px color-mix(in srgb, var(--sc-color-action-primary) 20%, transparent);
   --sc-glow-aula: 0 10px 34px color-mix(in srgb, var(--sc-color-aula) 22%, transparent);

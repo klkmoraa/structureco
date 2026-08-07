@@ -276,11 +276,8 @@ describe('AG-015 premium visual layer contract', () => {
     for (const token of display) expect(rootTokens.declarations.has(token), token).toBe(true);
   });
 
-  it('declares materials — glass, rings, glows and gradients — as tokens, not per-component literals', () => {
+  it('declares rings, glows and gradients as tokens, not per-component literals', () => {
     const materials = [
-      '--sc-surface-glass',
-      '--sc-surface-glass-border',
-      '--sc-blur-glass',
       '--sc-ring-inset',
       '--sc-glow-accent',
       '--sc-glow-aula',
@@ -293,12 +290,9 @@ describe('AG-015 premium visual layer contract', () => {
   });
 
   it('recalibrates every material Dark cannot inherit from Day', () => {
-    // Translucency and glow read inverted across themes: a scrim tuned for porcelain
-    // turns milky over graphite, and an accent halo that reads as light in Day reads
-    // as haze in Night. Each of these must be re-measured, not inherited.
+    // Rings and glows read inverted across themes: an accent halo that reads as
+    // light in Day reads as haze in Night. Re-measure them instead of inheriting.
     const recalibrated = [
-      '--sc-surface-glass',
-      '--sc-surface-glass-border',
       '--sc-ring-inset',
       '--sc-glow-accent',
       '--sc-shadow-lifted',

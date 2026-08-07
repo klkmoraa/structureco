@@ -35,7 +35,9 @@
 .matrix-view,
 .education-explorer,
 .diagram-cursor-readout,
-.learning-steps details {
+.learning-toolbar,
+.learning-steps details,
+.hide-classroom-results {
   background: var(--sc-color-surface-1);
   border: 1px solid var(--sc-color-border-soft);
   box-shadow: none;
@@ -60,11 +62,26 @@
 
 /* floating: lo que se despega del plano — popovers, hojas, menús. */
 .sc-surface[data-level='floating'],
-[data-level='floating'] {
+[data-level='floating'],
+.popover,
+.sc-toast-card,
+.import-center-dialog,
+.mobile-tool-palette,
+.welcome-header,
+.welcome-badge-pill,
+.welcome-highlight-item,
+.welcome-filter-tabs,
+.welcome-workflow,
+.welcome-footer {
   background: var(--sc-gradient-clay);
   border: var(--sc-clay-edge);
   box-shadow: var(--sc-shadow-clay-floating);
 }
+
+.sc-toast-card--success { border-color: color-mix(in srgb, var(--sc-color-action-primary) 40%, var(--sc-color-border-soft)); }
+.sc-toast-card--info { border-color: color-mix(in srgb, var(--sc-color-info) 40%, var(--sc-color-border-soft)); }
+.sc-toast-card--warning { border-color: color-mix(in srgb, var(--sc-color-state-warning) 40%, var(--sc-color-border-soft)); }
+.sc-toast-card--error { border-color: color-mix(in srgb, var(--sc-color-state-error) 40%, var(--sc-color-border-soft)); }
 
 /* pressed: invierte la iluminación. Coexiste con cualquier nivel — por eso
    va al final y sólo toca lo que un estado pulsado necesita cambiar. */
@@ -85,6 +102,7 @@
 .canvas-result-legend,
 .canvas-feedback,
 .canvas-hint,
+.mobile-inspector-toggle,
 .quick-entry-bar,
 .selection-cycle-indicator,
 .cut-tooltip,
