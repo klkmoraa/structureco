@@ -3,8 +3,7 @@
  * Fails the build when the initial download grows past its declared ceiling.
  *
  * `measure-performance.mjs` has always been able to report bundle composition, but nothing
- * ever *asserted* on it: the numbers were printed, read once, written into
- * `docs/releases/0.8.1/PERFORMANCE.md`, and then drifted silently. That is exactly how the
+ * ever *asserted* on it: the numbers were printed and then drifted silently. That is exactly how the
  * animation library landed in the entry chunk and pushed the initial download from
  * 148 531 gzip to 195 360 gzip without a single check going red.
  *

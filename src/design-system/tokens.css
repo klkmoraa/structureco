@@ -45,7 +45,7 @@
   /* El grafito frío (el papel y la tinta) no se declara como rampa: sólo dos
      de sus escalones tienen consumidor, y una rampa que nadie usa viaja en el
      chunk de entrada sin pagar su sitio. Los valores intermedios de la familia
-     están documentados en docs/design-system/PALETTE.md. */
+     están resumidos en README.md. */
 
   /* Identidad esmeralda clay. Los escalones 300-500 son la rampa de la que se
      derivó la familia clay-mint (ver más abajo); hoy no tienen consumidor
