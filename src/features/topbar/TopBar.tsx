@@ -285,7 +285,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
     <header ref={topbarRef} className="topbar">
       <div className="brand-block topbar-zone topbar-document-zone" data-topbar-zone="document">
         <button className="brand-mark brand-home-button" type="button" aria-label={t('navigation.home')} onClick={onOpenHome}>
-          <BrandMark size={34} />
+          <BrandMark size={46} />
         </button>
         <div className="top-divider" />
         <div className="document-identity">

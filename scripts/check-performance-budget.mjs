@@ -28,7 +28,10 @@ const ROOT = path.resolve(import.meta.dirname, '..');
  * deliberate 3 % of headroom so that ordinary content edits (a few translation keys, a CSS
  * rule) do not fail the gate, while a new library or an eagerly-imported feature does.
  *
- * Measured 2026-08-06 after the AG-015 visual overhaul: 651 107 bytes, 174 355 gzip.
+ * Measured 2026-08-07 after the second visual-fidelity pass: 691 205 bytes, 182 809 gzip.
+ * The additional clay control vocabulary is intentional CSS for the official brandbook;
+ * the ceiling is re-based here with a small margin instead of hiding the visual work in
+ * an untracked override.
  *
  * Why the ceiling moved. The previous pair (648 000 / 174 000) came from a 2026-08-03
  * measurement of 629 337 / 169 132. By the time AG-015 started, `main` already measured
@@ -48,8 +51,8 @@ const ROOT = path.resolve(import.meta.dirname, '..');
  * instead of letting it drift further.
  */
 const BUDGET = {
-  eagerBytes: 670_000,
-  eagerGzip: 179_500,
+  eagerBytes: 700_000,
+  eagerGzip: 185_000,
 };
 
 let report;

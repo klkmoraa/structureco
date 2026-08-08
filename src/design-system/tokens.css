@@ -78,6 +78,7 @@
 
   /* Acentos de estado y dominio */
   --sc-violet-500: #7d63c9;
+  --sc-pink-500: #c15b8f;
   --sc-coral-500: #c94f3f;
   --sc-red-500: #bd4b3e;
   --sc-red-700: #96362d;
@@ -123,6 +124,9 @@
   --sc-color-border-canvas-chrome: #82786d;
   --sc-color-divider: #e7e0d6;
 
+  /* Mantiene la familia verde oficial con el contraste AA necesario para el
+     texto blanco de una acción primaria. El verde claro se conserva para
+     iconos, badges y capas de la ilustración. */
   --sc-color-action-primary: var(--sc-green-600);
   --sc-color-action-hover: var(--sc-green-700);
   --sc-color-action-pressed: var(--sc-green-800);
@@ -158,7 +162,7 @@
   --sc-color-error-solid: #b43d3d;
   --sc-color-error-on-solid: var(--sc-white);
 
-  --sc-color-aula: var(--sc-violet-500);
+  --sc-color-aula: var(--sc-pink-500);
   --sc-color-aula-foreground: var(--sc-white);
 
   /* Lienzo y documento: explícitos, nunca producidos por inversión. */
@@ -309,7 +313,9 @@
   --sc-shadow-clay-floating: 16px 18px 39px rgba(83, 72, 55, 0.19), -11px -11px 26px rgba(255, 255, 255, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.9), inset -4px -4px 9px rgba(83, 72, 55, 0.1);
   /* Pulsado: la luz se invierte. Sólo capas interiores — cualquier sombra
      exterior lo devolvería a parecer que flota. */
-  --sc-shadow-clay-pressed: inset 3px 4px 8px color-mix(in srgb, var(--sc-color-action-primary) 50%, black 25%), inset -2px -2px 6px color-mix(in srgb, var(--sc-color-action-primary) 25%, white 12%);
+  /* Una cavidad estándar es arcilla neutra: el color de marca queda para el
+     relleno de acciones/selecciones y no contamina campos, cards o capas. */
+  --sc-shadow-clay-pressed: inset 3px 4px 8px rgba(83, 72, 55, 0.18), inset -2px -2px 6px rgba(255, 255, 255, 0.86), inset 0 1px 0 rgba(255, 255, 255, 0.38);
 
   --sc-clay-edge: 1px solid color-mix(in srgb, var(--sc-color-border) 58%, white);
   --sc-gradient-clay: var(--sc-color-surface-1);
@@ -321,8 +327,8 @@
   --sc-ring-focus: 0 0 0 var(--sc-focus-ring-width) color-mix(in srgb, var(--sc-color-focus) 30%, transparent);
 
   /* Halos: color de marca proyectado. Sólo en estados activos o hover. */
-  --sc-glow-accent: 0 10px 30px color-mix(in srgb, var(--sc-color-action-primary) 24%, transparent);
-  --sc-glow-aula: 0 10px 30px color-mix(in srgb, var(--sc-color-aula) 24%, transparent);
+  --sc-glow-accent: 0 5px 11px color-mix(in srgb, var(--sc-color-action-primary) 28%, transparent);
+  --sc-glow-aula: 0 5px 11px color-mix(in srgb, var(--sc-color-aula) 28%, transparent);
 
   /* Gradientes de identidad. `display` es el único sitio donde el cian y el
      esmeralda comparten un mismo trazo. */
@@ -522,12 +528,15 @@
   --sc-color-bg-app: #0a1116;
   --sc-color-bg-canvas: #0d161b;
   --sc-color-surface-1: #15232b;
-  --sc-color-surface-2: #0a1116;
+  /* El brandbook distingue la base nocturna del objeto clay. `surface-2`
+     llega a campos, trays y botones secundarios: dejarla en la base casi
+     negra los convertía en ranuras con halo verde, no en materia elevada. */
+  --sc-color-surface-2: #15232b;
   --sc-color-surface-elevated: #1e313b;
-  --sc-color-surface-pressed: #101b21;
-  --sc-color-surface-inset: #0a1116;
+  --sc-color-surface-pressed: #0d161b;
+  --sc-color-surface-inset: #0d161b;
   --sc-color-surface-toolbar: #15232b;
-  --sc-color-surface-input: #0a1116;
+  --sc-color-surface-input: #15232b;
 
   --sc-color-text-primary: #f4f8f6;
   --sc-color-text-secondary: #a6b6b0;
@@ -544,10 +553,10 @@
   --sc-color-border-canvas-chrome: #58717a;
   --sc-color-divider: #20313a;
 
-  --sc-color-action-primary: #159a72;
+  --sc-color-action-primary: #087e5c;
   --sc-color-action-hover: #43b88f;
   --sc-color-action-pressed: #0f815f;
-  --sc-color-action-foreground: #0d161b;
+  --sc-color-action-foreground: var(--sc-white);
   --sc-color-action-subtle: #13382f;
   --sc-color-brand-secondary: #1f88b8;
 
@@ -577,8 +586,8 @@
   --sc-color-error-solid: var(--sc-color-state-error);
   --sc-color-error-on-solid: #1a0e0e;
 
-  --sc-color-aula: #d27aa7;
-  --sc-color-aula-foreground: #1b1118;
+  --sc-color-aula: var(--sc-pink-500);
+  --sc-color-aula-foreground: var(--sc-white);
 
   --sc-color-canvas-grid: #1e3038;
   --sc-color-canvas-grid-strong: #2b414a;
@@ -624,7 +633,9 @@
   --sc-shadow-clay-md: 14px 16px 30px rgba(0, 0, 0, 0.55), -9px -9px 20px rgba(62, 92, 102, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset -3px -3px 7px rgba(0, 0, 0, 0.30);
   --sc-shadow-clay-lg: 17px 19px 36px rgba(0, 0, 0, 0.58), -10px -10px 22px rgba(62, 92, 102, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset -4px -4px 9px rgba(0, 0, 0, 0.32);
   --sc-shadow-clay-floating: 17px 19px 36px rgba(0, 0, 0, 0.58), -10px -10px 22px rgba(62, 92, 102, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset -4px -4px 9px rgba(0, 0, 0, 0.32);
-  --sc-shadow-clay-pressed: inset 3px 4px 8px color-mix(in srgb, var(--sc-color-action-primary) 50%, black 25%), inset -2px -2px 6px color-mix(in srgb, var(--sc-color-action-primary) 20%, white 12%);
+  /* Las cavidades neutras conservan volumen con carbón y luz azul grisácea;
+     el verde se reserva al control primario o a una selección real. */
+  --sc-shadow-clay-pressed: inset 3px 4px 8px rgba(0, 0, 0, 0.46), inset -2px -2px 6px rgba(77, 108, 118, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 
   --sc-clay-edge: 1px solid var(--sc-color-border);
   --sc-gradient-clay: var(--sc-color-surface-1);
