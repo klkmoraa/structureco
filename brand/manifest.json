@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Official structureCo Clay brand assets",
+  "assets": [
+    {
+      "path": "brandbook-clay.html",
+      "sourceName": "1-brandbook-clay.html",
+      "bytes": 223329,
+      "sha256": "40D356E6EBC687C2C4F3A15F20434B6205FE616CE77EB852A8B49EA0306B5501"
+    },
+    {
+      "path": "logo.svg",
+      "sourceName": "2-Untitled-design-1.svg",
+      "bytes": 2554,
+      "sha256": "05B8C685F962780EE642D326CAC27FB40A50958B5C21D881B640BC705F691308"
+    }
+  ]
+}
