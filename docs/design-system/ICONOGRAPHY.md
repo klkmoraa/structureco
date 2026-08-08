@@ -1,6 +1,6 @@
 # Iconografía — Sistema de diseño structureCo
 
-> Fuente de verdad: `src/design-system/icons/structural.tsx` (glifos propios), imports de `lucide-react` en `src/`, `src/components/StructuralToolIcon.tsx` (puente de compatibilidad), `src/components/ToolBar.tsx` (mapa herramienta→icono).
+> Fuente de verdad: `src/design-system/icons/structural.tsx` (glifos propios), imports de `lucide-react` en `src/`, `src/features/canvas/StructuralToolIcon.tsx` (puente de compatibilidad), `src/features/canvas/ToolBar.tsx` (mapa herramienta→icono).
 > Complementa el inventario histórico `docs/ux-redesign/ICON_INVENTORY.md`.
 
 ## 1 · Gramática común
@@ -31,12 +31,6 @@ Todos exportan `({ size?, ...SVGProps })` con la firma `StructuralGlyphProps`.
 | `NodeGlyph` | Nodo (círculo con centro sólido) | Herramienta `node`; propiedades de nodo |
 | `MemberGlyph` | Miembro/barra entre dos nodos enmascarados | Herramienta `member` |
 | `SupportGlyph` | Apoyo genérico (triángulo + suelo rayado) | Herramienta `support` |
-| `PinSupportGlyph` | Apoyo articulado (pin) | Distinción de tipo de apoyo |
-| `RollerSupportGlyph` | Apoyo de rodillo (triángulo sobre rodillos) | Distinción de tipo de apoyo |
-| `FixedSupportGlyph` | Empotramiento (muro rayado) | Distinción de tipo de apoyo |
-| `SpringGlyph` | Resorte (zigzag sobre base) | Apoyos elásticos |
-| `HingeGlyph` | Rótula (círculo enmascarado entre dos barras) | Liberaciones de continuidad |
-| `ReleaseGlyph` | Liberación (círculo punteado entre segmentos) | Liberaciones de extremo |
 | `SplitMemberGlyph` | Dividir miembro (barra interrumpida + punto) | Herramienta `split` |
 | `SectionCutGlyph` | Corte de sección (línea de corte discontinua) | Herramienta `cut` |
 | `DimensionGlyph` | Cota (extensiones + flechas bidireccionales) | Herramienta `dimension` |
@@ -48,31 +42,9 @@ Todos exportan `({ size?, ...SVGProps })` con la firma `StructuralGlyphProps`.
 | `PointLoadGlyph` | Carga puntual (flecha vertical hacia la viga) | Herramienta `pointLoad` |
 | `DistributedLoadGlyph` | Carga distribuida (peine de flechas) | Herramienta `distributedLoad` |
 | `MomentLoadGlyph` | Momento aplicado (flecha circular) | Herramienta `moment` |
-| `LoadTrainGlyph` | Tren de cargas (flechas + vehículo) | Líneas de influencia / tren de cargas |
-
-### Resultados
-
-| Componente | Concepto | Uso |
-| --- | --- | --- |
-| `AxialGlyph` | Fuerza axial (flechas opuestas entre extremos) | Pestaña/capa axial |
-| `ShearGlyph` | Diagrama de cortante (escalón sobre línea base discontinua) | Pestaña/capa cortante |
-| `MomentDiagramGlyph` | Diagrama de momento (parábola + punto crítico) | Pestaña/capa momento |
-| `DeformedShapeGlyph` | Deformada (curva bajo línea base punteada, apoyos sólidos) | Capa deformada |
-| `ReactionGlyph` | Reacción (flecha vertical hacia arriba) | Capa/tabla de reacciones |
-| `InfluenceLineGlyph` | Línea de influencia (onda sobre base discontinua + punto) | Análisis de influencia |
-| `EnvelopeGlyph` | Envolvente (lente doble curva sobre base) | Envolventes de combinaciones |
-| `CriticalPointGlyph` | Punto crítico (parábola + círculo objetivo) | Marcado de extremos |
-
-### Expedientes portables
-
-| Componente | Concepto | Uso |
-| --- | --- | --- |
-| `PortableCaseGlyph` | Expediente portable (documento con check) | Import/export de expedientes |
-| `ChecksumGlyph` | Integridad (escudo con check) | Verificación de checksum |
-
 ### Puente de compatibilidad
 
-`src/components/StructuralToolIcon.tsx` conserva la API histórica `tool → icono` que consumen ToolBar y el dock móvil. `STRUCTURAL_TOOL_IDS` = { `node`, `member`, `support`, `pointLoad`, `distributedLoad`, `moment`, `dimension`, `split`, `cut` }: estas nueve herramientas renderizan glifo estructural propio; el resto cae a lucide.
+`src/features/canvas/StructuralToolIcon.tsx` conserva la API histórica `tool → icono` que consumen ToolBar y el dock móvil. `STRUCTURAL_TOOL_IDS` = { `node`, `member`, `support`, `pointLoad`, `distributedLoad`, `moment`, `dimension`, `split`, `cut` }: estas nueve herramientas renderizan glifo estructural propio; el resto cae a lucide.
 
 ## 3 · Iconos lucide-react reutilizados
 
@@ -96,27 +68,27 @@ ToolBar importa además `BoxSelect`, `ChevronRight` y `MoreHorizontal` para affo
 | Archivo | Iconos lucide |
 | --- | --- |
 | `App.tsx` | `LoaderCircle` (carga del workspace) |
-| `components/TopBar.tsx` | `Check`, `ChevronDown`, `CloudOff`, `Download`, `FileArchive`, `FileText`, `FilePlus2`, `FolderOpen`, `Maximize2`, `Minimize2`, `Moon`, `MoreHorizontal`, `PanelLeftClose`, `PanelLeftOpen`, `PanelRightClose`, `PanelRightOpen`, `Play`, `Redo2`, `Save`, `Sun`, `Undo2` |
-| `components/AnalysisStatus.tsx` | `CheckCircle2`, `Circle`, `CircleX`, `Clock3`, `LoaderCircle`, `TriangleAlert` |
-| `components/CanvasChrome.tsx` | `Crosshair`, `LocateFixed`, `Minus`, `Plus`, `X` (controles de zoom/centrado) |
-| `components/CanvasLayers.tsx` | `Box`, `ChartNoAxesCombined`, `HelpCircle`, `Layers3`, `Ruler`, `Tags`, `TriangleAlert`, `X`, `Zap` (conmutador de capas) |
-| `components/ClassroomGuide.tsx` | `Check`, `ChevronRight`, `Lightbulb`, `TriangleAlert` |
-| `components/ImportCenterDialog.tsx` | `AlertTriangle`, `ArrowLeft`, `ArrowRight`, `Check`, `CheckCircle2`, `FileArchive`, `FileJson`, `FileText`, `LoaderCircle`, `Save`, `ShieldCheck`, `Upload`, `X` |
-| `components/Inspector.tsx` | `ChevronRight`, `CircleHelp`, `MoveDown`, `Plus`, `RotateCcw`, `Sigma`, `X` |
-| `components/inspector/InspectorPrimitives.tsx` | `CircleHelp`, `LockKeyhole`, `PencilLine` |
-| `components/inspector/InspectorProperties.tsx` | `AlertTriangle`, `Anchor`, `CircleDot`, `Layers3`, `Minus`, `MoveDown`, `MousePointer2`, `Plus`, `RotateCcw`, `Sigma`, `Trash2` |
-| `components/ResultsPanel.tsx` | `AlertCircle`, `Check`, `ChevronDown`, `ChevronUp`, `CircleDotDashed`, `GripHorizontal`, `LoaderCircle` |
-| `components/ResultSummary.tsx` | `Download`, `GitCompareArrows`, `LocateFixed`, `Printer`, `RefreshCw` |
-| `components/StructuralCanvas.tsx` | `X` |
-| `components/WelcomeScreen.tsx` | `ArrowRight`, `FilePlus2`, `FolderOpen`, `GitCommitHorizontal`, `Play`, `Triangle`, `Upload` |
-| `components/WorkspaceShell.tsx` | `SlidersHorizontal` (toggle móvil del inspector) |
-| `ui/controls.tsx` | `ChevronDown` (selects) |
-| `ui/disclosure.tsx` | `ChevronDown` (acordeón/tabs) |
-| `ui/editor.tsx` | `CheckCircle2`, `Circle`, `CircleAlert`, `Clock3`, `TriangleAlert` (status strip) |
-| `ui/feedback.tsx` | `CheckCircle2`, `CircleAlert`, `Info`, `TriangleAlert`, `X` (badges/banners) |
-| `ui/overlays.tsx` | `X` (cierre de diálogo/drawer) |
-| `ui/ComponentLab.tsx` (solo dev, ruta `/__components`) | `BarChart3`, `BoxSelect`, `CircleDot`, `Component`, `Crosshair`, `Eye`, `Gauge`, `Grid3X3`, `MousePointer2`, `PanelRightOpen`, `Plus`, `Ruler`, `Save`, `Sparkles`, `Trash2`, `Triangle`, `Waves` |
-| `ui/TopBarLab.tsx` (solo dev) | `Check`, `ChevronDown`, `Circle`, `Download`, `MoreHorizontal`, `Play`, `Redo2`, `Undo2` |
+| `features/topbar/TopBar.tsx` | `Check`, `ChevronDown`, `CloudOff`, `Download`, `FileArchive`, `FileText`, `FilePlus2`, `FolderOpen`, `Maximize2`, `Minimize2`, `Moon`, `MoreHorizontal`, `PanelLeftClose`, `PanelLeftOpen`, `PanelRightClose`, `PanelRightOpen`, `Play`, `Redo2`, `Save`, `Sun`, `Undo2` |
+| `features/topbar/AnalysisStatus.tsx` | `CheckCircle2`, `Circle`, `CircleX`, `Clock3`, `LoaderCircle`, `TriangleAlert` |
+| `features/canvas/CanvasChrome.tsx` | `Crosshair`, `LocateFixed`, `Minus`, `Plus`, `X` (controles de zoom/centrado) |
+| `features/canvas/CanvasLayers.tsx` | `Box`, `ChartNoAxesCombined`, `HelpCircle`, `Layers3`, `Ruler`, `Tags`, `TriangleAlert`, `X`, `Zap` (conmutador de capas) |
+| `features/classroom/ClassroomGuide.tsx` | `Check`, `ChevronRight`, `Lightbulb`, `TriangleAlert` |
+| `features/import-export/ImportCenterDialog.tsx` | `AlertTriangle`, `ArrowLeft`, `ArrowRight`, `Check`, `CheckCircle2`, `FileArchive`, `FileJson`, `FileText`, `LoaderCircle`, `Save`, `ShieldCheck`, `Upload`, `X` |
+| `features/inspector/Inspector.tsx` | `ChevronRight`, `CircleHelp`, `MoveDown`, `Plus`, `RotateCcw`, `Sigma`, `X` |
+| `features/inspector/InspectorPrimitives.tsx` | `CircleHelp`, `LockKeyhole`, `PencilLine` |
+| `features/inspector/InspectorProperties.tsx` | `AlertTriangle`, `Anchor`, `CircleDot`, `Layers3`, `Minus`, `MoveDown`, `MousePointer2`, `Plus`, `RotateCcw`, `Sigma`, `Trash2` |
+| `features/results/ResultsPanel.tsx` | `AlertCircle`, `Check`, `ChevronDown`, `ChevronUp`, `CircleDotDashed`, `GripHorizontal`, `LoaderCircle` |
+| `features/results/ResultSummary.tsx` | `Download`, `GitCompareArrows`, `LocateFixed`, `Printer`, `RefreshCw` |
+| `features/canvas/StructuralCanvas.tsx` | `X` |
+| `features/welcome/WelcomeScreen.tsx` | `ArrowRight`, `FilePlus2`, `FolderOpen`, `GitCommitHorizontal`, `Play`, `Triangle`, `Upload` |
+| `features/workspace/WorkspaceShell.tsx` | `SlidersHorizontal` (toggle móvil del inspector) |
+| `design-system/components/controls.tsx` | `ChevronDown` (selects) |
+| `design-system/components/disclosure.tsx` | `ChevronDown` (acordeón/tabs) |
+| `design-system/components/editor.tsx` | `CheckCircle2`, `Circle`, `CircleAlert`, `Clock3`, `TriangleAlert` (status strip) |
+| `design-system/components/feedback.tsx` | `CheckCircle2`, `CircleAlert`, `Info`, `TriangleAlert`, `X` (badges/banners) |
+| `design-system/components/overlays.tsx` | `X` (cierre de diálogo/drawer) |
+| `design-system/lab/ComponentLab.tsx` (solo dev, ruta `/__components`) | `BarChart3`, `BoxSelect`, `CircleDot`, `Component`, `Crosshair`, `Eye`, `Gauge`, `Grid3X3`, `MousePointer2`, `PanelRightOpen`, `Plus`, `Ruler`, `Save`, `Sparkles`, `Trash2`, `Triangle`, `Waves` |
+| `design-system/lab/TopBarLab.tsx` (solo dev) | `Check`, `ChevronDown`, `Circle`, `Download`, `MoreHorizontal`, `Play`, `Redo2`, `Undo2` |
 
 Convenciones recurrentes: `X` = cerrar; `ChevronDown/Right/Up` = expandir/navegar; `Check`/`CheckCircle2` = confirmación; `TriangleAlert`/`AlertTriangle`/`CircleAlert`/`AlertCircle` = advertencia/error; `LoaderCircle` = progreso; `Sun`/`Moon` = tema Día/Noche.
 
