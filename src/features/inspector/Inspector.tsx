@@ -6,7 +6,7 @@ import { useProject } from '../../store/ProjectContext';
 import type { Tool } from '../../types';
 import { InspectorNumericField } from './InspectorNumericField';
 import { InspectorProperties } from './InspectorProperties';
-import { MAX_INSPECTOR_WIDTH, MIN_INSPECTOR_WIDTH, clampInspectorWidth } from '../workspace/useWorkspaceLayoutPreferences';
+import { MAX_INSPECTOR_WIDTH, MIN_INSPECTOR_WIDTH, clampInspectorWidth, type InspectorDetent } from '../workspace/useWorkspaceLayoutPreferences';
 
 const NumberField = ({
   label,
@@ -70,12 +70,16 @@ export const Inspector = ({
   modal = false,
   onClose,
   onDesktopWidthChange,
+  mobileDetent = 'medium',
+  onMobileDetentChange,
 }: {
   className?: string;
   desktopWidth?: number;
   modal?: boolean;
   onClose?: () => void;
   onDesktopWidthChange?: (width: number) => void;
+  mobileDetent?: InspectorDetent;
+  onMobileDetentChange?: (detent: InspectorDetent) => void;
 }) => {
   const { selection, activeTool, setActiveTool, selectedCombinationId, setSelectedCombinationId } = useProject();
   const { t } = useI18n();
@@ -175,6 +179,7 @@ export const Inspector = ({
       aria-modal={modal || undefined}
       aria-label={t('inspector.tab')}
       tabIndex={modal ? -1 : undefined}
+      data-mobile-detent={modal ? mobileDetent : undefined}
     >
       {!modal && onDesktopWidthChange ? <button
         type="button"
@@ -194,6 +199,14 @@ export const Inspector = ({
         onPointerUp={() => setResizeOrigin(null)}
         onPointerCancel={() => setResizeOrigin(null)}
       /> : null}
+      {modal && onMobileDetentChange ? <div className="inspector-detent-control" role="group" aria-label={t('inspector.detentGroup')}>
+        {(['compact', 'medium', 'large'] as const).map((detent) => <button
+          key={detent}
+          type="button"
+          aria-pressed={mobileDetent === detent}
+          onClick={() => onMobileDetentChange(detent)}
+        >{detent === 'compact' ? t('inspector.detentCompact') : detent === 'medium' ? t('inspector.detentMedium') : t('inspector.detentLarge')}</button>)}
+      </div> : null}
       <div className="inspector-tabs" role="tablist" aria-label={t('inspector.tab')}>
         <button id="inspector-tab-inspector" type="button" role="tab" aria-controls="inspector-tabpanel" aria-selected={tab === 'inspector'} tabIndex={tab === 'inspector' ? 0 : -1} className={tab === 'inspector' ? 'active' : ''} onClick={() => setTab('inspector')} onKeyDown={(event) => onTabKeyDown(event, 0)}>{t('inspector.tab')}</button>
         <button id="inspector-tab-loads" type="button" role="tab" aria-controls="inspector-tabpanel" aria-selected={tab === 'loads'} tabIndex={tab === 'loads' ? 0 : -1} className={tab === 'loads' ? 'active' : ''} onClick={() => setTab('loads')} onKeyDown={(event) => onTabKeyDown(event, 1)}>{t('inspector.loadsTab')}</button>

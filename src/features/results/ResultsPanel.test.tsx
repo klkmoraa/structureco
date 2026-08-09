@@ -129,7 +129,7 @@ describe('Results analytical center', () => {
     await user.click(focusButton);
     await waitFor(() => expect(panel.getAttribute('data-results-mode')).toBe('focused'));
     expect(document.activeElement).toBe(panel);
-    expect(localStorage.getItem(RESULTS_MODE_STORAGE_KEY)).toBe('focused');
+    expect(localStorage.getItem(RESULTS_MODE_STORAGE_KEY)).toBe('expanded');
     await user.keyboard('{Escape}');
     await waitFor(() => expect(panel.getAttribute('data-results-mode')).toBe('expanded'));
     expect(document.activeElement).toBe(focusButton);
@@ -381,6 +381,27 @@ describe('Results analytical center', () => {
     expect(document.activeElement).toBe(toggle);
   });
 
+  it('uses phone focus mode temporarily and reopens as the canvas-preserving panel', async () => {
+    const user = userEvent.setup();
+    window.matchMedia = mockMatchMedia('phone');
+    renderResults();
+
+    const toggle = screen.getByRole('button', { name: 'Resultados' });
+    await user.click(toggle);
+    const panel = screen.getByRole('region', { name: /Resultados del an/ });
+    await user.click(screen.getByRole('button', { name: 'Enfocar resultados en pantalla completa' }));
+
+    expect(panel.getAttribute('data-results-mode')).toBe('focused');
+    expect(localStorage.getItem(RESULTS_MODE_STORAGE_KEY)).toBe('expanded');
+    await user.keyboard('{Escape}');
+    expect(panel.getAttribute('data-results-mode')).toBe('expanded');
+
+    await user.click(toggle);
+    await user.click(toggle);
+    expect(panel.getAttribute('data-results-mode')).toBe('expanded');
+    expect(panel.getAttribute('data-canvas-interactive')).toBe('true');
+  });
+
   it('leaves Escape to a visible modal above the modeless phone results', async () => {
     const user = userEvent.setup();
     window.matchMedia = mockMatchMedia('phone');
@@ -460,7 +481,7 @@ describe('Results analytical center', () => {
     hiddenInspector.remove();
   });
 
-  it('requires a base-unit prediction, compares real results, and preserves the attempt across units and modes', async () => {
+  it.skip('legacy prediction gate retired by Aula vNext', async () => {
     const user = userEvent.setup();
     const project = createSimpleBeamExercise();
     renderResults(project);
@@ -504,7 +525,7 @@ describe('Results analytical center', () => {
     expect(screen.getByText('Tu predicción frente al resultado')).toBeTruthy();
   }, 10_000);
 
-  it('keeps the complete classroom prediction and reveal flow in English', async () => {
+  it.skip('legacy English prediction gate retired by Aula vNext', async () => {
     const user = userEvent.setup();
     const project = createSimpleBeamExercise();
     project.settings.language = 'en';
@@ -522,7 +543,7 @@ describe('Results analytical center', () => {
     expect(screen.getByRole('button', { name: 'Hide results' })).toBeTruthy();
   }, 10_000);
 
-  it('opens prediction instead of blocking on a failed analysis inherited from Complete mode', async () => {
+  it.skip('legacy failed-analysis prediction gate retired by Aula vNext', async () => {
     const user = userEvent.setup();
     const project = createSimpleBeamExercise();
     project.settings.calculationMode = 'complete';
@@ -538,6 +559,52 @@ describe('Results analytical center', () => {
     await user.click(screen.getByRole('button', { name: 'Modo aula test' }));
     expect(await screen.findByRole('heading', { name: 'Tu hipótesis antes del cálculo' })).toBeTruthy();
     expect(screen.queryByText('Estructura inestable o mecanismo')).toBeNull();
+  }, 10_000);
+
+  it('shows analysis and the same result families in Aula without using legacy predictions', async () => {
+    const user = userEvent.setup();
+    const project = createSimpleBeamExercise();
+    renderResults(project);
+
+    expect(screen.queryByText(/hipótesis antes del cálculo/i)).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
+    await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+    expect(screen.getByRole('tab', { name: 'Deformada' })).toBeTruthy();
+    await user.click(screen.getByRole('tab', { name: 'Reacciones' }));
+    expect(screen.getByRole('columnheader', { name: /Ux/ })).toBeTruthy();
+    expect(screen.getByRole('columnheader', { name: /Uy/ })).toBeTruthy();
+    expect(screen.getByLabelText('Predicciones base').textContent).toBe('{}');
+
+    const modelState = screen.getByLabelText('Estado del modelo').textContent;
+    await user.click(screen.getByRole('button', { name: 'Modo completo test' }));
+    await user.click(screen.getByRole('button', { name: 'Modo aula test' }));
+    expect(screen.getByLabelText('Estado del modelo').textContent).toBe(modelState);
+    expect(screen.getByRole('columnheader', { name: /Ux/ })).toBeTruthy();
+
+    await user.click(screen.getByRole('tab', { name: 'Aprender' }));
+    const levels = screen.getByRole('group', { name: 'Niveles pedagógicos' });
+    expect(within(levels).getByRole('button', { name: 'Fundamentos' })).toBeTruthy();
+    expect(within(levels).getByRole('button', { name: 'Procedimiento' })).toBeTruthy();
+    await user.click(within(levels).getByRole('button', { name: 'Verificación' }));
+    expect(screen.getByText(/Evidencia runtime:/)).toBeTruthy();
+  }, 10_000);
+
+  it('keeps a failed analysis visible when switching into Aula', async () => {
+    const user = userEvent.setup();
+    const project = createSimpleBeamExercise();
+    project.settings.calculationMode = 'complete';
+    project.nodes.push(
+      { id: 'N3', x: 0, y: 3, support: { type: 'none' } },
+      { id: 'N4', x: 3, y: 3, support: { type: 'none' } },
+    );
+    project.members.push({ ...project.members[0], id: 'M2', i: 'N3', j: 'N4' });
+    renderResults(project);
+
+    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
+    expect(await screen.findByText('Estructura inestable o mecanismo', {}, { timeout: 5000 })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Modo aula test' }));
+    expect(screen.getByText('Estructura inestable o mecanismo')).toBeTruthy();
+    expect(screen.queryByText(/hipótesis antes del cálculo/i)).toBeNull();
   }, 10_000);
 
   it('substitutes the real member properties into the element stiffness terms', async () => {

@@ -19,7 +19,6 @@ import {
 } from '../../utils/snapping';
 import { selectGeometryByBox } from '../../utils/selectionGeometry';
 import { useI18n } from '../../i18n/useI18n';
-import { useClassroomSession } from '../../store/ClassroomSessionContext';
 import type { TranslationKey } from '../../i18n/catalogs';
 import {
   cameraForViewportResize,
@@ -56,6 +55,8 @@ import {
 } from '../../graphics/structureGeometry';
 import { CanvasResultLayer, diagramPixelScaleFor, reactionClearanceFor } from './CanvasResultLayer';
 import { CanvasInteractionLayer } from './CanvasInteractionLayer';
+import { parseQuickEntryPair } from './quickEntry';
+import { resolveRepeatRecipe, type RepeatRecipe } from './repeatAction';
 
 type Camera = CanvasCamera;
 
@@ -169,7 +170,6 @@ export const StructuralCanvas = ({
     resultCursor,
     influenceCanvasState,
   } = useProject();
-  const { resultsVisible } = useClassroomSession();
   const { t } = useI18n();
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -186,6 +186,8 @@ export const StructuralCanvas = ({
   const [quickEntryMode, setQuickEntryMode] = useState<'delta' | 'polar'>('delta');
   const [quickEntryError, setQuickEntryError] = useState('');
   const [cycleIndicator, setCycleIndicator] = useState<{ x: number; y: number; index: number; total: number } | null>(null);
+  const [overlapPicker, setOverlapPicker] = useState<{ x: number; y: number; candidates: Array<Exclude<StructuralTarget, { kind: 'background' }>> } | null>(null);
+  const [repeatRecipe, setRepeatRecipe] = useState<RepeatRecipe | null>(null);
   const spacePressedRef = useRef(false);
   const interactionRef = useRef<CanvasInteraction>(IDLE_INTERACTION);
   const cameraRef = useRef(camera);
@@ -204,6 +206,7 @@ export const StructuralCanvas = ({
   const feedbackTimerRef = useRef<number | null>(null);
   const [canvasFeedback, setCanvasFeedback] = useState('');
   const selectionBox = interaction.kind === 'selection-box' ? interaction : null;
+  const repeatCandidate = useMemo(() => resolveRepeatRecipe(project, selection), [project, selection]);
 
   const nodeMap = useMemo(() => new Map(project.nodes.map((node) => [node.id, node])), [project.nodes]);
   const memberMap = useMemo(() => new Map(project.members.map((member) => [member.id, member])), [project.members]);
@@ -243,7 +246,7 @@ export const StructuralCanvas = ({
   const mechanismMap = useMemo(() => new Map((analysis?.mechanism?.nodes ?? []).map((node) => [node.nodeId, node])), [analysis?.mechanism]);
   const units = project.settings.units;
   const selectionFilter = useMemo(() => project.settings.selectionFilter ?? { nodes: true, members: true, loads: true }, [project.settings.selectionFilter]);
-  const resultsAllowed = project.settings.calculationMode !== 'classroom' || resultsVisible;
+  const resultsAllowed = true;
   const lengthLabel = unitLabel(units, 'length');
   const forceLabel = unitLabel(units, 'force');
   const momentLabel = unitLabel(units, 'moment');
@@ -534,6 +537,7 @@ export const StructuralCanvas = ({
       return draft;
     });
     if (id) setSelection({ kind: 'node', id });
+    if (activeTool === 'node') setRepeatRecipe(null);
     return id;
   };
 
@@ -560,27 +564,26 @@ export const StructuralCanvas = ({
         return draft;
       }
       memberId = nextId('M', draft.members.map((member) => member.id));
-      draft.members.push({ id: memberId, i: memberStart, j: nodeId, type: 'frame', E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 });
+      const template = repeatRecipe?.kind === 'member'
+        ? repeatRecipe.template
+        : { type: 'frame' as const, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 };
+      draft.members.push({ id: memberId, i: memberStart, j: nodeId, ...template });
       return draft;
     });
     setMemberStart(null);
     if (memberId) setSelection({ kind: 'member', id: memberId });
     setQuickEntry({ first: '', second: '' });
     setQuickEntryError('');
+    setRepeatRecipe(null);
   };
 
   const submitQuickEntry = () => {
-    const first = Number(quickEntry.first);
-    const second = Number(quickEntry.second);
-    if (
-      quickEntry.first.trim() === ''
-      || quickEntry.second.trim() === ''
-      || !Number.isFinite(first)
-      || !Number.isFinite(second)
-    ) {
+    const parsed = parseQuickEntryPair(quickEntry.first, quickEntry.second);
+    if (!parsed.ok) {
       setQuickEntryError(t('canvas.twoValidNumbers'));
       return;
     }
+    const { first, second } = parsed.value;
     if (activeTool === 'node') {
       addNode({ x: fromDisplay(first, units, 'length'), y: fromDisplay(second, units, 'length') });
       setQuickEntry({ first: '', second: '' });
@@ -597,6 +600,22 @@ export const StructuralCanvas = ({
       createMemberEndpoint({ x: startNode.x + length * Math.cos(radians), y: startNode.y + length * Math.sin(radians) });
     }
   };
+
+  const cancelQuickEntry = () => {
+    setQuickEntry({ first: '', second: '' });
+    setQuickEntryError('');
+    if (activeTool === 'member') setMemberStart(null);
+  };
+
+  const activateRepeat = useCallback(() => {
+    const recipe = resolveRepeatRecipe(project, selection);
+    if (!recipe) return;
+    setRepeatRecipe(recipe);
+    setMemberStart(null);
+    setActiveTool(recipe.tool);
+    showCanvasFeedback(t('canvas.repeatWaiting', { tool: t(toolLabelKeys[recipe.tool]) }));
+    window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
+  }, [project, selection, setActiveTool, showCanvasFeedback, t]);
 
   const capturePointer = useCallback((pointerId: number) => {
     try { svgRef.current?.setPointerCapture(pointerId); } catch { /* Pointer may already be cancelled. */ }
@@ -683,10 +702,14 @@ export const StructuralCanvas = ({
       if (memberStart === node.id) { setMemberStart(null); return; }
       const id = nextId('M', project.members.map((member) => member.id));
       updateProject((draft) => {
-        draft.members.push({ id, i: memberStart, j: node.id, type: 'frame', E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 });
+        const template = repeatRecipe?.kind === 'member'
+          ? repeatRecipe.template
+          : { type: 'frame' as const, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 };
+        draft.members.push({ id, i: memberStart, j: node.id, ...template });
         return draft;
       });
       setMemberStart(null);
+      setRepeatRecipe(null);
       setSelection({ kind: 'member', id });
       return;
     }
@@ -707,10 +730,14 @@ export const StructuralCanvas = ({
       const id = nextId('NL', project.nodalLoads.map((load) => load.id));
       const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
       updateProject((draft) => {
-        draft.nodalLoads.push({ id, nodeId: node.id, caseId, fx: 0, fy: -fromDisplay(10, units, 'force'), mz: 0 });
+        const template = repeatRecipe?.kind === 'nodalLoad' && repeatRecipe.tool === 'pointLoad'
+          ? repeatRecipe.template
+          : { caseId, fx: 0, fy: -fromDisplay(10, units, 'force'), mz: 0 };
+        draft.nodalLoads.push({ id, nodeId: node.id, ...template });
         return draft;
       });
       setSelection({ kind: 'nodalLoad', id });
+      setRepeatRecipe(null);
       completeLoadPlacement(t('toolbar.pointLoad'));
       return;
     }
@@ -718,10 +745,14 @@ export const StructuralCanvas = ({
       const id = nextId('NL', project.nodalLoads.map((load) => load.id));
       const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
       updateProject((draft) => {
-        draft.nodalLoads.push({ id, nodeId: node.id, caseId, fx: 0, fy: 0, mz: fromDisplay(10, units, 'moment') });
+        const template = repeatRecipe?.kind === 'nodalLoad' && repeatRecipe.tool === 'moment'
+          ? repeatRecipe.template
+          : { caseId, fx: 0, fy: 0, mz: fromDisplay(10, units, 'moment') };
+        draft.nodalLoads.push({ id, nodeId: node.id, ...template });
         return draft;
       });
       setSelection({ kind: 'nodalLoad', id });
+      setRepeatRecipe(null);
       completeLoadPlacement(t('toolbar.moment'));
       return;
     }
@@ -762,13 +793,14 @@ export const StructuralCanvas = ({
       const id = nextId('ML', project.memberLoads.map((load) => load.id));
       const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
       updateProject((draft) => {
-        draft.memberLoads.push({
-          id, memberId: member.id, caseId, type: 'distributed', coordinateSystem: 'global', lengthBasis: 'real',
-          start: 0, end: 1, qxStart: 0, qxEnd: 0, qyStart: -fromDisplay(10, units, 'distributedForce'), qyEnd: -fromDisplay(10, units, 'distributedForce'),
-        });
+        const template = repeatRecipe?.kind === 'memberLoad' && repeatRecipe.tool === 'distributedLoad'
+          ? repeatRecipe.template
+          : { caseId, type: 'distributed' as const, coordinateSystem: 'global' as const, lengthBasis: 'real' as const, start: 0, end: 1, qxStart: 0, qxEnd: 0, qyStart: -fromDisplay(10, units, 'distributedForce'), qyEnd: -fromDisplay(10, units, 'distributedForce') };
+        draft.memberLoads.push({ id, memberId: member.id, ...template });
         return draft;
       });
       setSelection({ kind: 'memberLoad', id });
+      setRepeatRecipe(null);
       completeLoadPlacement(t('toolbar.distributedLoad'));
       return;
     }
@@ -781,10 +813,14 @@ export const StructuralCanvas = ({
       const id = nextId('ML', project.memberLoads.map((load) => load.id));
       const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
       updateProject((draft) => {
-        draft.memberLoads.push({ id, memberId: member.id, caseId, type: 'point', coordinateSystem: 'global', lengthBasis: 'real', start: 0, end: 1, px: 0, py: -fromDisplay(10, units, 'force'), position: ratio });
+        const template = repeatRecipe?.kind === 'memberLoad' && repeatRecipe.tool === 'pointLoad'
+          ? repeatRecipe.template
+          : { caseId, type: 'point' as const, coordinateSystem: 'global' as const, lengthBasis: 'real' as const, start: 0, end: 1, px: 0, py: -fromDisplay(10, units, 'force') };
+        draft.memberLoads.push({ id, memberId: member.id, ...template, position: ratio });
         return draft;
       });
       setSelection({ kind: 'memberLoad', id });
+      setRepeatRecipe(null);
       completeLoadPlacement(t('toolbar.pointLoad'));
       return;
     }
@@ -797,10 +833,14 @@ export const StructuralCanvas = ({
       const id = nextId('ML', project.memberLoads.map((load) => load.id));
       const caseId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? 'LC1';
       updateProject((draft) => {
-        draft.memberLoads.push({ id, memberId: member.id, caseId, type: 'moment', coordinateSystem: 'local', lengthBasis: 'real', start: 0, end: 1, moment: fromDisplay(10, units, 'moment'), position: ratio });
+        const template = repeatRecipe?.kind === 'memberLoad' && repeatRecipe.tool === 'moment'
+          ? repeatRecipe.template
+          : { caseId, type: 'moment' as const, coordinateSystem: 'local' as const, lengthBasis: 'real' as const, start: 0, end: 1, moment: fromDisplay(10, units, 'moment') };
+        draft.memberLoads.push({ id, memberId: member.id, ...template, position: ratio });
         return draft;
       });
       setSelection({ kind: 'memberLoad', id });
+      setRepeatRecipe(null);
       completeLoadPlacement(t('toolbar.moment'));
       return;
     }
@@ -861,6 +901,7 @@ export const StructuralCanvas = ({
 
   const handleObjectPointerDown = (event: ReactPointerEvent, target: StructuralTarget) => {
     event.stopPropagation();
+    setOverlapPicker(null);
     if (interactionRef.current.kind === 'pinch') return;
     if (shouldStartPan(event)) {
       event.preventDefault();
@@ -888,7 +929,7 @@ export const StructuralCanvas = ({
             ? selectionFilter.loads
             : true;
       if (!selectable) return;
-      if (event.pointerType !== 'touch') {
+      {
         const candidates: StructuralTarget[] = [];
         const seen = new Set<string>();
         const hitElements = document.elementsFromPoint?.(event.clientX, event.clientY) ?? [event.target as Element];
@@ -917,8 +958,14 @@ export const StructuralCanvas = ({
           selectionCycleRef.current = { x: event.clientX, y: event.clientY, at: performance.now(), key, index };
           const rect = hostRef.current?.getBoundingClientRect();
           setCycleIndicator({ x: event.clientX - (rect?.left ?? 0), y: event.clientY - (rect?.top ?? 0), index: index + 1, total: candidates.length });
+          setOverlapPicker({
+            x: clamp(event.clientX - (rect?.left ?? 0) + 12, 8, Math.max(8, size.width - 230)),
+            y: clamp(event.clientY - (rect?.top ?? 0) + 12, 8, Math.max(8, size.height - 220)),
+            candidates: candidates as Array<Exclude<StructuralTarget, { kind: 'background' }>>,
+          });
           if (cycleTimerRef.current !== null) window.clearTimeout(cycleTimerRef.current);
           cycleTimerRef.current = window.setTimeout(() => { setCycleIndicator(null); cycleTimerRef.current = null; }, 1100);
+          return;
         } else selectionCycleRef.current = null;
       }
     }
@@ -1134,6 +1181,12 @@ export const StructuralCanvas = ({
       }
       const command = event.ctrlKey || event.metaKey;
       const key = event.key.toLowerCase();
+      if (key === 'r' && !command && !event.altKey) {
+        if (!repeatCandidate) return;
+        event.preventDefault();
+        activateRepeat();
+        return;
+      }
       if (command && key === 'c') {
         event.preventDefault();
         clipboardRef.current = copyModelSelection(project, selection);
@@ -1169,6 +1222,10 @@ export const StructuralCanvas = ({
       if (event.key === 'Escape') {
         cancelActiveInteraction();
         setMemberStart(null);
+        setQuickEntry({ first: '', second: '' });
+        setQuickEntryError('');
+        setOverlapPicker(null);
+        setRepeatRecipe(null);
         setSelection(null);
         setCut(null);
         setActiveTool('select');
@@ -1194,7 +1251,7 @@ export const StructuralCanvas = ({
       window.removeEventListener('blur', cancelActiveInteraction);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [cancelActiveInteraction, deleteSelection, project, replaceProject, selection, setActiveTool, setSelection]);
+  }, [activateRepeat, cancelActiveInteraction, deleteSelection, project, repeatCandidate, replaceProject, selection, setActiveTool, setSelection]);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -1510,7 +1567,7 @@ export const StructuralCanvas = ({
         role="application"
         aria-label={t('canvas.workspace')}
         aria-describedby="canvas-interaction-description"
-        aria-keyshortcuts="V H N M S P D O C X B Delete Backspace Escape"
+        aria-keyshortcuts="V H N M S P D O C X B R Delete Backspace Escape"
         data-pointer-support="mouse touch pen"
         tabIndex={0}
         onPointerDownCapture={handlePointerDownCapture}
@@ -1712,10 +1769,39 @@ export const StructuralCanvas = ({
         onFit={fitModel}
       />
       {canvasFeedback ? <div className="canvas-feedback" role="alert">{canvasFeedback}</div> : null}
+      {repeatCandidate ? <button
+        type="button"
+        className="repeat-action-control"
+        aria-keyshortcuts="R"
+        onClick={activateRepeat}
+      >{t('canvas.repeatAction')}</button> : null}
+      {repeatRecipe ? <div className="repeat-preview" role="status">
+        <strong>{t('canvas.repeatPreview')}</strong>
+        <span>{t('canvas.repeatWaiting', { tool: t(toolLabelKeys[repeatRecipe.tool]) })}</span>
+        <button type="button" onClick={() => { setRepeatRecipe(null); setMemberStart(null); setActiveTool('select'); }}>{t('canvas.cancelPlacement')}</button>
+      </div> : null}
       {layers.results && layers.labels && resultsAllowed && analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <div className={`canvas-result-legend ${resultTab}`} aria-label={t('canvas.diagramConvention')} data-canvas-chrome="result-legend"><strong>{resultTab === 'axial' ? `N · ${t('results.axial')}` : resultTab === 'shear' ? `V · ${t('results.shear')}` : `M · ${t('results.moment')}`}</strong><span><i /> {t('canvas.exactCurveScale', { scale: t(project.settings.diagramScaleMode === 'individual' ? 'canvas.scaleByMember' : 'canvas.scaleCommon') })}</span><small>{t('canvas.diagramSideDescription', { side: project.settings.diagramSide === 'positive' ? '+y' : '−y' })}</small></div> : null}
       {memberStart ? <div className="canvas-hint" role="status"><span>{t('canvas.touchDestinationNode')}</span><button type="button" onClick={() => setMemberStart(null)} aria-label={t('canvas.cancelMemberCreation')}><X size={14} /></button></div> : null}
-      {activeTool === 'node' || (activeTool === 'member' && memberStart) ? <form className="quick-entry-bar" aria-label={t('canvas.cadEntry')} onSubmit={(event) => { event.preventDefault(); submitQuickEntry(); }}><div className="quick-entry-heading"><strong>{t(activeTool === 'node' ? 'canvas.nodeByCoordinates' : 'canvas.memberEndpoint')}</strong>{activeTool === 'member' ? <div className="quick-entry-mode"><button type="button" aria-pressed={quickEntryMode === 'delta'} onClick={() => setQuickEntryMode('delta')}>ΔX · ΔY</button><button type="button" aria-pressed={quickEntryMode === 'polar'} onClick={() => setQuickEntryMode('polar')}>L · ∠</button></div> : null}</div><label><span>{activeTool === 'node' ? 'X' : quickEntryMode === 'delta' ? 'ΔX' : 'L'}</span><input type="number" inputMode="decimal" step="any" value={quickEntry.first} onChange={(event) => setQuickEntry((current) => ({ ...current, first: event.target.value }))} /><small>{lengthLabel}</small></label><label><span>{activeTool === 'node' ? 'Y' : quickEntryMode === 'delta' ? 'ΔY' : '∠'}</span><input type="number" inputMode="decimal" step="any" value={quickEntry.second} onChange={(event) => setQuickEntry((current) => ({ ...current, second: event.target.value }))} /><small>{activeTool === 'member' && quickEntryMode === 'polar' ? '°' : lengthLabel}</small></label><button type="submit">{t(activeTool === 'node' ? 'canvas.createNode' : 'canvas.createMember')}</button>{quickEntryError ? <span className="quick-entry-error" role="alert">{quickEntryError}</span> : null}</form> : null}
+      {activeTool === 'node' || (activeTool === 'member' && memberStart) ? <form className="quick-entry-bar" aria-label={t('canvas.cadEntry')} onSubmit={(event) => { event.preventDefault(); submitQuickEntry(); }}>
+        <div className="quick-entry-heading"><strong>{t(activeTool === 'node' ? 'canvas.nodeByCoordinates' : 'canvas.memberEndpoint')}</strong>{activeTool === 'member' ? <div className="quick-entry-mode"><button type="button" aria-pressed={quickEntryMode === 'delta'} onClick={() => setQuickEntryMode('delta')}>ΔX · ΔY</button><button type="button" aria-pressed={quickEntryMode === 'polar'} onClick={() => setQuickEntryMode('polar')}>L · ∠</button></div> : null}</div>
+        <label><span>{activeTool === 'node' ? 'X' : quickEntryMode === 'delta' ? 'ΔX' : 'L'}</span><input type="text" inputMode="decimal" autoComplete="off" value={quickEntry.first} onChange={(event) => { setQuickEntry((current) => ({ ...current, first: event.target.value })); setQuickEntryError(''); }} /><small>{lengthLabel}</small></label>
+        <label><span>{activeTool === 'node' ? 'Y' : quickEntryMode === 'delta' ? 'ΔY' : '∠'}</span><input type="text" inputMode="decimal" autoComplete="off" value={quickEntry.second} onChange={(event) => { setQuickEntry((current) => ({ ...current, second: event.target.value })); setQuickEntryError(''); }} /><small>{activeTool === 'member' && quickEntryMode === 'polar' ? '°' : lengthLabel}</small></label>
+        <button type="submit">{t(activeTool === 'node' ? 'canvas.createNode' : 'canvas.createMember')}</button>
+        <button type="button" className="quick-entry-cancel" onClick={cancelQuickEntry}>{t('canvas.cancelPlacement')}</button>
+        {quickEntryError ? <span className="quick-entry-error" role="alert">{quickEntryError}</span> : null}
+      </form> : null}
       {cycleIndicator ? <div className="selection-cycle-indicator" style={{ left: cycleIndicator.x + 12, top: cycleIndicator.y + 12 }} role="status">{t('canvas.selectionCycle', { index: cycleIndicator.index, total: cycleIndicator.total })}</div> : null}
+      {overlapPicker ? <div className="overlap-picker" style={{ left: overlapPicker.x, top: overlapPicker.y }} role="listbox" aria-label={t('canvas.overlapPicker')}>
+        <strong>{t('canvas.overlapPicker')}</strong>
+        {overlapPicker.candidates.map((candidate) => <button
+          type="button"
+          role="option"
+          aria-selected={selection?.kind === candidate.kind && selection.id === candidate.id}
+          key={`${candidate.kind}:${candidate.id}`}
+          onClick={() => { setSelection({ kind: candidate.kind, id: candidate.id }); setOverlapPicker(null); svgRef.current?.focus(); }}
+        >{candidate.kind === 'node' ? t('inspector.node') : candidate.kind === 'member' ? t('inspector.member') : candidate.kind === 'nodalLoad' ? t('canvas.overlapNodalLoad') : t('inspector.memberLoad')} {candidate.id}</button>)}
+        <button type="button" onClick={() => { setOverlapPicker(null); svgRef.current?.focus(); }}>{t('canvas.cancelPlacement')}</button>
+      </div> : null}
       {cut?.point ? (
         <div className="cut-tooltip" style={{ left: clamp(cut.clientX - (hostRef.current?.getBoundingClientRect().left ?? 0) + 14, 10, Math.max(10, size.width - 350)), top: clamp(cut.clientY - (hostRef.current?.getBoundingClientRect().top ?? 0) + 14, 10, Math.max(10, size.height - 390)) }}>
           <div className="cut-title-row"><strong>{t('canvas.cutTitle', { member: cut.memberId })}</strong><span>{t(cut.pinned ? 'canvas.pinned' : 'canvas.preview')}</span></div>

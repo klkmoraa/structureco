@@ -72,7 +72,7 @@ const selections: Array<{ label: string; value: Selection }> = [
   },
 ];
 
-const InspectorHarness = ({ modal = false, onClose, onDesktopWidthChange, desktopWidth }: { modal?: boolean; onClose?: () => void; onDesktopWidthChange?: (width: number) => void; desktopWidth?: number }) => {
+const InspectorHarness = ({ modal = false, onClose, onDesktopWidthChange, desktopWidth, mobileDetent, onMobileDetentChange }: { modal?: boolean; onClose?: () => void; onDesktopWidthChange?: (width: number) => void; desktopWidth?: number; mobileDetent?: 'compact' | 'medium' | 'large'; onMobileDetentChange?: (detent: 'compact' | 'medium' | 'large') => void }) => {
   const {
     project,
     analysis,
@@ -109,14 +109,14 @@ const InspectorHarness = ({ modal = false, onClose, onDesktopWidthChange, deskto
       <output aria-label="N4 X almacenada">{String(nodeN4?.x)}</output>
       <output aria-label="M1 E almacenado">{String(memberM1?.E)}</output>
       <output aria-label="Issues de análisis">{analysis?.issues.map((issue) => issue.id).join(',') ?? ''}</output>
-      <Inspector desktopWidth={desktopWidth} modal={modal} onClose={onClose} onDesktopWidthChange={onDesktopWidthChange} />
+      <Inspector desktopWidth={desktopWidth} modal={modal} onClose={onClose} onDesktopWidthChange={onDesktopWidthChange} mobileDetent={mobileDetent} onMobileDetentChange={onMobileDetentChange} />
     </div>
   </ClassroomSessionProvider>;
 };
 
 const renderInspector = (
   project: ProjectModel = createInspectorProject(),
-  props: { modal?: boolean; onClose?: () => void; onDesktopWidthChange?: (width: number) => void; desktopWidth?: number } = {},
+  props: { modal?: boolean; onClose?: () => void; onDesktopWidthChange?: (width: number) => void; desktopWidth?: number; mobileDetent?: 'compact' | 'medium' | 'large'; onMobileDetentChange?: (detent: 'compact' | 'medium' | 'large') => void } = {},
 ) => {
   localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
   return render(<ProjectProvider><InspectorHarness {...props} /></ProjectProvider>);
@@ -669,6 +669,21 @@ describe('Inspector advanced, locked, and validation states', () => {
     expect(document.activeElement).toBe(first);
     await user.keyboard('{Escape}');
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('exposes three mutually exclusive phone heights without mutating the model', async () => {
+    const user = userEvent.setup();
+    const onMobileDetentChange = vi.fn();
+    renderInspector(createInspectorProject(), { modal: true, mobileDetent: 'medium', onMobileDetentChange });
+
+    const group = screen.getByRole('group', { name: 'Altura del Inspector' });
+    expect(within(group).getByRole('button', { name: 'Compacta' }).getAttribute('aria-pressed')).toBe('false');
+    expect(within(group).getByRole('button', { name: 'Media' }).getAttribute('aria-pressed')).toBe('true');
+    expect(within(group).getByRole('button', { name: 'Casi completa' }).getAttribute('aria-pressed')).toBe('false');
+
+    await user.click(within(group).getByRole('button', { name: 'Casi completa' }));
+    expect(onMobileDetentChange).toHaveBeenCalledWith('large');
+    expect(screen.getByLabelText('Puede deshacer').textContent).toBe('false');
   });
 
   it('traps focus against the active tab and ignores controls inside closed details', async () => {

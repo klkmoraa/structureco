@@ -7,18 +7,19 @@ import { buildDiagramEnvelope, evaluateEnvelopeAt } from '../../engine/envelope'
 import { analysisSignature } from '../../engine/projectSignature';
 import { resolveReliability } from '../../engine/reliability';
 import { useScenarioAnalysis } from '../../engine/useScenarioAnalysis';
-import type { DiagramQuantity, DiagramSegment, EducationalAssertionTarget, MatrixTrace, MemberModel, MemberResult, ProjectModel } from '../../types';
+import type { DiagramQuantity, DiagramSegment, EducationalAssertionTarget, MatrixTrace, MemberModel, MemberResult } from '../../types';
 import { toDisplay, unitLabel } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import type { TranslationKey } from '../../i18n/catalogs';
 import { ResultSummary } from './ResultSummary';
-import { useClassroomSession } from '../../store/ClassroomSessionContext';
 import { deriveClassroomProgress, type ClassroomProgressStepId } from '../../education/classroomProgress';
 import { formatResultNumber } from './resultFormatting';
 import { buildStiffnessSubstitution } from './stiffnessSubstitution';
 import { formatFixed, formatScientific, formatSignificant } from '../../utils/numberFormat';
-import { ClassroomPredictionForm } from '../classroom/ClassroomPredictionForm';
 import { emitWorkspaceCommand, onWorkspaceCommand } from '../workspace/workspaceCommands';
+import { ProvenanceCard } from './ProvenanceCard';
+import type { ResultRef } from './provenance';
+import { ClassroomPedagogyLevels } from '../classroom/ClassroomPedagogyLevels';
 
 const loadInfluenceLineView = () => import('./InfluenceLineView')
   .then((module) => ({ default: module.InfluenceLineView }));
@@ -76,7 +77,8 @@ const getResultsFocusable = (panel: HTMLElement | null) => [
 const readResultsMode = (): ResultsPanelMode => {
   if (typeof window === 'undefined') return 'expanded';
   const stored = window.localStorage.getItem(RESULTS_MODE_STORAGE_KEY);
-  return stored === 'compact' || stored === 'focused' || stored === 'expanded' ? stored : 'expanded';
+  if (stored === 'focused') return 'expanded';
+  return stored === 'compact' || stored === 'expanded' ? stored : 'expanded';
 };
 
 const MOBILE_RESULTS_QUERY = '(max-width: 1023px)';
@@ -99,7 +101,7 @@ const getViewportHeightPx = (referenceElement: HTMLElement | null): number => {
 };
 
 export const ResultsPanel = () => {
-  const { project, analysis, resultTab, setResultTab, analyze, selection, isAnalyzing, setInfluenceCanvasState } = useProject();
+  const { project, analysis, resultTab, setResultTab, analyze, selection, isAnalyzing, selectedCombinationId, resultCursor, setInfluenceCanvasState } = useProject();
   const { t } = useI18n();
   const [height, setHeight] = useState(() => isMobileResultsViewport() ? Math.min(330, window.innerHeight * 0.4) : 285);
   const [drag, setDrag] = useState<{ y: number; height: number } | null>(null);
@@ -118,8 +120,8 @@ export const ResultsPanel = () => {
   const previousPanelModeRef = useRef<ResultsPanelMode>('expanded');
   const mobileToggleRef = useRef<HTMLButtonElement>(null);
   const mobileReturnFocusRef = useRef<HTMLElement | null>(null);
-  const phoneCanvasInteractive = isPhone && mobileExpanded;
-  const mobileResultsModal = isMobile && mobileExpanded && !isPhone;
+  const phoneCanvasInteractive = isPhone && mobileExpanded && panelMode !== 'focused';
+  const mobileResultsModal = isMobile && mobileExpanded && (!isPhone || panelMode === 'focused');
   const resultContext = useMemo(() => {
     if (selection?.kind === 'member') return { memberId: selection.id, label: t('results.contextMember', { id: selection.id }) };
     if (selection?.kind === 'multi') {
@@ -144,15 +146,37 @@ export const ResultsPanel = () => {
   }, [analysis?.memberResults, project.memberLoads, project.members, project.nodalLoads, selection, t]);
   const selectedMemberId = resultContext.memberId;
   const memberResult = selectedMemberId ? analysis?.memberResults.find((result) => result.memberId === selectedMemberId) : undefined;
-  const classroomMode = project.settings.calculationMode === 'classroom';
-  const classroomSession = useClassroomSession();
-  const { resultsVisible, hideResults } = classroomSession;
-  const classroomProgress = classroomMode ? deriveClassroomProgress(project, analysis) : null;
-  const classroomPredictionRequired = Boolean(classroomMode
-    && classroomProgress?.readyToAnalyze
-    && (!analysis || (!analysis.success && (!classroomSession.hasPredictions || classroomSession.revealState === 'predicting'))));
-  const resultsAllowed = !classroomMode || resultsVisible;
-  const availableTabs = classroomMode ? tabs.filter((tab) => tab.id !== 'deformed') : tabs;
+  const provenanceRef = useMemo<ResultRef | null>(() => {
+    if (!analysis?.success) return null;
+    const caseOrCombinationId = selectedCombinationId || project.loadCases.find((loadCase) => loadCase.active)?.id || project.loadCases[0]?.id || '—';
+    if (resultTab === 'axial' || resultTab === 'shear' || resultTab === 'moment') {
+      if (!memberResult) return null;
+      const storedStart = memberResult.diagram[0];
+      const cursor = resultCursor?.memberId === memberResult.memberId ? resultCursor : null;
+      const quantity = resultTab === 'axial' ? 'N' : resultTab === 'shear' ? 'V' : 'M';
+      return {
+        quantity,
+        entity: { kind: 'member', id: memberResult.memberId },
+        caseOrCombinationId,
+        signConvention: quantity === 'N' ? t('results.signAxial') : quantity === 'V' ? t('results.signShear') : t('results.signMoment'),
+        position: { x: cursor?.x ?? storedStart?.x ?? 0, side: cursor ? undefined : storedStart?.side },
+      };
+    }
+    if (resultTab === 'summary' || resultTab === 'reactions' || resultTab === 'deformed' || resultTab === 'learn') {
+      const nodeId = selection?.kind === 'node' ? selection.id : analysis.nodeResults[0]?.nodeId;
+      if (!nodeId) return null;
+      const reaction = resultTab === 'reactions';
+      return {
+        quantity: reaction ? 'R' : 'U',
+        entity: { kind: 'node', id: nodeId },
+        component: 'y',
+        caseOrCombinationId,
+        signConvention: t('results.signGlobalY'),
+      };
+    }
+    return null;
+  }, [analysis, memberResult, project.loadCases, resultCursor, resultTab, selectedCombinationId, selection, t]);
+  const availableTabs = tabs;
   const activeTab = availableTabs.find((tab) => tab.id === resultTab) ?? availableTabs[0];
   const visibleFamilies = resultFamilies.map((family) => ({
     ...family,
@@ -266,15 +290,6 @@ export const ResultsPanel = () => {
     });
   }, [cancelScheduledPhoneFit]);
   useEffect(() => {
-    if (classroomMode && resultTab === 'deformed') setResultTab('moment');
-  }, [classroomMode, resultTab, setResultTab]);
-  useEffect(() => {
-    if (!classroomMode || !analysis?.success) return;
-    const targetId = resultsVisible ? 'classroom-result-summary' : 'classroom-result-gate-title';
-    const focusFrame = window.requestAnimationFrame(() => document.getElementById(targetId)?.focus({ preventScroll: true }));
-    return () => window.cancelAnimationFrame(focusFrame);
-  }, [analysis, classroomMode, resultsVisible]);
-  useEffect(() => {
     const query = window.matchMedia?.(MOBILE_RESULTS_QUERY);
     if (!query) return undefined;
     const update = (event: MediaQueryListEvent) => {
@@ -320,14 +335,11 @@ export const ResultsPanel = () => {
     cancelScheduledPhoneFit();
   }, [cancelScheduledPhoneFit]);
   useEffect(() => {
-    window.localStorage.setItem(RESULTS_MODE_STORAGE_KEY, panelMode);
+    if (panelMode !== 'focused') window.localStorage.setItem(RESULTS_MODE_STORAGE_KEY, panelMode);
     if (isMobile) return;
     if (panelMode === 'compact') setHeight(190);
     else if (panelMode === 'expanded') setHeight((current) => Math.max(current, 320));
     else setHeight(getViewportHeightPx(panelRef.current) * 0.72);
-  }, [isMobile, panelMode]);
-  useEffect(() => {
-    if (isMobile && panelMode === 'focused') setPanelMode('expanded');
   }, [isMobile, panelMode]);
   useEffect(() => {
     if (!mobileResultsModal) return undefined;
@@ -346,7 +358,10 @@ export const ResultsPanel = () => {
       if (event.defaultPrevented) return;
       if (event.key === 'Escape') {
         event.preventDefault();
-        closeMobileResults();
+        if (panelMode === 'focused') {
+          setPanelMode(previousPanelModeRef.current === 'focused' ? 'expanded' : previousPanelModeRef.current);
+          window.requestAnimationFrame(() => focusedLauncherRef.current?.focus());
+        } else closeMobileResults();
         return;
       }
       if (event.key !== 'Tab') return;
@@ -376,7 +391,7 @@ export const ResultsPanel = () => {
         element.removeAttribute('aria-hidden');
       });
     };
-  }, [closeMobileResults, mobileResultsModal]);
+  }, [closeMobileResults, mobileResultsModal, panelMode]);
   useEffect(() => {
     if (!phoneCanvasInteractive) return undefined;
     const onPhoneEscape = (event: KeyboardEvent) => {
@@ -453,7 +468,10 @@ export const ResultsPanel = () => {
       onPointerCancel={() => setDrag(null)}
     >
       <button ref={mobileToggleRef} className="results-mobile-toggle" type="button" aria-expanded={mobileExpanded} aria-controls="results-content" onClick={(event) => {
-        if (mobileExpanded) closeMobileResults();
+        if (mobileExpanded) {
+          if (panelMode === 'focused') setPanelMode('expanded');
+          closeMobileResults();
+        }
         else {
           rememberMobileLauncher(event.currentTarget);
           setMobileExpanded(true);
@@ -463,6 +481,15 @@ export const ResultsPanel = () => {
         <strong>{mobileResultLabel}</strong>
         <ChevronUp className={`results-toggle-chevron${mobileExpanded ? ' expanded' : ''}`} size={19} />
       </button>
+      {isMobile && mobileExpanded ? <div className="results-mobile-commandbar">
+        <button
+          type="button"
+          className="results-mobile-focus"
+          aria-label={panelMode === 'focused' ? 'Salir del modo enfoque de resultados' : 'Enfocar resultados en pantalla completa'}
+          aria-pressed={panelMode === 'focused'}
+          onClick={(event) => panelMode === 'focused' ? leaveFocusedMode() : choosePanelMode('focused', event.currentTarget)}
+        >{panelMode === 'focused' ? t('results.modeExitFocus') : t('results.modeFocus')}</button>
+      </div> : null}
       <button
         className="resize-handle"
         role="separator"
@@ -515,33 +542,19 @@ export const ResultsPanel = () => {
         </div>)}
       </nav>
       <div id="results-content" className="results-body" role="tabpanel" aria-labelledby={`result-tab-${activeTab.id}`} aria-busy={isAnalyzing}>
-        {analysis?.success && classroomMode && resultsVisible ? <button className="hide-classroom-results" onClick={hideResults}>{t('classroom.hideResults')}</button> : null}
-        {classroomPredictionRequired ? <ClassroomPredictionForm project={project} preferredMemberId={selectedMemberId} onContinue={() => { classroomSession.markAnalysisRequested(); analyze(); }} /> : null}
-        {!analysis && (!classroomMode || !classroomProgress?.readyToAnalyze) ? <EmptyResults onAnalyze={analyze} /> : null}
-        {analysis && !analysis.success && !classroomPredictionRequired && resultTab !== 'issues' ? <FailedResults onOpenIssues={() => setResultTab('issues')} /> : null}
-        {analysis?.success && !resultsAllowed ? <ClassroomResultGate project={project} memberId={selectedMemberId ?? memberResult?.memberId ?? ''} onAnalyze={analyze} /> : null}
-        {analysis?.success && resultsAllowed && resultTab === 'reactions' ? <ReactionTable /> : null}
-        {analysis?.success && resultsAllowed && resultTab === 'summary' ? <ResultSummary /> : null}
-        {analysis?.success && resultsAllowed && ['axial', 'shear', 'moment'].includes(resultTab) ? <DiagramView type={resultTab as 'axial' | 'shear' | 'moment'} memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
-        {analysis?.success && resultsAllowed && resultTab === 'influence' ? <Suspense fallback={<div className="results-view-loading" role="status" aria-label={t('results.loadingInfluence')}><LoaderCircle className="spin" size={20} aria-hidden="true" /><span>{t('results.loadingInfluence')}</span></div>}><LazyInfluenceLineView project={project} selection={selection ?? undefined} onCanvasStateChange={setInfluenceCanvasState} /></Suspense> : null}
-        {analysis?.success && resultsAllowed && resultTab === 'deformed' ? <DeformationView memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
-        {analysis?.success && resultsAllowed && resultTab === 'learn' ? <LearningSteps /> : null}
-        {analysis && resultTab === 'issues' && !classroomPredictionRequired ? <IssuesView /> : null}
+        {!analysis ? <EmptyResults onAnalyze={analyze} /> : null}
+        {analysis && !analysis.success && resultTab !== 'issues' ? <FailedResults onOpenIssues={() => setResultTab('issues')} /> : null}
+        {analysis?.success && resultTab === 'reactions' ? <ReactionTable /> : null}
+        {analysis?.success && resultTab === 'summary' ? <ResultSummary /> : null}
+        {analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <DiagramView type={resultTab as 'axial' | 'shear' | 'moment'} memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
+        {analysis?.success && resultTab === 'influence' ? <Suspense fallback={<div className="results-view-loading" role="status" aria-label={t('results.loadingInfluence')}><LoaderCircle className="spin" size={20} aria-hidden="true" /><span>{t('results.loadingInfluence')}</span></div>}><LazyInfluenceLineView project={project} selection={selection ?? undefined} onCanvasStateChange={setInfluenceCanvasState} /></Suspense> : null}
+        {analysis?.success && resultTab === 'deformed' ? <DeformationView memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
+        {analysis?.success && resultTab === 'learn' ? <LearningSteps /> : null}
+        {analysis?.success && provenanceRef ? <ProvenanceCard analysis={analysis} resultRef={provenanceRef} /> : null}
+        {analysis && resultTab === 'issues' ? <IssuesView /> : null}
       </div>
     </section>
   </>;
-};
-
-const ClassroomResultGate = ({ project, memberId, onAnalyze }: { project: ProjectModel; memberId: string; onAnalyze: () => void }) => {
-  const { t } = useI18n();
-  const { hasPredictions, revealState, startPredicting, revealResults, markAnalysisRequested } = useClassroomSession();
-  const { setResultTab } = useProject();
-  if (!hasPredictions || revealState === 'predicting') return <ClassroomPredictionForm project={project} preferredMemberId={memberId} onContinue={() => { markAnalysisRequested(); onAnalyze(); }} />;
-  return <section className="classroom-result-gate" aria-labelledby="classroom-result-gate-title" aria-live="polite">
-    <div className="classroom-result-lock" aria-hidden="true">?</div>
-    <div><span className="eyebrow">{t('classroom.practiceActive')}</span><h3 id="classroom-result-gate-title" tabIndex={-1}>{t('classroom.gateTitle')}</h3><p>{t('classroom.gateBody', { member: memberId || t('classroom.selectedMember') })}</p></div>
-    <div className="classroom-result-gate-actions"><button className="secondary" onClick={() => { startPredicting(); window.requestAnimationFrame(() => document.getElementById('classroom-prediction-title')?.focus()); }}>{t('classroom.editPrediction')}</button><button onClick={() => { revealResults(); setResultTab('summary'); }}>{t('classroom.revealAndCompare')}</button></div>
-  </section>;
 };
 
 const EmptyResults = ({ onAnalyze }: { onAnalyze: () => void }) => {
@@ -566,17 +579,15 @@ const ReactionTable = () => {
   const lengthUnit = unitLabel(units, 'length');
   const forceUnit = unitLabel(units, 'force');
   const momentUnit = unitLabel(units, 'moment');
-  const classroom = project.settings.calculationMode === 'classroom';
   return <div className="table-wrap">
-    {classroom ? <div className="classroom-result-note"><strong>{t('classroom.resultNoteTitle')}</strong><span>{t('classroom.resultNoteBody')}</span></div> : null}
     <table className="results-table">
       <caption>{t('results.reactionCaption')}</caption>
-      <thead><tr><th scope="col">{t('results.node')}</th>{classroom ? null : <><th scope="col">Ux ({lengthUnit})</th><th scope="col">Uy ({lengthUnit})</th><th scope="col">Rz (rad)</th></>}<th scope="col">Rx ({forceUnit})</th><th scope="col">Ry ({forceUnit})</th><th scope="col">Mz ({momentUnit})</th></tr></thead>
+      <thead><tr><th scope="col">{t('results.node')}</th><th scope="col">Ux ({lengthUnit})</th><th scope="col">Uy ({lengthUnit})</th><th scope="col">Rz (rad)</th><th scope="col">Rx ({forceUnit})</th><th scope="col">Ry ({forceUnit})</th><th scope="col">Mz ({momentUnit})</th></tr></thead>
       <tbody>{analysis?.nodeResults.map((result) => {
         const selected = selection?.kind === 'node' && selection.id === result.nodeId;
         return <tr key={result.nodeId} aria-selected={selected || undefined}>
           <th scope="row"><button type="button" className="result-object-link" aria-pressed={selected} onClick={() => setSelection({ kind: 'node', id: result.nodeId })}>{result.nodeId}<span className="sr-only"> · {t('results.locateModel')}</span></button></th>
-          {classroom ? null : <><td>{formatResultNumber(toDisplay(result.ux, units, 'length'))}</td><td>{formatResultNumber(toDisplay(result.uy, units, 'length'))}</td><td>{formatResultNumber(result.rz)}</td></>}
+          <td>{formatResultNumber(toDisplay(result.ux, units, 'length'))}</td><td>{formatResultNumber(toDisplay(result.uy, units, 'length'))}</td><td>{formatResultNumber(result.rz)}</td>
           <td>{formatResultNumber(toDisplay(result.rx, units, 'force'))}</td>
           <td>{formatResultNumber(toDisplay(result.ry, units, 'force'))}</td>
           <td>{formatResultNumber(toDisplay(result.rm, units, 'moment'))}</td>
@@ -913,6 +924,7 @@ const LearningSteps = () => {
   useEffect(() => () => setLearningFocus(null), [setLearningFocus]);
   return <div className="learning-steps">
     <EducationExplorer />
+    <ClassroomPedagogyLevels />
     <div className="learning-toolbar"><div><strong>{t('results.linkedProcedure')}</strong><small>{t('results.learningStepCount', { count: analysis?.explanation.length ?? 0 })}</small></div><div className="learning-level" role="group" aria-label={t('results.detailLevel')}><button aria-pressed={detailLevel === 'summary'} className={detailLevel === 'summary' ? 'active' : ''} onClick={() => setDetailLevel('summary')}>{t('results.summary')}</button><button aria-pressed={detailLevel === 'steps'} className={detailLevel === 'steps' ? 'active' : ''} onClick={() => setDetailLevel('steps')}>{t('results.stepByStep')}</button><button aria-pressed={detailLevel === 'full'} className={detailLevel === 'full' ? 'active' : ''} onClick={() => setDetailLevel('full')}>{t('results.full')}</button></div></div>
     {educationalCase ? <section className="educational-source">
       <div><strong>{educationalCase.chapter}</strong><span>{educationalCase.kind === 'attributed-example' ? t('results.attributedExample') : t('results.originalPractice')}</span></div>

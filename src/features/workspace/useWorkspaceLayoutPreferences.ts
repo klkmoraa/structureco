@@ -2,16 +2,28 @@ import { useCallback, useEffect, useState } from 'react';
 
 export const WORKSPACE_LAYOUT_STORAGE_KEY = 'structureco:workspace-layout:v1';
 
+export type InspectorDetent = 'compact' | 'medium' | 'large';
+
 export interface WorkspaceLayoutPreferences {
   inspectorCollapsed: boolean;
   fullCanvas: boolean;
   toolRailCompact: boolean;
   inspectorWidth: number;
+  inspectorDetent: InspectorDetent;
 }
 
 export const MIN_INSPECTOR_WIDTH = 280;
 export const MAX_INSPECTOR_WIDTH = 480;
 export const DEFAULT_INSPECTOR_WIDTH = 320;
+
+export const normalizeInspectorDetent = (
+  detent: InspectorDetent,
+  viewport: { width: number; height: number },
+): InspectorDetent => {
+  if (viewport.height < 340) return 'compact';
+  if (detent === 'large' && (viewport.width > viewport.height || viewport.height < 560)) return 'medium';
+  return detent;
+};
 
 export const clampInspectorWidth = (value: number) => Math.min(
   MAX_INSPECTOR_WIDTH,
@@ -23,6 +35,7 @@ const DEFAULT_PREFERENCES: WorkspaceLayoutPreferences = {
   fullCanvas: false,
   toolRailCompact: false,
   inspectorWidth: DEFAULT_INSPECTOR_WIDTH,
+  inspectorDetent: 'medium',
 };
 
 const readPreferences = (): WorkspaceLayoutPreferences => {
@@ -36,6 +49,9 @@ const readPreferences = (): WorkspaceLayoutPreferences => {
       inspectorWidth: typeof stored.inspectorWidth === 'number' && Number.isFinite(stored.inspectorWidth)
         ? clampInspectorWidth(stored.inspectorWidth)
         : DEFAULT_INSPECTOR_WIDTH,
+      inspectorDetent: stored.inspectorDetent === 'compact' || stored.inspectorDetent === 'medium' || stored.inspectorDetent === 'large'
+        ? stored.inspectorDetent
+        : 'medium',
     };
   } catch {
     return DEFAULT_PREFERENCES;

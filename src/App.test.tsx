@@ -154,7 +154,7 @@ describe('structureCo app shell', () => {
     expect(reactionB.querySelector('line[data-reaction-component="ry"]')).toBeTruthy();
   });
 
-  it('creates a guided classroom exercise and keeps the solution hidden until reveal', async () => {
+  it('creates a guided classroom exercise and analyzes it without prediction gates', async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole('button', { name: /nuevo ejercicio/i }));
@@ -164,17 +164,15 @@ describe('structureCo app shell', () => {
     expect(await screen.findByDisplayValue('Viga simplemente apoyada')).toBeTruthy();
     expect(screen.getAllByText(/modo aula/i).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: /^analizar$/i }));
-    expect(await screen.findByRole('heading', { name: /tu hipótesis antes del cálculo/i })).toBeTruthy();
-    expect(screen.queryByText(/decide cuándo ver la solución/i)).toBeNull();
-    await user.selectOptions(screen.getByRole('combobox', { name: /signo esperado/i }), 'negative');
-    await user.type(screen.getByRole('spinbutton', { name: /magnitud estimada/i }), '20');
-    await user.click(screen.getByRole('button', { name: /continuar al análisis/i }));
-    await waitFor(() => expect(screen.getByText(/decide cuándo ver la solución/i)).toBeTruthy(), { timeout: 2500 });
-    expect(screen.queryByText(/resumen global/i)).toBeNull();
+    await waitFor(() => expect(screen.getAllByText(/resultados resueltos/i).length).toBeGreaterThan(0), { timeout: 2500 });
+    expect(screen.queryByRole('heading', { name: /tu hipótesis antes del cálculo/i })).toBeNull();
+    expect(screen.queryByRole('combobox', { name: /signo esperado/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /revelar y comparar/i })).toBeNull();
 
-    await user.click(screen.getAllByRole('button', { name: /revelar y comparar/i }).at(-1)!);
-    await waitFor(() => expect(screen.getByText(/resumen global/i)).toBeTruthy());
-    expect(screen.getByText(/tu predicción frente al resultado/i)).toBeTruthy();
+    await user.click(screen.getByRole('tab', { name: /^aprender$/i }));
+    expect(await screen.findByRole('button', { name: 'Fundamentos' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Procedimiento' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Verificación' })).toBeTruthy();
   }, 10_000);
 
   it('changes between light and dark themes', async () => {

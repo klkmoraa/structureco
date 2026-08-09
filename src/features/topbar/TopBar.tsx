@@ -221,11 +221,6 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
   };
   const requestAnalysis = () => {
     if (project.settings.calculationMode === 'classroom') {
-      if (!classroomSession.hasPredictions) {
-        classroomSession.startPredicting();
-        emitWorkspaceCommand('expand-mobile-results');
-        return;
-      }
       classroomSession.markAnalysisRequested();
     }
     analyze();

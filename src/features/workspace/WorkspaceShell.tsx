@@ -11,8 +11,9 @@ import { useI18n } from '../../i18n/useI18n';
 import { useProject } from '../../store/ProjectContext';
 import { createPersistedEditorLayerState, editorLayerReducer, persistEditorLayerState } from '../canvas/editorLayers';
 import { AppShellLayout } from './AppShellLayout';
-import { useWorkspaceLayoutPreferences } from './useWorkspaceLayoutPreferences';
+import { normalizeInspectorDetent, useWorkspaceLayoutPreferences } from './useWorkspaceLayoutPreferences';
 import '../../design-system/components/ui.css';
+import './phase1.css';
 import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
 
 export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => void; projectId: string }) => {
@@ -56,6 +57,25 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
     desktop.addEventListener?.('change', syncBreakpoint);
     return () => desktop.removeEventListener?.('change', syncBreakpoint);
   }, []);
+
+  useEffect(() => {
+    const normalizeDetent = () => {
+      const next = normalizeInspectorDetent(layout.inspectorDetent, {
+        width: window.innerWidth,
+        height: window.visualViewport?.height ?? window.innerHeight,
+      });
+      if (next !== layout.inspectorDetent) setPreference('inspectorDetent', next);
+    };
+    normalizeDetent();
+    window.addEventListener('resize', normalizeDetent);
+    window.addEventListener('orientationchange', normalizeDetent);
+    window.visualViewport?.addEventListener('resize', normalizeDetent);
+    return () => {
+      window.removeEventListener('resize', normalizeDetent);
+      window.removeEventListener('orientationchange', normalizeDetent);
+      window.visualViewport?.removeEventListener('resize', normalizeDetent);
+    };
+  }, [layout.inspectorDetent, setPreference]);
 
   useEffect(() => {
     return onWorkspaceCommand('expand-mobile-results', () => setMobileInspectorOpen(false));
@@ -139,6 +159,8 @@ export const WorkspaceShell = ({ onOpenHome, projectId }: { onOpenHome: () => vo
       modal={mobileInspectorOpen}
       onClose={closeMobileInspector}
       onDesktopWidthChange={(width) => setPreference('inspectorWidth', width)}
+      mobileDetent={layout.inspectorDetent}
+      onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)}
     />}
     floatingActions={!mobileInspectorOpen ? <button
         ref={inspectorToggleRef}
