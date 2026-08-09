@@ -6,6 +6,7 @@ import type {
   GlobalResultant,
   LoadAudit,
   LoadCombination,
+  LinearSolverPolicy,
   MemberLoad,
   MemberModel,
   MemberResult,
@@ -374,6 +375,7 @@ const condenseConnections = (
   member: MemberModel,
   releaseI: boolean,
   releaseJ: boolean,
+  linearBackend: LinearSolverPolicy = 'auto',
 ): CondensationResult => {
   const connections = [
     releaseI || member.rotationalSpringI !== undefined ? { localRotation: 2, stiffness: releaseI ? 0 : member.rotationalSpringI ?? 0 } : null,
@@ -409,9 +411,9 @@ const condenseConnections = (
   const fb = subvector(augmentedF, internal);
   // Static condensation without forming Kbb^-1 explicitly:
   // Kbar = Kaa - Kab X, with Kbb X = Kba.
-  const solvedColumns = transpose(kba).map((column) => solveLinearSystem(kbb, column).x);
+  const solvedColumns = transpose(kba).map((column) => solveLinearSystem(kbb, column, { backend: linearBackend }).x);
   const kbbInverseTimesKba = transpose(solvedColumns);
-  const kbbInverseTimesFb = solveLinearSystem(kbb, fb).x;
+  const kbbInverseTimesFb = solveLinearSystem(kbb, fb, { backend: linearBackend }).x;
   const correctionK = multiply(kab, kbbInverseTimesKba);
   const correctionF = multiplyMatrixVector(kab, kbbInverseTimesFb);
   const condensedK = kaa.map((row, i) => row.map((value, j) => value - correctionK[i][j]));
@@ -422,11 +424,12 @@ const condenseConnections = (
 const recoverConnectedDisplacements = (
   assembly: ElementAssembly,
   nodalLocalDisplacements: number[],
+  linearBackend: LinearSolverPolicy = 'auto',
 ): number[] => {
   if (!assembly.connectionRecovery) return nodalLocalDisplacements;
   const { kba, kbb, fb, beamRotationIndices } = assembly.connectionRecovery;
   const rhs = fb.map((value, i) => value - multiplyMatrixVector(kba, nodalLocalDisplacements)[i]);
-  const db = solveLinearSystem(kbb, rhs).x;
+  const db = solveLinearSystem(kbb, rhs, { backend: linearBackend }).x;
   const recovered = [...nodalLocalDisplacements];
   beamRotationIndices.forEach((index, i) => {
     recovered[index] = db[i];
@@ -1226,10 +1229,17 @@ const abortedResult = abortedAnalysis;
  * local stiffness before condensation, iteration over iteration. Every
  * ordinary caller omits it and gets today's first-order behavior unchanged.
  */
+export interface AnalyzeProjectOptions {
+  pDeltaAxialForces?: Map<string, number>;
+  includeEducationTrace?: boolean;
+  /** Internal run-wide policy; P-Delta uses `dense` to stay isolated from sparse. */
+  linearBackend?: LinearSolverPolicy;
+}
+
 export const analyzeProject = (
   project: ProjectModel,
   combination?: LoadCombination | null,
-  options?: { pDeltaAxialForces?: Map<string, number>; includeEducationTrace?: boolean },
+  options?: AnalyzeProjectOptions,
 ): AnalysisResult => {
   const issues = validateProject(project);
   if (issues.some((issue) => issue.severity === 'error')) {
@@ -1328,7 +1338,7 @@ export const analyzeProject = (
       const releaseI = member.type === 'frame' && Boolean(member.releases?.iMoment || nodes.get(member.i)?.internalHinge);
       const releaseJ = member.type === 'frame' && Boolean(member.releases?.jMoment || nodes.get(member.j)?.internalHinge);
       const condensed = member.type === 'frame'
-        ? condenseConnections(localStiffnessOriginal, localLoadOriginal, member, releaseI, releaseJ)
+        ? condenseConnections(localStiffnessOriginal, localLoadOriginal, member, releaseI, releaseJ, options?.linearBackend)
         : { stiffness: localStiffnessOriginal, load: localLoadOriginal, released: [] };
       const globalStiffness = multiply(multiply(transpose(transform), condensed.stiffness), transform);
       const globalLoad = multiplyMatrixVector(transpose(transform), condensed.load);
@@ -1526,7 +1536,7 @@ export const analyzeProject = (
     let solved: ReturnType<typeof solveLinearSystem>;
     const linearSolveStart = profileStart();
     try {
-      solved = solveLinearSystem(scaledA, scaledB);
+      solved = solveLinearSystem(scaledA, scaledB, { backend: options?.linearBackend });
     } catch (error) {
       const nullSpace = findNullSpaceVector(scaledA, ndof);
       if (nullSpace.vector) {
@@ -1753,7 +1763,7 @@ export const analyzeProject = (
     const memberResults: MemberResult[] = elementAssemblies.map((assembly) => {
       const globalD = assembly.indices.map((index) => U[index]);
       const nodalLocalD = multiplyMatrixVector(assembly.transform, globalD);
-      const localD = recoverConnectedDisplacements(assembly, nodalLocalD);
+      const localD = recoverConnectedDisplacements(assembly, nodalLocalD, options?.linearBackend);
       const localEndForces = multiplyMatrixVector(assembly.localStiffnessOriginal, localD)
         .map((value, index) => value - assembly.localLoadOriginal[index]);
       assembly.released.forEach((index) => { localEndForces[index] = 0; });
@@ -2099,6 +2109,7 @@ export const analyzeProject = (
       refinementIterations: solved.refinementIterations,
       forwardErrorBound,
       reliableDigits,
+      linearSolver: solved.diagnostics,
       equilibrium,
       loadAudit,
       educationTrace,

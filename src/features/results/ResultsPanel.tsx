@@ -12,6 +12,7 @@ import { toDisplay, unitLabel } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import type { TranslationKey } from '../../i18n/catalogs';
 import { ResultSummary } from './ResultSummary';
+import { NumericQualityCard } from './NumericQualityCard';
 import { deriveClassroomProgress, type ClassroomProgressStepId } from '../../education/classroomProgress';
 import { formatResultNumber } from './resultFormatting';
 import { buildStiffnessSubstitution } from './stiffnessSubstitution';
@@ -570,7 +571,14 @@ const EmptyResults = ({ onAnalyze }: { onAnalyze: () => void }) => {
   return <div className="empty-results"><CircleDotDashed size={28} /><div><strong>{currentCopy ? t('results.nextStep', { title: t(currentCopy.title) }) : t('results.readyTitle')}</strong><p>{currentCopy ? t(currentCopy.description) : t('results.readyBody')}</p></div><button onClick={run}>{currentCopy ? t(currentCopy.action) : t('results.analyzeStructure')}</button></div>;
 };
 
-const FailedResults = ({ onOpenIssues }: { onOpenIssues: () => void }) => { const { t } = useI18n(); return <div className="failed-results"><AlertCircle size={28} /><div><strong>{t('results.failedTitle')}</strong><p>{t('results.failedBody')}</p></div><button onClick={onOpenIssues}>{t('results.openIssues')}</button></div>; };
+const FailedResults = ({ onOpenIssues }: { onOpenIssues: () => void }) => {
+  const { analysis } = useProject();
+  const { t } = useI18n();
+  return <div className="failed-results-layout">
+    {analysis ? <NumericQualityCard analysis={analysis} /> : null}
+    <div className="failed-results"><AlertCircle size={28} /><div><strong>{t('results.failedTitle')}</strong><p>{t('results.failedBody')}</p></div><button onClick={onOpenIssues}>{t('results.openIssues')}</button></div>
+  </div>;
+};
 
 const ReactionTable = () => {
   const { analysis, project, selection, setSelection } = useProject();

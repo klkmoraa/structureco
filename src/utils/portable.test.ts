@@ -30,6 +30,11 @@ describe('expediente portable structureCo', () => {
 
     expect(payload.project).toEqual(JSON.parse(JSON.stringify(project)));
     expect(payload.analysis).toEqual(JSON.parse(JSON.stringify(analysis)));
+    expect(payload.metadata).toMatchObject({
+      numericQuality: 'stable',
+      analysisMode: 'first-order',
+      pDeltaExperimental: false,
+    });
     expect(payload.checksum.value).toMatch(/^[a-f0-9]{64}$/);
     expect(await verifyPortablePayload(payload)).toBe(true);
     await expect(parsePortablePayload(serializePortablePayload(payload))).resolves.toEqual(payload);

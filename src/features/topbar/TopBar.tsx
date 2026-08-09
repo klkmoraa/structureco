@@ -246,8 +246,8 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
     try {
       let exportAnalysis = analysis;
       if (!exportAnalysis) {
-        const { analyzeProject } = await import('../../engine/solver');
-        exportAnalysis = analyzeProject(project, selectedCombination ?? null);
+        const { analyzeForPortableExport } = await import('./portableExportAnalysis');
+        exportAnalysis = analyzeForPortableExport(project, selectedCombination ?? null);
       } else if (!exportAnalysis.educationTrace) {
         // The interactive analysis run skips the matrix trace for speed
         // (AG-013); the report annex needs it, so fetch it here on demand.

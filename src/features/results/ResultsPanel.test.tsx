@@ -144,6 +144,10 @@ describe('Results analytical center', () => {
     await user.click(screen.getByRole('tab', { name: 'Resumen' }));
     const summary = await screen.findByRole('region', { name: 'Resumen global de resultados' });
     expect(summary).toBeTruthy();
+    const quality = screen.getByRole('region', { name: 'Calidad numérica' });
+    expect(quality.textContent).toMatch(/Resultado numéricamente estable/);
+    expect(quality.textContent).toMatch(/Condición κ₁/);
+    expect(quality.textContent).toMatch(/no evalúa la seguridad estructural/i);
 
     await user.click(screen.getByRole('button', { name: /M máx\. absoluto/i }));
     expect(screen.getByLabelText('Selección actual').textContent).toBe('member:AB');
