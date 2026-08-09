@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { createBlankProject, exampleProjects } from '../../data/defaultProject';
 import { useI18n } from '../../i18n/useI18n';
+import { usePhase2I18n } from '../../i18n/usePhase2I18n';
 import { useProject } from '../../store/ProjectContext';
 import { exportProjectJson } from '../../utils/export';
 import { normalizeProject } from '../../data/migrate';
@@ -74,6 +75,7 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
     ensureEducationTrace,
   } = useProject();
   const { language, t } = useI18n();
+  const { t: phase2T } = usePhase2I18n(language);
   const classroomSession = useClassroomSession();
   const reducedMotion = useReducedMotion();
   const popoverMotionProps = reducedMotion
@@ -190,16 +192,24 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
     ? 'load-error'
     : storageIssue === 'save-failed'
       ? 'save-error'
+      : storageIssue === 'conflict'
+        ? 'conflict'
+        : storageIssue === 'repository-degraded'
+          ? 'repository-error'
       : !online
         ? 'offline'
         : storageIssue === 'recovered'
           ? 'recovered'
           : 'local';
-  const storageHasError = storageState === 'load-error' || storageState === 'save-error';
+  const storageHasError = ['load-error', 'save-error', 'repository-error', 'conflict'].includes(storageState);
   const storageLabel = storageState === 'load-error'
     ? t('storage.loadFailedShort')
     : storageState === 'save-error'
       ? t('storage.failedShort')
+    : storageState === 'conflict'
+      ? phase2T('storage.conflictShort')
+    : storageState === 'repository-error'
+      ? phase2T('storage.repositoryShort')
     : storageState === 'recovered'
       ? t('storage.recoveredShort')
       : storageState === 'offline'
@@ -209,6 +219,10 @@ export const TopBar = ({ onOpenHome, layoutActions }: { onOpenHome?: () => void;
     ? t('storage.loadFailed')
     : storageState === 'save-error'
       ? t('storage.failed')
+    : storageState === 'conflict'
+      ? (storageMessage ?? phase2T('storage.conflict'))
+    : storageState === 'repository-error'
+      ? (storageMessage ?? phase2T('storage.repository'))
     : storageState === 'recovered'
       ? t('storage.recovered')
       : storageState === 'offline'

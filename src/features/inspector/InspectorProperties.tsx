@@ -145,7 +145,7 @@ const InspectorIssues = ({ issues }: { issues: readonly ValidationIssue[] }) => 
 };
 
 export const InspectorProperties = () => {
-  const { project, analysis, selection, setSelection, updateProject } = useProject();
+  const { project, analysis, selection, setSelection, executeProjectCommand, updateProject } = useProject();
   const { language, t } = useI18n();
   const { resultsVisible } = useClassroomSession();
   const [expandedSections, setExpandedSections] = usePersistentInspectorSections();
@@ -217,9 +217,9 @@ export const InspectorProperties = () => {
     if (resultingNodeId && resultingNodeId !== selectedNode?.id) setSelection({ kind: 'node', id: resultingNodeId });
   };
 
-  const updateMember = (key: string, value: unknown) => updateProject((draft) => {
-    const member = draft.members.find((item) => item.id === selectedMember?.id);
-    if (!member) return draft;
+  const updateMember = (key: string, value: unknown) => {
+    if (!selectedMember) return;
+    const member = structuredClone(selectedMember);
     if (key === 'type') member.type = value as typeof member.type;
     else if (key === 'E') member.E = Number(value);
     else if (key === 'A' || key === 'I' || key === 'density' || key === 'G' || key === 'shearArea' || key === 'rotationalSpringI' || key === 'rotationalSpringJ') member[key] = Number(value);
@@ -233,25 +233,24 @@ export const InspectorProperties = () => {
       member.releases ??= {};
       member.releases[key] = Boolean(value);
     }
-    return draft;
-  });
+    void executeProjectCommand({
+      kind: 'member.update', description: `Editar miembro ${member.id}`, memberId: member.id, changes: member,
+    });
+  };
 
-  const applyMaterialPreset = (material: StandardMaterial) => updateProject((draft) => {
-    const member = draft.members.find((item) => item.id === selectedMember?.id);
-    if (!member) return draft;
-    member.E = material.elasticModulus;
-    member.G = material.shearModulus;
-    member.density = material.density;
-    return draft;
-  });
+  const applyMaterialPreset = (material: StandardMaterial) => {
+    if (!selectedMember) return;
+    void executeProjectCommand({ kind: 'member.update', description: `Aplicar material a ${selectedMember.id}`, memberId: selectedMember.id, changes: {
+      E: material.elasticModulus, G: material.shearModulus, density: material.density,
+    } });
+  };
 
-  const applySectionPreset = (section: StandardSection) => updateProject((draft) => {
-    const member = draft.members.find((item) => item.id === selectedMember?.id);
-    if (!member) return draft;
-    member.A = section.area;
-    member.I = section.inertiaX;
-    return draft;
-  });
+  const applySectionPreset = (section: StandardSection) => {
+    if (!selectedMember) return;
+    void executeProjectCommand({ kind: 'member.update', description: `Aplicar sección a ${selectedMember.id}`, memberId: selectedMember.id, changes: {
+      A: section.area, I: section.inertiaX,
+    } });
+  };
 
   const updateNodalLoad = (key: keyof NodalLoad, value: string | number) => updateProject((draft) => {
     const load = draft.nodalLoads.find((item) => item.id === selectedNodalLoad?.id);

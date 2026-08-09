@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { unavailableAnalysis } from '../engine/analysisFailure';
-import type { AnalysisWorkerRequest, AnalysisWorkerResponse } from '../engine/analysisWorkerProtocol';
+import type { AnalysisWorkerResponse } from '../engine/analysisWorkerProtocol';
 import { normalizeProject } from '../data/migrate';
 import { loadProjectFromStorage, saveProjectToStorage } from '../data/projectStorage';
 import { repairProjectTopology } from '../data/modelOperations';
@@ -8,6 +8,9 @@ import type { AnalysisResult, ProjectModel, Selection, ThemeMode, Tool } from '.
 import { ProjectModelContext, useProjectModel, type ProjectModelContextValue } from './ProjectModelContext';
 import { ProjectAnalysisContext, useProjectAnalysis, type ProjectAnalysisContextValue, type InfluenceCanvasState } from './ProjectAnalysisContext';
 import { WorkspaceUIContext, useWorkspaceUI, type WorkspaceUIContextValue, type ResultCursor, type ResultTab } from './WorkspaceUIContext';
+import type { ProjectCommand } from '../commands/projectCommand';
+import { WORKER_PROTOCOL_VERSION, type AnalysisWorkerPayload, type WorkerRequestEnvelope, type WorkerResponseEnvelope } from '../runtime/workerProtocol';
+import type { ProjectRepository } from '../storage/projectRepository';
 
 // oxlint-disable-next-line react/only-export-components
 export { useProjectModel } from './ProjectModelContext';
@@ -24,11 +27,16 @@ const runFallbackAnalysis = async (project: ProjectModel, combinationId: string,
   return analyzeProjectAuto(project, combination, { includeEducationTrace });
 };
 
+interface HistoryEntry {
+  project: ProjectModel;
+  description: string;
+}
+
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [initial] = useState(() => loadProjectFromStorage(localStorage));
   const [project, setProject] = useState<ProjectModel>(initial.project);
-  const [past, setPast] = useState<ProjectModel[]>([]);
-  const [future, setFuture] = useState<ProjectModel[]>([]);
+  const [past, setPast] = useState<HistoryEntry[]>([]);
+  const [future, setFuture] = useState<HistoryEntry[]>([]);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [activeTool, setActiveTool] = useState<Tool>('select');
   const [selection, setSelectionState] = useState<Selection>(null);
@@ -46,7 +54,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [transactionActive, setTransactionActive] = useState(false);
   const [persistenceRevision, setPersistenceRevision] = useState(0);
   const [storageState, setStorageState] = useState<{
-    issue: 'recovered' | 'load-failed' | 'save-failed' | null;
+    issue: 'recovered' | 'load-failed' | 'save-failed' | 'repository-degraded' | 'conflict' | null;
     message: string | null;
   }>(() => ({
     issue: initial.recoveredFromBackup ? 'recovered' : initial.recoveryMessage ? 'load-failed' : null,
@@ -56,9 +64,14 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const selectionRef = useRef(selection);
   const analysisRef = useRef(analysis);
   const transactionStartRef = useRef<ProjectModel | null>(null);
+  const transactionDescriptionRef = useRef('Editar proyecto');
   const analysisTimerRef = useRef<number | null>(null);
   const analysisRevisionRef = useRef(0);
   const analysisWorkerRef = useRef<Worker | null>(null);
+  const repositoryRef = useRef<ProjectRepository | null>(null);
+  const repositoryRevisionRef = useRef<{ projectId: string; revision: number } | null>(null);
+  const repositoryBlockedProjectIdRef = useRef<string | null>(null);
+  const repositorySaveChainRef = useRef<Promise<void>>(Promise.resolve());
 
   const setSelection = useCallback((next: Selection) => {
     selectionRef.current = next;
@@ -68,6 +81,32 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => { projectRef.current = project; }, [project]);
   useEffect(() => { selectionRef.current = selection; }, [selection]);
   useEffect(() => { analysisRef.current = analysis; }, [analysis]);
+
+  useEffect(() => {
+    if (typeof indexedDB === 'undefined') return undefined;
+    let active = true;
+    void import('../storage/projectRepository').then(async ({ getProjectRepository, migrateLegacyProject }) => {
+      const repository = getProjectRepository();
+      const migration = await migrateLegacyProject(repository, localStorage);
+      if (!active) return;
+      repositoryRef.current = repository;
+      if (migration.record) repositoryRevisionRef.current = { projectId: migration.record.id, revision: migration.record.revision };
+      if (migration.status === 'conflict') {
+        repositoryBlockedProjectIdRef.current = projectRef.current.id;
+        setStorageState({
+          issue: 'conflict',
+          message: 'IndexedDB ya contiene otra revisión. La copia compatible se conservó como recuperación; abre una versión desde Proyectos locales para desbloquear ese ID.',
+        });
+      }
+    }).catch((error: unknown) => {
+      if (!active) return;
+      setStorageState({
+        issue: 'repository-degraded',
+        message: error instanceof Error ? error.message : 'La biblioteca local no está disponible; el proyecto sigue protegido en el guardado compatible.',
+      });
+    });
+    return () => { active = false; };
+  }, []);
 
   const invalidateAnalysis = useCallback(() => {
     analysisRevisionRef.current += 1;
@@ -101,6 +140,29 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         setStorageState((current) => current.issue === 'save-failed'
           ? { issue: null, message: null }
           : current);
+        const repository = repositoryRef.current;
+        if (repository && repositoryBlockedProjectIdRef.current !== project.id) {
+          repositorySaveChainRef.current = repositorySaveChainRef.current.catch(() => undefined).then(async () => {
+            const expected = repositoryRevisionRef.current?.projectId === project.id
+              ? repositoryRevisionRef.current.revision
+              : undefined;
+            try {
+              const record = await repository.saveProject(project, expected);
+              repositoryRevisionRef.current = { projectId: record.id, revision: record.revision };
+              if (repositoryBlockedProjectIdRef.current === record.id) repositoryBlockedProjectIdRef.current = null;
+              setStorageState((current) => current.issue === 'repository-degraded' || current.issue === 'conflict'
+                ? { issue: null, message: null }
+                : current);
+            } catch (error) {
+              const conflict = error instanceof Error && error.name === 'RepositoryConflictError';
+              if (conflict) repositoryBlockedProjectIdRef.current = project.id;
+              setStorageState({
+                issue: conflict ? 'conflict' : 'repository-degraded',
+                message: error instanceof Error ? error.message : 'La biblioteca IndexedDB no pudo guardar; el espejo compatible permanece disponible.',
+              });
+            }
+          });
+        }
       } catch (error) {
         setStorageState({
           issue: 'save-failed',
@@ -120,7 +182,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     const topologyRepair = repairProjectTopology(source);
     const topologyRepairCount = topologyRepair.mergedNodes.length + topologyRepair.splitMembers.length;
     if (topologyRepairCount > 0) {
-      setPast((history) => [...history.slice(-49), currentProject]);
+      setPast((history) => [...history.slice(-49), { project: currentProject, description: 'Reparar topología' }]);
       setFuture([]);
       projectRef.current = source;
       setProject(source);
@@ -186,7 +248,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         if (analysisWorkerRef.current === worker) analysisWorkerRef.current = null;
         runFallback();
       };
-      worker.onmessage = (event: MessageEvent<AnalysisWorkerResponse>) => {
+      worker.onmessage = (event: MessageEvent<WorkerResponseEnvelope<'analysis', AnalysisResult> | AnalysisWorkerResponse>) => {
         if (settled || event.data.requestId !== requestRevision) return;
         settled = true;
         worker.terminate();
@@ -194,11 +256,14 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         // `analysis-error` is a decision taken by the same pure function the
         // fallback would call, so recomputing it on the main thread would only
         // block the UI to reach the identical failure and hide its message.
-        if (event.data.type === 'analysis-result') complete(event.data.result);
-        else fail(event.data.message);
+        if (event.data.type === 'success' || event.data.type === 'analysis-result') complete(event.data.result);
+        else fail(event.data.type === 'error' ? event.data.error.message : event.data.message);
       };
       worker.onerror = fallbackOnce;
-      const request: AnalysisWorkerRequest = { type: 'analyze', requestId: requestRevision, project: source, combinationId: selectedCombinationId || null, includeEducationTrace: false };
+      const request: WorkerRequestEnvelope<'analysis', AnalysisWorkerPayload> = {
+        protocolVersion: WORKER_PROTOCOL_VERSION, type: 'run', domain: 'analysis', requestId: requestRevision,
+        payload: { project: source, combinationId: selectedCombinationId || null, includeEducationTrace: false },
+      };
       worker.postMessage(request);
     } catch {
       runFallback();
@@ -227,15 +292,18 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
           worker.terminate();
           runFallback();
         };
-        worker.onmessage = (event: MessageEvent<AnalysisWorkerResponse>) => {
+        worker.onmessage = (event: MessageEvent<WorkerResponseEnvelope<'analysis', AnalysisResult> | AnalysisWorkerResponse>) => {
           if (settled) return;
           settled = true;
           worker.terminate();
-          if (event.data.type === 'analysis-result') resolve(event.data.result);
-          else reject(new Error(event.data.message));
+          if (event.data.type === 'success' || event.data.type === 'analysis-result') resolve(event.data.result);
+          else reject(new Error(event.data.type === 'error' ? event.data.error.message : event.data.message));
         };
         worker.onerror = fallbackOnce;
-        const request: AnalysisWorkerRequest = { type: 'analyze', requestId: 0, project: source, combinationId: combinationId || null, includeEducationTrace: true };
+        const request: WorkerRequestEnvelope<'analysis', AnalysisWorkerPayload> = {
+          protocolVersion: WORKER_PROTOCOL_VERSION, type: 'run', domain: 'analysis', requestId: 0,
+          payload: { project: source, combinationId: combinationId || null, includeEducationTrace: true },
+        };
         worker.postMessage(request);
       } catch {
         runFallback();
@@ -279,7 +347,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     const current = projectRef.current;
     const next = updater(structuredClone(current));
     if (JSON.stringify(next) === JSON.stringify(current)) return;
-    setPast((history) => [...history.slice(-49), current]);
+    setPast((history) => [...history.slice(-49), { project: current, description: 'Editar proyecto' }]);
     setFuture([]);
     invalidateAnalysis();
     projectRef.current = next;
@@ -300,6 +368,19 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [invalidateAnalysis, selectedCombinationId]);
 
+  const executeProjectCommand = useCallback(async (command: ProjectCommand): Promise<void> => {
+    const { applyProjectPatch, compileProjectCommand } = await import('../commands/projectCommand');
+    const current = projectRef.current;
+    const compiled = compileProjectCommand(current, command);
+    const next = applyProjectPatch(current, compiled.forward);
+    if (JSON.stringify(next) === JSON.stringify(current)) return;
+    setPast((history) => [...history.slice(-49), { project: current, description: command.description }]);
+    setFuture([]);
+    invalidateAnalysis();
+    projectRef.current = next;
+    setProject(next);
+  }, [invalidateAnalysis]);
+
   const updateProjectView = useCallback((updater: (project: ProjectModel) => ProjectModel) => {
     const current = projectRef.current;
     const next = updater(structuredClone(current));
@@ -308,9 +389,10 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setProject(next);
   }, []);
 
-  const beginProjectTransaction = useCallback(() => {
+  const beginProjectTransaction = useCallback((description = 'Editar proyecto') => {
     if (transactionStartRef.current) return;
     transactionStartRef.current = structuredClone(projectRef.current);
+    transactionDescriptionRef.current = description;
     setTransactionActive(true);
   }, []);
 
@@ -341,7 +423,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     const start = transactionStartRef.current;
     transactionStartRef.current = null;
     if (start && JSON.stringify(start) !== JSON.stringify(projectRef.current)) {
-      setPast((history) => [...history.slice(-49), start]);
+      setPast((history) => [...history.slice(-49), { project: start, description: transactionDescriptionRef.current }]);
       setFuture([]);
     }
     setTransactionActive(false);
@@ -360,12 +442,14 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setPersistenceRevision((revision) => revision + 1);
   }, [invalidateAnalysis]);
 
-  const replaceProject = useCallback((next: ProjectModel, restoredAnalysis?: AnalysisResult) => {
+  const replaceProject = useCallback((next: ProjectModel, restoredAnalysis?: AnalysisResult, repositoryRevision?: number) => {
     const normalized = normalizeProject(next);
-    setPast((history) => [...history.slice(-49), project]);
+    setPast((history) => [...history.slice(-49), { project, description: 'Abrir proyecto' }]);
     setFuture([]);
     setProject(normalized);
     projectRef.current = normalized;
+    repositoryRevisionRef.current = repositoryRevision === undefined ? null : { projectId: normalized.id, revision: repositoryRevision };
+    if (repositoryRevision !== undefined) repositoryBlockedProjectIdRef.current = null;
     invalidateAnalysis();
     if (restoredAnalysis) {
       setAnalysis(restoredAnalysis);
@@ -380,18 +464,19 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const undo = useCallback(() => {
     if (past.length === 0) return;
     const previous = past[past.length - 1];
-    setFuture((items) => [project, ...items].slice(0, 50));
+    setFuture((items) => [{ project, description: previous.description }, ...items].slice(0, 50));
     setPast(past.slice(0, -1));
-    setProject(previous);
-    projectRef.current = previous;
+    setProject(previous.project);
+    projectRef.current = previous.project;
     invalidateAnalysis();
     setSelection(null);
   }, [invalidateAnalysis, past, project, setSelection]);
 
   const redo = useCallback(() => {
     if (future.length === 0) return;
-    const normalized = normalizeProject(future[0]);
-    setPast((history) => [...history.slice(-49), project]);
+    const entry = future[0];
+    const normalized = normalizeProject(entry.project);
+    setPast((history) => [...history.slice(-49), { project, description: entry.description }]);
     setFuture(future.slice(1));
     setProject(normalized);
     projectRef.current = normalized;
@@ -405,9 +490,9 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     canRedo: future.length > 0,
     storageIssue: storageState.issue,
     storageMessage: storageState.message,
-    renameProject, updateProject, updateProjectView, beginProjectTransaction, updateProjectTransient,
+    renameProject, executeProjectCommand, updateProject, updateProjectView, beginProjectTransaction, updateProjectTransient,
     moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo,
-  }), [project, past.length, future.length, storageState.issue, storageState.message, renameProject, updateProject, updateProjectView, beginProjectTransaction, updateProjectTransient, moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo]);
+  }), [project, past.length, future.length, storageState.issue, storageState.message, renameProject, executeProjectCommand, updateProject, updateProjectView, beginProjectTransaction, updateProjectTransient, moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo]);
 
   const analysisValue = useMemo<ProjectAnalysisContextValue>(() => ({
     analysis, isAnalyzing, selectedCombinationId, learningFocus, influenceCanvasState,

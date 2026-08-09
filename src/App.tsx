@@ -11,6 +11,7 @@ import './design-system/material.css';
 
 const loadWorkspaceShell = () => import('./features/workspace/WorkspaceShell');
 const WorkspaceShell = lazy(loadWorkspaceShell);
+const PwaUpdateNotice = lazy(() => import('./platform/PwaUpdateNotice').then((module) => ({ default: module.PwaUpdateNotice })));
 
 const AppShell = () => {
   const [screen, setScreen] = useState<'welcome' | 'workspace'>('welcome');
@@ -48,5 +49,5 @@ const AppShell = () => {
 };
 
 export default function App() {
-  return <ProjectProvider><AppShell /></ProjectProvider>;
+  return <ProjectProvider><AppShell /><Suspense fallback={null}><PwaUpdateNotice /></Suspense></ProjectProvider>;
 }

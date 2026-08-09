@@ -238,6 +238,8 @@ describe('structureCo app shell', () => {
     expect(firstMember).toBeTruthy();
     await user.click(firstMember!);
     await user.keyboard('{Control>}d{/Control}');
+    expect(screen.getByLabelText(/duplicar selección/i)).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /confirmar duplicado/i }));
     await waitFor(() => expect(container.querySelectorAll('.member-object').length).toBe(initial + 1));
     await user.keyboard('{Control>}c{/Control}');
     await user.keyboard('{Control>}v{/Control}');

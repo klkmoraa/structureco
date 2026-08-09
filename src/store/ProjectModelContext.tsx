@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { AnalysisResult, ProjectModel } from '../types';
+import type { ProjectCommand } from '../commands/projectCommand';
 
 /**
  * The structural model, its undo/redo history and persistence state.
@@ -10,17 +11,18 @@ export interface ProjectModelContextValue {
   project: ProjectModel;
   canUndo: boolean;
   canRedo: boolean;
-  storageIssue: 'recovered' | 'load-failed' | 'save-failed' | null;
+  storageIssue: 'recovered' | 'load-failed' | 'save-failed' | 'repository-degraded' | 'conflict' | null;
   storageMessage: string | null;
   renameProject: (name: string) => void;
+  executeProjectCommand: (command: ProjectCommand) => Promise<void>;
   updateProject: (updater: (project: ProjectModel) => ProjectModel, analyzeAfter?: boolean) => void;
   updateProjectView: (updater: (project: ProjectModel) => ProjectModel) => void;
-  beginProjectTransaction: () => void;
+  beginProjectTransaction: (description?: string) => void;
   updateProjectTransient: (updater: (project: ProjectModel) => ProjectModel) => void;
   moveNodeTransient: (nodeId: string, point: { x: number; y: number }) => void;
   commitProjectTransaction: () => void;
   cancelProjectTransaction: () => void;
-  replaceProject: (project: ProjectModel, restoredAnalysis?: AnalysisResult) => void;
+  replaceProject: (project: ProjectModel, restoredAnalysis?: AnalysisResult, repositoryRevision?: number) => void;
   undo: () => void;
   redo: () => void;
 }

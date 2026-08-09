@@ -8,7 +8,7 @@ import { resolveMemberLocalLoads } from '../../engine/solver';
 import { fromDisplay, toDisplay, unitLabel } from '../../engine/units';
 import { exportSvgAsPng, exportSvgElement } from '../../utils/export';
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
-import { copyModelSelection, duplicateModelSelection, ensureNodeAtPoint, pasteModelClipboard, splitMemberAt, structuralSelectionFromIds, toggleStructuralSelection, type ModelClipboard } from '../../data/modelOperations';
+import { copyModelSelection, ensureNodeAtPoint, pasteModelClipboard, splitMemberAt, structuralSelectionFromIds, toggleStructuralSelection, type ModelClipboard } from '../../data/modelOperations';
 import {
   buildIntersectionSnapCandidates,
   buildPerpendicularSnapCandidates,
@@ -19,6 +19,7 @@ import {
 } from '../../utils/snapping';
 import { selectGeometryByBox } from '../../utils/selectionGeometry';
 import { useI18n } from '../../i18n/useI18n';
+import { usePhase2I18n } from '../../i18n/usePhase2I18n';
 import type { TranslationKey } from '../../i18n/catalogs';
 import {
   cameraForViewportResize,
@@ -57,6 +58,8 @@ import { CanvasResultLayer, diagramPixelScaleFor, reactionClearanceFor } from '.
 import { CanvasInteractionLayer } from './CanvasInteractionLayer';
 import { parseQuickEntryPair } from './quickEntry';
 import { resolveRepeatRecipe, type RepeatRecipe } from './repeatAction';
+import { prepareDuplicatePreview } from './duplicatePreview';
+import './phase2.css';
 
 type Camera = CanvasCamera;
 
@@ -160,6 +163,7 @@ export const StructuralCanvas = ({
     selectedCombinationId,
     setSelection,
     setActiveTool,
+    executeProjectCommand,
     updateProject,
     replaceProject,
     beginProjectTransaction,
@@ -170,7 +174,8 @@ export const StructuralCanvas = ({
     resultCursor,
     influenceCanvasState,
   } = useProject();
-  const { t } = useI18n();
+  const { language, t } = useI18n();
+  const { t: phase2T } = usePhase2I18n(language);
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const coordinateReadoutRef = useRef<HTMLOutputElement>(null);
@@ -188,6 +193,7 @@ export const StructuralCanvas = ({
   const [cycleIndicator, setCycleIndicator] = useState<{ x: number; y: number; index: number; total: number } | null>(null);
   const [overlapPicker, setOverlapPicker] = useState<{ x: number; y: number; candidates: Array<Exclude<StructuralTarget, { kind: 'background' }>> } | null>(null);
   const [repeatRecipe, setRepeatRecipe] = useState<RepeatRecipe | null>(null);
+  const [duplicateDraft, setDuplicateDraft] = useState<{ selection: Selection; x: string; y: string } | null>(null);
   const spacePressedRef = useRef(false);
   const interactionRef = useRef<CanvasInteraction>(IDLE_INTERACTION);
   const cameraRef = useRef(camera);
@@ -207,6 +213,32 @@ export const StructuralCanvas = ({
   const [canvasFeedback, setCanvasFeedback] = useState('');
   const selectionBox = interaction.kind === 'selection-box' ? interaction : null;
   const repeatCandidate = useMemo(() => resolveRepeatRecipe(project, selection), [project, selection]);
+  const duplicatePreview = useMemo(() => {
+    if (!duplicateDraft) return null;
+    try {
+      if (!duplicateDraft.x.trim() || !duplicateDraft.y.trim()) throw new Error(phase2T('canvas.invalidOffset'));
+      return {
+        prepared: prepareDuplicatePreview(project, duplicateDraft.selection, {
+          x: Number(duplicateDraft.x),
+          y: Number(duplicateDraft.y),
+        }),
+        error: '',
+      };
+    } catch (error) {
+      return { prepared: null, error: error instanceof Error ? error.message : phase2T('canvas.invalidOffset') };
+    }
+  }, [duplicateDraft, phase2T, project]);
+
+  const confirmDuplicate = useCallback(async () => {
+    if (!duplicatePreview?.prepared) return;
+    await executeProjectCommand(duplicatePreview.prepared.command);
+    const nodeIds = duplicatePreview.prepared.addedNodes.map((node) => node.id);
+    const memberIds = duplicatePreview.prepared.addedMembers.map((member) => member.id);
+    if (memberIds.length === 1 && nodeIds.length === 0) setSelection({ kind: 'member', id: memberIds[0] });
+    else if (nodeIds.length === 1 && memberIds.length === 0) setSelection({ kind: 'node', id: nodeIds[0] });
+    else setSelection({ kind: 'multi', nodeIds, memberIds });
+    setDuplicateDraft(null);
+  }, [duplicatePreview, executeProjectCommand, setSelection]);
 
   const nodeMap = useMemo(() => new Map(project.nodes.map((node) => [node.id, node])), [project.nodes]);
   const memberMap = useMemo(() => new Map(project.members.map((member) => [member.id, member])), [project.members]);
@@ -520,15 +552,14 @@ export const StructuralCanvas = ({
         draft.prescribedDisplacements = (draft.prescribedDisplacements ?? []).filter((item) => item.nodeId !== target.id);
         draft.memberInitialEffects = (draft.memberInitialEffects ?? []).filter((effect) => !deletedMembers.includes(effect.memberId));
       } else if (target.kind === 'member') {
-        draft.members = draft.members.filter((member) => member.id !== target.id);
-        draft.memberLoads = draft.memberLoads.filter((load) => load.memberId !== target.id);
-        draft.memberInitialEffects = (draft.memberInitialEffects ?? []).filter((effect) => effect.memberId !== target.id);
+        return draft;
       } else if (target.kind === 'nodalLoad') draft.nodalLoads = draft.nodalLoads.filter((load) => load.id !== target.id);
       else draft.memberLoads = draft.memberLoads.filter((load) => load.id !== target.id);
       return draft;
     });
+    if (target.kind === 'member') void executeProjectCommand({ kind: 'member.delete', description: `Eliminar miembro ${target.id}`, memberId: target.id });
     setSelection(null);
-  }, [selection, setSelection, updateProject]);
+  }, [executeProjectCommand, selection, setSelection, updateProject]);
 
   const addNode = (point: { x: number; y: number }) => {
     let id = '';
@@ -541,7 +572,7 @@ export const StructuralCanvas = ({
     return id;
   };
 
-  const createMemberEndpoint = (point: { x: number; y: number }) => {
+  const createMemberEndpoint = async (point: { x: number; y: number }) => {
     if (!memberStart) {
       const id = addNode(point);
       setMemberStart(id);
@@ -554,22 +585,35 @@ export const StructuralCanvas = ({
     }
     let nodeId = '';
     let memberId = '';
-    updateProject((draft) => {
-      nodeId = ensureNodeAtPoint(draft, point).nodeId;
-      if (nodeId === memberStart) return draft;
+    const draft = structuredClone(project);
+    const memberStateBeforeEndpoint = JSON.stringify({ members: draft.members, memberLoads: draft.memberLoads, memberInitialEffects: draft.memberInitialEffects });
+    nodeId = ensureNodeAtPoint(draft, point).nodeId;
+    if (nodeId !== memberStart) {
       const existing = draft.members.find((member) =>
         (member.i === memberStart && member.j === nodeId) || (member.i === nodeId && member.j === memberStart));
       if (existing) {
         memberId = existing.id;
-        return draft;
+      } else {
+        memberId = nextId('M', draft.members.map((member) => member.id));
+        const template = repeatRecipe?.kind === 'member'
+          ? repeatRecipe.template
+          : { type: 'frame' as const, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 };
+        const member = { id: memberId, i: memberStart, j: nodeId, ...template };
+        const endpointOnlyAddedNodes = memberStateBeforeEndpoint === JSON.stringify({ members: draft.members, memberLoads: draft.memberLoads, memberInitialEffects: draft.memberInitialEffects });
+        if (endpointOnlyAddedNodes) {
+          const existingNodeIds = new Set(project.nodes.map((node) => node.id));
+          await executeProjectCommand({
+            kind: 'member.create',
+            description: `Crear miembro ${memberId}`,
+            nodes: draft.nodes.filter((node) => !existingNodeIds.has(node.id)),
+            member,
+          });
+        } else {
+          draft.members.push(member);
+          updateProject(() => draft);
+        }
       }
-      memberId = nextId('M', draft.members.map((member) => member.id));
-      const template = repeatRecipe?.kind === 'member'
-        ? repeatRecipe.template
-        : { type: 'frame' as const, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 };
-      draft.members.push({ id: memberId, i: memberStart, j: nodeId, ...template });
-      return draft;
-    });
+    }
     setMemberStart(null);
     if (memberId) setSelection({ kind: 'member', id: memberId });
     setQuickEntry({ first: '', second: '' });
@@ -593,11 +637,11 @@ export const StructuralCanvas = ({
     const startNode = memberStart ? nodeMap.get(memberStart) : null;
     if (!startNode) return;
     if (quickEntryMode === 'delta') {
-      createMemberEndpoint({ x: startNode.x + fromDisplay(first, units, 'length'), y: startNode.y + fromDisplay(second, units, 'length') });
+      void createMemberEndpoint({ x: startNode.x + fromDisplay(first, units, 'length'), y: startNode.y + fromDisplay(second, units, 'length') });
     } else {
       const length = fromDisplay(first, units, 'length');
       const radians = second * Math.PI / 180;
-      createMemberEndpoint({ x: startNode.x + length * Math.cos(radians), y: startNode.y + length * Math.sin(radians) });
+      void createMemberEndpoint({ x: startNode.x + length * Math.cos(radians), y: startNode.y + length * Math.sin(radians) });
     }
   };
 
@@ -866,7 +910,7 @@ export const StructuralCanvas = ({
   const performTargetAction = (target: StructuralTarget, tool: Tool, client: ScreenPoint, shiftKey = false) => {
     if (target.kind === 'background') {
       if (tool === 'node') addNode(modelPointFromClient(client.x, client.y));
-      else if (tool === 'member') createMemberEndpoint(modelPointFromClient(client.x, client.y));
+      else if (tool === 'member') void createMemberEndpoint(modelPointFromClient(client.x, client.y));
       else if (tool === 'pointLoad' || tool === 'distributedLoad' || tool === 'moment') {
         showCanvasFeedback(tool === 'distributedLoad'
           ? t('canvas.placeDistributedLoad')
@@ -1001,7 +1045,7 @@ export const StructuralCanvas = ({
       return;
     }
     if (activeTool === 'node') addNode(modelPointFromClient(event.clientX, event.clientY));
-    else if (activeTool === 'member') createMemberEndpoint(modelPointFromClient(event.clientX, event.clientY));
+    else if (activeTool === 'member') void createMemberEndpoint(modelPointFromClient(event.clientX, event.clientY));
     else if (activeTool === 'select') {
       const start = screenToModelPoint(localScreenPoint(event.clientX, event.clientY), cameraRef.current);
       capturePointer(event.pointerId);
@@ -1208,10 +1252,7 @@ export const StructuralCanvas = ({
         if (!selection || !['node', 'member', 'multi'].includes(selection.kind)) return;
         event.preventDefault();
         const step = Math.max(project.settings.gridSize || 1, 0.25);
-        const next = structuredClone(project);
-        const duplicated = duplicateModelSelection(next, selection, { x: step, y: step });
-        replaceProject(next);
-        setSelection(duplicated);
+        setDuplicateDraft({ selection: structuredClone(selection), x: String(step), y: String(step) });
         return;
       }
       const shortcutTool = toolFromShortcut(key);
@@ -1220,6 +1261,10 @@ export const StructuralCanvas = ({
         setActiveTool(shortcutTool);
       }
       if (event.key === 'Escape') {
+        if (duplicateDraft) {
+          setDuplicateDraft(null);
+          return;
+        }
         cancelActiveInteraction();
         setMemberStart(null);
         setQuickEntry({ first: '', second: '' });
@@ -1251,7 +1296,7 @@ export const StructuralCanvas = ({
       window.removeEventListener('blur', cancelActiveInteraction);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [activateRepeat, cancelActiveInteraction, deleteSelection, project, repeatCandidate, replaceProject, selection, setActiveTool, setSelection]);
+  }, [activateRepeat, cancelActiveInteraction, deleteSelection, duplicateDraft, project, repeatCandidate, replaceProject, selection, setActiveTool, setSelection]);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -1556,6 +1601,10 @@ export const StructuralCanvas = ({
     }),
   ] : [];
   const multiSelectionEnvelope = selectionEnvelopeForPoints(multiSelectionPoints, { x: 0, y: 0, width: size.width, height: size.height }, 22);
+  const duplicatePreviewNodeMap = new Map([
+    ...project.nodes.map((node) => [node.id, node] as const),
+    ...(duplicatePreview?.prepared?.addedNodes ?? []).map((node) => [node.id, node] as const),
+  ]);
 
   return (
     <div className="canvas-host" ref={hostRef}>
@@ -1609,6 +1658,21 @@ export const StructuralCanvas = ({
           size={size}
           t={t}
         />
+
+        {duplicatePreview?.prepared ? <g className="duplicate-preview-layer" aria-label={phase2T('canvas.duplicatePreviewAria')}>
+          {duplicatePreview.prepared.addedMembers.map((member) => {
+            const start = duplicatePreviewNodeMap.get(member.i);
+            const end = duplicatePreviewNodeMap.get(member.j);
+            if (!start || !end) return null;
+            const a = toScreen(start.x, start.y);
+            const b = toScreen(end.x, end.y);
+            return <line key={member.id} className="duplicate-preview-member" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />;
+          })}
+          {duplicatePreview.prepared.addedNodes.map((node) => {
+            const point = toScreen(node.x, node.y);
+            return <circle key={node.id} className="duplicate-preview-node" cx={point.x} cy={point.y} r="6" />;
+          })}
+        </g> : null}
 
         <CanvasResultLayer
           slot="diagrams"
@@ -1751,6 +1815,31 @@ export const StructuralCanvas = ({
           <text x="65" y="5" className="axis-x-label">X</text><text x="-5" y="-66" className="axis-y-label">Y</text>
         </g>
       </svg>
+
+      {duplicateDraft ? <form
+        className="duplicate-preview-panel"
+        aria-label={phase2T('canvas.duplicateTitle')}
+        onSubmit={(event) => { event.preventDefault(); confirmDuplicate(); }}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            setDuplicateDraft(null);
+            svgRef.current?.focus();
+          }
+        }}
+      >
+        <strong>{phase2T('canvas.duplicateTitle')}</strong>
+        <p>{phase2T('canvas.duplicateDescription')}</p>
+        <div className="duplicate-preview-fields">
+          <label>{phase2T('canvas.offsetX')}<input type="number" step="any" value={duplicateDraft.x} onChange={(event) => setDuplicateDraft((current) => current ? { ...current, x: event.target.value } : null)} /></label>
+          <label>{phase2T('canvas.offsetY')}<input type="number" step="any" value={duplicateDraft.y} onChange={(event) => setDuplicateDraft((current) => current ? { ...current, y: event.target.value } : null)} /></label>
+        </div>
+        {duplicatePreview?.error ? <span className="duplicate-preview-error" role="alert">{duplicatePreview.error}</span> : null}
+        <div className="duplicate-preview-actions">
+          <button type="submit" disabled={!duplicatePreview?.prepared}>{phase2T('canvas.confirmDuplicate')}</button>
+          <button type="button" onClick={() => { setDuplicateDraft(null); svgRef.current?.focus(); }}>{phase2T('canvas.cancelDuplicate')}</button>
+        </div>
+      </form> : null}
 
       <CanvasChrome
         modeLabel={t(toolLabelKeys[activeTool])}

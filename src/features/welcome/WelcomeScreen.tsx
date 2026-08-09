@@ -31,6 +31,8 @@ import { Surface } from '../../design-system/components/surface';
 import type { TranslationKey } from '../../i18n/catalogs';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
+const Phase2ProjectHub = lazy(() => import('./Phase2ProjectHub').then((module) => ({ default: module.Phase2ProjectHub })));
+const Phase2DxfAction = lazy(() => import('./Phase2DxfAction').then((module) => ({ default: module.Phase2DxfAction })));
 
 interface WelcomeScreenProps {
   onOpenWorkspace: () => void;
@@ -77,6 +79,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
   const reducedMotion = useReducedMotion();
   const [exerciseDialogOpen, setExerciseDialogOpen] = useState(false);
   const [importCenterOpen, setImportCenterOpen] = useState(false);
+  const [dxfImportOpen, setDxfImportOpen] = useState(false);
   const [templateFilter, setTemplateFilter] = useState<TemplateFilter>('all');
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -141,7 +144,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
 
   return (
     <main className="welcome-screen" data-testid="welcome-screen">
-      <div className="welcome-base" inert={exerciseDialogOpen || importCenterOpen || menuOpen} aria-hidden={exerciseDialogOpen || importCenterOpen || menuOpen || undefined}>
+      <div className="welcome-base" inert={exerciseDialogOpen || importCenterOpen || dxfImportOpen || menuOpen} aria-hidden={exerciseDialogOpen || importCenterOpen || dxfImportOpen || menuOpen || undefined}>
         <header className="welcome-header">
           <div className="welcome-brand" aria-label="structureCo">
             <BrandMark size={34} />
@@ -234,6 +237,10 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
               </button>
             </div>
 
+            <Suspense fallback={<p role="status">{t('hub.loading')}</p>}>
+              <Phase2ProjectHub onOpenWorkspace={onOpenWorkspace} />
+            </Suspense>
+
             <section className="welcome-showcase" aria-labelledby="welcome-showcase-title">
               <div className="welcome-showcase-header">
                 <div>
@@ -255,6 +262,12 @@ export const WelcomeScreen = ({ onOpenWorkspace, onPreloadWorkspace }: WelcomeSc
                 </span>
                 <ArrowRight size={16} className="welcome-launcher-arrow" />
               </button>
+
+              <Suspense fallback={null}><Phase2DxfAction
+                open={dxfImportOpen}
+                onOpenChange={setDxfImportOpen}
+                onOpenWorkspace={onOpenWorkspace}
+              /></Suspense>
 
               <div className="welcome-templates-grid">
                 {/* `initial={false}`: en el primer montaje las tarjetas aparecen ya en su

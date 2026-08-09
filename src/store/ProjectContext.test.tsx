@@ -5,6 +5,7 @@ import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createDefaultProject } from '../data/defaultProject';
 import { ProjectProvider, useProject } from './ProjectContext';
+import type { ProjectCommand } from '../commands/projectCommand';
 
 const TransactionHarness = () => {
   const {
@@ -23,7 +24,7 @@ const TransactionHarness = () => {
   return <>
     <output aria-label="x-coordinate">{project.nodes[0].x}</output>
     <output aria-label="can-undo">{String(canUndo)}</output>
-    <button onClick={beginProjectTransaction}>begin</button>
+    <button onClick={() => beginProjectTransaction()}>begin</button>
     <button onClick={move}>move</button>
     <button onClick={commitProjectTransaction}>commit</button>
     <button onClick={cancelProjectTransaction}>cancel</button>
@@ -51,10 +52,45 @@ const DirectHistoryHarness = () => {
   return <><output aria-label="node-count">{project.nodes.length}</output><output aria-label="direct-can-undo">{String(canUndo)}</output><button onClick={() => updateProject((draft) => { draft.nodes.push({ id: `N${draft.nodes.length + 1}`, x: 9, y: 9, support: { type: 'none' } }); return draft; })}>add-direct</button><button onClick={undo}>undo-direct</button></>;
 };
 
+const CommandHistoryHarness = () => {
+  const { project, canUndo, canRedo, executeProjectCommand, undo, redo } = useProject();
+  const createMember = async () => {
+    const source = project.members[0];
+    const command: ProjectCommand = {
+      kind: 'member.create', description: 'Crear miembro command', nodes: [],
+      member: { ...structuredClone(source), id: 'M-command', i: source.i, j: source.j },
+    };
+    await executeProjectCommand(command);
+  };
+  return <>
+    <output aria-label="command-members">{project.members.length}</output>
+    <output aria-label="command-undo">{String(canUndo)}</output>
+    <output aria-label="command-redo">{String(canRedo)}</output>
+    <button onClick={createMember}>command-create</button>
+    <button onClick={undo}>command-undo-action</button>
+    <button onClick={redo}>command-redo-action</button>
+  </>;
+};
+
 beforeEach(() => localStorage.clear());
 afterEach(() => cleanup());
 
 describe('ProjectContext transactions', () => {
+  it('records one reversible history entry for one command intention', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('structureCo.project', JSON.stringify(createDefaultProject()));
+    render(<ProjectProvider><CommandHistoryHarness /></ProjectProvider>);
+    const initial = Number(screen.getByLabelText('command-members').textContent);
+    await user.click(screen.getByText('command-create'));
+    expect(Number(screen.getByLabelText('command-members').textContent)).toBe(initial + 1);
+    expect(screen.getByLabelText('command-undo').textContent).toBe('true');
+    await user.click(screen.getByText('command-undo-action'));
+    expect(Number(screen.getByLabelText('command-members').textContent)).toBe(initial);
+    expect(screen.getByLabelText('command-redo').textContent).toBe('true');
+    await user.click(screen.getByText('command-redo-action'));
+    expect(Number(screen.getByLabelText('command-members').textContent)).toBe(initial + 1);
+  });
+
   it('keeps direct edit history correct under React StrictMode', async () => {
     const user = userEvent.setup();
     localStorage.setItem('structureCo.project', JSON.stringify(createDefaultProject()));
