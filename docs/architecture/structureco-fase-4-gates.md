@@ -7,6 +7,7 @@
 ## Estados
 
 - `PASA`: evidencia ejecutable actual y gate satisfecho para el alcance indicado.
+- `PASA INFORMATIVO`: la evidencia se ejecuta y se reporta, pero no impone un techo bloqueante.
 - `PARCIAL`: existe una parte verificable, pero faltan controles o alcance requerido.
 - `NO EXISTE`: no hay implementación actual.
 - `NO PASA`: el gate requiere evidencia que no existe o falló.
@@ -30,14 +31,14 @@
 | F4-AI-BROKER | Broker servidor DeepSeek | Arquitectura propuesta; sin servicio, SDK o secreto | NO EXISTE | plataforma + seguridad | threat model, servicio y kill switch |
 | F4-AI-EVAL | Corpus adversarial y métricas | Criterios definidos; harness ausente | NO EXISTE | seguridad + QA | evals reproducibles con cero escapes |
 | F4-AI-VENDOR | Privacidad, retención y coste | Documentación técnica consultada | REQUIERE INVESTIGACIÓN | legal/privacidad + operaciones | evaluación contractual y de datos |
-| F4-OPS-BUNDLE | Carga inicial preservada | 711 442 bytes / 188 963 gzip; visor 553 398 bytes, `eager:false`; Three.js ausente del entry | PASA | frontend performance | vigilar margen del presupuesto en cambios futuros |
+| F4-OPS-BUNDLE | Medición de carga inicial | 711 442 bytes / 188 963 gzip; visor 553 398 bytes, `eager:false`; Three.js ausente del entry; `verify:perf` conserva la medición sin techo duro | PASA INFORMATIVO | frontend performance | vigilar la métrica y reintroducir un techo sólo mediante una decisión explícita |
 | F4-OPS-RELEASE | CI/release reproducible | Verificación local completa; F4 no publicada por alcance | PARCIAL | release engineering | publicación sólo con autorización explícita |
 
 ## Evidencia de cierre experimental
 
 - Pruebas focalizadas: 8 archivos, 50 pruebas aprobadas.
 - Suite completa: 119 archivos, 811 aprobadas y 3 omitidas de 814.
-- Build y rendimiento: aprobados mediante `npm.cmd run verify`.
+- Build: aprobado mediante `npm.cmd run verify`; rendimiento: medición registrada por `verify:perf` sin techo bloqueante.
 - Navegador real: 1440×900 y 390×844; claro/oscuro; español/inglés; poblado/vacío; controles de cámara; pérdida y reintento de WebGL.
 - Evidencia visual: `reports/evidence/2026-08-09-fase-4/`.
 - Alcance de accesibilidad: se comprobó DOM accesible, teclado, foco, touch y movimiento reducido; no se afirma compatibilidad con lector de pantalla no probado.

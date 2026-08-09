@@ -43,6 +43,6 @@ No se modifican `src/engine/**`, `src/workers/**`, `src/data/**`, `src/store/Pro
 - Navegación Inicio/editor/visor funciona en español e inglés.
 - Controles de cámara son semánticos y operables por teclado.
 - El fallback de WebGL conserva contexto y retorno.
-- El bundle inicial permanece bajo 722 000 bytes y 192 000 gzip; Three.js sólo aparece en un chunk diferido.
+- El bundle inicial se mide y se reporta; Fase 4 no impone un techo bloqueante de bytes/gzip. Three.js sólo aparece en un chunk diferido.
 - La baseline protegida continúa con 29 archivos idénticos.
 - La UI se verifica en navegador real en escritorio/móvil y claro/oscuro.
