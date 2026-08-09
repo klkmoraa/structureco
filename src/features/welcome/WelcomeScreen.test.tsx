@@ -27,14 +27,15 @@ const renderWelcome = (language: 'es' | 'en' = 'es') => {
   project.settings = { ...project.settings, language };
   localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
   const onOpenWorkspace = vi.fn();
+  const onOpenExperimental3D = vi.fn();
   const result = render(
     <ProjectProvider>
       <ClassroomSessionProvider projectId="welcome-test">
-        <WelcomeScreen onOpenWorkspace={onOpenWorkspace} />
+        <WelcomeScreen onOpenWorkspace={onOpenWorkspace} onOpenExperimental3D={onOpenExperimental3D} />
       </ClassroomSessionProvider>
     </ProjectProvider>,
   );
-  return { ...result, onOpenWorkspace };
+  return { ...result, onOpenWorkspace, onOpenExperimental3D };
 };
 
 const templateCards = (container: HTMLElement) => [...container.querySelectorAll('.welcome-template-card')];
@@ -95,6 +96,16 @@ describe('WelcomeScreen template showcase', () => {
 });
 
 describe('WelcomeScreen launcher', () => {
+  it('opens the experimental 3D viewer without replacing the current project', async () => {
+    const user = userEvent.setup();
+    const { onOpenExperimental3D, onOpenWorkspace } = renderWelcome();
+
+    await user.click(screen.getByRole('button', { name: /experimental 3d/i }));
+
+    expect(onOpenExperimental3D).toHaveBeenCalledOnce();
+    expect(onOpenWorkspace).not.toHaveBeenCalled();
+  });
+
   it('reports the current project size on the continue card', () => {
     const { container } = renderWelcome();
     const recent = container.querySelector('.welcome-launcher-card--recent');

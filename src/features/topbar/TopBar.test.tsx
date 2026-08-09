@@ -46,6 +46,16 @@ afterEach(() => {
 });
 
 describe('TopBar portable export', () => {
+  it('exposes the experimental 3D view as a non-analysis action', async () => {
+    const user = userEvent.setup();
+    const onOpenExperimental3D = vi.fn();
+    render(<TopBarHarness><TopBar onOpenExperimental3D={onOpenExperimental3D} /></TopBarHarness>);
+
+    await user.click(screen.getByRole('button', { name: /vista 3d experimental/i }));
+
+    expect(onOpenExperimental3D).toHaveBeenCalledOnce();
+  });
+
   it('localizes portable export, navigation, and built-in example presentation in English', async () => {
     const user = userEvent.setup();
     const project = createDefaultProject();

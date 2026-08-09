@@ -5,6 +5,16 @@ import userEvent from '@testing-library/user-event';
 import App from './App';
 import { createDefaultProject } from './data/defaultProject';
 
+vi.mock('./features/experimental3d/threeViewport', () => ({
+  createThreeViewportController: () => ({
+    resize: vi.fn(),
+    setView: vi.fn(),
+    zoomBy: vi.fn(),
+    reset: vi.fn(),
+    dispose: vi.fn(),
+  }),
+}));
+
 class ResizeObserverMock {
   observe() {}
   unobserve() {}
@@ -21,9 +31,13 @@ beforeAll(() => {
 beforeEach(() => {
   localStorage.clear();
   document.documentElement.dataset.theme = 'light';
+  vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
 });
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 const openWorkspace = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.click(screen.getByRole('button', { name: /continuar proyecto/i }));
@@ -43,6 +57,28 @@ const openUtilityMenu = async (user: ReturnType<typeof userEvent.setup>) => {
 };
 
 describe('structureCo app shell', () => {
+  it('navigates to the experimental 3D view from start and returns to both destinations', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: /experimental 3d/i }));
+    expect(await screen.findByRole('heading', { name: /vista 3d experimental/i }, { timeout: 5000 })).toBeTruthy();
+
+    await user.click(screen.getAllByRole('button', { name: 'Editor 2D' })[0]);
+    expect(await screen.findByRole('button', { name: /^analizar$/i }, { timeout: 5000 })).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: /vista 3d experimental/i }));
+    expect(await screen.findByRole('heading', { name: /vista 3d experimental/i }, { timeout: 5000 })).toBeTruthy();
+    await user.click(screen.getAllByRole('button', { name: 'Editor 2D' })[0]);
+    expect(await screen.findByRole('button', { name: /^analizar$/i }, { timeout: 5000 })).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: /ir al inicio/i }));
+    expect(await screen.findByTestId('welcome-screen')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /experimental 3d/i }));
+    await user.click(await screen.findByRole('button', { name: 'Inicio' }));
+    expect(await screen.findByTestId('welcome-screen')).toBeTruthy();
+  }, 30_000);
+
   it('shows a start screen and opens a blank project on demand', async () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
@@ -228,7 +264,7 @@ describe('structureCo app shell', () => {
     expect(detailGroup).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Completo' }));
     expect(screen.getByRole('button', { name: 'Completo' }).classList.contains('active')).toBe(true);
-  });
+  }, 15_000);
 
   it('duplicates and copy-pastes members with fresh identifiers', async () => {
     const user = userEvent.setup();

@@ -281,7 +281,7 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 /* Los tres puntos de entrada, en fila y con el mismo peso visual: ninguno es
    un "botón secundario". El acento de cada uno lo pone su color de dominio
    (marca / Aula / neutro), no su tamaño. */
-.welcome-hero-launcher { --launcher-accent:var(--accent); display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.welcome-hero-launcher { --launcher-accent:var(--accent); display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
 .welcome-launcher-card {
   --launcher-accent:var(--accent);
   position:relative; overflow:hidden; width:100%;
@@ -318,6 +318,7 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 }
 .welcome-launcher-card--classroom { --launcher-accent:var(--sc-color-aula); }
 .welcome-launcher-card--recent { --launcher-accent:var(--sc-color-text-link); }
+.welcome-launcher-card--experimental3d { --launcher-accent:var(--sc-color-state-warning-foreground); }
 /* Contenedores de icono: aquí viven el azul y el lavanda de la referencia,
    sobre un icono en el tono medido de cada dominio. */
 .welcome-launcher-icon {
@@ -338,6 +339,7 @@ button:disabled { cursor: not-allowed; opacity: .62; }
   background:var(--sc-color-accent-blue-soft);
   color:var(--sc-color-text-link);
 }
+.welcome-launcher-card--experimental3d .welcome-launcher-icon { background:color-mix(in srgb,var(--sc-color-state-warning) 18%,var(--surface)); color:var(--sc-color-state-warning-foreground); }
 .welcome-launcher-info { grid-area:info; display:flex; flex-direction:column; gap:5px; min-width:0; }
 .welcome-launcher-header { display:flex; align-items:center; gap:10px; justify-content:space-between; }
 .welcome-launcher-header strong { font-size:16px; font-weight:750; color:var(--text); letter-spacing:var(--sc-tracking-tight); }
@@ -346,6 +348,7 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 .welcome-launcher-info strong { font-size:16px; font-weight:750; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .welcome-pill-badge { font-size:10px; font-weight:750; padding:3px 9px; border-radius:var(--sc-radius-pill); background:color-mix(in srgb, var(--accent) 14%, transparent); color:var(--accent); white-space:nowrap; }
 .welcome-pill-badge--aula { background:color-mix(in srgb, var(--sc-color-aula) 14%, transparent); color:var(--sc-color-aula); }
+.welcome-pill-badge--experimental { background:color-mix(in srgb,var(--sc-color-state-warning) 15%,transparent); color:var(--sc-color-state-warning-foreground); }
 .welcome-project-stats { font-size:11px; font-weight:650; color:var(--muted); background:var(--surface-2); padding:2px 8px; border-radius:var(--sc-radius-xs); white-space:nowrap; font-variant-numeric:var(--sc-numeric-variant); }
 .welcome-launcher-arrow { grid-area:arrow; justify-self:end; align-self:center; color:var(--subtle); transition:transform var(--sc-motion-control) var(--sc-ease-standard), color var(--sc-motion-control) var(--sc-ease-standard); }
 .welcome-launcher-card:hover .welcome-launcher-arrow { color:var(--launcher-accent); transform:translateX(4px); }
@@ -3307,6 +3310,7 @@ button:not(:disabled):active,.selection-card:active {
 .welcome-launcher-icon { background:var(--accent); color:var(--accent-foreground); box-shadow:var(--sc-shadow-clay-xs); }
 .welcome-launcher-card--classroom .welcome-launcher-icon { background:var(--sc-color-aula); color:var(--sc-color-aula-foreground); }
 .welcome-launcher-card--recent .welcome-launcher-icon { background:var(--axial); color:var(--sc-color-action-foreground); }
+.welcome-launcher-card--experimental3d .welcome-launcher-icon { background:var(--sc-color-state-warning); color:var(--sc-color-action-foreground); }
 .welcome-launcher-card:hover .welcome-launcher-arrow,
 .welcome-template-card:hover .welcome-template-footer svg { color:var(--accent); transform:translateX(4px); }
 
@@ -3497,6 +3501,7 @@ button:not(:disabled):active,.selection-card:active {
 .analysis-status:active { transform:translateY(1px) scale(.97); box-shadow:var(--sc-shadow-clay-pressed); }
 
 @media (max-width:1023px) {
+  .sc-icon-button.experimental-3d-button { display:none; }
   .welcome-hero h1 { font-size:clamp(2rem,1.45rem + 3vw,2.8rem); }
   .welcome-launcher-card:hover,
   .welcome-import-card:hover,
