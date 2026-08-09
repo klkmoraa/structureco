@@ -28,6 +28,7 @@ structureco-skills/
 structureco-ux-responsive/
 
 # Backups y temporales de trabajo
+/.worktrees/
 structureCo-backup-*/
 structureCo-contexto-*/
 structureCo-create-zip-parts.py
