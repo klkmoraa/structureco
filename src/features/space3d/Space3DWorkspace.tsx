@@ -22,6 +22,7 @@ import {
   type Space3DBridgeNote,
 } from '../../space3d/data/bridge2d';
 import { loadSpace3DProject } from '../../space3d/data/storage';
+import { Dialog } from '../../design-system/components/overlays';
 import { Space3DCanvas, type Space3DViewportFactory } from '../../space3d/view/Space3DCanvas';
 import { buildSpace3DSceneModel } from '../../space3d/view/sceneModel';
 import { SPACE3D_DEFAULT_LAYERS, type Space3DLayerVisibility } from '../../space3d/view/threeViewport';
@@ -176,6 +177,13 @@ const WorkspaceBody = ({
    * otro valor la amplifica sin tocar el modelo ni el resultado.
    */
   const [scaleFactor, setScaleFactor] = useState<number | null>(null);
+  /**
+   * "Cargar ejemplo" y "Proyecto vacío" reemplazan el modelo entero. Son
+   * recuperables con Deshacer, pero eso no es obvio para quien no lo sabe: se
+   * confirma antes de actuar, salvo que no haya nada que perder.
+   */
+  const [pendingReplace, setPendingReplace] = useState<'example' | 'blank' | null>(null);
+  const hasContent = project.nodes.length > 0;
   // Doce clics en cada sentido: suficiente margen para explorar sin llegar a
   // una deformada ilegible por minúscula o a una que ya no cabe en pantalla.
   const effectiveScaleFactor = scaleFactor ?? 1;
@@ -207,6 +215,19 @@ const WorkspaceBody = ({
     select(null);
     setRail('model');
     setEditorTarget({ kind, id: null });
+  };
+
+  /** Reemplaza directamente si no hay nada que perder; si lo hay, pide confirmación. */
+  const requestReplace = (target: 'example' | 'blank') => {
+    if (hasContent) { setPendingReplace(target); return; }
+    if (target === 'example') loadExample(); else resetToBlank();
+    setEditorTarget(null);
+  };
+
+  const confirmReplace = () => {
+    if (pendingReplace === 'example') loadExample(); else if (pendingReplace === 'blank') resetToBlank();
+    setEditorTarget(null);
+    setPendingReplace(null);
   };
 
   const remove = (target: Space3DEditorTarget) => {
@@ -276,10 +297,10 @@ const WorkspaceBody = ({
         <button type="button" className="space3d-tool" onClick={redo} disabled={!canRedo} title={t('space3d.redo')}>
           <Redo2 size={16} aria-hidden="true" /><span className="space3d-visually-hidden">{t('space3d.redo')}</span>
         </button>
-        <button type="button" className="space3d-tool" onClick={() => { loadExample(); setEditorTarget(null); }}>
+        <button type="button" className="space3d-tool" onClick={() => requestReplace('example')}>
           <Sparkles size={16} aria-hidden="true" />{t('space3d.loadExample')}
         </button>
-        <button type="button" className="space3d-tool" onClick={() => { resetToBlank(); setEditorTarget(null); }}>
+        <button type="button" className="space3d-tool" onClick={() => requestReplace('blank')}>
           {t('space3d.resetBlank')}
         </button>
         <button type="button" className="space3d-tool" onClick={() => setTransfer('import')}>
@@ -561,6 +582,21 @@ const WorkspaceBody = ({
         <button type="button" className="space3d-button" onClick={() => setTransfer(null)}>{t('space3d.importCancel')}</button>
       </div>
     </div> : null}
+
+    <Dialog
+      open={pendingReplace !== null}
+      onOpenChange={(open) => { if (!open) setPendingReplace(null); }}
+      title={pendingReplace === 'example' ? t('space3d.confirmReplaceTitleExample') : t('space3d.confirmReplaceTitleBlank')}
+      description={pendingReplace === 'example' ? t('space3d.confirmReplaceBodyExample') : t('space3d.confirmReplaceBodyBlank')}
+      footer={<>
+        <button type="button" className="space3d-button" onClick={() => setPendingReplace(null)}>
+          {t('space3d.confirmReplaceCancel')}
+        </button>
+        <button type="button" className="space3d-button space3d-button--primary" onClick={confirmReplace}>
+          {t('space3d.confirmReplaceConfirm')}
+        </button>
+      </>}
+    >{null}</Dialog>
 
     <footer className="space3d-status" aria-label={t('space3d.title')}>
       <span className={`space3d-state space3d-state--${STATE_TONES[analysisState]}`}>{t(STATE_KEYS[analysisState])}</span>

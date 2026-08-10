@@ -160,6 +160,7 @@ describe('Space3DWorkspace end to end', () => {
     await user.click(screen.getByRole('button', { name: /cerrar/i }));
 
     await user.click(screen.getByRole('button', { name: /proyecto vacío/i }));
+    await user.click(screen.getByRole('button', { name: /^reemplazar$/i }));
     expect(within(table(/nudos/i)).queryAllByRole('row')).toHaveLength(1);
 
     await user.click(screen.getByRole('button', { name: /^importar$/i }));
@@ -228,6 +229,54 @@ describe('Space3DWorkspace end to end', () => {
     await user.click(screen.getByRole('button', { name: /editor 2d/i }));
     expect(home).toHaveBeenCalled();
     expect(editor).toHaveBeenCalled();
+  });
+});
+
+describe('Space3DWorkspace discard confirmation', () => {
+  it('pide confirmación antes de cargar el ejemplo o vaciar un modelo con contenido', async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+    expect(within(table(/nudos/i)).getAllByRole('row')).toHaveLength(5);
+
+    await user.click(screen.getByRole('button', { name: /proyecto vacío/i }));
+    expect(screen.getByRole('dialog', { name: /vaciar el proyecto/i })).toBeDefined();
+    // Cancelar no toca el modelo.
+    await user.click(screen.getByRole('button', { name: /^cancelar$/i }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(within(table(/nudos/i)).getAllByRole('row')).toHaveLength(5);
+
+    await user.click(screen.getByRole('button', { name: /proyecto vacío/i }));
+    await user.click(screen.getByRole('button', { name: /^reemplazar$/i }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(within(table(/nudos/i)).queryAllByRole('row')).toHaveLength(1);
+
+    // Sin nada que perder, "Cargar ejemplo" no necesita confirmación.
+    await user.click(screen.getByRole('button', { name: /cargar ejemplo/i }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(within(table(/nudos/i)).getAllByRole('row')).toHaveLength(5);
+  });
+
+  it('pide confirmación distinta para cargar el ejemplo con contenido existente', async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    await user.click(screen.getByRole('button', { name: /cargar ejemplo/i }));
+    expect(screen.getByRole('dialog', { name: /cargar el ejemplo/i })).toBeDefined();
+    await user.click(screen.getByRole('button', { name: /^reemplazar$/i }));
+    // El resultado es indistinguible del ejemplo original, pero el diálogo se cerró
+    // y el comando se ejecutó una sola vez: la geometría sigue teniendo 4 nudos.
+    expect(within(table(/nudos/i)).getAllByRole('row')).toHaveLength(5);
+  });
+
+  it('deshacer recupera el modelo reemplazado por confirmación', async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+    await user.click(screen.getByRole('button', { name: /proyecto vacío/i }));
+    await user.click(screen.getByRole('button', { name: /^reemplazar$/i }));
+    expect(within(table(/nudos/i)).queryAllByRole('row')).toHaveLength(1);
+
+    await user.click(screen.getByRole('button', { name: /deshacer/i }));
+    expect(within(table(/nudos/i)).getAllByRole('row')).toHaveLength(5);
   });
 });
 

@@ -1340,6 +1340,12 @@ export const es = {
   'space3d.scaleDouble': 'Duplicar la escala',
   'space3d.scaleHalve': 'Reducir la escala a la mitad',
   'space3d.loadCombination': 'Combinación',
+  'space3d.confirmReplaceTitleExample': '¿Cargar el ejemplo?',
+  'space3d.confirmReplaceBodyExample': 'Se reemplazará el modelo actual por el ejemplo de pórtico espacial. Podrás deshacerlo con Deshacer.',
+  'space3d.confirmReplaceTitleBlank': '¿Vaciar el proyecto?',
+  'space3d.confirmReplaceBodyBlank': 'Se reemplazará el modelo actual por un proyecto vacío. Podrás deshacerlo con Deshacer.',
+  'space3d.confirmReplaceCancel': 'Cancelar',
+  'space3d.confirmReplaceConfirm': 'Reemplazar',
   'welcome.space3DDescription': 'Crea y resuelve un marco espacial con seis grados de libertad por nudo, aparte del editor 2D.',
 } as const;
 
@@ -2689,6 +2695,12 @@ export const en: Catalog = {
   'space3d.scaleDouble': 'Double the scale',
   'space3d.scaleHalve': 'Halve the scale',
   'space3d.loadCombination': 'Combination',
+  'space3d.confirmReplaceTitleExample': 'Load the example?',
+  'space3d.confirmReplaceBodyExample': 'The current model will be replaced by the space frame example. You can undo it with Undo.',
+  'space3d.confirmReplaceTitleBlank': 'Empty the project?',
+  'space3d.confirmReplaceBodyBlank': 'The current model will be replaced by an empty project. You can undo it with Undo.',
+  'space3d.confirmReplaceCancel': 'Cancel',
+  'space3d.confirmReplaceConfirm': 'Replace',
   'welcome.space3DDescription': 'Create and solve a space frame with six degrees of freedom per node, separate from the 2D editor.',
 };
 
