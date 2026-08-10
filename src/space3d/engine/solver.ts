@@ -95,7 +95,7 @@ const crossProduct = (r: Space3DVector, f: Space3DVector): Space3DVector => [
  * Reparte el objetivo de análisis en factores por caso. Un caso vale 1×; una
  * combinación acumula los factores declarados, sumando los repetidos.
  */
-const resolveTarget = (project: Space3DProjectV1, targetId: string) => {
+export const resolveSpace3DTarget = (project: Space3DProjectV1, targetId: string) => {
   if (project.loadCases.some((item) => item.id === targetId)) {
     return { kind: 'case' as const, factors: new Map([[targetId, 1]]) };
   }
@@ -122,7 +122,7 @@ export const analyzeSpace3DProject = (project: Space3DProjectV1, targetId: strin
     return failed(targetId, 'unknown', validationIssues.map((item) => issue(item.code, item.entityKind, item.entityId, item.field)));
   }
 
-  const target = resolveTarget(project, targetId);
+  const target = resolveSpace3DTarget(project, targetId);
   if (!target) return failed(targetId, 'unknown', [issue('unknown-target', 'project', targetId)]);
 
   if (project.nodes.length === 0 || project.members.length === 0) {
