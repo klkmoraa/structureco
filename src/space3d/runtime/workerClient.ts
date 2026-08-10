@@ -9,7 +9,7 @@
  * Las respuestas llevan `requestId`: cualquier mensaje de una corrida anterior
  * se descarta en vez de resolver una promesa que ya no corresponde al modelo.
  */
-import { SPACE3D_PROTOCOL_VERSION, type Space3DWorkerRequest, type Space3DWorkerResponse } from './protocol';
+import { SPACE3D_PROTOCOL_VERSION, handleSpace3DWorkerRequest, type Space3DWorkerRequest, type Space3DWorkerResponse } from './protocol';
 import type { Space3DAnalysisResult, Space3DProjectV1 } from '../model/types';
 
 /**
@@ -60,6 +60,38 @@ interface Pending {
  */
 const defaultWorkerFactory: Space3DWorkerFactory = () =>
   new Worker(new URL('./space3d.worker.ts', import.meta.url), { type: 'module' }) as unknown as WorkerLike;
+
+/**
+ * Worker degradado que corre en el hilo principal.
+ *
+ * Es la ruta real cuando el entorno no ofrece Web Workers de módulo, y la que
+ * usan las pruebas. La respuesta se entrega en un microtask para que el
+ * contrato asíncrono del cliente sea idéntico en ambos caminos; `terminate()`
+ * deja de entregar, que es la única cancelación posible sin un hilo aparte.
+ */
+export const createInlineSpace3DWorker = (): WorkerLike => {
+  const listeners = new Map<string, Set<(event: Space3DWorkerEvent) => void>>();
+  let alive = true;
+  return {
+    postMessage(message) {
+      const response = handleSpace3DWorkerRequest(message);
+      queueMicrotask(() => {
+        if (!alive) return;
+        for (const listener of [...(listeners.get('message') ?? [])]) listener({ data: response });
+      });
+    },
+    terminate() { alive = false; listeners.clear(); },
+    addEventListener(type, listener) {
+      if (!listeners.has(type)) listeners.set(type, new Set());
+      listeners.get(type)!.add(listener);
+    },
+    removeEventListener(type, listener) { listeners.get(type)?.delete(listener); },
+  };
+};
+
+/** Elige worker real o degradado según lo que ofrezca el entorno. */
+export const createSpace3DWorkerClient = (): Space3DWorkerClient =>
+  new Space3DWorkerClient(typeof Worker === 'undefined' ? createInlineSpace3DWorker : defaultWorkerFactory);
 
 export class Space3DWorkerClient {
   private readonly createWorker: Space3DWorkerFactory;
