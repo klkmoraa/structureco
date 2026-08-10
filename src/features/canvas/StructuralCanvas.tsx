@@ -56,6 +56,9 @@ import {
 } from '../../graphics/structureGeometry';
 import { CanvasResultLayer, diagramPixelScaleFor, reactionClearanceFor } from './CanvasResultLayer';
 import { CanvasInteractionLayer } from './CanvasInteractionLayer';
+import { CanvasMiniMap } from './CanvasMiniMap';
+import { CanvasTouchLoupe } from './CanvasTouchLoupe';
+import { demandTone, memberDemandRatios, memberSectionModulus, memberYieldStrength } from '../results/elasticDemand';
 import { parseQuickEntryPair } from './quickEntry';
 import { resolveRepeatRecipe, type RepeatRecipe } from './repeatAction';
 import { prepareDuplicatePreview } from './duplicatePreview';
@@ -65,6 +68,9 @@ type Camera = CanvasCamera;
 
 /** Shared empty list so the memoised snap candidates keep a stable identity. */
 const EMPTY_SNAP_CANDIDATES: SnapCandidate[] = [];
+
+/** Misma razón: sin mapa de calor, la capa de geometría recibe siempre la misma referencia. */
+const EMPTY_DEMAND_RATIOS: ReadonlyMap<string, number> = new Map();
 
 interface Size {
   width: number;
@@ -194,6 +200,7 @@ export const StructuralCanvas = ({
   const [overlapPicker, setOverlapPicker] = useState<{ x: number; y: number; candidates: Array<Exclude<StructuralTarget, { kind: 'background' }>> } | null>(null);
   const [repeatRecipe, setRepeatRecipe] = useState<RepeatRecipe | null>(null);
   const [duplicateDraft, setDuplicateDraft] = useState<{ selection: Selection; x: string; y: string } | null>(null);
+  const [touchLoupe, setTouchLoupe] = useState<{ screenX: number; screenY: number; modelX: number; modelY: number } | null>(null);
   const spacePressedRef = useRef(false);
   const interactionRef = useRef<CanvasInteraction>(IDLE_INTERACTION);
   const cameraRef = useRef(camera);
@@ -293,6 +300,42 @@ export const StructuralCanvas = ({
         ? t('canvas.placeMoment')
         : null;
   const loadsLayerVisible = layers.loads || loadPlacementInstruction !== null;
+  /**
+   * El mapa de calor es una lectura derivada, no un estado: se recalcula sólo
+   * cuando la capa está encendida, así el coste no lo paga quien no lo pidió.
+   */
+  const heatmapRatios = useMemo(
+    () => layers.heatmap && resultsAllowed ? memberDemandRatios(project, analysis) : EMPTY_DEMAND_RATIOS,
+    [analysis, layers.heatmap, project, resultsAllowed],
+  );
+  /** Rectángulo de modelo que cabe hoy en pantalla; es lo que el radar enmarca. */
+  const minimapViewport = useMemo(() => {
+    if (!canvasMeasured || !size.width || !size.height) return null;
+    const topLeft = screenToModelPoint({ x: 0, y: 0 }, camera);
+    const bottomRight = screenToModelPoint({ x: size.width, y: size.height }, camera);
+    return {
+      minX: Math.min(topLeft.x, bottomRight.x),
+      maxX: Math.max(topLeft.x, bottomRight.x),
+      minY: Math.min(topLeft.y, bottomRight.y),
+      maxY: Math.max(topLeft.y, bottomRight.y),
+    };
+  }, [camera, canvasMeasured, size.height, size.width]);
+  /**
+   * Tarjeta contextual: la utilización elástica *en esa sección concreta*, no la
+   * de la barra entera. Con N y M ya resueltos en el punto, σ es una división;
+   * lo que aporta es leer η junto a los esfuerzos en lugar de en otro panel.
+   */
+  const cutDemand = useMemo(() => {
+    if (!cut?.point || !resultsAllowed) return null;
+    const member = memberMap.get(cut.memberId);
+    if (!member || member.type === 'rigid' || member.A <= 0) return null;
+    const { modulus } = memberSectionModulus(member);
+    const { yieldStrength, estimated } = memberYieldStrength(member);
+    if (yieldStrength <= 0) return null;
+    const sigma = Math.abs(cut.point.axial) / member.A + (modulus > 0 ? Math.abs(cut.point.moment) / modulus : 0);
+    const ratio = sigma / yieldStrength;
+    return Number.isFinite(ratio) ? { ratio, estimated, tone: demandTone(ratio) } : null;
+  }, [cut, memberMap, resultsAllowed]);
   const cutEquilibrium = useMemo(() => {
     if (!cut?.point || !analysis?.success) return null;
     const memberResult = resultMap.get(cut.memberId);
@@ -1091,11 +1134,36 @@ export const StructuralCanvas = ({
     });
   };
 
+  /**
+   * La lupa sólo aparece bajo un dedo y sólo mientras hay una intención en curso
+   * (colocación, arrastre, marco de selección). Durante `pan` o `pinch` el punto
+   * de modelo bajo el dedo no cambia — dibujarla ahí sería una cota que miente
+   * sobre el gesto y un `setState` por cuadro que no compra nada.
+   */
+  const syncTouchLoupe = (pointerType: string, current: CanvasInteraction, clientX: number, clientY: number) => {
+    const placing = current.kind === 'idle' && (activeTool === 'node' || activeTool === 'member');
+    const tracking = current.kind === 'pending' || current.kind === 'node-drag'
+      || current.kind === 'long-press' || current.kind === 'selection-box';
+    if (pointerType !== 'touch' || !(placing || tracking)) {
+      setTouchLoupe((existing) => existing === null ? existing : null);
+      return;
+    }
+    const local = localScreenPoint(clientX, clientY);
+    const model = screenToModelPoint(local, cameraRef.current);
+    setTouchLoupe({
+      screenX: local.x,
+      screenY: local.y,
+      modelX: toDisplay(model.x, units, 'length'),
+      modelY: toDisplay(model.y, units, 'length'),
+    });
+  };
+
   const handlePointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
     const client = { x: event.clientX, y: event.clientY };
     updateCoordinateReadout(event.clientX, event.clientY, event.pointerType);
     if (event.pointerType === 'touch') activePointersRef.current.set(event.pointerId, client);
     const current = interactionRef.current;
+    syncTouchLoupe(event.pointerType, current, event.clientX, event.clientY);
     if (current.kind === 'idle' && (activeTool === 'node' || activeTool === 'member')) {
       modelPointFromClient(event.clientX, event.clientY);
     }
@@ -1160,6 +1228,7 @@ export const StructuralCanvas = ({
   const finishPointer = (event: ReactPointerEvent<SVGSVGElement>, cancelled: boolean) => {
     clearLongPressTimer();
     setSnapPreview(null);
+    setTouchLoupe(null);
     if (event.pointerType === 'touch') activePointersRef.current.delete(event.pointerId);
     const current = interactionRef.current;
     if (current.kind === 'pinch' && current.pointerIds.includes(event.pointerId)) {
@@ -1200,6 +1269,7 @@ export const StructuralCanvas = ({
   const cancelActiveInteraction = useCallback(() => {
     clearLongPressTimer();
     setSnapPreview(null);
+    setTouchLoupe(null);
     const current = interactionRef.current;
     if (current.kind === 'node-drag') {
       cancelNodeDragTransaction();
@@ -1713,6 +1783,7 @@ export const StructuralCanvas = ({
           memberStartId={memberStart}
           layers={layers}
           loadsLayerVisible={loadsLayerVisible}
+          heatmapRatios={heatmapRatios}
           resultTab={resultTab}
           units={units}
           forceLabel={forceLabel}
@@ -1765,6 +1836,7 @@ export const StructuralCanvas = ({
           memberStartId={memberStart}
           layers={layers}
           loadsLayerVisible={loadsLayerVisible}
+          heatmapRatios={heatmapRatios}
           resultTab={resultTab}
           units={units}
           forceLabel={forceLabel}
@@ -1857,6 +1929,14 @@ export const StructuralCanvas = ({
         onZoomOut={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1 / 1.15))}
         onFit={fitModel}
       />
+      <CanvasMiniMap
+        nodes={project.nodes}
+        members={project.members}
+        viewport={minimapViewport}
+        label={t('canvas.minimap')}
+        onFit={fitModel}
+      />
+      {touchLoupe ? <CanvasTouchLoupe {...touchLoupe} lengthLabel={lengthLabel} /> : null}
       {canvasFeedback ? <div className="canvas-feedback" role="alert">{canvasFeedback}</div> : null}
       {repeatCandidate ? <button
         type="button"
@@ -1893,8 +1973,15 @@ export const StructuralCanvas = ({
       </div> : null}
       {cut?.point ? (
         <div className="cut-tooltip" style={{ left: clamp(cut.clientX - (hostRef.current?.getBoundingClientRect().left ?? 0) + 14, 10, Math.max(10, size.width - 350)), top: clamp(cut.clientY - (hostRef.current?.getBoundingClientRect().top ?? 0) + 14, 10, Math.max(10, size.height - 390)) }}>
-          <div className="cut-title-row"><strong>{t('canvas.cutTitle', { member: cut.memberId })}</strong><span>{t(cut.pinned ? 'canvas.pinned' : 'canvas.preview')}</span></div>
-          <span>x = {formatFixed(toDisplay(cut.point.x, units, 'length'), 3)} {lengthLabel}</span>
+          <div className="cut-title-row">
+            <strong>{t('canvas.cutTitle', { member: cut.memberId })}</strong>
+            {cutDemand ? <span
+              className={`cut-demand-badge tone-${cutDemand.tone}`}
+              title={t(cutDemand.estimated ? 'canvas.cutDemandEstimated' : 'canvas.cutDemandHint')}
+            >η {formatFixed(cutDemand.ratio * 100, 0)}%</span> : null}
+            <span>{t(cut.pinned ? 'canvas.pinned' : 'canvas.preview')}</span>
+          </div>
+          <span>x = {formatFixed(toDisplay(cut.point.x, units, 'length'), 3)} {lengthLabel} <small className="cut-station">({formatFixed(cut.ratio * 100, 1)}% s/L)</small></span>
           <div className="cut-values">
             <span className="axial-text">N = {formatFixed(toDisplay(cut.point.axial, units, 'force'), 3)} {forceLabel}</span>
             <span className="shear-text">V = {formatFixed(toDisplay(cut.point.shear, units, 'force'), 3)} {forceLabel}</span>

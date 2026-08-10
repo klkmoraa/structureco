@@ -321,7 +321,7 @@ body:has(.component-lab),
   padding: var(--sc-space-3) clamp(var(--sc-space-4), 4vw, var(--sc-space-8));
   border-bottom: var(--sc-border-width) solid var(--sc-color-border);
   background: color-mix(in srgb, var(--sc-color-surface-1) 90%, transparent);
-  backdrop-filter: blur(18px);
+  box-shadow: var(--sc-shadow-clay-sm);
 }
 
 .component-lab__brand {
@@ -552,7 +552,7 @@ body:has(.component-lab),
   border-radius: var(--sc-radius-lg);
   background: color-mix(in srgb, var(--sc-color-surface-elevated) 94%, transparent);
   box-shadow: var(--sc-shadow-floating);
-  backdrop-filter: blur(18px);
+  box-shadow: var(--sc-shadow-clay-sm);
 }
 
 .component-lab__event span { color: var(--sc-color-text-muted); font-size: var(--sc-font-size-label); }

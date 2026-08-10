@@ -66,7 +66,7 @@ const definitions: Record<UnitSystemId, UnitDefinition> = {
       force: 0.22480894387096,
       moment: 0.73756214927727,
       distributedForce: 0.06852176585679,
-      elasticModulus: 1.45037737730209e-7,
+      elasticModulus: 1.45037737730209e-4,
       area: 1550.0031000062,
       inertia: 2_402_509.60999038,
       translationalStiffness: 0.06852176585679,

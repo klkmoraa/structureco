@@ -1,4 +1,4 @@
-import { memo, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { memo, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import type { MemberLoad, MemberModel, NodeModel, ProjectModel, Selection } from '../../types';
 import type { CanvasSelectionVisualState } from './selectionVisuals';
 import type { EditorLayerState } from './editorLayers';
@@ -12,6 +12,7 @@ import {
   toGlobalVector,
 } from '../../graphics/structureGeometry';
 import { formatFixed } from '../../utils/numberFormat';
+import { demandColorVariable } from '../results/elasticDemand';
 import type { TranslationKey } from '../../i18n/catalogs';
 
 export type StructuralTarget =
@@ -42,6 +43,11 @@ export interface CanvasGeometryLayerProps {
   memberStartId: string | null;
   layers: EditorLayerState;
   loadsLayerVisible: boolean;
+  /**
+   * η por barra cuando la capa `heatmap` está activa. Vacío significa "sin mapa
+   * de calor": la barra conserva su color de dibujo técnico.
+   */
+  heatmapRatios: ReadonlyMap<string, number>;
   resultTab: ResultTab;
   units: Units;
   forceLabel: string;
@@ -57,7 +63,7 @@ export interface CanvasGeometryLayerProps {
 
 const CanvasGeometryLayerImpl = ({
   slot, project, nodeMap, memberMap, toScreen, camera, selectionVisualState, learningFocus, memberStartId,
-  layers, loadsLayerVisible, resultTab, units, forceLabel, momentLabel, distributedLabel, t,
+  layers, loadsLayerVisible, heatmapRatios, resultTab, units, forceLabel, momentLabel, distributedLabel, t,
   onObjectPointerDown, onSelect, onLoadKeyDown, onShowCut, onCutLeave,
 }: CanvasGeometryLayerProps) => {
   const selectedNodeIds = selectionVisualState.nodeIds;
@@ -227,13 +233,22 @@ const CanvasGeometryLayerImpl = ({
           const a = toScreen(ni.x, ni.y); const b = toScreen(nj.x, nj.y);
           const selected = selectedMemberIds.includes(member.id);
           const learningHighlighted = learningFocus?.memberIds.includes(member.id) ?? false;
+          const demandRatio = heatmapRatios.get(member.id);
+          // Gancho de diagnóstico, no un número en pantalla: se redondea sin
+          // `toFixed` para no depender del locale ni de la política de
+          // presentación, que gobierna sólo lo que el usuario lee.
+          const demandAttribute = demandRatio === undefined ? undefined : String(Math.round(demandRatio * 1000) / 1000);
           return (
             <g
               key={member.id}
               data-structure-object
               data-structure-kind="member"
               data-structure-id={member.id}
-              className={`member-object ${selected ? 'selected' : ''} ${learningHighlighted ? 'learning-highlight' : ''} ${member.type}`}
+              data-demand-ratio={demandAttribute}
+              /* El color térmico viaja como custom property y no como `stroke`:
+                 así la selección y el foco pedagógico siguen ganando por CSS. */
+              style={demandRatio === undefined ? undefined : { '--member-demand-color': demandColorVariable(demandRatio) } as CSSProperties}
+              className={`member-object ${selected ? 'selected' : ''} ${learningHighlighted ? 'learning-highlight' : ''} ${member.type}${demandRatio === undefined ? '' : ' has-demand'}`}
               role="button"
               tabIndex={0}
               aria-keyshortcuts="Enter Space"

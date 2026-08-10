@@ -3003,10 +3003,9 @@ button:not(:disabled):active,.selection-card:active {
 
 .welcome-header {
   min-height:64px;
-  background:color-mix(in srgb, var(--app-bg) 90%, transparent);
+  background:var(--app-bg);
   border-bottom:1px solid color-mix(in srgb, var(--border) 55%, transparent);
-  box-shadow:none;
-  backdrop-filter:blur(14px);
+  box-shadow:0 1px 0 color-mix(in srgb, var(--sc-color-surface-elevated) 72%, transparent);
 }
 
 .welcome-brand,
@@ -3864,4 +3863,730 @@ button:not(:disabled):active,.selection-card:active {
   .tool-rail.is-compact .tool-button,
   .tool-rail.is-compact .tool-button:hover:not(:disabled),
   .tool-rail.is-compact .tool-button:active:not(:disabled) { transform:none; transition:none; }
+}
+
+
+/* ========================================================================
+   CLAY PERVASIVO · relieve completo y piezas nuevas del lienzo, inspector,
+   resultados y paleta de comandos.
+
+   Una sola gramática de materia, aplicada en tres estados:
+     · reposo  → tarjeta de arcilla elevada (`--sc-shadow-clay-xs/sm`)
+     · hover   → sube 1,5px y gana difusión
+     · activo  → cavidad rehundida (`--sc-shadow-clay-pressed`), nunca halo
+   Va al final del archivo porque `ui.css` se carga después (WorkspaceShell es
+   lazy) y estos selectores necesitan ganar sin recurrir a `!important`.
+   ===================================================================== */
+
+/* --- Relieve homogéneo de herramientas y controles segmentados --------- */
+.tool-button:not(:disabled) {
+  background:var(--sc-color-surface-1);
+  border:var(--sc-clay-edge);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+.tool-button:hover:not(:disabled) {
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-sm);
+  transform:translateY(-1.5px);
+}
+/* Selección = tecla hundida. El color de dominio pasa al icono y al texto en
+   lugar de rellenar la tecla: la herramienta se reconoce por su color y el
+   estado se lee por el volumen, no por el brillo. */
+.tool-button.active,
+.tool-button.active:hover:not(:disabled) {
+  color:var(--tool-color,var(--accent));
+  background:var(--sc-color-surface-inset);
+  background-image:none;
+  border-color:color-mix(in srgb,var(--tool-color,var(--accent)) 26%,var(--border));
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:translateY(1.5px) scale(.985);
+}
+.tool-button.active kbd { color:color-mix(in srgb,var(--tool-color,var(--accent)) 74%,var(--muted)); }
+.tool-button:active:not(:disabled) {
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:translateY(1.5px) scale(.985);
+}
+
+.segmented-control button {
+  background:var(--sc-color-surface-1);
+  border:var(--sc-clay-edge);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transition:var(--sc-transition-control);
+}
+.segmented-control button:hover:not(:disabled) { box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1px); }
+.segmented-control button.active,
+.segmented-control button[aria-pressed='true'] {
+  color:var(--accent);
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:translateY(1px);
+}
+
+/* El disparador de capas comparte la gramática: cavidad al estar abierto. */
+.canvas-layer-trigger {
+  background:var(--surface);
+  border:1px solid color-mix(in srgb,var(--border) 72%,white);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transition:var(--sc-transition-control);
+}
+.canvas-layer-trigger:hover { box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1.5px); }
+.canvas-layer-trigger.active {
+  color:var(--accent);
+  background:var(--sc-color-surface-inset);
+  border-color:color-mix(in srgb,var(--accent) 30%,var(--border));
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:translateY(1px);
+}
+
+/* --- Presets de capas ------------------------------------------------- */
+.canvas-layer-presets {
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  padding:9px 11px;
+  border-bottom:1px solid var(--border-soft);
+}
+.canvas-layer-preset {
+  min-height:28px;
+  padding:0 10px;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-pill);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  color:var(--muted);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+  font-weight:700;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:var(--sc-transition-control);
+}
+.canvas-layer-preset:hover { color:var(--text); box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1px); }
+.canvas-layer-preset.active {
+  color:var(--accent);
+  background:var(--sc-color-surface-inset);
+  border-color:color-mix(in srgb,var(--accent) 30%,var(--border));
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:translateY(1px);
+}
+
+/* --- Mapa de calor estructural ---------------------------------------- */
+/* El color térmico sustituye al trazo neutro, pero cede ante selección y
+   foco pedagógico: el estado de interacción manda sobre la lectura. */
+.member-object.has-demand .member-line { stroke:var(--member-demand-color); }
+.member-object.has-demand.selected .member-line,
+.member-object.has-demand.learning-highlight .member-line { stroke:var(--selection); }
+
+/* --- Minimapa radar ---------------------------------------------------- */
+.canvas-minimap {
+  position:absolute;
+  z-index:8;
+  right:12px;
+  bottom:60px;
+  width:132px;
+  height:88px;
+  padding:6px;
+  display:block;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-sm);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  cursor:pointer;
+  transition:var(--sc-transition-control);
+}
+.canvas-minimap:hover { box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1.5px); }
+.canvas-minimap:active { box-shadow:var(--sc-shadow-clay-pressed); transform:translateY(1px) scale(.99); }
+.canvas-minimap svg { width:100%; height:100%; display:block; }
+.canvas-minimap-members line { stroke:var(--muted); stroke-width:1.4; opacity:.72; }
+.canvas-minimap-nodes circle { fill:var(--accent); }
+.canvas-minimap-viewport {
+  fill:color-mix(in srgb,var(--accent) 12%,transparent);
+  stroke:var(--accent);
+  stroke-width:1.2;
+}
+
+/* --- Lupa táctil ------------------------------------------------------- */
+.canvas-touch-loupe {
+  position:absolute;
+  z-index:12;
+  translate:-50% -50%;
+  display:grid;
+  justify-items:center;
+  gap:4px;
+  pointer-events:none;
+}
+.canvas-touch-loupe-reticle {
+  width:46px;
+  height:46px;
+  border-radius:var(--sc-radius-pill);
+  border:1.5px solid color-mix(in srgb,var(--accent) 68%,transparent);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--sc-color-surface-elevated) 74%,transparent);
+  background:
+    linear-gradient(var(--accent),var(--accent)) center/13px 1.5px no-repeat,
+    linear-gradient(var(--accent),var(--accent)) center/1.5px 13px no-repeat;
+}
+.canvas-touch-loupe-coord {
+  /* Desplazada por encima del dedo: lo que se apunta queda tapado por la mano. */
+  margin-top:-84px;
+  padding:5px 10px;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-pill);
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-xs);
+  color:var(--text);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-technical);
+  font-variant-numeric:var(--sc-numeric-variant);
+  white-space:nowrap;
+}
+
+/* --- Tarjeta contextual del corte: η y estación ------------------------ */
+.cut-demand-badge {
+  padding:1px 7px;
+  border-radius:var(--sc-radius-pill);
+  border:1px solid currentColor;
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+  font-weight:750;
+  letter-spacing:.03em;
+}
+.cut-demand-badge.tone-safe { color:var(--sc-color-state-success); }
+.cut-demand-badge.tone-warning { color:var(--sc-color-state-warning-foreground); }
+.cut-demand-badge.tone-overstressed { color:var(--sc-color-state-error-foreground); }
+.cut-station { color:var(--subtle); font-family:var(--sc-font-mono); }
+
+/* --- Inspector: vista previa de la selección --------------------------- */
+.inspector-selection-preview {
+  margin:9px 0 0;
+  padding:8px;
+  display:grid;
+  gap:5px;
+  border-radius:var(--sc-radius-sm);
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-pressed);
+}
+.inspector-selection-preview svg { width:100%; height:auto; display:block; }
+.inspector-selection-preview figcaption {
+  color:var(--muted);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+  text-align:center;
+}
+.inspector-selection-preview .preview-members line { stroke:var(--muted); stroke-width:2; stroke-linecap:round; }
+.inspector-selection-preview .preview-members line.is-focus { stroke:var(--selection); stroke-width:3.4; }
+.inspector-selection-preview .preview-nodes circle { fill:var(--node-fill); stroke:var(--member); stroke-width:1.4; }
+.inspector-selection-preview .preview-nodes circle.is-focus { fill:var(--selection); stroke:var(--selection); }
+.inspector-selection-preview .preview-support { fill:none; stroke:var(--member); stroke-width:1.3; stroke-linecap:round; }
+
+/* --- Inspector: visor de sección --------------------------------------- */
+.section-viewer {
+  margin-top:10px;
+  padding:10px;
+  display:grid;
+  gap:8px;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-sm);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+.section-viewer-header { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.section-viewer-title { display:grid; gap:1px; min-width:0; }
+.section-viewer-title strong { font-size:13px; }
+.section-viewer-title span { color:var(--muted); font-size:var(--sc-font-size-caption); }
+.section-viewer-modes { display:flex; gap:4px; }
+.section-viewer-modes button {
+  min-height:26px;
+  padding:0 8px;
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-pill);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  color:var(--muted);
+  font-size:var(--sc-font-size-caption);
+  font-weight:650;
+  cursor:pointer;
+  transition:var(--sc-transition-control);
+}
+.section-viewer-modes button:hover:not(:disabled) { color:var(--text); box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1px); }
+.section-viewer-modes button:disabled { opacity:.5; cursor:not-allowed; }
+.section-viewer-modes button.active {
+  color:var(--accent);
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:translateY(1px);
+}
+.section-viewer-canvas {
+  padding:6px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-pressed);
+}
+.section-viewer-canvas svg { width:100%; height:auto; display:block; }
+.section-viewer .section-shape { fill:var(--surface-2); stroke:var(--accent); stroke-width:2; }
+.section-viewer .section-shape-void { fill:var(--canvas-bg); stroke:var(--border); stroke-width:1.2; }
+.section-viewer .section-neutral-axis { stroke:var(--axis); stroke-width:1.2; stroke-dasharray:4 2; }
+.section-viewer .section-axis-label,
+.section-viewer .section-dimension text,
+.section-viewer .section-stress-label {
+  font-family:var(--sc-font-mono);
+  font-size:8px;
+  font-weight:700;
+}
+.section-viewer .section-axis-label { fill:var(--muted); }
+.section-viewer .section-dimension line { stroke:var(--dimension); stroke-width:1; }
+.section-viewer .section-dimension text { fill:var(--text); }
+.section-viewer .section-stress-fill { stroke:var(--accent); stroke-width:1.6; }
+.section-viewer .section-stress-label { fill:var(--text); }
+.section-viewer-chips { margin:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+.section-viewer-chips > div {
+  padding:6px 8px;
+  display:grid;
+  gap:1px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  min-width:0;
+}
+.section-viewer-chips dt { color:var(--subtle); font-family:var(--sc-font-mono); font-size:var(--sc-font-size-caption); }
+.section-viewer-chips dd {
+  margin:0;
+  color:var(--text);
+  font-family:var(--sc-font-mono);
+  font-size:11px;
+  font-variant-numeric:var(--sc-numeric-variant);
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* --- Inspector narrativo ---------------------------------------------- */
+.inspector-narrative {
+  margin-top:10px;
+  padding:11px;
+  display:grid;
+  gap:8px;
+  border:var(--sc-clay-edge);
+  border-left:3px solid var(--sc-color-state-success);
+  border-radius:var(--sc-radius-sm);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+.inspector-narrative.tone-warning { border-left-color:var(--sc-color-state-warning); }
+.inspector-narrative.tone-overstressed { border-left-color:var(--sc-color-state-error); }
+.inspector-narrative > header { display:flex; align-items:center; gap:6px; color:var(--text); }
+.inspector-narrative.tone-safe > header svg { color:var(--sc-color-state-success); }
+.inspector-narrative.tone-warning > header svg { color:var(--sc-color-state-warning-foreground); }
+.inspector-narrative.tone-overstressed > header svg { color:var(--sc-color-state-error-foreground); }
+.inspector-narrative > header strong { font-size:13px; }
+.inspector-narrative-body,
+.inspector-narrative-verdict {
+  margin:0;
+  color:var(--muted);
+  font-size:var(--sc-font-size-technical);
+  line-height:var(--sc-line-height-compact);
+}
+.inspector-narrative-verdict { color:var(--text); font-weight:600; }
+.inspector-narrative-values { margin:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+.inspector-narrative-values > div {
+  padding:5px 7px;
+  display:grid;
+  gap:1px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  min-width:0;
+}
+.inspector-narrative-values dt { color:var(--subtle); font-family:var(--sc-font-mono); font-size:var(--sc-font-size-caption); }
+.inspector-narrative-values dd {
+  margin:0;
+  font-family:var(--sc-font-mono);
+  font-size:11px;
+  font-variant-numeric:var(--sc-numeric-variant);
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.inspector-narrative-meter,
+.structural-health-track {
+  position:relative;
+  height:10px;
+  border-radius:var(--sc-radius-pill);
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  overflow:hidden;
+}
+.inspector-narrative-meter .meter-fill,
+.structural-health-fill {
+  position:absolute;
+  inset-block:0;
+  inset-inline-start:0;
+  border-radius:var(--sc-radius-pill);
+  background:var(--sc-color-state-success);
+  transition:width var(--sc-motion-standard) var(--sc-ease-standard);
+}
+.inspector-narrative-meter .meter-fill.tone-warning,
+.structural-health-fill.tone-warning { background:var(--sc-color-state-warning); }
+.inspector-narrative-meter .meter-fill.tone-overstressed,
+.structural-health-fill.tone-overstressed { background:var(--sc-color-state-error); }
+.inspector-narrative-meter .meter-threshold,
+.structural-health-mark {
+  position:absolute;
+  inset-block:0;
+  width:2px;
+  background:color-mix(in srgb,var(--text) 42%,transparent);
+}
+.structural-health-mark.is-yield { background:var(--sc-color-state-error); transform:translateX(-2px); }
+.inspector-narrative-basis,
+.structural-health-basis {
+  color:var(--subtle);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+}
+
+/* --- Medidor de salud estructural ------------------------------------- */
+.structural-health {
+  display:grid;
+  gap:9px;
+  padding:12px;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-sm);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+.structural-health-header { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.structural-health-title { display:flex; align-items:center; gap:6px; }
+.structural-health-title strong { font-size:13px; }
+.structural-health.tone-safe .structural-health-title svg { color:var(--sc-color-state-success); }
+.structural-health.tone-warning .structural-health-title svg { color:var(--sc-color-state-warning-foreground); }
+.structural-health.tone-overstressed .structural-health-title svg { color:var(--sc-color-state-error-foreground); }
+.structural-health-badge {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:3px 10px;
+  border:1px solid currentColor;
+  border-radius:var(--sc-radius-pill);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+  font-weight:750;
+}
+.structural-health-badge.tone-safe { color:var(--sc-color-state-success); }
+.structural-health-badge.tone-warning { color:var(--sc-color-state-warning-foreground); }
+.structural-health-badge.tone-overstressed { color:var(--sc-color-state-error-foreground); }
+.structural-health-track { height:13px; }
+.structural-health-grid {
+  margin:0;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(112px,1fr));
+  gap:6px;
+}
+.structural-health-grid > div {
+  padding:6px 8px;
+  display:grid;
+  gap:2px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  min-width:0;
+}
+.structural-health-grid dt { color:var(--subtle); font-size:var(--sc-font-size-caption); font-family:var(--sc-font-mono); }
+.structural-health-grid dd {
+  margin:0;
+  color:var(--text);
+  font-family:var(--sc-font-mono);
+  font-size:12px;
+  font-variant-numeric:var(--sc-numeric-variant);
+}
+.structural-health-locate {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:var(--accent);
+  font:inherit;
+  cursor:pointer;
+}
+.structural-health-locate:hover { text-decoration:underline; }
+.structural-health-split {
+  display:flex;
+  height:8px;
+  border-radius:var(--sc-radius-pill);
+  overflow:hidden;
+  background:var(--sc-color-surface-inset);
+}
+.structural-health-split i { display:block; }
+.structural-health-split .is-axial { background:var(--axial); }
+.structural-health-split .is-bending { background:var(--moment); }
+
+/* --- Resultados más compactos ------------------------------------------ */
+/* Las etiquetas de familia repetían en la barra lo que la propia pestaña ya
+   dice y añadían ~480px de ancho: forzaban scroll horizontal permanente en
+   portátiles. Se conservan en el árbol de accesibilidad (`aria-describedby`
+   sigue apuntando a ellas) y desaparecen sólo del dibujo, sustituidas por un
+   divisor entre grupos. */
+@media (min-width:768px) {
+  .result-tabs .result-tab-family__label {
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+  }
+  .result-tabs .result-tab-family + .result-tab-family {
+    padding-inline-start:8px;
+    border-inline-start:1px solid var(--border-soft);
+  }
+  .result-tabs button { padding-inline:10px; }
+}
+.result-tabs button {
+  border:var(--sc-clay-edge);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transition:var(--sc-transition-control);
+}
+.result-tabs button:hover:not(.active) { box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1px); }
+.result-tabs button.active {
+  background:var(--sc-color-surface-inset);
+  border-color:color-mix(in srgb,var(--accent) 26%,var(--border));
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:translateY(1px);
+}
+.results-mode-control button {
+  border:var(--sc-clay-edge);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transition:var(--sc-transition-control);
+}
+.results-mode-control button[aria-pressed='true'] {
+  color:var(--accent);
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:translateY(1px);
+}
+
+/* --- TopBar: disparador de la paleta ----------------------------------- */
+.topbar-command-button {
+  min-height:var(--sc-control-height-sm);
+  padding:0 10px;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-pill);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  color:var(--muted);
+  font-size:var(--sc-font-size-technical);
+  cursor:pointer;
+  transition:var(--sc-transition-control);
+}
+.topbar-command-button:hover { color:var(--text); box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1.5px); }
+.topbar-command-button:active { box-shadow:var(--sc-shadow-clay-pressed); transform:translateY(1px) scale(.97); }
+.topbar-command-button kbd {
+  padding:1px 5px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  color:var(--subtle);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+}
+/* Por debajo de 1536px el ancho de la zona de acciones es el recurso escaso:
+   el botón se contrae a icono y devuelve ~80px a la barra. */
+@media (max-width:1536px) {
+  .topbar-command-button { width:var(--sc-control-height-sm); padding:0; justify-content:center; }
+  .topbar-command-button span,
+  .topbar-command-button kbd { display:none; }
+}
+@media (max-width:1023px) {
+  .topbar-command-button { display:none; }
+}
+
+/* --- Paleta de comandos ------------------------------------------------ */
+.command-palette-backdrop {
+  position:fixed;
+  inset:0;
+  z-index:var(--sc-z-modal);
+  display:grid;
+  justify-items:center;
+  align-items:start;
+  padding:max(64px,env(safe-area-inset-top)) 16px 16px;
+  background:var(--sc-color-overlay-soft);
+}
+.command-palette {
+  width:min(640px,100%);
+  max-height:min(70vh,560px);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-lg);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-modal);
+}
+.command-palette-title {
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+  border:0;
+}
+.command-palette-search {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:12px 14px;
+  border-bottom:1px solid var(--border-soft);
+  color:var(--muted);
+}
+.command-palette-search input {
+  flex:1;
+  min-width:0;
+  min-height:var(--sc-control-height-md);
+  padding:0 12px;
+  border:0;
+  border-radius:var(--sc-radius-sm);
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  color:var(--text);
+  font-size:var(--sc-font-size-body);
+}
+.command-palette-search input:focus-visible { outline:none; box-shadow:var(--sc-shadow-clay-pressed),var(--sc-ring-focus); }
+.command-palette-search kbd {
+  padding:2px 7px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  color:var(--subtle);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+}
+.command-palette-list { flex:1; min-height:0; overflow-y:auto; padding:8px; }
+.command-palette-empty { margin:16px 8px; color:var(--muted); font-size:var(--sc-font-size-technical); }
+.command-palette-group + .command-palette-group { margin-top:8px; }
+.command-palette-group h3 {
+  margin:0 0 4px;
+  padding:0 8px;
+  color:var(--subtle);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+  font-weight:700;
+  letter-spacing:var(--sc-tracking-eyebrow);
+  text-transform:uppercase;
+}
+.command-palette-item {
+  width:100%;
+  min-height:40px;
+  padding:6px 10px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  border:1px solid transparent;
+  border-radius:var(--sc-radius-sm);
+  background:transparent;
+  color:var(--text);
+  text-align:left;
+  cursor:pointer;
+  transition:background var(--sc-motion-fast) var(--sc-ease-standard), box-shadow var(--sc-motion-fast) var(--sc-ease-standard);
+}
+.command-palette-item svg { flex:0 0 auto; color:var(--muted); }
+.command-palette-item.is-active {
+  border-color:color-mix(in srgb,var(--accent) 24%,var(--border));
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-pressed);
+}
+.command-palette-item.is-active svg { color:var(--accent); }
+.command-palette-item:disabled { opacity:.45; cursor:not-allowed; }
+.command-palette-label { flex:1; min-width:0; display:grid; gap:1px; }
+.command-palette-label strong { font-size:var(--sc-font-size-body); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.command-palette-label small { color:var(--subtle); font-size:var(--sc-font-size-caption); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.command-palette-item kbd {
+  flex:0 0 auto;
+  padding:2px 7px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  color:var(--subtle);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+}
+.command-palette-footer {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 14px;
+  border-top:1px solid var(--border-soft);
+  color:var(--subtle);
+  font-size:var(--sc-font-size-caption);
+}
+@media (max-width:640px) {
+  .command-palette-backdrop { padding-top:max(24px,env(safe-area-inset-top)); }
+  .command-palette { max-height:82vh; }
+  .command-palette-footer { display:none; }
+}
+
+/* --- Anti-colisiones: el radar comparte esquina con el zoom ------------- */
+@media (min-width:1024px) {
+  /* El zoom vive en la esquina inferior derecha; el radar se apila encima y
+     el pie de coordenadas recorta su ancho para no cruzarse con ninguno. */
+  .canvas-minimap { bottom:calc(12px + var(--sc-control-height-md) * 3 + 8px); }
+  .canvas-status { max-width:calc(100% - 430px); }
+}
+/* El panel de capas baja por el mismo borde derecho y cubriría el radar. Se
+   retira mientras el panel está abierto: dos objetos en el mismo sitio no se
+   resuelven apilándolos, se resuelve mostrando uno. */
+.canvas-host:has(.canvas-layer-panel) .canvas-minimap { display:none; }
+
+/* En teléfonos estrechos la pastilla de coordenadas se centraba en el ancho
+   completo, sin descontar el grupo de zoom (~134px) que ocupa la esquina
+   inferior derecha: a 375px se solapaban 3px. Deja de centrarse y se ancla a
+   la izquierda, que en esta franja está libre, con holgura garantizada. */
+@media (max-width:640px) {
+  .canvas-status {
+    left:max(8px,env(safe-area-inset-left));
+    right:auto;
+    transform:none;
+    max-width:calc(100% - 168px);
+  }
+}
+@media (max-width:1023px) {
+  /* En táctil el lienzo es el recurso escaso: el radar se retira y deja el
+     dibujo limpio bajo el dedo. */
+  .canvas-minimap { display:none; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .tool-button,
+  .tool-button:hover:not(:disabled),
+  .tool-button.active,
+  .tool-button:active:not(:disabled),
+  .segmented-control button:hover:not(:disabled),
+  .segmented-control button.active,
+  .canvas-layer-trigger,
+  .canvas-layer-trigger:hover,
+  .canvas-layer-preset:hover,
+  .canvas-layer-preset.active,
+  .canvas-minimap:hover,
+  .canvas-minimap:active,
+  .section-viewer-modes button:hover:not(:disabled),
+  .section-viewer-modes button.active,
+  .result-tabs button:hover:not(.active),
+  .result-tabs button.active,
+  .results-mode-control button[aria-pressed='true'],
+  .topbar-command-button:hover,
+  .topbar-command-button:active { transform:none; transition:none; }
 }

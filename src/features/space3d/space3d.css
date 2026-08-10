@@ -210,9 +210,11 @@
   box-shadow: var(--sc-shadow-clay-sm);
 }
 
+/* Misma gramática que el editor 2D: al pulsar, la tecla baja de verdad. */
 .space3d-tool:active:not(:disabled),
 .space3d-button:active:not(:disabled) {
-  transform: none;
+  background: var(--sc-color-surface-inset);
+  transform: translateY(1.5px) scale(.985);
   box-shadow: var(--sc-shadow-clay-pressed);
 }
 
@@ -582,9 +584,9 @@
   gap: 4px;
   padding: 4px;
   border-radius: var(--sc-radius-md);
-  background: color-mix(in srgb, var(--sc-color-surface-1) 88%, transparent);
+  background: var(--sc-color-surface-1);
+  border: var(--sc-clay-edge);
   box-shadow: var(--sc-shadow-clay-xs);
-  backdrop-filter: blur(6px);
 }
 
 .space3d-view-select {
@@ -593,9 +595,9 @@
   align-items: center;
   padding: 6px var(--sc-space-3);
   border-radius: var(--sc-radius-md);
-  background: color-mix(in srgb, var(--sc-color-surface-1) 88%, transparent);
+  background: var(--sc-color-surface-1);
+  border: var(--sc-clay-edge);
   box-shadow: var(--sc-shadow-clay-xs);
-  backdrop-filter: blur(6px);
   color: var(--sc-color-text-primary);
   font-size: var(--sc-font-size-control);
   font-weight: var(--sc-font-weight-semibold);
@@ -1114,8 +1116,8 @@
     inset-block-start: 0;
     z-index: var(--sc-z-sticky);
     padding-block: var(--sc-space-2);
-    background: color-mix(in srgb, var(--sc-color-bg-app) 92%, transparent);
-    backdrop-filter: blur(8px);
+    background: var(--sc-color-bg-app);
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--sc-color-surface-elevated) 72%, transparent);
   }
 
   .space3d-tray { flex-wrap: wrap; }
@@ -1263,5 +1265,7 @@
   .space3d-tab { transition: none; }
 
   .space3d-tool:hover:not(:disabled),
-  .space3d-button:hover:not(:disabled) { transform: none; }
+  .space3d-button:hover:not(:disabled),
+  .space3d-tool:active:not(:disabled),
+  .space3d-button:active:not(:disabled) { transform: none; }
 }

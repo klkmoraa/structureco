@@ -28,10 +28,13 @@ import type {
   UnitSystemId,
   ValidationIssue,
 } from '../../types';
+import { InspectorNarrativeCard } from './InspectorNarrativeCard';
 import { InspectorNumericField } from './InspectorNumericField';
+import { InspectorSelectionPreview } from './InspectorSelectionPreview';
 import { MaterialPresetSelector } from './MaterialPresetSelector';
 import { formatInspectorValue } from './numericFormatting';
 import { SectionPresetSelector } from './SectionPresetSelector';
+import { SectionViewer2D } from './SectionViewer2D';
 import {
   InspectorAdvancedProperties,
   InspectorDerivedList,
@@ -471,6 +474,12 @@ export const InspectorProperties = () => {
         metrics={summaryMetrics}
         empty={selection === null}
       />
+      {selection && selection.kind !== 'multi' ? <InspectorSelectionPreview
+        project={project}
+        selection={selection}
+        label={t('inspector.selectionPreview')}
+        caption={t('inspector.selectionPreviewCaption')}
+      /> : null}
     </div>
 
     {selection === null ? <div className="inspector-empty-state">
@@ -546,6 +555,18 @@ export const InspectorProperties = () => {
             <label><input type="checkbox" checked={selectedMember.releases?.jMoment ?? false} onChange={(event) => updateMember('jMoment', event.target.checked)} /> {t('inspector.momentJ')}</label>
           </div> : null}
         </InspectorPropertyGroup>
+        {selectedMember.type !== 'rigid' && selectedMember.A > 0 && selectedMember.I > 0 ? <SectionViewer2D
+          area={selectedMember.A}
+          inertia={selectedMember.I}
+          units={units}
+          axialForce={memberResult && (!classroomMode || resultsVisible) ? memberResult.maxAxial : 0}
+          bendingMoment={memberResult && (!classroomMode || resultsVisible) ? memberResult.maxMoment : 0}
+        /> : null}
+        {memberResult && (!classroomMode || resultsVisible) ? <InspectorNarrativeCard
+          member={selectedMember}
+          result={memberResult}
+          units={units}
+        /> : null}
         <InspectorPropertyGroup title={t('inspector.derivedValues')} mode="derived" description={t('inspector.memberDerivedDescription')}>
           <InspectorDerivedList rows={[
             { label: t('inspector.nodeI'), value: selectedMember.i },

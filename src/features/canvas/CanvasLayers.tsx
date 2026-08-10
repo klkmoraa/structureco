@@ -1,6 +1,7 @@
 import {
   Box,
   ChartNoAxesCombined,
+  Flame,
   HelpCircle,
   Layers3,
   Ruler,
@@ -14,7 +15,7 @@ import { useEffect, useId, useRef, useState, type Dispatch } from 'react';
 import type { TranslationKey } from '../../i18n/catalogs';
 import { useI18n } from '../../i18n/useI18n';
 import { LayerToggle } from '../../design-system/components/editor';
-import type { EditorLayerAction, EditorLayerId, EditorLayerState } from './editorLayers';
+import { activeEditorLayerPreset, type EditorLayerAction, type EditorLayerId, type EditorLayerPresetId, type EditorLayerState } from './editorLayers';
 
 interface LayerDefinition {
   id: EditorLayerId;
@@ -32,6 +33,15 @@ const layerDefinitions: readonly LayerDefinition[] = [
   { id: 'labels', labelKey: 'canvas.layerLabels', detailKey: 'canvas.layerLabelsDetail', icon: Tags },
   { id: 'help', labelKey: 'canvas.layerHelp', detailKey: 'canvas.layerHelpDetail', icon: HelpCircle },
   { id: 'diagnostics', labelKey: 'canvas.layerDiagnostics', detailKey: 'canvas.layerDiagnosticsDetail', icon: TriangleAlert },
+  { id: 'heatmap', labelKey: 'canvas.layerHeatmap', detailKey: 'canvas.layerHeatmapDetail', icon: Flame },
+] as const;
+
+const presetDefinitions: ReadonlyArray<{ id: EditorLayerPresetId; labelKey: TranslationKey }> = [
+  { id: 'all', labelKey: 'canvas.layerPresetAll' },
+  { id: 'model', labelKey: 'canvas.layerPresetModel' },
+  { id: 'loads', labelKey: 'canvas.layerPresetLoads' },
+  { id: 'results', labelKey: 'canvas.layerPresetResults' },
+  { id: 'clean', labelKey: 'canvas.layerPresetClean' },
 ] as const;
 
 export const CanvasLayers = ({
@@ -46,6 +56,7 @@ export const CanvasLayers = ({
   const panelRef = useRef<HTMLElement>(null);
   const panelId = useId();
   const { t } = useI18n();
+  const currentPreset = activeEditorLayerPreset(layers);
 
   const close = (restoreFocus = true) => {
     setOpen(false);
@@ -96,6 +107,16 @@ export const CanvasLayers = ({
         <div><strong>{t('canvas.layers')}</strong><span>{t('canvas.layersDescription')}</span></div>
         <button type="button" aria-label={t('canvas.layersClose')} onClick={() => close()}><X size={17} /></button>
       </header>
+      <div className="canvas-layer-presets" role="group" aria-label={t('canvas.layerPresets')}>
+        {presetDefinitions.map(({ id, labelKey }) => <button
+          key={id}
+          type="button"
+          className={`canvas-layer-preset${currentPreset === id ? ' active' : ''}`}
+          aria-pressed={currentPreset === id}
+          data-layer-preset={id}
+          onClick={() => dispatch({ type: 'preset', preset: id })}
+        >{t(labelKey)}</button>)}
+      </div>
       <div className="canvas-layer-list">
         {layerDefinitions.map(({ id, labelKey, detailKey, icon: Icon }) => {
           const fixed = id === 'model';

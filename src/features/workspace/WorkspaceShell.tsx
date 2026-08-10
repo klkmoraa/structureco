@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import { Inspector } from '../inspector/Inspector';
 import { ResultsPanel } from '../results/ResultsPanel';
@@ -16,8 +16,12 @@ import '../../design-system/components/ui.css';
 import './phase1.css';
 import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
 
+/** La paleta sólo pesa cuando se abre: nadie paga su código por arrancar el editor. */
+const LazyCommandPalette = lazy(() => import('./CommandPalette').then((module) => ({ default: module.CommandPalette })));
+
 export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string }) => {
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
   const inspectorToggleRef = useRef<HTMLButtonElement>(null);
   const inspectorReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -79,6 +83,18 @@ export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpe
 
   useEffect(() => {
     return onWorkspaceCommand('expand-mobile-results', () => setMobileInspectorOpen(false));
+  }, []);
+
+  useEffect(() => onWorkspaceCommand('open-command-palette', () => setPaletteOpen(true)), []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== 'k' || !(event.ctrlKey || event.metaKey) || event.altKey) return;
+      event.preventDefault();
+      setPaletteOpen((open) => !open);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
   useEffect(() => {
@@ -152,6 +168,11 @@ export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpe
         }} />
         <ResultsPanel />
         <ToastNotification />
+        {paletteOpen ? <Suspense fallback={null}><LazyCommandPalette
+          open
+          onClose={() => setPaletteOpen(false)}
+          dispatchLayers={dispatchEditorLayers}
+        /></Suspense> : null}
       </>}
     backdrop={mobileInspectorOpen ? <button className="mobile-inspector-backdrop" aria-hidden="true" tabIndex={-1} onClick={closeMobileInspector} /> : null}
     inspector={<Inspector

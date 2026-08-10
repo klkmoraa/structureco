@@ -34,6 +34,8 @@ export interface WorkspaceCommands {
   'export-svg': void;
   /** Export the structural canvas as a raster image. */
   'export-png': void;
+  /** Raise the command palette; emitted from the TopBar trigger. */
+  'open-command-palette': void;
   /** Show a toast notification on screen. */
   'show-toast': {
     message: string;

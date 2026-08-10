@@ -22,6 +22,7 @@ import {
   Play,
   Redo2,
   Save,
+  Search,
   Sun,
   Undo2,
 } from 'lucide-react';
@@ -403,6 +404,19 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
       </div>
 
       <div className="top-actions topbar-zone topbar-actions-zone" data-topbar-zone="actions">
+        {/* En pantallas anchas el botón lleva texto y keycap; por debajo de 1536px
+            colapsa a icono en CSS y libera el ancho que la zona necesita. */}
+        <button
+          type="button"
+          className="topbar-command-button"
+          onClick={() => emitWorkspaceCommand('open-command-palette')}
+          aria-label={t('palette.open')}
+          title={t('palette.open')}
+        >
+          <Search size={17} aria-hidden="true" />
+          <span>{t('palette.openShort')}</span>
+          <kbd>Ctrl K</kbd>
+        </button>
         {onOpenSpace3D ? <IconButton
           className="icon-button space3d-open-button"
           label={t('space3d.open')}
