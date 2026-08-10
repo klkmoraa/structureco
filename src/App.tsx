@@ -11,18 +11,23 @@ import './design-system/material.css';
 
 const loadWorkspaceShell = () => import('./features/workspace/WorkspaceShell');
 const WorkspaceShell = lazy(loadWorkspaceShell);
-const loadExperimental3DView = () => import('./features/experimental3d/Experimental3DView');
-const Experimental3DView = lazy(loadExperimental3DView);
-// Space 3D es una superficie aparte: su dominio, su worker y Three.js sólo
-// entran en el grafo cuando el usuario abre la pantalla.
+// Space 3D es la única superficie 3D del producto: su dominio, su worker y
+// Three.js sólo entran en el grafo cuando el usuario abre la pantalla.
 const loadSpace3DWorkspace = () => import('./features/space3d/Space3DWorkspace');
 const Space3DWorkspace = lazy(loadSpace3DWorkspace);
 const PwaUpdateNotice = lazy(() => import('./platform/PwaUpdateNotice').then((module) => ({ default: module.PwaUpdateNotice })));
 
-export type AppScreen = 'welcome' | 'workspace' | 'experimental3d' | 'space3d';
+export type AppScreen = 'welcome' | 'workspace' | 'space3d';
+
+/**
+ * De dónde se abrió Space 3D. Desde la mesa 2D se abre el proyecto actual
+ * convertido al dominio espacial; desde Inicio, un modelo espacial propio.
+ */
+type Space3DOrigin = 'workspace' | 'standalone';
 
 const AppShell = () => {
   const [screen, setScreen] = useState<AppScreen>('welcome');
+  const [space3dOrigin, setSpace3DOrigin] = useState<Space3DOrigin>('standalone');
   const { project, analysis } = useProject();
   const { t } = useI18n();
 
@@ -48,8 +53,7 @@ const AppShell = () => {
   if (screen === 'welcome') {
     return <ClassroomSessionProvider projectId={project.id} analysisAvailable={analysis?.success === true}><WelcomeScreen
       onOpenWorkspace={() => navigate('workspace')}
-      onOpenExperimental3D={() => navigate('experimental3d')}
-      onOpenSpace3D={() => navigate('space3d')}
+      onOpenSpace3D={() => { setSpace3DOrigin('standalone'); navigate('space3d'); }}
       onPreloadWorkspace={() => { void loadWorkspaceShell(); }}
     /></ClassroomSessionProvider>;
   }
@@ -61,25 +65,17 @@ const AppShell = () => {
       <Suspense fallback={<div className="workspace-loading" role="status" aria-label={t('space3d.loading')}><BrandMark size={42} /><LoaderCircle className="spin" size={22} /></div>}>
         <Space3DWorkspace
           language={project.settings.language}
+          sourceProject={space3dOrigin === 'workspace' ? project : undefined}
           onOpenHome={() => navigate('welcome')}
           onOpen2D={() => navigate('workspace')}
-          onOpenPlanarPreview={() => navigate('experimental3d')}
         />
       </Suspense>
     );
   }
 
-  if (screen === 'experimental3d') {
-    return <ClassroomSessionProvider projectId={project.id} analysisAvailable={analysis?.success === true}>
-      <Suspense fallback={<div className="workspace-loading" role="status" aria-label={t('experimental3d.loading')}><BrandMark size={42} /><LoaderCircle className="spin" size={22} /></div>}>
-        <Experimental3DView project={project} onOpenWorkspace={() => navigate('workspace')} onOpenHome={() => navigate('welcome')} />
-      </Suspense>
-    </ClassroomSessionProvider>;
-  }
-
   return <ClassroomSessionProvider projectId={project.id} analysisAvailable={analysis?.success === true}>
     <Suspense fallback={<div className="workspace-loading" role="status" aria-label={t('workspace.loading')}><BrandMark size={42} /><LoaderCircle className="spin" size={22} /></div>}>
-      <WorkspaceShell projectId={project.id} onOpenHome={() => navigate('welcome')} onOpenExperimental3D={() => navigate('experimental3d')} />
+      <WorkspaceShell projectId={project.id} onOpenHome={() => navigate('welcome')} onOpenSpace3D={() => { setSpace3DOrigin('workspace'); navigate('space3d'); }} />
     </Suspense>
   </ClassroomSessionProvider>;
 };

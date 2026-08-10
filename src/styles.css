@@ -318,7 +318,6 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 }
 .welcome-launcher-card--classroom { --launcher-accent:var(--sc-color-aula); }
 .welcome-launcher-card--recent { --launcher-accent:var(--sc-color-text-link); }
-.welcome-launcher-card--experimental3d { --launcher-accent:var(--sc-color-state-warning-foreground); }
 /* Space 3D es dominio estructural propio, no una vista previa: su acento es el
    cian de trazo de la marca, la segunda dimensión del dibujo técnico. */
 .welcome-launcher-card--space3d { --launcher-accent:var(--sc-color-brand-secondary); }
@@ -342,7 +341,6 @@ button:disabled { cursor: not-allowed; opacity: .62; }
   background:var(--sc-color-accent-blue-soft);
   color:var(--sc-color-text-link);
 }
-.welcome-launcher-card--experimental3d .welcome-launcher-icon { background:color-mix(in srgb,var(--sc-color-state-warning) 18%,var(--surface)); color:var(--sc-color-state-warning-foreground); }
 .welcome-launcher-card--space3d .welcome-launcher-icon { background:color-mix(in srgb,var(--sc-color-brand-secondary) 16%,var(--surface)); color:var(--sc-color-brand-secondary); }
 .welcome-launcher-info { grid-area:info; display:flex; flex-direction:column; gap:5px; min-width:0; }
 .welcome-launcher-header { display:flex; align-items:center; gap:10px; justify-content:space-between; }
@@ -484,11 +482,18 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 
 .welcome-footer { margin-top:auto; min-height:40px; padding:9px 18px; display:flex; justify-content:center; align-items:center; gap:7px; color:var(--subtle); text-align:center; font-size:11px; }
 .welcome-footer svg { color:var(--accent); flex:0 0 auto; }
-.topbar { height: var(--topbar-h); flex: 0 0 var(--topbar-h); display: grid; grid-template-columns: minmax(270px,1fr) minmax(300px,max-content) minmax(350px,1fr); align-items: center; gap: var(--sc-space-4); padding: 0 var(--sc-layout-gutter); border-bottom-width: 0; position: relative; z-index: var(--sc-z-topbar); }
+/* Tres zonas, tres columnas reales. La del medio es la única elástica: el
+   documento reserva un mínimo legible y las acciones se dimensionan por su
+   contenido, porque son botones que no encogen. Con `max-content` en el
+   centro, un caso de carga de nombre largo robaba ancho a los lados y la
+   zona de acciones se pintaba encima de los selectores. */
+.topbar { height: var(--topbar-h); flex: 0 0 var(--topbar-h); display: grid; grid-template-columns: minmax(220px,1fr) minmax(0,auto) max-content; align-items: center; gap: var(--sc-space-4); padding: 0 var(--sc-layout-gutter); border-bottom-width: 0; position: relative; z-index: var(--sc-z-topbar); }
 .topbar-zone,.brand-block,.top-actions,.history-controls { display:flex; align-items:center; min-width:0; }
 .brand-block { justify-self:start; gap: var(--sc-space-3); position: relative; max-width:100%; }
-.topbar-context-zone { justify-self:center; gap:var(--sc-space-1); min-width:0; }
-.topbar-actions-zone { justify-self:end; }
+.topbar-context-zone { justify-self:center; gap:var(--sc-space-1); min-width:0; overflow:clip; }
+/* Los selectores ceden ancho antes de que nada se salga de su celda. */
+.topbar-context-zone .compact-select { flex:0 1 auto; min-width:0; }
+.topbar-actions-zone { justify-self:end; min-width:max-content; flex-wrap:nowrap; }
 .brand-mark { width: 34px; height:34px; display:grid; place-items:center; color:var(--accent); text-align: center; }
 .brand-home-button { overflow:visible; border:0; padding:0; background:transparent; color:inherit; cursor:pointer; border-radius:var(--sc-radius-sm); }.brand-home-button:hover,.brand-home-button:focus-visible { background:transparent; transform:translateY(-1px); }
 .top-divider { width: 1px; height: 34px; background: var(--border); }
@@ -927,7 +932,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .mobile-storage-state small { color:var(--muted); font-size:var(--sc-font-size-label); }
 
 @media (max-width:1439px) {
-  .topbar { grid-template-columns:minmax(250px,1fr) minmax(270px,max-content) minmax(350px,1fr); gap:var(--sc-space-3); }
+  .topbar { grid-template-columns:minmax(200px,1fr) minmax(0,auto) max-content; gap:var(--sc-space-3); }
   .topbar-context-zone .units-select,.export-wrap { display:none; }
 }
 
@@ -936,7 +941,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .tool-button { grid-template-columns: 1fr; justify-items:center; min-height:52px; padding:5px; }
   .tool-button > span:not(.sc-tool-button__icon),.tool-button kbd,.selection-tip span { display:none; }
   .selection-tip { justify-content:center; }
-  .topbar { grid-template-columns:minmax(250px,1fr) minmax(132px,max-content) minmax(220px,1fr); gap:var(--sc-space-2); }
+  .topbar { grid-template-columns:minmax(160px,1fr) minmax(0,auto) max-content; gap:var(--sc-space-2); }
   .history-controls { display:none; }
   .analyze-button { width:124px; min-width:124px; }
   .mobile-history-actions.overflow-history { display:grid; }
@@ -946,7 +951,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 
 @media (max-width: 1023px) {
   :root { --topbar-h: 58px; --inspector-w: 0px; }
-  .topbar { grid-template-columns: minmax(0,1fr) auto; padding: env(safe-area-inset-top) 10px 0; height: calc(var(--topbar-h) + env(safe-area-inset-top)); flex-basis: calc(var(--topbar-h) + env(safe-area-inset-top)); }
+  .topbar { grid-template-columns: minmax(0,1fr) max-content; padding: env(safe-area-inset-top) 10px 0; height: calc(var(--topbar-h) + env(safe-area-inset-top)); flex-basis: calc(var(--topbar-h) + env(safe-area-inset-top)); }
   .topbar-context-zone { display:none; }
   .history-controls { display:none; }
   .brand-name { display:none; }
@@ -3314,7 +3319,6 @@ button:not(:disabled):active,.selection-card:active {
 .welcome-launcher-icon { background:var(--accent); color:var(--accent-foreground); box-shadow:var(--sc-shadow-clay-xs); }
 .welcome-launcher-card--classroom .welcome-launcher-icon { background:var(--sc-color-aula); color:var(--sc-color-aula-foreground); }
 .welcome-launcher-card--recent .welcome-launcher-icon { background:var(--axial); color:var(--sc-color-action-foreground); }
-.welcome-launcher-card--experimental3d .welcome-launcher-icon { background:var(--sc-color-state-warning); color:var(--sc-color-action-foreground); }
 .welcome-launcher-card--space3d .welcome-launcher-icon { background:var(--sc-color-brand-secondary); color:var(--sc-color-action-foreground); }
 .welcome-launcher-card:hover .welcome-launcher-arrow,
 .welcome-template-card:hover .welcome-template-footer svg { color:var(--accent); transform:translateX(4px); }

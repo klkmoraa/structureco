@@ -1,7 +1,6 @@
 import { lazy, Suspense, useState } from 'react';
 import {
   ArrowRight,
-  Box,
   CheckCircle2,
   Compass,
   Cpu,
@@ -38,7 +37,6 @@ const Phase2DxfAction = lazy(() => import('./Phase2DxfAction').then((module) => 
 
 interface WelcomeScreenProps {
   onOpenWorkspace: () => void;
-  onOpenExperimental3D?: () => void;
   onOpenSpace3D?: () => void;
   onPreloadWorkspace?: () => void;
 }
@@ -76,7 +74,7 @@ const splitEmphasis = (title: string) => {
   return { lead: title.slice(0, lastSpace), emphasis: title.slice(lastSpace + 1) };
 };
 
-export const WelcomeScreen = ({ onOpenWorkspace, onOpenExperimental3D, onOpenSpace3D, onPreloadWorkspace }: WelcomeScreenProps) => {
+export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspace }: WelcomeScreenProps) => {
   const { project, replaceProject, updateProjectView } = useProject();
   const { language, t } = useI18n();
   const { theme, setTheme } = useWorkspaceUI();
@@ -256,21 +254,6 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenExperimental3D, onOpenSpa
                 <ArrowRight size={18} className="welcome-launcher-arrow" />
               </button> : null}
 
-              {onOpenExperimental3D ? <button
-                type="button"
-                className="welcome-launcher-card welcome-launcher-card--experimental3d"
-                onClick={onOpenExperimental3D}
-              >
-                <span className="welcome-launcher-icon"><Box size={22} /></span>
-                <span className="welcome-launcher-info">
-                  <span className="welcome-launcher-header">
-                    <strong>{t('experimental3d.short')}</strong>
-                    <span className="welcome-pill-badge welcome-pill-badge--experimental">{t('experimental3d.badge')}</span>
-                  </span>
-                  <small>{t('welcome.experimental3DDescription')}</small>
-                </span>
-                <ArrowRight size={18} className="welcome-launcher-arrow" />
-              </button> : null}
             </div>
 
             <Suspense fallback={<p role="status">{t('hub.loading')}</p>}>

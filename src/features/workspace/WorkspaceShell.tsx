@@ -16,7 +16,7 @@ import '../../design-system/components/ui.css';
 import './phase1.css';
 import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
 
-export const WorkspaceShell = ({ onOpenHome, onOpenExperimental3D, projectId }: { onOpenHome: () => void; onOpenExperimental3D: () => void; projectId: string }) => {
+export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string }) => {
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
   const inspectorToggleRef = useRef<HTMLButtonElement>(null);
@@ -123,7 +123,7 @@ export const WorkspaceShell = ({ onOpenHome, onOpenExperimental3D, projectId }: 
     toolRailCompact={layout.toolRailCompact}
     topBar={<TopBar
       onOpenHome={onOpenHome}
-      onOpenExperimental3D={onOpenExperimental3D}
+      onOpenSpace3D={onOpenSpace3D}
       layoutActions={{
         inspectorCollapsed: layout.inspectorCollapsed,
         fullCanvas: layout.fullCanvas,

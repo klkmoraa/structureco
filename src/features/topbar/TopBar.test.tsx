@@ -46,14 +46,26 @@ afterEach(() => {
 });
 
 describe('TopBar portable export', () => {
-  it('exposes the experimental 3D view as a non-analysis action', async () => {
+  it('opens Space 3D from the workspace top bar', async () => {
     const user = userEvent.setup();
-    const onOpenExperimental3D = vi.fn();
-    render(<TopBarHarness><TopBar onOpenExperimental3D={onOpenExperimental3D} /></TopBarHarness>);
+    const onOpenSpace3D = vi.fn();
+    render(<TopBarHarness><TopBar onOpenSpace3D={onOpenSpace3D} /></TopBarHarness>);
 
-    await user.click(screen.getByRole('button', { name: /vista 3d experimental/i }));
+    await user.click(screen.getByRole('button', { name: /abrir space 3d/i }));
 
-    expect(onOpenExperimental3D).toHaveBeenCalledOnce();
+    expect(onOpenSpace3D).toHaveBeenCalledOnce();
+  });
+
+  it('keeps every top bar zone inside its own column, without overlapping', () => {
+    render(<TopBarHarness><TopBar onOpenSpace3D={() => {}} /></TopBarHarness>);
+    const bar = document.querySelector('.topbar')!;
+    // Las tres zonas deben ser hermanas en la misma rejilla y no compartir celda:
+    // la del medio es la única que puede encogerse, y la de acciones nunca se
+    // queda sin ancho propio.
+    const zones = [...bar.querySelectorAll('[data-topbar-zone]')].map((zone) => zone.getAttribute('data-topbar-zone'));
+    expect(zones).toEqual(['document', 'context', 'actions']);
+    const styles = getComputedStyle(bar.querySelector('[data-topbar-zone="actions"]')!);
+    expect(styles.minWidth).not.toBe('0px');
   });
 
   it('localizes portable export, navigation, and built-in example presentation in English', async () => {

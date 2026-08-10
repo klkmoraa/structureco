@@ -5,12 +5,22 @@ import userEvent from '@testing-library/user-event';
 import App from './App';
 import { createDefaultProject } from './data/defaultProject';
 
-vi.mock('./features/experimental3d/threeViewport', () => ({
-  createThreeViewportController: () => ({
-    resize: vi.fn(),
+// El visor real necesita WebGL, que jsdom no ofrece. Se sustituye el viewport
+// por un doble inerte para poder ejercitar la navegación y la superficie.
+vi.mock('./space3d/view/threeViewport', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./space3d/view/threeViewport')>()),
+  createSpace3DViewport: () => ({
+    scene: {} as never,
+    camera: {} as never,
+    controlsTarget: {} as never,
+    setModel: vi.fn(),
+    setLayers: vi.fn(),
     setView: vi.fn(),
     zoomBy: vi.fn(),
-    reset: vi.fn(),
+    resize: vi.fn(),
+    render: vi.fn(),
+    requestRender: vi.fn(),
+    pickAt: () => null,
     dispose: vi.fn(),
   }),
 }));
@@ -57,27 +67,20 @@ const openUtilityMenu = async (user: ReturnType<typeof userEvent.setup>) => {
 };
 
 describe('structureCo app shell', () => {
-  it('navigates to the experimental 3D view from start and returns to both destinations', async () => {
+  it('reaches Space 3D from the workspace top bar and keeps no other 3D surface', async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await user.click(screen.getByRole('button', { name: /experimental 3d/i }));
-    expect(await screen.findByRole('heading', { name: /vista 3d experimental/i }, { timeout: 5000 })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /continuar proyecto/i }));
+    await screen.findByRole('button', { name: /^analizar$/i }, { timeout: 10_000 });
+    expect(screen.queryByRole('button', { name: /experimental 3d/i })).toBeNull();
 
-    await user.click(screen.getAllByRole('button', { name: 'Editor 2D' })[0]);
-    expect(await screen.findByRole('button', { name: /^analizar$/i }, { timeout: 5000 })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /abrir space 3d/i }));
+    expect(await screen.findByRole('button', { name: 'Editor 2D' }, { timeout: 10_000 })).toBeTruthy();
 
-    await user.click(screen.getByRole('button', { name: /vista 3d experimental/i }));
-    expect(await screen.findByRole('heading', { name: /vista 3d experimental/i }, { timeout: 5000 })).toBeTruthy();
-    await user.click(screen.getAllByRole('button', { name: 'Editor 2D' })[0]);
-    expect(await screen.findByRole('button', { name: /^analizar$/i }, { timeout: 5000 })).toBeTruthy();
-
-    await user.click(screen.getByRole('button', { name: /ir al inicio/i }));
-    expect(await screen.findByTestId('welcome-screen')).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /experimental 3d/i }));
-    await user.click(await screen.findByRole('button', { name: 'Inicio' }));
-    expect(await screen.findByTestId('welcome-screen')).toBeTruthy();
-  }, 30_000);
+    await user.click(screen.getByRole('button', { name: 'Editor 2D' }));
+    expect(await screen.findByRole('button', { name: /^analizar$/i }, { timeout: 10_000 })).toBeTruthy();
+  }, 40_000);
 
   it('opens Space 3D lazily from start and returns to both destinations', async () => {
     const user = userEvent.setup();

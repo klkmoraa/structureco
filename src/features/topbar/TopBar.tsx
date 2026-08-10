@@ -53,7 +53,7 @@ export interface TopBarLayoutActions {
   onToggleToolRail: () => void;
 }
 
-export const TopBar = ({ onOpenHome, onOpenExperimental3D, layoutActions }: { onOpenHome?: () => void; onOpenExperimental3D?: () => void; layoutActions?: TopBarLayoutActions }) => {
+export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHome?: () => void; onOpenSpace3D?: () => void; layoutActions?: TopBarLayoutActions }) => {
   const {
     project,
     analysis,
@@ -403,11 +403,11 @@ export const TopBar = ({ onOpenHome, onOpenExperimental3D, layoutActions }: { on
       </div>
 
       <div className="top-actions topbar-zone topbar-actions-zone" data-topbar-zone="actions">
-        {onOpenExperimental3D ? <IconButton
-          className="icon-button experimental-3d-button"
-          label={t('experimental3d.open')}
-          title={t('experimental3d.open')}
-          onClick={onOpenExperimental3D}
+        {onOpenSpace3D ? <IconButton
+          className="icon-button space3d-open-button"
+          label={t('space3d.open')}
+          title={t('space3d.open')}
+          onClick={onOpenSpace3D}
         ><Box size={19} /></IconButton> : null}
         <div className="history-controls" aria-label={t('history.label')}>
           <IconButton className="icon-button" label={t('history.undo')} onClick={undo} disabled={!canUndo} title={t('history.undo')}><Undo2 size={19} /></IconButton>
@@ -465,8 +465,8 @@ export const TopBar = ({ onOpenHome, onOpenExperimental3D, layoutActions }: { on
 
                 {layoutActions ? <div className="menu-section overflow-layout-actions" role="group" aria-label={t('shell.viewLayout')}>
                   <div className="menu-section-title">{t('menu.sectionViews')}</div>
-                  {onOpenExperimental3D ? <button onClick={() => { onOpenExperimental3D(); setShowMobileMenu(false); }}>
-                    <Box size={17} /> {t('experimental3d.open')}
+                  {onOpenSpace3D ? <button onClick={() => { onOpenSpace3D(); setShowMobileMenu(false); }}>
+                    <Box size={17} /> {t('space3d.open')}
                   </button> : null}
                   <button onClick={() => { layoutActions.onToggleInspector(); setShowMobileMenu(false); }}>
                     {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? <PanelRightOpen size={17} /> : <PanelRightClose size={17} />}
