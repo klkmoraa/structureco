@@ -319,6 +319,9 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 .welcome-launcher-card--classroom { --launcher-accent:var(--sc-color-aula); }
 .welcome-launcher-card--recent { --launcher-accent:var(--sc-color-text-link); }
 .welcome-launcher-card--experimental3d { --launcher-accent:var(--sc-color-state-warning-foreground); }
+/* Space 3D es dominio estructural propio, no una vista previa: su acento es el
+   cian de trazo de la marca, la segunda dimensión del dibujo técnico. */
+.welcome-launcher-card--space3d { --launcher-accent:var(--sc-color-brand-secondary); }
 /* Contenedores de icono: aquí viven el azul y el lavanda de la referencia,
    sobre un icono en el tono medido de cada dominio. */
 .welcome-launcher-icon {
@@ -340,6 +343,7 @@ button:disabled { cursor: not-allowed; opacity: .62; }
   color:var(--sc-color-text-link);
 }
 .welcome-launcher-card--experimental3d .welcome-launcher-icon { background:color-mix(in srgb,var(--sc-color-state-warning) 18%,var(--surface)); color:var(--sc-color-state-warning-foreground); }
+.welcome-launcher-card--space3d .welcome-launcher-icon { background:color-mix(in srgb,var(--sc-color-brand-secondary) 16%,var(--surface)); color:var(--sc-color-brand-secondary); }
 .welcome-launcher-info { grid-area:info; display:flex; flex-direction:column; gap:5px; min-width:0; }
 .welcome-launcher-header { display:flex; align-items:center; gap:10px; justify-content:space-between; }
 .welcome-launcher-header strong { font-size:16px; font-weight:750; color:var(--text); letter-spacing:var(--sc-tracking-tight); }
@@ -3311,6 +3315,7 @@ button:not(:disabled):active,.selection-card:active {
 .welcome-launcher-card--classroom .welcome-launcher-icon { background:var(--sc-color-aula); color:var(--sc-color-aula-foreground); }
 .welcome-launcher-card--recent .welcome-launcher-icon { background:var(--axial); color:var(--sc-color-action-foreground); }
 .welcome-launcher-card--experimental3d .welcome-launcher-icon { background:var(--sc-color-state-warning); color:var(--sc-color-action-foreground); }
+.welcome-launcher-card--space3d .welcome-launcher-icon { background:var(--sc-color-brand-secondary); color:var(--sc-color-action-foreground); }
 .welcome-launcher-card:hover .welcome-launcher-arrow,
 .welcome-template-card:hover .welcome-template-footer svg { color:var(--accent); transform:translateX(4px); }
 

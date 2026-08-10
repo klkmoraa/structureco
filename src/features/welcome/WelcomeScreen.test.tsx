@@ -28,14 +28,19 @@ const renderWelcome = (language: 'es' | 'en' = 'es') => {
   localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
   const onOpenWorkspace = vi.fn();
   const onOpenExperimental3D = vi.fn();
+  const onOpenSpace3D = vi.fn();
   const result = render(
     <ProjectProvider>
       <ClassroomSessionProvider projectId="welcome-test">
-        <WelcomeScreen onOpenWorkspace={onOpenWorkspace} onOpenExperimental3D={onOpenExperimental3D} />
+        <WelcomeScreen
+          onOpenWorkspace={onOpenWorkspace}
+          onOpenExperimental3D={onOpenExperimental3D}
+          onOpenSpace3D={onOpenSpace3D}
+        />
       </ClassroomSessionProvider>
     </ProjectProvider>,
   );
-  return { ...result, onOpenWorkspace, onOpenExperimental3D };
+  return { ...result, onOpenWorkspace, onOpenExperimental3D, onOpenSpace3D };
 };
 
 const templateCards = (container: HTMLElement) => [...container.querySelectorAll('.welcome-template-card')];
@@ -104,6 +109,25 @@ describe('WelcomeScreen launcher', () => {
 
     expect(onOpenExperimental3D).toHaveBeenCalledOnce();
     expect(onOpenWorkspace).not.toHaveBeenCalled();
+  });
+
+  it('opens Space 3D as a surface of its own, without touching the 2D project', async () => {
+    const user = userEvent.setup();
+    const { onOpenSpace3D, onOpenWorkspace, onOpenExperimental3D } = renderWelcome();
+
+    const card = screen.getByRole('button', { name: /space 3d/i });
+    expect(card.textContent).toMatch(/experimental/i);
+    await user.click(card);
+
+    expect(onOpenSpace3D).toHaveBeenCalledOnce();
+    expect(onOpenWorkspace).not.toHaveBeenCalled();
+    expect(onOpenExperimental3D).not.toHaveBeenCalled();
+  });
+
+  it('describes Space 3D in English too', () => {
+    renderWelcome('en');
+    expect(screen.getByRole('button', { name: /space 3d/i }).textContent)
+      .toMatch(/six degrees of freedom|space frame/i);
   });
 
   it('reports the current project size on the continue card', () => {

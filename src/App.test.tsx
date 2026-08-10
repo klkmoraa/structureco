@@ -79,6 +79,40 @@ describe('structureCo app shell', () => {
     expect(await screen.findByTestId('welcome-screen')).toBeTruthy();
   }, 30_000);
 
+  it('opens Space 3D lazily from start and returns to both destinations', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    // El grafo de Space 3D no debe estar evaluado antes del clic.
+    expect(document.querySelector('.space3d-screen')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: /space 3d/i }));
+    expect(await screen.findByRole('button', { name: /^analizar$/i }, { timeout: 10_000 })).toBeTruthy();
+    expect(document.querySelector('.space3d-screen')).not.toBeNull();
+
+    await user.click(screen.getAllByRole('button', { name: 'Editor 2D' })[0]);
+    expect(await screen.findByRole('button', { name: /^analizar$/i }, { timeout: 10_000 })).toBeTruthy();
+    expect(document.querySelector('.space3d-screen')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: /ir al inicio/i }));
+    await user.click(await screen.findByRole('button', { name: /space 3d/i }));
+    await user.click(await screen.findByRole('button', { name: 'Inicio' }));
+    expect(await screen.findByTestId('welcome-screen')).toBeTruthy();
+  }, 40_000);
+
+  it('keeps the 2D project untouched while Space 3D stores its own model', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('structureCo.project', JSON.stringify(createDefaultProject()));
+    render(<App />);
+    const before = localStorage.getItem('structureCo.project');
+
+    await user.click(screen.getByRole('button', { name: /space 3d/i }));
+    await screen.findByRole('button', { name: /^analizar$/i }, { timeout: 10_000 });
+    await waitFor(() => expect(localStorage.getItem('structureco:space3d:v1')).toBeTruthy(), { timeout: 10_000 });
+
+    expect(localStorage.getItem('structureCo.project')).toBe(before);
+  }, 40_000);
+
   it('shows a start screen and opens a blank project on demand', async () => {
     const user = userEvent.setup();
     const { container } = render(<App />);
