@@ -4,7 +4,7 @@ import { useI18n } from '../../i18n/useI18n';
 import type { MemberModel, MemberResult, UnitSystemId } from '../../types';
 import { formatFixed } from '../../utils/numberFormat';
 import { formatInspectorNumber, formatInspectorValue } from './numericFormatting';
-import { DEMAND_WARNING_RATIO, demandTone, memberElasticDemand } from '../results/elasticDemand';
+import { DEMAND_WARNING_RATIO, DEMAND_YIELD_RATIO, demandTone, memberElasticDemand } from '../results/elasticDemand';
 
 export interface InspectorNarrativeCardProps {
   member: MemberModel;
@@ -73,7 +73,10 @@ export const InspectorNarrativeCard = ({ member, result, units }: InspectorNarra
       aria-label={t('inspector.narrativeUtilization')}
     >
       <span className={`meter-fill tone-${tone}`} style={{ width: `${Math.min(percent, 100)}%` }} />
+      {/* Las dos marcas del medidor de salud, aquí también: si un panel enseña
+          el corte de aviso y el otro no, la misma η se lee distinta. */}
       <span className="meter-threshold" style={{ left: `${DEMAND_WARNING_RATIO * 100}%` }} aria-hidden="true" />
+      <span className="meter-threshold is-yield" style={{ left: `${DEMAND_YIELD_RATIO * 100}%` }} aria-hidden="true" />
     </div>
 
     <p className="inspector-narrative-verdict">{t(

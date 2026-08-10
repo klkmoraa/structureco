@@ -74,6 +74,21 @@ export const SectionViewer2D = ({ area, inertia, units, axialForce = 0, bendingM
   const modulusDisplay = modulus * lengthFactor ** 3;
   const hasStress = Math.abs(sigmaTop) > 1e-9 || Math.abs(sigmaBottom) > 1e-9;
 
+  /*
+   * σ varía linealmente entre la fibra superior y la inferior (Navier), así que
+   * el degradado es la distribución, no una decoración. La fibra de tensión
+   * nula sólo cae *dentro* del canto si los dos extremos tienen signo opuesto;
+   * con el axil dominando, toda la sección trabaja del mismo lado y no hay
+   * corte que marcar. El color distingue compresión de tracción y la opacidad
+   * lleva la magnitud, relativa a la fibra más cargada de esta misma sección.
+   */
+  const stressSpan = sigmaTop - sigmaBottom;
+  const neutralFraction = Math.abs(stressSpan) > 1e-12 ? sigmaTop / stressSpan : 0;
+  const neutralOffset = neutralFraction > 0 && neutralFraction < 1 ? neutralFraction : null;
+  const peakStress = Math.max(Math.abs(sigmaTop), Math.abs(sigmaBottom));
+  const stressColor = (sigma: number) => sigma < 0 ? 'var(--sc-color-technical-axial)' : 'var(--sc-color-technical-moment)';
+  const stressOpacity = (sigma: number) => peakStress > 0 ? 0.18 + 0.72 * (Math.abs(sigma) / peakStress) : 0;
+
   const drawWidth = SVG_WIDTH - PADDING * 2;
   const drawHeight = SVG_HEIGHT - PADDING * 2;
   const scale = Math.min(drawWidth / Math.max(width, 0.01), drawHeight / Math.max(depth, 0.01)) * 0.9;
@@ -88,7 +103,27 @@ export const SectionViewer2D = ({ area, inertia, units, axialForce = 0, bendingM
   const top = cy - pxHeight / 2;
   const bottom = cy + pxHeight / 2;
 
-  const renderShape = () => {
+  /*
+   * La forma se dibuja una sola vez y sirve para dos cosas: el trazo visible y
+   * la máscara del mapa de tensiones. Antes el modo Stress pintaba un
+   * rectángulo con degradado sobre *cualquier* perfil, así que una I, una C,
+   * un HSS o una L acababan representados como una caja — la tensión se leía
+   * en una sección que no era la del miembro. Con `variant='mask'` el mismo
+   * contorno (huecos incluidos) recorta el degradado, y la geometría real es
+   * la misma en los dos modos.
+   *
+   * En la máscara el blanco es material y el negro es hueco: por eso los
+   * `section-shape-void` se pintan de negro en lugar de con el color del
+   * lienzo, y así el ánima hueca de un tubo sigue vacía bajo el degradado.
+   */
+  const renderShape = (variant: 'draw' | 'outline' | 'mask' = 'draw') => {
+    const isMask = variant === 'mask';
+    const solid = isMask
+      ? { fill: 'white', stroke: 'none' as const }
+      : { className: variant === 'outline' ? 'section-shape section-shape--outline' : 'section-shape' };
+    const hollow = isMask
+      ? { fill: 'black', stroke: 'none' as const }
+      : { className: 'section-shape-void' };
     switch (shapeType) {
       case 'I':
       case 'C': {
@@ -97,7 +132,7 @@ export const SectionViewer2D = ({ area, inertia, units, axialForce = 0, bendingM
         const flangeBottom = top + pxFlange;
         const flangeTop = bottom - pxFlange;
         return <path
-          className="section-shape"
+          {...solid}
           d={[
             `M ${left} ${top}`, `H ${right}`, `V ${flangeBottom}`, `H ${webRight}`, `V ${flangeTop}`,
             `H ${right}`, `V ${bottom}`, `H ${left}`,
@@ -109,9 +144,9 @@ export const SectionViewer2D = ({ area, inertia, units, axialForce = 0, bendingM
       }
       case 'HSS_RECT':
         return <g>
-          <rect className="section-shape" x={left} y={top} width={pxWidth} height={pxHeight} rx="4" />
+          <rect {...solid} x={left} y={top} width={pxWidth} height={pxHeight} rx="4" />
           <rect
-            className="section-shape-void"
+            {...hollow}
             x={left + pxWeb}
             y={top + pxFlange}
             width={Math.max(pxWidth - pxWeb * 2, 2)}
@@ -122,18 +157,18 @@ export const SectionViewer2D = ({ area, inertia, units, axialForce = 0, bendingM
       case 'HSS_ROUND': {
         const radius = Math.min(pxWidth, pxHeight) / 2;
         return <g>
-          <circle className="section-shape" cx={cx} cy={cy} r={radius} />
-          <circle className="section-shape-void" cx={cx} cy={cy} r={Math.max(radius - pxWeb, 2)} />
+          <circle {...solid} cx={cx} cy={cy} r={radius} />
+          <circle {...hollow} cx={cx} cy={cy} r={Math.max(radius - pxWeb, 2)} />
         </g>;
       }
       case 'L':
         return <path
-          className="section-shape"
+          {...solid}
           d={`M ${left} ${top} H ${left + pxWeb} V ${bottom - pxFlange} H ${right} V ${bottom} H ${left} Z`}
           strokeLinejoin="round"
         />;
       default:
-        return <rect className="section-shape" x={left} y={top} width={pxWidth} height={pxHeight} rx="3" />;
+        return <rect {...solid} x={left} y={top} width={pxWidth} height={pxHeight} rx="3" />;
     }
   };
 
@@ -172,18 +207,34 @@ export const SectionViewer2D = ({ area, inertia, units, axialForce = 0, bendingM
         width: dimensionWidth,
       })}>
         <defs>
-          <linearGradient id="section-stress-gradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={sigmaTop < 0 ? 'var(--sc-color-technical-axial)' : 'var(--sc-color-technical-moment)'} stopOpacity="0.8" />
-            <stop offset="50%" stopColor="var(--sc-color-surface-1)" stopOpacity="0.95" />
-            <stop offset="100%" stopColor={sigmaBottom < 0 ? 'var(--sc-color-technical-axial)' : 'var(--sc-color-technical-moment)'} stopOpacity="0.8" />
+          <linearGradient id="section-stress-gradient" x1={cx} y1={top} x2={cx} y2={bottom} gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor={stressColor(sigmaTop)} stopOpacity={stressOpacity(sigmaTop)} />
+            {/* `offset` admite la fracción directamente: no hay número que
+                *mostrar* aquí, así que no pasa por el formateador. */}
+            {neutralOffset === null ? null
+              : <stop offset={neutralOffset} stopColor={stressColor(sigmaBottom)} stopOpacity="0" />}
+            <stop offset="100%" stopColor={stressColor(sigmaBottom)} stopOpacity={stressOpacity(sigmaBottom)} />
           </linearGradient>
+          <mask id="section-stress-mask" data-testid="section-stress-mask">{renderShape('mask')}</mask>
         </defs>
 
         <line className="section-neutral-axis" x1={left - 18} y1={cy} x2={right + 18} y2={cy} />
         <text className="section-axis-label" x={left - 20} y={cy + 3} textAnchor="end">E.N.</text>
 
         {view === 'stress' && hasStress ? <>
-          <rect className="section-stress-fill" x={left} y={top} width={pxWidth} height={pxHeight} rx="3" fill="url(#section-stress-gradient)" />
+          {/* El degradado se recorta con la sección real; el contorno se dibuja
+              encima para que el perfil siga leyéndose bajo el mapa. */}
+          <rect
+            className="section-stress-fill"
+            data-testid="section-stress-fill"
+            x={left}
+            y={top}
+            width={pxWidth}
+            height={pxHeight}
+            fill="url(#section-stress-gradient)"
+            mask="url(#section-stress-mask)"
+          />
+          {renderShape('outline')}
           <text className="section-stress-label" x={right + 6} y={top + 8}>σ {formatInspectorValue(sigmaTop, stressUnit)}</text>
           <text className="section-stress-label" x={right + 6} y={bottom - 2}>σ {formatInspectorValue(sigmaBottom, stressUnit)}</text>
         </> : <>

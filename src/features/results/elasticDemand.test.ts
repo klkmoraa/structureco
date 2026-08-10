@@ -4,11 +4,15 @@ import { standardSections } from '../../data/standardSections';
 import type { MemberModel, MemberResult } from '../../types';
 import {
   DEMAND_WARNING_RATIO,
+  DEMAND_YIELD_RATIO,
   FALLBACK_YIELD_STRENGTH,
+  demandColorVariable,
   demandTone,
+  demandToneColorVariable,
   memberElasticDemand,
   memberSectionModulus,
   memberYieldStrength,
+  structuralDemandSummary,
 } from './elasticDemand';
 
 const ipe300 = standardSections.find((section) => section.id === 'ipe-300')!;
@@ -70,10 +74,43 @@ describe('elastic demand estimation', () => {
     expect(memberElasticDemand(member({ A: 0 }), result())).toBeNull();
   });
 
-  it('reads the regime against the documented thresholds', () => {
+  it('reads the regime against the documented thresholds, closed from below', () => {
+    // Los dos cortes son `>=`. El valor exacto del umbral pertenece al tramo
+    // que empieza, no al que termina: con `>` estricto, η = 0,85 se leía como
+    // holgado y η = 1,00 como aviso, justo los dos casos que más se miran.
     expect(demandTone(0.5)).toBe('safe');
-    expect(demandTone(DEMAND_WARNING_RATIO)).toBe('safe');
+    expect(demandTone(DEMAND_WARNING_RATIO - 1e-9)).toBe('safe');
+    expect(demandTone(DEMAND_WARNING_RATIO)).toBe('warning');
     expect(demandTone(0.9)).toBe('warning');
+    expect(demandTone(DEMAND_YIELD_RATIO - 1e-9)).toBe('warning');
+    expect(demandTone(DEMAND_YIELD_RATIO)).toBe('overstressed');
     expect(demandTone(1.4)).toBe('overstressed');
+  });
+
+  it('paints the canvas with the same three tones the panels name', () => {
+    // El mapa de calor tenía su propia rampa de cinco escalones: η = 1,00 salía
+    // crítico en el lienzo y aviso en los paneles. Ahora el color se deriva del
+    // tono, así que discrepar es imposible por construcción.
+    for (const ratio of [0, 0.29, 0.3, 0.59, 0.6, 0.84999, DEMAND_WARNING_RATIO, 0.99, DEMAND_YIELD_RATIO, 2.5]) {
+      expect(demandColorVariable(ratio), `η = ${ratio}`).toBe(demandToneColorVariable[demandTone(ratio)]);
+    }
+    expect(demandColorVariable(DEMAND_YIELD_RATIO)).toBe(demandToneColorVariable.overstressed);
+    expect(demandColorVariable(DEMAND_WARNING_RATIO)).toBe(demandToneColorVariable.warning);
+  });
+
+  it('publishes utilisation instead of a factor that reads as a code check', () => {
+    const summary = structuralDemandSummary(
+      {
+        nodes: [], members: [member()], nodalLoads: [], memberLoads: [],
+        id: 'p', name: 'p', settings: {} as never,
+      } as never,
+      {
+        success: true,
+        memberResults: [result({ maxMoment: 60 })],
+        nodeResults: [],
+      } as never,
+    )!;
+    expect(summary.maxRatio).toBeCloseTo(summary.critical.ratio, 12);
+    expect(summary).not.toHaveProperty('safetyFactor');
   });
 });

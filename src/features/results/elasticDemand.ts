@@ -28,8 +28,22 @@ export const FALLBACK_YIELD_STRENGTH = 250_000;
 
 export type DemandTone = 'safe' | 'warning' | 'overstressed';
 
-/** Umbral de aviso: por encima el margen elástico deja de ser cómodo. */
+/**
+ * Los dos únicos cortes del sistema, y son cerrados por abajo:
+ *
+ *   η < 0,85            → `safe`
+ *   0,85 ≤ η < 1,00     → `warning`
+ *   η ≥ 1,00            → `overstressed`
+ *
+ * Que sean `>=` no es un detalle: con `>` estricto, η = 1,00 exacto —el caso
+ * que más se mira— caía en `warning` en los paneles mientras la rampa de color
+ * del mapa de calor, que sí usaba `>=`, lo pintaba de crítico. La misma barra
+ * decía dos cosas distintas según dónde se la mirara. Ahora hay un solo
+ * clasificador, `demandTone`, y todo lo demás —color del lienzo, medidores,
+ * narrativa, sello del corte— se deriva de él.
+ */
 export const DEMAND_WARNING_RATIO = 0.85;
+export const DEMAND_YIELD_RATIO = 1;
 
 export interface MemberElasticDemand {
   memberId: string;
@@ -57,8 +71,6 @@ export interface StructuralDemandSummary {
   demands: MemberElasticDemand[];
   critical: MemberElasticDemand;
   maxRatio: number;
-  /** 1/η del elemento crítico. */
-  safetyFactor: number;
   /** `true` si alguna barra tuvo que recurrir al límite elástico de reserva. */
   anyEstimatedYield: boolean;
 }
@@ -131,30 +143,37 @@ export const structuralDemandSummary = (
   if (demands.length === 0) return null;
   demands.sort((first, second) => second.ratio - first.ratio);
   const critical = demands[0];
+  /* Sin `safetyFactor`. 1/η se leía como el coeficiente de seguridad de una
+     norma, y esto no es una comprobación normativa: es σ de Navier contra un
+     límite elástico supuesto. Lo que se publica es η y su porcentaje. */
   return {
     demands,
     critical,
     maxRatio: critical.ratio,
-    safetyFactor: critical.ratio > 0 ? 1 / critical.ratio : Number.POSITIVE_INFINITY,
     anyEstimatedYield: demands.some((demand) => demand.estimatedYield),
   };
 };
 
 export const demandTone = (ratio: number): DemandTone =>
-  ratio > 1 ? 'overstressed' : ratio > DEMAND_WARNING_RATIO ? 'warning' : 'safe';
+  ratio >= DEMAND_YIELD_RATIO ? 'overstressed' : ratio >= DEMAND_WARNING_RATIO ? 'warning' : 'safe';
 
 /**
- * Rampa térmica del mapa de calor. Son roles de dominio del sistema de diseño,
- * no literales: el mismo verde/ámbar/rojo que ya usan los estados, medido en
- * ambos temas.
+ * Color por tono. Son roles de dominio del sistema de diseño, no literales: el
+ * mismo verde/ámbar/rojo que ya usan los estados, medido en ambos temas.
  */
-export const demandColorVariable = (ratio: number): string => {
-  if (ratio >= 1) return 'var(--sc-color-state-critical)';
-  if (ratio >= DEMAND_WARNING_RATIO) return 'var(--sc-color-state-error)';
-  if (ratio >= 0.6) return 'var(--sc-color-state-warning)';
-  if (ratio >= 0.3) return 'var(--sc-color-technical-shear)';
-  return 'var(--sc-color-state-success)';
+export const demandToneColorVariable: Record<DemandTone, string> = {
+  safe: 'var(--sc-color-state-success)',
+  warning: 'var(--sc-color-state-warning)',
+  overstressed: 'var(--sc-color-state-error)',
 };
+
+/**
+ * Color del mapa de calor. Pasa por `demandTone` a propósito: la rampa anterior
+ * tenía cinco escalones propios (0,3 · 0,6 · 0,85 · 1) que no se correspondían
+ * con los tres estados que nombran los paneles, así que el lienzo y el texto
+ * podían discrepar. Un solo clasificador, un solo mensaje.
+ */
+export const demandColorVariable = (ratio: number): string => demandToneColorVariable[demandTone(ratio)];
 
 /** Mapa memoizable id → η, el formato que consume la capa de geometría. */
 export const memberDemandRatios = (

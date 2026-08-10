@@ -61,6 +61,35 @@ export const diagramPixelScaleFor = (project: ProjectModel, resultTab: ResultTab
   return (68 * project.settings.diagramScale) / maximum;
 };
 
+/**
+ * Un extremo sólo se sella si vale al menos esta fracción del máximo global del
+ * diagrama. Sin el filtro, una estructura de treinta barras se cubre de
+ * etiquetas —incluidas las de los tramos que apenas trabajan— y el sello deja
+ * de señalar nada. Con él quedan los picos que de verdad gobiernan.
+ */
+const CRITICAL_MARKER_MIN_SHARE = 0.15;
+
+/** Extremos M/V ya resueltos por el análisis, listos para sellar sobre la barra. */
+// oxlint-disable-next-line react/only-export-components
+export const criticalExtremesFor = (
+  points: ReadonlyArray<MemberResult['criticalPoints'][number]>,
+  quantity: DiagramQuantity,
+  floor: number,
+): Array<{ point: MemberResult['criticalPoints'][number]; extreme: 'max' | 'min' }> => {
+  const candidates = points.filter((point) => point.quantity === quantity);
+  if (candidates.length === 0) return [];
+  const highest = candidates.reduce((best, point) => (point.value > best.value ? point : best));
+  const lowest = candidates.reduce((best, point) => (point.value < best.value ? point : best));
+  const marks: Array<{ point: MemberResult['criticalPoints'][number]; extreme: 'max' | 'min' }> = [];
+  if (Math.abs(highest.value) >= floor) marks.push({ point: highest, extreme: 'max' });
+  // Un diagrama de signo constante tiene un solo extremo interesante: sellarlo
+  // dos veces apilaría dos etiquetas idénticas sobre el mismo punto.
+  if (Math.abs(lowest.value) >= floor && Math.abs(lowest.value - highest.value) > 1e-9) {
+    marks.push({ point: lowest, extreme: 'min' });
+  }
+  return marks;
+};
+
 const CanvasResultLayerImpl = ({
   slot, project, analysis, resultTab, resultsAllowed, resultCursor, influenceCanvasState, camera, toScreen,
   nodeMap, memberMap, resultMap, nodeResultMap, mechanismMap, mechanismPixelScale, globalDiagramMax,
@@ -179,6 +208,70 @@ const CanvasResultLayerImpl = ({
       }
     }
     return <g className="result-cursor-marker" transform={`translate(${screen.x} ${screen.y})`} pointerEvents="none"><circle r="6" /><path d="M-13 0H13M0-13V13" /><g transform="translate(10 -31)"><rect width={Math.max(90, label.length * 5.5)} height="22" rx="7" /><text x="8" y="15">{label}</text></g></g>;
+  };
+
+  /**
+   * Sellos de Mmax/Mmin y Vmax/Vmin sobre la propia barra.
+   *
+   * Los valores y sus estaciones ya vienen resueltos en `criticalPoints`: aquí
+   * no se recalcula ni se re-muestrea nada, sólo se llevan a pantalla con la
+   * misma escala y el mismo lado que el diagrama que se está mirando. Antes el
+   * pico había que cazarlo moviendo el cursor sobre la curva o buscándolo en la
+   * tabla; ahora está donde ocurre.
+   */
+  const renderCriticalPoints = () => {
+    if (!resultsAllowed || !analysis?.success || !project.settings.showResultOverlay) return null;
+    if (resultTab !== 'shear' && resultTab !== 'moment') return null;
+    const key = resultTab as DiagramQuantity;
+    const symbol = key === 'shear' ? 'V' : 'M';
+    const displayQuantity = key === 'moment' ? 'moment' as const : 'force' as const;
+    const valueUnit = key === 'moment' ? momentLabel : forceLabel;
+    const floor = Math.max(globalDiagramMax * CRITICAL_MARKER_MIN_SHARE, 1e-9);
+    const side = project.settings.diagramSide === 'negative' ? -1 : 1;
+
+    const stamps = project.members.flatMap((member) => {
+      const result = resultMap.get(member.id);
+      const ni = nodeMap.get(member.i);
+      const nj = nodeMap.get(member.j);
+      if (!result || !ni || !nj || !result.criticalPoints.length) return [];
+      const axis = memberAxis(member, ni, nj);
+      if (axis.length <= 1e-12) return [];
+      const nx = axis.normal.x * side;
+      const ny = axis.normal.y * side;
+      const diagramPixelScale = scaleFor(result);
+      return criticalExtremesFor(result.criticalPoints, key, floor).map(({ point, extreme }) => {
+        const grossX = (result.startOffset ?? 0) + point.x;
+        const baseX = ni.x + axis.c * grossX;
+        const baseY = ni.y + axis.s * grossX;
+        const offsetModel = (point.value * diagramPixelScale) / camera.scale;
+        const base = toScreen(baseX, baseY);
+        const tip = toScreen(baseX + nx * offsetModel, baseY + ny * offsetModel);
+        const value = `${symbol}${extreme === 'max' ? 'max' : 'min'} ${formatFixed(toDisplay(point.value, units, displayQuantity), 2)} ${valueUnit}`;
+        const station = `x ${formatFixed(toDisplay(point.x, units, 'length'), 2)} ${lengthLabel}`;
+        // El sello se aparta hacia el lado libre del diagrama, nunca hacia la
+        // barra: ahí es donde ya hay geometría y etiquetas de modelo.
+        const away = Math.sign(offsetModel) || 1;
+        const width = Math.max(value.length, station.length) * 5.1 + 11;
+        const anchorX = Math.min(Math.max(tip.x + nx * away * 9, 4), Math.max(size.width - width - 4, 4));
+        const anchorY = Math.min(Math.max(tip.y + ny * away * 9 - 11, 4), Math.max(size.height - 30, 4));
+        return <g
+          key={`${member.id}-${key}-${extreme}`}
+          className={`critical-point-marker is-${extreme}`}
+          data-critical-point={`${member.id}:${key}:${extreme}`}
+          pointerEvents="none"
+        >
+          <title>{`${member.id} · ${value} · ${station}`}</title>
+          <line className="critical-point-stem" x1={base.x} y1={base.y} x2={tip.x} y2={tip.y} />
+          <circle className="critical-point-dot" cx={tip.x} cy={tip.y} r="3.2" />
+          <g transform={`translate(${anchorX} ${anchorY})`}>
+            <rect className="critical-point-stamp" width={width} height="25" rx="6" />
+            <text className="critical-point-value" x="6" y="11">{value}</text>
+            <text className="critical-point-station" x="6" y="20">{station}</text>
+          </g>
+        </g>;
+      });
+    });
+    return stamps.length ? <g className={`critical-point-layer is-${key}`} aria-hidden="true">{stamps}</g> : null;
   };
 
   const renderInfluenceOverlay = () => {
@@ -330,6 +423,7 @@ const CanvasResultLayerImpl = ({
 
   return <>
     {showResults ? renderInfluenceOverlay() : null}
+    {showResults ? renderCriticalPoints() : null}
     {showResults ? <g className="reaction-layer">{project.nodes.map(renderReaction)}</g> : null}
   </>;
 };

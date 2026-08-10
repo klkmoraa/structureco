@@ -69,6 +69,9 @@ type Camera = CanvasCamera;
 /** Shared empty list so the memoised snap candidates keep a stable identity. */
 const EMPTY_SNAP_CANDIDATES: SnapCandidate[] = [];
 
+/** `id` del grupo que la lupa táctil clona con `<use>` para ampliar la escena. */
+const CANVAS_SCENE_ID = 'canvas-scene-root';
+
 /** Misma razón: sin mapa de calor, la capa de geometría recibe siempre la misma referencia. */
 const EMPTY_DEMAND_RATIOS: ReadonlyMap<string, number> = new Map();
 
@@ -1713,6 +1716,11 @@ export const StructuralCanvas = ({
           <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--axial)" /></marker>
           <marker id="arrow-mechanism" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--warning)" /></marker>
         </defs>
+        {/* Todo lo dibujable va dentro de un grupo con `id`: la lupa táctil lo
+            clona con `<use>` para ampliarlo, en vez de mantener un segundo
+            render de la estructura que podría desincronizarse de éste. El
+            grupo no lleva transform — sus coordenadas son las del lienzo. */}
+        <g id={CANVAS_SCENE_ID}>
         {grid}
         <CanvasInteractionLayer
           slot="preview"
@@ -1886,6 +1894,7 @@ export const StructuralCanvas = ({
           </defs>
           <text x="65" y="5" className="axis-x-label">X</text><text x="-5" y="-66" className="axis-y-label">Y</text>
         </g>
+        </g>
       </svg>
 
       {duplicateDraft ? <form
@@ -1936,7 +1945,12 @@ export const StructuralCanvas = ({
         label={t('canvas.minimap')}
         onFit={fitModel}
       />
-      {touchLoupe ? <CanvasTouchLoupe {...touchLoupe} lengthLabel={lengthLabel} /> : null}
+      {touchLoupe ? <CanvasTouchLoupe
+        {...touchLoupe}
+        lengthLabel={lengthLabel}
+        sceneId={CANVAS_SCENE_ID}
+        canvasHeight={size.height}
+      /> : null}
       {canvasFeedback ? <div className="canvas-feedback" role="alert">{canvasFeedback}</div> : null}
       {repeatCandidate ? <button
         type="button"

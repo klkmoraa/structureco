@@ -320,6 +320,29 @@
   --sc-clay-edge: 1px solid color-mix(in srgb, var(--sc-color-border) 58%, white);
   --sc-gradient-clay: var(--sc-color-surface-1);
 
+  /* El hundimiento de una tecla clay: baja 1,5px y encoge un pelo. Es un token
+     y no un literal porque `prefers-reduced-motion` lo anula de una sola vez
+     para todos los controles, en lugar de repetir un `transform:none` por
+     selector al final de la hoja. */
+  --sc-clay-press-transform: translateY(1.5px) scale(0.985);
+
+  /* Arcilla teñida de marca: la única pieza que se rellena con el acento en
+     lugar de con la superficie. Misma anatomía que el resto de la escala
+     (sombra exterior abajo, luz interior arriba, sombra interior abajo), pero
+     medida sobre el color de acción para que el volumen siga leyéndose cuando
+     el relleno ya no es marfil. La consume el Design System (`ui.css`) en
+     `.sc-button--primary` / `.sc-icon-button--primary`; antes vivía repetida
+     tres veces al final de `styles.css`. */
+  --sc-gradient-clay-action: linear-gradient(160deg,
+    color-mix(in srgb, var(--sc-color-action-primary) 78%, white) 0%,
+    var(--sc-color-action-primary) 48%,
+    color-mix(in srgb, var(--sc-color-action-primary) 82%, black) 100%);
+  --sc-shadow-clay-action: 0 5px 11px color-mix(in srgb, var(--sc-color-action-primary) 28%, transparent), inset 0 1.5px 0 rgba(255, 255, 255, 0.38), inset 0 -6px 9px color-mix(in srgb, var(--sc-color-action-primary) 25%, black 20%);
+  --sc-shadow-clay-action-hover: 0 6px 13px color-mix(in srgb, var(--sc-color-action-primary) 32%, transparent), inset 0 1.5px 0 rgba(255, 255, 255, 0.42), inset 0 -6px 9px color-mix(in srgb, var(--sc-color-action-primary) 28%, black 20%);
+  /* Rehundido con color: la cavidad neutra desaparecería sobre el relleno de
+     marca, así que la tinta de la cavidad también se mide sobre el acento. */
+  --sc-shadow-clay-action-pressed: inset 0 3px 8px color-mix(in srgb, var(--sc-color-action-primary) 46%, black 26%), inset 0 -1px 0 rgba(255, 255, 255, 0.22);
+
 
   /* Anillos: 1px de luz interior en el borde superior. Es lo que separa una
      tarjeta "plana con sombra" de una tarjeta con canto. */
@@ -640,6 +663,13 @@
   --sc-clay-edge: 1px solid var(--sc-color-border);
   --sc-gradient-clay: var(--sc-color-surface-1);
 
+  /* Noche: el relleno de marca ya es lo más claro de la pantalla, así que la
+     luz interior baja de 0.38 a 0.18 — el mismo recorte que hace el resto de
+     la escala clay. El gradiente no cambia: se mide sobre el mismo acento. */
+  --sc-shadow-clay-action: 0 5px 11px color-mix(in srgb, var(--sc-color-action-primary) 28%, transparent), inset 0 1.5px 0 rgba(255, 255, 255, 0.18), inset 0 -6px 9px color-mix(in srgb, var(--sc-color-action-primary) 25%, black 20%);
+  --sc-shadow-clay-action-hover: 0 6px 13px color-mix(in srgb, var(--sc-color-action-primary) 32%, transparent), inset 0 1.5px 0 rgba(255, 255, 255, 0.22), inset 0 -6px 9px color-mix(in srgb, var(--sc-color-action-primary) 28%, black 20%);
+  --sc-shadow-clay-action-pressed: inset 0 3px 8px color-mix(in srgb, var(--sc-color-action-primary) 46%, black 34%), inset 0 -1px 0 rgba(255, 255, 255, 0.1);
+
 
   --sc-ring-inset: inset 0 1px 0 color-mix(in srgb, var(--sc-color-action-primary) 14%, transparent);
   --sc-glow-accent: 0 0 transparent;
@@ -662,5 +692,9 @@
     --sc-ease-emphasized: linear;
     --sc-spring-soft: linear;
     --sc-spring-panel: linear;
+    /* Anular la duración no basta: un `transform` sin transición sigue saltando.
+       Neutralizar el token apaga el hundimiento en todos los controles clay a
+       la vez, y el estado sigue leyéndose por la cavidad de la sombra. */
+    --sc-clay-press-transform: none;
   }
 }

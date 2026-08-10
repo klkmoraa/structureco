@@ -23,7 +23,7 @@ export const StructuralHealthMeter = () => {
   const summary = useMemo(() => structuralDemandSummary(project, analysis), [analysis, project]);
   if (!summary) return null;
 
-  const { critical, maxRatio, safetyFactor, anyEstimatedYield } = summary;
+  const { critical, maxRatio, anyEstimatedYield } = summary;
   const percent = maxRatio * 100;
   const tone = demandTone(maxRatio);
   const ToneIcon = tone === 'overstressed' ? ShieldAlert : tone === 'warning' ? AlertTriangle : CheckCircle2;
@@ -80,8 +80,11 @@ export const StructuralHealthMeter = () => {
         <dd>{formatInspectorValue(toDisplay(critical.sigmaTotal, units, 'elasticModulus'), unitLabel(units, 'elasticModulus'))}</dd>
       </div>
       <div>
-        <dt>{t('results.healthSafetyFactor')}</dt>
-        <dd>{Number.isFinite(safetyFactor) && safetyFactor < 10 ? formatFixed(safetyFactor, 2, 'inspector') : '> 10'}</dd>
+        {/* η y su porcentaje, no 1/η: un "factor" invita a leerlo como el
+            coeficiente de seguridad de una norma, y esto es una estimación
+            elástica. La magnitud que manda es la utilización. */}
+        <dt>{t('results.healthUtilization')}</dt>
+        <dd data-testid="structural-health-ratio">η {formatFixed(maxRatio, 2, 'inspector')} · {formatFixed(percent, 0, 'inspector')}%</dd>
       </div>
       <div>
         <dt>{t('results.healthContribution')}</dt>

@@ -1330,7 +1330,9 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 @media (max-width:1023px) {
   .brand-mark,.brand-mark svg { width:30px; height:30px; }
   .inspector-panel { height:min(78dvh,700px); border-radius:20px 20px 0 0; }
-  .mobile-inspector-backdrop { background:var(--sc-color-overlay-soft); backdrop-filter:blur(2px); }
+  /* Sin `backdrop-filter`: 2px de desenfoque no se ven y sí cuestan una capa de
+     composición sobre el lienzo. El velo lo hace el scrim. */
+  .mobile-inspector-backdrop { background:var(--sc-color-overlay-soft); }
   .empty-results,.failed-results { margin:10px; min-height:calc(100% - 20px); }
 }
 
@@ -2513,7 +2515,7 @@ button:not(:disabled):active,.selection-card:active {
 .result-object-link:hover,.result-object-link[aria-pressed='true'] { color:var(--selection); background:color-mix(in srgb,var(--selection) 10%,transparent); }
 
 @media (max-width:1023px) {
-  .results-sheet-backdrop { display:block; position:absolute; inset:0; z-index:7; border:0; background:var(--sc-color-overlay-sheet); backdrop-filter:blur(1px); }
+  .results-sheet-backdrop { display:block; position:absolute; inset:0; z-index:7; border:0; background:var(--sc-color-overlay-sheet); }
   .results-panel:not(.mobile-collapsed) { position:absolute; inset:auto 0 0; z-index:8; width:100%; border-radius:14px 14px 0 0; }
   .results-commandbar { min-height:46px; padding:5px 12px; }
   .results-mode-control { display:none; }
@@ -2873,15 +2875,11 @@ button:not(:disabled):active,.selection-card:active {
 .results-table tbody tr { transition: background-color var(--sc-motion-fast) var(--sc-ease-standard); }
 .results-table tbody tr:hover td { background: color-mix(in srgb, var(--sc-color-selection) 26%, transparent); }
 
-/* Controles segmentados: elevación tokenizada y transición. */
+/* Controles segmentados: transición compartida. El relieve de cada estado lo
+   declara una sola vez la capa clay del final del archivo. */
 .segmented-control button, .learning-level button, .response-selector button {
   transition: var(--sc-transition-control);
 }
-.segmented-control button.active { box-shadow: var(--sc-shadow-raised); }
-
-/* Herramientas del rail: feedback de pulsación. */
-.tool-button { transition: var(--sc-transition-control); }
-.tool-button:not(:disabled):active { transform: scale(.97); transition-duration: var(--sc-motion-press); }
 
 /* Scrollbars finas y tematizadas (WebKit + Firefox). */
 .inspector-scroll, .results-body, .toolbar, .table-wrap, .matrix-scroll, .sc-modal-surface__body {
@@ -2930,46 +2928,20 @@ button:not(:disabled):active,.selection-card:active {
 /* ========================================================================
    AG-015 · Capa de materia
    Lo que la bienvenida estrena, el espacio de trabajo lo hereda: canto de
-   1px, vidrio saturado y halo de marca sólo donde hay una acción. No
-   introduce color nuevo ni cambia una sola medida de layout — sube el
-   acabado de superficies que ya existían.
-   Va al final del archivo a propósito: `ui.css` se carga después (el
-   WorkspaceShell es lazy), así que los adaptadores `.sc-*` necesitan una
-   clase extra para ganar sin recurrir a `!important`.
+   1px y halo de marca sólo donde hay una acción. No introduce color nuevo
+   ni cambia una sola medida de layout — sube el acabado de superficies que
+   ya existían.
+   Lo que esta capa vestía de los componentes `.sc-*` (acción primaria,
+   segmentados, teclas del rail) se mudó a `design-system/components/ui.css`,
+   que es quien los posee: se cargaba después que `styles.css` y por eso hacía
+   falta la clase extra (`.sc-button.sc-button--primary`) para ganar la
+   cascada. Declarada en su sitio, la duplicación desaparece.
    ===================================================================== */
 
-/* Acción primaria: relleno sólido + brillo superior + halo. El halo aparece
-   sólo en hover, para que "analizar" no compita con el lienzo en reposo. */
-.analyze-button,
-.sc-button.sc-button--primary {
-  background-image:var(--sc-gradient-sheen);
-  box-shadow:var(--sc-shadow-contact), var(--sc-ring-inset);
-}
-.analyze-button:hover:not(:disabled),
-.sc-button.sc-button--primary:not(:disabled):hover {
-  box-shadow:var(--sc-glow-accent), var(--sc-ring-inset);
-}
+/* Analizando: el anillo de foco marca que la acción sigue en curso. Es el
+   único estado del botón primario que no describe el Design System, porque
+   `.analyzing` es de esta pantalla y no del componente. */
 .analyze-button.analyzing { box-shadow:var(--sc-ring-focus), var(--sc-ring-inset); }
-
-/* Canto interior en todo lo que se eleva. Es un solo píxel y es la
-   diferencia entre "rectángulo con sombra" y "objeto con borde". */
-.segmented-control button.active {
-  box-shadow:var(--sc-shadow-raised), var(--sc-ring-inset);
-}
-
-/* Herramienta activa: el halo usa el color de la propia herramienta, así el
-   rail sigue codificando dominio y no sólo estado. */
-.tool-button.active {
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb,var(--tool-color) 22%,transparent),
-    0 6px 18px color-mix(in srgb,var(--tool-color) 16%,transparent);
-}
-.tool-node.active,.tool-pointLoad.active,.tool-dimension.active {
-  box-shadow:
-    0 -1px 0 var(--border-soft),
-    inset 0 0 0 1px color-mix(in srgb,var(--tool-color) 22%,transparent),
-    0 6px 18px color-mix(in srgb,var(--tool-color) 16%,transparent);
-}
 
 @media (pointer:coarse) {
   /* Los filtros de la vitrina medían 29px y quedaban fuera del suelo táctil
@@ -3123,40 +3095,6 @@ button:not(:disabled):active,.selection-card:active {
   font-size:11px;
 }
 
-.tool-button {
-  border-radius:var(--sc-radius-sm);
-  background:transparent;
-  transition:background var(--sc-motion-control) var(--sc-ease-standard), color var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press);
-}
-.tool-button:hover:not(:disabled) { background:var(--sc-color-surface-2); }
-.tool-button.active {
-  color:var(--accent-foreground);
-  background:linear-gradient(160deg, color-mix(in srgb, var(--tool-color) 78%, white) 0%, var(--tool-color) 48%, color-mix(in srgb, var(--tool-color) 82%, black) 100%);
-  box-shadow:0 4px 10px color-mix(in srgb, var(--tool-color) 28%, transparent), inset 0 1.5px 0 rgba(255,255,255,.38), inset 0 -5px 8px color-mix(in srgb, var(--tool-color) 25%, black 20%);
-}
-.tool-button.active svg,
-.tool-button.active kbd { color:currentColor; }
-.tool-button:not(:disabled):active { box-shadow:var(--sc-shadow-clay-pressed); transform:translateY(1px) scale(.97); }
-
-.analyze-button,
-.sc-button.sc-button--primary {
-  border:0;
-  background:linear-gradient(160deg, color-mix(in srgb, var(--accent) 78%, white) 0%, var(--accent) 48%, color-mix(in srgb, var(--accent) 82%, black) 100%);
-  box-shadow:0 5px 11px color-mix(in srgb, var(--accent) 28%, transparent), inset 0 1.5px 0 rgba(255,255,255,.38), inset 0 -6px 9px color-mix(in srgb, var(--accent) 25%, black 20%);
-  transition:transform var(--sc-motion-press) var(--sc-ease-press), box-shadow var(--sc-motion-control) var(--sc-ease-standard), background var(--sc-motion-control) var(--sc-ease-standard);
-}
-.analyze-button:hover:not(:disabled),
-.sc-button.sc-button--primary:not(:disabled):hover {
-  box-shadow:0 6px 13px color-mix(in srgb, var(--accent) 32%, transparent), inset 0 1.5px 0 rgba(255,255,255,.42), inset 0 -6px 9px color-mix(in srgb, var(--accent) 28%, black 20%);
-  transform:translateY(-1px);
-}
-.analyze-button:not(:disabled):active,
-.sc-button.sc-button--primary:not(:disabled):active {
-  box-shadow:var(--sc-shadow-clay-pressed);
-  transform:translateY(1px) scale(.97);
-}
-
-.sc-button.sc-button--secondary,
 .welcome-continue-link,
 .theme-toggle,
 .topbar button:not(.analyze-button):not(.sc-button--primary) {
@@ -3182,13 +3120,6 @@ button:not(:disabled):active,.selection-card:active {
 .number-control:focus-within,
 .select-field select:focus-visible,
 .compact-select:focus-visible { box-shadow:var(--sc-shadow-clay-pressed), 0 0 0 var(--sc-focus-ring-width) color-mix(in srgb, var(--focus) 34%, transparent); }
-.segmented-control button.active,
-.learning-level button.active,
-.response-selector button.active {
-  background:var(--sc-color-surface-1);
-  box-shadow:var(--sc-shadow-clay-xs);
-  color:var(--accent);
-}
 
 .inspector-tabs button,
 .result-tabs button {
@@ -3394,18 +3325,9 @@ button:not(:disabled):active,.selection-card:active {
 .topbar :is(.icon-button,.project-menu-toggle,.brand-home-button):active:not(:disabled),
 .canvas-controls button:active { box-shadow:var(--sc-shadow-clay-pressed); transform:translateY(1px) scale(.96); }
 
-.tool-button {
-  border-radius:var(--sc-radius-sm);
-  transition:background var(--sc-motion-control) var(--sc-ease-standard), color var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard), transform var(--sc-motion-press) var(--sc-ease-press);
-}
-.tool-button:hover:not(:disabled) { background:var(--sc-color-surface-2); transform:translateY(-1px); }
-.tool-button.active {
-  color:var(--accent-foreground);
-  background:linear-gradient(160deg,color-mix(in srgb,var(--tool-color) 78%,white) 0%,var(--tool-color) 48%,color-mix(in srgb,var(--tool-color) 82%,black) 100%);
-  box-shadow:0 4px 10px color-mix(in srgb,var(--tool-color) 28%,transparent), inset 0 1.5px 0 rgba(255,255,255,.38), inset 0 -5px 8px color-mix(in srgb,var(--tool-color) 25%,black 20%);
-}
-.tool-button.active:hover:not(:disabled) { transform:translateY(-1px); }
-.tool-button:active:not(:disabled) { box-shadow:var(--sc-shadow-clay-pressed); transform:translateY(1px) scale(.97); }
+/* La geometría de la tecla es de esta pantalla; su relieve lo declara
+   `.sc-tool-button` en `ui.css`, que es el componente que la dibuja. */
+.tool-button { border-radius:var(--sc-radius-sm); }
 
 .canvas-mode-badge,
 .canvas-view-chips span,
@@ -3471,14 +3393,11 @@ button:not(:disabled):active,.selection-card:active {
 .compact-toggle-grid input[type='checkbox']:checked::after { transform:translateX(13px); }
 .compact-toggle-grid label:has(input:checked) { color:var(--accent); background:var(--surface); box-shadow:var(--sc-shadow-clay-xs); }
 
+/* La pista es la ranura; las teclas y su estado se visten al final del archivo. */
 .segmented-control,
 .learning-level,
 .response-selector,
 .filter-chip-row { background:var(--sc-color-surface-2); box-shadow:var(--sc-shadow-clay-pressed); }
-.segmented-control button.active,
-.learning-level button.active,
-.response-selector button.active,
-.filter-chip-row button[aria-pressed='true'] { background:var(--surface); color:var(--accent); box-shadow:var(--sc-shadow-clay-xs); }
 .combination-card[open] { background:var(--surface); box-shadow:var(--sc-shadow-clay-sm); }
 
 .results-panel { border-top:1px solid var(--border); }
@@ -3872,55 +3791,38 @@ button:not(:disabled):active,.selection-card:active {
 
    Una sola gramática de materia, aplicada en tres estados:
      · reposo  → tarjeta de arcilla elevada (`--sc-shadow-clay-xs/sm`)
-     · hover   → sube 1,5px y gana difusión
+     · hover   → sube y gana difusión
      · activo  → cavidad rehundida (`--sc-shadow-clay-pressed`), nunca halo
-   Va al final del archivo porque `ui.css` se carga después (WorkspaceShell es
-   lazy) y estos selectores necesitan ganar sin recurrir a `!important`.
+
+   La gramática la define `design-system/components/ui.css` para todo lo que
+   es del Design System (botones, icon-buttons, campos, segmentados, popovers,
+   pestañas, teclas del rail). Lo que queda aquí son las piezas propias de
+   estas features, que la aplican con los mismos tokens.
    ===================================================================== */
 
-/* --- Relieve homogéneo de herramientas y controles segmentados --------- */
-.tool-button:not(:disabled) {
-  background:var(--sc-color-surface-1);
-  border:var(--sc-clay-edge);
-  box-shadow:var(--sc-shadow-clay-xs);
-}
-.tool-button:hover:not(:disabled) {
-  background:var(--sc-color-surface-elevated);
-  box-shadow:var(--sc-shadow-clay-sm);
-  transform:translateY(-1.5px);
-}
-/* Selección = tecla hundida. El color de dominio pasa al icono y al texto en
-   lugar de rellenar la tecla: la herramienta se reconoce por su color y el
-   estado se lee por el volumen, no por el brillo. */
-.tool-button.active,
-.tool-button.active:hover:not(:disabled) {
-  color:var(--tool-color,var(--accent));
-  background:var(--sc-color-surface-inset);
-  background-image:none;
-  border-color:color-mix(in srgb,var(--tool-color,var(--accent)) 26%,var(--border));
-  box-shadow:var(--sc-shadow-clay-pressed);
-  transform:translateY(1.5px) scale(.985);
-}
-.tool-button.active kbd { color:color-mix(in srgb,var(--tool-color,var(--accent)) 74%,var(--muted)); }
-.tool-button:active:not(:disabled) {
-  background:var(--sc-color-surface-inset);
-  box-shadow:var(--sc-shadow-clay-pressed);
-  transform:translateY(1.5px) scale(.985);
-}
-
-.segmented-control button {
+/* Controles segmentados locales (`.segmented-control`, `.learning-level`,
+   `.response-selector`): no pasan por `SegmentedControl` del Design System,
+   así que llevan aquí la misma gramática, declarada una sola vez. */
+.segmented-control button,
+.learning-level button,
+.response-selector button {
   background:var(--sc-color-surface-1);
   border:var(--sc-clay-edge);
   box-shadow:var(--sc-shadow-clay-xs);
   transition:var(--sc-transition-control);
 }
-.segmented-control button:hover:not(:disabled) { box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1px); }
+.segmented-control button:hover:not(:disabled),
+.learning-level button:hover:not(:disabled),
+.response-selector button:hover:not(:disabled) { box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1px); }
 .segmented-control button.active,
-.segmented-control button[aria-pressed='true'] {
+.segmented-control button[aria-pressed='true'],
+.learning-level button.active,
+.response-selector button.active,
+.filter-chip-row button[aria-pressed='true'] {
   color:var(--accent);
   background:var(--sc-color-surface-inset);
   box-shadow:var(--sc-shadow-clay-pressed);
-  transform:translateY(1px);
+  transform:var(--sc-clay-press-transform);
 }
 
 /* El disparador de capas comparte la gramática: cavidad al estar abierto. */
@@ -4008,16 +3910,21 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 /* --- Lupa táctil ------------------------------------------------------- */
+/* El contenedor tiene tamaño cero y se planta en el punto de contacto: cada
+   pieza se coloca respecto a ese punto. La lente y la cota van apartadas del
+   dedo, la retícula se queda debajo marcando dónde está exactamente. */
 .canvas-touch-loupe {
   position:absolute;
   z-index:12;
-  translate:-50% -50%;
-  display:grid;
-  justify-items:center;
-  gap:4px;
+  width:0;
+  height:0;
   pointer-events:none;
 }
 .canvas-touch-loupe-reticle {
+  position:absolute;
+  left:0;
+  top:0;
+  translate:-50% -50%;
   width:46px;
   height:46px;
   border-radius:var(--sc-radius-pill);
@@ -4027,9 +3934,17 @@ button:not(:disabled):active,.selection-card:active {
     linear-gradient(var(--accent),var(--accent)) center/13px 1.5px no-repeat,
     linear-gradient(var(--accent),var(--accent)) center/1.5px 13px no-repeat;
 }
+.canvas-touch-loupe-lens {
+  position:absolute;
+  left:0;
+  translate:-50% 0;
+  display:block;
+  filter:drop-shadow(0 6px 14px color-mix(in srgb,var(--sc-color-text-primary) 22%,transparent));
+}
 .canvas-touch-loupe-coord {
-  /* Desplazada por encima del dedo: lo que se apunta queda tapado por la mano. */
-  margin-top:-84px;
+  position:absolute;
+  left:0;
+  translate:-50% 0;
   padding:5px 10px;
   border:var(--sc-clay-edge);
   border-radius:var(--sc-radius-pill);
@@ -4040,6 +3955,45 @@ button:not(:disabled):active,.selection-card:active {
   font-size:var(--sc-font-size-technical);
   font-variant-numeric:var(--sc-numeric-variant);
   white-space:nowrap;
+}
+/* Encima del dedo por defecto; debajo cuando el contacto está tan arriba que
+   la lente se saldría del lienzo. `bottom`/`top` se miden desde el punto de
+   contacto porque el contenedor no tiene tamaño. */
+.canvas-touch-loupe[data-placement='above'] .canvas-touch-loupe-lens { bottom:40px; }
+.canvas-touch-loupe[data-placement='above'] .canvas-touch-loupe-coord { bottom:150px; }
+.canvas-touch-loupe[data-placement='below'] .canvas-touch-loupe-lens { top:40px; }
+.canvas-touch-loupe[data-placement='below'] .canvas-touch-loupe-coord { top:150px; }
+/* El fondo de la lente es el del lienzo: lo ampliado tiene que leerse sobre el
+   mismo papel, no sobre una superficie de chrome. */
+.canvas-touch-loupe-ground { fill:var(--canvas-bg); }
+.canvas-touch-loupe-rim { fill:none; stroke:var(--sc-color-border-canvas-chrome); stroke-width:2; }
+.canvas-touch-loupe-crosshair { stroke:color-mix(in srgb,var(--accent) 72%,transparent); stroke-width:1.2; }
+
+/* --- Sellos de extremos M/V sobre el diagrama -------------------------- */
+/* El color es el de la magnitud que se está mirando, el mismo del diagrama:
+   la capa declara cuál y el sello lo hereda. */
+.critical-point-layer { --critical-color:var(--moment); }
+.critical-point-layer.is-shear { --critical-color:var(--shear); }
+.critical-point-stem { stroke:var(--critical-color); stroke-width:1; stroke-dasharray:3 2; opacity:.6; }
+.critical-point-dot { fill:var(--critical-color); stroke:var(--canvas-bg); stroke-width:1.2; }
+.critical-point-marker.is-min .critical-point-dot { fill:var(--canvas-bg); stroke:var(--critical-color); stroke-width:2; }
+.critical-point-stamp {
+  fill:var(--sc-color-surface-elevated);
+  stroke:var(--sc-color-border-canvas-chrome);
+  stroke-width:1;
+}
+.critical-point-value {
+  fill:var(--critical-color);
+  font-family:var(--sc-font-mono);
+  font-size:9px;
+  font-weight:700;
+  font-variant-numeric:var(--sc-numeric-variant);
+}
+.critical-point-station {
+  fill:var(--muted);
+  font-family:var(--sc-font-mono);
+  font-size:8px;
+  font-variant-numeric:var(--sc-numeric-variant);
 }
 
 /* --- Tarjeta contextual del corte: η y estación ------------------------ */
@@ -4079,6 +4033,27 @@ button:not(:disabled):active,.selection-card:active {
 .inspector-selection-preview .preview-nodes circle { fill:var(--node-fill); stroke:var(--member); stroke-width:1.4; }
 .inspector-selection-preview .preview-nodes circle.is-focus { fill:var(--selection); stroke:var(--selection); }
 .inspector-selection-preview .preview-support { fill:none; stroke:var(--member); stroke-width:1.3; stroke-linecap:round; }
+.inspector-selection-preview .preview-support.is-focus { stroke:var(--selection); stroke-width:1.7; }
+/* La carga se dibuja con su color técnico, el mismo del lienzo: quien la
+   reconoce ahí la reconoce aquí sin traducir nada. */
+.inspector-selection-preview .preview-arrow line { stroke:var(--force); stroke-width:1.8; stroke-linecap:round; }
+.inspector-selection-preview .preview-arrow polygon { fill:var(--force); stroke:none; }
+.inspector-selection-preview .preview-load-band {
+  fill:color-mix(in srgb,var(--shear) 22%,transparent);
+  stroke:var(--shear);
+  stroke-width:1.4;
+  stroke-linejoin:round;
+}
+.inspector-selection-preview [data-load-kind='distributed'] .preview-arrow line { stroke:var(--shear); }
+.inspector-selection-preview [data-load-kind='distributed'] .preview-arrow polygon { fill:var(--shear); }
+.inspector-selection-preview .preview-moment path { fill:none; stroke:var(--moment); stroke-width:1.8; stroke-linecap:round; }
+.inspector-selection-preview .preview-moment polygon { fill:var(--moment); stroke:none; }
+.inspector-selection-preview .preview-load-label {
+  fill:var(--muted);
+  font-family:var(--sc-font-mono);
+  font-size:8px;
+  font-variant-numeric:var(--sc-numeric-variant);
+}
 
 /* --- Inspector: visor de sección --------------------------------------- */
 .section-viewer {
@@ -4128,6 +4103,9 @@ button:not(:disabled):active,.selection-card:active {
 }
 .section-viewer-canvas svg { width:100%; height:auto; display:block; }
 .section-viewer .section-shape { fill:var(--surface-2); stroke:var(--accent); stroke-width:2; }
+/* En modo tensiones el contorno va *encima* del degradado: si conservara el
+   relleno taparía justo el mapa que tiene que enmarcar. */
+.section-viewer .section-shape--outline { fill:none; }
 .section-viewer .section-shape-void { fill:var(--canvas-bg); stroke:var(--border); stroke-width:1.2; }
 .section-viewer .section-neutral-axis { stroke:var(--axis); stroke-width:1.2; stroke-dasharray:4 2; }
 .section-viewer .section-axis-label,
@@ -4140,7 +4118,8 @@ button:not(:disabled):active,.selection-card:active {
 .section-viewer .section-axis-label { fill:var(--muted); }
 .section-viewer .section-dimension line { stroke:var(--dimension); stroke-width:1; }
 .section-viewer .section-dimension text { fill:var(--text); }
-.section-viewer .section-stress-fill { stroke:var(--accent); stroke-width:1.6; }
+/* Sin trazo: el borde lo pone `.section-shape--outline` con la forma real. */
+.section-viewer .section-stress-fill { stroke:none; }
 .section-viewer .section-stress-label { fill:var(--text); }
 .section-viewer-chips { margin:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
 .section-viewer-chips > div {
@@ -4238,6 +4217,7 @@ button:not(:disabled):active,.selection-card:active {
   width:2px;
   background:color-mix(in srgb,var(--text) 42%,transparent);
 }
+.inspector-narrative-meter .meter-threshold.is-yield,
 .structural-health-mark.is-yield { background:var(--sc-color-state-error); transform:translateX(-2px); }
 .inspector-narrative-basis,
 .structural-health-basis {
