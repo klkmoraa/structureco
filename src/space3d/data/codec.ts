@@ -187,7 +187,21 @@ const readCombination = (value: unknown, index: number): Space3DLoadCombination 
 
 const UNIT_SYSTEMS = ['kN-m', 'N-mm', 'kgf-m', 'kip-ft'] as const;
 
-export const parseSpace3DProject = (json: string): Space3DProjectV1 => {
+export interface Space3DParseOptions {
+  /**
+   * Exige además un modelo estructuralmente admisible.
+   *
+   * Un archivo puede tener la forma correcta y aun así describir un modelo que
+   * no se puede analizar — por ejemplo el derivado de un proyecto 2D, con la
+   * inercia del eje débil todavía a cero. Eso es trabajo en curso legítimo: se
+   * guarda y se reabre, y es el validador quien impide analizarlo. Un archivo
+   * que llega de fuera sí se exige coherente.
+   */
+  readonly requireAdmissibleModel?: boolean;
+}
+
+export const parseSpace3DProject = (json: string, options: Space3DParseOptions = {}): Space3DProjectV1 => {
+  const requireAdmissibleModel = options.requireAdmissibleModel ?? true;
   let raw: unknown;
   try {
     raw = JSON.parse(json);
@@ -223,14 +237,20 @@ export const parseSpace3DProject = (json: string): Space3DProjectV1 => {
     loadCombinations: list(source, 'loadCombinations', 'project').map(readCombination),
   };
 
-  const issues = validateSpace3DProject(project);
-  if (issues.length > 0) {
-    const detail = issues.slice(0, 3).map((item) => `${item.entityKind}:${item.entityId}:${item.code}`).join(', ');
-    fail('invalid-model', `${issues.length} problema(s): ${detail}`);
+  if (requireAdmissibleModel) {
+    const issues = validateSpace3DProject(project);
+    if (issues.length > 0) {
+      const detail = issues.slice(0, 3).map((item) => `${item.entityKind}:${item.entityId}:${item.code}`).join(', ');
+      fail('invalid-model', `${issues.length} problema(s): ${detail}`);
+    }
   }
 
   return project;
 };
+
+/** Lectura de trabajo en curso: forma estricta, admisibilidad no exigida. */
+export const parseSpace3DDraft = (json: string): Space3DProjectV1 =>
+  parseSpace3DProject(json, { requireAdmissibleModel: false });
 
 export const serializeSpace3DProject = (project: Space3DProjectV1): string => JSON.stringify({
   analysisSpace: project.analysisSpace,

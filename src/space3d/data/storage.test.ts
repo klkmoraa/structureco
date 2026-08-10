@@ -78,10 +78,27 @@ describe('Space3D storage', () => {
     expect(loadSpace3DProject(storage)).toBeNull();
   });
 
-  it('rechaza guardar un proyecto que no serializa a un modelo válido', () => {
-    const broken = { ...example, members: [{ ...example.members[0], A: 0 }] };
+  it('conserva un modelo a medio completar: guardar no es analizar', () => {
+    // El derivado de un proyecto 2D llega con la inercia del eje débil a cero.
+    // Es trabajo en curso legítimo: tiene que sobrevivir a una recarga aunque el
+    // validador impida analizarlo.
+    const draft = { ...example, members: example.members.map((member) => ({ ...member, Iy: 0, J: 0 })) };
+    expect(saveSpace3DProject(draft, storage)).toBe(true);
+    expect(loadSpace3DProject(storage)).toEqual(draft);
+  });
+
+  it('rechaza guardar lo que no podría volver a leer', () => {
+    const broken = { ...example, nodes: [{ ...example.nodes[0], x: Number.NaN }] };
     expect(saveSpace3DProject(broken, storage)).toBe(false);
     expect(storage.getItem(SPACE3D_STORAGE_KEY)).toBeNull();
+  });
+
+  it('separa el almacenamiento por espacio de nombres', () => {
+    saveSpace3DProject(example, storage);
+    const derived = { ...createBlankSpace3DProject(), id: 'space3d-from-p1' };
+    expect(saveSpace3DProject(derived, storage, 'src:p1')).toBe(true);
+    expect(loadSpace3DProject(storage, 'src:p1')).toEqual(derived);
+    expect(loadSpace3DProject(storage)).toEqual(example);
   });
 
   it('limpia ambas claves', () => {

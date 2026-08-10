@@ -626,6 +626,37 @@
 .space3d-empty strong { display: block; color: var(--sc-color-text-primary); font-family: var(--sc-font-display); }
 .space3d-empty p { margin: var(--sc-space-1) 0 0; font-size: var(--sc-font-size-technical); }
 
+/* --- Puente 2D -> Space 3D ---------------------------------------------- */
+
+/* No es un aviso decorativo: mientras tenga contenido, la superficie no
+   analiza. Por eso vive junto a la barra de herramientas y no en una pestaña. */
+.space3d-bridge {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-2);
+  margin-inline: max(var(--sc-space-5), env(safe-area-inset-left)) max(var(--sc-space-5), env(safe-area-inset-right));
+  padding: var(--sc-space-3);
+  border: var(--sc-clay-edge);
+  border-inline-start: 3px solid var(--sc-color-brand-secondary);
+  border-radius: var(--sc-radius-lg);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-shadow-clay-xs);
+}
+
+.space3d-bridge header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sc-space-2);
+}
+
+.space3d-bridge header strong {
+  font-family: var(--sc-font-display);
+  font-size: var(--sc-font-size-subtitle);
+}
+
+.space3d-bridge .space3d-issues li { border-inline-start-color: var(--sc-color-state-warning); }
+
 /* --- Transferencia y estado --------------------------------------------- */
 
 .space3d-transfer {
@@ -703,7 +734,11 @@
 }
 
 @media (pointer: coarse) {
-  .space3d-linkish { min-block-size: var(--sc-size-target-touch); }
+  /* Con el dedo, todo lo accionable llega al objetivo táctil de 44px: las
+     pestañas y los identificadores de entidad también, que son los destinos
+     más pequeños de la superficie. */
+  .space3d-linkish { min-block-size: var(--sc-size-target-touch); min-inline-size: var(--sc-size-target-touch); }
+  .space3d-tab { min-block-size: var(--sc-control-height-touch); }
   .space3d-table th,
   .space3d-table td { padding-block: var(--sc-space-2); }
 }

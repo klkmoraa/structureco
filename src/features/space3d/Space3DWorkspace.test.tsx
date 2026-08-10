@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import Space3DWorkspace from './Space3DWorkspace';
 import type { Space3DViewport } from '../../space3d/view/threeViewport';
 import type { Space3DStorageLike } from '../../space3d/data/storage';
+import { createBlankProject } from '../../data/defaultProject';
 
 class ResizeObserverMock {
   observe() {}
@@ -227,5 +228,121 @@ describe('Space3DWorkspace end to end', () => {
     await user.click(screen.getByRole('button', { name: /editor 2d/i }));
     expect(home).toHaveBeenCalled();
     expect(editor).toHaveBeenCalled();
+  });
+});
+
+describe('Space3DWorkspace derived from a 2D project', () => {
+  const planar = () => {
+    const source = createBlankProject();
+    source.name = 'Pórtico A-04';
+    source.nodes = [
+      { id: 'N1', x: 0, y: 0, support: { type: 'fixed' } },
+      { id: 'N2', x: 0, y: 3, support: { type: 'none' } },
+      { id: 'N3', x: 4, y: 3, support: { type: 'none' } },
+      { id: 'N4', x: 4, y: 0, support: { type: 'fixed' } },
+    ];
+    source.members = [
+      { id: 'M1', i: 'N1', j: 'N2', type: 'frame', E: 2e8, A: 0.01, I: 8e-5, G: 7.7e7 },
+      { id: 'M2', i: 'N2', j: 'N3', type: 'frame', E: 2e8, A: 0.01, I: 8e-5, G: 7.7e7 },
+      { id: 'M3', i: 'N3', j: 'N4', type: 'frame', E: 2e8, A: 0.01, I: 8e-5, G: 7.7e7 },
+    ];
+    source.nodalLoads = [{ id: 'L1', nodeId: 'N2', caseId: source.loadCases[0].id, fx: 12, fy: -30, mz: 0 }];
+    return source;
+  };
+
+  const renderDerived = (source = planar(), storage = new MemoryStorage()) => {
+    const view = render(<Space3DWorkspace
+      language="es"
+      storage={storage}
+      sourceProject={source}
+      createViewport={stubViewport}
+    />);
+    return { view, storage, source };
+  };
+
+  it('abre el proyecto 2D actual, no el ejemplo ni uno vacío', () => {
+    const { source } = renderDerived();
+    expect(screen.getByText(/Pórtico A-04/)).toBeDefined();
+    const rows = within(table(/nudos/i)).getAllByRole('row').slice(1);
+    expect(rows.map((row) => row.querySelector('th')!.textContent)).toEqual(source.nodes.map((node) => node.id));
+    // Todo nudo derivado vive en z = 0: el modelo plano se levanta, no se inventa.
+    rows.forEach((row) => expect([...row.querySelectorAll('td')][2].textContent).toBe('0'));
+  });
+
+  it('no deja analizar mientras el puente tenga datos sin resolver', () => {
+    renderDerived();
+    expect((screen.getByRole('button', { name: /^analizar$/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText(/no se ha inventado ningún valor/i)).toBeDefined();
+    expect(screen.getByText(/inercia del eje débil/i)).toBeDefined();
+    expect(screen.getByText(/restringe uz/i)).toBeDefined();
+  });
+
+  it('desbloquea el análisis cuando el usuario completa lo que faltaba', async () => {
+    const user = userEvent.setup();
+    renderDerived();
+
+    for (const id of ['M1', 'M2', 'M3']) {
+      await user.click(within(table(/barras/i)).getByRole('button', { name: new RegExp(id) }));
+      await user.clear(screen.getByLabelText(/inercia iy/i));
+      await user.type(screen.getByLabelText(/inercia iy/i), '0.00003');
+      await user.clear(screen.getByLabelText(/torsión j/i));
+      await user.type(screen.getByLabelText(/torsión j/i), '0.00002');
+      await user.click(screen.getByRole('button', { name: /guardar barra/i }));
+    }
+    for (const id of ['N1', 'N4']) {
+      await user.click(within(table(/nudos/i)).getByRole('button', { name: new RegExp(id) }));
+      await user.click(screen.getByRole('button', { name: /empotrar/i }));
+      await user.click(screen.getByRole('button', { name: /guardar nodo/i }));
+    }
+
+    expect((screen.getByRole('button', { name: /^analizar$/i }) as HTMLButtonElement).disabled).toBe(false);
+    await user.click(screen.getByRole('button', { name: /^analizar$/i }));
+    await waitFor(() => expect(screen.getByTestId('space3d-analysis-state').textContent).toBe('ready'));
+  }, 30_000);
+
+  it('reabre el modelo derivado en lugar de duplicarlo', async () => {
+    const user = userEvent.setup();
+    const source = planar();
+    const storage = new MemoryStorage();
+    const { view } = renderDerived(source, storage);
+
+    await user.click(screen.getByRole('button', { name: /nuevo nodo/i }));
+    await user.click(screen.getByRole('button', { name: /guardar nodo/i }));
+    await waitFor(() => expect(storage.map.size).toBeGreaterThan(0));
+    view.unmount();
+
+    render(<Space3DWorkspace language="es" storage={storage} sourceProject={source} createViewport={stubViewport} />);
+    expect(within(table(/nudos/i)).getAllByRole('row')).toHaveLength(6);
+    expect([...storage.map.keys()].filter((key) => !key.endsWith(':backup'))).toHaveLength(1);
+  });
+
+  it('ofrece re-derivar sólo cuando el proyecto 2D cambió, sin sobrescribir sola', async () => {
+    const user = userEvent.setup();
+    const source = planar();
+    const storage = new MemoryStorage();
+    const { view } = renderDerived(source, storage);
+    expect(screen.queryByRole('button', { name: /re-derivar/i })).toBeNull();
+    view.unmount();
+
+    const moved = { ...source, nodes: source.nodes.map((node, index) => (index === 2 ? { ...node, x: 6 } : node)) };
+    render(<Space3DWorkspace language="es" storage={storage} sourceProject={moved} createViewport={stubViewport} />);
+    expect(screen.getByText(/cambió desde que se derivó/i)).toBeDefined();
+    // El modelo espacial sigue siendo el guardado hasta que el usuario decide.
+    expect(within(table(/nudos/i)).getByRole('row', { name: /N3/ }).textContent).toContain('4');
+
+    await user.click(screen.getByRole('button', { name: /re-derivar/i }));
+    expect(within(table(/nudos/i)).getByRole('row', { name: /N3/ }).textContent).toContain('6');
+  });
+
+  it('no toca el almacenamiento del Space 3D independiente', async () => {
+    const storage = new MemoryStorage();
+    render(<Space3DWorkspace language="es" storage={storage} createViewport={stubViewport} />);
+    await waitFor(() => expect(storage.getItem('structureco:space3d:v1')).toBeTruthy());
+    const standalone = storage.getItem('structureco:space3d:v1');
+    cleanup();
+
+    render(<Space3DWorkspace language="es" storage={storage} sourceProject={planar()} createViewport={stubViewport} />);
+    await waitFor(() => expect([...storage.map.keys()].some((key) => key.includes(':src:'))).toBe(true));
+    expect(storage.getItem('structureco:space3d:v1')).toBe(standalone);
   });
 });

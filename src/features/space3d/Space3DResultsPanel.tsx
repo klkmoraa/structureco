@@ -11,6 +11,7 @@
 import { AlertTriangle, CircleCheck, CircleSlash, Clock } from 'lucide-react';
 import type { Space3DAnalysisIssue, Space3DAnalysisResult } from '../../space3d/model/types';
 import type { Space3DAnalysisState } from '../../space3d/store/Space3DProjectContext';
+import { formatNumber } from '../../utils/numberFormat';
 import type { TranslationKey } from '../../i18n/catalogs';
 
 export type Space3DResultsTab = 'summary' | 'nodes' | 'members' | 'diagnostics';
@@ -62,13 +63,17 @@ const STATE_META: Record<Space3DAnalysisState, { key: TranslationKey; tone: stri
   cancelled: { key: 'space3d.stateCancelled', tone: 'neutral', Icon: CircleSlash },
 };
 
-const engineering = (value: number, digits = 4): string => {
-  if (!Number.isFinite(value)) return '—';
-  if (value === 0) return '0';
-  const magnitude = Math.abs(value);
-  if (magnitude >= 1e-3 && magnitude < 1e6) return value.toFixed(digits);
-  return value.toExponential(3);
-};
+/**
+ * Una sola política numérica en todo el producto: `utils/numberFormat` decide
+ * cuándo un valor se lee en decimal y cuándo en científica, y qué se imprime
+ * cuando no hay número. Los desplazamientos espaciales son del orden de 1e-5 m,
+ * así que el contexto `table` es el que evita una columna de ceros.
+ */
+const engineering = (value: number, digits = 6): string =>
+  formatNumber(value, 'table', { significantDigits: digits });
+
+/** Acciones de extremo: cuatro cifras bastan y mantienen la columna estrecha. */
+const action = (value: number): string => formatNumber(value, 'table', { significantDigits: 4 });
 
 export const Space3DResultsPanel = ({
   analysis, analysisState, tab, onTabChange, deformationScale, maxDisplacement, t, onSelectNode, onSelectMember,
@@ -97,7 +102,7 @@ export const Space3DResultsPanel = ({
         <StateIcon size={15} aria-hidden="true" />{t(meta.key)}
       </span>
       {deformationScale !== null && analysisState === 'ready'
-        ? <span className="space3d-chip">{t('space3d.deformationScale', { scale: engineering(deformationScale, 1) })}</span>
+        ? <span className="space3d-chip">{t('space3d.deformationScale', { scale: engineering(deformationScale, 4) })}</span>
         : null}
     </header>
 
@@ -142,11 +147,11 @@ export const Space3DResultsPanel = ({
                 <button type="button" className="space3d-linkish" onClick={() => onSelectNode(item.nodeId)}>{item.nodeId}</button>
                 <em>{t('space3d.displacement')}</em>
               </th>
-              {(['ux', 'uy', 'uz', 'rx', 'ry', 'rz'] as const).map((dof) => <td key={dof}>{engineering(item.displacement[dof], 6)}</td>)}
+              {(['ux', 'uy', 'uz', 'rx', 'ry', 'rz'] as const).map((dof) => <td key={dof}>{engineering(item.displacement[dof])}</td>)}
             </tr>,
             <tr key={`${item.nodeId}-r`} className="space3d-row-secondary">
               <th scope="row"><span aria-hidden="true">{item.nodeId}</span><em>{t('space3d.reaction')}</em></th>
-              {(['ux', 'uy', 'uz', 'rx', 'ry', 'rz'] as const).map((dof) => <td key={dof}>{engineering(item.reaction[dof], 3)}</td>)}
+              {(['ux', 'uy', 'uz', 'rx', 'ry', 'rz'] as const).map((dof) => <td key={dof}>{engineering(item.reaction[dof], 4)}</td>)}
             </tr>,
           ])}
         </tbody>
@@ -169,21 +174,21 @@ export const Space3DResultsPanel = ({
                 <button type="button" className="space3d-linkish" onClick={() => onSelectMember(item.memberId)}>{item.memberId}</button>
                 <em>{t('space3d.startEnd')}</em>
               </th>
-              <td className="space3d-axial">{engineering(item.start.N, 3)}</td>
-              <td className="space3d-shear">{engineering(item.start.Vy, 3)}</td>
-              <td className="space3d-shear">{engineering(item.start.Vz, 3)}</td>
-              <td>{engineering(item.start.T, 3)}</td>
-              <td className="space3d-moment">{engineering(item.start.My, 3)}</td>
-              <td className="space3d-moment">{engineering(item.start.Mz, 3)}</td>
+              <td className="space3d-axial">{action(item.start.N)}</td>
+              <td className="space3d-shear">{action(item.start.Vy)}</td>
+              <td className="space3d-shear">{action(item.start.Vz)}</td>
+              <td>{action(item.start.T)}</td>
+              <td className="space3d-moment">{action(item.start.My)}</td>
+              <td className="space3d-moment">{action(item.start.Mz)}</td>
             </tr>,
             <tr key={`${item.memberId}-j`} className="space3d-row-secondary">
               <th scope="row"><span aria-hidden="true">{item.memberId}</span><em>{t('space3d.finishEnd')}</em></th>
-              <td className="space3d-axial">{engineering(item.end.N, 3)}</td>
-              <td className="space3d-shear">{engineering(item.end.Vy, 3)}</td>
-              <td className="space3d-shear">{engineering(item.end.Vz, 3)}</td>
-              <td>{engineering(item.end.T, 3)}</td>
-              <td className="space3d-moment">{engineering(item.end.My, 3)}</td>
-              <td className="space3d-moment">{engineering(item.end.Mz, 3)}</td>
+              <td className="space3d-axial">{action(item.end.N)}</td>
+              <td className="space3d-shear">{action(item.end.Vy)}</td>
+              <td className="space3d-shear">{action(item.end.Vz)}</td>
+              <td>{action(item.end.T)}</td>
+              <td className="space3d-moment">{action(item.end.My)}</td>
+              <td className="space3d-moment">{action(item.end.Mz)}</td>
             </tr>,
           ])}
         </tbody>
@@ -195,11 +200,11 @@ export const Space3DResultsPanel = ({
       {analysis?.success ? <dl className="space3d-metrics">
         <div>
           <dt>{t('space3d.equilibriumForce')}</dt>
-          <dd>{analysis.diagnostics.equilibrium.force.map((value) => engineering(value, 3)).join(' · ')}</dd>
+          <dd>{analysis.diagnostics.equilibrium.force.map((value) => engineering(value, 4)).join(' · ')}</dd>
         </div>
         <div>
           <dt>{t('space3d.equilibriumMoment')}</dt>
-          <dd>{analysis.diagnostics.equilibrium.moment.map((value) => engineering(value, 3)).join(' · ')}</dd>
+          <dd>{analysis.diagnostics.equilibrium.moment.map((value) => engineering(value, 4)).join(' · ')}</dd>
         </div>
       </dl> : null}
     </div> : null}

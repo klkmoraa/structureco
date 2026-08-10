@@ -6,9 +6,11 @@
  * es la forma barata de garantizar que deshacer nunca reconstruye un estado que
  * el validador no aceptaría.
  *
- * Todo comando termina revalidando el resultado. Un comando individualmente
- * razonable puede dejar el modelo inconsistente (mover un nudo encima de otro
- * anula la longitud de una barra), y ese estado no debe llegar al solver.
+ * Todo comando termina comparando los problemas del modelo antes y después: se
+ * rechaza el que introduce uno nuevo (mover un nudo encima de otro anula la
+ * longitud de una barra), y se acepta el que convive con los que ya había —de
+ * lo contrario un modelo derivado de 2D, que nace incompleto a propósito, no
+ * podría completarse nunca.
  */
 import { validateSpace3DProject } from '../model/validation';
 import {
@@ -104,10 +106,23 @@ const checkLoadShape = (load: Space3DNodalLoad) => {
   for (const component of LOAD_COMPONENTS) requireFinite(load[component], `carga ${load.id}.${component}`);
 };
 
-const finish = (project: Space3DProjectV1): Space3DProjectV1 => {
-  const issues = validateSpace3DProject(project);
-  if (issues.length > 0) {
-    const detail = issues.slice(0, 3).map((item) => `${item.entityKind}:${item.entityId}:${item.code}`).join(', ');
+const issueKey = (issue: { entityKind: string; entityId: string; code: string; field: string }) =>
+  `${issue.entityKind}:${issue.entityId}:${issue.code}:${issue.field}`;
+
+/**
+ * Un comando se rechaza si **empeora** el modelo, no si el modelo ya estaba mal.
+ *
+ * Exigir un modelo íntegro después de cada comando parece más seguro y es justo
+ * lo contrario: un proyecto derivado de 2D nace con la inercia del eje débil sin
+ * definir, y una regla así impediría precisamente las ediciones que sirven para
+ * completarlo. Se comparan los problemas antes y después, y sólo los nuevos
+ * bloquean.
+ */
+const finish = (before: Space3DProjectV1, project: Space3DProjectV1): Space3DProjectV1 => {
+  const previous = new Set(validateSpace3DProject(before).map(issueKey));
+  const introduced = validateSpace3DProject(project).filter((issue) => !previous.has(issueKey(issue)));
+  if (introduced.length > 0) {
+    const detail = introduced.slice(0, 3).map((item) => `${item.entityKind}:${item.entityId}:${item.code}`).join(', ');
     fail('invalid-result', detail);
   }
   return project;
@@ -121,14 +136,14 @@ export const applySpace3DCommand = (project: Space3DProjectV1, command: Space3DC
       if (project.nodes.length + 1 > SPACE3D_LIMITS.maxNodes) {
         fail('limit-exceeded', `el modelo admite ${SPACE3D_LIMITS.maxNodes} nudos`);
       }
-      return finish({ ...project, nodes: [...project.nodes, command.node] });
+      return finish(project, { ...project, nodes: [...project.nodes, command.node] });
     }
 
     case 'update-node': {
       const current = requireExisting(project.nodes, command.nodeId, 'el nudo');
       const next = { ...current, ...command.changes, id: current.id };
       checkNodeShape(next);
-      return finish({ ...project, nodes: project.nodes.map((node) => (node.id === current.id ? next : node)) });
+      return finish(project, { ...project, nodes: project.nodes.map((node) => (node.id === current.id ? next : node)) });
     }
 
     case 'delete-node': {
@@ -139,7 +154,7 @@ export const applySpace3DCommand = (project: Space3DProjectV1, command: Space3DC
         const consumers = [...members.map((item) => item.id), ...loads.map((item) => item.id)].join(', ');
         fail('node-in-use', `el nudo «${command.nodeId}» todavía es usado por: ${consumers}`);
       }
-      return finish({ ...project, nodes: project.nodes.filter((node) => node.id !== command.nodeId) });
+      return finish(project, { ...project, nodes: project.nodes.filter((node) => node.id !== command.nodeId) });
     }
 
     case 'add-member': {
@@ -151,7 +166,7 @@ export const applySpace3DCommand = (project: Space3DProjectV1, command: Space3DC
       if (project.members.length + 1 > SPACE3D_LIMITS.maxMembers) {
         fail('limit-exceeded', `el modelo admite ${SPACE3D_LIMITS.maxMembers} barras`);
       }
-      return finish({ ...project, members: [...project.members, command.member] });
+      return finish(project, { ...project, members: [...project.members, command.member] });
     }
 
     case 'update-member': {
@@ -161,12 +176,12 @@ export const applySpace3DCommand = (project: Space3DProjectV1, command: Space3DC
       requireExisting(project.nodes, next.i, 'el nudo');
       requireExisting(project.nodes, next.j, 'el nudo');
       if (next.i === next.j) fail('self-referential', 'una barra no puede unir un nudo consigo mismo');
-      return finish({ ...project, members: project.members.map((member) => (member.id === current.id ? next : member)) });
+      return finish(project, { ...project, members: project.members.map((member) => (member.id === current.id ? next : member)) });
     }
 
     case 'delete-member': {
       requireExisting(project.members, command.memberId, 'la barra');
-      return finish({ ...project, members: project.members.filter((member) => member.id !== command.memberId) });
+      return finish(project, { ...project, members: project.members.filter((member) => member.id !== command.memberId) });
     }
 
     case 'set-restraints': {
@@ -175,7 +190,7 @@ export const applySpace3DCommand = (project: Space3DProjectV1, command: Space3DC
         if (typeof command.restraints[dof] !== 'boolean') fail('invalid-value', `apoyo ${command.nodeId}.${dof}`);
       }
       const next = { ...current, restraints: { ...command.restraints } };
-      return finish({ ...project, nodes: project.nodes.map((node) => (node.id === current.id ? next : node)) });
+      return finish(project, { ...project, nodes: project.nodes.map((node) => (node.id === current.id ? next : node)) });
     }
 
     case 'add-nodal-load': {
@@ -183,7 +198,7 @@ export const applySpace3DCommand = (project: Space3DProjectV1, command: Space3DC
       requireUnique(project.nodalLoads.map((load) => load.id), command.load.id, 'la carga');
       requireExisting(project.nodes, command.load.nodeId, 'el nudo');
       requireExisting(project.loadCases, command.load.caseId, 'el caso de carga');
-      return finish({ ...project, nodalLoads: [...project.nodalLoads, command.load] });
+      return finish(project, { ...project, nodalLoads: [...project.nodalLoads, command.load] });
     }
 
     case 'update-nodal-load': {
@@ -192,12 +207,12 @@ export const applySpace3DCommand = (project: Space3DProjectV1, command: Space3DC
       checkLoadShape(next);
       requireExisting(project.nodes, next.nodeId, 'el nudo');
       requireExisting(project.loadCases, next.caseId, 'el caso de carga');
-      return finish({ ...project, nodalLoads: project.nodalLoads.map((load) => (load.id === current.id ? next : load)) });
+      return finish(project, { ...project, nodalLoads: project.nodalLoads.map((load) => (load.id === current.id ? next : load)) });
     }
 
     case 'delete-nodal-load': {
       requireExisting(project.nodalLoads, command.loadId, 'la carga');
-      return finish({ ...project, nodalLoads: project.nodalLoads.filter((load) => load.id !== command.loadId) });
+      return finish(project, { ...project, nodalLoads: project.nodalLoads.filter((load) => load.id !== command.loadId) });
     }
   }
 };
