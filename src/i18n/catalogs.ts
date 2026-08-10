@@ -1339,6 +1339,7 @@ export const es = {
   'space3d.scaleAuto': 'Escala automática',
   'space3d.scaleDouble': 'Duplicar la escala',
   'space3d.scaleHalve': 'Reducir la escala a la mitad',
+  'space3d.loadCombination': 'Combinación',
   'welcome.space3DDescription': 'Crea y resuelve un marco espacial con seis grados de libertad por nudo, aparte del editor 2D.',
 } as const;
 
@@ -2687,6 +2688,7 @@ export const en: Catalog = {
   'space3d.scaleAuto': 'Automatic scale',
   'space3d.scaleDouble': 'Double the scale',
   'space3d.scaleHalve': 'Halve the scale',
+  'space3d.loadCombination': 'Combination',
   'welcome.space3DDescription': 'Create and solve a space frame with six degrees of freedom per node, separate from the 2D editor.',
 };
 

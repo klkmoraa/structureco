@@ -355,6 +355,10 @@ describe('Space3DWorkspace analysis target and deformation scale', () => {
     const target = screen.getByLabelText(/objetivo de análisis/i) as HTMLSelectElement;
     expect([...target.options].map((option) => option.value)).toEqual(['LC1', 'CO1']);
     expect(target.value).toBe('LC1');
+    // Un caso y una combinación son objetos distintos del dominio: agrupados,
+    // no una lista plana que los confunde.
+    const groups = [...target.querySelectorAll('optgroup')].map((group) => group.getAttribute('label'));
+    expect(groups).toEqual(['Caso de carga', 'Combinación']);
 
     await user.click(screen.getByRole('button', { name: /^analizar$/i }));
     await waitFor(() => expect(screen.getByTestId('space3d-analysis-state').textContent).toBe('ready'));
@@ -384,7 +388,37 @@ describe('Space3DWorkspace analysis target and deformation scale', () => {
     expect(Number(screen.getByTestId('space3d-deformation-scale').textContent)).toBeCloseTo(Number(automatic) * 2, 6);
     expect(screen.getByTestId('space3d-analysis-state').textContent).toBe('ready');
 
+    // El texto de escala se anuncia como región viva: quien usa lector de
+    // pantalla se entera del cambio sin tener que volver a enfocarlo.
+    const readout = screen.getByTestId('space3d-deformation-scale').closest('[role="status"]');
+    expect(readout?.getAttribute('aria-live')).toBe('polite');
+
     await user.click(screen.getByRole('button', { name: /escala automática/i }));
     expect(screen.getByTestId('space3d-deformation-scale').textContent).toBe(automatic);
+  }, 30_000);
+
+  it('acota la escala manual para que no se vuelva absurda ni inútil', async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+    await user.click(screen.getByRole('button', { name: /^analizar$/i }));
+    await waitFor(() => expect(screen.getByTestId('space3d-analysis-state').textContent).toBe('ready'));
+
+    const doubleButton = screen.getByRole('button', { name: /duplicar la escala/i });
+    const halveButton = screen.getByRole('button', { name: /reducir la escala a la mitad/i });
+
+    for (let click = 0; click < 10; click += 1) await user.click(doubleButton);
+    expect((doubleButton as HTMLButtonElement).disabled).toBe(true);
+    const capped = Number(screen.getByTestId('space3d-deformation-scale').textContent);
+
+    await user.click(doubleButton);
+    expect(Number(screen.getByTestId('space3d-deformation-scale').textContent)).toBe(capped);
+
+    await user.click(screen.getByRole('button', { name: /escala automática/i }));
+    for (let click = 0; click < 10; click += 1) await user.click(halveButton);
+    expect((halveButton as HTMLButtonElement).disabled).toBe(true);
+    const floored = Number(screen.getByTestId('space3d-deformation-scale').textContent);
+
+    await user.click(halveButton);
+    expect(Number(screen.getByTestId('space3d-deformation-scale').textContent)).toBe(floored);
   }, 30_000);
 });

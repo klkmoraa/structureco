@@ -121,6 +121,15 @@ const BRIDGE_RESOLVABLE = new Set([
   'pending-shear-modulus', 'pending-weak-axis-inertia', 'pending-torsion-constant', 'out-of-plane-unrestrained',
 ]);
 
+/**
+ * Límites del multiplicador manual sobre la escala automática de la deformada.
+ * Seis duplicaciones (2⁶ = 64) separan lo apenas visible de lo que ya no cabe
+ * en pantalla; más allá de eso el control deja de ayudar a leer el modelo, y
+ * los botones se deshabilitan en el límite para decirlo sin ambigüedad.
+ */
+const SCALE_FACTOR_MIN = 1 / 64;
+const SCALE_FACTOR_MAX = 64;
+
 const LAYER_TOGGLES: readonly { id: keyof Space3DLayerVisibility; key: TranslationKey; Icon: typeof Grid3x3 }[] = [
   { id: 'grid', key: 'space3d.layerGrid', Icon: Grid3x3 },
   { id: 'loads', key: 'space3d.layerLoads', Icon: Weight },
@@ -167,6 +176,9 @@ const WorkspaceBody = ({
    * otro valor la amplifica sin tocar el modelo ni el resultado.
    */
   const [scaleFactor, setScaleFactor] = useState<number | null>(null);
+  // Doce clics en cada sentido: suficiente margen para explorar sin llegar a
+  // una deformada ilegible por minúscula o a una que ya no cabe en pantalla.
+  const effectiveScaleFactor = scaleFactor ?? 1;
 
   const automatic = useMemo(() => buildSpace3DSceneModel({
     project, analysis, analysisState, selection: selectedEntity, targetId: analysisTargetId,
@@ -301,8 +313,12 @@ const WorkspaceBody = ({
             value={analysisTargetId}
             onChange={(event) => setAnalysisTargetId(event.target.value)}
           >
-            {project.loadCases.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-            {project.loadCombinations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            {project.loadCases.length > 0 ? <optgroup label={t('space3d.loadCase')}>
+              {project.loadCases.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </optgroup> : null}
+            {project.loadCombinations.length > 0 ? <optgroup label={t('space3d.loadCombination')}>
+              {project.loadCombinations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </optgroup> : null}
           </select>
         </label>
         <button type="button" className="space3d-button space3d-button--primary" onClick={() => { void analyze(); }}
@@ -393,14 +409,18 @@ const WorkspaceBody = ({
           }}
         />
         {scene.deformed ? <div className="space3d-scale" role="group" aria-label={t('space3d.layerDeformed')}>
-          <span>{t('space3d.deformationScale', { scale: formatNumber(scene.deformed.scale, 'table', { significantDigits: 4 }) })}</span>
-          <span data-testid="space3d-deformation-scale" className="space3d-visually-hidden">{scene.deformed.scale}</span>
+          <span role="status" aria-live="polite">
+            {t('space3d.deformationScale', { scale: formatNumber(scene.deformed.scale, 'table', { significantDigits: 4 }) })}
+            <span data-testid="space3d-deformation-scale" className="space3d-visually-hidden">{scene.deformed.scale}</span>
+          </span>
           <button type="button" className="space3d-tool" title={t('space3d.scaleHalve')}
-            onClick={() => setScaleFactor((current) => (current ?? 1) / 2)}>
+            disabled={effectiveScaleFactor <= SCALE_FACTOR_MIN}
+            onClick={() => setScaleFactor((current) => Math.max(SCALE_FACTOR_MIN, (current ?? 1) / 2))}>
             <Minus size={15} aria-hidden="true" /><span className="space3d-visually-hidden">{t('space3d.scaleHalve')}</span>
           </button>
           <button type="button" className="space3d-tool" title={t('space3d.scaleDouble')}
-            onClick={() => setScaleFactor((current) => (current ?? 1) * 2)}>
+            disabled={effectiveScaleFactor >= SCALE_FACTOR_MAX}
+            onClick={() => setScaleFactor((current) => Math.min(SCALE_FACTOR_MAX, (current ?? 1) * 2))}>
             <Plus size={15} aria-hidden="true" /><span className="space3d-visually-hidden">{t('space3d.scaleDouble')}</span>
           </button>
           <button type="button" className="space3d-tool" disabled={scaleFactor === null}
