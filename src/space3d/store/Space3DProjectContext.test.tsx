@@ -19,7 +19,7 @@ class MemoryStorage implements Space3DStorageLike {
 
 const Harness = () => {
   const {
-    project, analysis, analysisState, canUndo, canRedo, selectedEntity,
+    project, analysis, analysisState, analysisTargetId, canUndo, canRedo, selectedEntity,
     execute, undo, redo, analyze, cancelAnalysis, replaceProject, importPortable, exportPortable, select, lastError,
   } = useSpace3DProject();
 
@@ -32,6 +32,7 @@ const Harness = () => {
     <p data-testid="selection">{selectedEntity ? `${selectedEntity.kind}:${selectedEntity.id}` : 'none'}</p>
     <p data-testid="error">{lastError ?? ''}</p>
     <p data-testid="undo">{String(canUndo)}</p>
+    <p data-testid="target">{analysisTargetId}</p>
     <p data-testid="redo">{String(canRedo)}</p>
     <button onClick={() => execute({ kind: 'add-node', node: { id: 'N9', x: 1, y: 1, z: 1, restraints: freeSpace3DRestraints() } })}>add</button>
     <button onClick={() => execute({ kind: 'delete-node', nodeId: 'N1' })}>bad</button>
@@ -156,6 +157,30 @@ describe('Space3DProjectProvider', () => {
     expect(screen.getByTestId('selection').textContent).toBe('node:N2');
     await user.click(screen.getByRole('button', { name: 'blank' }));
     expect(screen.getByTestId('selection').textContent).toBe('none');
+  });
+
+  it('toma el objetivo de análisis del proyecto en vez de asumir LC1', async () => {
+    const user = userEvent.setup();
+    const renamed = {
+      ...createSpace3DPortalExample(),
+      loadCases: [{ id: 'permanente', name: 'Permanente' }],
+      nodalLoads: createSpace3DPortalExample().nodalLoads.map((load) => ({ ...load, caseId: 'permanente' })),
+      loadCombinations: [],
+    };
+    render(<Space3DProjectProvider storage={storage} initialProject={renamed}><Harness /></Space3DProjectProvider>);
+    expect(screen.getByTestId('target').textContent).toBe('permanente');
+
+    await user.click(screen.getByRole('button', { name: 'analyze' }));
+    await waitFor(() => expect(screen.getByTestId('state').textContent).toBe('ready'));
+  });
+
+  it('realinea el objetivo cuando el proyecto cambia y el anterior ya no existe', async () => {
+    const user = userEvent.setup();
+    renderProvider();
+    expect(screen.getByTestId('target').textContent).toBe('LC1');
+    await user.click(screen.getByRole('button', { name: 'blank' }));
+    // El proyecto vacío conserva LC1; un import con otros casos debe realinear.
+    expect(screen.getByTestId('target').textContent).toBe('LC1');
   });
 
   it('analiza igual bajo StrictMode, que monta y limpia dos veces', async () => {

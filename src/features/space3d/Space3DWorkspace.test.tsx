@@ -346,3 +346,45 @@ describe('Space3DWorkspace derived from a 2D project', () => {
     expect(storage.getItem('structureco:space3d:v1')).toBe(standalone);
   });
 });
+
+describe('Space3DWorkspace analysis target and deformation scale', () => {
+  it('deja elegir caso o combinación y analiza el objetivo seleccionado', async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    const target = screen.getByLabelText(/objetivo de análisis/i) as HTMLSelectElement;
+    expect([...target.options].map((option) => option.value)).toEqual(['LC1', 'CO1']);
+    expect(target.value).toBe('LC1');
+
+    await user.click(screen.getByRole('button', { name: /^analizar$/i }));
+    await waitFor(() => expect(screen.getByTestId('space3d-analysis-state').textContent).toBe('ready'));
+    await user.click(screen.getByRole('tab', { name: /resultados/i }));
+    await user.click(screen.getByRole('tab', { name: /^nudos$/i }));
+    const single = within(table(/desplazamiento/i)).getByRole('row', { name: /N4/ }).textContent;
+
+    await user.selectOptions(screen.getByLabelText(/objetivo de análisis/i), 'CO1');
+    // Cambiar de objetivo deja obsoleto el resultado anterior: describe otra carga.
+    expect(screen.getByTestId('space3d-analysis-state').textContent).toBe('stale');
+
+    await user.click(screen.getByRole('button', { name: /^analizar$/i }));
+    await waitFor(() => expect(screen.getByTestId('space3d-analysis-state').textContent).toBe('ready'));
+    expect(within(table(/desplazamiento/i)).getByRole('row', { name: /N4/ }).textContent).toBe(single);
+  }, 30_000);
+
+  it('permite amplificar la deformada sin tocar el modelo', async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+    await user.click(screen.getByRole('button', { name: /^analizar$/i }));
+    await waitFor(() => expect(screen.getByTestId('space3d-analysis-state').textContent).toBe('ready'));
+
+    const automatic = screen.getByTestId('space3d-deformation-scale').textContent;
+    expect(Number(automatic)).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole('button', { name: /duplicar la escala/i }));
+    expect(Number(screen.getByTestId('space3d-deformation-scale').textContent)).toBeCloseTo(Number(automatic) * 2, 6);
+    expect(screen.getByTestId('space3d-analysis-state').textContent).toBe('ready');
+
+    await user.click(screen.getByRole('button', { name: /escala automática/i }));
+    expect(screen.getByTestId('space3d-deformation-scale').textContent).toBe(automatic);
+  }, 30_000);
+});

@@ -1336,6 +1336,9 @@ export const es = {
   'space3d.bridge.droppedMemberLoad': 'Se han perdido cargas en barra: S3D-1 sólo admite cargas nodales.',
   'space3d.bridge.droppedPrescribedDisplacement': 'Se han perdido desplazamientos impuestos: S3D-1 sólo admite cargas nodales.',
   'space3d.bridge.droppedInitialEffect': 'Se han perdido efectos iniciales (térmicos o de deformación): S3D-1 no los representa.',
+  'space3d.scaleAuto': 'Escala automática',
+  'space3d.scaleDouble': 'Duplicar la escala',
+  'space3d.scaleHalve': 'Reducir la escala a la mitad',
   'welcome.space3DDescription': 'Crea y resuelve un marco espacial con seis grados de libertad por nudo, aparte del editor 2D.',
 } as const;
 
@@ -2681,6 +2684,9 @@ export const en: Catalog = {
   'space3d.bridge.droppedMemberLoad': 'Member loads were dropped: S3D-1 only supports nodal loads.',
   'space3d.bridge.droppedPrescribedDisplacement': 'Prescribed displacements were dropped: S3D-1 only supports nodal loads.',
   'space3d.bridge.droppedInitialEffect': 'Initial effects (thermal or strain) were dropped: S3D-1 does not represent them.',
+  'space3d.scaleAuto': 'Automatic scale',
+  'space3d.scaleDouble': 'Double the scale',
+  'space3d.scaleHalve': 'Halve the scale',
   'welcome.space3DDescription': 'Create and solve a space frame with six degrees of freedom per node, separate from the 2D editor.',
 };
 

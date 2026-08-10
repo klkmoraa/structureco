@@ -68,6 +68,22 @@ interface History {
 
 const HISTORY_LIMIT = 100;
 
+/**
+ * Objetivo de analisis por defecto: el primer caso del proyecto y, si no hay
+ * ninguno, la primera combinacion.
+ *
+ * Asumir `'LC1'` funcionaba mientras el unico proyecto posible fuera el
+ * ejemplo. Un modelo importado o derivado de 2D trae los identificadores de su
+ * origen, y con ellos el analisis fallaba con `unknown-target` sin que nada
+ * explicara por que.
+ */
+const defaultTargetId = (project: Space3DProjectV1): string =>
+  project.loadCases[0]?.id ?? project.loadCombinations[0]?.id ?? '';
+
+const targetExists = (project: Space3DProjectV1, targetId: string): boolean =>
+  project.loadCases.some((item) => item.id === targetId)
+  || project.loadCombinations.some((item) => item.id === targetId);
+
 const push = (history: History, next: Space3DProjectV1): History => ({
   past: [...history.past, history.present].slice(-HISTORY_LIMIT),
   present: next,
@@ -94,7 +110,7 @@ export const Space3DProjectProvider = ({ children, storage, client, initialProje
   }));
   const [analysis, setAnalysis] = useState<Space3DAnalysisResult | null>(null);
   const [analysisState, setAnalysisState] = useState<Space3DAnalysisState>('idle');
-  const [analysisTargetId, setAnalysisTargetId] = useState('LC1');
+  const [analysisTargetId, setTargetId] = useState(() => defaultTargetId(history.present));
   const [selectedEntity, setSelectedEntity] = useState<Space3DSelection | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
   const [lastErrorMessage, setLastErrorMessage] = useState<string | null>(null);
@@ -196,6 +212,9 @@ export const Space3DProjectProvider = ({ children, storage, client, initialProje
   const replaceProject = useCallback((next: Space3DProjectV1) => {
     setHistory((current) => push(current, next));
     setSelectedEntity(null);
+    // Un proyecto nuevo puede no tener el objetivo actual: se realinea en vez
+    // de dejar apuntando a un caso que ya no existe.
+    setTargetId((current) => (targetExists(next, current) ? current : defaultTargetId(next)));
     clearError();
     invalidate();
   }, [clearError, invalidate]);
@@ -219,6 +238,17 @@ export const Space3DProjectProvider = ({ children, storage, client, initialProje
       reportError('analysis-failed', error instanceof Error ? error.message : String(error));
     }
   }, [analysisTargetId, clearError, ensureClient, project, reportError]);
+
+  /**
+   * Cambiar de objetivo deja obsoleto el resultado: describe otra combinacion de
+   * cargas sobre la misma geometria, que es exactamente lo que `stale` significa.
+   */
+  const setAnalysisTargetId = useCallback((targetId: string) => {
+    setTargetId((current) => {
+      if (current !== targetId) invalidate();
+      return targetId;
+    });
+  }, [invalidate]);
 
   const cancelAnalysis = useCallback(() => {
     clientRef.current?.cancel();
@@ -262,7 +292,7 @@ export const Space3DProjectProvider = ({ children, storage, client, initialProje
   }), [
     analysis, analysisState, analysisTargetId, analyze, cancelAnalysis, execute, exportPortable,
     history.future.length, history.past.length, importPortable, lastError, lastErrorMessage,
-    project, redo, replaceProject, selectedEntity, undo,
+    project, redo, replaceProject, selectedEntity, setAnalysisTargetId, undo,
   ]);
 
   return <Space3DProjectContext.Provider value={value}>{children}</Space3DProjectContext.Provider>;

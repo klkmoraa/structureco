@@ -11,7 +11,7 @@
  */
 import { useCallback, useMemo, useState } from 'react';
 import {
-  ChevronLeft, CircleStop, Download, Grid3x3, Home, Layers, Move3d,
+  ChevronLeft, CircleStop, Download, Grid3x3, Home, Layers, Minus, Move3d,
   PenLine, Play, Plus, Redo2, Sparkles, Spline, Tag, Undo2, Upload, Weight,
 } from 'lucide-react';
 import { Space3DProjectProvider, useSpace3DProject, type Space3DSelection } from '../../space3d/store/Space3DProjectContext';
@@ -151,7 +151,7 @@ const WorkspaceBody = ({
   const {
     project, analysis, analysisState, analysisTargetId, selectedEntity, canUndo, canRedo, lastError,
     execute, undo, redo, analyze, cancelAnalysis, select, importPortable, exportPortable, loadExample, resetToBlank,
-    replaceProject,
+    replaceProject, setAnalysisTargetId,
   } = useSpace3DProject();
 
   const [layers, setLayers] = useState<Space3DLayerVisibility>(SPACE3D_DEFAULT_LAYERS);
@@ -161,10 +161,28 @@ const WorkspaceBody = ({
   const [transfer, setTransfer] = useState<'import' | 'export' | null>(null);
   const [importText, setImportText] = useState('');
   const [acknowledged, setAcknowledged] = useState<ReadonlySet<string>>(() => new Set());
+  /**
+   * Multiplicador sobre la escala automatica de la deformada. `null` deja que
+   * la escena la calcule para ocupar una fraccion fija del modelo; cualquier
+   * otro valor la amplifica sin tocar el modelo ni el resultado.
+   */
+  const [scaleFactor, setScaleFactor] = useState<number | null>(null);
 
-  const scene = useMemo(() => buildSpace3DSceneModel({
+  const automatic = useMemo(() => buildSpace3DSceneModel({
     project, analysis, analysisState, selection: selectedEntity, targetId: analysisTargetId,
   }), [analysis, analysisState, analysisTargetId, project, selectedEntity]);
+
+  const scene = useMemo(() => {
+    if (scaleFactor === null || automatic.deformed === null) return automatic;
+    return buildSpace3DSceneModel({
+      project,
+      analysis,
+      analysisState,
+      selection: selectedEntity,
+      targetId: analysisTargetId,
+      deformationScale: automatic.deformed.scale * scaleFactor,
+    });
+  }, [analysis, analysisState, analysisTargetId, automatic, project, scaleFactor, selectedEntity]);
 
   const submit = useCallback((command: Space3DCommand) => execute(command).ok, [execute]);
 
@@ -276,6 +294,17 @@ const WorkspaceBody = ({
       </div>
 
       <div className="space3d-tray space3d-tray--run" role="group" aria-label={t('space3d.analyze')}>
+        <label className="space3d-target">
+          <span className="space3d-visually-hidden">{t('space3d.loadTarget')}</span>
+          <select
+            aria-label={t('space3d.loadTarget')}
+            value={analysisTargetId}
+            onChange={(event) => setAnalysisTargetId(event.target.value)}
+          >
+            {project.loadCases.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            {project.loadCombinations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
+        </label>
         <button type="button" className="space3d-button space3d-button--primary" onClick={() => { void analyze(); }}
           disabled={running || pendingNotes.length > 0}
           title={pendingNotes.length > 0 ? t('space3d.bridgeBlocked', { count: pendingNotes.length }) : undefined}
@@ -363,6 +392,20 @@ const WorkspaceBody = ({
             loads: t('space3d.loads'),
           }}
         />
+        {scene.deformed ? <div className="space3d-scale" role="group" aria-label={t('space3d.layerDeformed')}>
+          <span>{t('space3d.deformationScale', { scale: formatNumber(scene.deformed.scale, 'table', { significantDigits: 4 }) })}</span>
+          <span data-testid="space3d-deformation-scale" className="space3d-visually-hidden">{scene.deformed.scale}</span>
+          <button type="button" className="space3d-tool" title={t('space3d.scaleHalve')}
+            onClick={() => setScaleFactor((current) => (current ?? 1) / 2)}>
+            <Minus size={15} aria-hidden="true" /><span className="space3d-visually-hidden">{t('space3d.scaleHalve')}</span>
+          </button>
+          <button type="button" className="space3d-tool" title={t('space3d.scaleDouble')}
+            onClick={() => setScaleFactor((current) => (current ?? 1) * 2)}>
+            <Plus size={15} aria-hidden="true" /><span className="space3d-visually-hidden">{t('space3d.scaleDouble')}</span>
+          </button>
+          <button type="button" className="space3d-tool" disabled={scaleFactor === null}
+            onClick={() => setScaleFactor(null)}>{t('space3d.scaleAuto')}</button>
+        </div> : null}
         <p className="space3d-help">{t('space3d.interactionHelp')}</p>
       </section>
 
