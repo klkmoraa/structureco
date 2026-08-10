@@ -475,7 +475,12 @@ export const createSpace3DViewport = (options: Space3DViewportOptions): Space3DV
       controls.dispose();
       disposeObject(scene);
       renderer.dispose();
-      renderer.forceContextLoss?.();
+      // Deliberadamente NO se llama a `forceContextLoss()`: mata el contexto
+      // WebGL del `<canvas>`, y React vuelve a montar sobre ese mismo elemento
+      // (StrictMode en desarrollo, y cualquier remontaje en producción). El
+      // segundo renderer se encontraría un lienzo envenenado y la superficie
+      // caería al fallback sin que falte nada. `renderer.dispose()` ya libera
+      // programas, texturas y buffers; el contexto se va con el elemento.
     },
   };
 };

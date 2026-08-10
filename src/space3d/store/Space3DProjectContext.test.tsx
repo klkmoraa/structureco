@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -155,6 +156,16 @@ describe('Space3DProjectProvider', () => {
     expect(screen.getByTestId('selection').textContent).toBe('node:N2');
     await user.click(screen.getByRole('button', { name: 'blank' }));
     expect(screen.getByTestId('selection').textContent).toBe('none');
+  });
+
+  it('analiza igual bajo StrictMode, que monta y limpia dos veces', async () => {
+    const user = userEvent.setup();
+    render(<StrictMode>
+      <Space3DProjectProvider storage={storage}><Harness /></Space3DProjectProvider>
+    </StrictMode>);
+    const analyze = screen.getAllByRole('button', { name: 'analyze' })[0];
+    await user.click(analyze);
+    await waitFor(() => expect(screen.getAllByTestId('state')[0].textContent).toBe('ready'));
   });
 
   it('no deja trabajo pendiente al desmontar', async () => {

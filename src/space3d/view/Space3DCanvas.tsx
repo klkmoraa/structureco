@@ -82,13 +82,18 @@ export const Space3DCanvas = ({
     const canvas = canvasRef.current;
     if (!canvas || unavailable) return undefined;
 
+    let releasing = false;
     const release = () => {
+      releasing = true;
       viewportRef.current?.dispose();
       viewportRef.current = null;
     };
 
     const onContextLost = (event: Event) => {
       event.preventDefault();
+      // Una pérdida disparada por nuestra propia limpieza no es una caída del
+      // visor: sólo cuenta la que llega con el visor todavía vivo.
+      if (releasing) return;
       release();
       setUnavailable(true);
     };

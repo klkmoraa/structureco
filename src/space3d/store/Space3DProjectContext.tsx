@@ -79,15 +79,17 @@ export interface Space3DProjectProviderProps {
   readonly storage?: Space3DStorageLike | null;
   readonly client?: Space3DWorkerClient;
   readonly initialProject?: Space3DProjectV1;
+  /** Aísla el almacenamiento de un Space 3D derivado del de uno independiente. */
+  readonly namespace?: string;
 }
 
-export const Space3DProjectProvider = ({ children, storage, client, initialProject }: Space3DProjectProviderProps) => {
+export const Space3DProjectProvider = ({ children, storage, client, initialProject, namespace }: Space3DProjectProviderProps) => {
   const storageRef = useRef<Space3DStorageLike | null | undefined>(storage);
   storageRef.current = storage;
 
   const [history, setHistory] = useState<History>(() => ({
     past: [],
-    present: initialProject ?? loadSpace3DProject(storage) ?? createSpace3DPortalExample(),
+    present: initialProject ?? loadSpace3DProject(storage, namespace) ?? createSpace3DPortalExample(),
     future: [],
   }));
   const [analysis, setAnalysis] = useState<Space3DAnalysisResult | null>(null);
@@ -97,20 +99,35 @@ export const Space3DProjectProvider = ({ children, storage, client, initialProje
   const [lastError, setLastError] = useState<string | null>(null);
   const [lastErrorMessage, setLastErrorMessage] = useState<string | null>(null);
 
-  const clientRef = useRef<Space3DWorkerClient | null>(client ?? null);
-  const ownsClient = useRef(client === undefined);
-  if (clientRef.current === null) clientRef.current = createSpace3DWorkerClient();
+  const clientRef = useRef<Space3DWorkerClient | null>(null);
+  const ownsClient = useRef(false);
   const alive = useRef(true);
+
+  /**
+   * El cliente se crea perezosamente y se suelta en cada limpieza.
+   *
+   * Un `Space3DWorkerClient` desechado lo está para siempre — es lo correcto
+   * para `dispose()` —, así que el proveedor no puede guardar uno entre
+   * montajes: con StrictMode (y con cualquier remontaje real) el segundo ciclo
+   * se quedaría con un cliente muerto y todo análisis respondería «cancelado»
+   * sin que nada lo explique.
+   */
+  const ensureClient = useCallback(() => {
+    if (!clientRef.current) {
+      clientRef.current = client ?? createSpace3DWorkerClient();
+      ownsClient.current = client === undefined;
+    }
+    return clientRef.current;
+  }, [client]);
 
   useEffect(() => {
     alive.current = true;
-    // El cliente se captura aquí: en la limpieza el ref ya podría apuntar a otro.
-    const runner = clientRef.current;
-    const owned = ownsClient.current;
     const mounted = alive;
     return () => {
       mounted.current = false;
-      if (owned) runner?.dispose();
+      const runner = clientRef.current;
+      clientRef.current = null;
+      if (ownsClient.current) runner?.dispose();
       else runner?.cancel();
     };
   }, []);
@@ -118,8 +135,8 @@ export const Space3DProjectProvider = ({ children, storage, client, initialProje
   const project = history.present;
 
   useEffect(() => {
-    saveSpace3DProject(project, storageRef.current ?? undefined);
-  }, [project]);
+    saveSpace3DProject(project, storageRef.current ?? undefined, namespace);
+  }, [namespace, project]);
 
   /** Un resultado deja de describir el modelo en cuanto el modelo cambia. */
   const invalidate = useCallback(() => {
@@ -184,8 +201,7 @@ export const Space3DProjectProvider = ({ children, storage, client, initialProje
   }, [clearError, invalidate]);
 
   const analyze = useCallback(async () => {
-    const runner = clientRef.current;
-    if (!runner) return;
+    const runner = ensureClient();
     setAnalysisState('running');
     clearError();
     try {
@@ -202,7 +218,7 @@ export const Space3DProjectProvider = ({ children, storage, client, initialProje
       setAnalysisState('failed');
       reportError('analysis-failed', error instanceof Error ? error.message : String(error));
     }
-  }, [analysisTargetId, clearError, project, reportError]);
+  }, [analysisTargetId, clearError, ensureClient, project, reportError]);
 
   const cancelAnalysis = useCallback(() => {
     clientRef.current?.cancel();
