@@ -18,13 +18,13 @@
 | ID | Capacidad / dependencia | Evidencia actual | Estado | Responsable del siguiente gate | Siguiente evidencia |
 |---|---|---|---|---|---|
 | F4-BASE-2D | Frontera matemática 2D | `npm.cmd run verify:protected`: 29 archivos intactos; `npm.cmd run verify` completo | PASA | mantenedor del solver | conservar baseline sin actualizar |
-| F4-3D-VIEW | Visor `(x,y,0)` no autoritativo | Adaptador puro, Three.js lazy, cámara bajo demanda, fallback y navegación | PASA para alcance experimental | producto + frontend | revisión de uso antes de ampliar contenido |
-| F4-3D-MODEL | `AnalysisSpace`, `z`, 6 GDL y propiedades 3D | Sólo pre-RFC | NO EXISTE | arquitectura estructural | ADR y contratos aprobados |
-| F4-3D-NUM | Formulación/ensamblaje 3D | Investigación histórica, sin derivación vigente ejecutable | NO PASA | ingeniería numérica | derivaciones y corpus manual |
-| F4-3D-ORACLE | Validación independiente | Frame3DD/OpenSees identificados, sin comparación structureCo | REQUIERE INVESTIGACIÓN | validación estructural | tolerancias y resultados reproducibles |
-| F4-3D-DATA | Persistencia/portable 3D | Portable v1 protege 2D; no conoce 3D | NO EXISTE | arquitectura de datos | versión, migración y rechazo estricto |
-| F4-3D-WORKER | Protocolo/capacidad 3D | Workers 2D permanecen intactos; no existe mensaje 3D | NO EXISTE para 3D | plataforma | protocolo 3D y presupuestos medidos |
-| F4-3D-A11Y | Semántica y fallback del visor | Teclado, nombres accesibles, touch 44 px, 390×844, temas, reducción de movimiento y fallback probados en navegador | PASA para el alcance probado | accesibilidad | prueba manual con tecnología de asistencia antes de afirmarla |
+| F4-3D-VIEW | Visor `(x,y,0)` no autoritativo | **Retirado del producto.** Space 3D es la única superficie 3D; el módulo `src/features/experimental3d` ya no existe | SUSTITUIDO por S3D-1 | producto | ninguna: la capacidad la cubre `F4-3D-MODEL` |
+| F4-3D-MODEL | `AnalysisSpace`, `z`, 6 GDL y propiedades 3D | `src/space3d/model` con contratos discriminados, límites y validación fail-closed | PASA para S3D-1 | arquitectura estructural | ampliar sólo con ADR para S3D-2 |
+| F4-3D-NUM | Formulación/ensamblaje 3D | Elemento 12×12, ensamblaje y solver; 5 casos manuales con derivación cerrada, invariantes y guardas de mutación comprobadas provocando el fallo | PASA para S3D-1 | ingeniería numérica | mantener el corpus al ampliar el alcance |
+| F4-3D-ORACLE | Validación independiente | Modelos nativos OpenSees y Frame3DD escritos y versionados, **nunca ejecutados**: ningún ejecutable disponible | NO PASA · `NOT_RUN` | validación estructural | autorización para descargar los ejecutables oficiales y ejecutarlos |
+| F4-3D-DATA | Persistencia/portable 3D | Códec estricto con allowlist, almacenamiento con copia de seguridad y claves propias por proyecto de origen; el portable 2D sigue sin conocer 3D | PASA para S3D-1 | arquitectura de datos | migración entre versiones de esquema cuando exista la segunda |
+| F4-3D-WORKER | Protocolo/capacidad 3D | Protocolo versionado propio, worker aislado, cancelación real y capacidad medida 150/300 con `verify:space3d` | PASA para S3D-1 | plataforma | revisar la política si sube el techo de capacidad |
+| F4-3D-A11Y | Semántica y fallback de la superficie | Resumen semántico permanente junto al lienzo, teclado, foco visible, touch 44 px, 390×844, temas y reducción de movimiento comprobados en navegador | PASA para el alcance probado | accesibilidad | prueba manual con tecnología de asistencia antes de afirmarla |
 | F4-CMD | Comandos reversibles | `ProjectCommand`, compile/apply y undo actuales | PASA para subcapacidad existente | arquitectura de comandos | ampliar sólo tras schema/evals de IA |
 | F4-ANCHOR | Procedencia de explicaciones | Resolver interno de anchors sobre resultados almacenados | PARCIAL | arquitectura de resultados | snapshot/versionado/portable oficial |
 | F4-AI-SCHEMA | `CommandProposal` cerrado | JSON Schema normativo en pre-RFC | NO EXISTE en producto | seguridad de aplicación | implementación local y tests negativos |
