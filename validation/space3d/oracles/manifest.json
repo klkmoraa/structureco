@@ -1,0 +1,359 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "validation/space3d/build-manifest.py",
+  "engine": "structureCo 0.8.2 · src/space3d",
+  "notes": [
+    "Los casos `manual` comparan el solver contra formas cerradas derivadas en manual-cases.md.",
+    "Los valores esperados los produce validation/space3d/derive-expected.py, que no usa el solver.",
+    "Una corrida externa sólo pasa a PASS cuando tiene output, versión y hash reales."
+  ],
+  "cases": [
+    {
+      "id": "S3D-AXIAL-001",
+      "source": "manual",
+      "target": "LC1",
+      "model": "expected/S3D-AXIAL-001.project.json",
+      "result": "expected/S3D-AXIAL-001.result.json",
+      "modelSha256": "a9de3de66209e63aebbfa7bd2dd66ed0455bded5aee850940c15baf17416df15",
+      "resultSha256": "b0ceb638f7cf2699ac310974e37308e44f1ecaa8c838c91ef1ba5f5775476b66",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-15,
+          "rtol": 0.0
+        }
+      ]
+    },
+    {
+      "id": "S3D-BENDING-Y-001",
+      "source": "manual",
+      "target": "LC1",
+      "model": "expected/S3D-BENDING-Y-001.project.json",
+      "result": "expected/S3D-BENDING-Y-001.result.json",
+      "modelSha256": "de7c48db518f9a5008cbb27f115d6f7885b7e4c20a7fbbee0edf469b60f87d71",
+      "resultSha256": "296206c2ccfa17b3bf34b09b2102e79500ad7269a24ba79d3449b9a287bf7a17",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-15,
+          "rtol": 0.0
+        }
+      ]
+    },
+    {
+      "id": "S3D-BENDING-Z-001",
+      "source": "manual",
+      "target": "LC1",
+      "model": "expected/S3D-BENDING-Z-001.project.json",
+      "result": "expected/S3D-BENDING-Z-001.result.json",
+      "modelSha256": "1ea3d947668a95e6f98278515abc90b6a967a7dac7452156edfd149a2f59c9b8",
+      "resultSha256": "06425880eb65d4ca7f4a2b526a8880ea3a082e11740a2fc70f804dc1ccee09c8",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-15,
+          "rtol": 0.0
+        }
+      ]
+    },
+    {
+      "id": "S3D-FRAME-001",
+      "source": "manual",
+      "target": "LC1",
+      "model": "expected/S3D-FRAME-001.project.json",
+      "result": "expected/S3D-FRAME-001.result.json",
+      "modelSha256": "5a1382f312ff05d11be9e2c95ed7f05f3938aa73b0d8184b662c12d958ca8768",
+      "resultSha256": "ab7e0044d0bcddfd3acdd0d0b14ec8e59a3455b11741e59cef187ef7ae0715fb",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-15,
+          "rtol": 0.0
+        }
+      ]
+    },
+    {
+      "id": "S3D-TORSION-001",
+      "source": "manual",
+      "target": "LC1",
+      "model": "expected/S3D-TORSION-001.project.json",
+      "result": "expected/S3D-TORSION-001.result.json",
+      "modelSha256": "5633d4382650b1d4df9434c095cf44967ad02d3f46b6353351f573f6faa433cd",
+      "resultSha256": "59c445fcab05092282c432857b226e0aaa631c478d1da06d1a3d34e53c68c804",
+      "observables": [
+        {
+          "path": "nodes.J",
+          "unit": "m, rad",
+          "atol": 1e-12,
+          "rtol": 1e-09
+        },
+        {
+          "path": "nodes.I",
+          "unit": "m, rad",
+          "atol": 1e-15,
+          "rtol": 0.0
+        },
+        {
+          "path": "reactions.I",
+          "unit": "kN, kN·m",
+          "atol": 1e-09,
+          "rtol": 1e-09
+        },
+        {
+          "path": "reactions.J",
+          "unit": "kN, kN·m",
+          "atol": 1e-15,
+          "rtol": 0.0
+        }
+      ]
+    }
+  ],
+  "externalRuns": [
+    {
+      "caseId": "S3D-AXIAL-001",
+      "oracle": "opensees",
+      "status": "NOT_RUN",
+      "reason": "oracle executable unavailable",
+      "input": "opensees/S3D-AXIAL-001.tcl",
+      "inputSha256": "363778263b2730c8150f9224b5829d904a87594521cf4e1e88f1f85770c55096",
+      "output": null,
+      "outputSha256": null,
+      "version": null,
+      "os": null,
+      "command": null,
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": null,
+      "observables": null
+    },
+    {
+      "caseId": "S3D-AXIAL-001",
+      "oracle": "frame3dd",
+      "status": "NOT_RUN",
+      "reason": "oracle executable unavailable",
+      "input": "frame3dd/S3D-AXIAL-001.3dd",
+      "inputSha256": "40fee5eb55b847f5f966071413b9338922e9ae65036764dddbaf29ac627441d4",
+      "output": null,
+      "outputSha256": null,
+      "version": null,
+      "os": null,
+      "command": null,
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": null,
+      "observables": null
+    },
+    {
+      "caseId": "S3D-BENDING-Y-001",
+      "oracle": "opensees",
+      "status": "NOT_RUN",
+      "reason": "oracle executable unavailable",
+      "input": "opensees/S3D-BENDING-Y-001.tcl",
+      "inputSha256": "abb454a59a678aef03cf7f69aa55fb5b43f4016da690323b4d24d45ec58d57e9",
+      "output": null,
+      "outputSha256": null,
+      "version": null,
+      "os": null,
+      "command": null,
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": null,
+      "observables": null
+    },
+    {
+      "caseId": "S3D-BENDING-Y-001",
+      "oracle": "frame3dd",
+      "status": "NOT_RUN",
+      "reason": "oracle executable unavailable",
+      "input": "frame3dd/S3D-BENDING-Y-001.3dd",
+      "inputSha256": "c971bf2e6a34a75a752f3c6c588d752ee3d76541e1084ba5362ad55591a95f40",
+      "output": null,
+      "outputSha256": null,
+      "version": null,
+      "os": null,
+      "command": null,
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": null,
+      "observables": null
+    },
+    {
+      "caseId": "S3D-BENDING-Z-001",
+      "oracle": "opensees",
+      "status": "NOT_RUN",
+      "reason": "oracle executable unavailable",
+      "input": "opensees/S3D-BENDING-Z-001.tcl",
+      "inputSha256": "084b2d63707efa0322a88b34eb91cf18b5696de3ead890c04f8cc790dce908e2",
+      "output": null,
+      "outputSha256": null,
+      "version": null,
+      "os": null,
+      "command": null,
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": null,
+      "observables": null
+    },
+    {
+      "caseId": "S3D-BENDING-Z-001",
+      "oracle": "frame3dd",
+      "status": "NOT_RUN",
+      "reason": "oracle executable unavailable",
+      "input": "frame3dd/S3D-BENDING-Z-001.3dd",
+      "inputSha256": "0054bf5b847ad5e274d7eaa7536f3af369cf9c89608e202067e71f7f51df5e8e",
+      "output": null,
+      "outputSha256": null,
+      "version": null,
+      "os": null,
+      "command": null,
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": null,
+      "observables": null
+    },
+    {
+      "caseId": "S3D-FRAME-001",
+      "oracle": "opensees",
+      "status": "NOT_RUN",
+      "reason": "oracle executable unavailable",
+      "input": "opensees/S3D-FRAME-001.tcl",
+      "inputSha256": "e9f84e7664f469b08573385ccaf8fb5c1e8ce4ef5e9d880f9e830cc5ca326b1c",
+      "output": null,
+      "outputSha256": null,
+      "version": null,
+      "os": null,
+      "command": null,
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": null,
+      "observables": null
+    },
+    {
+      "caseId": "S3D-FRAME-001",
+      "oracle": "frame3dd",
+      "status": "NOT_RUN",
+      "reason": "oracle executable unavailable",
+      "input": "frame3dd/S3D-FRAME-001.3dd",
+      "inputSha256": "e7c2f3f0902856adc10d6926a37704c174cc290e97053d2d268e28787988635d",
+      "output": null,
+      "outputSha256": null,
+      "version": null,
+      "os": null,
+      "command": null,
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": null,
+      "observables": null
+    },
+    {
+      "caseId": "S3D-TORSION-001",
+      "oracle": "opensees",
+      "status": "NOT_RUN",
+      "reason": "oracle executable unavailable",
+      "input": "opensees/S3D-TORSION-001.tcl",
+      "inputSha256": "0e81222d335526ceac7eedd13376636c9c70c868165946cf269678b50d783696",
+      "output": null,
+      "outputSha256": null,
+      "version": null,
+      "os": null,
+      "command": null,
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": null,
+      "observables": null
+    },
+    {
+      "caseId": "S3D-TORSION-001",
+      "oracle": "frame3dd",
+      "status": "NOT_RUN",
+      "reason": "oracle executable unavailable",
+      "input": "frame3dd/S3D-TORSION-001.3dd",
+      "inputSha256": "1ceafed41c5a265527ad5d99077a908f76ce37f59825e142433d2f34738ab4a7",
+      "output": null,
+      "outputSha256": null,
+      "version": null,
+      "os": null,
+      "command": null,
+      "units": "kN, m",
+      "axes": "X, Y, Z globales; Y vertical (identico a structureCo)",
+      "signMap": null,
+      "observables": null
+    }
+  ]
+}
