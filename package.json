@@ -15,6 +15,7 @@
     "inspect:pdf": "node scripts/inspect-pdf.mjs",
     "validate:ci": "node scripts/validate-ci.mjs",
     "verify:perf": "node scripts/check-performance-budget.mjs",
+    "verify:space3d": "vitest run src/space3d src/features/space3d --maxWorkers=1 && node scripts/check-space3d-capacity.mjs",
     "verify": "npm run lint && npm run verify:protected && npm test && npm run build && npm run verify:perf",
     "qa": "npm run build && node qa.mjs",
     "qa:webkit": "npm run build && node qa-webkit.mjs"
