@@ -30,6 +30,13 @@ interface ExternalRun {
   readonly output: string | null;
   readonly outputSha256: string | null;
   readonly version: string | null;
+  /**
+   * Tolerancias propias de la corrida externa. Existen porque structureCo pone
+   * a cero exacto la reaccion en los GDL libres y los motores externos publican
+   * ahi su residuo numerico: comparar contra cero exacto mediria esa decision
+   * de presentacion, no la fisica.
+   */
+  readonly observables: readonly Observable[] | null;
 }
 
 interface Manifest {
@@ -128,13 +135,17 @@ describe('Space3D external oracle corpus', () => {
       const result = analyzeSpace3DProject(project, testCase!.target);
       expect(result.success).toBe(true);
 
-      for (const observable of testCase!.observables) {
+      for (const observable of run.observables ?? testCase!.observables) {
         const [group, nodeId] = observable.path.split('.');
         const bag = (oracle as unknown as Record<string, Record<string, Record<string, number>>>)[group][nodeId];
+        expect(bag, `${run.oracle} ${run.caseId}: falta ${observable.path}`).toBeDefined();
         for (const dof of SPACE3D_DOF_KEYS) {
           const target = bag[dof];
           const actual = actualValue(result, group, nodeId, dof);
-          expect(Math.abs(actual - target)).toBeLessThanOrEqual(observable.atol + observable.rtol * Math.abs(target));
+          expect(
+            Math.abs(actual - target),
+            `${run.oracle} ${run.caseId} ${observable.path}.${dof}: ${actual} vs ${target}`,
+          ).toBeLessThanOrEqual(observable.atol + observable.rtol * Math.abs(target));
         }
       }
     });

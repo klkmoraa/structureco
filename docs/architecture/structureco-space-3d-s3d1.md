@@ -57,17 +57,34 @@ Los guardas de mutación se comprobaron provocando el fallo real: intercambiar
 `Iy`/`Iz` rompe 5 pruebas, eliminar el término `GJ` rompe 12, construir la
 triada como `cross(y, x)` rompe 9 e interpretar el `roll` en grados rompe 4.
 
-## Oráculos externos — NO EJECUTADOS
+## Oráculos externos — EJECUTADOS
 
-`validation/space3d/oracles/` contiene modelos nativos OpenSees (`.tcl`) y
-Frame3DD (`.3dd`) generados desde los mismos JSON comparados. **Nunca se han
-ejecutado**: ninguno de los dos ejecutables está disponible en el entorno.
+| Motor | Versión | Casos | Resultado |
+|---|---|---|---|
+| OpenSees (`openseespy`) | 3.8.0 | 5/5 | PASA |
+| PyNite (`PyNiteFEA`) | 3.0.0 | 5/5 | PASA |
+| Frame3DD | — | 0/5 | `NOT_RUN` |
 
-En consecuencia, la equivalencia de convenciones de ejes de esos archivos es
-una afirmación **no verificada**. `manifest.json` mantiene `output`,
-`outputSha256` y `version` en `null`, y las pruebas correspondientes aparecen
-como omitidas con la razón `oracle executable unavailable`, nunca como
-aprobadas.
+Dos implementaciones independientes de structureCo y entre sí reproducen los
+cinco casos a precisión de máquina: la mayor discrepancia observada es
+`4,2e-12` sobre un momento de reacción de `66,4 kN·m` (`6e-14` relativo).
+Ninguna se toma como verdad única; se comparan por separado.
+
+`validation/space3d/run-oracles.py` no importa nada de structureCo: construye
+cada modelo con el API nativo de cada motor desde el mismo
+`expected/*.project.json`, y guarda junto a cada salida el crudo del motor para
+que el mapa de signos sea auditable. La comparación es sensible: perturbar `Iz`
+un `1e-6` relativo rompe ambas.
+
+Los motores se instalan **fuera del repositorio** (`py -3.12 -m pip install
+openseespy PyNiteFEA`); no son dependencias del producto ni entran en el bundle.
+
+**Frame3DD sigue sin ejecutarse.** Los espejos de SourceForge responden `403`,
+el paquete de PyPI que comparte nombre es un generador de archivos de entrada y
+no el solver, y no hay toolchain de C para compilar la fuente oficial. Sus
+`.3dd` están escritos pero su equivalencia de ejes es una afirmación no
+verificada; el manifiesto mantiene sus campos de salida en `null` y las pruebas
+aparecen como omitidas con esa razón.
 
 ## Capacidad medida
 

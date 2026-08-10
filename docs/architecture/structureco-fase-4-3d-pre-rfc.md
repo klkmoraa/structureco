@@ -115,7 +115,7 @@ Estado tras entregar S3D-1 (2026-08-10). Ver
 |---|---|---|
 | 3D-G0 · separación visual | Visor no muta, no analiza y declara `z = 0` | Superado y retirado: el visor planar ya no existe, Space 3D sí analiza |
 | 3D-G1 · contrato | ADR aprobado para espacio, GDL, orientación, signos y versionado | Pasa para S3D-1: contratos implementados y documentados |
-| 3D-G2 · numérico | Derivaciones, corpus manual y dos oráculos independientes | **Parcial**: corpus manual de 5 casos en verde; los dos oráculos externos siguen `NOT_RUN` |
+| 3D-G2 · numérico | Derivaciones, corpus manual y dos oráculos independientes | **Pasa**: 5 casos manuales más OpenSees 3.8.0 y PyNite 3.0.0, los tres en acuerdo a precisión de máquina. Frame3DD queda como tercer oráculo pendiente |
 | 3D-G3 · compatibilidad | Migraciones, portable, workers, undo/redo y rechazo por versión | Pasa para S3D-1; la migración entre esquemas espera a que exista un segundo esquema |
 | 3D-G4 · UX/A11Y | Edición, picking, formularios, teclado y fallback sin GPU | Pasa para el alcance probado; sin tecnología de asistencia real |
 | 3D-G5 · capacidad | Presupuestos medidos de modelo, worker, memoria, render y cancelación | Pasa: 150 nudos / 300 barras medidos |
