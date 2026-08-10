@@ -97,7 +97,52 @@
 .space3d-destinations {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--sc-space-2);
+}
+
+.space3d-theme-toggle { padding-inline: var(--sc-space-2); }
+
+/* --- Selector de proyecto / caso (cabecera) ----------------------------- */
+
+.space3d-project-picker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px var(--sc-space-3);
+  border-radius: var(--sc-radius-md);
+  background: var(--sc-color-surface-inset);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  min-inline-size: 0;
+}
+
+.space3d-project-picker-label {
+  font-size: var(--sc-font-size-caption);
+  color: var(--sc-color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--sc-tracking-eyebrow);
+  white-space: nowrap;
+}
+
+.space3d-project-picker-caret {
+  order: 3;
+  color: var(--sc-color-text-muted);
+  pointer-events: none;
+}
+
+.space3d-project-picker .space3d-target { order: 2; min-inline-size: 0; }
+
+.space3d-project-picker .space3d-target select {
+  min-block-size: auto;
+  max-inline-size: 220px;
+  padding-inline: 0 var(--sc-space-4);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--sc-color-text-primary);
+  font-weight: var(--sc-font-weight-semibold);
+  text-overflow: ellipsis;
 }
 
 .space3d-experimental {
@@ -218,9 +263,13 @@
   min-block-size: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "stage";
   gap: var(--sc-space-4);
   padding-inline: max(var(--sc-space-5), env(safe-area-inset-left)) max(var(--sc-space-5), env(safe-area-inset-right));
+  position: relative;
 }
+
+.space3d-layout .space3d-stage { grid-area: stage; }
 
 .space3d-stage,
 .space3d-rail {
@@ -243,6 +292,198 @@
   margin: 0;
   font-size: var(--sc-font-size-technical);
   color: var(--sc-color-text-muted);
+}
+
+/* --- Carril vertical de herramientas ------------------------------------
+   Mesa de herramientas: cada botón es una pieza salida sobre la bandeja
+   hundida del carril, igual que en la barra horizontal. Escritorio: columna
+   fija a la izquierda. Móvil: se convierte en la barra táctil inferior. */
+
+.space3d-rail-vertical {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sc-space-2);
+  padding: var(--sc-space-2);
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-lg);
+  background: var(--sc-color-surface-inset);
+  box-shadow: var(--sc-shadow-clay-pressed);
+}
+
+.space3d-rail-vertical-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.space3d-rail-button {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-block-size: var(--sc-size-target-touch);
+  min-inline-size: var(--sc-size-target-touch);
+  padding: 6px 4px;
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-md);
+  background: var(--sc-color-surface-1);
+  color: var(--sc-color-text-secondary);
+  box-shadow: var(--sc-shadow-clay-xs);
+  font-family: var(--sc-font-ui);
+  font-size: 10px;
+  font-weight: var(--sc-font-weight-semibold);
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--sc-transition-control);
+}
+
+.space3d-rail-button:hover:not(:disabled) {
+  color: var(--sc-color-text-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--sc-shadow-clay-sm);
+}
+
+.space3d-rail-button:active:not(:disabled) { transform: none; box-shadow: var(--sc-shadow-clay-pressed); }
+
+.space3d-rail-button[aria-pressed='true'] {
+  background: var(--sc-color-action-subtle);
+  border-color: color-mix(in srgb, var(--sc-color-action-primary) 42%, var(--sc-color-border));
+  color: var(--sc-color-action-primary);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  transform: none;
+}
+
+.space3d-rail-button:disabled {
+  color: var(--sc-color-text-disabled);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.space3d-rail-button--danger:not(:disabled):hover { color: var(--sc-color-state-error-foreground); }
+
+/* --- Panel Modelo / Vistas ------------------------------------------------ */
+
+.space3d-model-nav-panel {
+  min-inline-size: 0;
+  min-block-size: 0;
+  overflow-y: auto;
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-xl);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-shadow-clay-md);
+  padding: var(--sc-space-3);
+}
+
+.space3d-model-nav { display: flex; flex-direction: column; gap: var(--sc-space-4); }
+
+.space3d-model-nav-heading {
+  margin: 0 0 var(--sc-space-2);
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-caption);
+  font-weight: var(--sc-font-weight-semibold);
+  letter-spacing: var(--sc-tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--sc-color-text-muted);
+}
+
+.space3d-model-nav-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.space3d-model-nav-row,
+.space3d-model-nav-static {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sc-space-2);
+  min-block-size: var(--sc-size-target-pointer);
+  padding: 6px var(--sc-space-2);
+  border: 0;
+  border-radius: var(--sc-radius-sm);
+  background: transparent;
+  color: var(--sc-color-text-secondary);
+  font-family: var(--sc-font-ui);
+  font-size: var(--sc-font-size-control);
+  font-weight: var(--sc-font-weight-medium);
+  cursor: pointer;
+  transition: var(--sc-transition-control);
+}
+
+.space3d-model-nav-static { color: var(--sc-color-text-muted); cursor: default; }
+
+.space3d-model-nav-row:hover { background: var(--sc-color-action-subtle); color: var(--sc-color-text-primary); }
+
+.space3d-model-nav-row[aria-current='true'] {
+  background: var(--sc-color-action-subtle);
+  color: var(--sc-color-action-primary);
+  font-weight: var(--sc-font-weight-semibold);
+}
+
+.space3d-model-nav-count {
+  min-inline-size: 22px;
+  padding: 1px 6px;
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-surface-inset);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-caption);
+  text-align: center;
+  color: var(--sc-color-text-primary);
+}
+
+.space3d-model-nav-info {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.space3d-model-nav-info dt { font-size: var(--sc-font-size-caption); color: var(--sc-color-text-muted); }
+.space3d-model-nav-info dd { margin: 0; font-family: var(--sc-font-mono); font-size: var(--sc-font-size-control); color: var(--sc-color-text-primary); }
+
+.space3d-model-nav-properties {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  inline-size: 100%;
+  margin-block-start: var(--sc-space-2);
+  padding: 6px 2px;
+  border: 0;
+  border-block-start: 1px solid var(--sc-color-divider);
+  background: transparent;
+  color: var(--sc-color-text-link);
+  font-size: var(--sc-font-size-control);
+  font-weight: var(--sc-font-weight-semibold);
+  cursor: pointer;
+}
+
+.space3d-model-nav-properties svg { transition: transform 0.15s ease; }
+.space3d-model-nav-properties svg.is-open { transform: rotate(90deg); }
+
+.space3d-model-nav-properties-body { margin-block-start: var(--sc-space-2); grid-template-columns: 1fr; }
+
+/* --- Bandeja inferior móvil (sheet) --------------------------------------
+   En escritorio, `display: contents` deja que sus hijos participen del grid
+   del layout como columnas propias; en móvil se convierte en la bandeja fija
+   que se despliega desde abajo. */
+
+.space3d-sheet-handle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 100%;
+  min-block-size: 28px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.space3d-sheet-handle-bar {
+  inline-size: 40px;
+  block-size: 4px;
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-border-strong);
 }
 
 /* El objetivo de analisis vive dentro de la bandeja de ejecucion: es lo que la
@@ -314,6 +555,69 @@
   cursor: crosshair;
 }
 
+.space3d-canvas-stage[data-fullscreen] {
+  background: var(--sc-color-bg-canvas);
+}
+
+/* --- Barra superior del lienzo (selector de vista + acciones) ----------- */
+
+.space3d-canvas-topbar {
+  position: absolute;
+  inset-block-start: var(--sc-space-2);
+  inset-inline: var(--sc-space-2);
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sc-space-2);
+  pointer-events: none;
+}
+
+.space3d-canvas-topbar > * { pointer-events: auto; }
+
+.space3d-canvas-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--sc-radius-md);
+  background: color-mix(in srgb, var(--sc-color-surface-1) 88%, transparent);
+  box-shadow: var(--sc-shadow-clay-xs);
+  backdrop-filter: blur(6px);
+}
+
+.space3d-view-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px var(--sc-space-3);
+  border-radius: var(--sc-radius-md);
+  background: color-mix(in srgb, var(--sc-color-surface-1) 88%, transparent);
+  box-shadow: var(--sc-shadow-clay-xs);
+  backdrop-filter: blur(6px);
+  color: var(--sc-color-text-primary);
+  font-size: var(--sc-font-size-control);
+  font-weight: var(--sc-font-weight-semibold);
+}
+
+.space3d-view-select select {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding-inline-end: var(--sc-space-4);
+  cursor: pointer;
+}
+
+.space3d-view-select svg {
+  position: absolute;
+  inset-inline-end: var(--sc-space-2);
+  pointer-events: none;
+  color: var(--sc-color-text-muted);
+}
+
 .space3d-canvas-controls {
   display: flex;
   flex-wrap: wrap;
@@ -375,6 +679,25 @@
   color: var(--sc-color-text-primary);
   box-shadow: var(--sc-shadow-clay-xs);
 }
+
+.space3d-results-select {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--sc-space-2) var(--sc-space-3);
+  border-radius: var(--sc-radius-md);
+  background: var(--sc-color-surface-inset);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  backdrop-filter: none;
+  inline-size: 100%;
+}
+
+.space3d-results-select select {
+  inline-size: 100%;
+  padding-inline-end: var(--sc-space-5);
+}
+
+.space3d-results-select svg { inset-inline-end: var(--sc-space-3); inset-block-start: 30px; }
 
 /* --- Tablas de datos (planas, densas, monoespaciadas) ------------------- */
 
@@ -611,6 +934,12 @@
   line-height: var(--sc-line-height-compact);
 }
 
+.space3d-notice--ok {
+  background: color-mix(in srgb, var(--sc-color-state-success) 14%, var(--sc-color-surface-1));
+  color: var(--sc-color-state-success);
+  border: 1px solid color-mix(in srgb, var(--sc-color-state-success) 34%, transparent);
+}
+
 .space3d-notice--warn {
   background: color-mix(in srgb, var(--sc-color-state-warning) 12%, var(--sc-color-surface-1));
   color: var(--sc-color-state-warning-foreground);
@@ -744,17 +1073,40 @@
 /* --- Escritorio ---------------------------------------------------------- */
 
 @media (min-width: 960px) {
-  .space3d-layout { grid-template-columns: minmax(0, 1fr) minmax(340px, 420px); }
+  .space3d-layout {
+    grid-template-columns: auto minmax(220px, 260px) minmax(0, 1fr) minmax(340px, 420px);
+    grid-template-areas: "toolrail modelnav stage inspector";
+    align-items: start;
+  }
   .space3d-canvas-stage { min-block-size: 0; }
   .space3d-screen { block-size: 100dvh; overflow: hidden; }
   .space3d-rail-body { padding-inline-end: var(--sc-space-1); }
+
+  .space3d-rail-vertical {
+    grid-area: toolrail;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-self: stretch;
+    block-size: 100%;
+  }
+  .space3d-rail-vertical-group { flex-direction: column; }
+  .space3d-rail-vertical-group--history {
+    margin-block-start: auto;
+    padding-block-start: var(--sc-space-2);
+    border-block-start: 1px solid var(--sc-color-divider);
+  }
+
+  .space3d-sheet { display: contents; }
+  .space3d-sheet-handle { display: none; }
+  .space3d-model-nav-panel { grid-area: modelnav; align-self: stretch; }
+  .space3d-sheet .space3d-rail { grid-area: inspector; align-self: stretch; }
 }
 
 @media (min-width: 1440px) {
-  .space3d-layout { grid-template-columns: minmax(0, 1fr) minmax(380px, 460px); }
+  .space3d-layout { grid-template-columns: auto minmax(240px, 280px) minmax(0, 1fr) minmax(380px, 460px); }
 }
 
-/* --- Móvil y táctil ------------------------------------------------------ */
+/* --- Tablet y teléfono (rasgos compartidos) ------------------------------ */
 
 @media (max-width: 959px) {
   .space3d-toolbar {
@@ -769,9 +1121,130 @@
   .space3d-tray { flex-wrap: wrap; }
   .space3d-tray--run { margin-inline-start: 0; inline-size: 100%; }
   .space3d-tray--run .space3d-button--primary { flex: 1; }
-  .space3d-canvas-stage { block-size: 45vh; }
   .space3d-canvas-summary { margin-inline-start: 0; inline-size: 100%; }
   .space3d-header { position: sticky; inset-block-start: 0; z-index: var(--sc-z-topbar); }
+
+  .space3d-rail-vertical { flex-direction: column; }
+  .space3d-rail-vertical-group { flex-direction: column; }
+  .space3d-rail-vertical-group--history {
+    margin-block-start: auto;
+    padding-block-start: var(--sc-space-2);
+    border-block-start: 1px solid var(--sc-color-divider);
+  }
+}
+
+/* --- Tablet: mismo esqueleto que escritorio, en tres columnas ----------- *
+ * El carril de modelo/vistas y el inspector comparten una sola columna
+ * apilada — cabe sin comprimir el carril de herramientas ni el viewport. */
+
+@media (min-width: 600px) and (max-width: 959px) {
+  .space3d-layout {
+    grid-template-columns: auto minmax(0, 1fr) minmax(300px, 360px);
+    grid-template-areas: "toolrail stage sheetcol";
+    align-items: start;
+  }
+  .space3d-screen { block-size: 100dvh; overflow: hidden; }
+  .space3d-canvas-stage { min-block-size: 0; }
+  .space3d-rail-vertical { grid-area: toolrail; align-self: stretch; }
+
+  .space3d-sheet {
+    grid-area: sheetcol;
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
+    border: var(--sc-clay-edge);
+    border-radius: var(--sc-radius-xl);
+    background: var(--sc-color-surface-1);
+    box-shadow: var(--sc-shadow-clay-md);
+    overflow: hidden;
+  }
+  .space3d-sheet-handle { display: none; }
+  .space3d-model-nav-panel,
+  .space3d-sheet .space3d-rail {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    min-block-size: 0;
+    overflow-y: auto;
+  }
+  .space3d-sheet .space3d-model-nav-panel { border-block-end: 1px solid var(--sc-color-divider); flex: none; max-block-size: 34vh; }
+  .space3d-sheet .space3d-rail { flex: 1; }
+}
+
+/* --- Teléfono: viewport protagonista, bandeja inferior desplegable ------- */
+
+@media (max-width: 599px) {
+  .space3d-screen { --space3d-rail-h: 64px; }
+  .space3d-canvas-stage { block-size: 52vh; }
+  .space3d-layout { padding-block-end: calc(var(--space3d-rail-h) + var(--sc-space-2)); }
+
+  /* Cabecera compacta: el viewport es protagonista, la cabecera no debe
+     competir por altura en pantallas de ~390px. */
+  .space3d-header { padding: var(--sc-space-2) var(--sc-space-4); gap: 6px; }
+  .space3d-identity { flex: 1 1 auto; min-inline-size: 0; }
+  .space3d-identity small { display: none; }
+  .space3d-project-picker { order: 3; inline-size: 100%; }
+  .space3d-destinations .space3d-button-label { display: none; }
+  .space3d-destinations .space3d-button { padding-inline: var(--sc-space-2); }
+
+  .space3d-rail-vertical {
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: 0;
+    z-index: var(--sc-z-topbar);
+    flex-direction: row;
+    block-size: var(--space3d-rail-h);
+    border-radius: 0;
+    border-inline: 0;
+    border-block-end: 0;
+    justify-content: space-between;
+    padding-inline: var(--sc-space-2);
+    padding-block-end: max(6px, env(safe-area-inset-bottom));
+  }
+  .space3d-rail-vertical-group { flex: 1; flex-direction: row; justify-content: space-around; }
+  .space3d-rail-vertical-group--history {
+    flex: 0 0 auto;
+    margin-block-start: 0;
+    padding-block-start: 0;
+    padding-inline-start: var(--sc-space-2);
+    border-block-start: 0;
+    border-inline-start: 1px solid var(--sc-color-divider);
+  }
+  .space3d-rail-button { min-inline-size: 0; padding-inline: 2px; }
+
+  .space3d-sheet {
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: var(--space3d-rail-h);
+    z-index: calc(var(--sc-z-topbar) - 1);
+    display: flex;
+    flex-direction: column;
+    max-block-size: 34vh;
+    border-start-start-radius: var(--sc-radius-sheet);
+    border-start-end-radius: var(--sc-radius-sheet);
+    background: var(--sc-color-surface-1);
+    box-shadow: var(--sc-shadow-clay-floating);
+    border: var(--sc-clay-edge);
+    border-block-end: 0;
+    overflow: hidden;
+    transition: max-block-size 0.2s ease;
+  }
+  .space3d-sheet[data-expanded] { max-block-size: 72vh; }
+  .space3d-sheet-handle { display: flex; flex: none; }
+
+  .space3d-model-nav-panel,
+  .space3d-sheet .space3d-rail {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    min-block-size: 0;
+    overflow-y: auto;
+  }
+  .space3d-sheet .space3d-model-nav-panel { border-block-end: 1px solid var(--sc-color-divider); flex: none; max-block-size: 40%; }
+  .space3d-sheet .space3d-rail { flex: 1; min-block-size: 0; }
+
+  .space3d-sheet:not([data-expanded]) .space3d-model-nav-panel,
+  .space3d-sheet:not([data-expanded]) .space3d-rail-body { display: none; }
 }
 
 @media (pointer: coarse) {

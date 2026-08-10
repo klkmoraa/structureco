@@ -68,14 +68,30 @@ describe('Space3DCanvas', () => {
   it('expone el lienzo con nombre accesible y controles de cámara operables por teclado', async () => {
     const user = userEvent.setup();
     const viewport = stubViewport();
-    render(<Space3DCanvas model={model} layers={SPACE3D_DEFAULT_LAYERS} copy={copy} createViewport={() => viewport} />);
+    let activeView: 'front' | 'top' | 'side' | 'isometric' = 'isometric';
+    const view = render(<Space3DCanvas
+      model={model}
+      layers={SPACE3D_DEFAULT_LAYERS}
+      copy={copy}
+      createViewport={() => viewport}
+      activeView={activeView}
+      onViewChange={(preset) => { activeView = preset; }}
+    />);
 
     expect(screen.getByRole('img', { name: copy.label })).toBeDefined();
-    const isometric = screen.getByRole('button', { name: /isom/i });
-    isometric.focus();
-    expect(document.activeElement).toBe(isometric);
-    await user.click(isometric);
-    expect(viewport.calls).toContain('setView:isometric');
+    const viewSelect = screen.getByRole('combobox');
+    viewSelect.focus();
+    expect(document.activeElement).toBe(viewSelect);
+    await user.selectOptions(viewSelect, 'front');
+    view.rerender(<Space3DCanvas
+      model={model}
+      layers={SPACE3D_DEFAULT_LAYERS}
+      copy={copy}
+      createViewport={() => viewport}
+      activeView={activeView}
+      onViewChange={(preset) => { activeView = preset; }}
+    />);
+    expect(viewport.calls).toContain('setView:front');
 
     await user.click(screen.getByRole('button', { name: /acercar/i }));
     expect(viewport.calls.some((call) => call.startsWith('zoomBy:'))).toBe(true);

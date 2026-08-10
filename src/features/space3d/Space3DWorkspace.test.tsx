@@ -115,11 +115,11 @@ describe('Space3DWorkspace end to end', () => {
     await waitFor(() => expect(screen.getByTestId('space3d-analysis-state').textContent).toBe('ready'));
 
     await user.click(screen.getByRole('tab', { name: /resultados/i }));
-    await user.click(screen.getByRole('tab', { name: /^nudos$/i }));
+    await user.selectOptions(screen.getByRole('combobox', { name: /tablas de resultados/i }), 'Nudos');
     const nodeRow = within(table(/desplazamiento/i)).getByRole('row', { name: /N4/ });
     expect(nodeRow.textContent).toMatch(/-?\d/);
 
-    await user.click(screen.getByRole('tab', { name: /^barras$/i }));
+    await user.selectOptions(screen.getByRole('combobox', { name: /tablas de resultados/i }), 'Barras');
     expect(within(table(/acciones de extremo/i)).getByRole('row', { name: /M1/ })).toBeDefined();
   });
 
@@ -412,7 +412,7 @@ describe('Space3DWorkspace analysis target and deformation scale', () => {
     await user.click(screen.getByRole('button', { name: /^analizar$/i }));
     await waitFor(() => expect(screen.getByTestId('space3d-analysis-state').textContent).toBe('ready'));
     await user.click(screen.getByRole('tab', { name: /resultados/i }));
-    await user.click(screen.getByRole('tab', { name: /^nudos$/i }));
+    await user.selectOptions(screen.getByRole('combobox', { name: /tablas de resultados/i }), 'Nudos');
     const single = within(table(/desplazamiento/i)).getByRole('row', { name: /N4/ }).textContent;
 
     await user.selectOptions(screen.getByLabelText(/objetivo de análisis/i), 'CO1');

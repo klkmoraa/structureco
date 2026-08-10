@@ -9,10 +9,10 @@
  * El módulo trae su propio `Space3DProjectProvider`: es la superficie completa
  * y lo único que la aplicación necesita cargar de forma diferida.
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ChevronLeft, CircleStop, Download, Grid3x3, Home, Layers, Minus, Move3d,
-  PenLine, Play, Plus, Redo2, Sparkles, Spline, Tag, Undo2, Upload, Weight,
+  ChevronDown, ChevronLeft, CircleStop, Download, Grid3x3, Home, Layers, Minus,
+  Moon, PenLine, Play, Plus, Sparkles, Spline, Sun, Tag, Upload, Weight,
 } from 'lucide-react';
 import { Space3DProjectProvider, useSpace3DProject, type Space3DSelection } from '../../space3d/store/Space3DProjectContext';
 import {
@@ -26,8 +26,11 @@ import { Dialog } from '../../design-system/components/overlays';
 import { Space3DCanvas, type Space3DViewportFactory } from '../../space3d/view/Space3DCanvas';
 import { buildSpace3DSceneModel } from '../../space3d/view/sceneModel';
 import { SPACE3D_DEFAULT_LAYERS, type Space3DLayerVisibility } from '../../space3d/view/threeViewport';
+import { SPACE3D_VIEW_PRESETS, type Space3DViewPreset } from '../../space3d/view/cameraModel';
 import { Space3DEntityEditor, type Space3DEditorTarget } from './Space3DEntityEditor';
 import { Space3DResultsPanel, type Space3DResultsTab } from './Space3DResultsPanel';
+import { Space3DToolRail, type Space3DActiveTool } from './Space3DToolRail';
+import { Space3DModelNav, type Space3DModelFocus } from './Space3DModelNav';
 import { translate, type Language, type TranslationKey } from '../../i18n/catalogs';
 import { formatNumber } from '../../utils/numberFormat';
 import { BrandMark } from '../topbar/BrandMark';
@@ -37,6 +40,22 @@ import type { ProjectModel } from '../../types';
 import type { Space3DStorageLike } from '../../space3d/data/storage';
 import type { Space3DWorkerClient } from '../../space3d/runtime/workerClient';
 import './space3d.css';
+
+type Space3DThemeMode = 'light' | 'dark';
+
+const readStoredTheme = (): Space3DThemeMode => {
+  if (typeof window === 'undefined') return 'light';
+  const saved = window.localStorage?.getItem('structureCo.theme');
+  if (saved === 'light' || saved === 'dark') return saved;
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+};
+
+const VIEW_LABEL_KEYS: Record<Space3DViewPreset, TranslationKey> = {
+  front: 'space3d.viewFront',
+  top: 'space3d.viewTop',
+  side: 'space3d.viewSide',
+  isometric: 'space3d.viewIsometric',
+};
 
 export interface Space3DWorkspaceProps {
   readonly language: Language;
@@ -183,6 +202,12 @@ const WorkspaceBody = ({
    * confirma antes de actuar, salvo que no haya nada que perder.
    */
   const [pendingReplace, setPendingReplace] = useState<'example' | 'blank' | null>(null);
+  const [theme, setThemeState] = useState<Space3DThemeMode>(readStoredTheme);
+  const [activeView, setActiveView] = useState<Space3DViewPreset>('isometric');
+  const [modelNavFocus, setModelNavFocus] = useState<Space3DModelFocus>('node');
+  const [propertiesOpen, setPropertiesOpen] = useState(false);
+  const [sheetExpanded, setSheetExpanded] = useState(false);
+  const [lastAnalyzedAt, setLastAnalyzedAt] = useState<number | null>(null);
   const hasContent = project.nodes.length > 0;
   // Doce clics en cada sentido: suficiente margen para explorar sin llegar a
   // una deformada ilegible por minúscula o a una que ya no cabe en pantalla.
@@ -206,15 +231,67 @@ const WorkspaceBody = ({
 
   const submit = useCallback((command: Space3DCommand) => execute(command).ok, [execute]);
 
+  // El tema es local a Space 3D (la superficie es independiente del editor
+  // 2D, ver cabecera del módulo) pero comparte la misma clave de almacenamiento
+  // y el mismo atributo de documento que el editor 2D, así que ambas
+  // superficies quedan visualmente consistentes sin depender la una de la otra.
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { window.localStorage?.setItem('structureCo.theme', theme); } catch { /* almacenamiento no disponible */ }
+  }, [theme]);
+  const toggleTheme = () => setThemeState((current) => (current === 'light' ? 'dark' : 'light'));
+
+  // El resultado listo no trae marca de tiempo propia (el dominio no la
+  // modela): se anota aquí, en la superficie, sólo para mostrarla junto al
+  // botón Analizar. No participa del cálculo ni se persiste con el proyecto.
+  useEffect(() => {
+    if (analysisState === 'ready') setLastAnalyzedAt(Date.now());
+  }, [analysisState]);
+
   const selectEntity = useCallback((selection: Space3DSelection | null) => {
     select(selection);
     setEditorTarget(selection ? { kind: selection.kind, id: selection.id } : null);
+    if (selection) {
+      setModelNavFocus(selection.kind);
+      // En móvil, la bandeja inferior puede estar contraída: sin esto, el
+      // editor se abre fuera de la vista y parece que el toque no hizo nada.
+      setSheetExpanded(true);
+    }
   }, [select]);
 
   const openNew = (kind: Space3DEditorTarget['kind']) => {
     select(null);
     setRail('model');
     setEditorTarget({ kind, id: null });
+    setModelNavFocus(kind);
+    setSheetExpanded(true);
+  };
+
+  const clearToolSelection = () => {
+    select(null);
+    setEditorTarget(null);
+  };
+
+  const selectedNodeId = selectedEntity?.kind === 'node' ? selectedEntity.id : null;
+  const editSelectedSupports = () => {
+    if (!selectedNodeId) return;
+    selectEntity({ kind: 'node', id: selectedNodeId });
+  };
+
+  const activeTool: Space3DActiveTool = !editorTarget
+    ? 'select'
+    : editorTarget.id === null ? editorTarget.kind : 'select';
+
+  const cycleView = () => setActiveView((current) => {
+    const index = SPACE3D_VIEW_PRESETS.indexOf(current);
+    return SPACE3D_VIEW_PRESETS[(index + 1) % SPACE3D_VIEW_PRESETS.length];
+  });
+
+  const focusModelSection = (focus: Space3DModelFocus) => {
+    setModelNavFocus(focus);
+    setRail('model');
+    setSheetExpanded(true);
+    document.getElementById(`space3d-table-${focus}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
   /** Reemplaza directamente si no hay nada que perder; si lo hay, pide confirmación. */
@@ -259,6 +336,48 @@ const WorkspaceBody = ({
   const running = analysisState === 'running';
   const errorMessage = lastError ? t(ERROR_KEYS[lastError] ?? 'space3d.error.generic') : null;
 
+  const canNewMember = project.nodes.length >= 2;
+  const canNewLoad = project.nodes.length > 0;
+  const canEditSupport = selectedNodeId !== null;
+  const canDeleteSelection = editorTarget !== null && editorTarget.id !== null;
+  const modelCounts = {
+    nodes: project.nodes.length,
+    members: project.members.length,
+    supports: project.nodes.filter((node) => countRestraints(node.restraints) > 0).length,
+    loads: project.nodalLoads.length,
+    loadCases: project.loadCases.length,
+    combinations: project.loadCombinations.length,
+  };
+  const modelProperties = {
+    id: project.id,
+    target: analysisTargetId,
+    dofTotal: project.nodes.length * 6,
+    dofFree: analysis?.diagnostics.freeDofCount ?? 0,
+    dofRestrained: analysis?.diagnostics.restrainedDofCount ?? 0,
+  };
+  const viewLabels = {
+    front: t(VIEW_LABEL_KEYS.front), top: t(VIEW_LABEL_KEYS.top),
+    side: t(VIEW_LABEL_KEYS.side), isometric: t(VIEW_LABEL_KEYS.isometric),
+  };
+  const lastAnalysisLabel = lastAnalyzedAt === null ? null : t('space3d.lastAnalysis', {
+    time: new Intl.DateTimeFormat(language === 'es' ? 'es' : 'en', { hour: 'numeric', minute: '2-digit' }).format(lastAnalyzedAt),
+  });
+  const targetSelect = <label className="space3d-target">
+    <span className="space3d-visually-hidden">{t('space3d.loadTarget')}</span>
+    <select
+      aria-label={t('space3d.loadTarget')}
+      value={analysisTargetId}
+      onChange={(event) => setAnalysisTargetId(event.target.value)}
+    >
+      {project.loadCases.length > 0 ? <optgroup label={t('space3d.loadCase')}>
+        {project.loadCases.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+      </optgroup> : null}
+      {project.loadCombinations.length > 0 ? <optgroup label={t('space3d.loadCombination')}>
+        {project.loadCombinations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+      </optgroup> : null}
+    </select>
+  </label>;
+
   return <div className="space3d-screen">
     <header className="space3d-header">
       <div className="space3d-identity">
@@ -269,34 +388,29 @@ const WorkspaceBody = ({
         </span>
         <span className="space3d-badge">{t('space3d.badge')}</span>
       </div>
+      <div className="space3d-project-picker">
+        <ChevronDown size={14} aria-hidden="true" className="space3d-project-picker-caret" />
+        <span className="space3d-project-picker-label">{t('space3d.projectSelector')}</span>
+        {targetSelect}
+      </div>
       <nav className="space3d-destinations" aria-label={t('space3d.title')}>
-        {onOpenHome ? <button type="button" className="space3d-button" onClick={onOpenHome}><Home size={16} aria-hidden="true" />{t('space3d.home')}</button> : null}
-        {onOpen2D ? <button type="button" className="space3d-button" onClick={onOpen2D}><PenLine size={16} aria-hidden="true" />{t('space3d.editor2D')}</button> : null}
+        <button type="button" className="space3d-tool space3d-theme-toggle" onClick={toggleTheme} title={theme === 'light' ? t('theme.dark') : t('theme.light')}>
+          {theme === 'light' ? <Moon size={16} aria-hidden="true" /> : <Sun size={16} aria-hidden="true" />}
+          <span className="space3d-visually-hidden">{theme === 'light' ? t('theme.dark') : t('theme.light')}</span>
+        </button>
+        {onOpenHome ? <button type="button" className="space3d-button" onClick={onOpenHome} aria-label={t('space3d.home')} title={t('space3d.home')}>
+          <Home size={16} aria-hidden="true" /><span className="space3d-button-label">{t('space3d.home')}</span>
+        </button> : null}
+        {onOpen2D ? <button type="button" className="space3d-button" onClick={onOpen2D} aria-label={t('space3d.editor2D')} title={t('space3d.editor2D')}>
+          <PenLine size={16} aria-hidden="true" /><span className="space3d-button-label">{t('space3d.editor2D')}</span>
+        </button> : null}
       </nav>
     </header>
 
     <p className="space3d-experimental" role="note">{t('space3d.experimentalNotice')}</p>
 
     <div className="space3d-toolbar">
-      <div className="space3d-tray" role="group" aria-label={t('space3d.toolbarModel')}>
-        <button type="button" className="space3d-tool space3d-tool--wide" onClick={() => openNew('node')}>
-          <Plus size={16} aria-hidden="true" />{t('space3d.newNode')}
-        </button>
-        <button type="button" className="space3d-tool space3d-tool--wide" onClick={() => openNew('member')} disabled={project.nodes.length < 2}>
-          <Move3d size={16} aria-hidden="true" />{t('space3d.newMember')}
-        </button>
-        <button type="button" className="space3d-tool space3d-tool--wide" onClick={() => openNew('load')} disabled={project.nodes.length === 0}>
-          <Weight size={16} aria-hidden="true" />{t('space3d.newLoad')}
-        </button>
-      </div>
-
       <div className="space3d-tray" role="group" aria-label={t('space3d.toolbarProject')}>
-        <button type="button" className="space3d-tool" onClick={undo} disabled={!canUndo} title={t('space3d.undo')}>
-          <Undo2 size={16} aria-hidden="true" /><span className="space3d-visually-hidden">{t('space3d.undo')}</span>
-        </button>
-        <button type="button" className="space3d-tool" onClick={redo} disabled={!canRedo} title={t('space3d.redo')}>
-          <Redo2 size={16} aria-hidden="true" /><span className="space3d-visually-hidden">{t('space3d.redo')}</span>
-        </button>
         <button type="button" className="space3d-tool" onClick={() => requestReplace('example')}>
           <Sparkles size={16} aria-hidden="true" />{t('space3d.loadExample')}
         </button>
@@ -327,21 +441,6 @@ const WorkspaceBody = ({
       </div>
 
       <div className="space3d-tray space3d-tray--run" role="group" aria-label={t('space3d.analyze')}>
-        <label className="space3d-target">
-          <span className="space3d-visually-hidden">{t('space3d.loadTarget')}</span>
-          <select
-            aria-label={t('space3d.loadTarget')}
-            value={analysisTargetId}
-            onChange={(event) => setAnalysisTargetId(event.target.value)}
-          >
-            {project.loadCases.length > 0 ? <optgroup label={t('space3d.loadCase')}>
-              {project.loadCases.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-            </optgroup> : null}
-            {project.loadCombinations.length > 0 ? <optgroup label={t('space3d.loadCombination')}>
-              {project.loadCombinations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-            </optgroup> : null}
-          </select>
-        </label>
         <button type="button" className="space3d-button space3d-button--primary" onClick={() => { void analyze(); }}
           disabled={running || pendingNotes.length > 0}
           title={pendingNotes.length > 0 ? t('space3d.bridgeBlocked', { count: pendingNotes.length }) : undefined}
@@ -402,21 +501,40 @@ const WorkspaceBody = ({
       : null}
 
     <div className="space3d-layout">
+      <Space3DToolRail
+        t={t}
+        activeTool={activeTool}
+        onSelectTool={clearToolSelection}
+        onNewNode={() => openNew('node')}
+        onNewMember={() => openNew('member')}
+        onNewLoad={() => openNew('load')}
+        onEditSupport={editSelectedSupports}
+        canNewMember={canNewMember}
+        canNewLoad={canNewLoad}
+        canEditSupport={canEditSupport}
+        onCycleView={cycleView}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        canDelete={canDeleteSelection}
+        onUndo={undo}
+        onRedo={redo}
+        onDelete={() => { if (editorTarget) remove(editorTarget); }}
+      />
+
       <section className="space3d-stage" aria-label={t('space3d.canvasLabel')}>
         <Space3DCanvas
           model={scene}
           layers={layers}
           onSelect={selectEntity}
           createViewport={createViewport}
-          viewLabels={{
-            front: t('space3d.viewFront'),
-            top: t('space3d.viewTop'),
-            side: t('space3d.viewSide'),
-            isometric: t('space3d.viewIsometric'),
-          }}
+          viewLabels={viewLabels}
+          activeView={activeView}
+          onViewChange={setActiveView}
           zoomInLabel={t('space3d.zoomIn')}
           zoomOutLabel={t('space3d.zoomOut')}
           resetLabel={t('space3d.resetView')}
+          fullscreenEnterLabel={t('space3d.fullscreenEnter')}
+          fullscreenExitLabel={t('space3d.fullscreenExit')}
           copy={{
             label: t('space3d.canvasLabel'),
             fallbackTitle: t('space3d.webglTitle'),
@@ -450,9 +568,36 @@ const WorkspaceBody = ({
         <p className="space3d-help">{t('space3d.interactionHelp')}</p>
       </section>
 
-      <aside className="space3d-rail">
+      <div className="space3d-sheet" data-expanded={sheetExpanded || undefined}>
+        <button
+          type="button"
+          className="space3d-sheet-handle"
+          onClick={() => setSheetExpanded((current) => !current)}
+          aria-expanded={sheetExpanded}
+        >
+          <span className="space3d-sheet-handle-bar" aria-hidden="true" />
+          <span className="space3d-visually-hidden">{sheetExpanded ? t('space3d.mobileSheetCollapse') : t('space3d.mobileSheetExpand')}</span>
+        </button>
+
+        <aside className="space3d-model-nav-panel">
+          <Space3DModelNav
+            t={t}
+            counts={modelCounts}
+            focus={modelNavFocus}
+            onFocusChange={focusModelSection}
+            views={SPACE3D_VIEW_PRESETS}
+            viewLabels={viewLabels}
+            activeView={activeView}
+            onViewChange={setActiveView}
+            properties={modelProperties}
+            propertiesOpen={propertiesOpen}
+            onToggleProperties={() => setPropertiesOpen((current) => !current)}
+          />
+        </aside>
+
+        <aside className="space3d-rail">
         <div className="space3d-tabs space3d-tray" role="tablist" aria-label={t('space3d.title')}>
-          <button type="button" role="tab" className="space3d-tab" aria-selected={rail === 'model'} onClick={() => setRail('model')}>{t('space3d.tabModel')}</button>
+          <button type="button" role="tab" className="space3d-tab" aria-selected={rail === 'model'} onClick={() => setRail('model')}>{t('space3d.tabInspector')}</button>
           <button type="button" role="tab" className="space3d-tab" aria-selected={rail === 'results'} onClick={() => setRail('results')}>{t('space3d.tabResults')}</button>
         </div>
 
@@ -462,7 +607,7 @@ const WorkspaceBody = ({
             <p>{t('space3d.emptyModelBody')}</p>
           </div> : null}
 
-          <div className="space3d-table-scroll">
+          <div className="space3d-table-scroll" id="space3d-table-node">
             <table className="space3d-table" aria-label={t('space3d.nodes')}>
               <thead>
                 <tr>
@@ -484,7 +629,7 @@ const WorkspaceBody = ({
             {project.nodes.length === 0 ? <p className="space3d-notice">{t('space3d.emptyNodes')}</p> : null}
           </div>
 
-          <div className="space3d-table-scroll">
+          <div className="space3d-table-scroll" id="space3d-table-member">
             <table className="space3d-table" aria-label={t('space3d.members')}>
               <thead>
                 <tr>
@@ -507,7 +652,7 @@ const WorkspaceBody = ({
             {project.members.length === 0 ? <p className="space3d-notice">{t('space3d.emptyMembers')}</p> : null}
           </div>
 
-          <div className="space3d-table-scroll">
+          <div className="space3d-table-scroll" id="space3d-table-load">
             <table className="space3d-table" aria-label={t('space3d.loads')}>
               <thead>
                 <tr>
@@ -553,6 +698,7 @@ const WorkspaceBody = ({
           />
         </div>}
       </aside>
+      </div>
     </div>
 
     {transfer ? <div className="space3d-transfer" role="group" aria-label={transfer === 'import' ? t('space3d.import') : t('space3d.export')}>
@@ -605,6 +751,8 @@ const WorkspaceBody = ({
       <span><b>{project.nodalLoads.length}</b> {t('space3d.loads')}</span>
       <span><b>{project.nodes.length * 6}</b> {t('space3d.dofCount')}</span>
       <span>{t('space3d.analysisTarget', { id: analysisTargetId })}</span>
+      {lastAnalysisLabel ? <span className="space3d-status-last">{lastAnalysisLabel}</span> : null}
+      <span className="space3d-status-units">{t('space3d.unitsChip')}</span>
       <span data-testid="space3d-analysis-state" className="space3d-visually-hidden">{analysisState}</span>
       <span data-testid="space3d-deformed-visible" className="space3d-visually-hidden">{String(scene.deformed !== null)}</span>
     </footer>

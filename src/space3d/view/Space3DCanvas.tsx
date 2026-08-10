@@ -6,8 +6,8 @@
  * porque un lienzo WebGL es opaco para un lector de pantalla incluso cuando
  * funciona. Si el visor cae, lo único que desaparece es la imagen.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Box, Maximize2, Minus, Plus, RotateCcw, SquareDashed } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { AlertTriangle, ChevronDown, Maximize2, Minimize2, Minus, Plus, RotateCcw } from 'lucide-react';
 import { SPACE3D_VIEW_PRESETS, type Space3DViewPreset } from './cameraModel';
 import { createSpace3DViewport, type Space3DLayerVisibility, type Space3DViewport } from './threeViewport';
 import type { Space3DSceneModel } from './sceneModel';
@@ -38,9 +38,16 @@ export interface Space3DCanvasProps {
   readonly onSelect?: (selection: Space3DSelection | null) => void;
   readonly createViewport?: Space3DViewportFactory;
   readonly viewLabels?: Readonly<Record<Space3DViewPreset, string>>;
+  /** Preset activo, controlado por quien aloja el lienzo (comparte estado con la lista de Vistas del panel lateral). */
+  readonly activeView?: Space3DViewPreset;
+  readonly onViewChange?: (preset: Space3DViewPreset) => void;
   readonly zoomInLabel?: string;
   readonly zoomOutLabel?: string;
   readonly resetLabel?: string;
+  readonly fullscreenEnterLabel?: string;
+  readonly fullscreenExitLabel?: string;
+  /** Controles adicionales inyectados por quien aloja el lienzo (p.ej. capas). */
+  readonly trailingControls?: ReactNode;
 }
 
 const DEFAULT_VIEW_LABELS: Record<Space3DViewPreset, string> = {
@@ -48,13 +55,6 @@ const DEFAULT_VIEW_LABELS: Record<Space3DViewPreset, string> = {
   top: 'Vista superior',
   side: 'Vista lateral',
   isometric: 'Vista isométrica',
-};
-
-const VIEW_ICONS: Record<Space3DViewPreset, typeof Box> = {
-  front: SquareDashed,
-  top: Maximize2,
-  side: SquareDashed,
-  isometric: Box,
 };
 
 const defaultFactory: Space3DViewportFactory = (options) => createSpace3DViewport(options);
@@ -66,14 +66,21 @@ export const Space3DCanvas = ({
   onSelect,
   createViewport = defaultFactory,
   viewLabels = DEFAULT_VIEW_LABELS,
+  activeView = 'isometric',
+  onViewChange,
   zoomInLabel = 'Acercar',
   zoomOutLabel = 'Alejar',
   resetLabel = 'Restablecer vista',
+  fullscreenEnterLabel = 'Pantalla completa',
+  fullscreenExitLabel = 'Salir de pantalla completa',
+  trailingControls,
 }: Space3DCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<Space3DViewport | null>(null);
   const selectRef = useRef(onSelect);
   selectRef.current = onSelect;
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const [unavailable, setUnavailable] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -137,6 +144,23 @@ export const Space3DCanvas = ({
     viewportRef.current?.setLayers(layers);
   }, [layers]);
 
+  // El preset lo gobierna quien aloja el lienzo (comparte estado con la lista
+  // de Vistas del panel lateral); este efecto sólo lo aplica a la cámara viva.
+  useEffect(() => {
+    viewportRef.current?.setView(activeView);
+  }, [activeView]);
+
+  useEffect(() => {
+    const onFullscreenChange = () => setIsFullscreen(document.fullscreenElement === stageRef.current);
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) { void document.exitFullscreen(); return; }
+    void stageRef.current?.requestFullscreen();
+  }, []);
+
   const retry = useCallback(() => {
     setUnavailable(false);
     setAttempt((current) => current + 1);
@@ -154,7 +178,35 @@ export const Space3DCanvas = ({
   </div>;
 
   return <div className="space3d-canvas">
-    <div className="space3d-canvas-stage">
+    <div className="space3d-canvas-stage" ref={stageRef} data-fullscreen={isFullscreen || undefined}>
+      <div className="space3d-canvas-topbar">
+        <label className="space3d-view-select">
+          <span className="space3d-visually-hidden">{resetLabel}</span>
+          <select
+            value={activeView}
+            onChange={(event) => onViewChange?.(event.target.value as Space3DViewPreset)}
+          >
+            {SPACE3D_VIEW_PRESETS.map((preset) => <option key={preset} value={preset}>{viewLabels[preset]}</option>)}
+          </select>
+          <ChevronDown size={14} aria-hidden="true" />
+        </label>
+        <div className="space3d-canvas-topbar-actions">
+          <button type="button" className="space3d-tool" onClick={() => viewportRef.current?.zoomBy(0.8)} title={zoomInLabel}>
+            <Plus size={16} aria-hidden="true" /><span className="space3d-visually-hidden">{zoomInLabel}</span>
+          </button>
+          <button type="button" className="space3d-tool" onClick={() => viewportRef.current?.zoomBy(1.25)} title={zoomOutLabel}>
+            <Minus size={16} aria-hidden="true" /><span className="space3d-visually-hidden">{zoomOutLabel}</span>
+          </button>
+          <button type="button" className="space3d-tool" onClick={() => onViewChange?.('isometric')} title={resetLabel}>
+            <RotateCcw size={16} aria-hidden="true" /><span className="space3d-visually-hidden">{resetLabel}</span>
+          </button>
+          <button type="button" className="space3d-tool" onClick={toggleFullscreen} title={isFullscreen ? fullscreenExitLabel : fullscreenEnterLabel}>
+            {isFullscreen ? <Minimize2 size={16} aria-hidden="true" /> : <Maximize2 size={16} aria-hidden="true" />}
+            <span className="space3d-visually-hidden">{isFullscreen ? fullscreenExitLabel : fullscreenEnterLabel}</span>
+          </button>
+          {trailingControls}
+        </div>
+      </div>
       {unavailable
         ? <div className="space3d-canvas-fallback" role="alert">
           <AlertTriangle size={22} aria-hidden="true" />
@@ -183,35 +235,6 @@ export const Space3DCanvas = ({
     </div>
 
     <div className="space3d-canvas-controls">
-      <div className="space3d-tray" role="group" aria-label={resetLabel}>
-        {SPACE3D_VIEW_PRESETS.map((preset) => {
-          const Icon = VIEW_ICONS[preset];
-          return <button
-            key={preset}
-            type="button"
-            className="space3d-tool"
-            onClick={() => viewportRef.current?.setView(preset)}
-            title={viewLabels[preset]}
-          >
-            <Icon size={17} aria-hidden="true" />
-            <span className="space3d-visually-hidden">{viewLabels[preset]}</span>
-          </button>;
-        })}
-      </div>
-      <div className="space3d-tray" role="group" aria-label={zoomInLabel}>
-        <button type="button" className="space3d-tool" onClick={() => viewportRef.current?.zoomBy(0.8)} title={zoomInLabel}>
-          <Plus size={17} aria-hidden="true" />
-          <span className="space3d-visually-hidden">{zoomInLabel}</span>
-        </button>
-        <button type="button" className="space3d-tool" onClick={() => viewportRef.current?.zoomBy(1.25)} title={zoomOutLabel}>
-          <Minus size={17} aria-hidden="true" />
-          <span className="space3d-visually-hidden">{zoomOutLabel}</span>
-        </button>
-        <button type="button" className="space3d-tool" onClick={() => viewportRef.current?.setView('isometric')} title={resetLabel}>
-          <RotateCcw size={17} aria-hidden="true" />
-          <span className="space3d-visually-hidden">{resetLabel}</span>
-        </button>
-      </div>
       {summary}
     </div>
   </div>;

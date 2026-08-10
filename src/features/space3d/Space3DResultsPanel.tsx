@@ -8,7 +8,7 @@
  * Un resultado obsoleto se etiqueta y se conserva; uno fallido muestra los
  * códigos de issue. En ningún caso se borra el modelo del usuario.
  */
-import { AlertTriangle, CircleCheck, CircleSlash, Clock } from 'lucide-react';
+import { AlertTriangle, ChevronDown, CircleCheck, CircleSlash, Clock } from 'lucide-react';
 import type { Space3DAnalysisIssue, Space3DAnalysisResult } from '../../space3d/model/types';
 import type { Space3DAnalysisState } from '../../space3d/store/Space3DProjectContext';
 import { formatNumber } from '../../utils/numberFormat';
@@ -82,6 +82,7 @@ export const Space3DResultsPanel = ({
   const StateIcon = meta.Icon;
 
   const banner = () => {
+    if (analysisState === 'ready') return <p className="space3d-notice space3d-notice--ok" role="status">{t('space3d.readyNotice')}</p>;
     if (analysisState === 'stale') return <p className="space3d-notice space3d-notice--warn" role="status">{t('space3d.staleNotice')}</p>;
     if (analysisState === 'failed') return <p className="space3d-notice space3d-notice--error" role="alert">{t('space3d.failedNotice')}</p>;
     if (analysisState === 'idle' || analysisState === 'cancelled') return <p className="space3d-notice">{t('space3d.idleNotice')}</p>;
@@ -108,16 +109,13 @@ export const Space3DResultsPanel = ({
 
     {banner()}
 
-    <div className="space3d-tabs space3d-tray" role="tablist" aria-label={t('space3d.tabResults')}>
-      {TABS.map((entry) => <button
-        key={entry.id}
-        type="button"
-        role="tab"
-        className="space3d-tab"
-        aria-selected={tab === entry.id}
-        onClick={() => onTabChange(entry.id)}
-      >{t(entry.key)}</button>)}
-    </div>
+    <label className="space3d-view-select space3d-results-select">
+      <span className="space3d-field-label">{t('space3d.resultsTablesLabel')}</span>
+      <select value={tab} onChange={(event) => onTabChange(event.target.value as Space3DResultsTab)}>
+        {TABS.map((entry) => <option key={entry.id} value={entry.id}>{t(entry.key)}</option>)}
+      </select>
+      <ChevronDown size={14} aria-hidden="true" />
+    </label>
 
     {tab === 'summary' ? <dl className="space3d-metrics">
       <div><dt>{t('space3d.dofCount')}</dt><dd>{analysis?.diagnostics.dofCount ?? '—'}</dd></div>
