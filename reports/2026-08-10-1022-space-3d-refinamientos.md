@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-08-10 10:22
 **Agente:** Claude Code
-**Rama:** main (25 commits locales, sin push)
+**Rama:** main (23 commits locales, sin push)
 
 ## Qué cambió
 
@@ -43,4 +43,4 @@ Resultados obtenidos:
 
 - **Pase con lector de pantalla real.** No ejecutable en este entorno: no hay NVDA/VoiceOver disponibles. Sigue como pendiente real, no se marca como hecho.
 - **Frame3DD** como tercer oráculo, sólo si aparece un binario alcanzable o un toolchain de C. No bloquea nada: el gate 3D-G2 ya tiene dos oráculos independientes (OpenSees, PyNite).
-- **Push.** 25 commits sólo en local. Codex no verá nada hasta que se confirme explícitamente en el chat.
+- **Push.** 23 commits sólo en local. Codex no verá nada hasta que se confirme explícitamente en el chat.
