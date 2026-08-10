@@ -12,11 +12,21 @@
 import { SPACE3D_PROTOCOL_VERSION, type Space3DWorkerRequest, type Space3DWorkerResponse } from './protocol';
 import type { Space3DAnalysisResult, Space3DProjectV1 } from '../model/types';
 
+/**
+ * Forma mínima de un evento del worker. `message` y `error` comparten una sola
+ * firma para que un `Worker` real, un doble de prueba y esta interfaz encajen
+ * sin sobrecargas ni `any`.
+ */
+export interface Space3DWorkerEvent {
+  readonly data?: unknown;
+  readonly message?: string;
+}
+
 export interface WorkerLike {
   postMessage(message: Space3DWorkerRequest): void;
   terminate(): void;
-  addEventListener(type: string, listener: (event: never) => void): void;
-  removeEventListener(type: string, listener: (event: never) => void): void;
+  addEventListener(type: string, listener: (event: Space3DWorkerEvent) => void): void;
+  removeEventListener(type: string, listener: (event: Space3DWorkerEvent) => void): void;
 }
 
 export type Space3DWorkerFactory = () => WorkerLike;
@@ -102,18 +112,18 @@ export class Space3DWorkerClient {
   private ensureWorker(): WorkerLike {
     if (this.worker) return this.worker;
     const worker = this.createWorker();
-    const onMessage = (event: { data: Space3DWorkerResponse }) => this.receive(event.data);
-    const onError = (event: { message?: string }) => {
+    const onMessage = (event: Space3DWorkerEvent) => this.receive(event?.data as Space3DWorkerResponse | undefined);
+    const onError = (event: Space3DWorkerEvent) => {
       const pending = this.pending;
       this.pending = null;
       this.teardown();
       pending?.reject(new Space3DWorkerError('WORKER_FAILURE', event?.message ?? 'El worker de Space 3D falló.'));
     };
-    worker.addEventListener('message', onMessage as (event: never) => void);
-    worker.addEventListener('error', onError as (event: never) => void);
+    worker.addEventListener('message', onMessage);
+    worker.addEventListener('error', onError);
     this.detach = () => {
-      worker.removeEventListener('message', onMessage as (event: never) => void);
-      worker.removeEventListener('error', onError as (event: never) => void);
+      worker.removeEventListener('message', onMessage);
+      worker.removeEventListener('error', onError);
     };
     this.worker = worker;
     return worker;

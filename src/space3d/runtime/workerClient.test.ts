@@ -3,13 +3,13 @@ import { Space3DAnalysisCancelledError, Space3DWorkerClient } from './workerClie
 import { handleSpace3DWorkerRequest, type Space3DWorkerRequest, type Space3DWorkerResponse } from './protocol';
 import { analyzeSpace3DProject } from '../engine/solver';
 import { axialCantilever } from '../engine/fixtures';
-import type { WorkerLike } from './workerClient';
+import type { Space3DWorkerEvent, WorkerLike } from './workerClient';
 
 class FakeWorker implements WorkerLike {
   static instances: FakeWorker[] = [];
   readonly posted: Space3DWorkerRequest[] = [];
   terminated = false;
-  private listeners = new Map<string, Set<(event: unknown) => void>>();
+  private listeners = new Map<string, Set<(event: Space3DWorkerEvent) => void>>();
 
   constructor() { FakeWorker.instances.push(this); }
 
@@ -17,12 +17,12 @@ class FakeWorker implements WorkerLike {
 
   terminate() { this.terminated = true; }
 
-  addEventListener(type: string, listener: (event: unknown) => void) {
+  addEventListener(type: string, listener: (event: Space3DWorkerEvent) => void) {
     if (!this.listeners.has(type)) this.listeners.set(type, new Set());
     this.listeners.get(type)!.add(listener);
   }
 
-  removeEventListener(type: string, listener: (event: unknown) => void) {
+  removeEventListener(type: string, listener: (event: Space3DWorkerEvent) => void) {
     this.listeners.get(type)?.delete(listener);
   }
 
@@ -36,7 +36,7 @@ class FakeWorker implements WorkerLike {
     this.emit('message', { data: response });
   }
 
-  emit(type: string, event: unknown) {
+  emit(type: string, event: Space3DWorkerEvent) {
     for (const listener of [...(this.listeners.get(type) ?? [])]) listener(event);
   }
 
