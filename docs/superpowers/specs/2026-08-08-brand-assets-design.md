@@ -1,5 +1,9 @@
 # Brand Assets Protection Design
 
+> **HISTORICAL** — Diseño de incorporación conservado. La autoridad vigente de identidad visual está en [brand/README.md](../../../brand/README.md).
+
+**Clasificación:** `HISTORICAL`
+
 **Fecha:** 2026-08-08  
 **Estado:** Aprobado por el usuario  
 **Alcance:** Activos de marca y gobernanza del repositorio

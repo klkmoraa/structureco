@@ -1,5 +1,9 @@
 # Fase 4: dependencias y gates
 
+> **HISTORICAL** — Esta matriz conserva el corte de Fase 4. Para el estado vigente consulta el [mapa de arquitectura](README.md), el contrato [S3D-1](structureco-space-3d-s3d1.md) y los gates ejecutables.
+
+**Clasificación:** `HISTORICAL`
+
 **Fecha de corte:** 2026-08-09
 **Base:** `6233286806f7029936e52d98fe3a8e53825b2a94` + cambios Fase 4 verificados antes del commit local
 **Regla:** un documento histórico o pre-RFC demuestra diseño, no implementación ni certificación.

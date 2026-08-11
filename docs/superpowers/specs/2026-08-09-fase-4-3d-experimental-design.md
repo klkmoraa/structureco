@@ -1,5 +1,9 @@
 # Fase 4: diseño del visor 3D experimental
 
+> **HISTORICAL** — Diseño del visor planar conservado. Fue sustituido por [Space 3D · S3D-1](../../architecture/structureco-space-3d-s3d1.md).
+
+**Clasificación:** `HISTORICAL`
+
 **Fecha:** 2026-08-09
 **Estado:** aprobado para implementación
 **Producto:** structureCo 0.8.2

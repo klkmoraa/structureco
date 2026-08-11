@@ -1,5 +1,9 @@
 # structureCo Fase 4 Implementation Plan
 
+> **HISTORICAL** — Plan de ejecución conservado. El visor planar que describe fue sustituido por [Space 3D · S3D-1](../../architecture/structureco-space-3d-s3d1.md).
+
+**Clasificación:** `HISTORICAL`
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** entregar un visor Three.js experimental y no autoritativo del proyecto 2D, junto con pre-RFCs 3D/IA y gates trazables.

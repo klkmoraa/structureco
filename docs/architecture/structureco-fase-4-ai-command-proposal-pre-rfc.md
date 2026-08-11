@@ -1,5 +1,7 @@
 # Pre-RFC: IA acotada mediante CommandProposal
 
+**Clasificación:** `REFERENCE`
+
 **Fecha:** 2026-08-09
 **Estado:** contrato propuesto; producto y proveedor no implementados
 **Responsables del siguiente gate:** seguridad de aplicación + producto estructural
