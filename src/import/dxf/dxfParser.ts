@@ -261,7 +261,16 @@ export const buildDxfImportCommand = (
   const importedNodes = new Map<string, NodeModel>();
   const nodes: NodeModel[] = [];
   const members: MemberModel[] = [];
-  const { id: _templateId, i: _templateI, j: _templateJ, ...templateProperties } = structuredClone(template);
+  const {
+    id: _templateId,
+    i: _templateI,
+    j: _templateJ,
+    materialId: _templateMaterialId,
+    materialOrigin: _templateMaterialOrigin,
+    sectionId: _templateSectionId,
+    sectionOrigin: _templateSectionOrigin,
+    ...templateProperties
+  } = structuredClone(template);
 
   const nodeFor = (source: DxfPoint): NodeModel => {
     const point = { x: source.x * factor, y: source.y * factor };
@@ -277,7 +286,14 @@ export const buildDxfImportCommand = (
   for (const segment of inspection.segments) {
     const start = nodeFor(segment.start);
     const end = nodeFor(segment.end);
-    members.push({ ...structuredClone(templateProperties), id: nextId('M', usedMembers), i: start.id, j: end.id });
+    members.push({
+      ...structuredClone(templateProperties),
+      id: nextId('M', usedMembers),
+      i: start.id,
+      j: end.id,
+      materialOrigin: 'imported',
+      sectionOrigin: 'imported',
+    });
   }
   return {
     kind: 'dxf.import', description: `Importar DXF: ${options.sourceName}`,

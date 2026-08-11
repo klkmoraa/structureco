@@ -109,6 +109,10 @@ const InspectorHarness = ({ modal = false, onClose, onDesktopWidthChange, deskto
       <output aria-label="N4 X almacenada">{String(nodeN4?.x)}</output>
       <output aria-label="M1 E almacenado">{String(memberM1?.E)}</output>
       <output aria-label="M1 A almacenada">{String(memberM1?.A)}</output>
+      <output aria-label="M1 material ID">{String((memberM1 as unknown as Record<string, unknown>)?.materialId ?? '')}</output>
+      <output aria-label="M1 origen material">{String((memberM1 as unknown as Record<string, unknown>)?.materialOrigin ?? '')}</output>
+      <output aria-label="M1 sección ID">{String((memberM1 as unknown as Record<string, unknown>)?.sectionId ?? '')}</output>
+      <output aria-label="M1 origen sección">{String((memberM1 as unknown as Record<string, unknown>)?.sectionOrigin ?? '')}</output>
       <output aria-label="Issues de análisis">{analysis?.issues.map((issue) => issue.id).join(',') ?? ''}</output>
       <Inspector desktopWidth={desktopWidth} modal={modal} onClose={onClose} onDesktopWidthChange={onDesktopWidthChange} mobileDetent={mobileDetent} onMobileDetentChange={onMobileDetentChange} />
     </div>
@@ -397,6 +401,8 @@ describe('Inspector preset selectors and load-case guidance', () => {
     await waitFor(() => {
       expect(materialSelect().value).toBe('steel-a992');
       expect(storedNumber('M1 E almacenado')).toBe(200e6);
+      expect(screen.getByLabelText('M1 material ID').textContent).toBe('steel-a992');
+      expect(screen.getByLabelText('M1 origen material').textContent).toBe('catalog');
     });
 
     await user.selectOptions(sectionSelect(), 'w12x26');
@@ -405,7 +411,28 @@ describe('Inspector preset selectors and load-case guidance', () => {
     await waitFor(() => {
       expect(sectionSelect().value).toBe('w12x26');
       expect(storedNumber('M1 A almacenada')).toBe(section?.area);
+      expect(screen.getByLabelText('M1 sección ID').textContent).toBe('w12x26');
+      expect(screen.getByLabelText('M1 origen sección').textContent).toBe('catalog');
     });
+  });
+
+  it('resolves both selectors from explicit IDs, including numerically indistinguishable steel presets', async () => {
+    const user = userEvent.setup();
+    const project = createInspectorProject();
+    const member = project.members.find((item) => item.id === 'M1')!;
+    const section = findStandardSection('ipe-300')!;
+    Object.assign(member as object, {
+      E: 200e6, G: 76_923_076.9231, density: 7850,
+      materialId: 'steel-a992', materialOrigin: 'catalog',
+      A: section.area, I: section.inertiaX,
+      sectionId: section.id, sectionOrigin: 'catalog',
+    });
+    renderInspector(project);
+
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+
+    expect(materialSelect().value).toBe('steel-a992');
+    expect(sectionSelect().value).toBe('ipe-300');
   });
 
   it('does not carry the chosen preset over to another member with identical properties', async () => {
@@ -439,6 +466,39 @@ describe('Inspector preset selectors and load-case guidance', () => {
     await user.keyboard('{Enter}');
 
     expect(sectionSelect().value).toBe('');
+    expect(screen.getByLabelText('M1 sección ID').textContent).toBe('');
+    expect(screen.getByLabelText('M1 origen sección').textContent).toBe('custom');
+
+    await user.click(screen.getByRole('button', { name: 'Deshacer fixture' }));
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+    expect(sectionSelect().value).toBe('w12x26');
+    expect(screen.getByLabelText('M1 origen sección').textContent).toBe('catalog');
+
+    await user.click(screen.getByRole('button', { name: 'Rehacer fixture' }));
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+    expect(sectionSelect().value).toBe('');
+    expect(screen.getByLabelText('M1 origen sección').textContent).toBe('custom');
+  });
+
+  it('does not recover section identity when exact preset floats are typed back manually', async () => {
+    const user = userEvent.setup();
+    renderInspector();
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+    await user.selectOptions(sectionSelect(), 'w12x26');
+    const section = findStandardSection('w12x26')!;
+    const area = screen.getByRole('textbox', { name: 'A' });
+
+    await user.clear(area);
+    await user.type(area, '0.02');
+    await user.keyboard('{Enter}');
+    await user.clear(area);
+    await user.type(area, String(section.area));
+    await user.keyboard('{Enter}');
+
+    expect(storedNumber('M1 A almacenada')).toBe(section.area);
+    expect(sectionSelect().value).toBe('');
+    expect(screen.getByLabelText('M1 sección ID').textContent).toBe('');
+    expect(screen.getByLabelText('M1 origen sección').textContent).toBe('custom');
   });
 
   it('lists compact preset labels translated to the project language', async () => {

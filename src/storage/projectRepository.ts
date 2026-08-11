@@ -1,3 +1,4 @@
+import { CURRENT_SCHEMA_VERSION } from '../data/defaultProject';
 import { normalizeProject } from '../data/migrate';
 import { PROJECT_STORAGE_KEY, type StorageLike } from '../data/projectStorage';
 import type { ProjectModel } from '../types';
@@ -278,7 +279,7 @@ export const migrateLegacyProject = async (repository: ProjectRepository, storag
   if (raw === null) return { status: 'no-source' };
   const project = normalizeProject(JSON.parse(raw) as unknown);
   const checksum = await projectChecksum(project);
-  const markerKey = `legacy-v5:${project.id}:${checksum}`;
+  const markerKey = `legacy-v${CURRENT_SCHEMA_VERSION}:${project.id}:${checksum}`;
   if (await repository.getMeta(markerKey)) return { status: 'already-migrated', record: await repository.openProject(project.id) ?? undefined };
   const existing = await repository.openProject(project.id);
   if (existing && existing.checksum !== checksum) {

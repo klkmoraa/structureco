@@ -243,16 +243,24 @@ export const InspectorProperties = () => {
 
   const applyMaterialPreset = (material: StandardMaterial) => {
     if (!selectedMember) return;
-    void executeProjectCommand({ kind: 'member.update', description: `Aplicar material a ${selectedMember.id}`, memberId: selectedMember.id, changes: {
-      E: material.elasticModulus, G: material.shearModulus, density: material.density,
-    } });
+    void executeProjectCommand({
+      kind: 'member.material.apply',
+      description: `Aplicar material a ${selectedMember.id}`,
+      memberId: selectedMember.id,
+      materialId: material.id,
+      properties: { E: material.elasticModulus, G: material.shearModulus, density: material.density },
+    });
   };
 
   const applySectionPreset = (section: StandardSection) => {
     if (!selectedMember) return;
-    void executeProjectCommand({ kind: 'member.update', description: `Aplicar sección a ${selectedMember.id}`, memberId: selectedMember.id, changes: {
-      A: section.area, I: section.inertiaX,
-    } });
+    void executeProjectCommand({
+      kind: 'member.section.apply',
+      description: `Aplicar sección a ${selectedMember.id}`,
+      memberId: selectedMember.id,
+      sectionId: section.id,
+      properties: { A: section.area, I: section.inertiaX },
+    });
   };
 
   const updateNodalLoad = (key: keyof NodalLoad, value: string | number) => updateProject((draft) => {
@@ -541,9 +549,8 @@ export const InspectorProperties = () => {
             <option value="frame">{t('inspector.frame')}</option><option value="truss">{t('inspector.truss')}</option><option value="rigid">{t('inspector.rigid')}</option>
           </SelectField>
           {selectedMember.type !== 'rigid' && !classroomMode ? <>
-            {/* `key` remonta los selectores al cambiar de miembro: el preset elegido pertenece al miembro activo, no al panel. */}
-            <MaterialPresetSelector key={`${selectionKey}:material`} units={units} current={{ E: selectedMember.E, G: selectedMember.G, density: selectedMember.density }} onSelect={applyMaterialPreset} />
-            <SectionPresetSelector key={`${selectionKey}:section`} units={units} current={{ A: selectedMember.A, I: selectedMember.I }} onSelect={applySectionPreset} />
+            <MaterialPresetSelector units={units} selectedId={selectedMember.materialId} origin={selectedMember.materialOrigin} onSelect={applyMaterialPreset} />
+            <SectionPresetSelector units={units} selectedId={selectedMember.sectionId} origin={selectedMember.sectionOrigin} onSelect={applySectionPreset} />
             <PhysicalNumberField label="E" value={selectedMember.E} units={units} quantity="elasticModulus" resetKey={`${selectionKey}:E`} hint={t('inspector.domainValidatesE')} onCommit={(value) => updateMember('E', value)} />
             <PhysicalNumberField label="A" value={selectedMember.A} units={units} quantity="area" resetKey={`${selectionKey}:A`} hint={t('inspector.domainValidatesA')} onCommit={(value) => updateMember('A', value)} />
             <PhysicalNumberField label="I" value={selectedMember.I} units={units} quantity="inertia" resetKey={`${selectionKey}:I`} hint={selectedMember.type === 'frame' ? t('inspector.domainValidatesI') : t('inspector.inertiaCompatibilityHint')} onCommit={(value) => updateMember('I', value)} />
@@ -558,6 +565,8 @@ export const InspectorProperties = () => {
         {selectedMember.type !== 'rigid' && selectedMember.A > 0 && selectedMember.I > 0 ? <SectionViewer2D
           area={selectedMember.A}
           inertia={selectedMember.I}
+          sectionId={selectedMember.sectionId}
+          sectionOrigin={selectedMember.sectionOrigin}
           units={units}
           axialForce={memberResult && (!classroomMode || resultsVisible) ? memberResult.maxAxial : 0}
           bendingMoment={memberResult && (!classroomMode || resultsVisible) ? memberResult.maxMoment : 0}
