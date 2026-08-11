@@ -10,6 +10,7 @@ const tokensCss = readCss(new URL('./tokens.css', import.meta.url));
 const stylesCss = readCss(new URL('../styles.css', import.meta.url));
 const uiCss = readCss(new URL('./components/ui.css', import.meta.url));
 const materialCss = readCss(new URL('./material.css', import.meta.url));
+const phase1Css = readCss(new URL('../features/workspace/phase1.css', import.meta.url));
 /** The combined text of all component CSS that is not `tokens.css`. */
 const componentCss = `${stylesCss}\n${materialCss}`;
 
@@ -363,6 +364,15 @@ describe('AG-015 premium visual layer contract', () => {
       .toBeGreaterThanOrEqual(3);
     expect(contrast('--sc-color-border-canvas-chrome', '--sc-color-bg-canvas', darkTheme))
       .toBeGreaterThanOrEqual(3);
+  });
+
+  it('gives repeat controls the existing floating canvas-chrome material without the contact glow', () => {
+    const canvasChromeBlock = materialCss.match(/\.canvas-mode-badge,[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(canvasChromeBlock).toContain('.repeat-action-control');
+    expect(canvasChromeBlock).toContain('.repeat-preview');
+    expect(canvasChromeBlock).toContain('box-shadow: var(--sc-shadow-clay-floating)');
+    expect(phase1Css).not.toMatch(/\.repeat-action-control[^}]*--sc-shadow-contact/);
+    expect(phase1Css).not.toMatch(/\.repeat-preview[^}]*--sc-shadow-contact/);
   });
 
   it('keeps ui.css off the flat AG-015 shadow family', () => {

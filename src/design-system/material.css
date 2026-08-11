@@ -107,7 +107,9 @@
 .selection-cycle-indicator,
 .cut-tooltip,
 .canvas-layer-trigger,
-.canvas-layer-panel {
+.canvas-layer-panel,
+.repeat-action-control,
+.repeat-preview {
   background: var(--sc-color-surface-2);
   border: 1px solid var(--sc-color-border-canvas-chrome);
   box-shadow: var(--sc-shadow-clay-floating);
