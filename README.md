@@ -1,87 +1,57 @@
-# structureCo — Contexto único del proyecto
+# StructureCo
 
-## Qué es
+StructureCo es una aplicación web local-first para modelar, analizar y explicar estructuras. El producto principal trabaja con estructuras planas 2D; además incluye un espacio 3D funcional separado, todavía experimental. La aplicación corre en el navegador con React, TypeScript y Vite, sin backend obligatorio.
 
-structureCo es una aplicación web local-first para modelar, analizar y explicar estructuras planas 2D. Corre completamente en el navegador con React, TypeScript y Vite: no depende de un backend. El modelo se guarda localmente y puede intercambiarse como JSON, SVG, PNG, PDF y expedientes `.structureco`.
+La autoridad del repositorio sigue este orden: código, pruebas y gates ejecutables → documentación canónica → referencias → documentación histórica y evidencia de auditoría. El [índice canónico de documentación](docs/README.md) detalla esa jerarquía.
 
-La fuente de verdad es el código bajo `src/`; este archivo concentra el contexto humano vigente. Se retiraron los reportes, propuestas, fases, capturas y documentos históricos que duplicaban o describían estados ya superados.
+## Capacidades actuales
 
-## Lo que está implementado
+| Área | Estado | Alcance comprobable |
+|---|---|---|
+| Modelado y análisis 2D | Vigente | Nodos, barras, apoyos, cargas, casos y combinaciones; marcos, vigas y armaduras; análisis lineal, P-Delta, líneas de influencia, diagramas y deformada. |
+| Resultados | Vigente | Desplazamientos, reacciones, acciones internas, extremos, confiabilidad numérica, auditorías y explicaciones trazables. |
+| Aula | Vigente | Ejercicios, recorrido guiado, predicciones, niveles pedagógicos y progreso local por proyecto. |
+| Project Hub y persistencia | Vigente | Proyectos en IndexedDB, migración desde almacenamiento heredado y recuperaciones antes de operaciones sensibles. |
+| Importación y exportación | Vigente con límites declarados | JSON, expediente `.structureco`, SVG, PNG, CSV y PDF portable; importación DXF ASCII de un subconjunto experimental. |
+| PDF y PWA | Vigente | Memoria de cálculo PDF reimportable, manifiesto web, shell offline generado durante el build y aviso controlado de actualización. |
+| `ProjectCommand` | Vigente, contrato interno | Comandos tipados, patches reversibles y una ruta común para historial/undo-redo; no es una interfaz de IA. |
+| Space 3D · S3D-1 | Experimental funcional | Marco espacial elástico lineal con 6 GDL por nudo, edición, análisis, resultados, persistencia, import/export y vista 3D en un dominio separado del 2D. |
+| IA mediante `CommandProposal` | No implementada | Existe únicamente un pre-RFC de referencia; no hay proveedor, SDK, llamadas de red ni mutación automática del proyecto. |
 
-### Modelado y edición
+## Límites relevantes
 
-- Editor gráfico para nodos, barras, apoyos, conexiones, cargas puntuales, distribuidas y momentos.
-- Elementos de marco, viga y armadura; liberaciones, offsets rígidos, resortes, rótulas, cortes, cotas, selección múltiple, snapping y deshacer/rehacer.
-- Propiedades de material y sección, perfiles normalizados, unidades métricas e imperiales y validación de entradas.
-- Persistencia local con recuperación ante datos corruptos y migración de versiones de proyecto.
+- StructureCo es una ayuda de modelado y cálculo; no sustituye revisión, criterio ni certificación profesional.
+- Space 3D sigue marcado como experimental. S3D-1 no incluye cargas en barra, liberaciones, muelles, asentamientos, deformación por cortante, dinámica ni no linealidad.
+- El puente 2D → 3D es explícito y de una sola dirección: no inventa propiedades espaciales ausentes ni convierte el solver 2D en uno híbrido.
+- La importación DXF admite sólo un subconjunto ASCII y muestra diagnósticos antes de crear geometría.
 
-### Análisis estructural
+El alcance técnico y las convenciones de Space 3D están en el [mapa de arquitectura](docs/architecture/README.md).
 
-- Método directo de rigidez para estructuras 2D, con formulaciones Euler–Bernoulli y Timoshenko.
-- Casos y combinaciones de carga, asentamientos, temperatura, deformaciones iniciales, vínculos rígidos y mecanismos.
-- Cálculo de desplazamientos, reacciones, acciones internas, equilibrio, compatibilidad, condición numérica y auditoría independiente de cargas.
-- Diagramas N/V/M y deformada, envolventes, análisis P-Delta y líneas de influencia con trenes de carga.
+## Inicio local
 
-### Resultados, exportación y aprendizaje
-
-- Panel de resultados trazable con tablas, diagramas, extremos y explicaciones del método.
-- Exportación SVG, PNG, CSV, PDF y expediente portable; importación validada de JSON, `.structureco` y PDF compatible.
-- Modo Aula con ejercicios, guías, predicciones y progreso local.
-- Interfaz en español e inglés, tema claro/oscuro, navegación por teclado, foco en diálogos y diseño responsive para escritorio, tablet y móvil.
-
-## Arquitectura vigente
-
-```text
-src/main.tsx
-  └─ App.tsx
-      └─ ProjectProvider
-          └─ AppShell
-              ├─ bienvenida
-              └─ WorkspaceShell (carga diferida)
-                  ├─ barra superior y herramientas
-                  ├─ canvas estructural
-                  ├─ inspector
-                  ├─ resultados
-                  ├─ importación/exportación
-                  └─ modo Aula
-```
-
-- `src/features/`: superficies de interfaz por dominio.
-- `src/design-system/`: tokens, tipografía, componentes e iconografía.
-- `src/engine/`: solver, diagramas, envolventes, influencia, P-Delta y verificaciones numéricas.
-- `src/workers/`: análisis asíncrono con fallback seguro en el hilo principal.
-- `src/data/`, `src/store/` y `src/types.ts`: modelo, migraciones, persistencia, historial y contratos.
-- `src/utils/`: formato numérico, importación/exportación y construcción de PDFs.
-
-## Contratos que no se deben romper
-
-Las rutas `src/engine/**`, `src/workers/**`, `src/data/**`, `src/store/ProjectContext.tsx` y `src/types.ts` son la frontera protegida. En ellas viven el solver, unidades, signos, topología, IDs, formatos de archivo, migraciones, persistencia, historial y resultados matemáticos.
-
-Una tarea visual o de mantenimiento no debe modificar esa frontera sin autorización explícita. `scripts/protected-baseline.sha256` guarda los hashes que verifica el gate local.
-
-Los assets de `public/` son parte del producto: favicon, manifiesto, iconos y fuentes IBM Plex. No se eliminan como artefactos históricos.
-
-## Calidad y comandos
-
-En PowerShell usa los ejecutables `.cmd`:
+Requiere la versión de Node indicada en `.nvmrc`.
 
 ```powershell
-npm.cmd run lint
-npm.cmd test
-npm.cmd run build
-npm.cmd run verify
-npm.cmd run qa
-npm.cmd run qa:webkit
+npm.cmd ci
+npm.cmd run dev
 ```
 
-`npm.cmd run verify` ejecuta lint, frontera protegida, suite de Vitest, build y presupuesto de rendimiento. La verificación más reciente previa a esta consolidación aprobó 99 archivos de prueba y 741 pruebas.
+## Verificación
 
-## Contenido deliberadamente retirado
+```powershell
+npm.cmd run verify:docs
+npm.cmd run verify
+npm.cmd run verify:space3d
+npm.cmd run validate:ci
+```
 
-Se eliminaron reportes de sesiones, propuestas, planes, fases, matrices de QA históricas, capturas comparativas, PDFs de entrega y scripts que solo generaban esos documentos. También se limpiaron los directorios generados `dist/`, `qa-artifacts/` y `output/` cuando no contienen código fuente.
+`npm run verify` cubre lint, documentación, frontera protegida, pruebas, build y presupuesto de rendimiento. No se publican cantidades de pruebas en este README porque cambian con frecuencia.
 
-Se conservan los wrappers locales de Sites y los respaldos externos al producto porque son recursos de publicación o recuperación, no documentación duplicada. No forman parte del build, lint ni tests de la aplicación principal.
+## Documentación
 
-## Estado de consolidación
+- [Índice canónico y clasificación completa](docs/README.md)
+- [Mapa de arquitectura vigente](docs/architecture/README.md)
+- [Identidad visual oficial protegida](brand/README.md)
+- [Política de reportes y evidencia](reports/README.md)
 
-Esta es la única documentación humana vigente del repositorio. Para saber qué hace una parte concreta, usa el código y sus pruebas cercanas; para validar cambios, ejecuta el gate completo antes de declarar éxito.
+El roadmap y el backlog viven fuera de la documentación canónica del repositorio y no se duplican aquí.

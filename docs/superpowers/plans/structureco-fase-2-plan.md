@@ -1,5 +1,9 @@
 # structureCo Fase 2 — plan de implementación
 
+> **HISTORICAL** — Plan de ejecución conservado. El estado vigente está en el [README principal](../../../README.md) y en el código actual.
+
+**Clasificación:** `HISTORICAL`
+
 **Base:** `main@166d826c9a0c4247873ce78f3e22186ceaef6659`, aplicación raíz 0.8.2.
 
 **Skills locales `structureco-*`: NO DISPONIBLE** (registro único). Respaldo focalizado, hashes, frontera protegida y pruebas equivalentes sustituyen ese flujo sin ampliar el alcance. Los plugins obligatorios sin capacidad invocable (`ui-theme-designer`, `code-simplifier`, `typescript-lsp`, `security-guidance`) también se tratarán mediante revisión focalizada; `frontend-design` sí está activo.

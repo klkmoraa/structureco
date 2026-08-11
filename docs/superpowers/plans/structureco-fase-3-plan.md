@@ -1,5 +1,9 @@
 # structureCo Fase 3 — plan de implementación
 
+> **HISTORICAL** — Plan de ejecución conservado. El estado vigente está en el [README principal](../../../README.md) y en los gates actuales.
+
+**Clasificación:** `HISTORICAL`
+
 > **Para la ejecución:** usar `superpowers:executing-plans`, `test-driven-development`, `systematic-debugging` y `verification-before-completion`. Esta sesión trabaja en la raíz autorizada y conserva los cambios locales existentes.
 
 **Objetivo:** certificar y corregir el motor real, comunicar su calidad numérica y conservar P-Delta/sparse como capacidades experimentales acotadas.

@@ -1,5 +1,9 @@
 # Pre-RFC: camino de structureCo hacia análisis 3D
 
+> **HISTORICAL** — Conserva la propuesta que precedió a S3D-1. El contrato vigente está en [Space 3D · S3D-1](structureco-space-3d-s3d1.md).
+
+**Clasificación:** `HISTORICAL`
+
 **Fecha:** 2026-08-09
 **Estado:** pre-RFC; no autoriza implementación del motor 3D
 **Responsable de siguiente gate:** arquitectura estructural + ingeniería numérica

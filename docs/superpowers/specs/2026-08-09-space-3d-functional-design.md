@@ -1,5 +1,9 @@
 # Space 3D funcional — diseño para revisión
 
+> **HISTORICAL** — Diseño previo a la implementación conservado. El contrato vigente está en [Space 3D · S3D-1](../../architecture/structureco-space-3d-s3d1.md).
+
+**Clasificación:** `HISTORICAL`
+
 **Fecha:** 2026-08-09
 **Producto base:** structureCo `0.8.2`
 **Base Git:** `fcbca272c1e01d8cf2c00f8aaaa6943d8d78e618`
