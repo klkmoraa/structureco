@@ -8,19 +8,19 @@
  *
  * Tres decisiones sostienen la estimación, y las tres se declaran al usuario:
  *
- *  · **W elástico.** Si el área y la inercia del miembro coinciden exactamente
- *    con un perfil del catálogo, se usa su `sectionModulusX` real. Si no, se
- *    supone la sección rectangular equivalente (h = √(12·I/A)) y W = I/(h/2).
- *  · **Límite elástico.** Se busca el material del catálogo cuyo módulo elástico
- *    coincida con el del miembro y se toma su `yieldStrength`. Sin coincidencia
+ *  · **W elástico.** Si `sectionId` identifica explícitamente un perfil del
+ *    catálogo, se usa su `sectionModulusX` real. Si no, se supone la sección
+ *    rectangular equivalente (h = √(12·I/A)) y W = I/(h/2).
+ *  · **Límite elástico.** Si `materialId` identifica explícitamente un material
+ *    del catálogo, se toma su `yieldStrength`. Sin identidad fiable
  *    se cae a 250 MPa (acero A36) y `estimatedYield` queda en `true`.
  *  · **Combinación.** N y M se suman en valor absoluto — la envolvente más
  *    conservadora, porque los extremos pueden no ocurrir en la misma sección.
  *
  * Todas las magnitudes viajan en las unidades base internas (kN, m ⇒ kN/m²).
  */
-import { standardMaterials } from '../../data/standardMaterials';
-import { standardSections } from '../../data/standardSections';
+import { findStandardMaterial } from '../../data/standardMaterials';
+import { findStandardSection } from '../../data/standardSections';
 import type { AnalysisResult, MemberModel, MemberResult, ProjectModel } from '../../types';
 
 /** Acero A36 en unidades base internas (kN/m²). Sólo se usa si el material no se reconoce. */
@@ -76,7 +76,9 @@ export interface StructuralDemandSummary {
 }
 
 const matchingSection = (member: MemberModel) =>
-  standardSections.find((section) => section.area === member.A && section.inertiaX === member.I) ?? null;
+  member.sectionOrigin === 'catalog' && member.sectionId
+    ? findStandardSection(member.sectionId) ?? null
+    : null;
 
 /** Módulo elástico W (m³) y el perfil que lo respalda, si lo hay. */
 export const memberSectionModulus = (member: MemberModel): { modulus: number; sectionName: string | null } => {
@@ -91,7 +93,9 @@ export const memberSectionModulus = (member: MemberModel): { modulus: number; se
 
 /** Límite elástico de referencia (kN/m²) para el miembro, y si hubo que estimarlo. */
 export const memberYieldStrength = (member: MemberModel): { yieldStrength: number; estimated: boolean } => {
-  const material = standardMaterials.find((candidate) => candidate.elasticModulus === member.E);
+  const material = member.materialOrigin === 'catalog' && member.materialId
+    ? findStandardMaterial(member.materialId)
+    : undefined;
   return material && material.yieldStrength > 0
     ? { yieldStrength: material.yieldStrength, estimated: false }
     : { yieldStrength: FALLBACK_YIELD_STRENGTH, estimated: true };

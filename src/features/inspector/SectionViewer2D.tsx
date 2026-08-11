@@ -1,9 +1,9 @@
 import { useId, useMemo, useState } from 'react';
 import { Box, Ruler } from 'lucide-react';
-import { standardSections, type SectionShapeType, type StandardSection } from '../../data/standardSections';
+import { findStandardSection, type SectionShapeType, type StandardSection } from '../../data/standardSections';
 import { toDisplay, unitLabel } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
-import type { UnitSystemId } from '../../types';
+import type { MemberPropertyOrigin, UnitSystemId } from '../../types';
 import { formatFixed } from '../../utils/numberFormat';
 import { formatInspectorValue } from './numericFormatting';
 
@@ -12,6 +12,8 @@ export interface SectionViewer2DProps {
   area: number;
   /** Inercia fuerte del miembro (m⁴). */
   inertia: number;
+  sectionId?: string;
+  sectionOrigin?: MemberPropertyOrigin;
   units: UnitSystemId;
   /** Axil de referencia (kN) para el mapa de tensiones; 0 lo deja neutro. */
   axialForce?: number;
@@ -26,13 +28,11 @@ const PADDING = 30;
 /**
  * Sección transversal a escala, con cotas y la distribución elástica de Navier.
  *
- * El miembro sólo guarda A e I: la *forma* no está en el modelo. Cuando A e I
- * coinciden exactamente con un perfil del catálogo se dibuja ese perfil; si no,
- * se dibuja la rectangular equivalente h = √(12·I/A), que es la única forma que
- * los dos datos disponibles determinan sin inventar nada. El encabezado dice
- * siempre cuál de los dos casos se está viendo.
+ * Una identidad explícita de catálogo permite dibujar la forma real. En cualquier
+ * otro origen se dibuja la rectangular equivalente h = √(12·I/A), que es la única
+ * forma que A e I determinan sin inventar una identidad.
  */
-export const SectionViewer2D = ({ area, inertia, units, axialForce = 0, bendingMoment = 0 }: SectionViewer2DProps) => {
+export const SectionViewer2D = ({ area, inertia, sectionId, sectionOrigin, units, axialForce = 0, bendingMoment = 0 }: SectionViewer2DProps) => {
   const [view, setView] = useState<'dimensions' | 'stress'>('dimensions');
   const { t } = useI18n();
   const uid = useId();
@@ -40,9 +40,9 @@ export const SectionViewer2D = ({ area, inertia, units, axialForce = 0, bendingM
   const maskId = `section-stress-mask-${uid}`;
 
   const geometry = useMemo(() => {
-    const section: StandardSection | null = standardSections.find(
-      (candidate) => candidate.area === area && candidate.inertiaX === inertia,
-    ) ?? null;
+    const section: StandardSection | null = sectionOrigin === 'catalog' && sectionId
+      ? findStandardSection(sectionId) ?? null
+      : null;
     const safeArea = area > 0 ? area : 0.01;
     const safeInertia = inertia > 0 ? inertia : 1e-5;
     const depth = section?.depth ?? Math.sqrt((12 * safeInertia) / safeArea);
@@ -56,7 +56,7 @@ export const SectionViewer2D = ({ area, inertia, units, axialForce = 0, bendingM
       web: section?.webThickness ?? width * 0.1,
       modulus: section?.sectionModulusX ?? (depth > 0 ? safeInertia / (depth / 2) : 0),
     };
-  }, [area, inertia]);
+  }, [area, inertia, sectionId, sectionOrigin]);
 
   const { section, shapeType, depth, width, flange, web, modulus } = geometry;
 

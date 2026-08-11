@@ -20,6 +20,8 @@ const renderViewer = (
     <SectionViewer2D
       area={section.area}
       inertia={section.inertiaX}
+      sectionId={'id' in section ? String(section.id) : undefined}
+      sectionOrigin="catalog"
       units="kN-m"
       axialForce={overrides?.axialForce ?? (stress ? -180 : 0)}
       bendingMoment={overrides?.bendingMoment ?? (stress ? 95 : 0)}
@@ -30,6 +32,22 @@ const renderViewer = (
 const shapeElement = () => document.querySelector('.section-shape');
 
 describe('SectionViewer2D', () => {
+  it('does not infer a commercial shape from matching A and I without explicit identity', () => {
+    render(
+      <ProjectProvider>
+        <SectionViewer2D
+          area={ipe300.area}
+          inertia={ipe300.inertiaX}
+          sectionOrigin={'legacy' as never}
+          units="kN-m"
+        />
+      </ProjectProvider>,
+    );
+
+    expect(screen.queryByText(ipe300.name)).toBeNull();
+    expect(shapeElement()?.tagName.toLowerCase()).toBe('rect');
+  });
+
   it('keeps the real profile geometry when the stress map is switched on', async () => {
     const user = userEvent.setup();
     renderViewer(ipe300);

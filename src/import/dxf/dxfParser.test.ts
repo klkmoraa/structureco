@@ -41,6 +41,10 @@ describe('bounded ASCII DXF import', () => {
 
   it('builds a reversible command using an explicit existing member as the structural template', () => {
     const project = createDefaultProject();
+    Object.assign(project.members[0] as object, {
+      materialId: 'steel-a992', materialOrigin: 'catalog',
+      sectionId: 'ipe-300', sectionOrigin: 'catalog',
+    });
     const inspection = parseAsciiDxf(ascii(
       [0, 'SECTION'], [2, 'HEADER'], [9, '$INSUNITS'], [70, 4], [0, 'ENDSEC'],
       [0, 'SECTION'], [2, 'ENTITIES'], [0, 'LINE'], [8, 'STEEL'], [10, 0], [20, 0], [11, 1000], [21, 0], [0, 'ENDSEC'], [0, 'EOF'],
@@ -55,6 +59,9 @@ describe('bounded ASCII DXF import', () => {
     expect(imported.members).toHaveLength(4);
     expect(imported.nodes).toHaveLength(6);
     expect(imported.members[3]).toMatchObject({ E: project.members[0].E, A: project.members[0].A, I: project.members[0].I });
+    expect(imported.members[3]).toMatchObject({ materialOrigin: 'imported', sectionOrigin: 'imported' });
+    expect(imported.members[3]).not.toHaveProperty('materialId');
+    expect(imported.members[3]).not.toHaveProperty('sectionId');
     expect(imported.nodes.slice(-2).map((node) => [node.x, node.y])).toEqual([[0, 0], [1, 0]]);
     expect(applyProjectPatch(imported, compiled.inverse)).toEqual(project);
   });
