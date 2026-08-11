@@ -11,14 +11,18 @@ afterEach(cleanup);
 const ipe300 = standardSections.find((section) => section.id === 'ipe-300')!;
 const hss = standardSections.find((section) => section.shapeType === 'HSS_RECT')!;
 
-const renderViewer = (section: { area: number; inertiaX: number }, stress = true) => render(
+const renderViewer = (
+  section: { area: number; inertiaX: number },
+  stress = true,
+  overrides?: { axialForce?: number; bendingMoment?: number },
+) => render(
   <ProjectProvider>
     <SectionViewer2D
       area={section.area}
       inertia={section.inertiaX}
       units="kN-m"
-      axialForce={stress ? -180 : 0}
-      bendingMoment={stress ? 95 : 0}
+      axialForce={overrides?.axialForce ?? (stress ? -180 : 0)}
+      bendingMoment={overrides?.bendingMoment ?? (stress ? 95 : 0)}
     />
   </ProjectProvider>,
 );
@@ -53,11 +57,33 @@ describe('SectionViewer2D', () => {
     await user.click(screen.getByRole('button', { name: /Tensiones/ }));
 
     const fill = screen.getByTestId('section-stress-fill');
-    expect(fill.getAttribute('mask')).toBe('url(#section-stress-mask)');
-    expect(fill.getAttribute('fill')).toBe('url(#section-stress-gradient)');
+    const mask = screen.getByTestId('section-stress-mask');
+    const maskId = mask.getAttribute('id') ?? '';
+    expect(maskId).toMatch(/^section-stress-mask-/);
+    expect(fill.getAttribute('mask')).toBe(`url(#${maskId})`);
+    expect(fill.getAttribute('fill')).toMatch(/^url\(#section-stress-gradient-/);
 
-    const masked = screen.getByTestId('section-stress-mask').querySelector('path');
+    const masked = mask.querySelector('path');
     expect(masked?.getAttribute('d')).toBe(outline);
+  });
+
+  it('keeps gradient and mask ids unique across simultaneous instances', async () => {
+    const user = userEvent.setup();
+    render(
+      <ProjectProvider>
+        <SectionViewer2D area={ipe300.area} inertia={ipe300.inertiaX} units="kN-m" axialForce={-180} bendingMoment={95} />
+        <SectionViewer2D area={hss.area} inertia={hss.inertiaX} units="kN-m" axialForce={-180} bendingMoment={95} />
+      </ProjectProvider>,
+    );
+    for (const button of screen.getAllByRole('button', { name: /Tensiones/ })) await user.click(button);
+
+    const masks = screen.getAllByTestId('section-stress-mask');
+    const maskIds = masks.map((mask) => mask.getAttribute('id'));
+    expect(new Set(maskIds).size).toBe(maskIds.length);
+
+    const fills = screen.getAllByTestId('section-stress-fill');
+    const fillRefs = fills.map((fill) => fill.getAttribute('fill'));
+    expect(new Set(fillRefs).size).toBe(fillRefs.length);
   });
 
   it('carries the hollow of a tube into the mask so the void stays empty', async () => {
@@ -78,7 +104,9 @@ describe('SectionViewer2D', () => {
     renderViewer(ipe300);
     await user.click(screen.getByRole('button', { name: /Tensiones/ }));
 
-    const stops = [...document.querySelectorAll('#section-stress-gradient stop')];
+    const fill = screen.getByTestId('section-stress-fill');
+    const gradientId = (fill.getAttribute('fill') ?? '').replace(/^url\(#/, '').replace(/\)$/, '');
+    const stops = [...document.getElementById(gradientId)!.querySelectorAll('stop')];
     // Con axil de compresión y flexión, σ cambia de signo dentro del canto: hay
     // una parada intermedia, y no está en el 50 % como estaba antes fijada.
     expect(stops).toHaveLength(3);
@@ -92,5 +120,31 @@ describe('SectionViewer2D', () => {
   it('leaves the stress mode unavailable when the member carries no forces', () => {
     renderViewer(ipe300, false);
     expect((screen.getByRole('button', { name: /Tensiones/ }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('draws E.N. at the geometric mid-depth in dimensions view', () => {
+    renderViewer(ipe300);
+    const axis = document.querySelector('.section-neutral-axis');
+    expect(axis).toBeTruthy();
+    expect(axis?.getAttribute('y1')).toBe('70');
+  });
+
+  it('moves E.N. to the Navier zero-stress fibre in stress view, not the geometric centre', async () => {
+    const user = userEvent.setup();
+    renderViewer(ipe300);
+    const centerY = document.querySelector('.section-neutral-axis')?.getAttribute('y1');
+
+    await user.click(screen.getByRole('button', { name: /Tensiones/ }));
+
+    const axis = document.querySelector('.section-neutral-axis');
+    expect(axis).toBeTruthy();
+    expect(axis?.getAttribute('y1')).not.toBe(centerY);
+  });
+
+  it('hides E.N. in stress view when the whole section carries the same sign (no zero crossing)', async () => {
+    const user = userEvent.setup();
+    renderViewer(ipe300, true, { axialForce: -400, bendingMoment: 1 });
+    await user.click(screen.getByRole('button', { name: /Tensiones/ }));
+    expect(document.querySelector('.section-neutral-axis')).toBeNull();
   });
 });

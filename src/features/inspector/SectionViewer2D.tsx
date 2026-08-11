@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Box, Ruler } from 'lucide-react';
 import { standardSections, type SectionShapeType, type StandardSection } from '../../data/standardSections';
 import { toDisplay, unitLabel } from '../../engine/units';
@@ -35,6 +35,9 @@ const PADDING = 30;
 export const SectionViewer2D = ({ area, inertia, units, axialForce = 0, bendingMoment = 0 }: SectionViewer2DProps) => {
   const [view, setView] = useState<'dimensions' | 'stress'>('dimensions');
   const { t } = useI18n();
+  const uid = useId();
+  const gradientId = `section-stress-gradient-${uid}`;
+  const maskId = `section-stress-mask-${uid}`;
 
   const geometry = useMemo(() => {
     const section: StandardSection | null = standardSections.find(
@@ -172,6 +175,17 @@ export const SectionViewer2D = ({ area, inertia, units, axialForce = 0, bendingM
     }
   };
 
+  /*
+   * En Dimensiones, E.N. es la referencia geométrica central. En Stress debe
+   * ser la fibra de tensión nula real: si el axil domina y toda la sección
+   * trabaja del mismo lado, esa fibra cae fuera del perfil y no hay línea que
+   * mostrar — dibujarla en el centro geométrico sería una E.N. inventada.
+   */
+  const showStressView = view === 'stress' && hasStress;
+  const neutralAxisY = showStressView
+    ? (neutralOffset === null ? null : top + neutralOffset * pxHeight)
+    : cy;
+
   const lengthUnit = unitLabel(units, 'length');
   const dimensionWidth = formatFixed(toDisplay(width, units, 'length'), 3, 'inspector');
   const dimensionDepth = formatFixed(toDisplay(depth, units, 'length'), 3, 'inspector');
@@ -207,7 +221,7 @@ export const SectionViewer2D = ({ area, inertia, units, axialForce = 0, bendingM
         width: dimensionWidth,
       })}>
         <defs>
-          <linearGradient id="section-stress-gradient" x1={cx} y1={top} x2={cx} y2={bottom} gradientUnits="userSpaceOnUse">
+          <linearGradient id={gradientId} x1={cx} y1={top} x2={cx} y2={bottom} gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor={stressColor(sigmaTop)} stopOpacity={stressOpacity(sigmaTop)} />
             {/* `offset` admite la fracción directamente: no hay número que
                 *mostrar* aquí, así que no pasa por el formateador. */}
@@ -215,11 +229,13 @@ export const SectionViewer2D = ({ area, inertia, units, axialForce = 0, bendingM
               : <stop offset={neutralOffset} stopColor={stressColor(sigmaBottom)} stopOpacity="0" />}
             <stop offset="100%" stopColor={stressColor(sigmaBottom)} stopOpacity={stressOpacity(sigmaBottom)} />
           </linearGradient>
-          <mask id="section-stress-mask" data-testid="section-stress-mask">{renderShape('mask')}</mask>
+          <mask id={maskId} data-testid="section-stress-mask">{renderShape('mask')}</mask>
         </defs>
 
-        <line className="section-neutral-axis" x1={left - 18} y1={cy} x2={right + 18} y2={cy} />
-        <text className="section-axis-label" x={left - 20} y={cy + 3} textAnchor="end">E.N.</text>
+        {neutralAxisY !== null ? <>
+          <line className="section-neutral-axis" x1={left - 18} y1={neutralAxisY} x2={right + 18} y2={neutralAxisY} />
+          <text className="section-axis-label" x={left - 20} y={neutralAxisY + 3} textAnchor="end">E.N.</text>
+        </> : null}
 
         {view === 'stress' && hasStress ? <>
           {/* El degradado se recorta con la sección real; el contorno se dibuja
@@ -231,8 +247,8 @@ export const SectionViewer2D = ({ area, inertia, units, axialForce = 0, bendingM
             y={top}
             width={pxWidth}
             height={pxHeight}
-            fill="url(#section-stress-gradient)"
-            mask="url(#section-stress-mask)"
+            fill={`url(#${gradientId})`}
+            mask={`url(#${maskId})`}
           />
           {renderShape('outline')}
           <text className="section-stress-label" x={right + 6} y={top + 8}>σ {formatInspectorValue(sigmaTop, stressUnit)}</text>

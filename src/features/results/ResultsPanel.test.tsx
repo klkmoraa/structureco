@@ -227,7 +227,8 @@ describe('Results analytical center', () => {
     const nodeId = node?.textContent?.split('·')[0]?.trim();
     expect(screen.getByLabelText('Selección actual').textContent).toBe(`node:${nodeId}`);
     expect(node?.getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByText(`Nodo ${nodeId}`)).toBeTruthy();
+    const context = document.querySelector('.results-commandbar__context strong');
+    expect(context?.textContent).toBe(`Nodo ${nodeId}`);
   }, 10_000);
 
   it('keeps the solved envelope when only a presentation setting changes', async () => {

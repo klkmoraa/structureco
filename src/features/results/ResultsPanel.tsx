@@ -587,22 +587,38 @@ const ReactionTable = () => {
   const lengthUnit = unitLabel(units, 'length');
   const forceUnit = unitLabel(units, 'force');
   const momentUnit = unitLabel(units, 'moment');
-  return <div className="table-wrap">
-    <table className="results-table">
-      <caption>{t('results.reactionCaption')}</caption>
-      <thead><tr><th scope="col">{t('results.node')}</th><th scope="col">Ux ({lengthUnit})</th><th scope="col">Uy ({lengthUnit})</th><th scope="col">Rz (rad)</th><th scope="col">Rx ({forceUnit})</th><th scope="col">Ry ({forceUnit})</th><th scope="col">Mz ({momentUnit})</th></tr></thead>
-      <tbody>{analysis?.nodeResults.map((result) => {
-        const selected = selection?.kind === 'node' && selection.id === result.nodeId;
-        return <tr key={result.nodeId} aria-selected={selected || undefined}>
-          <th scope="row"><button type="button" className="result-object-link" aria-pressed={selected} onClick={() => setSelection({ kind: 'node', id: result.nodeId })}>{result.nodeId}<span className="sr-only"> · {t('results.locateModel')}</span></button></th>
-          <td>{formatResultNumber(toDisplay(result.ux, units, 'length'))}</td><td>{formatResultNumber(toDisplay(result.uy, units, 'length'))}</td><td>{formatResultNumber(result.rz)}</td>
-          <td>{formatResultNumber(toDisplay(result.rx, units, 'force'))}</td>
-          <td>{formatResultNumber(toDisplay(result.ry, units, 'force'))}</td>
-          <td>{formatResultNumber(toDisplay(result.rm, units, 'moment'))}</td>
-        </tr>;
-      })}</tbody>
-    </table>
-  </div>;
+  const nodeResults = analysis?.nodeResults ?? [];
+  type NodeResult = (typeof nodeResults)[number];
+  const critical = (pick: (result: NodeResult) => number): NodeResult | null => nodeResults.reduce<NodeResult | null>(
+    (best, result) => !best || Math.abs(pick(result)) > Math.abs(pick(best)) ? result : best,
+    null,
+  );
+  const criticalRx = critical((result) => result.rx);
+  const criticalRy = critical((result) => result.ry);
+  const criticalRm = critical((result) => result.rm);
+  return <>
+    <div className="results-metric-cards">
+      {criticalRx ? <button type="button" onClick={() => setSelection({ kind: 'node', id: criticalRx.nodeId })}><span>Rx {t('results.maximum')}</span><strong>{formatResultNumber(toDisplay(criticalRx.rx, units, 'force'))} {forceUnit}</strong><small>{t('results.node')} {criticalRx.nodeId}</small></button> : null}
+      {criticalRy ? <button type="button" onClick={() => setSelection({ kind: 'node', id: criticalRy.nodeId })}><span>Ry {t('results.maximum')}</span><strong>{formatResultNumber(toDisplay(criticalRy.ry, units, 'force'))} {forceUnit}</strong><small>{t('results.node')} {criticalRy.nodeId}</small></button> : null}
+      {criticalRm ? <button type="button" onClick={() => setSelection({ kind: 'node', id: criticalRm.nodeId })}><span>M {t('results.maximum')}</span><strong>{formatResultNumber(toDisplay(criticalRm.rm, units, 'moment'))} {momentUnit}</strong><small>{t('results.node')} {criticalRm.nodeId}</small></button> : null}
+    </div>
+    <div className="table-wrap">
+      <table className="results-table">
+        <caption>{t('results.reactionCaption')}</caption>
+        <thead><tr><th scope="col">{t('results.node')}</th><th scope="col">Ux ({lengthUnit})</th><th scope="col">Uy ({lengthUnit})</th><th scope="col">Rz (rad)</th><th scope="col">Rx ({forceUnit})</th><th scope="col">Ry ({forceUnit})</th><th scope="col">Mz ({momentUnit})</th></tr></thead>
+        <tbody>{nodeResults.map((result) => {
+          const selected = selection?.kind === 'node' && selection.id === result.nodeId;
+          return <tr key={result.nodeId} aria-selected={selected || undefined}>
+            <th scope="row"><button type="button" className="result-object-link" aria-pressed={selected} onClick={() => setSelection({ kind: 'node', id: result.nodeId })}>{result.nodeId}<span className="sr-only"> · {t('results.locateModel')}</span></button></th>
+            <td>{formatResultNumber(toDisplay(result.ux, units, 'length'))}</td><td>{formatResultNumber(toDisplay(result.uy, units, 'length'))}</td><td>{formatResultNumber(result.rz)}</td>
+            <td>{formatResultNumber(toDisplay(result.rx, units, 'force'))}</td>
+            <td>{formatResultNumber(toDisplay(result.ry, units, 'force'))}</td>
+            <td>{formatResultNumber(toDisplay(result.rm, units, 'moment'))}</td>
+          </tr>;
+        })}</tbody>
+      </table>
+    </div>
+  </>;
 };
 
 const DiagramView = ({ type, memberResult, memberId }: { type: DiagramQuantity; memberResult: MemberResult | undefined; memberId: string }) => {
@@ -680,6 +696,9 @@ const DiagramView = ({ type, memberResult, memberId }: { type: DiagramQuantity; 
     .filter((point) => point.quantity === type && ['maximum', 'minimum', 'jump', 'end', 'zero'].includes(point.kind))
     .filter((point, index, all) => all.findIndex((candidate) => Math.abs(candidate.x - point.x) < Math.max(L, 1) * 1e-7 && Math.abs(candidate.value - point.value) < Math.max(maxAbs, 1) * 1e-7 && candidate.side === point.side) === index)
     .slice(0, 14);
+  const lengthUnit = unitLabel(units, 'length');
+  const maxPoint = memberResult.criticalPoints.find((point) => point.quantity === type && point.kind === 'maximum');
+  const minPoint = memberResult.criticalPoints.find((point) => point.quantity === type && point.kind === 'minimum');
   const snapCandidates = Array.from(new Set([
     0,
     L,
@@ -734,6 +753,11 @@ const DiagramView = ({ type, memberResult, memberId }: { type: DiagramQuantity; 
     setResultCursor({ memberId, x: Math.max(0, Math.min(L, next)), pinned: true });
   };
   return <div className="diagram-result-layout">
+    <div className="results-metric-cards diagram-focus-cards">
+      <div className={colorClass}><span>{t('results.maximum')}</span><strong>{formatFixed(displayValue(max), 3)} {unit}</strong>{maxPoint ? <small>{memberId} · x {formatFixed(toDisplay(maxPoint.x, units, 'length'), 2)} {lengthUnit}</small> : null}</div>
+      <div className={colorClass}><span>{t('results.minimum')}</span><strong>{formatFixed(displayValue(min), 3)} {unit}</strong>{minPoint ? <small>{memberId} · x {formatFixed(toDisplay(minPoint.x, units, 'length'), 2)} {lengthUnit}</small> : null}</div>
+      {cursorPoint ? <div className={colorClass}><span>{t('results.cursorValue')}</span><strong>{formatFixed(displayValue(cursorPoint[type]), 3)} {unit}</strong><small>x {formatFixed(toDisplay(cursorPoint.x, units, 'length'), 2)} {lengthUnit}</small></div> : null}
+    </div>
     <div className="diagram-guidance"><div className={`step-badge ${colorClass}`}>1</div><div><strong>{label}</strong><p>{t('results.exactCurves')}</p></div><div className="step-badge muted">2</div><div><strong>{t('results.mainValues')}</strong><p>{t('results.maximum')} {formatFixed(displayValue(max), 3)} {unit}<br />{t('results.minimum')} {formatFixed(displayValue(min), 3)} {unit}</p></div><div className="step-badge muted">3</div><div><strong>{t('results.verification')}</strong><p>{t('results.derivativeCheck')}</p></div></div>
     <div className={`diagram-chart ${colorClass}`} data-testid="diagram-chart"><div className="diagram-chart-heading"><label><span>{t('results.member')}</span><select aria-label={t('results.memberForDiagram')} value={memberId} onChange={(event) => { setSelection({ kind: 'member', id: event.target.value }); setResultCursor(null); }}>{memberOptions.map((member) => <option key={member.memberId} value={member.memberId}>{member.memberId}</option>)}</select></label><strong>{label}</strong><button className="envelope-toggle" aria-pressed={envelopeMode} disabled={envelopeBusy} title={t('results.compareAllCases')} onClick={() => { if (!envelopeScenarios) runEnvelopeAnalysis(); setEnvelopeMode((current) => !current); }}>{envelopeBusy ? '…' : 'Env.'}</button><small>{envelopeMode ? t('results.scenarioCount', { count: envelope?.includedScenarioIds.length ?? 0 }) : pinnedX === null ? t('results.pointerHint') : t('results.pinnedHint')}</small></div><span id={cursorHelpId} className="sr-only">{t('results.chartKeyboardHelp')}</span><svg tabIndex={0} role="img" aria-label={diagramAriaLabel} aria-describedby={cursorHelpId} aria-keyshortcuts="ArrowLeft ArrowRight Home End Escape" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" onKeyDown={movePinnedByKeyboard} onPointerMove={(event) => setHoverX(pointerX(event))} onPointerDown={(event) => pinAt(pointerX(event))} onPointerLeave={() => setHoverX(null)}>
       <title>{diagramAriaLabel}</title><desc>{t('results.chartKeyboardHelp')}</desc>
@@ -772,6 +796,15 @@ const DeformationView = ({ memberResult, memberId }: { memberResult: MemberResul
   const minimum = candidates.reduce((best, point) => point.value < best.value ? point : best, candidates[0]);
   const absolute = [maximum, minimum].filter(Boolean).reduce((best, point) => Math.abs(point.value) > Math.abs(best.value) ? point : best);
   const maxAbsValue = Math.max(1e-15, ...candidates.map((point) => Math.abs(point.value)), ...memberResult.deformation.map((point) => Math.abs(point[quantity])));
+  const absoluteFor = (targetQuantity: 'u' | 'v' | 'theta') => {
+    const points = memberResult.deformationCriticalPoints.filter((point) => point.quantity === targetQuantity && (point.kind === 'maximum' || point.kind === 'minimum' || point.kind === 'end'));
+    if (!points.length) return null;
+    return points.reduce((best, point) => Math.abs(point.value) > Math.abs(best.value) ? point : best, points[0]);
+  };
+  const displayFor = (targetQuantity: 'u' | 'v' | 'theta', value: number) => targetQuantity === 'theta' ? value : toDisplay(value, units, 'length');
+  const absU = absoluteFor('u');
+  const absV = absoluteFor('v');
+  const absTheta = absoluteFor('theta');
   const width = 820;
   const height = 190;
   const baseline = 98;
@@ -804,6 +837,11 @@ const DeformationView = ({ memberResult, memberId }: { memberResult: MemberResul
     setResultCursor({ memberId, x: Math.max(0, Math.min(L, next)), pinned: true });
   };
   return <div className="deformation-result-layout">
+    <div className="results-metric-cards deformation-focus-cards">
+      <div className="deformation"><span>|u| {t('results.maximum')}</span><strong>{absU ? formatScientific(displayFor('u', absU.value), 3) : '—'} {unitLabel(units, 'length')}</strong>{absU ? <small>{t('results.criticalPosition')} · x {formatFixed(toDisplay(absU.x, units, 'length'), 2)} {unitLabel(units, 'length')}</small> : null}</div>
+      <div className="deformation"><span>|v| {t('results.maximum')}</span><strong>{absV ? formatScientific(displayFor('v', absV.value), 3) : '—'} {unitLabel(units, 'length')}</strong>{absV ? <small>{t('results.criticalPosition')} · x {formatFixed(toDisplay(absV.x, units, 'length'), 2)} {unitLabel(units, 'length')}</small> : null}</div>
+      <div className="deformation"><span>|θ| {t('results.maximum')}</span><strong>{absTheta ? formatScientific(displayFor('theta', absTheta.value), 3) : '—'} rad</strong>{absTheta ? <small>{t('results.criticalPosition')} · x {formatFixed(toDisplay(absTheta.x, units, 'length'), 2)} {unitLabel(units, 'length')}</small> : null}</div>
+    </div>
     <div className="diagram-guidance deformation-guidance"><div className="step-badge deformed">1</div><div><strong>{t('results.exactMemberResponseTitle')}</strong><p>{t('results.exactMemberResponseBody')}</p></div><div className="step-badge muted">2</div><div><strong>{t('results.interiorMaximum')}</strong><p>{absolute ? t('results.responseAtPosition', { quantity, value: formatScientific(displayValue(absolute.value), 4), unit, x: formatFixed(toDisplay(absolute.x, units, 'length'), 3), lengthUnit: unitLabel(units, 'length') }) : '—'}</p></div></div>
     <div className="diagram-chart deformation" data-testid="deformation-chart"><div className="diagram-chart-heading"><label><span>{t('results.member')}</span><select aria-label={t('results.memberForDeformation')} value={memberId} onChange={(event) => { setSelection({ kind: 'member', id: event.target.value }); setResultCursor(null); }}>{memberOptions.map((member) => <option key={member.memberId} value={member.memberId}>{member.memberId}</option>)}</select></label><div className="response-selector" role="group" aria-label={t('results.memberResponse')}>{(['u', 'v', 'theta'] as const).map((item) => <button key={item} aria-pressed={quantity === item} className={quantity === item ? 'active' : ''} onClick={() => setQuantity(item)}>{item === 'theta' ? 'θ' : item}</button>)}</div><small>{pinnedX === null ? t('results.pointerHint') : t('results.pinnedHint')}</small></div>
       <span id={cursorHelpId} className="sr-only">{t('results.chartKeyboardHelp')}</span>
