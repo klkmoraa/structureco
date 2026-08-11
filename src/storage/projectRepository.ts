@@ -282,11 +282,13 @@ export const migrateLegacyProject = async (repository: ProjectRepository, storag
   const markerKey = `legacy-v${CURRENT_SCHEMA_VERSION}:${project.id}:${checksum}`;
   if (await repository.getMeta(markerKey)) return { status: 'already-migrated', record: await repository.openProject(project.id) ?? undefined };
   const existing = await repository.openProject(project.id);
-  if (existing && existing.checksum !== checksum) {
+  if (existing && serializeProject(existing.project) !== serializeProject(project)) {
     await repository.createRecovery(project, 'migration');
     return { status: 'conflict', record: existing };
   }
-  const written = existing ?? await repository.saveProject(project);
+  const written = existing?.checksum === checksum && existing.schemaVersion === CURRENT_SCHEMA_VERSION
+    ? existing
+    : await repository.saveProject(project, existing?.revision);
   const readBack = await repository.openProject(project.id);
   if (!readBack || readBack.checksum !== checksum || serializeProject(readBack.project) !== serializeProject(project)) {
     throw new Error('La copia IndexedDB no superó la verificación de lectura.');
