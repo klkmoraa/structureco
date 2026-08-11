@@ -643,7 +643,7 @@ export const StructuralCanvas = ({
         memberId = nextId('M', draft.members.map((member) => member.id));
         const template = repeatRecipe?.kind === 'member'
           ? repeatRecipe.template
-          : { type: 'frame' as const, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 };
+          : { type: 'frame' as const, materialOrigin: 'custom' as const, sectionOrigin: 'custom' as const, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 };
         const member = { id: memberId, i: memberStart, j: nodeId, ...template };
         const endpointOnlyAddedNodes = memberStateBeforeEndpoint === JSON.stringify({ members: draft.members, memberLoads: draft.memberLoads, memberInitialEffects: draft.memberInitialEffects });
         if (endpointOnlyAddedNodes) {
@@ -794,7 +794,7 @@ export const StructuralCanvas = ({
       updateProject((draft) => {
         const template = repeatRecipe?.kind === 'member'
           ? repeatRecipe.template
-          : { type: 'frame' as const, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 };
+          : { type: 'frame' as const, materialOrigin: 'custom' as const, sectionOrigin: 'custom' as const, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 };
         draft.members.push({ id, i: memberStart, j: node.id, ...template });
         return draft;
       });

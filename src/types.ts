@@ -58,11 +58,20 @@ export interface MemberRelease {
   jMoment?: boolean;
 }
 
+/** Provenance of the material or section properties stored on a 2D member. */
+export type MemberPropertyOrigin = 'catalog' | 'custom' | 'imported' | 'legacy';
+
 export interface MemberModel {
   id: string;
   i: string;
   j: string;
   type: MemberType;
+  /** Stable catalog identity. Numeric properties remain the solver inputs. */
+  materialId?: string;
+  materialOrigin?: MemberPropertyOrigin;
+  /** Stable catalog identity. Numeric properties remain the solver inputs. */
+  sectionId?: string;
+  sectionOrigin?: MemberPropertyOrigin;
   E: number; // kN / m², internal base unit
   A: number; // m²
   I: number; // m⁴

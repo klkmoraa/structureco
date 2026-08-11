@@ -17,6 +17,10 @@ import {
 
 const ipe300 = standardSections.find((section) => section.id === 'ipe-300')!;
 const a36 = standardMaterials.find((material) => material.id === 'steel-a36')!;
+const a992 = standardMaterials.find((material) => material.id === 'steel-a992')!;
+
+const identity = (values: Record<string, unknown>): Partial<MemberModel> =>
+  values as unknown as Partial<MemberModel>;
 
 const member = (overrides: Partial<MemberModel> = {}): MemberModel => ({
   id: 'B1', i: 'N1', j: 'N2', type: 'frame',
@@ -33,23 +37,45 @@ const result = (overrides: Partial<MemberResult> = {}): MemberResult => ({
 } as MemberResult);
 
 describe('elastic demand estimation', () => {
-  it('uses the catalogue section modulus when A and I identify a commercial profile', () => {
-    expect(memberSectionModulus(member())).toEqual({
+  it('uses the catalogue section modulus only when section identity names it explicitly', () => {
+    expect(memberSectionModulus(member({
+      A: 0.01,
+      I: 3e-4,
+      ...identity({ sectionId: ipe300.id, sectionOrigin: 'catalog' }),
+    }))).toEqual({
       modulus: ipe300.sectionModulusX,
       sectionName: ipe300.name,
     });
   });
 
-  it('falls back to the equivalent rectangle when the section is not in the catalogue', () => {
+  it('does not infer a catalogue section from matching A and I floats', () => {
+    const exactFloatsWithoutIdentity = member({
+      A: ipe300.area,
+      I: ipe300.inertiaX,
+      ...identity({ sectionOrigin: 'legacy' }),
+    });
+    const { modulus, sectionName } = memberSectionModulus(exactFloatsWithoutIdentity);
+    const depth = Math.sqrt((12 * ipe300.inertiaX) / ipe300.area);
+    expect(sectionName).toBeNull();
+    expect(modulus).toBeCloseTo(ipe300.inertiaX / (depth / 2), 12);
+  });
+
+  it('falls back to the equivalent rectangle when the section is custom', () => {
     // h = sqrt(12·I/A) = 0.6 m para A = 0.01 m², I = 3e-4 m⁴ ⇒ W = I/(h/2) = 1e-3 m³.
     const { modulus, sectionName } = memberSectionModulus(member({ A: 0.01, I: 3e-4 }));
     expect(sectionName).toBeNull();
     expect(modulus).toBeCloseTo(1e-3, 9);
   });
 
-  it('takes the yield strength from the material catalogue, and declares it when it cannot', () => {
-    expect(memberYieldStrength(member())).toEqual({ yieldStrength: a36.yieldStrength, estimated: false });
-    expect(memberYieldStrength(member({ E: 12345 }))).toEqual({
+  it('takes yield strength from materialId and never from matching E floats', () => {
+    expect(memberYieldStrength(member({
+      E: 12345,
+      ...identity({ materialId: a992.id, materialOrigin: 'catalog' }),
+    }))).toEqual({ yieldStrength: a992.yieldStrength, estimated: false });
+    expect(memberYieldStrength(member({
+      E: a36.elasticModulus,
+      ...identity({ materialOrigin: 'legacy' }),
+    }))).toEqual({
       yieldStrength: FALLBACK_YIELD_STRENGTH,
       estimated: true,
     });
@@ -57,7 +83,12 @@ describe('elastic demand estimation', () => {
 
   it('combines axial and bending stress with the most conservative envelope', () => {
     const demand = memberElasticDemand(
-      member(),
+      member({
+        ...identity({
+          materialId: a36.id, materialOrigin: 'catalog',
+          sectionId: ipe300.id, sectionOrigin: 'catalog',
+        }),
+      }),
       result({ maxAxial: 100, minAxial: -40, maxMoment: 20, minMoment: -55 }),
     )!;
     expect(demand.maxAxial).toBe(100);

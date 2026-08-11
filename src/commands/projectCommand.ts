@@ -30,6 +30,18 @@ interface CommandBase { description: string }
 
 export type ProjectCommand =
   | (CommandBase & { kind: 'member.create'; nodes: NodeModel[]; member: MemberModel })
+  | (CommandBase & {
+    kind: 'member.material.apply';
+    memberId: string;
+    materialId: string;
+    properties: Pick<MemberModel, 'E'> & Pick<Partial<MemberModel>, 'G' | 'density'>;
+  })
+  | (CommandBase & {
+    kind: 'member.section.apply';
+    memberId: string;
+    sectionId: string;
+    properties: Pick<MemberModel, 'A' | 'I'>;
+  })
   | (CommandBase & { kind: 'member.update'; memberId: string; changes: Partial<Omit<MemberModel, 'id'>> })
   | (CommandBase & { kind: 'member.delete'; memberId: string })
   | (CommandBase & { kind: 'selection.duplicate'; selection: Selection; offset: { x: number; y: number } })
@@ -51,6 +63,7 @@ const entities = (project: ProjectModel, collection: ProjectEntityCollection): P
 };
 
 const same = (first: unknown, second: unknown): boolean => JSON.stringify(first) === JSON.stringify(second);
+const owns = (value: object, key: PropertyKey): boolean => Object.prototype.hasOwnProperty.call(value, key);
 
 const validateProjectBoundary = (project: ProjectModel): void => {
   const nodeIds = new Set<string>();
@@ -64,6 +77,12 @@ const validateProjectBoundary = (project: ProjectModel): void => {
     if (memberIds.has(member.id)) throw new Error(`ID de miembro duplicado: ${member.id}.`);
     if (!nodeIds.has(member.i) || !nodeIds.has(member.j) || member.i === member.j) {
       throw new Error(`El miembro ${member.id} no conserva extremos válidos.`);
+    }
+    if (member.materialOrigin === 'catalog' && !member.materialId) {
+      throw new Error(`El miembro ${member.id} declara material de catálogo sin materialId.`);
+    }
+    if (member.sectionOrigin === 'catalog' && !member.sectionId) {
+      throw new Error(`El miembro ${member.id} declara sección de catálogo sin sectionId.`);
     }
     memberIds.add(member.id);
   }
@@ -121,11 +140,55 @@ export const compileProjectCommand = (project: ProjectModel, command: ProjectCom
   const next = structuredClone(project);
   if (command.kind === 'member.create') {
     next.nodes.push(...structuredClone(command.nodes));
-    next.members.push(structuredClone(command.member));
+    const member = structuredClone(command.member);
+    member.materialOrigin ??= 'custom';
+    member.sectionOrigin ??= 'custom';
+    next.members.push(member);
+  } else if (command.kind === 'member.material.apply') {
+    const index = next.members.findIndex((member) => member.id === command.memberId);
+    if (index < 0) throw new Error(`No existe el miembro ${command.memberId}.`);
+    next.members[index] = {
+      ...next.members[index],
+      ...structuredClone(command.properties),
+      materialId: command.materialId,
+      materialOrigin: 'catalog',
+    };
+  } else if (command.kind === 'member.section.apply') {
+    const index = next.members.findIndex((member) => member.id === command.memberId);
+    if (index < 0) throw new Error(`No existe el miembro ${command.memberId}.`);
+    next.members[index] = {
+      ...next.members[index],
+      ...structuredClone(command.properties),
+      sectionId: command.sectionId,
+      sectionOrigin: 'catalog',
+    };
   } else if (command.kind === 'member.update') {
     const index = next.members.findIndex((member) => member.id === command.memberId);
     if (index < 0) throw new Error(`No existe el miembro ${command.memberId}.`);
-    next.members[index] = { ...next.members[index], ...structuredClone(command.changes), id: command.memberId };
+    const current = next.members[index];
+    const changes = structuredClone(command.changes);
+    const materialChanged = (['E', 'G', 'density'] as const).some(
+      (key) => owns(changes, key) && !Object.is(changes[key], current[key]),
+    );
+    const sectionChanged = (['A', 'I'] as const).some(
+      (key) => owns(changes, key) && !Object.is(changes[key], current[key]),
+    );
+    // Identity is only assigned through the two explicit preset commands.
+    // Generic edits cannot inject or recover a catalog identity.
+    delete changes.materialId;
+    delete changes.materialOrigin;
+    delete changes.sectionId;
+    delete changes.sectionOrigin;
+    const updated = { ...current, ...changes, id: command.memberId };
+    if (materialChanged) {
+      delete updated.materialId;
+      updated.materialOrigin = 'custom';
+    }
+    if (sectionChanged) {
+      delete updated.sectionId;
+      updated.sectionOrigin = 'custom';
+    }
+    next.members[index] = updated;
   } else if (command.kind === 'member.delete') {
     if (!next.members.some((member) => member.id === command.memberId)) throw new Error(`No existe el miembro ${command.memberId}.`);
     next.members = next.members.filter((member) => member.id !== command.memberId);

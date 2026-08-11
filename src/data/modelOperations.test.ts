@@ -34,6 +34,10 @@ describe('model clipboard operations', () => {
   it('copies a member as a detached snapshot and safely remaps endpoints and loads on paste', () => {
     const project = createDefaultProject();
     const source = project.members[0];
+    Object.assign(source as object, {
+      materialId: 'steel-a992', materialOrigin: 'catalog',
+      sectionId: 'ipe-300', sectionOrigin: 'catalog',
+    });
     project.memberLoads.push({
       id: 'ML-copy', memberId: source.id, caseId: project.loadCases[0].id,
       type: 'point', coordinateSystem: 'global', lengthBasis: 'real', start: 0, end: 1,
@@ -51,6 +55,10 @@ describe('model clipboard operations', () => {
     expect(copy.i).not.toBe(source.i);
     expect(copy.j).not.toBe(source.j);
     expect(copy.E).not.toBe(source.E);
+    expect(copy).toMatchObject({
+      materialId: 'steel-a992', materialOrigin: 'catalog',
+      sectionId: 'ipe-300', sectionOrigin: 'catalog',
+    });
     const copiedLoad = project.memberLoads.find((load) => load.memberId === copy.id)!;
     expect(copiedLoad).toMatchObject({ type: 'point', px: 4, py: -9, position: 0.35 });
     expect(copiedLoad.id).not.toBe('ML-copy');
