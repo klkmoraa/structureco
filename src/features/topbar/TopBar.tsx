@@ -418,14 +418,15 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           <kbd>Ctrl K</kbd>
         </button>
         {onOpenSpace3D ? <IconButton
+          variant="secondary"
           className="icon-button space3d-open-button"
           label={t('space3d.open')}
           title={t('space3d.open')}
           onClick={onOpenSpace3D}
         ><Box size={19} /></IconButton> : null}
         <div className="history-controls" aria-label={t('history.label')}>
-          <IconButton className="icon-button" label={t('history.undo')} onClick={undo} disabled={!canUndo} title={t('history.undo')}><Undo2 size={19} /></IconButton>
-          <IconButton className="icon-button" label={t('history.redo')} onClick={redo} disabled={!canRedo} title={t('history.redo')}><Redo2 size={19} /></IconButton>
+          <IconButton variant="secondary" className="icon-button" label={t('history.undo')} onClick={undo} disabled={!canUndo} title={t('history.undo')}><Undo2 size={19} /></IconButton>
+          <IconButton variant="secondary" className="icon-button" label={t('history.redo')} onClick={redo} disabled={!canRedo} title={t('history.redo')}><Redo2 size={19} /></IconButton>
         </div>
         <AnalysisStatus
           projectId={project.id}
@@ -437,7 +438,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           }}
         />
         <div className="export-wrap">
-          <IconButton ref={exportMenuButtonRef} className="icon-button" label={t('export.label')} title={t('export.label')} aria-expanded={showExportMenu} aria-haspopup="menu" onClick={toggleExportMenu}><Download size={19} /></IconButton>
+          <IconButton variant="secondary" ref={exportMenuButtonRef} className="icon-button" label={t('export.label')} title={t('export.label')} aria-expanded={showExportMenu} aria-haspopup="menu" onClick={toggleExportMenu}><Download size={19} /></IconButton>
           <AnimatePresence>
             {showExportMenu ? (
               <m.div {...popoverMotionProps} className="popover export-menu" role="menu" aria-label={t('export.label')} onKeyDown={onMenuKeyDown}>
@@ -453,7 +454,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           </AnimatePresence>
         </div>
         <div className="mobile-actions-wrap utility-actions-wrap">
-          <IconButton ref={mobileMenuButtonRef} className="icon-button mobile-more-button utility-more-button" label={t('actions.more')} aria-expanded={showMobileMenu} aria-haspopup="dialog" onClick={toggleMobileMenu}><MoreHorizontal size={20} /></IconButton>
+          <IconButton variant="secondary" ref={mobileMenuButtonRef} className="icon-button mobile-more-button utility-more-button" label={t('actions.more')} aria-expanded={showMobileMenu} aria-haspopup="dialog" onClick={toggleMobileMenu}><MoreHorizontal size={20} /></IconButton>
           <AnimatePresence>
             {showMobileMenu ? (
               <m.div {...popoverMotionProps} className="popover mobile-actions-menu utility-actions-menu" role="dialog" aria-label={t('actions.more')}>

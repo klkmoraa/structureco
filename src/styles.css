@@ -545,7 +545,7 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .combination-select { width:clamp(150px,15vw,230px); max-width:230px; }
 .mode-select { max-width:160px; }
 .units-select { max-width:104px; }
-.analyze-button { border: 0; color: var(--accent-foreground); background: var(--accent); width:148px; min-width:148px; height: var(--sc-control-height-touch); padding: 0 var(--sc-space-5); border-radius: var(--sc-radius-md); display: flex; align-items: center; justify-content:center; gap:var(--sc-space-2); overflow:hidden; font-weight:700; }
+.analyze-button { border: 0; color: var(--accent-foreground); background: var(--accent); width:148px; min-width:148px; height: var(--sc-control-height-touch); padding: 0 var(--sc-space-5); border-radius: var(--sc-radius-md); display: flex; align-items: center; justify-content:center; gap:var(--sc-space-2); font-weight:700; }
 .analyze-button > .sc-button__label { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .analyze-button:hover:not(:disabled) { background:var(--accent-hover); transform:translateY(-1px); }
 .analyze-button:not(:disabled):active { transform:translateY(0) scale(.985); transition-duration:var(--sc-motion-press); }
@@ -3153,6 +3153,37 @@ button:not(:disabled):active,.selection-card:active {
 .topbar button:not(.analyze-button):not(.sc-button--primary) {
   box-shadow:var(--sc-shadow-clay-xs);
 }
+
+/* --- TopBar: arcilla real, no una sombra suelta sobre fondo transparente ---
+   La regla de arriba sólo pone la sombra de reposo; sin una superficie
+   propia detrás (estos controles traían background:transparent, herencia
+   del diseño plano previo) la sombra flotaba sin nada que elevar. Aquí se
+   les da cuerpo y los tres estados de la materia: reposo elevado, hover más
+   elevado, pulsado/abierto rehundido — igual que el resto del sistema. */
+.brand-home-button { background:var(--sc-color-surface-1); transition:var(--sc-transition-control); }
+.brand-home-button:hover,
+.brand-home-button:focus-visible { background:var(--sc-color-surface-elevated); box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1.5px); }
+.brand-home-button:active { background:var(--sc-color-surface-inset); box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
+
+.project-menu-toggle { background:var(--sc-color-surface-1); transition:var(--sc-transition-control); }
+.project-menu-toggle:hover,
+.project-menu-toggle:focus-visible { background:var(--sc-color-surface-elevated); box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1px); }
+.project-menu-toggle:active,
+.project-menu-toggle[aria-expanded='true'] { background:var(--sc-color-surface-inset); box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
+
+.autosave-state { background:var(--sc-color-surface-1); box-shadow:var(--sc-shadow-clay-xs); transition:var(--sc-transition-control); }
+.autosave-state:hover { background:var(--sc-color-surface-elevated); box-shadow:var(--sc-shadow-clay-sm); }
+
+/* El selector genérico de arriba congela la sombra en `xs` en todo estado
+   porque su combinación de :not() lo hace más específico que
+   `.sc-icon-button:hover`/`:active`. Se restaura aquí la profundidad. */
+.topbar .sc-icon-button:not(:disabled):hover { box-shadow:var(--sc-shadow-clay-sm); }
+.topbar .sc-icon-button:not(:disabled):active,
+.topbar .sc-icon-button[aria-expanded='true']:not(:disabled) { box-shadow:var(--sc-shadow-clay-pressed); }
+
+.topbar-context-zone .compact-select { background:var(--sc-color-surface-1); box-shadow:var(--sc-shadow-clay-xs); }
+.topbar-context-zone .compact-select:hover { background:var(--sc-color-surface-elevated); box-shadow:var(--sc-shadow-clay-sm); }
+.topbar-context-zone .compact-select:focus-visible { background:var(--sc-color-surface-inset); box-shadow:var(--sc-shadow-clay-pressed), 0 0 0 var(--sc-focus-ring-width) color-mix(in srgb, var(--focus) 34%, transparent); }
 
 .number-control,
 .select-field select,

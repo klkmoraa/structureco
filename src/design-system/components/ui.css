@@ -157,6 +157,15 @@
 .sc-icon-button--ghost { background: transparent; color: var(--sc-color-text-secondary); }
 .sc-icon-button--danger { background: color-mix(in srgb, var(--sc-color-state-error) 10%, var(--sc-color-surface-1)); color: var(--sc-color-state-error); box-shadow: var(--sc-shadow-clay-xs); }
 .sc-icon-button--danger:not(:disabled):hover { background: color-mix(in srgb, var(--sc-color-state-error) 16%, var(--sc-color-surface-1)); color: var(--sc-color-state-error); }
+/* Abierto no es "resaltado", es un botón que se quedó pulsado — mismo gesto
+   que `.sc-popover__trigger[aria-expanded='true']`. */
+.sc-icon-button[aria-expanded='true']:not(:disabled),
+.sc-icon-button[aria-expanded='true']:not(:disabled):hover {
+  background: var(--sc-color-surface-inset);
+  color: var(--sc-color-action-primary);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  transform: var(--sc-clay-press-transform);
+}
 .sc-icon-button--primary { border-color: transparent; background: var(--sc-gradient-clay-action); color: var(--sc-color-action-foreground); box-shadow: var(--sc-shadow-clay-action); }
 .sc-icon-button--primary:not(:disabled):hover { background: var(--sc-gradient-clay-action); color: var(--sc-color-action-foreground); box-shadow: var(--sc-shadow-clay-action-hover); }
 .sc-icon-button--primary:not(:disabled):active { background: var(--sc-gradient-clay-action); box-shadow: var(--sc-shadow-clay-action-pressed); }

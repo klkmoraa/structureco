@@ -307,25 +307,25 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
           />)}
           <button
             ref={loadMenuButtonRef}
-            className={`mobile-tool-group tool-button tool-pointLoad${loadGroupHighlighted ? ' active' : ''}`}
+            className={`sc-tool-button sc-tool-button--load mobile-tool-group tool-button tool-pointLoad mobile-dock-tool${loadGroupHighlighted ? ' is-active' : ''}`}
             aria-label={t('toolbar.loads')}
             aria-expanded={mobileMenu === 'loads'}
             aria-haspopup="dialog"
             onClick={() => setMobileMenu((current) => current === 'loads' ? null : 'loads')}
           >
-            <StructuralToolIcon tool="pointLoad" />
-            <span>{t('toolbar.loadsShort')}</span>
+            <span className="sc-tool-button__icon" aria-hidden="true"><StructuralToolIcon tool="pointLoad" /></span>
+            <span className="sc-tool-button__copy"><strong>{t('toolbar.loadsShort')}</strong></span>
           </button>
           <button
             ref={moreMenuButtonRef}
-            className={`mobile-tool-group tool-button${moreGroupHighlighted ? ' active' : ''}`}
+            className={`sc-tool-button sc-tool-button--navigation mobile-tool-group tool-button mobile-dock-tool${moreGroupHighlighted ? ' is-active' : ''}`}
             aria-label={t('toolbar.more')}
             aria-expanded={mobileMenu === 'more'}
             aria-haspopup="dialog"
             onClick={() => setMobileMenu((current) => current === 'more' ? null : 'more')}
           >
-            <MoreHorizontal size={22} strokeWidth={1.8} />
-            <span>{t('toolbar.moreShort')}</span>
+            <span className="sc-tool-button__icon" aria-hidden="true"><MoreHorizontal size={22} strokeWidth={1.8} /></span>
+            <span className="sc-tool-button__copy"><strong>{t('toolbar.moreShort')}</strong></span>
           </button>
         </nav>
       </aside>
