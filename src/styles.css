@@ -1476,16 +1476,14 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
     gap:3px;
     border:0;
     border-radius:10px;
-    background:transparent;
-    box-shadow:none;
   }
   .mobile-tool-dock .tool-button svg { width:21px; height:21px; flex:0 0 auto; }
   .mobile-tool-dock .tool-button > span:not(.sc-tool-button__icon) { display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; font-size:var(--sc-font-size-label); line-height:1.05; font-weight:650; white-space:nowrap; }
   .mobile-tool-dock .tool-button kbd { display:none; }
   .mobile-tool-dock .tool-button.active {
     color:var(--accent);
-    background:var(--accent-soft);
-    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 18%,transparent);
+    background:var(--sc-color-surface-inset);
+    box-shadow:var(--sc-shadow-clay-pressed);
   }
   .mobile-tool-group { --tool-color:var(--accent); }
 
@@ -1909,17 +1907,10 @@ button:not(:disabled):active,.selection-card:active {
 
 @media (max-width:1023px) {
   .desktop-tool-list { display:none; }
-  .mobile-tool-dock .tool-button,
-  .mobile-tool-dock .tool-button.active,
-  .mobile-tool-dock .tool-node.active,
-  .mobile-tool-dock .tool-pointLoad.active,
-  .mobile-tool-dock .tool-dimension.active {
-    box-shadow:none;
-  }
   .mobile-tool-dock .tool-button.active {
     color:var(--accent);
-    background:var(--accent-soft);
-    box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 18%,transparent);
+    background:var(--sc-color-surface-inset);
+    box-shadow:var(--sc-shadow-clay-pressed);
   }
   .mobile-tool-palette-list { gap:10px; }
   .mobile-palette-group { display:grid; gap:6px; }
