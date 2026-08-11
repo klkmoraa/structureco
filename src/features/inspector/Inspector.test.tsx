@@ -108,6 +108,7 @@ const InspectorHarness = ({ modal = false, onClose, onDesktopWidthChange, deskto
       <output aria-label="N3 Y almacenada">{String(nodeN3?.y)}</output>
       <output aria-label="N4 X almacenada">{String(nodeN4?.x)}</output>
       <output aria-label="M1 E almacenado">{String(memberM1?.E)}</output>
+      <output aria-label="M1 A almacenada">{String(memberM1?.A)}</output>
       <output aria-label="Issues de análisis">{analysis?.issues.map((issue) => issue.id).join(',') ?? ''}</output>
       <Inspector desktopWidth={desktopWidth} modal={modal} onClose={onClose} onDesktopWidthChange={onDesktopWidthChange} mobileDetent={mobileDetent} onMobileDetentChange={onMobileDetentChange} />
     </div>
@@ -393,11 +394,18 @@ describe('Inspector preset selectors and load-case guidance', () => {
 
     expect(materialSelect().value).toBe('');
     await user.selectOptions(materialSelect(), 'steel-a992');
-    expect(materialSelect().value).toBe('steel-a992');
-    expect(storedNumber('M1 E almacenado')).toBe(200e6);
+    await waitFor(() => {
+      expect(materialSelect().value).toBe('steel-a992');
+      expect(storedNumber('M1 E almacenado')).toBe(200e6);
+    });
 
     await user.selectOptions(sectionSelect(), 'w12x26');
-    expect(sectionSelect().value).toBe('w12x26');
+    const section = findStandardSection('w12x26');
+    expect(section).toBeDefined();
+    await waitFor(() => {
+      expect(sectionSelect().value).toBe('w12x26');
+      expect(storedNumber('M1 A almacenada')).toBe(section?.area);
+    });
   });
 
   it('does not carry the chosen preset over to another member with identical properties', async () => {
