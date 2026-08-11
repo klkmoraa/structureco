@@ -50,6 +50,9 @@ jobs:
       - name: Instalar navegadores de Playwright
         run: npx playwright install --with-deps chromium webkit
 
+      - name: QA de geometría TopBar
+        run: npm run qa:topbar
+
       - name: QA Chromium (desktop, móvil, Aula, importación)
         run: npm run qa
 
