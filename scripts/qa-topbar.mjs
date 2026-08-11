@@ -9,6 +9,8 @@ const browser = await chromium.launch({ headless: true, channel: process.env.PLA
 const page = await browser.newPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
 const checkedWidths = [1024, 1100, 1180, 1280, 1366, 1440, 1536, 1920];
 const continuousWidths = Array.from({ length: 37 }, (_, index) => 1024 + index * 16);
+const breakpointBoundaryWidths = [1023, 1024, 1025, 1279, 1280, 1281, 1439, 1440, 1441, 1499, 1500, 1501, 1535, 1536, 1537];
+const geometryWidths = [...new Set([...continuousWidths, ...checkedWidths, ...breakpointBoundaryWidths])].sort((first, second) => first - second);
 
 const intersects = (first, second) => first.left < second.right && second.left < first.right && first.top < second.bottom && second.top < first.bottom;
 
@@ -52,12 +54,11 @@ async function assertTopBarGeometry(width) {
 
 try {
   await enterWorkspace();
-  for (const width of continuousWidths) await assertTopBarGeometry(width);
-  for (const width of checkedWidths) await assertTopBarGeometry(width);
+  for (const width of geometryWidths) await assertTopBarGeometry(width);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(32);
   if (!(await page.getByLabel('Más acciones').isVisible())) throw new Error('Mobile More actions is no longer reachable');
-  console.log(`TopBar browser geometry passed: ${checkedWidths.join(', ')}px; continuous 1024-1600px.`);
+  console.log(`TopBar browser geometry passed: ${checkedWidths.join(', ')}px; breakpoints ${breakpointBoundaryWidths.join(', ')}px; continuous 1024-1600px.`);
 } finally {
   await browser.close();
   await previewServer.close();

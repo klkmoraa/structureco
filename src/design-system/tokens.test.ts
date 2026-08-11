@@ -375,6 +375,12 @@ describe('AG-015 premium visual layer contract', () => {
     expect(phase1Css).not.toMatch(/\.repeat-preview[^}]*--sc-shadow-contact/);
   });
 
+  it('keeps Repeat cancellation visually separated with existing Clay control material', () => {
+    expect(phase1Css).toMatch(/\.repeat-preview button \{[^}]*border:var\(--sc-clay-edge\)[^}]*background:var\(--sc-color-surface-elevated\)[^}]*box-shadow:var\(--sc-shadow-clay-xs\)/);
+    expect(phase1Css).toMatch(/\.repeat-preview button:hover:not\(:disabled\) \{[^}]*box-shadow:var\(--sc-shadow-clay-sm\)/);
+    expect(phase1Css).toMatch(/\.repeat-preview button:active:not\(:disabled\) \{[^}]*box-shadow:var\(--sc-shadow-clay-pressed\)/);
+  });
+
   it('keeps ui.css off the flat AG-015 shadow family', () => {
     // ui.css is the design-system library CSS — every sc-* component's shadow
     // should resolve to the clay scale, not the flat one clay was meant to
