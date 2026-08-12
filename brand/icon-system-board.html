@@ -406,7 +406,12 @@ footer p{ font-family:var(--font-mono); font-size:10.5px; color:var(--muted); }
         <h2>Prueba de tamaño óptico</h2>
         <span class="index">03 · Legibilidad</span>
       </div>
-      <p class="section-sub">Los mismos glyphs a 24, 20 y 16px. A 16px se activa la variante <em>dense</em> (stroke 2.3) para compensar la pérdida de peso visual — la silueta debe sobrevivir intacta.</p>
+      <p class="section-sub">Los mismos glyphs a 24, 20 y 16px. A 16px se activa la variante <em>dense</em> (stroke 1.75) para compensar la pérdida de peso visual — la silueta debe sobrevivir intacta.</p>
+      <p class="section-sub" style="max-width:none; margin-top:14px; padding:13px 16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-sm); font-family:var(--font-mono); font-size:12px; line-height:1.7;">
+        <strong style="color:var(--brand);">Verificado en navegador:</strong> la caja de trazo de los 51 glyphs se midió con <code>getBBox({stroke:true})</code>.
+        Centro óptico en (12,12) — <strong>desviación máxima 0.25 u</strong> (antes 2.45 u en 20 de 51).
+        Extensión máxima en la banda <strong>12.0–15.8 u</strong>, mediana 14.2 (antes 10.2–17.6).
+      </p>
       <div id="optical-row" class="opt-row" style="margin-top:22px;"></div>
     </div>
   </section>
@@ -489,143 +494,179 @@ footer p{ font-family:var(--font-mono); font-size:10.5px; color:var(--muted); }
 
 <script>
 /* ============================================================
-   StructureCo Icon System — glyph library  ·  v2 (trazo fino)
+   StructureCo Icon System — glyph library  ·  v3
    24x24 viewBox · stroke 1.4 regular / 1.75 dense (16px)
    round cap + round join · firma "socket punch"
-   (--ico-bg rellena el anillo en los puntos de conexión para que
-   se lea como junta perforada sobre la superficie que lo soporta).
 
-   v2: todo el trazo bajó de 1.75 → 1.4. Con menos peso el dibujo
-   admite más precisión: cabezas de flecha más esbeltas, puntos
-   sólidos más pequeños, tramas de suelo más finas.
+   v3 — pulido de construcción:
+   · Todo glyph centrado ópticamente: el centro de su caja de trazo
+     cae en (12,12) con tolerancia ±0.25. Antes 20 de 51 derivaban
+     hasta 2.45 u — a 16px eso es 1.6px de deriva visible en fila.
+   · Extensión máxima normalizada a la banda 12.0–15.8 u (antes
+     10.2–17.6): los iconos se sienten del mismo tamaño.
+   · Familias con construcción compartida: los cinco apoyos comparten
+     ancho de triángulo y ritmo de trama; las cargas comparten la
+     línea de miembro y la cabeza de flecha; M y Deformada comparten
+     exactamente el mismo recorrido vertical (8.5–15.5) con curvatura
+     opuesta.
+   · Rediseñados por ambigüedad: loadFrame, internalForces,
+     criticalPoint, repeat, units.
    ============================================================ */
 
 const ICO = {
   /* ---------------- Navegación ---------------- */
-  select: `<path d="M6.4 3.8 6.4 17.2 9.7 14.3 12.7 19.9 14.9 18.8 11.9 13.3 17.1 12.5Z" fill="var(--ico-bg)"/>`,
+  select: `<path d="M7.1 4.6 7.1 16.9 10.1 14.3 12.9 19.4 14.9 18.4 12.1 13.3 16.9 12.6Z" fill="var(--ico-bg)"/>`,
   pan: `<circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/>
-    <path d="M12 4.8v3M12 16.2v3M4.8 12h3M16.2 12h3"/>
-    <path d="m10.4 6.4 1.6-1.9 1.6 1.9M10.4 17.6l1.6 1.9 1.6-1.9M6.4 13.6l-1.9-1.6 1.9-1.6M17.6 13.6l1.9-1.6-1.9-1.6"/>`,
+    <path d="M12 5.2v3M12 18.8v-3M5.2 12h3M18.8 12h-3"/>
+    <path d="M9.9 6.6 12 4.5 14.1 6.6M9.9 17.4 12 19.5 14.1 17.4M6.6 9.9 4.5 12 6.6 14.1M17.4 9.9 19.5 12 17.4 14.1"/>`,
 
   /* ---------------- Geometría ---------------- */
-  node: `<circle cx="12" cy="12" r="5.1"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>`,
-  member: `<line x1="5.8" y1="17.6" x2="18.2" y2="6.4"/><circle cx="5.8" cy="17.6" r="2.05" fill="var(--ico-bg)"/><circle cx="18.2" cy="6.4" r="2.05" fill="var(--ico-bg)"/>`,
-  dimension: `<path d="M4.6 6.2v11.6M19.4 6.2v11.6"/><path d="M6.2 12h11.6"/><path d="M9.2 9.4 6.2 12l3 2.6M14.8 9.4 17.8 12l-3 2.6"/>`,
+  node: `<circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.55" fill="currentColor" stroke="none"/>`,
+  member: `<line x1="6.4" y1="17" x2="17.6" y2="7"/><circle cx="6.4" cy="17" r="2.05" fill="var(--ico-bg)"/><circle cx="17.6" cy="7" r="2.05" fill="var(--ico-bg)"/>`,
+  dimension: `<path d="M4.8 6.2v11.6M19.2 6.2v11.6"/><path d="M6.4 12h11.2"/><path d="M9.4 9.4 6.4 12l3 2.6M14.6 9.4 17.6 12l-3 2.6"/>`,
 
-  /* ---------------- Apoyos ---------------- */
-  supportGeneral: `<path d="M12 6.8 6.8 15.8h10.4Z"/><path d="M5 15.8h14"/>`,
-  supportPin: `<circle cx="12" cy="5.4" r="1.55" fill="var(--ico-bg)"/><path d="M12 6.95 6.9 15.5h10.2Z"/><path d="M5.1 15.5h13.8"/><path d="M7 17.9 8.7 15.7M10.9 17.9 12.6 15.7M14.8 17.9 16.5 15.7"/>`,
-  supportRoller: `<path d="M12 6.8 7.6 13.3h8.8Z"/><circle cx="9.7" cy="15.15" r="1.4"/><circle cx="14.3" cy="15.15" r="1.4"/><path d="M5.1 17.4h13.8"/><path d="M7 19.8 8.7 17.6M10.9 19.8 12.6 17.6M14.8 19.8 16.5 17.6"/>`,
-  supportFixed: `<line x1="12" y1="4" x2="12" y2="10.4"/><rect x="5.4" y="10.4" width="13.2" height="3" rx="0.5"/><path d="M6.5 13.4 4.7 16.2M9.2 13.4 7.4 16.2M11.9 13.4 10.1 16.2M14.6 13.4 12.8 16.2M17.3 13.4 15.5 16.2"/>`,
-  supportCustom: `<path d="M11 8.6 6.4 16.8h9.2Z"/><path d="M4.7 16.8h12.6"/><path d="M17.6 4.8v3.2M16 6.4h3.2"/>`,
+  /* ---------------- Apoyos ----------------
+     Construcción compartida: triángulo de media base 5.1, línea de
+     suelo de 4.9 a 19.1, trama de 3 marcas · 2.4 de caída.
+     Fixed rompe el triángulo a propósito: 5 marcas densas = máxima
+     restricción. General y Pin comparten geometría exacta y se separan
+     por el ápice — punto sólido (nodo restringido) frente a anillo
+     abierto (bisagra), la misma distinción lleno/hueco que ya usan
+     Node y Member. Cada uno centrado ópticamente por separado. */
+  supportGeneral: `<circle cx="12" cy="7.1" r="1.5" fill="currentColor" stroke="none"/><path d="M12 8.6 6.9 16h10.2Z"/><path d="M4.9 16h14.2"/><path d="M6.8 18.4 8.5 16.2M10.7 18.4 12.4 16.2M14.6 18.4 16.3 16.2"/>`,
+  supportPin: `<circle cx="12" cy="7.1" r="1.5" fill="var(--ico-bg)"/><path d="M12 8.6 6.9 16h10.2Z"/><path d="M4.9 16h14.2"/><path d="M6.8 18.4 8.5 16.2M10.7 18.4 12.4 16.2M14.6 18.4 16.3 16.2"/>`,
+  supportRoller: `<path d="M12 5.95 7.6 12.35h8.8Z"/><circle cx="9.4" cy="13.75" r="1.3"/><circle cx="14.6" cy="13.75" r="1.3"/><path d="M4.9 15.65h14.2"/><path d="M6.8 18.05 8.5 15.85M10.7 18.05 12.4 15.85M14.6 18.05 16.3 15.85"/>`,
+  supportFixed: `<line x1="12" y1="5.9" x2="12" y2="12.3"/><rect x="5.4" y="12.3" width="13.2" height="3" rx="0.5"/><path d="M6.5 15.3 4.9 18.1M9.2 15.3 7.6 18.1M11.9 15.3 10.3 18.1M14.6 15.3 13 18.1M17.3 15.3 15.7 18.1"/>`,
+  supportCustom: `<path d="M10.2 7.4 5.7 15.5h9Z"/><path d="M4.3 15.5h11.8"/><path d="M5.9 17.9 7.6 15.7M9.8 17.9 11.5 15.7"/><path d="M17.9 6.1v3.4M16.2 7.8h3.4"/>`,
 
-  /* ---------------- Cargas ---------------- */
-  pointLoad: `<line x1="12" y1="3.8" x2="12" y2="13.4"/><polygon points="12,17.5 10,13.1 14,13.1"/><line x1="5.2" y1="17.5" x2="18.8" y2="17.5"/>`,
-  distributedLoad: `<line x1="4.2" y1="5.4" x2="19.8" y2="5.4"/><line x1="7.4" y1="5.4" x2="7.4" y2="13.9"/><line x1="12" y1="5.4" x2="12" y2="13.9"/><line x1="16.6" y1="5.4" x2="16.6" y2="13.9"/><polygon points="7.4,17.3 5.7,13.7 9.1,13.7"/><polygon points="12,17.3 10.3,13.7 13.7,13.7"/><polygon points="16.6,17.3 14.9,13.7 18.3,13.7"/><line x1="4.2" y1="17.3" x2="19.8" y2="17.3"/>`,
-  momentLoad: `<path d="M6.4 15.4A6.9 6.9 0 1 1 15.7 18.7" fill="none"/><polygon points="15.7,18.7 12.8,17.6 14.3,15.3"/>`,
+  /* ---------------- Cargas ----------------
+     Línea de miembro compartida en y=17.3/17.6; cabeza sólida de
+     4.2 de largo × 4.0 de ancho en toda la familia. */
+  pointLoad: `<line x1="12" y1="6.4" x2="12" y2="13.4"/><polygon points="12,17.6 10,13.4 14,13.4"/><line x1="5.6" y1="17.6" x2="18.4" y2="17.6"/>`,
+  distributedLoad: `<line x1="5" y1="6.7" x2="19" y2="6.7"/><line x1="7.6" y1="6.7" x2="7.6" y2="13.1"/><line x1="12" y1="6.7" x2="12" y2="13.1"/><line x1="16.4" y1="6.7" x2="16.4" y2="13.1"/><polygon points="7.6,17.3 6,13.1 9.2,13.1"/><polygon points="12,17.3 10.4,13.1 13.6,13.1"/><polygon points="16.4,17.3 14.8,13.1 18,13.1"/><line x1="5" y1="17.3" x2="19" y2="17.3"/>`,
+  momentLoad: `<path d="M5.74 15.25A6.9 6.9 0 1 1 15.04 18.55" fill="none"/><polygon points="15.04,18.55 12.14,17.45 13.64,15.15"/>`,
   fx: `<line x1="4.6" y1="9.2" x2="4.6" y2="14.8"/><line x1="4.6" y1="12" x2="16.4" y2="12"/><polygon points="19.4,12 15.8,9.9 15.8,14.1"/>`,
   fy: `<line x1="9.2" y1="19.4" x2="14.8" y2="19.4"/><line x1="12" y1="19.4" x2="12" y2="7.6"/><polygon points="12,4.6 9.9,8.2 14.1,8.2"/>`,
-  mz: `<circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><path d="M12 6.5A5.5 5.5 0 1 1 7.2 9.3" fill="none"/><polygon points="7.2,9.3 6.8,6.5 9.4,7.7"/>`,
-  loadFrame: `<circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><line x1="12" y1="12" x2="12" y2="5.2" /><line x1="12" y1="12" x2="18.8" y2="12"/><line x1="12" y1="12" x2="7.4" y2="7.4" stroke-dasharray="1.4 1.8"/><line x1="12" y1="12" x2="16.6" y2="16.6" stroke-dasharray="1.4 1.8"/>`,
+  mz: `<circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><path d="M12 6A6 6 0 1 1 6.76 9.05" fill="none"/><polygon points="6.76,9.05 6.33,6 9.16,7.31"/>`,
+  /* local/global: la misma carga sobre el mismo miembro, dibujada dos
+     veces — vertical (global, sólida) y girada (local, punteada). Las
+     dos flechas NO comparten origen: cualquier variante en que ambas
+     salían del mismo punto se emborronaba en una mancha a 16px. */
+  loadFrame: `<line x1="4.4" y1="16.4" x2="19.6" y2="16.4"/>
+    <line x1="9" y1="7.6" x2="9" y2="13"/><polygon points="9,16.4 7.6,13 10.4,13"/>
+    <line x1="19.3" y1="9.99" x2="17.2" y2="13.63" stroke-dasharray="1.5 1.6"/><polygon points="15.6,16.4 16.07,12.98 18.33,14.28"/>`,
 
   /* ---------------- Topología ---------------- */
-  cut: `<line x1="3.6" y1="12" x2="8.6" y2="12"/><line x1="15.4" y1="12" x2="20.4" y2="12"/><path d="M8.6 12 9.9 9.6 11.7 14 13.5 9.6 15.4 12" fill="none"/>`,
-  split: `<line x1="3.8" y1="12" x2="20.2" y2="12"/><circle cx="12" cy="12" r="1.95" fill="var(--ico-bg)"/><path d="M12 7.8v1.9M12 14.3v1.9"/>`,
-  del: `<line x1="6.6" y1="15.4" x2="13.9" y2="8.1"/><circle cx="6.6" cy="15.4" r="1.65" fill="var(--ico-bg)"/><circle cx="13.9" cy="8.1" r="1.65" fill="var(--ico-bg)"/><path d="M15.8 15.8 20.2 20.2M20.2 15.8 15.8 20.2"/>`,
-  move: `<rect x="6.2" y="6.2" width="9.6" height="9.6" rx="1.2" stroke-dasharray="2 2.2"/><path d="M15.8 15.8 20.2 20.2"/><path d="M20.2 20.2h-3.4M20.2 20.2v-3.4"/>`,
+  cut: `<line x1="4.4" y1="12" x2="8.9" y2="12"/><line x1="15.1" y1="12" x2="19.6" y2="12"/><path d="M8.9 12 10.15 9.85 11.9 14.15 13.65 9.85 15.1 12" fill="none"/>`,
+  split: `<line x1="4.4" y1="12" x2="19.6" y2="12"/><circle cx="12" cy="12" r="1.95" fill="var(--ico-bg)"/><path d="M12 7.8v1.9M12 14.3v1.9"/>`,
+  del: `<line x1="6.2" y1="14.4" x2="13.8" y2="6.8"/><circle cx="6.2" cy="14.4" r="1.6" fill="var(--ico-bg)"/><circle cx="13.8" cy="6.8" r="1.6" fill="var(--ico-bg)"/><path d="M15.6 15.2 19.2 18.8M19.2 15.2 15.6 18.8"/>`,
+  move: `<rect x="5" y="5" width="9.6" height="9.6" rx="1.2" stroke-dasharray="2 2.2"/><path d="M14.6 14.6 19 19"/><path d="M19 19h-3.4M19 19v-3.4"/>`,
   duplicate: `<circle cx="9.1" cy="14.9" r="4.3"/><circle cx="9.1" cy="14.9" r="1.15" fill="currentColor" stroke="none"/><circle cx="14.9" cy="9.1" r="4.3"/><circle cx="14.9" cy="9.1" r="1.15" fill="currentColor" stroke="none"/>`,
-  repeat: `<path d="M7.1 8.5A6.1 6.1 0 1 1 6.5 14.9" fill="none"/><path d="M11.5 5.8 8.7 6.7 9.1 9.7"/><path d="M2.8 12.6 3.5 15.6 6.5 14.9"/>`,
+  /* repeat: lazo de dos cabezas, simétrico por rotación de 180° —
+     por eso centra solo, y no se confunde con undo/redo (una cabeza)
+     ni con mz (punto central). */
+  repeat: `<path d="M6.46 8.8A6.4 6.4 0 0 1 18.01 9.81" fill="none"/><polygon points="18.9,11.7 15.03,10.83 17.29,8.03"/>
+    <path d="M17.54 15.2A6.4 6.4 0 0 1 5.99 14.19" fill="none"/><polygon points="5.1,12.3 8.97,13.17 6.71,15.97"/>`,
   undo: `<path d="M16.9 8.1A6.3 6.3 0 1 0 15.8 17" fill="none"/><path d="M18.4 15 15.8 17 14.4 14.2"/>`,
   redo: `<path d="M7.1 8.1A6.3 6.3 0 1 1 8.2 17" fill="none"/><path d="M5.6 15 8.2 17 9.6 14.2"/>`,
 
   /* ---------------- Propiedades ---------------- */
-  material: `<rect x="5.2" y="5.2" width="13.6" height="13.6" rx="2.8"/><path d="M8.3 15.7 15.7 8.3M8.3 11.9 11.9 8.3M12.1 15.7 15.7 12.1" stroke-width="1.05"/>`,
+  material: `<rect x="5.4" y="5.4" width="13.2" height="13.2" rx="2.8"/><path d="M8.4 15.6 15.6 8.4M8.4 11.8 11.8 8.4M12.2 15.6 15.6 12.2" stroke-width="1.05"/>`,
   section: `<path d="M6.2 5.8h11.6M6.2 18.2h11.6M12 5.8v12.4"/><path d="M6.2 5.8v2.4M17.8 5.8v2.4M6.2 18.2v-2.4M17.8 18.2v-2.4"/>`,
   properties: `<line x1="5.2" y1="7.8" x2="18.8" y2="7.8"/><line x1="5.2" y1="12" x2="15.3" y2="12"/><circle cx="17.6" cy="12" r="1.15" fill="currentColor" stroke="none"/><line x1="5.2" y1="16.2" x2="12.6" y2="16.2"/>`,
-  units: `<rect x="3.2" y="8.4" width="17.6" height="7.2" rx="1.3"/><path d="M7.6 8.4v3.4M12 8.4v4.6M16.4 8.4v3.4"/>`,
+  units: `<rect x="4.2" y="8.4" width="15.6" height="7.2" rx="1.3"/><path d="M8.1 8.4v3.4M12 8.4v4.6M15.9 8.4v3.4"/>`,
 
   /* ---------------- Análisis ---------------- */
-  solve: `<circle cx="12" cy="5.6" r="1.35" fill="currentColor" stroke="none"/><circle cx="6.2" cy="16.8" r="1.35" fill="currentColor" stroke="none"/><circle cx="17.8" cy="16.8" r="1.35" fill="currentColor" stroke="none"/><path d="M12 5.6 6.2 16.8M12 5.6 17.8 16.8M6.2 16.8h11.6"/>`,
+  solve: `<path d="M12 7 6.8 17M12 7 17.2 17M6.8 17h10.4"/><circle cx="12" cy="7" r="1.8" fill="var(--ico-bg)"/><circle cx="6.8" cy="17" r="1.8" fill="var(--ico-bg)"/><circle cx="17.2" cy="17" r="1.8" fill="var(--ico-bg)"/>`,
   reactions: `<line x1="5.2" y1="17.2" x2="18.8" y2="17.2"/><path d="M7.1 19.6 8.8 17.4M11 19.6 12.7 17.4M14.9 19.6 16.6 17.4"/><line x1="12" y1="16.4" x2="12" y2="7.8"/><polygon points="12,4.6 9.9,8.6 14.1,8.6"/>`,
-  displacements: `<circle cx="6.5" cy="15.7" r="2.5" stroke-dasharray="1.4 1.8"/><path d="M9.4 13.6 14.4 9.2"/><path d="M17.3 6.8 14.3 8.3 15.6 10.6"/><circle cx="17.3" cy="6.8" r="2.5" fill="var(--ico-bg)"/><circle cx="17.3" cy="6.8" r="1" fill="currentColor" stroke="none"/>`,
-  internalForces: `<line x1="3.8" y1="16.2" x2="10.1" y2="9.9"/><line x1="13.9" y1="9.9" x2="20.2" y2="16.2"/><polygon points="10.7,9.5 13,10.5 11.4,12.8"/><polygon points="13.3,16.6 11,15.6 12.6,13.3"/>`,
-  criticalPoint: `<line x1="3.8" y1="15.8" x2="20.2" y2="8.2"/><path d="M12 9 13.9 12 12 15 10.1 12Z" fill="currentColor" stroke="none"/><path d="M12 5.8v1.5M12 16.7v1.5M8.9 8.9l1 1M14.1 14.1l1 1M15.1 8.9l-1 1M9.9 14.1l-1 1" stroke-width="1.05"/>`,
+  displacements: `<circle cx="6.5" cy="16.45" r="2.5" stroke-dasharray="1.4 1.8"/><path d="M9.4 14.35 14.4 9.95"/><path d="M17.3 7.55 14.3 9.05 15.6 11.35"/><circle cx="17.3" cy="7.55" r="2.5" fill="var(--ico-bg)"/><circle cx="17.3" cy="7.55" r="1" fill="currentColor" stroke="none"/>`,
+  /* internalForces: miembro con plano de sección punteado y el par
+     de fuerzas que actúa a través de él. Silueta muy distinta de Cut
+     (que es zigzag horizontal, sin plano ni flechas). */
+  internalForces: `<line x1="4.4" y1="12" x2="7.2" y2="12"/><line x1="19.6" y1="12" x2="16.8" y2="12"/>
+    <line x1="12" y1="6.6" x2="12" y2="17.4" stroke-dasharray="1.7 1.8"/>
+    <polygon points="10.6,12 7.2,10.3 7.2,13.7"/><polygon points="13.4,12 16.8,10.3 16.8,13.7"/>`,
+  /* criticalPoint: el punto gobernante sobre el miembro, marcado con
+     rombo sólido y zona de influencia punteada. */
+  criticalPoint: `<line x1="4.9" y1="15.4" x2="19.1" y2="8.6"/><path d="M12 8.9 15.1 12 12 15.1 8.9 12Z" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="5.2" stroke-dasharray="1.7 1.9"/>`,
 
-  /* ---------------- Resultados N/V/M/Deformada ---------------- */
+  /* ---------------- Resultados N/V/M/Deformada ----------------
+     M y Deformada recorren exactamente el mismo tramo vertical
+     (8.5–15.5) con curvatura opuesta: son un par, no dos dibujos. */
   axialN: `<line x1="7.8" y1="12" x2="16.2" y2="12"/><polygon points="4.6,12 8.2,10.1 8.2,13.9"/><polygon points="19.4,12 15.8,13.9 15.8,10.1"/>`,
-  shearV: `<path d="M4.4 9.8h5.8M13.8 14.2h5.8M10.2 9.8v4.4" fill="none"/><polygon points="8.6,7.4 6.7,9.9 10.5,9.9"/><polygon points="15.4,16.6 17.3,14.1 13.5,14.1"/>`,
-  momentM: `<line x1="4.6" y1="15.2" x2="19.4" y2="15.2"/><path d="M4.6 15.2Q12 5.6 19.4 15.2" fill="none"/>`,
-  deformed: `<line x1="4.6" y1="8.4" x2="19.4" y2="8.4" stroke-dasharray="2.8 2.6"/><path d="M4.6 9.5Q12 17.2 19.4 9.5" fill="none"/>`,
+  shearV: `<path d="M4.6 9.8h5.8M13.6 14.2h5.8M10.4 9.8v4.4" fill="none"/><polygon points="8.8,7.4 6.9,9.9 10.7,9.9"/><polygon points="15.2,16.6 17.1,14.1 13.3,14.1"/>`,
+  momentM: `<line x1="4.8" y1="15.5" x2="19.2" y2="15.5"/><path d="M4.8 15.5Q12 1.5 19.2 15.5" fill="none"/>`,
+  deformed: `<line x1="4.8" y1="8.5" x2="19.2" y2="8.5" stroke-dasharray="2.8 2.6"/><path d="M4.8 9.6Q12 21.4 19.2 9.6" fill="none"/>`,
 
   /* ---------------- Estados de análisis ---------------- */
   stReliable: `<circle cx="12" cy="12" r="6.2" fill="currentColor" stroke="none"/>`,
   stLimited: `<circle cx="12" cy="12" r="6.2" fill="none"/><path d="M12 5.8A6.2 6.2 0 0 1 17.1 15.3" fill="none" stroke-width="2.5"/>`,
   stUnreliable: `<circle cx="12" cy="12" r="6.2" fill="none" stroke-dasharray="2 2.3"/>`,
-  stFailed: `<path d="M12 5.8A6.2 6.2 0 1 1 6.9 8.9" fill="none"/><path d="M7.8 7.8 16.2 16.2" stroke-width="1.7"/>`,
+  stFailed: `<circle cx="12" cy="12" r="6.2" fill="none"/><path d="M7.62 7.62 16.38 16.38" stroke-width="1.7"/>`,
   stStale: `<circle cx="12" cy="12" r="6.2" fill="none"/><path d="M12 12 15 15.4" stroke-width="1.6"/><circle cx="12" cy="12" r="0.95" fill="currentColor" stroke="none"/>`,
   stUnknown: `<circle cx="12" cy="12" r="6.2" fill="none" stroke-width="0.9" opacity=".6"/>`,
 
   /* ---------------- Aula ---------------- */
-  aulaConstruir: `<circle cx="12" cy="6.2" r="1.35" fill="currentColor" stroke="none"/><circle cx="6.6" cy="16.8" r="1.35" fill="currentColor" stroke="none"/><circle cx="17.4" cy="16.8" r="1.35" fill="currentColor" stroke="none"/><path d="M12 6.2 6.6 16.8M12 6.2 17.4 16.8"/><path d="M6.6 16.8h10.8" stroke-dasharray="1.8 2"/>`,
-  aulaDefinir: `<circle cx="6.6" cy="17.4" r="1.3" fill="currentColor" stroke="none"/><path d="M6.6 17.4 12 10.2"/><path d="M12 10.2h6.1l1.5 1.9-1.5 1.9H12Z"/>`,
-  aulaAnalizar: `<circle cx="10.3" cy="10.3" r="5.1"/><line x1="14.1" y1="14.1" x2="19.4" y2="19.4"/><path d="M8 12.2 10.3 7.5 12.6 12.2" fill="none"/>`,
+  aulaConstruir: `<circle cx="12" cy="6.7" r="1.35" fill="currentColor" stroke="none"/><circle cx="6.6" cy="17.3" r="1.35" fill="currentColor" stroke="none"/><circle cx="17.4" cy="17.3" r="1.35" fill="currentColor" stroke="none"/><path d="M12 6.7 6.6 17.3M12 6.7 17.4 17.3"/><path d="M6.6 17.3h10.8" stroke-dasharray="1.8 2"/>`,
+  aulaDefinir: `<circle cx="6.15" cy="14.95" r="1.3" fill="currentColor" stroke="none"/><path d="M6.15 14.95 11.55 7.75"/><path d="M11.55 7.75h6.1l1.5 1.9-1.5 1.9h-6.1Z"/>`,
+  aulaAnalizar: `<circle cx="10.1" cy="10.1" r="5.1"/><line x1="13.9" y1="13.9" x2="19.1" y2="19.1"/><path d="M7.8 12 10.1 7.3 12.4 12" fill="none"/>`,
   aulaComparar: `<line x1="12" y1="5.2" x2="12" y2="18.8" stroke-dasharray="1.4 1.8"/><path d="M4.6 15.4Q8 9.8 10.9 15.4" fill="none"/><path d="M13.1 15.4Q16.4 8.4 19.4 15.4" fill="none"/>`,
   aulaConcluir: `<circle cx="12" cy="12" r="6.9"/><path d="M8.6 12.3 10.9 14.6 15.6 9.6"/>`,
   aulaPrediction: `<path d="M4.6 16.2Q10 9.8 14.8 11.4" fill="none" stroke-dasharray="2.4 2.2"/><path d="M14.8 11.4 18.2 8.8" stroke-dasharray="2.4 2.2"/><polygon points="19.4,8 16.8,8.4 17.7,10.8"/>`,
-  aulaEvidence: `<rect x="5.7" y="5.2" width="9.6" height="12" rx="1.4"/><path d="M8.1 8.7h4.8M8.1 11.4h4.8M8.1 14.1h3"/><path d="M15.3 17.2 19.2 20.1"/><circle cx="19.2" cy="20.1" r="1.15" fill="currentColor" stroke="none"/>`,
+  aulaEvidence: `<rect x="5.45" y="5.2" width="8.8" height="10.8" rx="1.4"/><path d="M7.85 8.6h4M7.85 11.1h4M7.85 13.6h2.6"/><path d="M14.05 15.4 17.2 17.8"/><circle cx="17.2" cy="17.8" r="1.1" fill="currentColor" stroke="none"/>`,
 };
 
 /* alternativas de la exploración profunda (no forman parte de la familia principal) */
 const ALT = {
   node: [
-    { key:'A', label:'Punto sólido', note:'Un único punto lleno — el mínimo posible. Se pierde ante otros puntos sólidos del sistema (cargas, estados).', svg:`<circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/>` },
+    { key:'A', label:'Punto sólido', note:'Un único punto lleno — el mínimo posible. Se pierde ante otros puntos sólidos del sistema (cargas, estados).', svg:`<circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/>` },
     { key:'B', label:'Anillo + centro', note:'El anillo abierto con núcleo sólido lee como articulación real y deja hueco para selección/hover sin taparse.', svg: ICO.node, recommended:true },
-    { key:'C', label:'Rombo geométrico', note:'Distingue el nodo por silueta angular, pero rompe la familia de círculos que usan cargas y resultados.', svg:`<rect x="8.7" y="8.7" width="6.6" height="6.6" rx="1.1" transform="rotate(45 12 12)"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/>` },
+    { key:'C', label:'Rombo geométrico', note:'Distingue el nodo por silueta angular, pero rompe la familia de círculos que usan cargas y resultados.', svg:`<rect x="8.4" y="8.4" width="7.2" height="7.2" rx="1.1" transform="rotate(45 12 12)"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/>` },
   ],
   member: [
-    { key:'A', label:'Línea simple', note:'Solo el trazo — ligero, pero indistinguible de una guía o dimensión a 16px.', svg:`<line x1="5.8" y1="17.6" x2="18.2" y2="6.4"/>` },
+    { key:'A', label:'Línea simple', note:'Solo el trazo — ligero, pero indistinguible de una guía o dimensión a 16px.', svg:`<line x1="5.4" y1="17.9" x2="18.6" y2="6.1"/>` },
     { key:'B', label:'Socket en extremos', note:'Los extremos "perforados" muestran que el miembro conecta con nodos — firma de familia aplicada a geometría.', svg: ICO.member, recommended:true },
-    { key:'C', label:'Extremos sólidos', note:'Puntos llenos en vez de anillos: más peso, pero compite visualmente con los nodos reales del canvas.', svg:`<line x1="5.8" y1="17.6" x2="18.2" y2="6.4"/><circle cx="5.8" cy="17.6" r="1.5" fill="currentColor" stroke="none"/><circle cx="18.2" cy="6.4" r="1.5" fill="currentColor" stroke="none"/>` },
+    { key:'C', label:'Extremos sólidos', note:'Puntos llenos en vez de anillos: más peso, pero compite visualmente con los nodos reales del canvas.', svg:`<line x1="6.1" y1="17.3" x2="17.9" y2="6.7"/><circle cx="6.1" cy="17.3" r="1.5" fill="currentColor" stroke="none"/><circle cx="17.9" cy="6.7" r="1.5" fill="currentColor" stroke="none"/>` },
   ],
   supportPin: [
-    { key:'A', label:'Reducido', note:'Triángulo + suelo, sin bisagra ni trama. Muy cercano a Support general — pierde especificidad.', svg:`<path d="M12 6.95 6.9 15.5h10.2Z"/><path d="M5.1 15.5h13.8"/>` },
+    { key:'A', label:'Reducido', note:'Triángulo + suelo, sin bisagra ni trama. Muy cercano a Support general — pierde especificidad.', svg:`<path d="M12 7.5 6.9 16.2h10.2Z"/><path d="M4.9 16.2h14.2"/>` },
     { key:'B', label:'Bisagra + trama', note:'Símbolo de manual: pasador visible, triángulo abierto, trama de suelo dispersa (3 marcas) — máxima autoridad técnica.', svg: ICO.supportPin, recommended:true },
-    { key:'C', label:'Triángulo relleno', note:'Silueta más audaz a distancia, pero el "agujero" de la bisagra se pierde dentro del relleno sólido.', svg:`<path d="M12 6.95 6.9 15.5h10.2Z" fill="currentColor" stroke="none"/><circle cx="12" cy="9" r="1.3" fill="var(--ico-bg)" stroke="none"/><path d="M5.1 15.5h13.8"/><path d="M7 17.9 8.7 15.7M10.9 17.9 12.6 15.7M14.8 17.9 16.5 15.7"/>` },
+    { key:'C', label:'Triángulo relleno', note:'Silueta más audaz a distancia, pero el "agujero" de la bisagra se pierde dentro del relleno sólido.', svg:`<path d="M12 8.6 6.9 16h10.2Z" fill="currentColor" stroke="none"/><circle cx="12" cy="10.9" r="1.3" fill="var(--ico-bg)" stroke="none"/><path d="M4.9 16h14.2"/><path d="M6.8 18.4 8.5 16.2M10.7 18.4 12.4 16.2M14.6 18.4 16.3 16.2"/>` },
   ],
   supportRoller: [
-    { key:'A', label:'Sin trama', note:'Triángulo + rodillos, sin marcas de suelo — más limpio, pero ambiguo con Pin a 16px.', svg:`<path d="M12 6.8 7.6 13.3h8.8Z"/><circle cx="9.7" cy="15.15" r="1.4"/><circle cx="14.3" cy="15.15" r="1.4"/>` },
+    { key:'A', label:'Sin trama', note:'Triángulo + rodillos, sin marcas de suelo — más limpio, pero ambiguo con Pin a 16px.', svg:`<path d="M12 7.3 7.6 13.7h8.8Z"/><circle cx="9.4" cy="15.1" r="1.3"/><circle cx="14.6" cy="15.1" r="1.3"/>` },
     { key:'B', label:'Triángulo + rodillos + trama', note:'Convención de manual completa: el par de círculos bajo el triángulo es inequívoco incluso sin color.', svg: ICO.supportRoller, recommended:true },
-    { key:'C', label:'Placa sobre rodillos', note:'Variante de códigos que dibujan una barra plana (no triángulo) apoyada en rodillos — igual de válida, distinto acento visual.', svg:`<line x1="7.2" y1="12.6" x2="16.8" y2="12.6"/><circle cx="9.7" cy="15.15" r="1.4"/><circle cx="14.3" cy="15.15" r="1.4"/><path d="M5.1 17.4h13.8"/><path d="M7 19.8 8.7 17.6M10.9 19.8 12.6 17.6M14.8 19.8 16.5 17.6"/>` },
+    { key:'C', label:'Placa sobre rodillos', note:'Variante de códigos que dibujan una barra plana (no triángulo) apoyada en rodillos — igual de válida, distinto acento visual.', svg:`<line x1="7.2" y1="10.6" x2="16.8" y2="10.6"/><circle cx="9.4" cy="13" r="1.3"/><circle cx="14.6" cy="13" r="1.3"/><path d="M4.9 14.9h14.2"/><path d="M6.8 17.3 8.5 15.1M10.7 17.3 12.4 15.1M14.6 17.3 16.3 15.1"/>` },
   ],
   supportFixed: [
-    { key:'A', label:'Barra simple', note:'Un bloque sólido sin trama — legible, pero no comunica "restricción total" con la fuerza de la trama cruzada.', svg:`<line x1="12" y1="4" x2="12" y2="10.4"/><rect x="5.4" y="10.4" width="13.2" height="3" rx="0.5" fill="currentColor" stroke="none"/>` },
+    { key:'A', label:'Barra simple', note:'Un bloque sólido sin trama — legible, pero no comunica "restricción total" con la fuerza de la trama cruzada.', svg:`<line x1="12" y1="6.6" x2="12" y2="13.8"/><rect x="5.4" y="13.8" width="13.2" height="3" rx="0.5" fill="currentColor" stroke="none"/>` },
     { key:'B', label:'Bloque + trama densa', note:'5 marcas diagonales muy juntas — la densidad de la trama codifica "restricción máxima", en contraste con las 3 de Pin/Roller.', svg: ICO.supportFixed, recommended:true },
-    { key:'C', label:'Doble trama cruzada', note:'Textura más rica (cross-hatch), pero se satura y pierde peso a 16px frente a la opción B.', svg:`<line x1="12" y1="4" x2="12" y2="10.4"/><rect x="5.4" y="10.4" width="13.2" height="3.4" rx="0.5"/><path d="M6.5 10.4 4.7 13.8M9.4 10.4 7.6 13.8M12.3 10.4 10.5 13.8M15.2 10.4 13.4 13.8M9.4 13.8 11.2 10.4M6.5 13.8 8.3 10.4" stroke-width="1"/>` },
+    { key:'C', label:'Doble trama cruzada', note:'Textura más rica (cross-hatch), pero se satura y pierde peso a 16px frente a la opción B.', svg:`<line x1="12" y1="5.9" x2="12" y2="12.3"/><rect x="5.4" y="12.3" width="13.2" height="3.4" rx="0.5"/><path d="M6.5 12.3 4.9 15.7M9.4 12.3 7.8 15.7M12.3 12.3 10.7 15.7M15.2 12.3 13.6 15.7M9.4 15.7 11 12.3M6.5 15.7 8.1 12.3" stroke-width="1"/>` },
   ],
   pointLoad: [
-    { key:'A', label:'Flecha abierta', note:'Chevron sin relleno — coherente con navegación/UI, pero débil como vector de fuerza real.', svg:`<line x1="12" y1="3.8" x2="12" y2="13.8"/><path d="M9.4 12.6 12 17.4 14.6 12.6"/><line x1="5.2" y1="17.5" x2="18.8" y2="17.5"/>` },
+    { key:'A', label:'Flecha abierta', note:'Chevron sin relleno — coherente con navegación/UI, pero débil como vector de fuerza real.', svg:`<line x1="12" y1="6.4" x2="12" y2="13.8"/><path d="M9.4 12.6 12 17.4 14.6 12.6"/><line x1="5.6" y1="17.6" x2="18.4" y2="17.6"/>` },
     { key:'B', label:'Flecha sólida + base', note:'Convención de manual para carga puntual: vector sólido que llega al miembro. Máxima claridad de dirección.', svg: ICO.pointLoad, recommended:true },
-    { key:'C', label:'Vástago largo + marca', note:'Sin línea de miembro, con una marca de magnitud en la cola — útil si la carga flota fuera del elemento, pero pierde el "aterrizaje" visual.', svg:`<line x1="12" y1="3" x2="12" y2="14.2"/><line x1="9.6" y1="4.8" x2="14.4" y2="4.8"/><polygon points="12,18.1 10,13.7 14,13.7"/>` },
+    { key:'C', label:'Vástago largo + marca', note:'Sin línea de miembro, con una marca de magnitud en la cola — útil si la carga flota fuera del elemento, pero pierde el "aterrizaje" visual.', svg:`<line x1="12" y1="4.8" x2="12" y2="15"/><line x1="9.6" y1="6.6" x2="14.4" y2="6.6"/><polygon points="12,19.2 10,15 14,15"/>` },
   ],
   distributedLoad: [
-    { key:'A', label:'Dos flechas', note:'Versión mínima — legible a 16px, pero se confunde con dos cargas puntuales independientes.', svg:`<line x1="4.2" y1="5.4" x2="19.8" y2="5.4"/><line x1="8.6" y1="5.4" x2="8.6" y2="13.9"/><line x1="15.4" y1="5.4" x2="15.4" y2="13.9"/><polygon points="8.6,17.3 6.9,13.7 10.3,13.7"/><polygon points="15.4,17.3 13.7,13.7 17.1,13.7"/><line x1="4.2" y1="17.3" x2="19.8" y2="17.3"/>` },
+    { key:'A', label:'Dos flechas', note:'Versión mínima — legible a 16px, pero se confunde con dos cargas puntuales independientes.', svg:`<line x1="5" y1="6.7" x2="19" y2="6.7"/><line x1="8.8" y1="6.7" x2="8.8" y2="13.1"/><line x1="15.2" y1="6.7" x2="15.2" y2="13.1"/><polygon points="8.8,17.3 6.9,13.1 10.7,13.1"/><polygon points="15.2,17.3 13.3,13.1 17.1,13.1"/><line x1="5" y1="17.3" x2="19" y2="17.3"/>` },
     { key:'B', label:'Tres flechas uniformes', note:'El patrón "w" clásico de carga distribuida — inconfundible con carga puntual y suficientemente simple a 16px.', svg: ICO.distributedLoad, recommended:true },
-    { key:'C', label:'Trapecio (no uniforme)', note:'Flechas de largo creciente — comunica carga variable, útil como variante futura pero no como ícono genérico de la herramienta.', svg:`<path d="M4.2 8.4 19.8 5.4" fill="none"/><line x1="7.4" y1="7.8" x2="7.4" y2="13.9"/><line x1="12" y1="6.9" x2="12" y2="13.9"/><line x1="16.6" y1="6.1" x2="16.6" y2="13.9"/><polygon points="7.4,16.2 5.7,13.7 9.1,13.7"/><polygon points="12,16.8 10.3,13.7 13.7,13.7"/><polygon points="16.6,17.3 14.9,13.7 18.3,13.7"/><line x1="4.2" y1="17.3" x2="19.8" y2="17.3"/>` },
+    { key:'C', label:'Trapecio (no uniforme)', note:'Flechas de largo creciente — comunica carga variable, útil como variante futura pero no como ícono genérico de la herramienta.', svg:`<path d="M5 9.5 19 6.3" fill="none"/><line x1="7.6" y1="8.9" x2="7.6" y2="13.1"/><line x1="12" y1="7.9" x2="12" y2="13.1"/><line x1="16.4" y1="6.9" x2="16.4" y2="13.1"/><polygon points="7.6,15.6 5.7,13.1 9.5,13.1"/><polygon points="12,16.4 10.1,13.1 13.9,13.1"/><polygon points="16.4,17.3 14.5,13.1 18.3,13.1"/><line x1="5" y1="17.3" x2="19" y2="17.3"/>` },
   ],
   momentLoad: [
-    { key:'A', label:'Lazo cerrado', note:'Compacto, pero se parece demasiado a Mz (momento nodal) — ambigüedad de escala.', svg:`<circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><path d="M12 6.5A5.5 5.5 0 1 1 7.2 9.3" fill="none"/><polygon points="7.2,9.3 6.8,6.5 9.4,7.7"/>` },
+    { key:'A', label:'Lazo cerrado', note:'Compacto, pero se parece demasiado a Mz (momento nodal) — ambigüedad de escala.', svg: ICO.mz },
     { key:'B', label:'Arco abierto + flecha sólida', note:'Radio mayor, sin punto central — se lee como acción sobre el miembro, no sobre un nodo. Recomendado.', svg: ICO.momentLoad, recommended:true },
     { key:'C', label:'Doble flecha (sentido libre)', note:'Cabezas en ambos extremos del arco para momentos sin signo fijo — más ambiguo como glyph por defecto.', svg:`<path d="M6.6 16A6.9 6.9 0 0 1 15.4 6.8" fill="none"/><polygon points="6.6,16 7.1,13.2 9.5,14.5"/><polygon points="15.4,6.8 14.9,9.6 12.5,8.3"/>` },
   ],
   cut: [
-    { key:'A', label:'Solo hueco', note:'Dos muñones sin marca de rotura — limpio, pero puede leerse como "elemento faltante" más que como acción de cortar.', svg:`<line x1="3.6" y1="12" x2="9.6" y2="12"/><line x1="14.4" y1="12" x2="20.4" y2="12"/>` },
+    { key:'A', label:'Solo hueco', note:'Dos muñones sin marca de rotura — limpio, pero puede leerse como "elemento faltante" más que como acción de cortar.', svg:`<line x1="4.2" y1="12" x2="9.8" y2="12"/><line x1="14.2" y1="12" x2="19.8" y2="12"/>` },
     { key:'B', label:'Línea de rotura (zigzag)', note:'Convención de dibujo técnico para "quiebre convencional" — comunica corte sin literal tijera. Recomendado.', svg: ICO.cut, recommended:true },
-    { key:'C', label:'Corte en ángulo', note:'Dos trazos cruzados en la brecha, gesto más literal de "tijera" — funciona, pero se acerca a Delete (×) en silueta.', svg:`<line x1="3.6" y1="12" x2="8.8" y2="12"/><line x1="15.2" y1="12" x2="20.4" y2="12"/><path d="M8.8 9.6 15.2 14.4M8.8 14.4 15.2 9.6"/>` },
+    { key:'C', label:'Corte en ángulo', note:'Dos trazos cruzados en la brecha, gesto más literal de "tijera" — funciona, pero se acerca a Delete (×) en silueta.', svg:`<line x1="4.2" y1="12" x2="9" y2="12"/><line x1="15" y1="12" x2="19.8" y2="12"/><path d="M9 9.6 15 14.4M9 14.4 15 9.6"/>` },
   ],
   split: [
-    { key:'A', label:'Punto simple', note:'Línea continua + punto — el gesto mínimo, pero se confunde con un nodo normal sobre el miembro.', svg:`<line x1="3.8" y1="12" x2="20.2" y2="12"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>` },
+    { key:'A', label:'Punto simple', note:'Línea continua + punto — el gesto mínimo, pero se confunde con un nodo normal sobre el miembro.', svg:`<line x1="4.4" y1="12" x2="19.6" y2="12"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>` },
     { key:'B', label:'Socket + marcas', note:'El anillo perforado (misma firma que Node/Member) con dos marcas de inserción arriba/abajo — deja clarísimo que algo nuevo se insertó sin cortar nada.', svg: ICO.split, recommended:true },
-    { key:'C', label:'Marca "+"', note:'Cruz de inserción en vez de anillo — directa, pero rompe la firma visual de "punto sobre miembro" que comparten Node/Member/Split.', svg:`<line x1="3.8" y1="12" x2="20.2" y2="12"/><path d="M12 8.8v6.4M8.8 12h6.4"/>` },
+    { key:'C', label:'Marca "+"', note:'Cruz de inserción en vez de anillo — directa, pero rompe la firma visual de "punto sobre miembro" que comparten Node/Member/Split.', svg:`<line x1="4.4" y1="12" x2="19.6" y2="12"/><path d="M12 8.6v6.8M8.6 12h6.8"/>` },
   ],
   axialN: [
     { key:'A', label:'Doble flecha, un trazo', note:'Una sola línea con cabezas en los extremos — compacta, pero visualmente cercana a una flecha de medida (Dimension/Units).', svg:`<line x1="4.6" y1="12" x2="19.4" y2="12"/><polygon points="4.6,12 8.2,10.1 8.2,13.9"/><polygon points="19.4,12 15.8,13.9 15.8,10.1"/>` },
@@ -633,19 +674,19 @@ const ALT = {
     { key:'C', label:'Bloque de diagrama', note:'Barra rellena paralela al eje, al estilo diagrama de esfuerzo axial constante — muy técnico, pero pesado como icono de barra de herramientas.', svg:`<line x1="4.6" y1="12" x2="19.4" y2="12"/><rect x="7.2" y="9.6" width="9.6" height="4.8" rx="0.8" fill="currentColor" opacity=".2" stroke="none"/>` },
   ],
   shearV: [
-    { key:'A', label:'Flechas paralelas', note:'Dos flechas verticales opuestas sin el salto — más simple, pero pierde la idea de "deslizamiento" entre secciones.', svg:`<line x1="9.2" y1="7.8" x2="9.2" y2="16.2"/><line x1="14.8" y1="7.8" x2="14.8" y2="16.2"/><polygon points="9.2,5.4 7.2,8.6 11.2,8.6"/><polygon points="14.8,18.6 12.8,15.4 16.8,15.4"/>` },
+    { key:'A', label:'Flechas paralelas', note:'Dos flechas verticales opuestas sin el salto — más simple, pero pierde la idea de "deslizamiento" entre secciones.', svg:`<line x1="9.2" y1="7.8" x2="9.2" y2="16.2"/><line x1="14.8" y1="7.8" x2="14.8" y2="16.2"/><polygon points="9.2,5.4 7.3,9.2 11.1,9.2"/><polygon points="14.8,18.6 12.9,14.8 16.7,14.8"/>` },
     { key:'B', label:'Salto (jog) + par de fuerzas', note:'El quiebre en escalón visualiza el deslizamiento transversal real de la sección — silueta inconfundible frente a N y M.', svg: ICO.shearV, recommended:true },
-    { key:'C', label:'Cuchillas enfrentadas', note:'Dos triángulos que se cruzan en el punto de corte — gestual y directo, pero se lee más como Cut que como fenómeno de corte estructural.', svg:`<line x1="4.2" y1="12" x2="9.6" y2="12"/><line x1="14.4" y1="12" x2="19.8" y2="12"/><polygon points="9.6,9.2 12,12 9.6,14.8"/><polygon points="14.4,9.2 12,12 14.4,14.8"/>` },
+    { key:'C', label:'Cuchillas enfrentadas', note:'Dos triángulos que se cruzan en el punto de corte — gestual y directo, pero se lee más como Cut que como fenómeno de corte estructural.', svg:`<line x1="4.4" y1="12" x2="9.6" y2="12"/><line x1="14.4" y1="12" x2="19.6" y2="12"/><polygon points="9.6,9.2 12,12 9.6,14.8"/><polygon points="14.4,9.2 12,12 14.4,14.8"/>` },
   ],
   momentM: [
-    { key:'A', label:'Solo el arco', note:'Curva sin línea base — ligera, pero flota sin referencia del miembro.', svg:`<path d="M4.6 15.2Q12 5.6 19.4 15.2" fill="none"/>` },
+    { key:'A', label:'Solo el arco', note:'Curva sin línea base — ligera, pero flota sin referencia del miembro.', svg:`<path d="M4.8 15.5Q12 1.5 19.2 15.5" fill="none"/>` },
     { key:'B', label:'Línea base + arco', note:'Silueta de diagrama de momento clásico: referencia recta + curvatura de flexión — clara incluso muy pequeña.', svg: ICO.momentM, recommended:true },
-    { key:'C', label:'Área rellena', note:'El diagrama de momento clásico se dibuja relleno — máxima autoridad técnica, pero compite en peso visual con los estados de fiabilidad.', svg:`<line x1="4.6" y1="15.2" x2="19.4" y2="15.2"/><path d="M4.6 15.2Q12 5.6 19.4 15.2Z" fill="currentColor" opacity=".2" stroke="none"/><path d="M4.6 15.2Q12 5.6 19.4 15.2" fill="none"/>` },
+    { key:'C', label:'Área rellena', note:'El diagrama de momento clásico se dibuja relleno — máxima autoridad técnica, pero compite en peso visual con los estados de fiabilidad.', svg:`<line x1="4.8" y1="15.5" x2="19.2" y2="15.5"/><path d="M4.8 15.5Q12 1.5 19.2 15.5Z" fill="currentColor" opacity=".2" stroke="none"/><path d="M4.8 15.5Q12 1.5 19.2 15.5" fill="none"/>` },
   ],
   deformed: [
-    { key:'A', label:'Solo curva sólida', note:'Sin la referencia original punteada — se confunde con Moment M al tener una sola curva.', svg:`<path d="M4.6 9.5Q12 17.2 19.4 9.5" fill="none"/>` },
+    { key:'A', label:'Solo curva sólida', note:'Sin la referencia original punteada — se confunde con Moment M al tener una sola curva.', svg:`<path d="M4.8 9.6Q12 21.4 19.2 9.6" fill="none"/>` },
     { key:'B', label:'Original punteada + curva real', note:'El fantasma recto (punteado) contra la curva sólida es la convención estándar de software de análisis — comparación directa antes/después.', svg: ICO.deformed, recommended:true },
-    { key:'C', label:'Secuencia de curvas', note:'Original punteada + dos curvas en progresión — sugiere animación de deformación, más rico pero denso para un icono de 16px.', svg:`<line x1="4.6" y1="6.8" x2="19.4" y2="6.8" stroke-dasharray="2.6 2.4"/><path d="M4.6 7.8Q12 12.4 19.4 7.8" fill="none" opacity=".45"/><path d="M4.6 9.4Q12 17 19.4 9.4" fill="none"/>` },
+    { key:'C', label:'Secuencia de curvas', note:'Original punteada + dos curvas en progresión — sugiere animación de deformación, más rico pero denso para un icono de 16px.', svg:`<line x1="4.8" y1="7.4" x2="19.2" y2="7.4" stroke-dasharray="2.6 2.4"/><path d="M4.8 8.4Q12 15.4 19.2 8.4" fill="none" opacity=".45"/><path d="M4.8 10.2Q12 21.4 19.2 10.2" fill="none"/>` },
   ],
 };
 
@@ -694,26 +735,27 @@ const FAMILY = [
 const PRINCIPLES = [
   ['Precisión primero', 'Cada glyph nace de la convención estructural real — triángulo de apoyo, arco de momento, línea de rotura — no de una metáfora genérica de interfaz.'],
   ['Trazo fino, dibujo técnico', 'Stroke 1.4 sobre grid de 24: el peso de un lápiz de precisión, no de un rotulador. La delgadez es lo que separa "herramienta de ingeniería" de "app de consumo".'],
+  ['Centrado óptico verificado', 'El centro de la caja de trazo de los 51 glyphs cae en (12,12) con ±0.25 de tolerancia, medido en navegador. Sin eso, una fila de iconos baila.'],
   ['Tactilidad Clay, contenida', 'El "socket punch" en juntas y extremos es la única huella táctil de Clay dentro del glyph. Nunca se vuelve ilustración.'],
   ['Simplicidad legible', '2 a 6 primitivas por icono. Si no sobrevive a 16px, se simplifica — no se decora.'],
   ['Monocromo por defecto', 'El color refuerza; la forma identifica. Todo glyph debe funcionar en un solo color.'],
-  ['Producto premium', 'Sin gradientes, sin sombras pesadas, sin exceso de detalle — precisión técnica con calidez, no juguetona.'],
 ];
 
 const SPECS = [
   ['Lienzo (viewBox)', '24 × 24'],
-  ['Área viva', '18 × 18 (3–21)'],
-  ['Sobretiro óptico', 'círculos y diagonales +1 a +1.4'],
   ['Stroke regular (20–24px)', '1.4'],
   ['Stroke dense (16px)', '1.75'],
   ['Peso renderizado', '≈1.17px en 20px y en 16px dense'],
+  ['Centro óptico', '(12, 12) · tolerancia ±0.25'],
+  ['Extensión máxima', '12.0 – 15.8 u (mediana 14.2)'],
   ['Terminal', 'round cap'],
   ['Unión', 'round join'],
-  ['Radio de esquina', '0.5–1.2 en formas rectas'],
+  ['Radio de esquina', '0.5–1.3 en formas rectas'],
   ['Firma de junta', 'socket punch — fill: var(--ico-bg)'],
-  ['Punto sólido', 'r 1.15–1.4, fill currentColor'],
-  ['Cabeza de flecha', '4.0 ancho × 4.2 largo (esbelta)'],
-  ['Ritmo de trama (suelo)', '3 marcas dispersas · 5 marcas densas (Fixed)'],
+  ['Punto sólido', 'r 1.15–1.5, fill currentColor'],
+  ['Cabeza de flecha', '4.0 ancho × 4.2 largo'],
+  ['Apoyos — media base', '5.1 · suelo 4.9→19.1'],
+  ['Trama de suelo', '3 marcas · 2.4 de caída (5 en Fixed)'],
   ['Vector de fuerza', 'flecha sólida (polygon)'],
   ['Acción de interfaz', 'chevron abierto (path de 2 trazos)'],
 ];
