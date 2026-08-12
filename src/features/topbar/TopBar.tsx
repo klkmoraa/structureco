@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import {
   Check,
@@ -101,7 +101,6 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
   const projectMenuButtonRef = useRef<HTMLButtonElement>(null);
   const exportMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
-  const storageDescriptionId = useId();
   const menuOpen = showProjectMenu || showExportMenu || showMobileMenu;
 
   useEffect(() => {
@@ -330,17 +329,6 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
             </button>
           </div>
         </div>
-        <span
-          className={`autosave-state${storageHasError || storageState === 'offline' ? ' has-issue' : ''}`}
-          data-storage-state={storageState}
-          data-storage-diagnostic={storageMessage ?? undefined}
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-          aria-describedby={storageDescriptionId}
-          tabIndex={0}
-          title={storageDescription}
-        >{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />} <span>{storageLabel}</span><small id={storageDescriptionId} className="autosave-state__description">{storageDescription}</small></span>
         <AnimatePresence>
           {showProjectMenu ? (
             <m.div {...popoverMotionProps} className="popover project-menu" role="menu" aria-label={t('project.openExamples')} onKeyDown={onMenuKeyDown}>

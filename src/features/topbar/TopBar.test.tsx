@@ -190,15 +190,17 @@ describe('TopBar copy project JSON', () => {
 
 describe('TopBar information architecture', () => {
   it('announces local-first and offline states without relying on color', async () => {
+    const user = userEvent.setup();
     const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);
-    const status = container.querySelector<HTMLElement>('.autosave-state');
+    expect(container.querySelector('.autosave-state')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
+    const status = container.querySelector<HTMLElement>('.mobile-storage-state');
 
     expect(status?.dataset.storageState).toBe('local');
     expect(status?.textContent).toContain('Local');
     expect(status?.querySelector('svg')).not.toBeNull();
-    expect(status?.tabIndex).toBe(0);
-    const description = document.getElementById(status?.getAttribute('aria-describedby') ?? '');
-    expect(description?.textContent).toContain('Guardado localmente');
+    expect(status?.getAttribute('aria-live')).toBe('polite');
+    expect(status?.textContent).toContain('Guardado localmente');
 
     Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: false });
     window.dispatchEvent(new Event('offline'));
@@ -206,38 +208,43 @@ describe('TopBar information architecture', () => {
     await waitFor(() => expect(status?.dataset.storageState).toBe('offline'));
     expect(status?.textContent).toContain('Sin conexión');
     expect(status?.getAttribute('aria-live')).toBe('polite');
-    expect(status?.title).toContain('Puedes seguir trabajando');
-    expect(description?.textContent).toContain('Puedes seguir trabajando');
+    expect(status?.textContent).toContain('Puedes seguir trabajando');
   });
 
-  it('distinguishes a load failure from a save failure', () => {
+  it('distinguishes a load failure from a save failure', async () => {
+    const user = userEvent.setup();
     localStorage.setItem(PROJECT_STORAGE_KEY, '{invalid');
     const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);
-    const status = container.querySelector<HTMLElement>('.autosave-state');
+    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
+    const status = container.querySelector<HTMLElement>('.mobile-storage-state');
 
     expect(status?.dataset.storageState).toBe('load-error');
     expect(status?.textContent).toContain('Error al cargar');
-    expect(status?.title).toContain('No se pudo abrir la copia local');
+    expect(status?.textContent).toContain('No se pudo abrir la copia local');
   });
 
-  it('prioritizes the actionable offline state over a recovered backup notice', () => {
+  it('prioritizes the actionable offline state over a recovered backup notice', async () => {
+    const user = userEvent.setup();
     localStorage.setItem(PROJECT_BACKUP_KEY, JSON.stringify(createDefaultProject()));
     localStorage.setItem(PROJECT_STORAGE_KEY, '{invalid');
     Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: false });
 
     const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);
-    const status = container.querySelector<HTMLElement>('.autosave-state');
+    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
+    const status = container.querySelector<HTMLElement>('.mobile-storage-state');
 
     expect(status?.dataset.storageState).toBe('offline');
     expect(status?.textContent).toMatch(/Sin conexi/);
   });
 
-  it('keeps a local-load error visible when the browser is also offline', () => {
+  it('keeps a local-load error visible when the browser is also offline', async () => {
+    const user = userEvent.setup();
     localStorage.setItem(PROJECT_STORAGE_KEY, '{invalid');
     Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: false });
 
     const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);
-    const status = container.querySelector<HTMLElement>('.autosave-state');
+    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
+    const status = container.querySelector<HTMLElement>('.mobile-storage-state');
 
     expect(status?.dataset.storageState).toBe('load-error');
     expect(status?.textContent).toContain('Error al cargar');
