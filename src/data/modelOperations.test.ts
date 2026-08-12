@@ -3,6 +3,7 @@ import { createDefaultProject } from './defaultProject';
 import {
   copyModelSelection,
   createMemberAtPoint,
+  deleteStructuralSelection,
   duplicateModelSelection,
   ensureNodeAtPoint,
   pasteModelClipboard,
@@ -251,5 +252,51 @@ describe('model clipboard operations', () => {
     expect(project.memberLoads.find((load) => load.id === 'ML-R')).toMatchObject({ memberId: second.id, position: 5 / 12 });
     expect(project.memberLoads.filter((load) => load.type === 'distributed')).toHaveLength(2);
     expect(project.memberInitialEffects!.map((effect) => effect.memberId).sort()).toEqual([first.id, second.id].sort());
+  });
+
+  it('deletes a node with its incident structure and leaves unrelated references intact', () => {
+    const project = createDefaultProject();
+    project.memberLoads.push({
+      id: 'ML-M1', memberId: 'M1', caseId: 'LC1', type: 'point', coordinateSystem: 'global', lengthBasis: 'real', start: 0, end: 1, px: 0, py: -10, position: 0.5,
+    });
+    project.memberInitialEffects = [
+      { id: 'IE-M1', memberId: 'M1', caseId: 'LC1', type: 'temperature', alpha: 1.2e-5, deltaT: 20, gradient: 0 },
+      { id: 'IE-M3', memberId: 'M3', caseId: 'LC1', type: 'initial-strain', axialStrain: 0.001, curvature: 0.002 },
+    ];
+    project.nodalLoads.push({ id: 'NL-N2', nodeId: 'N2', caseId: 'LC1', fx: 4, fy: 0, mz: 0 });
+    project.prescribedDisplacements = [
+      { id: 'PD-N3', nodeId: 'N3', caseId: 'LC1', component: 'ux', value: 0 },
+      { id: 'PD-N2', nodeId: 'N2', caseId: 'LC1', component: 'uy', value: 0 },
+    ];
+
+    deleteStructuralSelection(project, { kind: 'node', id: 'N3' });
+
+    expect(project.nodes.map((node) => node.id)).toEqual(['N1', 'N2', 'N4']);
+    expect(project.members.map((member) => member.id)).toEqual(['M3']);
+    expect(project.nodalLoads.map((load) => load.id)).toEqual(['NL2', 'NL-N2']);
+    expect(project.memberLoads).toEqual([]);
+    expect(project.memberInitialEffects).toEqual([{ id: 'IE-M3', memberId: 'M3', caseId: 'LC1', type: 'initial-strain', axialStrain: 0.001, curvature: 0.002 }]);
+    expect(project.prescribedDisplacements).toEqual([{ id: 'PD-N2', nodeId: 'N2', caseId: 'LC1', component: 'uy', value: 0 }]);
+  });
+
+  it('deletes the union of multi-selected structure without removing unrelated entities', () => {
+    const project = createDefaultProject();
+    project.nodes.push({ id: 'N5', x: 10, y: 0, support: { type: 'none' } });
+    project.members.push({ id: 'M4', i: 'N2', j: 'N5', ...canvasMemberTemplate });
+    project.memberLoads.push({ id: 'ML-M4', memberId: 'M4', caseId: 'LC1', type: 'point', coordinateSystem: 'global', lengthBasis: 'real', start: 0, end: 1, px: 3, py: 0, position: 0.5 });
+    project.memberInitialEffects = [
+      { id: 'IE-M2', memberId: 'M2', caseId: 'LC1', type: 'temperature', alpha: 1.2e-5, deltaT: 20, gradient: 0 },
+      { id: 'IE-M4', memberId: 'M4', caseId: 'LC1', type: 'temperature', alpha: 1.2e-5, deltaT: 30, gradient: 0 },
+    ];
+    project.prescribedDisplacements = [{ id: 'PD-N3', nodeId: 'N3', caseId: 'LC1', component: 'ux', value: 0 }];
+
+    deleteStructuralSelection(project, { kind: 'multi', nodeIds: ['N3'], memberIds: ['M3'] });
+
+    expect(project.nodes.map((node) => node.id)).toEqual(['N1', 'N2', 'N4', 'N5']);
+    expect(project.members.map((member) => member.id)).toEqual(['M4']);
+    expect(project.memberLoads.map((load) => load.id)).toEqual(['ML-M4']);
+    expect(project.memberInitialEffects).toEqual([{ id: 'IE-M4', memberId: 'M4', caseId: 'LC1', type: 'temperature', alpha: 1.2e-5, deltaT: 30, gradient: 0 }]);
+    expect(project.nodalLoads.map((load) => load.id)).toEqual(['NL2']);
+    expect(project.prescribedDisplacements).toEqual([]);
   });
 });

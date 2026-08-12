@@ -299,9 +299,62 @@ describe('ProjectCommand', () => {
       kind: 'member.delete', description: `Eliminar ${member.id}`, memberId: member.id,
     });
     const removed = applyProjectPatch(project, compiled.forward);
+    expect(removed.nodes).toEqual(before.nodes);
     expect(removed.members.some((item) => item.id === member.id)).toBe(false);
     expect(removed.memberLoads.some((item) => item.memberId === member.id)).toBe(false);
+    expect((removed.memberInitialEffects ?? []).some((item) => item.memberId === member.id)).toBe(false);
     expect(applyProjectPatch(removed, invertProjectPatch(compiled.forward))).toEqual(before);
+  });
+
+  it('deletes a node cascade as one exact reversible command', () => {
+    const project = createDefaultProject();
+    project.memberInitialEffects = [{ id: 'IE-delete-node', memberId: 'M2', caseId: 'LC1', type: 'temperature', alpha: 1.2e-5, deltaT: 20, gradient: 0 }];
+    project.prescribedDisplacements = [{ id: 'PD-delete-node', nodeId: 'N3', caseId: 'LC1', component: 'ux', value: 0 }];
+    const before = structuredClone(project);
+
+    const compiled = compileProjectCommand(project, {
+      kind: 'node.delete', description: 'Eliminar nodo N3', nodeId: 'N3',
+    });
+    const removed = applyProjectPatch(project, compiled.forward);
+
+    expect(removed.nodes.map((node) => node.id)).toEqual(['N1', 'N2', 'N4']);
+    expect(removed.members.map((member) => member.id)).toEqual(['M3']);
+    expect(removed.nodalLoads.map((load) => load.id)).toEqual(['NL2']);
+    expect(removed.memberLoads).toEqual([]);
+    expect(removed.memberInitialEffects).toEqual([]);
+    expect(removed.prescribedDisplacements).toEqual([]);
+    expect(removed.memberLoads.every((load) => removed.members.some((member) => member.id === load.memberId))).toBe(true);
+    expect((removed.memberInitialEffects ?? []).every((effect) => removed.members.some((member) => member.id === effect.memberId))).toBe(true);
+    const restored = applyProjectPatch(removed, compiled.inverse);
+    expect(restored.members.map((member) => member.id)).toEqual(before.members.map((member) => member.id));
+    expect(restored).toEqual(before);
+    expect(applyProjectPatch(restored, compiled.forward)).toEqual(removed);
+    expect(applyProjectPatch(removed, invertProjectPatch(compiled.forward))).toEqual(before);
+  });
+
+  it('deletes a multi-selection cascade atomically and restores it in canonical order', () => {
+    const project = createDefaultProject();
+    project.nodes.push({ id: 'N5', x: 10, y: 0, support: { type: 'none' } });
+    project.members.push({ id: 'M4', i: 'N2', j: 'N5', type: 'frame', materialOrigin: 'custom', sectionOrigin: 'custom', E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 });
+    project.memberLoads.push({ id: 'ML-M4', memberId: 'M4', caseId: 'LC1', type: 'point', coordinateSystem: 'global', lengthBasis: 'real', start: 0, end: 1, px: 3, py: 0, position: 0.5 });
+    project.memberInitialEffects = [{ id: 'IE-M4', memberId: 'M4', caseId: 'LC1', type: 'temperature', alpha: 1.2e-5, deltaT: 30, gradient: 0 }];
+    const before = structuredClone(project);
+
+    const compiled = compileProjectCommand(project, {
+      kind: 'selection.delete', description: 'Eliminar selección estructural', selection: { kind: 'multi', nodeIds: ['N3'], memberIds: ['M3'] },
+    });
+    const removed = applyProjectPatch(project, compiled.forward);
+
+    expect(removed.members.map((member) => member.id)).toEqual(['M4']);
+    expect(removed.memberLoads.map((load) => load.id)).toEqual(['ML-M4']);
+    expect(removed.memberInitialEffects).toEqual([{ id: 'IE-M4', memberId: 'M4', caseId: 'LC1', type: 'temperature', alpha: 1.2e-5, deltaT: 30, gradient: 0 }]);
+    expect(applyProjectPatch(removed, compiled.inverse)).toEqual(before);
+
+    const stale = structuredClone(project);
+    stale.memberLoads[0].qyEnd = -22;
+    const staleBefore = structuredClone(stale);
+    expect(() => applyProjectPatch(stale, compiled.forward)).toThrow(/precondici/i);
+    expect(stale).toEqual(staleBefore);
   });
 
   it('prepares duplication with fresh ids and an exact inverse', () => {

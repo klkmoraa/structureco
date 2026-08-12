@@ -579,32 +579,11 @@ export const StructuralCanvas = ({
 
   const deleteSelection = useCallback((target: Selection = selection) => {
     if (!target) return;
-    updateProject((draft) => {
-      if (target.kind === 'multi') {
-        const nodeIds = new Set(target.nodeIds);
-        const memberIds = new Set(target.memberIds);
-        for (const member of draft.members) if (nodeIds.has(member.i) || nodeIds.has(member.j)) memberIds.add(member.id);
-        draft.nodes = draft.nodes.filter((node) => !nodeIds.has(node.id));
-        draft.members = draft.members.filter((member) => !memberIds.has(member.id));
-        draft.nodalLoads = draft.nodalLoads.filter((load) => !nodeIds.has(load.nodeId));
-        draft.memberLoads = draft.memberLoads.filter((load) => !memberIds.has(load.memberId));
-        draft.prescribedDisplacements = (draft.prescribedDisplacements ?? []).filter((item) => !nodeIds.has(item.nodeId));
-        draft.memberInitialEffects = (draft.memberInitialEffects ?? []).filter((effect) => !memberIds.has(effect.memberId));
-      } else if (target.kind === 'node') {
-        draft.nodes = draft.nodes.filter((node) => node.id !== target.id);
-        const deletedMembers = draft.members.filter((member) => member.i === target.id || member.j === target.id).map((member) => member.id);
-        draft.members = draft.members.filter((member) => !deletedMembers.includes(member.id));
-        draft.nodalLoads = draft.nodalLoads.filter((load) => load.nodeId !== target.id);
-        draft.memberLoads = draft.memberLoads.filter((load) => !deletedMembers.includes(load.memberId));
-        draft.prescribedDisplacements = (draft.prescribedDisplacements ?? []).filter((item) => item.nodeId !== target.id);
-        draft.memberInitialEffects = (draft.memberInitialEffects ?? []).filter((effect) => !deletedMembers.includes(effect.memberId));
-      } else if (target.kind === 'member') {
-        return draft;
-      } else if (target.kind === 'nodalLoad') draft.nodalLoads = draft.nodalLoads.filter((load) => load.id !== target.id);
-      else draft.memberLoads = draft.memberLoads.filter((load) => load.id !== target.id);
-      return draft;
-    });
     if (target.kind === 'member') void executeProjectCommand({ kind: 'member.delete', description: `Eliminar miembro ${target.id}`, memberId: target.id });
+    else if (target.kind === 'node') void executeProjectCommand({ kind: 'node.delete', description: 'Editar proyecto', nodeId: target.id });
+    else if (target.kind === 'multi') void executeProjectCommand({ kind: 'selection.delete', description: 'Editar proyecto', selection: target });
+    else if (target.kind === 'nodalLoad') updateProject((draft) => ({ ...draft, nodalLoads: draft.nodalLoads.filter((load) => load.id !== target.id) }));
+    else updateProject((draft) => ({ ...draft, memberLoads: draft.memberLoads.filter((load) => load.id !== target.id) }));
     setSelection(null);
   }, [executeProjectCommand, selection, setSelection, updateProject]);
 

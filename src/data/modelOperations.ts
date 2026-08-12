@@ -91,6 +91,7 @@ export type ModelClipboard =
   | { kind: 'multi'; nodes: NodeModel[]; members: MemberModel[]; nodalLoads: NodalLoad[]; memberLoads: MemberLoad[]; prescribedDisplacements: PrescribedDisplacement[]; initialEffects: MemberInitialEffect[] };
 
 type ModelSelection = Exclude<Selection, null>;
+export type StructuralSelection = Exclude<ModelSelection, { kind: 'nodalLoad' } | { kind: 'memberLoad' }>;
 
 export const structuralSelectionFromIds = (nodeIds: Iterable<string>, memberIds: Iterable<string>): Selection => {
   const nodes = [...new Set(nodeIds)];
@@ -108,6 +109,20 @@ export const toggleStructuralSelection = (selection: Selection, target: { kind: 
   if (set.has(target.id)) set.delete(target.id);
   else set.add(target.id);
   return structuralSelectionFromIds(nodeIds, memberIds);
+};
+
+/** Removes a structural selection and every dependent load, effect, and prescribed displacement. */
+export const deleteStructuralSelection = (project: ProjectModel, selection: StructuralSelection): void => {
+  const nodeIds = new Set(selection.kind === 'node' ? [selection.id] : selection.kind === 'multi' ? selection.nodeIds : []);
+  const memberIds = new Set(selection.kind === 'member' ? [selection.id] : selection.kind === 'multi' ? selection.memberIds : []);
+  for (const member of project.members) if (nodeIds.has(member.i) || nodeIds.has(member.j)) memberIds.add(member.id);
+
+  project.nodes = project.nodes.filter((node) => !nodeIds.has(node.id));
+  project.members = project.members.filter((member) => !memberIds.has(member.id));
+  project.nodalLoads = project.nodalLoads.filter((load) => !nodeIds.has(load.nodeId));
+  project.memberLoads = project.memberLoads.filter((load) => !memberIds.has(load.memberId));
+  project.prescribedDisplacements = (project.prescribedDisplacements ?? []).filter((item) => !nodeIds.has(item.nodeId));
+  project.memberInitialEffects = (project.memberInitialEffects ?? []).filter((effect) => !memberIds.has(effect.memberId));
 };
 
 /** Creates a detached, serializable snapshot of the selected structural object. */

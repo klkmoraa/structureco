@@ -1,5 +1,6 @@
 import {
   createMemberAtPoint,
+  deleteStructuralSelection,
   duplicateModelSelection,
   splitMemberAt,
   type MemberCreationTemplate,
@@ -62,6 +63,8 @@ export type ProjectCommand =
   })
   | (CommandBase & { kind: 'member.update'; memberId: string; changes: Partial<Omit<MemberModel, 'id'>> })
   | (CommandBase & { kind: 'member.delete'; memberId: string })
+  | (CommandBase & { kind: 'node.delete'; nodeId: string })
+  | (CommandBase & { kind: 'selection.delete'; selection: Extract<Selection, { kind: 'multi' }> })
   | (CommandBase & { kind: 'selection.duplicate'; selection: Selection; offset: { x: number; y: number } })
   | (CommandBase & { kind: 'dxf.import'; nodes: NodeModel[]; members: MemberModel[]; sourceName: string });
 
@@ -137,7 +140,7 @@ const diffProjects = (before: ProjectModel, after: ProjectModel, description: st
 
 export const invertProjectPatch = (patch: ProjectPatch): ProjectPatch => ({
   description: `Revertir: ${patch.description}`,
-  operations: [...patch.operations].reverse().map((operation) => ({
+  operations: patch.operations.map((operation) => ({
     ...operation,
     before: operation.after ? structuredClone(operation.after) : null,
     after: operation.before ? structuredClone(operation.before) : null,
@@ -228,9 +231,11 @@ export const compileProjectCommand = (project: ProjectModel, command: ProjectCom
     next.members[index] = updated;
   } else if (command.kind === 'member.delete') {
     if (!next.members.some((member) => member.id === command.memberId)) throw new Error(`No existe el miembro ${command.memberId}.`);
-    next.members = next.members.filter((member) => member.id !== command.memberId);
-    next.memberLoads = next.memberLoads.filter((load) => load.memberId !== command.memberId);
-    next.memberInitialEffects = (next.memberInitialEffects ?? []).filter((effect) => effect.memberId !== command.memberId);
+    deleteStructuralSelection(next, { kind: 'member', id: command.memberId });
+  } else if (command.kind === 'node.delete') {
+    deleteStructuralSelection(next, { kind: 'node', id: command.nodeId });
+  } else if (command.kind === 'selection.delete') {
+    deleteStructuralSelection(next, command.selection);
   } else if (command.kind === 'selection.duplicate') {
     const duplicated = duplicateModelSelection(next, command.selection, command.offset);
     if (!duplicated) throw new Error('La selección no se puede duplicar.');

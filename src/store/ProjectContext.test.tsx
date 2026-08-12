@@ -158,6 +158,31 @@ const TopologyCommandHarness = () => {
   </>;
 };
 
+const StructuralDeleteCommandHarness = () => {
+  const { project, analysis, canUndo, canRedo, analyze, executeProjectCommand, undo, redo } = useProject();
+  const removeNode = async () => {
+    await executeProjectCommand({ kind: 'node.delete', description: 'Eliminar N3 desde Context', nodeId: 'N3' });
+  };
+  const snapshot = JSON.stringify({
+    nodes: project.nodes,
+    members: project.members,
+    nodalLoads: project.nodalLoads,
+    memberLoads: project.memberLoads,
+    prescribedDisplacements: project.prescribedDisplacements,
+    memberInitialEffects: project.memberInitialEffects,
+  });
+  return <>
+    <output aria-label="structural-delete-snapshot">{snapshot}</output>
+    <output aria-label="structural-delete-analysis">{analysis ? (analysis.success ? 'success' : 'failed') : 'none'}</output>
+    <output aria-label="structural-delete-can-undo">{String(canUndo)}</output>
+    <output aria-label="structural-delete-can-redo">{String(canRedo)}</output>
+    <button onClick={analyze}>structural-delete-analyze</button>
+    <button onClick={removeNode}>structural-delete-node</button>
+    <button onClick={undo}>structural-delete-undo</button>
+    <button onClick={redo}>structural-delete-redo</button>
+  </>;
+};
+
 beforeEach(() => localStorage.clear());
 afterEach(() => cleanup());
 
@@ -476,5 +501,34 @@ describe('ProjectContext mutation-policy boundaries', () => {
     await user.click(screen.getByText('topology-redo'));
     expect(Number(screen.getByLabelText('topology-nodes').textContent)).toBe(Number(initialNodes) + 1);
     expect(Number(screen.getByLabelText('topology-members').textContent)).toBe(Number(initialMembers) + 1);
+  });
+
+  it('records one invalidating undo/redo entry for a structural delete cascade', async () => {
+    const user = userEvent.setup();
+    const project = createDefaultProject();
+    localStorage.setItem('structureCo.project', JSON.stringify(project));
+    render(<ProjectProvider><StructuralDeleteCommandHarness /></ProjectProvider>);
+    const before = screen.getByLabelText('structural-delete-snapshot').textContent;
+
+    await user.click(screen.getByText('structural-delete-analyze'));
+    await waitFor(() => expect(screen.getByLabelText('structural-delete-analysis').textContent).toBe('success'));
+    await user.click(screen.getByText('structural-delete-node'));
+    await waitFor(() => expect(screen.getByLabelText('structural-delete-snapshot').textContent).not.toBe(before));
+    const removed = screen.getByLabelText('structural-delete-snapshot').textContent;
+
+    expect(screen.getByLabelText('structural-delete-analysis').textContent).toBe('none');
+    expect(screen.getByLabelText('structural-delete-can-undo').textContent).toBe('true');
+    expect(removed).not.toContain('"N3"');
+    expect(removed).not.toContain('"M1"');
+    expect(removed).not.toContain('"M2"');
+    expect(removed).toContain('"M3"');
+
+    await user.click(screen.getByText('structural-delete-undo'));
+    expect(screen.getByLabelText('structural-delete-snapshot').textContent).toBe(before);
+    expect(screen.getByLabelText('structural-delete-can-undo').textContent).toBe('false');
+    expect(screen.getByLabelText('structural-delete-can-redo').textContent).toBe('true');
+
+    await user.click(screen.getByText('structural-delete-redo'));
+    expect(screen.getByLabelText('structural-delete-snapshot').textContent).toBe(removed);
   });
 });
