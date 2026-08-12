@@ -10,6 +10,8 @@ Se rediseñó la TopBar del Workspace como tres grupos Clay visibles: documento,
 
 Repeat se convirtió en una acción contextual de canvas con icono, tecla `R`, estado preparado de dos niveles y cancelar discreto. Su composición conserva centrado móvil, estados de foco y movimiento reducido.
 
+Como ajuste final de jerarquía, se retiró el indicador visible `Local` de la TopBar: competía con el nombre del proyecto sin ofrecer una acción. El mismo estado de almacenamiento se mantiene accesible dentro de `Más acciones`.
+
 ## Por qué
 
 La solicitud pidió una mejora visual perceptible de TopBar y Repetir sin alterar la lógica estructural. Durante la comprobación visual se detectó que la animación inicial anulaba el centrado del aviso Repeat en móvil; se corrigió antes de cerrar.
