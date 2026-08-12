@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, 
 import { ChevronRight, CircleHelp, MoveDown, Plus, RotateCcw, Sigma, X } from 'lucide-react';
 import { fromDisplay, toDisplay, unitLabel, type UnitQuantity } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
-import { useProject } from '../../store/ProjectContext';
+import { useProjectAnalysis } from '../../store/ProjectAnalysisContext';
+import { useProjectModel } from '../../store/ProjectModelContext';
+import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { Tool } from '../../types';
 import { InspectorNumericField } from './InspectorNumericField';
 import { InspectorProperties } from './InspectorProperties';
@@ -81,7 +83,8 @@ export const Inspector = ({
   mobileDetent?: InspectorDetent;
   onMobileDetentChange?: (detent: InspectorDetent) => void;
 }) => {
-  const { selection, activeTool, setActiveTool, selectedCombinationId, setSelectedCombinationId } = useProject();
+  const { selection, activeTool, setActiveTool } = useWorkspaceUI();
+  const { selectedCombinationId, setSelectedCombinationId } = useProjectAnalysis();
   const { t } = useI18n();
   const [tab, setTab] = useState<'inspector' | 'loads' | 'display'>('inspector');
   const panelRef = useRef<HTMLElement>(null);
@@ -229,7 +232,7 @@ const LoadsPanel = ({ activeTool, onChooseTool, selectedCombinationId, setSelect
   selectedCombinationId: string;
   setSelectedCombinationId: (id: string) => void;
 }) => {
-  const { project, updateProject } = useProject();
+  const { project, updateProject } = useProjectModel();
   const { t } = useI18n();
   const loadToolOptions: Array<{ tool: Extract<Tool, 'pointLoad' | 'distributedLoad' | 'moment'>; label: string; detail: string; icon: typeof MoveDown }> = [
     { tool: 'pointLoad', label: t('inspector.point'), detail: t('toolbar.pointLoadDetail'), icon: MoveDown },
@@ -290,7 +293,7 @@ const LoadsPanel = ({ activeTool, onChooseTool, selectedCombinationId, setSelect
 };
 
 const DisplayPanel = () => {
-  const { project, updateProjectView } = useProject();
+  const { project, updateProjectView } = useProjectModel();
   const { t } = useI18n();
   const units = project.settings.units;
   const display = (value: number, quantity: UnitQuantity) => toDisplay(value, units, quantity);

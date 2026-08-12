@@ -18,7 +18,9 @@ import type { StandardSection } from '../../data/standardSections';
 import { fromDisplay, toDisplay, unitLabel, type UnitQuantity } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import { useClassroomSession } from '../../store/ClassroomSessionContext';
-import { useProject } from '../../store/ProjectContext';
+import { useProjectAnalysis } from '../../store/ProjectAnalysisContext';
+import { useProjectModel } from '../../store/ProjectModelContext';
+import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type {
   MemberInitialEffect,
   MemberLoad,
@@ -148,7 +150,9 @@ const InspectorIssues = ({ issues }: { issues: readonly ValidationIssue[] }) => 
 };
 
 export const InspectorProperties = () => {
-  const { project, analysis, selection, setSelection, executeProjectCommand, updateProject } = useProject();
+  const { project, executeProjectCommand, updateProject } = useProjectModel();
+  const { analysis } = useProjectAnalysis();
+  const { selection, setSelection } = useWorkspaceUI();
   const { language, t } = useI18n();
   const { resultsVisible } = useClassroomSession();
   const [expandedSections, setExpandedSections] = usePersistentInspectorSections();

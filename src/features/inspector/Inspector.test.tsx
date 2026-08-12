@@ -6,7 +6,10 @@ import { createDefaultProject } from '../../data/defaultProject';
 import { PROJECT_STORAGE_KEY } from '../../data/projectStorage';
 import { findStandardSection } from '../../data/standardSections';
 import { ClassroomSessionProvider } from '../../store/ClassroomSessionContext';
-import { ProjectProvider, useProject } from '../../store/ProjectContext';
+import { useProjectAnalysis } from '../../store/ProjectAnalysisContext';
+import { ProjectProvider } from '../../store/ProjectContext';
+import { useProjectModel } from '../../store/ProjectModelContext';
+import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { ProjectModel, Selection, UnitSystemId } from '../../types';
 import { Inspector } from './Inspector';
 
@@ -73,18 +76,9 @@ const selections: Array<{ label: string; value: Selection }> = [
 ];
 
 const InspectorHarness = ({ modal = false, onClose, onDesktopWidthChange, desktopWidth, mobileDetent, onMobileDetentChange }: { modal?: boolean; onClose?: () => void; onDesktopWidthChange?: (width: number) => void; desktopWidth?: number; mobileDetent?: 'compact' | 'medium' | 'large'; onMobileDetentChange?: (detent: 'compact' | 'medium' | 'large') => void }) => {
-  const {
-    project,
-    analysis,
-    selection,
-    setSelection,
-    analyze,
-    canUndo,
-    canRedo,
-    undo,
-    redo,
-    updateProjectView,
-  } = useProject();
+  const { project, canUndo, canRedo, undo, redo, updateProjectView } = useProjectModel();
+  const { analysis, analyze } = useProjectAnalysis();
+  const { selection, setSelection } = useWorkspaceUI();
   const nodeN3 = project.nodes.find((node) => node.id === 'N3');
   const nodeN4 = project.nodes.find((node) => node.id === 'N4');
   const memberM1 = project.members.find((member) => member.id === 'M1');
@@ -107,6 +101,7 @@ const InspectorHarness = ({ modal = false, onClose, onDesktopWidthChange, deskto
       <output aria-label="N3 X almacenada">{String(nodeN3?.x)}</output>
       <output aria-label="N3 Y almacenada">{String(nodeN3?.y)}</output>
       <output aria-label="N4 X almacenada">{String(nodeN4?.x)}</output>
+      <output aria-label="Nodos actuales">{project.nodes.map((node) => node.id).join(',')}</output>
       <output aria-label="M1 E almacenado">{String(memberM1?.E)}</output>
       <output aria-label="M1 A almacenada">{String(memberM1?.A)}</output>
       <output aria-label="M1 material ID">{String((memberM1 as unknown as Record<string, unknown>)?.materialId ?? '')}</output>
@@ -623,6 +618,25 @@ describe('Inspector editing safety and history', () => {
 
     await user.click(screen.getByRole('button', { name: 'Rehacer fixture' }));
     expect(storedNumber('N3 Y almacenada')).toBe(exact);
+  });
+
+  it('remaps the selected node after its coordinate edit repairs coincident topology', async () => {
+    const user = userEvent.setup();
+    const project = createInspectorProject();
+    const nodeN1 = project.nodes.find((node) => node.id === 'N1');
+    project.members = project.members.filter((member) => member.id !== 'MR');
+    if (nodeN1) nodeN1.y = 4;
+    renderInspector(project);
+
+    await user.click(screen.getByRole('button', { name: 'Seleccionar apoyo N1' }));
+    const x = screen.getByRole('textbox', { name: 'X' });
+    await user.clear(x);
+    await user.type(x, '6');
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => expect(within(selectionSummary()).getByText('N4')).toBeTruthy());
+    expect(screen.getByLabelText('Nodos actuales').textContent).toBe('N2,N3,N4');
+    expect(screen.getByLabelText('Puede deshacer').textContent).toBe('true');
   });
 });
 
