@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { AnalysisResult, ProjectModel } from '../types';
+import type { AnalysisResult, ProjectModel, ProjectSettings } from '../types';
 import type { ProjectCommand } from '../commands/projectCommand';
 
 /**
@@ -17,6 +17,7 @@ export interface ProjectModelContextValue {
   executeProjectCommand: (command: ProjectCommand) => Promise<void>;
   updateProject: (updater: (project: ProjectModel) => ProjectModel, analyzeAfter?: boolean) => void;
   updateProjectView: (updater: (project: ProjectModel) => ProjectModel) => void;
+  updateProjectAnalysisSettings: (updater: (settings: Pick<ProjectSettings, 'analysisMode' | 'pDeltaConfig'>) => Pick<ProjectSettings, 'analysisMode' | 'pDeltaConfig'>) => void;
   beginProjectTransaction: (description?: string) => void;
   updateProjectTransient: (updater: (project: ProjectModel) => ProjectModel) => void;
   moveNodeTransient: (nodeId: string, point: { x: number; y: number }) => void;

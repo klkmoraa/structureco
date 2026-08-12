@@ -389,6 +389,23 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setProject(next);
   }, []);
 
+  const updateProjectAnalysisSettings = useCallback((updater: (settings: Pick<ProjectModel['settings'], 'analysisMode' | 'pDeltaConfig'>) => Pick<ProjectModel['settings'], 'analysisMode' | 'pDeltaConfig'>) => {
+    const current = projectRef.current;
+    const analysisSettings = {
+      analysisMode: current.settings.analysisMode,
+      pDeltaConfig: current.settings.pDeltaConfig,
+    };
+    const nextAnalysisSettings = updater(structuredClone(analysisSettings));
+    const next = {
+      ...current,
+      settings: { ...current.settings, ...nextAnalysisSettings },
+    };
+    if (JSON.stringify(next) === JSON.stringify(current)) return;
+    invalidateAnalysis();
+    projectRef.current = next;
+    setProject(next);
+  }, [invalidateAnalysis]);
+
   const beginProjectTransaction = useCallback((description = 'Editar proyecto') => {
     if (transactionStartRef.current) return;
     transactionStartRef.current = structuredClone(projectRef.current);
@@ -490,9 +507,9 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     canRedo: future.length > 0,
     storageIssue: storageState.issue,
     storageMessage: storageState.message,
-    renameProject, executeProjectCommand, updateProject, updateProjectView, beginProjectTransaction, updateProjectTransient,
+    renameProject, executeProjectCommand, updateProject, updateProjectView, updateProjectAnalysisSettings, beginProjectTransaction, updateProjectTransient,
     moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo,
-  }), [project, past.length, future.length, storageState.issue, storageState.message, renameProject, executeProjectCommand, updateProject, updateProjectView, beginProjectTransaction, updateProjectTransient, moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo]);
+  }), [project, past.length, future.length, storageState.issue, storageState.message, renameProject, executeProjectCommand, updateProject, updateProjectView, updateProjectAnalysisSettings, beginProjectTransaction, updateProjectTransient, moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo]);
 
   const analysisValue = useMemo<ProjectAnalysisContextValue>(() => ({
     analysis, isAnalyzing, selectedCombinationId, learningFocus, influenceCanvasState,

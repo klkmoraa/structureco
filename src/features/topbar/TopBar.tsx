@@ -67,6 +67,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     storageMessage,
     renameProject,
     updateProjectView,
+    updateProjectAnalysisSettings,
     replaceProject,
     setTheme,
     setResultTab,
@@ -378,7 +379,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
             className="compact-select analysis-order-select"
             aria-label={t('analysis.order')}
             value={project.settings.analysisMode ?? 'first-order'}
-            onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, analysisMode: event.target.value as 'first-order' | 'p-delta' } }))}
+            onChange={(event) => updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: event.target.value as 'first-order' | 'p-delta' }))}
           >
             <option value="first-order">{t('analysis.orderFirst')}</option>
             <option value="p-delta">{t('analysis.orderPDelta')}</option>
@@ -467,7 +468,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
                   <div className="menu-section-title">{t('menu.sectionAnalysis')}</div>
                   <label className="mobile-menu-field overflow-case"><span>{t('analysis.caseOrCombination')}</span><select value={selectedCombinationId} onChange={(event) => setSelectedCombinationId(event.target.value)}><option value="">{t('analysis.activeCases')}</option>{project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}</select></label>
                   <label className="mobile-menu-field overflow-mode"><span>{t('analysis.mode')}</span><select value={project.settings.calculationMode ?? 'complete'} onChange={(event) => { updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } })); setShowMobileMenu(false); }}><option value="classroom">{t('analysis.modeClassroom')}</option><option value="complete">{t('analysis.modeComplete')}</option></select></label>
-                  <label className="mobile-menu-field overflow-analysis-order"><span>{t('analysis.order')}</span><select value={project.settings.analysisMode ?? 'first-order'} onChange={(event) => { updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, analysisMode: event.target.value as 'first-order' | 'p-delta' } })); setShowMobileMenu(false); }}><option value="first-order">{t('analysis.orderFirst')}</option><option value="p-delta">{t('analysis.orderPDelta')}</option></select></label>
+                  <label className="mobile-menu-field overflow-analysis-order"><span>{t('analysis.order')}</span><select value={project.settings.analysisMode ?? 'first-order'} onChange={(event) => { updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: event.target.value as 'first-order' | 'p-delta' })); setShowMobileMenu(false); }}><option value="first-order">{t('analysis.orderFirst')}</option><option value="p-delta">{t('analysis.orderPDelta')}</option></select></label>
                   {(project.settings.analysisMode ?? 'first-order') === 'p-delta' ? <PDeltaAdvancedConfig /> : null}
                 </div>
 
@@ -550,14 +551,14 @@ const PDELTA_FIELDS: Array<{ key: keyof PDeltaConfig; labelKey: TranslationKey; 
 ];
 
 const PDeltaAdvancedConfig = () => {
-  const { project, updateProjectView } = useProject();
+  const { project, updateProjectAnalysisSettings } = useProject();
   const { t } = useI18n();
   const config = { ...DEFAULT_PDELTA_CONFIG, ...project.settings.pDeltaConfig };
   const setField = (key: keyof PDeltaConfig, value: number) => {
     if (!Number.isFinite(value)) return;
-    updateProjectView((draft) => ({
-      ...draft,
-      settings: { ...draft.settings, pDeltaConfig: { ...draft.settings.pDeltaConfig, [key]: value } },
+    updateProjectAnalysisSettings((settings) => ({
+      ...settings,
+      pDeltaConfig: { ...settings.pDeltaConfig, [key]: value },
     }));
   };
   return (

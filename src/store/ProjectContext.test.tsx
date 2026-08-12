@@ -52,6 +52,44 @@ const DirectHistoryHarness = () => {
   return <><output aria-label="node-count">{project.nodes.length}</output><output aria-label="direct-can-undo">{String(canUndo)}</output><button onClick={() => updateProject((draft) => { draft.nodes.push({ id: `N${draft.nodes.length + 1}`, x: 9, y: 9, support: { type: 'none' } }); return draft; })}>add-direct</button><button onClick={undo}>undo-direct</button></>;
 };
 
+const AnalysisSettingsHarness = () => {
+  const {
+    project,
+    analysis,
+    isAnalyzing,
+    canUndo,
+    canRedo,
+    analyze,
+    updateProject,
+    updateProjectAnalysisSettings,
+    updateProjectView,
+    undo,
+    redo,
+  } = useProject();
+  return <>
+    <output aria-label="settings-analysis-state">{analysis ? (analysis.success ? 'success' : 'failed') : 'none'}</output>
+    <output aria-label="settings-is-analyzing">{String(isAnalyzing)}</output>
+    <output aria-label="settings-analysis-mode">{project.settings.analysisMode ?? 'first-order'}</output>
+    <output aria-label="settings-max-load-steps">{project.settings.pDeltaConfig?.maxLoadSteps ?? ''}</output>
+    <output aria-label="settings-project-name">{project.name}</output>
+    <output aria-label="settings-can-undo">{String(canUndo)}</output>
+    <output aria-label="settings-can-redo">{String(canRedo)}</output>
+    <button onClick={analyze}>settings-analyze</button>
+    <button onClick={() => updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: 'p-delta' }))}>settings-p-delta</button>
+    <button onClick={() => updateProjectAnalysisSettings((settings) => ({
+      ...settings,
+      pDeltaConfig: { ...settings.pDeltaConfig, maxLoadSteps: 17 },
+    }))}>settings-p-delta-steps</button>
+    <button onClick={() => updateProjectView((draft) => ({
+      ...draft,
+      settings: { ...draft.settings, units: 'N-mm' },
+    }))}>settings-view-preference</button>
+    <button onClick={() => updateProject((draft) => ({ ...draft, name: 'Proyecto editado' }))}>settings-edit</button>
+    <button onClick={undo}>settings-undo</button>
+    <button onClick={redo}>settings-redo</button>
+  </>;
+};
+
 const CommandHistoryHarness = () => {
   const { project, canUndo, canRedo, executeProjectCommand, undo, redo } = useProject();
   const createMember = async () => {
@@ -176,5 +214,98 @@ describe('ProjectContext analysis lifecycle', () => {
     expect(screen.getByLabelText('analysis-node-count').textContent).toBe('4');
     expect(screen.getByLabelText('analysis-member-count').textContent).toBe('1');
     expect(screen.getByLabelText('analysis-state').textContent).toBe('none');
+  });
+});
+
+describe('ProjectContext analysis settings lifecycle', () => {
+  const renderSettingsHarness = () => {
+    localStorage.setItem('structureCo.project', JSON.stringify(createDefaultProject()));
+    render(<ProjectProvider><AnalysisSettingsHarness /></ProjectProvider>);
+  };
+
+  const analyzeSuccessfully = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByText('settings-analyze'));
+    await waitFor(() => expect(screen.getByLabelText('settings-analysis-state').textContent).toBe('success'));
+  };
+
+  it('clears a successful result when analysis mode changes', async () => {
+    const user = userEvent.setup();
+    renderSettingsHarness();
+    await analyzeSuccessfully(user);
+
+    await user.click(screen.getByText('settings-p-delta'));
+
+    expect(screen.getByLabelText('settings-analysis-mode').textContent).toBe('p-delta');
+    expect(screen.getByLabelText('settings-analysis-state').textContent).toBe('none');
+  });
+
+  it('clears a successful result when a P-Delta parameter changes', async () => {
+    const user = userEvent.setup();
+    renderSettingsHarness();
+    await analyzeSuccessfully(user);
+
+    await user.click(screen.getByText('settings-p-delta-steps'));
+
+    expect(screen.getByLabelText('settings-max-load-steps').textContent).toBe('17');
+    expect(screen.getByLabelText('settings-analysis-state').textContent).toBe('none');
+  });
+
+  it('never publishes an in-flight result after analysis settings change', async () => {
+    const user = userEvent.setup();
+    const OriginalWorker = globalThis.Worker;
+    class DelayedWorker {
+      onmessage: ((event: MessageEvent) => void) | null = null;
+      onerror: (() => void) | null = null;
+      postMessage(request: { requestId: number }) {
+        window.setTimeout(() => this.onmessage?.({ data: {
+          type: 'analysis-result',
+          requestId: request.requestId,
+          result: { success: false, issues: [] },
+        } } as MessageEvent), 25);
+      }
+      terminate() {}
+    }
+    Object.defineProperty(globalThis, 'Worker', { configurable: true, value: DelayedWorker });
+    try {
+      renderSettingsHarness();
+      await user.click(screen.getByText('settings-analyze'));
+      expect(screen.getByLabelText('settings-is-analyzing').textContent).toBe('true');
+
+      await user.click(screen.getByText('settings-p-delta'));
+      await new Promise((resolve) => window.setTimeout(resolve, 60));
+
+      expect(screen.getByLabelText('settings-analysis-state').textContent).toBe('none');
+      expect(screen.getByLabelText('settings-is-analyzing').textContent).toBe('false');
+    } finally {
+      Object.defineProperty(globalThis, 'Worker', { configurable: true, value: OriginalWorker });
+    }
+  });
+
+  it('keeps a valid result for a purely visual preference change', async () => {
+    const user = userEvent.setup();
+    renderSettingsHarness();
+    await analyzeSuccessfully(user);
+
+    await user.click(screen.getByText('settings-view-preference'));
+
+    expect(screen.getByLabelText('settings-analysis-state').textContent).toBe('success');
+  });
+
+  it('keeps the existing undo and redo contract for analysis settings changes', async () => {
+    const user = userEvent.setup();
+    renderSettingsHarness();
+
+    await user.click(screen.getByText('settings-edit'));
+    await user.click(screen.getByText('settings-p-delta'));
+    expect(screen.getByLabelText('settings-can-undo').textContent).toBe('true');
+
+    await user.click(screen.getByText('settings-undo'));
+    expect(screen.getByLabelText('settings-project-name').textContent).not.toBe('Proyecto editado');
+    expect(screen.getByLabelText('settings-analysis-mode').textContent).toBe('first-order');
+    expect(screen.getByLabelText('settings-can-redo').textContent).toBe('true');
+
+    await user.click(screen.getByText('settings-redo'));
+    expect(screen.getByLabelText('settings-project-name').textContent).toBe('Proyecto editado');
+    expect(screen.getByLabelText('settings-analysis-mode').textContent).toBe('p-delta');
   });
 });
