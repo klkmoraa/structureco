@@ -1,5 +1,7 @@
 # Identidad de materiales y secciones en Model v6
 
+**Clasificación:** `CANONICAL`
+
 Model v6 añade identidad explícita y procedencia a cada `MemberModel` 2D sin cambiar las propiedades numéricas que consume el motor.
 
 ## Contrato del miembro

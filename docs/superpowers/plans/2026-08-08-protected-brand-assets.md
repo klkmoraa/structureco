@@ -1,5 +1,9 @@
 # Protected Brand Assets Implementation Plan
 
+> **HISTORICAL** — Plan de ejecución conservado. La autoridad vigente de identidad visual está en [brand/README.md](../../../brand/README.md).
+
+**Clasificación:** `HISTORICAL`
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add the approved Clay brandbook and logo to a protected, hash-verifiable `brand/` directory and publish the change to `origin/main`.

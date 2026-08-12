@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-08-10 23:51
 **Agente:** Codex
-**Rama:** main
+**Rama:** `codex/cri-34-material-section-identity` (integrada sobre `origin/main` `17e56536bf3b9e2709e4058311681aa4099a778c`)
 
 ## Qué cambió
 
@@ -65,28 +65,27 @@ Persistencia local, IndexedDB, JSON interno y paquetes `.structureco` conservan 
 ## Cómo verificar
 
 - `npx.cmd vitest run <10 archivos focalizados> --maxWorkers=1 --reporter=verbose` — PASS, 10 archivos / 89 tests.
+- `npm.cmd run verify:docs` — PASS, 15 documentos clasificados; `docs/README.md` y `reports/README.md` presentes.
 - `npm.cmd run typecheck` — PASS.
 - `npm.cmd run verify:protected` — PASS, 29 archivos.
 - `npm.cmd run verify:space3d` — PASS, 20 archivos / 212 tests; 5 omitidos; capacidad 150 nudos / 300 barras.
 - `npm.cmd run validate:ci` — PASS, 2 workflows.
 - `npm.cmd run build` — PASS; advertencia no bloqueante de chunks mayores a 500 kB.
-- `npm.cmd test -- --maxWorkers=1` — PASS, 144 archivos / 1082 tests; 8 omitidos.
+- `npm.cmd exec vitest -- run --maxWorkers=1` — PASS, 144 archivos / 1082 tests; 8 omitidos.
 - `npm.cmd run verify:perf` — PASS, 769910 bytes / 201477 gzip; presupuesto sin techo bloqueante.
 - `git diff --check` — PASS.
 - Barrido `rg` de comparaciones E/G/densidad/A/I contra catálogos — sin reverse-inference en producción; sólo quedan búsquedas por ID.
-- `verify:docs` — NO EXISTE en `package.json`; no se inventó un comando sustituto.
-- `npm.cmd run verify` — NO PASA en dos intentos por timeouts intermitentes de 5 s en dos tests distintos y ajenos de `Space3DWorkspace.test.tsx`. Ambos casos pasaron aislados en 1.182 s y 1.913 s; la suite completa pasó con un worker. No se cambiaron tests, timeouts ni Space3D para ocultar el flake.
-
-El lint dentro de `verify` terminó con exit 0 y dos advertencias `react(only-export-components)` en el prototipo iOS preexistente.
+- `npm.cmd run verify` — NO PASA únicamente por timeouts intermitentes de 5 s en `crea una barra eligiendo extremos existentes` e `informa un mecanismo sin perder el modelo` de `Space3DWorkspace.test.tsx`; 1080 pruebas sí pasaron. Ambos casos pasaron aislados y la suite completa serial pasó. No se cambiaron tests, timeouts ni Space3D para ocultar el flake.
 
 ## Contexto de seguridad y Git
 
 - Respaldo previo: `C:\Users\crisd\AppData\Local\Temp\structureco-cri34-resume-20260810-233335`.
 - Versión de paquete: 0.8.2; no se actualizaron dependencias.
-- `main` ya estaba divergida antes de CRI-34: un commit local por delante y tres remotos por detrás. No se ejecutó pull, push, merge ni rebase.
-- Las skills locales `structureco-project-guardian`, `structureco-engine-safety`, `structureco-documentation-handoff` y `structureco-release-certification` no estaban instaladas; se aplicaron directamente sus reglas de `AGENTS.md` mediante respaldo, hashes, baseline protegida, prueba de invariancia, documentación y gates.
+- La integración se realizó en un worktree aislado creado desde el `origin/main` actual, sin hacer pull, reset, clean, stash ni checkout sobre el checkout principal.
+- El commit final se publicó en `origin/codex/cri-34-material-section-identity` como `43b72cd64608ed2c3c04933113c261aa59e6ce56`; no se abrió PR ni se hizo merge.
+- La rama remota queda un commit por delante y cero por detrás de `origin/main`.
 
 ## Pendiente / siguiente paso
 
 - Fuera de CRI-34: estabilizar el timeout paralelo de `Space3DWorkspace.test.tsx` para que el wrapper `npm run verify` sea determinista.
-- Antes de cualquier publicación futura: resolver conscientemente la divergencia de `main`. Este trabajo queda en un commit local y sin push, como se solicitó.
+- CRI-34 queda publicado únicamente en su rama remota; no hay PR ni merge pendiente ejecutado por esta tarea.

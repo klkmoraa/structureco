@@ -1,5 +1,7 @@
 # Space 3D · S3D-1 (experimental funcional)
 
+**Clasificación:** `CANONICAL`
+
 Estado a 2026-08-10. Este documento describe lo que S3D-1 **es** y, con el
 mismo detalle, lo que **no** es. Ningún estado de aquí se afirma sin una
 ejecución que lo respalde.

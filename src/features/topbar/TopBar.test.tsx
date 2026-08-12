@@ -56,12 +56,9 @@ describe('TopBar portable export', () => {
     expect(onOpenSpace3D).toHaveBeenCalledOnce();
   });
 
-  it('keeps every top bar zone inside its own column, without overlapping', () => {
+  it('renders document, context, and actions as ordered top bar zones', () => {
     render(<TopBarHarness><TopBar onOpenSpace3D={() => {}} /></TopBarHarness>);
     const bar = document.querySelector('.topbar')!;
-    // Las tres zonas deben ser hermanas en la misma rejilla y no compartir celda:
-    // la del medio es la única que puede encogerse, y la de acciones nunca se
-    // queda sin ancho propio.
     const zones = [...bar.querySelectorAll('[data-topbar-zone]')].map((zone) => zone.getAttribute('data-topbar-zone'));
     expect(zones).toEqual(['document', 'context', 'actions']);
     const styles = getComputedStyle(bar.querySelector('[data-topbar-zone="actions"]')!);

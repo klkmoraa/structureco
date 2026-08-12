@@ -1,5 +1,9 @@
 # Space 3D Functional Implementation Plan
 
+> **HISTORICAL** — Plan de ejecución conservado. El contrato vigente está en [Space 3D · S3D-1](../../architecture/structureco-space-3d-s3d1.md).
+
+**Clasificación:** `HISTORICAL`
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Entregar S3D-1 end-to-end: crear, editar, analizar, visualizar, guardar y reabrir un marco espacial elástico lineal con seis GDL, sin alterar el dominio 2D.
