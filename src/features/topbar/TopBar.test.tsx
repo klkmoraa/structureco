@@ -66,6 +66,10 @@ describe('TopBar portable export', () => {
     expect(zones).toEqual(['document', 'context', 'actions']);
     const styles = getComputedStyle(bar.querySelector('[data-topbar-zone="actions"]')!);
     expect(styles.minWidth).not.toBe('0px');
+    expect(bar.querySelector('[data-topbar-cluster="document"]')).not.toBeNull();
+    expect(bar.querySelector('[data-topbar-cluster="context"]')).not.toBeNull();
+    expect(bar.querySelector('[data-topbar-cluster="actions"]')).not.toBeNull();
+    expect(bar.querySelectorAll('[data-context-control]')).toHaveLength(4);
   });
 
   it('localizes portable export, navigation, and built-in example presentation in English', async () => {

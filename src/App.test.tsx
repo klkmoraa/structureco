@@ -319,6 +319,23 @@ describe('structureCo app shell', () => {
     await waitFor(() => expect(container.querySelectorAll('.member-object').length).toBe(initial + 2));
   });
 
+  it('presents repeat as an accessible contextual canvas action', async () => {
+    const user = userEvent.setup();
+    const { container } = await renderExampleApp(user);
+    const member = container.querySelector('.member-object');
+    expect(member).toBeTruthy();
+
+    await user.click(member!);
+    const repeat = screen.getByRole('button', { name: /repetir/i });
+    expect(repeat.getAttribute('data-repeat-affordance')).toBe('available');
+    expect(repeat.getAttribute('aria-keyshortcuts')).toBe('R');
+
+    await user.click(repeat);
+    const preview = screen.getByRole('status', { name: /repetición preparada/i });
+    expect(preview.getAttribute('data-repeat-affordance')).toBe('active');
+    expect(within(preview).getByRole('button', { name: /cancelar colocación/i })).toBeTruthy();
+  });
+
   it('exposes canvas shortcuts and selects structural objects from the keyboard', async () => {
     const user = userEvent.setup();
     const { container } = await renderExampleApp(user);
