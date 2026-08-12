@@ -153,9 +153,109 @@ section:last-of-type{ border-bottom:none; }
 .icon-tile .ico{ color:var(--ink); }
 .icon-tile .name{ font-family:var(--font-mono); font-size:9.5px; color:var(--muted); letter-spacing:.02em; line-height:1.3; }
 
-.ico{ display:block; fill:none; stroke:currentColor; stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round; }
-.ico.dense{ stroke-width:2.3; }
-.ico.filled-dot{ fill:currentColor; }
+.ico{ display:block; fill:none; stroke:currentColor; stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round; }
+.ico.dense{ stroke-width:1.75; }
+
+/* ---------- aplicaciones ---------- */
+.apps-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:18px; align-items:start; }
+.app-demo{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r-md); padding:18px; }
+.app-demo > h4{ font-family:var(--font-mono); font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+.app-demo > p.dnote{ font-size:12px; color:var(--muted); margin-bottom:14px; line-height:1.45; }
+.demo-stage{ --ico-bg:var(--surface-2); background:var(--surface-2); border-radius:var(--r-sm); padding:12px; }
+
+/* tool rail */
+.demo-rail{ width:164px; display:flex; flex-direction:column; gap:2px; }
+.demo-rail.compact{ width:76px; align-items:stretch; }
+.rail-group{ font-family:var(--font-mono); font-size:8.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); padding:9px 11px 5px; }
+.rail-btn{ --ico-bg:var(--surface-2); min-height:44px; border:0; background:transparent; border-radius:8px; display:grid; grid-template-columns:26px 1fr auto; align-items:center; gap:8px; text-align:left; padding:0 10px; color:var(--ink); width:100%; font-family:inherit; cursor:pointer; }
+.rail-btn span{ font-size:12.5px; }
+.rail-btn kbd{ font-family:var(--font-mono); font-size:9.5px; color:var(--muted); }
+.rail-btn:hover{ background:var(--surface); }
+.rail-btn.active{ --ico-bg:var(--brand-soft); color:var(--brand); background:var(--brand-soft); }
+.rail-btn.active kbd{ color:var(--brand); }
+.rail-btn.destructive{ color:var(--error); }
+.demo-rail.compact .rail-btn{ grid-template-columns:1fr; justify-items:center; padding:0; min-height:52px; gap:4px; }
+.demo-rail.compact .rail-btn span{ font-size:8.5px; font-family:var(--font-mono); letter-spacing:.02em; }
+.demo-rail.compact .rail-btn kbd{ display:none; }
+
+/* topbar fragment */
+.demo-topbar{ --ico-bg:var(--surface); min-height:56px; background:var(--surface); border-radius:var(--r-sm); display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border-soft); flex-wrap:wrap; }
+.demo-cmd{ display:flex; align-items:center; gap:7px; height:34px; padding:0 11px; border-radius:var(--r-pill); background:var(--surface-2); color:var(--muted); font-size:12px; white-space:nowrap; flex:none; }
+.demo-cmd kbd{ font-family:var(--font-mono); font-size:9px; background:var(--surface); padding:2px 5px; border-radius:4px; }
+.demo-iconbtn{ --ico-bg:var(--surface); width:34px; height:34px; border-radius:9px; display:grid; place-items:center; background:var(--surface-2); color:var(--ink); border:0; cursor:pointer; }
+.demo-iconbtn.solve{ background:var(--brand); color:var(--brand-ink); --ico-bg:var(--brand); width:auto; padding:0 13px; gap:7px; grid-auto-flow:column; font-size:12.5px; font-weight:600; font-family:inherit; }
+
+/* status chips */
+.chip-row{ display:flex; flex-wrap:wrap; gap:8px; }
+.status-chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 11px 6px 8px; border-radius:var(--r-pill); font-size:11.5px; font-weight:600; border:1px solid; background:var(--surface); }
+.status-chip small{ font-family:var(--font-mono); font-size:9px; font-weight:400; opacity:.75; }
+
+/* result tabs */
+.demo-tabs{ display:flex; gap:3px; background:var(--surface); border-radius:var(--r-pill); padding:3px; border:1px solid var(--border-soft); width:max-content; max-width:100%; flex-wrap:wrap; }
+.demo-tab{ --ico-bg:var(--surface); display:flex; align-items:center; gap:6px; padding:7px 13px; border-radius:var(--r-pill); font-size:12px; font-weight:600; color:var(--muted); border:0; background:transparent; cursor:pointer; font-family:inherit; }
+.demo-tab.active{ background:var(--surface-2); }
+
+/* inspector rows */
+.demo-inspector{ --ico-bg:var(--surface); background:var(--surface); border-radius:var(--r-sm); border:1px solid var(--border-soft); overflow:hidden; }
+.insp-row{ display:grid; grid-template-columns:24px 1fr auto; align-items:center; gap:10px; padding:11px 13px; border-bottom:1px solid var(--border-soft); }
+.insp-row:last-child{ border-bottom:none; }
+.insp-row .k{ font-size:12.5px; }
+.insp-row .v{ font-family:var(--font-mono); font-size:11.5px; color:var(--muted); text-align:right; }
+
+/* aula stepper */
+.aula-steps{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+.aula-step{ --ico-bg:var(--surface); display:flex; flex-direction:column; align-items:center; gap:5px; padding:9px 10px; border-radius:var(--r-sm); background:var(--surface); color:var(--muted); min-width:62px; border:1px solid var(--border-soft); }
+.aula-step.done{ color:var(--aula); }
+.aula-step.current{ --ico-bg:var(--aula); background:var(--aula); color:var(--aula-ink); border-color:var(--aula); }
+.aula-step span{ font-family:var(--font-mono); font-size:8.5px; letter-spacing:.03em; }
+.aula-sep{ width:12px; height:1px; background:var(--border); flex:none; }
+
+/* mobile dock */
+.demo-dock{ --ico-bg:var(--surface); display:flex; background:var(--surface); border-radius:var(--r-lg); padding:7px; gap:2px; box-shadow:var(--shadow-clay-xs); width:max-content; max-width:100%; }
+.dock-btn{ --ico-bg:var(--surface); display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 12px; border-radius:14px; color:var(--muted); background:transparent; border:0; font-family:inherit; cursor:pointer; }
+.dock-btn span{ font-family:var(--font-mono); font-size:8px; }
+.dock-btn.active{ --ico-bg:var(--brand-soft); background:var(--brand-soft); color:var(--brand); }
+
+/* ---------- réplica de interfaz ---------- */
+.replica-frame{ border:1px solid var(--border); border-radius:var(--r-md); overflow:hidden; background:var(--bg); box-shadow:var(--shadow-clay-sm); }
+.replica-scroll{ overflow-x:auto; }
+.replica{ min-width:1080px; display:flex; flex-direction:column; height:660px; background:var(--bg); }
+.rep-topbar{ --ico-bg:var(--surface); height:68px; flex:0 0 68px; display:grid; grid-template-columns:minmax(220px,1fr) minmax(0,auto) max-content; align-items:center; gap:16px; padding:0 18px; background:var(--surface); }
+.rep-brand{ display:flex; align-items:center; gap:11px; min-width:0; }
+.rep-brand .bm{ width:38px; height:38px; border-radius:11px; display:grid; place-items:center; background:var(--surface-2); color:var(--brand); flex:none; }
+.rep-ident{ display:flex; flex-direction:column; min-width:0; }
+.rep-ident .bn{ font-family:var(--font-mono); font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+.rep-ident .pn{ font-size:14.5px; font-weight:600; letter-spacing:-.01em; display:flex; align-items:center; gap:5px; }
+.rep-save{ display:inline-flex; align-items:center; gap:5px; margin-left:12px; font-family:var(--font-mono); font-size:9.5px; color:var(--success); flex:none; }
+.rep-ctx{ display:flex; gap:5px; justify-self:center; min-width:0; }
+.rep-sel{ height:32px; display:flex; align-items:center; gap:6px; padding:0 11px; border-radius:9px; background:var(--surface-2); font-size:11.5px; color:var(--ink); white-space:nowrap; }
+.rep-sel .cv{ font-family:var(--font-mono); font-size:10px; color:var(--muted); }
+.rep-actions{ display:flex; align-items:center; gap:7px; justify-self:end; }
+.rep-body{ flex:1; display:flex; min-height:0; gap:0; padding:0 18px 18px; }
+.rep-rail{ width:164px; flex:none; background:var(--surface); border-radius:var(--r-md); padding:10px 8px; display:flex; flex-direction:column; gap:1px; overflow:hidden; }
+.rep-stage{ flex:1; min-width:0; margin:0 14px; border-radius:var(--r-md); position:relative; overflow:hidden; border:1px solid var(--border-soft);
+  background-color:var(--canvas-bg);
+  background-image:linear-gradient(to right, var(--canvas-grid) 1px, transparent 1px), linear-gradient(to bottom, var(--canvas-grid) 1px, transparent 1px);
+  background-size:34px 34px; }
+.rep-stage svg{ display:block; width:100%; height:100%; }
+.rep-stage-chrome{ position:absolute; left:12px; bottom:12px; display:flex; gap:6px; }
+.rep-stage-tabs{ position:absolute; right:12px; top:12px; }
+.rep-insp{ width:320px; flex:none; background:var(--surface); border-radius:var(--r-md); overflow:hidden; display:flex; flex-direction:column; }
+.rep-insp-head{ padding:14px 16px 12px; border-bottom:1px solid var(--border-soft); display:flex; align-items:center; gap:9px; --ico-bg:var(--surface); }
+.rep-insp-head h5{ font-size:14px; font-weight:700; letter-spacing:-.01em; }
+.rep-insp-head .sel-kind{ font-family:var(--font-mono); font-size:9px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); display:block; margin-top:2px; }
+.rep-insp-body{ flex:1; overflow:hidden; --ico-bg:var(--surface); padding-bottom:6px; }
+.rep-sub{ font-family:var(--font-mono); font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding:10px 16px 4px; }
+.rep-field{ display:grid; grid-template-columns:22px 1fr auto; align-items:center; gap:9px; padding:7px 16px; }
+.rep-field .k{ font-size:12.5px; }
+.rep-field .v{ font-family:var(--font-mono); font-size:11.5px; color:var(--muted); }
+.rep-res{ margin:6px 16px 0; padding:10px 12px; border-radius:var(--r-sm); background:var(--surface-2); }
+.rep-res-row{ display:flex; align-items:center; gap:8px; padding:4px 0; --ico-bg:var(--surface-2); }
+.rep-res-row .lbl{ font-size:11.5px; flex:1; }
+.rep-res-row .val{ font-family:var(--font-mono); font-size:12px; font-weight:600; }
+:root{ --canvas-bg:#fffdf9; --canvas-grid:#e8e1d7; --canvas-grid-strong:#d9d0c4; --canvas-member:#23312c; --canvas-node:#fffdf9; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --canvas-bg:#0d161b; --canvas-grid:#1e3038; --canvas-grid-strong:#294049; --canvas-member:#e8f0ee; --canvas-node:#0d161b; } }
+:root[data-theme="dark"]{ --canvas-bg:#0d161b; --canvas-grid:#1e3038; --canvas-grid-strong:#294049; --canvas-member:#e8f0ee; --canvas-node:#0d161b; }
 
 /* ---------- variant strips ---------- */
 .variant-scroll{ overflow-x:auto; border-radius:var(--r-md); }
@@ -220,6 +320,8 @@ footer p{ font-family:var(--font-mono); font-size:10.5px; color:var(--muted); }
       <a href="#color">Color</a>
       <a href="#familia">Familia</a>
       <a href="#variantes">Variantes</a>
+      <a href="#aplicaciones">Aplicaciones</a>
+      <a href="#interfaz">Interfaz</a>
       <a href="#exploracion">Exploración</a>
     </nav>
     <div class="theme-toggle" role="group" aria-label="Tema">
@@ -238,7 +340,7 @@ footer p{ font-family:var(--font-mono); font-size:10.5px; color:var(--muted); }
       <p class="lead">Una gramática propia para el glyph que vive dentro de botones, toolbars y paneles — no un rediseño de esos contenedores. 51 iconos, una sola familia visual, legible desde 16px.</p>
       <div class="hero-meta">
         <div><span>Grid</span><strong>24 × 24</strong></div>
-        <div><span>Stroke</span><strong>1.75 / 2.3 dense</strong></div>
+        <div><span>Stroke</span><strong>1.4 / 1.75 dense</strong></div>
         <div><span>Terminales</span><strong>Round cap · round join</strong></div>
         <div><span>Firma</span><strong>Socket punch</strong></div>
         <div><span>Óptico mínimo</span><strong>16px</strong></div>
@@ -345,11 +447,33 @@ footer p{ font-family:var(--font-mono); font-size:10.5px; color:var(--muted); }
     </div>
   </section>
 
+  <section id="aplicaciones">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Aplicaciones</h2>
+        <span class="index">07 · El glyph en su sitio</span>
+      </div>
+      <p class="section-sub">Los mismos glyphs dentro de los controles que ya existen en el producto — tool rail, topbar, inspector, tabs de resultados, chips de estado, stepper de Aula y dock móvil. Los contenedores son los de StructureCo, sin rediseñar: lo único nuevo es lo que hay dentro.</p>
+      <div id="apps-container" class="apps-grid" style="margin-top:24px;"></div>
+    </div>
+  </section>
+
+  <section id="interfaz">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>Réplica de la interfaz</h2>
+        <span class="index">08 · Workspace completo</span>
+      </div>
+      <p class="section-sub">El editor de StructureCo con la iconografía nueva: topbar 68px, tool rail 164px, canvas y inspector 320px — las medidas reales de <code>tokens.css</code>. Nótese que el canvas dibuja los apoyos con la misma gramática que los iconos: el símbolo del apoyo en la barra de herramientas y el del modelo son el mismo dibujo a distinta escala.</p>
+      <div id="replica-container" style="margin-top:24px;"></div>
+    </div>
+  </section>
+
   <section id="exploracion">
     <div class="wrap">
       <div class="section-head">
         <h2>Exploración ampliada</h2>
-        <span class="index">07 · 14 iconos críticos · 3 alternativas c/u</span>
+        <span class="index">09 · 14 iconos críticos · 3 alternativas c/u</span>
       </div>
       <p class="section-sub">Node, Member, Pin, Roller, Fixed, Point load, Distributed load, Moment, Cut, Split, N, V, M y Deformed — antes de fijar versión definitiva. La opción marcada es la recomendación de este estudio.</p>
       <div id="explore-container" style="margin-top:26px;"></div>
@@ -365,169 +489,174 @@ footer p{ font-family:var(--font-mono); font-size:10.5px; color:var(--muted); }
 
 <script>
 /* ============================================================
-   StructureCo Icon System — glyph library
-   24x24 viewBox, round caps/joins, "socket punch" signature
-   (--ico-bg fills the ring at connection points so it reads as
-   a punched joint against whatever surface the tile sits on).
+   StructureCo Icon System — glyph library  ·  v2 (trazo fino)
+   24x24 viewBox · stroke 1.4 regular / 1.75 dense (16px)
+   round cap + round join · firma "socket punch"
+   (--ico-bg rellena el anillo en los puntos de conexión para que
+   se lea como junta perforada sobre la superficie que lo soporta).
+
+   v2: todo el trazo bajó de 1.75 → 1.4. Con menos peso el dibujo
+   admite más precisión: cabezas de flecha más esbeltas, puntos
+   sólidos más pequeños, tramas de suelo más finas.
    ============================================================ */
 
 const ICO = {
   /* ---------------- Navegación ---------------- */
-  select: `<path d="M6 4 6 17.5 9.4 14.6 12.6 20.2 14.7 19.1 11.6 13.6 17 12.7Z" fill="var(--ico-bg)"/>`,
-  pan: `<circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>
-    <path d="M12 4.6v3.1M12 16.3v3.1M4.6 12h3.1M16.3 12h3.1"/>
-    <path d="m10.3 6.3 1.7-1.9 1.7 1.9M10.3 17.7l1.7 1.9 1.7-1.9M6.3 13.7l-1.9-1.7 1.9-1.7M17.7 13.7l1.9-1.7-1.9-1.7"/>`,
+  select: `<path d="M6.4 3.8 6.4 17.2 9.7 14.3 12.7 19.9 14.9 18.8 11.9 13.3 17.1 12.5Z" fill="var(--ico-bg)"/>`,
+  pan: `<circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/>
+    <path d="M12 4.8v3M12 16.2v3M4.8 12h3M16.2 12h3"/>
+    <path d="m10.4 6.4 1.6-1.9 1.6 1.9M10.4 17.6l1.6 1.9 1.6-1.9M6.4 13.6l-1.9-1.6 1.9-1.6M17.6 13.6l1.9-1.6-1.9-1.6"/>`,
 
   /* ---------------- Geometría ---------------- */
-  node: `<circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/>`,
-  member: `<line x1="5.5" y1="17.8" x2="18.5" y2="6.2"/><circle cx="5.5" cy="17.8" r="2.3" fill="var(--ico-bg)"/><circle cx="18.5" cy="6.2" r="2.3" fill="var(--ico-bg)"/>`,
-  dimension: `<path d="M4.6 6v12M19.4 6v12"/><path d="M6.2 12h11.6"/><path d="M9.4 9.2 6.2 12l3.2 2.8M14.6 9.2 17.8 12l-3.2 2.8"/>`,
+  node: `<circle cx="12" cy="12" r="5.1"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/>`,
+  member: `<line x1="5.8" y1="17.6" x2="18.2" y2="6.4"/><circle cx="5.8" cy="17.6" r="2.05" fill="var(--ico-bg)"/><circle cx="18.2" cy="6.4" r="2.05" fill="var(--ico-bg)"/>`,
+  dimension: `<path d="M4.6 6.2v11.6M19.4 6.2v11.6"/><path d="M6.2 12h11.6"/><path d="M9.2 9.4 6.2 12l3 2.6M14.8 9.4 17.8 12l-3 2.6"/>`,
 
   /* ---------------- Apoyos ---------------- */
-  supportGeneral: `<path d="M12 6.6 6.6 16h10.8Z"/><path d="M4.8 16h14.4"/>`,
-  supportPin: `<circle cx="12" cy="5.2" r="1.7" fill="var(--ico-bg)"/><path d="M12 6.9 6.6 15.6h10.8Z"/><path d="M4.8 15.6h14.4"/><path d="M6.8 18.2 8.6 15.8M10.8 18.2 12.6 15.8M14.8 18.2 16.6 15.8"/>`,
-  supportRoller: `<path d="M12 6.6 7.4 13.4h9.2Z"/><circle cx="9.6" cy="15.3" r="1.5"/><circle cx="14.4" cy="15.3" r="1.5"/><path d="M4.8 17.6h14.4"/><path d="M6.8 20.2 8.6 17.8M10.8 20.2 12.6 17.8M14.8 20.2 16.6 17.8"/>`,
-  supportFixed: `<line x1="12" y1="3.8" x2="12" y2="10.2"/><rect x="5.2" y="10.2" width="13.6" height="3.2"/><path d="M6.4 13.4 4.4 16.4M9.2 13.4 7.2 16.4M12 13.4 10 16.4M14.8 13.4 12.8 16.4M17.6 13.4 15.6 16.4"/>`,
-  supportCustom: `<path d="M11 8.4 6.2 17h9.6Z"/><path d="M4.4 17h13.2"/><path d="M17.4 4.6v3.4M15.7 6.3h3.4"/>`,
+  supportGeneral: `<path d="M12 6.8 6.8 15.8h10.4Z"/><path d="M5 15.8h14"/>`,
+  supportPin: `<circle cx="12" cy="5.4" r="1.55" fill="var(--ico-bg)"/><path d="M12 6.95 6.9 15.5h10.2Z"/><path d="M5.1 15.5h13.8"/><path d="M7 17.9 8.7 15.7M10.9 17.9 12.6 15.7M14.8 17.9 16.5 15.7"/>`,
+  supportRoller: `<path d="M12 6.8 7.6 13.3h8.8Z"/><circle cx="9.7" cy="15.15" r="1.4"/><circle cx="14.3" cy="15.15" r="1.4"/><path d="M5.1 17.4h13.8"/><path d="M7 19.8 8.7 17.6M10.9 19.8 12.6 17.6M14.8 19.8 16.5 17.6"/>`,
+  supportFixed: `<line x1="12" y1="4" x2="12" y2="10.4"/><rect x="5.4" y="10.4" width="13.2" height="3" rx="0.5"/><path d="M6.5 13.4 4.7 16.2M9.2 13.4 7.4 16.2M11.9 13.4 10.1 16.2M14.6 13.4 12.8 16.2M17.3 13.4 15.5 16.2"/>`,
+  supportCustom: `<path d="M11 8.6 6.4 16.8h9.2Z"/><path d="M4.7 16.8h12.6"/><path d="M17.6 4.8v3.2M16 6.4h3.2"/>`,
 
   /* ---------------- Cargas ---------------- */
-  pointLoad: `<line x1="12" y1="3.6" x2="12" y2="13.2"/><polygon points="12,17.6 9.2,13 14.8,13"/><line x1="5" y1="17.6" x2="19" y2="17.6"/>`,
-  distributedLoad: `<line x1="4" y1="5.2" x2="20" y2="5.2"/><line x1="7.2" y1="5.2" x2="7.2" y2="14"/><line x1="12" y1="5.2" x2="12" y2="14"/><line x1="16.8" y1="5.2" x2="16.8" y2="14"/><polygon points="7.2,17.6 5.4,14 9,14"/><polygon points="12,17.6 10.2,14 13.8,14"/><polygon points="16.8,17.6 15,14 18.6,14"/><line x1="4" y1="17.6" x2="20" y2="17.6"/>`,
-  momentLoad: `<path d="M6.2 15.6A7 7 0 1 1 15.9 19" fill="none"/><polygon points="15.9,19 12.6,17.9 14.3,15.3"/>`,
-  fx: `<line x1="4.4" y1="9" x2="4.4" y2="15"/><line x1="4.4" y1="12" x2="16.6" y2="12"/><polygon points="19.6,12 15.6,9.6 15.6,14.4"/>`,
-  fy: `<line x1="9" y1="19.6" x2="15" y2="19.6"/><line x1="12" y1="19.6" x2="12" y2="7.4"/><polygon points="12,4.4 9.6,8.4 14.4,8.4"/>`,
-  mz: `<circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><path d="M12 6.4A5.6 5.6 0 1 1 7 9.4" fill="none"/><polygon points="7,9.4 6.5,6.3 9.4,7.7"/>`,
-  loadFrame: `<circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><line x1="12" y1="12" x2="12" y2="5" /><line x1="12" y1="12" x2="19" y2="12"/><line x1="12" y1="12" x2="7.2" y2="7.2" stroke-dasharray="1.6 2"/><line x1="12" y1="12" x2="16.8" y2="16.8" stroke-dasharray="1.6 2"/>`,
+  pointLoad: `<line x1="12" y1="3.8" x2="12" y2="13.4"/><polygon points="12,17.5 10,13.1 14,13.1"/><line x1="5.2" y1="17.5" x2="18.8" y2="17.5"/>`,
+  distributedLoad: `<line x1="4.2" y1="5.4" x2="19.8" y2="5.4"/><line x1="7.4" y1="5.4" x2="7.4" y2="13.9"/><line x1="12" y1="5.4" x2="12" y2="13.9"/><line x1="16.6" y1="5.4" x2="16.6" y2="13.9"/><polygon points="7.4,17.3 5.7,13.7 9.1,13.7"/><polygon points="12,17.3 10.3,13.7 13.7,13.7"/><polygon points="16.6,17.3 14.9,13.7 18.3,13.7"/><line x1="4.2" y1="17.3" x2="19.8" y2="17.3"/>`,
+  momentLoad: `<path d="M6.4 15.4A6.9 6.9 0 1 1 15.7 18.7" fill="none"/><polygon points="15.7,18.7 12.8,17.6 14.3,15.3"/>`,
+  fx: `<line x1="4.6" y1="9.2" x2="4.6" y2="14.8"/><line x1="4.6" y1="12" x2="16.4" y2="12"/><polygon points="19.4,12 15.8,9.9 15.8,14.1"/>`,
+  fy: `<line x1="9.2" y1="19.4" x2="14.8" y2="19.4"/><line x1="12" y1="19.4" x2="12" y2="7.6"/><polygon points="12,4.6 9.9,8.2 14.1,8.2"/>`,
+  mz: `<circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><path d="M12 6.5A5.5 5.5 0 1 1 7.2 9.3" fill="none"/><polygon points="7.2,9.3 6.8,6.5 9.4,7.7"/>`,
+  loadFrame: `<circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><line x1="12" y1="12" x2="12" y2="5.2" /><line x1="12" y1="12" x2="18.8" y2="12"/><line x1="12" y1="12" x2="7.4" y2="7.4" stroke-dasharray="1.4 1.8"/><line x1="12" y1="12" x2="16.6" y2="16.6" stroke-dasharray="1.4 1.8"/>`,
 
   /* ---------------- Topología ---------------- */
-  cut: `<line x1="3.4" y1="12" x2="8.4" y2="12"/><line x1="15.6" y1="12" x2="20.6" y2="12"/><path d="M8.4 12 9.8 9.4 11.6 14.2 13.4 9.4 15.6 12" fill="none"/>`,
-  split: `<line x1="3.6" y1="12" x2="20.4" y2="12"/><circle cx="12" cy="12" r="2.1" fill="var(--ico-bg)"/><path d="M12 7.6v2M12 14.4v2"/>`,
-  del: `<line x1="6.5" y1="15.5" x2="14" y2="8"/><circle cx="6.5" cy="15.5" r="1.8" fill="var(--ico-bg)"/><circle cx="14" cy="8" r="1.8" fill="var(--ico-bg)"/><path d="M15.6 15.6 20.4 20.4M20.4 15.6 15.6 20.4"/>`,
-  move: `<rect x="6" y="6" width="10" height="10" rx="1.5" stroke-dasharray="2.3 2.5"/><path d="M16 16 20.4 20.4"/><path d="M20.4 20.4h-3.6M20.4 20.4v-3.6"/>`,
-  duplicate: `<circle cx="9" cy="15" r="4.4"/><circle cx="9" cy="15" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="4.4"/><circle cx="15" cy="9" r="1.3" fill="currentColor" stroke="none"/>`,
-  repeat: `<path d="M7 8.4A6.2 6.2 0 1 1 6.4 15" fill="none"/><path d="M11.6 5.6 8.6 6.6 9 9.8"/><path d="M2.6 12.6 3.4 15.8 6.6 15"/>`,
-  undo: `<path d="M17 8A6.4 6.4 0 1 0 15.9 17.1" fill="none"/><path d="M18.6 15 15.9 17.1 14.4 14.1"/>`,
-  redo: `<path d="M7 8A6.4 6.4 0 1 1 8.1 17.1" fill="none"/><path d="M5.4 15 8.1 17.1 9.6 14.1"/>`,
+  cut: `<line x1="3.6" y1="12" x2="8.6" y2="12"/><line x1="15.4" y1="12" x2="20.4" y2="12"/><path d="M8.6 12 9.9 9.6 11.7 14 13.5 9.6 15.4 12" fill="none"/>`,
+  split: `<line x1="3.8" y1="12" x2="20.2" y2="12"/><circle cx="12" cy="12" r="1.95" fill="var(--ico-bg)"/><path d="M12 7.8v1.9M12 14.3v1.9"/>`,
+  del: `<line x1="6.6" y1="15.4" x2="13.9" y2="8.1"/><circle cx="6.6" cy="15.4" r="1.65" fill="var(--ico-bg)"/><circle cx="13.9" cy="8.1" r="1.65" fill="var(--ico-bg)"/><path d="M15.8 15.8 20.2 20.2M20.2 15.8 15.8 20.2"/>`,
+  move: `<rect x="6.2" y="6.2" width="9.6" height="9.6" rx="1.2" stroke-dasharray="2 2.2"/><path d="M15.8 15.8 20.2 20.2"/><path d="M20.2 20.2h-3.4M20.2 20.2v-3.4"/>`,
+  duplicate: `<circle cx="9.1" cy="14.9" r="4.3"/><circle cx="9.1" cy="14.9" r="1.15" fill="currentColor" stroke="none"/><circle cx="14.9" cy="9.1" r="4.3"/><circle cx="14.9" cy="9.1" r="1.15" fill="currentColor" stroke="none"/>`,
+  repeat: `<path d="M7.1 8.5A6.1 6.1 0 1 1 6.5 14.9" fill="none"/><path d="M11.5 5.8 8.7 6.7 9.1 9.7"/><path d="M2.8 12.6 3.5 15.6 6.5 14.9"/>`,
+  undo: `<path d="M16.9 8.1A6.3 6.3 0 1 0 15.8 17" fill="none"/><path d="M18.4 15 15.8 17 14.4 14.2"/>`,
+  redo: `<path d="M7.1 8.1A6.3 6.3 0 1 1 8.2 17" fill="none"/><path d="M5.6 15 8.2 17 9.6 14.2"/>`,
 
   /* ---------------- Propiedades ---------------- */
-  material: `<rect x="5" y="5" width="14" height="14" rx="3"/><path d="M8.4 15.6 15.6 8.4M8.4 11.6 11.6 8.4M12.4 15.6 15.6 12.4" stroke-width="1.3"/>`,
-  section: `<path d="M6 5.6h12M6 18.4h12M12 5.6v12.8"/><path d="M6 5.6v2.6M18 5.6v2.6M6 18.4v-2.6M18 18.4v-2.6"/>`,
-  properties: `<line x1="5" y1="7.6" x2="19" y2="7.6"/><line x1="5" y1="12" x2="15.4" y2="12"/><circle cx="17.6" cy="12" r="1.3" fill="currentColor" stroke="none"/><line x1="5" y1="16.4" x2="12.4" y2="16.4"/>`,
-  units: `<line x1="4.2" y1="9.5" x2="19.8" y2="9.5"/><path d="M4.2 9.5v3.4M7.8 9.5v2M11.4 9.5v3.4M15 9.5v2M18.6 9.5v3.4M19.8 9.5v2"/>`,
+  material: `<rect x="5.2" y="5.2" width="13.6" height="13.6" rx="2.8"/><path d="M8.3 15.7 15.7 8.3M8.3 11.9 11.9 8.3M12.1 15.7 15.7 12.1" stroke-width="1.05"/>`,
+  section: `<path d="M6.2 5.8h11.6M6.2 18.2h11.6M12 5.8v12.4"/><path d="M6.2 5.8v2.4M17.8 5.8v2.4M6.2 18.2v-2.4M17.8 18.2v-2.4"/>`,
+  properties: `<line x1="5.2" y1="7.8" x2="18.8" y2="7.8"/><line x1="5.2" y1="12" x2="15.3" y2="12"/><circle cx="17.6" cy="12" r="1.15" fill="currentColor" stroke="none"/><line x1="5.2" y1="16.2" x2="12.6" y2="16.2"/>`,
+  units: `<rect x="3.2" y="8.4" width="17.6" height="7.2" rx="1.3"/><path d="M7.6 8.4v3.4M12 8.4v4.6M16.4 8.4v3.4"/>`,
 
   /* ---------------- Análisis ---------------- */
-  solve: `<circle cx="12" cy="5.4" r="1.5" fill="currentColor" stroke="none"/><circle cx="6" cy="17" r="1.5" fill="currentColor" stroke="none"/><circle cx="18" cy="17" r="1.5" fill="currentColor" stroke="none"/><path d="M12 5.4 6 17M12 5.4 18 17M6 17h12"/>`,
-  reactions: `<line x1="5" y1="17.4" x2="19" y2="17.4"/><path d="M7 20 8.8 17.6M11 20 12.8 17.6M15 20 16.8 17.6"/><line x1="12" y1="16.6" x2="12" y2="7.4"/><polygon points="12,4.4 9.4,8.8 14.6,8.8"/>`,
-  displacements: `<circle cx="6.4" cy="15.8" r="2.6" stroke-dasharray="1.6 2"/><path d="M9.4 13.6 14.6 9" /><path d="M17.4 6.6 14.2 8.2 15.6 10.6"/><circle cx="17.4" cy="6.6" r="2.6" fill="var(--ico-bg)"/><circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none"/>`,
-  internalForces: `<line x1="3.6" y1="16.4" x2="10" y2="10"/><line x1="14" y1="10" x2="20.4" y2="16.4"/><polygon points="10.6,9.6 13,10.6 11.4,13"/><polygon points="13.4,16.8 11,15.8 12.6,13.4"/>`,
-  criticalPoint: `<line x1="3.6" y1="16" x2="20.4" y2="8"/><path d="M12 8.8 14.2 12 12 15.2 9.8 12Z" fill="currentColor" stroke="none"/><path d="M12 5.4v1.6M12 17v1.6M8.6 8.6l1.1 1.1M14.3 14.3l1.1 1.1M15.4 8.6l-1.1 1.1M9.7 14.3l-1.1 1.1" stroke-width="1.3"/>`,
+  solve: `<circle cx="12" cy="5.6" r="1.35" fill="currentColor" stroke="none"/><circle cx="6.2" cy="16.8" r="1.35" fill="currentColor" stroke="none"/><circle cx="17.8" cy="16.8" r="1.35" fill="currentColor" stroke="none"/><path d="M12 5.6 6.2 16.8M12 5.6 17.8 16.8M6.2 16.8h11.6"/>`,
+  reactions: `<line x1="5.2" y1="17.2" x2="18.8" y2="17.2"/><path d="M7.1 19.6 8.8 17.4M11 19.6 12.7 17.4M14.9 19.6 16.6 17.4"/><line x1="12" y1="16.4" x2="12" y2="7.8"/><polygon points="12,4.6 9.9,8.6 14.1,8.6"/>`,
+  displacements: `<circle cx="6.5" cy="15.7" r="2.5" stroke-dasharray="1.4 1.8"/><path d="M9.4 13.6 14.4 9.2"/><path d="M17.3 6.8 14.3 8.3 15.6 10.6"/><circle cx="17.3" cy="6.8" r="2.5" fill="var(--ico-bg)"/><circle cx="17.3" cy="6.8" r="1" fill="currentColor" stroke="none"/>`,
+  internalForces: `<line x1="3.8" y1="16.2" x2="10.1" y2="9.9"/><line x1="13.9" y1="9.9" x2="20.2" y2="16.2"/><polygon points="10.7,9.5 13,10.5 11.4,12.8"/><polygon points="13.3,16.6 11,15.6 12.6,13.3"/>`,
+  criticalPoint: `<line x1="3.8" y1="15.8" x2="20.2" y2="8.2"/><path d="M12 9 13.9 12 12 15 10.1 12Z" fill="currentColor" stroke="none"/><path d="M12 5.8v1.5M12 16.7v1.5M8.9 8.9l1 1M14.1 14.1l1 1M15.1 8.9l-1 1M9.9 14.1l-1 1" stroke-width="1.05"/>`,
 
   /* ---------------- Resultados N/V/M/Deformada ---------------- */
-  axialN: `<line x1="7.6" y1="12" x2="16.4" y2="12"/><polygon points="4.4,12 8,10.2 8,13.8"/><polygon points="19.6,12 16,13.8 16,10.2"/>`,
-  shearV: `<path d="M4 9.6h6M14 14.4h6M10 9.6v4.8" fill="none"/><polygon points="8.4,7.2 6.6,9.8 10.2,9.8"/><polygon points="15.6,16.8 17.4,14.2 13.8,14.2"/>`,
-  momentM: `<line x1="4.4" y1="15.4" x2="19.6" y2="15.4"/><path d="M4.4 15.4Q12 5.4 19.6 15.4" fill="none"/>`,
-  deformed: `<line x1="4.4" y1="8.2" x2="19.6" y2="8.2" stroke-dasharray="3.2 3"/><path d="M4.4 9.4Q12 17.4 19.6 9.4" fill="none"/>`,
+  axialN: `<line x1="7.8" y1="12" x2="16.2" y2="12"/><polygon points="4.6,12 8.2,10.1 8.2,13.9"/><polygon points="19.4,12 15.8,13.9 15.8,10.1"/>`,
+  shearV: `<path d="M4.4 9.8h5.8M13.8 14.2h5.8M10.2 9.8v4.4" fill="none"/><polygon points="8.6,7.4 6.7,9.9 10.5,9.9"/><polygon points="15.4,16.6 17.3,14.1 13.5,14.1"/>`,
+  momentM: `<line x1="4.6" y1="15.2" x2="19.4" y2="15.2"/><path d="M4.6 15.2Q12 5.6 19.4 15.2" fill="none"/>`,
+  deformed: `<line x1="4.6" y1="8.4" x2="19.4" y2="8.4" stroke-dasharray="2.8 2.6"/><path d="M4.6 9.5Q12 17.2 19.4 9.5" fill="none"/>`,
 
   /* ---------------- Estados de análisis ---------------- */
-  stReliable: `<circle cx="12" cy="12" r="6.4" fill="currentColor" stroke="none"/>`,
-  stLimited: `<circle cx="12" cy="12" r="6.4" fill="none"/><path d="M12 5.6A6.4 6.4 0 0 1 17.3 15.4" fill="none" stroke-width="3.1"/>`,
-  stUnreliable: `<circle cx="12" cy="12" r="6.4" fill="none" stroke-dasharray="2.3 2.6"/>`,
-  stFailed: `<path d="M12 5.6A6.4 6.4 0 1 1 6.7 8.9" fill="none"/><path d="M7.6 7.6 16.4 16.4" stroke-width="2.1"/>`,
-  stStale: `<circle cx="12" cy="12" r="6.4" fill="none"/><path d="M12 12 15.2 15.6" stroke-width="2"/><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none"/>`,
-  stUnknown: `<circle cx="12" cy="12" r="6.4" fill="none" stroke-width="1.1" opacity=".55"/>`,
+  stReliable: `<circle cx="12" cy="12" r="6.2" fill="currentColor" stroke="none"/>`,
+  stLimited: `<circle cx="12" cy="12" r="6.2" fill="none"/><path d="M12 5.8A6.2 6.2 0 0 1 17.1 15.3" fill="none" stroke-width="2.5"/>`,
+  stUnreliable: `<circle cx="12" cy="12" r="6.2" fill="none" stroke-dasharray="2 2.3"/>`,
+  stFailed: `<path d="M12 5.8A6.2 6.2 0 1 1 6.9 8.9" fill="none"/><path d="M7.8 7.8 16.2 16.2" stroke-width="1.7"/>`,
+  stStale: `<circle cx="12" cy="12" r="6.2" fill="none"/><path d="M12 12 15 15.4" stroke-width="1.6"/><circle cx="12" cy="12" r="0.95" fill="currentColor" stroke="none"/>`,
+  stUnknown: `<circle cx="12" cy="12" r="6.2" fill="none" stroke-width="0.9" opacity=".6"/>`,
 
   /* ---------------- Aula ---------------- */
-  aulaConstruir: `<circle cx="12" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="6.4" cy="17" r="1.5" fill="currentColor" stroke="none"/><circle cx="17.6" cy="17" r="1.5" fill="currentColor" stroke="none"/><path d="M12 6 6.4 17M12 6 17.6 17"/><path d="M6.4 17h11.2" stroke-dasharray="2 2.2"/>`,
-  aulaDefinir: `<circle cx="6.4" cy="17.6" r="1.4" fill="currentColor" stroke="none"/><path d="M6.4 17.6 12 10"/><path d="M12 10h6.2l1.6 2-1.6 2H12Z"/>`,
-  aulaAnalizar: `<circle cx="10.2" cy="10.2" r="5.2"/><line x1="14" y1="14" x2="19.4" y2="19.4"/><path d="M7.8 12.2 10.2 7.2 12.6 12.2" fill="none"/>`,
-  aulaComparar: `<line x1="12" y1="5" x2="12" y2="19" stroke-dasharray="1.6 2"/><path d="M4.4 15.6Q8 9.6 11 15.6" fill="none"/><path d="M13 15.6Q16.4 8 19.6 15.6" fill="none"/>`,
-  aulaConcluir: `<circle cx="12" cy="12" r="7"/><path d="M8.4 12.4 10.8 14.8 15.8 9.4"/>`,
-  aulaPrediction: `<path d="M4.4 16.4Q10 9.6 15 11.4" fill="none" stroke-dasharray="1.8 2.2"/><path d="M15 11.4 18.4 8.6" stroke-dasharray="1.8 2.2"/><polygon points="19.6,8 16.7,8.3 17.7,11.1"/>`,
-  aulaEvidence: `<rect x="5.5" y="5" width="10" height="12.4" rx="1.6"/><path d="M8 8.6h5M8 11.4h5M8 14.2h3.2"/><path d="M15.5 17.4 19.4 20.4"/><circle cx="19.4" cy="20.4" r="1.3" fill="currentColor" stroke="none"/>`,
+  aulaConstruir: `<circle cx="12" cy="6.2" r="1.35" fill="currentColor" stroke="none"/><circle cx="6.6" cy="16.8" r="1.35" fill="currentColor" stroke="none"/><circle cx="17.4" cy="16.8" r="1.35" fill="currentColor" stroke="none"/><path d="M12 6.2 6.6 16.8M12 6.2 17.4 16.8"/><path d="M6.6 16.8h10.8" stroke-dasharray="1.8 2"/>`,
+  aulaDefinir: `<circle cx="6.6" cy="17.4" r="1.3" fill="currentColor" stroke="none"/><path d="M6.6 17.4 12 10.2"/><path d="M12 10.2h6.1l1.5 1.9-1.5 1.9H12Z"/>`,
+  aulaAnalizar: `<circle cx="10.3" cy="10.3" r="5.1"/><line x1="14.1" y1="14.1" x2="19.4" y2="19.4"/><path d="M8 12.2 10.3 7.5 12.6 12.2" fill="none"/>`,
+  aulaComparar: `<line x1="12" y1="5.2" x2="12" y2="18.8" stroke-dasharray="1.4 1.8"/><path d="M4.6 15.4Q8 9.8 10.9 15.4" fill="none"/><path d="M13.1 15.4Q16.4 8.4 19.4 15.4" fill="none"/>`,
+  aulaConcluir: `<circle cx="12" cy="12" r="6.9"/><path d="M8.6 12.3 10.9 14.6 15.6 9.6"/>`,
+  aulaPrediction: `<path d="M4.6 16.2Q10 9.8 14.8 11.4" fill="none" stroke-dasharray="2.4 2.2"/><path d="M14.8 11.4 18.2 8.8" stroke-dasharray="2.4 2.2"/><polygon points="19.4,8 16.8,8.4 17.7,10.8"/>`,
+  aulaEvidence: `<rect x="5.7" y="5.2" width="9.6" height="12" rx="1.4"/><path d="M8.1 8.7h4.8M8.1 11.4h4.8M8.1 14.1h3"/><path d="M15.3 17.2 19.2 20.1"/><circle cx="19.2" cy="20.1" r="1.15" fill="currentColor" stroke="none"/>`,
 };
 
-/* alternate concepts for the deep-exploration set (not part of the main family) */
+/* alternativas de la exploración profunda (no forman parte de la familia principal) */
 const ALT = {
   node: [
-    { key:'A', label:'Punto sólido', note:'Un único punto lleno — el mínimo posible. Se pierde ante otros puntos sólidos del sistema (cargas, estados).', svg:`<circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/>` },
+    { key:'A', label:'Punto sólido', note:'Un único punto lleno — el mínimo posible. Se pierde ante otros puntos sólidos del sistema (cargas, estados).', svg:`<circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/>` },
     { key:'B', label:'Anillo + centro', note:'El anillo abierto con núcleo sólido lee como articulación real y deja hueco para selección/hover sin taparse.', svg: ICO.node, recommended:true },
-    { key:'C', label:'Rombo geométrico', note:'Distingue el nodo por silueta angular, pero rompe la familia de círculos que usan cargas y resultados.', svg:`<rect x="8.6" y="8.6" width="6.8" height="6.8" rx="1.3" transform="rotate(45 12 12)"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/>` },
+    { key:'C', label:'Rombo geométrico', note:'Distingue el nodo por silueta angular, pero rompe la familia de círculos que usan cargas y resultados.', svg:`<rect x="8.7" y="8.7" width="6.6" height="6.6" rx="1.1" transform="rotate(45 12 12)"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/>` },
   ],
   member: [
-    { key:'A', label:'Línea simple', note:'Solo el trazo — ligero, pero indistinguible de una guía o dimensión a 16px.', svg:`<line x1="5.5" y1="17.8" x2="18.5" y2="6.2"/>` },
+    { key:'A', label:'Línea simple', note:'Solo el trazo — ligero, pero indistinguible de una guía o dimensión a 16px.', svg:`<line x1="5.8" y1="17.6" x2="18.2" y2="6.4"/>` },
     { key:'B', label:'Socket en extremos', note:'Los extremos "perforados" muestran que el miembro conecta con nodos — firma de familia aplicada a geometría.', svg: ICO.member, recommended:true },
-    { key:'C', label:'Extremos sólidos', note:'Puntos llenos en vez de anillos: más peso, pero compite visualmente con los nodos reales del canvas.', svg:`<line x1="5.5" y1="17.8" x2="18.5" y2="6.2"/><circle cx="5.5" cy="17.8" r="1.7" fill="currentColor" stroke="none"/><circle cx="18.5" cy="6.2" r="1.7" fill="currentColor" stroke="none"/>` },
+    { key:'C', label:'Extremos sólidos', note:'Puntos llenos en vez de anillos: más peso, pero compite visualmente con los nodos reales del canvas.', svg:`<line x1="5.8" y1="17.6" x2="18.2" y2="6.4"/><circle cx="5.8" cy="17.6" r="1.5" fill="currentColor" stroke="none"/><circle cx="18.2" cy="6.4" r="1.5" fill="currentColor" stroke="none"/>` },
   ],
   supportPin: [
-    { key:'A', label:'Reducido', note:'Triángulo + suelo, sin bisagra ni trama. Muy cercano a Support general — pierde especificidad.', svg:`<path d="M12 6.9 6.6 15.6h10.8Z"/><path d="M4.8 15.6h14.4"/>` },
+    { key:'A', label:'Reducido', note:'Triángulo + suelo, sin bisagra ni trama. Muy cercano a Support general — pierde especificidad.', svg:`<path d="M12 6.95 6.9 15.5h10.2Z"/><path d="M5.1 15.5h13.8"/>` },
     { key:'B', label:'Bisagra + trama', note:'Símbolo de manual: pasador visible, triángulo abierto, trama de suelo dispersa (3 marcas) — máxima autoridad técnica.', svg: ICO.supportPin, recommended:true },
-    { key:'C', label:'Triángulo relleno', note:'Silueta más audaz a distancia, pero el "agujero" de la bisagra se pierde dentro del relleno sólido.', svg:`<path d="M12 6.9 6.6 15.6h10.8Z" fill="currentColor" stroke="none"/><circle cx="12" cy="8.8" r="1.4" fill="var(--ico-bg)" stroke="none"/><path d="M4.8 15.6h14.4"/><path d="M6.8 18.2 8.6 15.8M10.8 18.2 12.6 15.8M14.8 18.2 16.6 15.8"/>` },
+    { key:'C', label:'Triángulo relleno', note:'Silueta más audaz a distancia, pero el "agujero" de la bisagra se pierde dentro del relleno sólido.', svg:`<path d="M12 6.95 6.9 15.5h10.2Z" fill="currentColor" stroke="none"/><circle cx="12" cy="9" r="1.3" fill="var(--ico-bg)" stroke="none"/><path d="M5.1 15.5h13.8"/><path d="M7 17.9 8.7 15.7M10.9 17.9 12.6 15.7M14.8 17.9 16.5 15.7"/>` },
   ],
   supportRoller: [
-    { key:'A', label:'Sin trama', note:'Triángulo + rodillos, sin marcas de suelo — más limpio, pero ambiguo con Pin a 16px.', svg:`<path d="M12 6.6 7.4 13.4h9.2Z"/><circle cx="9.6" cy="15.3" r="1.5"/><circle cx="14.4" cy="15.3" r="1.5"/>` },
+    { key:'A', label:'Sin trama', note:'Triángulo + rodillos, sin marcas de suelo — más limpio, pero ambiguo con Pin a 16px.', svg:`<path d="M12 6.8 7.6 13.3h8.8Z"/><circle cx="9.7" cy="15.15" r="1.4"/><circle cx="14.3" cy="15.15" r="1.4"/>` },
     { key:'B', label:'Triángulo + rodillos + trama', note:'Convención de manual completa: el par de círculos bajo el triángulo es inequívoco incluso sin color.', svg: ICO.supportRoller, recommended:true },
-    { key:'C', label:'Placa sobre rodillos', note:'Variante de códigos que dibujan una barra plana (no triángulo) apoyada en rodillos — igual de válida, distinto acento visual.', svg:`<line x1="7" y1="12.6" x2="17" y2="12.6"/><circle cx="9.6" cy="15.3" r="1.5"/><circle cx="14.4" cy="15.3" r="1.5"/><path d="M4.8 17.6h14.4"/><path d="M6.8 20.2 8.6 17.8M10.8 20.2 12.6 17.8M14.8 20.2 16.6 17.8"/>` },
+    { key:'C', label:'Placa sobre rodillos', note:'Variante de códigos que dibujan una barra plana (no triángulo) apoyada en rodillos — igual de válida, distinto acento visual.', svg:`<line x1="7.2" y1="12.6" x2="16.8" y2="12.6"/><circle cx="9.7" cy="15.15" r="1.4"/><circle cx="14.3" cy="15.15" r="1.4"/><path d="M5.1 17.4h13.8"/><path d="M7 19.8 8.7 17.6M10.9 19.8 12.6 17.6M14.8 19.8 16.5 17.6"/>` },
   ],
   supportFixed: [
-    { key:'A', label:'Barra simple', note:'Un bloque sólido sin trama — legible, pero no comunica "restricción total" con la fuerza de la trama cruzada.', svg:`<line x1="12" y1="3.8" x2="12" y2="10.2"/><rect x="5.2" y="10.2" width="13.6" height="3.2" fill="currentColor" stroke="none"/>` },
+    { key:'A', label:'Barra simple', note:'Un bloque sólido sin trama — legible, pero no comunica "restricción total" con la fuerza de la trama cruzada.', svg:`<line x1="12" y1="4" x2="12" y2="10.4"/><rect x="5.4" y="10.4" width="13.2" height="3" rx="0.5" fill="currentColor" stroke="none"/>` },
     { key:'B', label:'Bloque + trama densa', note:'5 marcas diagonales muy juntas — la densidad de la trama codifica "restricción máxima", en contraste con las 3 de Pin/Roller.', svg: ICO.supportFixed, recommended:true },
-    { key:'C', label:'Doble trama cruzada', note:'Textura más rica (cross-hatch), pero se satura y pierde peso a 16px frente a la opción B.', svg:`<line x1="12" y1="3.8" x2="12" y2="10.2"/><rect x="5.2" y="10.2" width="13.6" height="3.6"/><path d="M6.4 10.2 4.4 13.8M9.6 10.2 7.6 13.8M12.8 10.2 10.8 13.8M16 10.2 14 13.8M9.6 13.8 12.8 10.2M6.4 13.8 9.6 10.2" stroke-width="1.2"/>` },
+    { key:'C', label:'Doble trama cruzada', note:'Textura más rica (cross-hatch), pero se satura y pierde peso a 16px frente a la opción B.', svg:`<line x1="12" y1="4" x2="12" y2="10.4"/><rect x="5.4" y="10.4" width="13.2" height="3.4" rx="0.5"/><path d="M6.5 10.4 4.7 13.8M9.4 10.4 7.6 13.8M12.3 10.4 10.5 13.8M15.2 10.4 13.4 13.8M9.4 13.8 11.2 10.4M6.5 13.8 8.3 10.4" stroke-width="1"/>` },
   ],
   pointLoad: [
-    { key:'A', label:'Flecha abierta', note:'Chevron sin relleno — coherente con navegación/UI, pero débil como vector de fuerza real.', svg:`<line x1="12" y1="3.6" x2="12" y2="13.6"/><path d="M9.2 12.4 12 17.6 14.8 12.4"/><line x1="5" y1="17.6" x2="19" y2="17.6"/>` },
+    { key:'A', label:'Flecha abierta', note:'Chevron sin relleno — coherente con navegación/UI, pero débil como vector de fuerza real.', svg:`<line x1="12" y1="3.8" x2="12" y2="13.8"/><path d="M9.4 12.6 12 17.4 14.6 12.6"/><line x1="5.2" y1="17.5" x2="18.8" y2="17.5"/>` },
     { key:'B', label:'Flecha sólida + base', note:'Convención de manual para carga puntual: vector sólido que llega al miembro. Máxima claridad de dirección.', svg: ICO.pointLoad, recommended:true },
-    { key:'C', label:'Vástago largo + marca', note:'Sin línea de miembro, con una marca de magnitud en la cola — útil si la carga flota fuera del elemento, pero pierde el "aterrizaje" visual.', svg:`<line x1="12" y1="2.8" x2="12" y2="14"/><line x1="9.4" y1="4.6" x2="14.6" y2="4.6"/><polygon points="12,18.2 9.2,13.6 14.8,13.6"/>` },
+    { key:'C', label:'Vástago largo + marca', note:'Sin línea de miembro, con una marca de magnitud en la cola — útil si la carga flota fuera del elemento, pero pierde el "aterrizaje" visual.', svg:`<line x1="12" y1="3" x2="12" y2="14.2"/><line x1="9.6" y1="4.8" x2="14.4" y2="4.8"/><polygon points="12,18.1 10,13.7 14,13.7"/>` },
   ],
   distributedLoad: [
-    { key:'A', label:'Dos flechas', note:'Versión mínima — legible a 16px, pero se confunde con dos cargas puntuales independientes.', svg:`<line x1="4" y1="5.2" x2="20" y2="5.2"/><line x1="8.4" y1="5.2" x2="8.4" y2="14"/><line x1="15.6" y1="5.2" x2="15.6" y2="14"/><polygon points="8.4,17.6 6.6,14 10.2,14"/><polygon points="15.6,17.6 13.8,14 17.4,14"/><line x1="4" y1="17.6" x2="20" y2="17.6"/>` },
+    { key:'A', label:'Dos flechas', note:'Versión mínima — legible a 16px, pero se confunde con dos cargas puntuales independientes.', svg:`<line x1="4.2" y1="5.4" x2="19.8" y2="5.4"/><line x1="8.6" y1="5.4" x2="8.6" y2="13.9"/><line x1="15.4" y1="5.4" x2="15.4" y2="13.9"/><polygon points="8.6,17.3 6.9,13.7 10.3,13.7"/><polygon points="15.4,17.3 13.7,13.7 17.1,13.7"/><line x1="4.2" y1="17.3" x2="19.8" y2="17.3"/>` },
     { key:'B', label:'Tres flechas uniformes', note:'El patrón "w" clásico de carga distribuida — inconfundible con carga puntual y suficientemente simple a 16px.', svg: ICO.distributedLoad, recommended:true },
-    { key:'C', label:'Trapecio (no uniforme)', note:'Flechas de largo creciente — comunica carga variable, útil como variante futura pero no como ícono genérico de la herramienta.', svg:`<path d="M4 8.2 20 5.2" fill="none"/><line x1="7.2" y1="7.6" x2="7.2" y2="14"/><line x1="12" y1="6.8" x2="12" y2="14"/><line x1="16.8" y1="6" x2="16.8" y2="14"/><polygon points="7.2,16.4 5.6,14 8.8,14"/><polygon points="12,17 10.3,14 13.7,14"/><polygon points="16.8,17.6 15,14 18.6,14"/><line x1="4" y1="17.6" x2="20" y2="17.6"/>` },
+    { key:'C', label:'Trapecio (no uniforme)', note:'Flechas de largo creciente — comunica carga variable, útil como variante futura pero no como ícono genérico de la herramienta.', svg:`<path d="M4.2 8.4 19.8 5.4" fill="none"/><line x1="7.4" y1="7.8" x2="7.4" y2="13.9"/><line x1="12" y1="6.9" x2="12" y2="13.9"/><line x1="16.6" y1="6.1" x2="16.6" y2="13.9"/><polygon points="7.4,16.2 5.7,13.7 9.1,13.7"/><polygon points="12,16.8 10.3,13.7 13.7,13.7"/><polygon points="16.6,17.3 14.9,13.7 18.3,13.7"/><line x1="4.2" y1="17.3" x2="19.8" y2="17.3"/>` },
   ],
   momentLoad: [
-    { key:'A', label:'Lazo cerrado', note:'Compacto, pero se parece demasiado a Mz (momento nodal) — ambigüedad de escala.', svg:`<circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><path d="M12 6.4A5.6 5.6 0 1 1 7 9.4" fill="none"/><polygon points="7,9.4 6.5,6.3 9.4,7.7"/>` },
+    { key:'A', label:'Lazo cerrado', note:'Compacto, pero se parece demasiado a Mz (momento nodal) — ambigüedad de escala.', svg:`<circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><path d="M12 6.5A5.5 5.5 0 1 1 7.2 9.3" fill="none"/><polygon points="7.2,9.3 6.8,6.5 9.4,7.7"/>` },
     { key:'B', label:'Arco abierto + flecha sólida', note:'Radio mayor, sin punto central — se lee como acción sobre el miembro, no sobre un nodo. Recomendado.', svg: ICO.momentLoad, recommended:true },
-    { key:'C', label:'Doble flecha (sentido libre)', note:'Cabezas en ambos extremos del arco para momentos sin signo fijo — más ambiguo como glyph por defecto.', svg:`<path d="M6.4 16.2A7 7 0 0 1 15.6 6.6" fill="none"/><polygon points="6.4,16.2 6.9,13.1 9.6,14.6"/><polygon points="15.6,6.6 15.1,9.7 12.4,8.2"/>` },
+    { key:'C', label:'Doble flecha (sentido libre)', note:'Cabezas en ambos extremos del arco para momentos sin signo fijo — más ambiguo como glyph por defecto.', svg:`<path d="M6.6 16A6.9 6.9 0 0 1 15.4 6.8" fill="none"/><polygon points="6.6,16 7.1,13.2 9.5,14.5"/><polygon points="15.4,6.8 14.9,9.6 12.5,8.3"/>` },
   ],
   cut: [
-    { key:'A', label:'Solo hueco', note:'Dos muñones sin marca de rotura — limpio, pero puede leerse como "elemento faltante" más que como acción de cortar.', svg:`<line x1="3.4" y1="12" x2="9.4" y2="12"/><line x1="14.6" y1="12" x2="20.6" y2="12"/>` },
+    { key:'A', label:'Solo hueco', note:'Dos muñones sin marca de rotura — limpio, pero puede leerse como "elemento faltante" más que como acción de cortar.', svg:`<line x1="3.6" y1="12" x2="9.6" y2="12"/><line x1="14.4" y1="12" x2="20.4" y2="12"/>` },
     { key:'B', label:'Línea de rotura (zigzag)', note:'Convención de dibujo técnico para "quiebre convencional" — comunica corte sin literal tijera. Recomendado.', svg: ICO.cut, recommended:true },
-    { key:'C', label:'Corte en ángulo', note:'Dos trazos cruzados en la brecha, gesto más literal de "tijera" — funciona, pero se acerca a Delete (×) en silueta.', svg:`<line x1="3.4" y1="12" x2="8.6" y2="12"/><line x1="15.4" y1="12" x2="20.6" y2="12"/><path d="M8.6 9.4 15.4 14.6M8.6 14.6 15.4 9.4"/>` },
+    { key:'C', label:'Corte en ángulo', note:'Dos trazos cruzados en la brecha, gesto más literal de "tijera" — funciona, pero se acerca a Delete (×) en silueta.', svg:`<line x1="3.6" y1="12" x2="8.8" y2="12"/><line x1="15.2" y1="12" x2="20.4" y2="12"/><path d="M8.8 9.6 15.2 14.4M8.8 14.4 15.2 9.6"/>` },
   ],
   split: [
-    { key:'A', label:'Punto simple', note:'Línea continua + punto — el gesto mínimo, pero se confunde con un nodo normal sobre el miembro.', svg:`<line x1="3.6" y1="12" x2="20.4" y2="12"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/>` },
+    { key:'A', label:'Punto simple', note:'Línea continua + punto — el gesto mínimo, pero se confunde con un nodo normal sobre el miembro.', svg:`<line x1="3.8" y1="12" x2="20.2" y2="12"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>` },
     { key:'B', label:'Socket + marcas', note:'El anillo perforado (misma firma que Node/Member) con dos marcas de inserción arriba/abajo — deja clarísimo que algo nuevo se insertó sin cortar nada.', svg: ICO.split, recommended:true },
-    { key:'C', label:'Marca "+"', note:'Cruz de inserción en vez de anillo — directa, pero rompe la firma visual de "punto sobre miembro" que comparten Node/Member/Split.', svg:`<line x1="3.6" y1="12" x2="20.4" y2="12"/><path d="M12 8.6v6.8M8.6 12h6.8"/>` },
+    { key:'C', label:'Marca "+"', note:'Cruz de inserción en vez de anillo — directa, pero rompe la firma visual de "punto sobre miembro" que comparten Node/Member/Split.', svg:`<line x1="3.8" y1="12" x2="20.2" y2="12"/><path d="M12 8.8v6.4M8.8 12h6.4"/>` },
   ],
   axialN: [
-    { key:'A', label:'Doble flecha, un trazo', note:'Una sola línea con cabezas en los extremos — compacta, pero visualmente cercana a una flecha de medida (Dimension/Units).', svg:`<line x1="4.6" y1="12" x2="19.4" y2="12"/><polygon points="4.6,12 8.2,10.2 8.2,13.8"/><polygon points="19.4,12 15.8,13.8 15.8,10.2"/>` },
+    { key:'A', label:'Doble flecha, un trazo', note:'Una sola línea con cabezas en los extremos — compacta, pero visualmente cercana a una flecha de medida (Dimension/Units).', svg:`<line x1="4.6" y1="12" x2="19.4" y2="12"/><polygon points="4.6,12 8.2,10.1 8.2,13.9"/><polygon points="19.4,12 15.8,13.9 15.8,10.1"/>` },
     { key:'B', label:'Vector con hueco central', note:'La brecha central deja que el trazo del miembro respire y las cabezas queden como protagonistas — mejor lectura a 16px.', svg: ICO.axialN, recommended:true },
-    { key:'C', label:'Bloque de diagrama', note:'Barra rellena paralela al eje, al estilo diagrama de esfuerzo axial constante — muy técnico, pero pesado como icono de barra de herramientas.', svg:`<line x1="4.4" y1="12" x2="19.6" y2="12"/><rect x="7" y="9.4" width="10" height="5.2" rx="1" fill="currentColor" opacity=".22" stroke="none"/>` },
+    { key:'C', label:'Bloque de diagrama', note:'Barra rellena paralela al eje, al estilo diagrama de esfuerzo axial constante — muy técnico, pero pesado como icono de barra de herramientas.', svg:`<line x1="4.6" y1="12" x2="19.4" y2="12"/><rect x="7.2" y="9.6" width="9.6" height="4.8" rx="0.8" fill="currentColor" opacity=".2" stroke="none"/>` },
   ],
   shearV: [
-    { key:'A', label:'Flechas paralelas', note:'Dos flechas verticales opuestas sin el salto — más simple, pero pierde la idea de "deslizamiento" entre secciones.', svg:`<line x1="9" y1="7.6" x2="9" y2="16.4"/><line x1="15" y1="7.6" x2="15" y2="16.4"/><polygon points="9,5.2 7.2,8.4 10.8,8.4"/><polygon points="15,18.8 13.2,15.6 16.8,15.6"/>` },
+    { key:'A', label:'Flechas paralelas', note:'Dos flechas verticales opuestas sin el salto — más simple, pero pierde la idea de "deslizamiento" entre secciones.', svg:`<line x1="9.2" y1="7.8" x2="9.2" y2="16.2"/><line x1="14.8" y1="7.8" x2="14.8" y2="16.2"/><polygon points="9.2,5.4 7.2,8.6 11.2,8.6"/><polygon points="14.8,18.6 12.8,15.4 16.8,15.4"/>` },
     { key:'B', label:'Salto (jog) + par de fuerzas', note:'El quiebre en escalón visualiza el deslizamiento transversal real de la sección — silueta inconfundible frente a N y M.', svg: ICO.shearV, recommended:true },
-    { key:'C', label:'Cuchillas enfrentadas', note:'Dos triángulos que se cruzan en el punto de corte — gestual y directo, pero se lee más como Cut que como fenómeno de corte estructural.', svg:`<line x1="4" y1="12" x2="9.4" y2="12"/><line x1="14.6" y1="12" x2="20" y2="12"/><polygon points="9.4,9 12,12 9.4,15"/><polygon points="14.6,9 12,12 14.6,15"/>` },
+    { key:'C', label:'Cuchillas enfrentadas', note:'Dos triángulos que se cruzan en el punto de corte — gestual y directo, pero se lee más como Cut que como fenómeno de corte estructural.', svg:`<line x1="4.2" y1="12" x2="9.6" y2="12"/><line x1="14.4" y1="12" x2="19.8" y2="12"/><polygon points="9.6,9.2 12,12 9.6,14.8"/><polygon points="14.4,9.2 12,12 14.4,14.8"/>` },
   ],
   momentM: [
-    { key:'A', label:'Solo el arco', note:'Curva sin línea base — ligera, pero flota sin referencia del miembro.', svg:`<path d="M4.4 15.4Q12 5.4 19.6 15.4" fill="none"/>` },
+    { key:'A', label:'Solo el arco', note:'Curva sin línea base — ligera, pero flota sin referencia del miembro.', svg:`<path d="M4.6 15.2Q12 5.6 19.4 15.2" fill="none"/>` },
     { key:'B', label:'Línea base + arco', note:'Silueta de diagrama de momento clásico: referencia recta + curvatura de flexión — clara incluso muy pequeña.', svg: ICO.momentM, recommended:true },
-    { key:'C', label:'Área rellena', note:'El diagrama de momento clásico se dibuja relleno — máxima autoridad técnica, pero compite en peso visual con los estados de fiabilidad.', svg:`<line x1="4.4" y1="15.4" x2="19.6" y2="15.4"/><path d="M4.4 15.4Q12 5.4 19.6 15.4Z" fill="currentColor" opacity=".22" stroke="none"/><path d="M4.4 15.4Q12 5.4 19.6 15.4" fill="none"/>` },
+    { key:'C', label:'Área rellena', note:'El diagrama de momento clásico se dibuja relleno — máxima autoridad técnica, pero compite en peso visual con los estados de fiabilidad.', svg:`<line x1="4.6" y1="15.2" x2="19.4" y2="15.2"/><path d="M4.6 15.2Q12 5.6 19.4 15.2Z" fill="currentColor" opacity=".2" stroke="none"/><path d="M4.6 15.2Q12 5.6 19.4 15.2" fill="none"/>` },
   ],
   deformed: [
-    { key:'A', label:'Solo curva sólida', note:'Sin la referencia original punteada — se confunde con Moment M al tener una sola curva.', svg:`<path d="M4.4 9.4Q12 17.4 19.6 9.4" fill="none"/>` },
+    { key:'A', label:'Solo curva sólida', note:'Sin la referencia original punteada — se confunde con Moment M al tener una sola curva.', svg:`<path d="M4.6 9.5Q12 17.2 19.4 9.5" fill="none"/>` },
     { key:'B', label:'Original punteada + curva real', note:'El fantasma recto (punteado) contra la curva sólida es la convención estándar de software de análisis — comparación directa antes/después.', svg: ICO.deformed, recommended:true },
-    { key:'C', label:'Secuencia de curvas', note:'Original punteada + dos curvas en progresión — sugiere animación de deformación, más rico pero denso para un icono de 16px.', svg:`<line x1="4.4" y1="6.6" x2="19.6" y2="6.6" stroke-dasharray="3 2.8"/><path d="M4.4 7.6Q12 12.4 19.6 7.6" fill="none" opacity=".45"/><path d="M4.4 9.2Q12 17 19.6 9.2" fill="none"/>` },
+    { key:'C', label:'Secuencia de curvas', note:'Original punteada + dos curvas en progresión — sugiere animación de deformación, más rico pero denso para un icono de 16px.', svg:`<line x1="4.6" y1="6.8" x2="19.4" y2="6.8" stroke-dasharray="2.6 2.4"/><path d="M4.6 7.8Q12 12.4 19.4 7.8" fill="none" opacity=".45"/><path d="M4.6 9.4Q12 17 19.4 9.4" fill="none"/>` },
   ],
 };
 
 const svg = (id, opts={}) => {
-  const { size=24, cls='', color, viewBox='0 0 24 24' } = opts;
+  const { size=24, cls='', color, extra='' } = opts;
   const style = color ? ` style="color:${color}"` : '';
-  return `<svg class="ico ${cls}" width="${size}" height="${size}" viewBox="${viewBox}" aria-hidden="true"${style}>${ICO[id]}</svg>`;
+  return `<svg class="ico ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"${style}${extra}>${ICO[id]}</svg>`;
 };
 
 /* ============================================================
-   Data catalogue for the "familia completa" grid
+   Catálogo de la familia completa
    ============================================================ */
 const FAMILY = [
   { title:'Navegación', tag:'2', items:[
@@ -564,9 +693,9 @@ const FAMILY = [
 
 const PRINCIPLES = [
   ['Precisión primero', 'Cada glyph nace de la convención estructural real — triángulo de apoyo, arco de momento, línea de rotura — no de una metáfora genérica de interfaz.'],
+  ['Trazo fino, dibujo técnico', 'Stroke 1.4 sobre grid de 24: el peso de un lápiz de precisión, no de un rotulador. La delgadez es lo que separa "herramienta de ingeniería" de "app de consumo".'],
   ['Tactilidad Clay, contenida', 'El "socket punch" en juntas y extremos es la única huella táctil de Clay dentro del glyph. Nunca se vuelve ilustración.'],
   ['Simplicidad legible', '2 a 6 primitivas por icono. Si no sobrevive a 16px, se simplifica — no se decora.'],
-  ['Personalidad StructureCo', 'Terminales redondeados + firma de socket + lenguaje de flecha dual dan a la familia una voz reconocible, no una librería genérica.'],
   ['Monocromo por defecto', 'El color refuerza; la forma identifica. Todo glyph debe funcionar en un solo color.'],
   ['Producto premium', 'Sin gradientes, sin sombras pesadas, sin exceso de detalle — precisión técnica con calidez, no juguetona.'],
 ];
@@ -574,14 +703,16 @@ const PRINCIPLES = [
 const SPECS = [
   ['Lienzo (viewBox)', '24 × 24'],
   ['Área viva', '18 × 18 (3–21)'],
-  ['Sobretiro óptico', 'círculos y diagonales +1 a +1.5'],
-  ['Stroke regular (20–24px)', '1.75'],
-  ['Stroke dense (16px)', '2.3'],
+  ['Sobretiro óptico', 'círculos y diagonales +1 a +1.4'],
+  ['Stroke regular (20–24px)', '1.4'],
+  ['Stroke dense (16px)', '1.75'],
+  ['Peso renderizado', '≈1.17px en 20px y en 16px dense'],
   ['Terminal', 'round cap'],
   ['Unión', 'round join'],
-  ['Radio de esquina', '1–1.6 en formas rectas'],
+  ['Radio de esquina', '0.5–1.2 en formas rectas'],
   ['Firma de junta', 'socket punch — fill: var(--ico-bg)'],
-  ['Punto sólido', 'r 1.3–1.7, fill currentColor'],
+  ['Punto sólido', 'r 1.15–1.4, fill currentColor'],
+  ['Cabeza de flecha', '4.0 ancho × 4.2 largo (esbelta)'],
   ['Ritmo de trama (suelo)', '3 marcas dispersas · 5 marcas densas (Fixed)'],
   ['Vector de fuerza', 'flecha sólida (polygon)'],
   ['Acción de interfaz', 'chevron abierto (path de 2 trazos)'],
@@ -648,8 +779,8 @@ document.getElementById('grid-diagram-card').innerHTML = `
       <rect x="30" y="30" width="180" height="180" fill="none" stroke="var(--border-strong)" stroke-width="1.5" stroke-dasharray="5 5"/>
       <circle cx="120" cy="120" r="105" fill="none" stroke="var(--brand)" stroke-width="1.2" stroke-dasharray="2 4" opacity=".55"/>
       <g transform="translate(120 120)" color="var(--ink)">
-        <g transform="translate(-55 -8) scale(4.6)"><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></g>
-        <g transform="translate(-2 -70) scale(4.6)" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" fill="none"><line x1="5.5" y1="17.8" x2="18.5" y2="6.2"/><circle cx="5.5" cy="17.8" r="2.3" fill="var(--surface)"/><circle cx="18.5" cy="6.2" r="2.3" fill="var(--surface)"/></g>
+        <g transform="translate(-55 -8) scale(4.6)"><circle cx="12" cy="12" r="5.1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></g>
+        <g transform="translate(-2 -70) scale(4.6)" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"><line x1="5.8" y1="17.6" x2="18.2" y2="6.4"/><circle cx="5.8" cy="17.6" r="2.05" fill="var(--surface)"/><circle cx="18.2" cy="6.4" r="2.05" fill="var(--surface)"/></g>
       </g>
       <text x="12" y="14" font-family="var(--font-mono)" font-size="9" fill="var(--muted)">24×24</text>
       <text x="34" y="26" font-family="var(--font-mono)" font-size="8" fill="var(--muted)">área viva 18×18</text>
@@ -669,8 +800,8 @@ document.getElementById('socket-diagram-card').innerHTML = `
   <figure>
     <svg viewBox="0 0 240 130" role="img" aria-label="Detalle ampliado de un extremo de Member mostrando el círculo perforado con el color de fondo, creando un efecto de junta hundida.">
       <circle cx="60" cy="65" r="46" fill="var(--surface-2)"/>
-      <g stroke="var(--ink)" stroke-width="4.2" stroke-linecap="round" fill="none"><line x1="30" y1="95" x2="90" y2="35"/></g>
-      <circle cx="30" cy="95" r="11" fill="var(--surface-2)" stroke="var(--ink)" stroke-width="4.2"/>
+      <g stroke="var(--ink)" stroke-width="3.4" stroke-linecap="round" fill="none"><line x1="30" y1="95" x2="90" y2="35"/></g>
+      <circle cx="30" cy="95" r="11" fill="var(--surface-2)" stroke="var(--ink)" stroke-width="3.4"/>
       <line x1="140" y1="15" x2="140" y2="115" stroke="var(--border)" stroke-dasharray="4 5"/>
       <text x="160" y="38" font-family="var(--font-mono)" font-size="10.5" fill="var(--ink)" font-weight="600">fill: var(--ico-bg)</text>
       <text x="160" y="56" font-family="var(--font-mono)" font-size="9.5" fill="var(--muted)">el anillo toma el color</text>
@@ -688,12 +819,12 @@ document.getElementById('arrow-diagram-card').innerHTML = `
   <figure>
     <svg viewBox="0 0 240 130" role="img" aria-label="Comparación entre flecha sólida usada para vectores de fuerza física y chevron abierto usado para acciones de interfaz.">
       <g color="var(--load)" stroke="currentColor" fill="currentColor">
-        <line x1="30" y1="30" x2="30" y2="70" stroke-width="3"/>
-        <polygon points="30,88 18,68 42,68"/>
+        <line x1="30" y1="30" x2="30" y2="70" stroke-width="2.4"/>
+        <polygon points="30,88 20,68 40,68"/>
       </g>
       <text x="30" y="112" font-family="var(--font-mono)" font-size="9.5" fill="var(--ink)" text-anchor="middle" font-weight="600">sólida</text>
       <text x="30" y="124" font-family="var(--font-mono)" font-size="8" fill="var(--muted)" text-anchor="middle">fuerza física</text>
-      <g color="var(--ink)" stroke="currentColor" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <g color="var(--ink)" stroke="currentColor" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
         <path d="M180 30 180 65"/>
         <path d="M168 55 180 68 192 55"/>
       </g>
@@ -796,6 +927,292 @@ try {
   const saved = localStorage.getItem('sc-icon-board-theme');
   if (saved) setTheme(saved);
 } catch(e) {}
+
+
+/* ============================================================
+   Aplicaciones — los glyphs dentro de los controles reales
+   ============================================================ */
+
+const railTools = [
+  { g:'Navegar' },
+  { id:'select', name:'Seleccionar', k:'V', active:true },
+  { id:'pan', name:'Encuadrar', k:'H' },
+  { g:'Crear' },
+  { id:'node', name:'Nodo', k:'N' },
+  { id:'member', name:'Miembro', k:'M' },
+  { id:'supportPin', name:'Apoyo', k:'S' },
+  { g:'Cargas' },
+  { id:'pointLoad', name:'Puntual', k:'P' },
+  { id:'distributedLoad', name:'Distribuida', k:'D' },
+  { id:'momentLoad', name:'Momento', k:'O' },
+  { g:'Editar' },
+  { id:'cut', name:'Cortar', k:'X' },
+  { id:'split', name:'Dividir', k:'B' },
+  { id:'del', name:'Eliminar', k:'⌫', destructive:true },
+];
+
+const railHTML = (tools) => tools.map(t => t.g
+  ? `<div class="rail-group">${t.g}</div>`
+  : `<button type="button" class="rail-btn${t.active?' active':''}${t.destructive?' destructive':''}">${svg(t.id,{size:21})}<span>${t.name}</span><kbd>${t.k}</kbd></button>`
+).join('');
+
+const STATES = [
+  { id:'stReliable', name:'Reliable', color:'var(--success)', note:'converge' },
+  { id:'stLimited', name:'Limited', color:'var(--warning)', note:'cond. alto' },
+  { id:'stUnreliable', name:'Unreliable', color:'var(--error)', note:'residuo' },
+  { id:'stFailed', name:'Failed', color:'var(--critical)', note:'singular' },
+  { id:'stStale', name:'Stale', color:'var(--stale)', note:'modelo editado' },
+  { id:'stUnknown', name:'Unknown', color:'var(--pending)', note:'sin evidencia' },
+];
+
+const RESULT_TABS = [
+  { id:'axialN', name:'N', color:'var(--axial)' },
+  { id:'shearV', name:'V', color:'var(--shear)', active:true },
+  { id:'momentM', name:'M', color:'var(--moment)' },
+  { id:'deformed', name:'Deformada', color:'var(--deformed)' },
+];
+
+const AULA_STEPS = [
+  { id:'aulaConstruir', name:'Construir', done:true },
+  { id:'aulaDefinir', name:'Definir', done:true },
+  { id:'aulaAnalizar', name:'Analizar', current:true },
+  { id:'aulaComparar', name:'Comparar' },
+  { id:'aulaConcluir', name:'Concluir' },
+];
+
+const APPS = [
+  {
+    title:'Tool rail · 164px',
+    note:'El rail real del editor: icono 21px, etiqueta y atajo. El estado activo tiñe icono y fondo — pero la herramienta se reconoce por su forma, no por el verde.',
+    html:`<div class="demo-stage" style="width:max-content; max-width:100%;"><div class="demo-rail">${railHTML(railTools)}</div></div>`
+  },
+  {
+    title:'Tool rail compacto · 76px',
+    note:'Al colapsar, el glyph queda solo con una etiqueta mínima. Es la prueba más dura del sistema: sin texto largo, la silueta tiene que cargar todo el significado.',
+    html:`<div class="demo-stage" style="width:max-content; max-width:100%;"><div class="demo-rail compact">${
+      railTools.filter(t=>!t.g).slice(0,8).map(t=>`<button type="button" class="rail-btn${t.active?' active':''}">${svg(t.id,{size:22})}<span>${t.name}</span></button>`).join('')
+    }</div></div>`
+  },
+  {
+    title:'Topbar · acciones',
+    note:'Paleta de comandos, deshacer/rehacer, unidades y el botón de análisis. Undo/Redo usan chevron abierto — son gesto de interfaz, no vector físico.',
+    html:`<div class="demo-topbar">
+      <span class="demo-cmd">${svg('properties',{size:15})} Buscar <kbd>Ctrl K</kbd></span>
+      <button class="demo-iconbtn">${svg('undo',{size:18})}</button>
+      <button class="demo-iconbtn">${svg('redo',{size:18})}</button>
+      <button class="demo-iconbtn">${svg('units',{size:18})}</button>
+      <button class="demo-iconbtn solve">${svg('solve',{size:17})} Analizar</button>
+    </div>`
+  },
+  {
+    title:'Chips de estado de análisis',
+    note:'Seis estados que NO son verde/amarillo/rojo: cada uno tiene una forma distinta (disco, arco parcial, anillo punteado, anillo roto, reloj, anillo tenue). Distinguibles en escala de grises.',
+    html:`<div class="chip-row">${STATES.map(s=>`
+      <span class="status-chip" style="color:${s.color}; border-color:color-mix(in srgb, ${s.color} 35%, transparent);">
+        ${svg(s.id,{size:15})} ${s.name} <small>${s.note}</small>
+      </span>`).join('')}</div>`
+  },
+  {
+    title:'Tabs de resultados',
+    note:'N / V / M / Deformada. El color oficial refuerza, pero el fenómeno se lee en el dibujo: vector simétrico, salto en escalón, arco de flexión y fantasma punteado.',
+    html:`<div class="demo-tabs">${RESULT_TABS.map(t=>`
+      <button class="demo-tab${t.active?' active':''}" style="${t.active?`color:${t.color}`:''}">${svg(t.id,{size:17,color:t.active?t.color:undefined})} ${t.name}</button>`).join('')}</div>
+      <div class="demo-tabs" style="margin-top:10px;">${RESULT_TABS.map(t=>`
+      <button class="demo-tab" style="color:${t.color}">${svg(t.id,{size:17})} ${t.name}</button>`).join('')}</div>`
+  },
+  {
+    title:'Inspector · filas de propiedad',
+    note:'Material y Section no comparten símbolo: uno es una probeta con trama de material, el otro una sección transversal en I. A 20px siguen siendo dos cosas distintas.',
+    html:`<div class="demo-inspector">
+      <div class="insp-row">${svg('material',{size:19})}<span class="k">Material</span><span class="v">Acero A36</span></div>
+      <div class="insp-row">${svg('section',{size:19})}<span class="k">Sección</span><span class="v">IPR 254×89</span></div>
+      <div class="insp-row">${svg('units',{size:19})}<span class="k">Unidades</span><span class="v">kN · m</span></div>
+      <div class="insp-row">${svg('dimension',{size:19})}<span class="k">Longitud</span><span class="v">6.000 m</span></div>
+      <div class="insp-row">${svg('supportPin',{size:19})}<span class="k">Apoyo inicial</span><span class="v">Articulado</span></div>
+      <div class="insp-row">${svg('supportRoller',{size:19})}<span class="k">Apoyo final</span><span class="v">Rodillo</span></div>
+    </div>`
+  },
+  {
+    title:'Aula · stepper',
+    note:'Familia relacionada pero diferenciada, en el rosa de Aula. Los iconos estructurales N/V/M nunca se recolorean a rosa: su significado técnico es estable.',
+    html:`<div class="aula-steps">${AULA_STEPS.map(s=>`
+      <div class="aula-step${s.current?' current':s.done?' done':''}">${svg(s.id,{size:20})}<span>${s.name}</span></div>`).join('')}</div>
+      <div class="chip-row" style="margin-top:12px;">
+        <span class="status-chip" style="color:var(--aula); border-color:color-mix(in srgb, var(--aula) 35%, transparent);">${svg('aulaPrediction',{size:15})} Predicción</span>
+        <span class="status-chip" style="color:var(--aula); border-color:color-mix(in srgb, var(--aula) 35%, transparent);">${svg('aulaEvidence',{size:15})} Evidencia</span>
+      </div>`
+  },
+  {
+    title:'Dock móvil',
+    note:'A 22px sobre superficie clay elevada. Es donde el trazo fino más se pone a prueba — por eso el dock usa el peso dense.',
+    html:`<div class="demo-dock">
+      ${[['select','Sel',true],['node','Nodo'],['member','Barra'],['pointLoad','Carga'],['solve','Analizar']].map(([id,n,a])=>`
+        <button class="dock-btn${a?' active':''}">${svg(id,{size:22,cls:'dense'})}<span>${n}</span></button>`).join('')}
+    </div>`
+  },
+];
+
+document.getElementById('apps-container').innerHTML = APPS.map(a => `
+  <div class="app-demo">
+    <h4>${a.title}</h4>
+    <p class="dnote">${a.note}</p>
+    ${a.html}
+  </div>
+`).join('');
+
+/* ============================================================
+   Réplica de la interfaz — workspace completo
+   ============================================================ */
+
+/* Pórtico simple: columnas en x=170/530, dintel en y=120, base y=330.
+   Los apoyos se dibujan con la MISMA gramática que los iconos, a escala
+   de modelo — de ahí que el símbolo del rail y el del canvas coincidan. */
+const canvasSVG = () => {
+  const L = 170, R = 530, TOP = 120, BASE = 330;
+  // carga distribuida sobre el dintel: 5 flechas sólidas
+  const q = [];
+  const qTop = 66, qTip = TOP - 6;
+  q.push(`<line x1="${L}" y1="${qTop}" x2="${R}" y2="${qTop}" stroke="var(--load)" stroke-width="1.8"/>`);
+  for (let i = 0; i <= 4; i++) {
+    const x = L + (R - L) * i / 4;
+    q.push(`<line x1="${x}" y1="${qTop}" x2="${x}" y2="${qTip - 9}" stroke="var(--load)" stroke-width="1.8"/>`);
+    q.push(`<polygon points="${x},${qTip} ${x-4.4},${qTip-9.5} ${x+4.4},${qTip-9.5}" fill="var(--load)"/>`);
+  }
+
+  const node = (x,y) => `<circle cx="${x}" cy="${y}" r="5.4" fill="var(--canvas-node)" stroke="var(--canvas-member)" stroke-width="2"/><circle cx="${x}" cy="${y}" r="1.5" fill="var(--canvas-member)"/>`;
+
+  // apoyo articulado (pin) a escala de modelo — mismo dibujo que ICO.supportPin
+  const pin = (x,y) => `<g stroke="var(--canvas-member)" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M${x} ${y+3} ${x-15} ${y+27} h30 Z"/>
+      <line x1="${x-22}" y1="${y+27}" x2="${x+22}" y2="${y+27}"/>
+      <path d="M${x-15} ${y+34} ${x-10} ${y+27}M${x-4} ${y+34} ${x+1} ${y+27}M${x+7} ${y+34} ${x+12} ${y+27}"/>
+    </g>`;
+  // apoyo de rodillo — triángulo + par de círculos + trama
+  const roller = (x,y) => `<g stroke="var(--canvas-member)" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M${x} ${y+3} ${x-13} ${y+22} h26 Z"/>
+      <circle cx="${x-7}" cy="${y+27.5}" r="4.4"/><circle cx="${x+7}" cy="${y+27.5}" r="4.4"/>
+      <line x1="${x-22}" y1="${y+34}" x2="${x+22}" y2="${y+34}"/>
+      <path d="M${x-15} ${y+41} ${x-10} ${y+34}M${x-4} ${y+41} ${x+1} ${y+34}M${x+7} ${y+41} ${x+12} ${y+34}"/>
+    </g>`;
+
+  return `<svg viewBox="126 42 448 358" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Canvas del editor con un pórtico de dos columnas, apoyo articulado a la izquierda, apoyo de rodillo a la derecha y carga distribuida sobre el dintel.">
+    <line x1="126" y1="${BASE+27}" x2="574" y2="${BASE+27}" stroke="var(--canvas-grid-strong)" stroke-width="1.4"/>
+    ${q.join('')}
+    <g stroke="var(--canvas-member)" stroke-width="2.6" stroke-linecap="round">
+      <line x1="${L}" y1="${BASE}" x2="${L}" y2="${TOP}"/>
+      <line x1="${L}" y1="${TOP}" x2="${R}" y2="${TOP}"/>
+      <line x1="${R}" y1="${TOP}" x2="${R}" y2="${BASE}"/>
+    </g>
+    <g stroke="var(--brand)" stroke-width="2.6" stroke-linecap="round"><line x1="${L}" y1="${TOP}" x2="${R}" y2="${TOP}"/></g>
+    ${pin(L, BASE)}
+    ${roller(R, BASE)}
+    ${node(L,BASE)}${node(L,TOP)}${node(R,TOP)}${node(R,BASE)}
+    <g stroke="var(--brand)" stroke-width="1.4" fill="none" opacity=".9">
+      <circle cx="${L}" cy="${TOP}" r="11" stroke-dasharray="3 3"/>
+      <circle cx="${R}" cy="${TOP}" r="11" stroke-dasharray="3 3"/>
+    </g>
+    <g stroke="var(--dimension)" stroke-width="1.3" fill="none" stroke-linecap="round">
+      <line x1="${L}" y1="${BASE+52}" x2="${R}" y2="${BASE+52}"/>
+      <line x1="${L}" y1="${BASE+45}" x2="${L}" y2="${BASE+59}"/>
+      <line x1="${R}" y1="${BASE+45}" x2="${R}" y2="${BASE+59}"/>
+      <path d="M${L+11} ${BASE+47} ${L+3} ${BASE+52} ${L+11} ${BASE+57}"/>
+      <path d="M${R-11} ${BASE+47} ${R-3} ${BASE+52} ${R-11} ${BASE+57}"/>
+    </g>
+    <text x="${(L+R)/2}" y="${BASE+45}" text-anchor="middle" font-family="var(--font-mono)" font-size="12" fill="var(--dimension)">6.00 m</text>
+    <text x="${(L+R)/2}" y="${qTop-9}" text-anchor="middle" font-family="var(--font-mono)" font-size="12" fill="var(--load)">w = 18.0 kN/m</text>
+  </svg>`;
+};
+
+const repRail = [
+  { g:'Navegar' },
+  { id:'select', name:'Seleccionar', k:'V' },
+  { id:'pan', name:'Encuadrar', k:'H' },
+  { g:'Crear' },
+  { id:'node', name:'Nodo', k:'N' },
+  { id:'member', name:'Miembro', k:'M', active:true },
+  { id:'supportPin', name:'Apoyo', k:'S' },
+  { g:'Cargas' },
+  { id:'pointLoad', name:'Puntual', k:'P' },
+  { id:'distributedLoad', name:'Distribuida', k:'D' },
+  { id:'momentLoad', name:'Momento', k:'O' },
+  { g:'Editar' },
+  { id:'cut', name:'Cortar', k:'X' },
+  { id:'split', name:'Dividir', k:'B' },
+];
+
+document.getElementById('replica-container').innerHTML = `
+<div class="replica-frame"><div class="replica-scroll"><div class="replica">
+
+  <div class="rep-topbar">
+    <div class="rep-brand">
+      <span class="bm"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 2.4 21 7.4v9.2L12 21.6 3 16.6V7.4Z"/><path d="M3 7.4 12 12.4l9-5M12 12.4v9.2"/></svg></span>
+      <span class="rep-ident">
+        <span class="bn">structureCo</span>
+        <span class="pn">Pórtico 2 aguas — revisión B ${svg('properties',{size:13,color:'var(--muted)'})}</span>
+      </span>
+      <span class="rep-save">${svg('stReliable',{size:11})} guardado</span>
+    </div>
+    <div class="rep-ctx">
+      <span class="rep-sel">Combinación <span class="cv">1.2D + 1.6L</span></span>
+      <span class="rep-sel">${svg('units',{size:14,color:'var(--muted)'})}<span class="cv">kN · m</span></span>
+      <span class="rep-sel">Orden <span class="cv">1er orden</span></span>
+    </div>
+    <div class="rep-actions">
+      <span class="demo-cmd">Buscar <kbd>Ctrl K</kbd></span>
+      <button class="demo-iconbtn">${svg('undo',{size:17})}</button>
+      <button class="demo-iconbtn">${svg('redo',{size:17})}</button>
+      <button class="demo-iconbtn solve">${svg('solve',{size:16})} Analizar</button>
+    </div>
+  </div>
+
+  <div class="rep-body">
+    <div class="rep-rail">${railHTML(repRail)}</div>
+
+    <div class="rep-stage">
+      ${canvasSVG()}
+      <div class="rep-stage-tabs">
+        <div class="demo-tabs">${RESULT_TABS.map(t=>`
+          <button class="demo-tab${t.active?' active':''}" style="${t.active?`color:${t.color}`:''}">${svg(t.id,{size:16,color:t.active?t.color:undefined})} ${t.name}</button>`).join('')}</div>
+      </div>
+      <div class="rep-stage-chrome">
+        <button class="demo-iconbtn">${svg('pan',{size:17})}</button>
+        <button class="demo-iconbtn">${svg('dimension',{size:17})}</button>
+        <button class="demo-iconbtn">${svg('criticalPoint',{size:17})}</button>
+      </div>
+    </div>
+
+    <div class="rep-insp">
+      <div class="rep-insp-head">
+        ${svg('member',{size:21})}
+        <div><h5>Miembro M-03</h5><span class="sel-kind">Dintel · seleccionado</span></div>
+      </div>
+      <div class="rep-insp-body">
+        <div class="rep-sub">Propiedades</div>
+        <div class="rep-field">${svg('material',{size:17})}<span class="k">Material</span><span class="v">Acero A36</span></div>
+        <div class="rep-field">${svg('section',{size:17})}<span class="k">Sección</span><span class="v">IPR 254×89</span></div>
+        <div class="rep-field">${svg('dimension',{size:17})}<span class="k">Longitud</span><span class="v">6.000 m</span></div>
+        <div class="rep-sub">Extremos</div>
+        <div class="rep-field">${svg('supportPin',{size:17})}<span class="k">Nodo i</span><span class="v">N-02 · rígido</span></div>
+        <div class="rep-field">${svg('supportRoller',{size:17})}<span class="k">Nodo j</span><span class="v">N-03 · rígido</span></div>
+        <div class="rep-sub">Resultados</div>
+        <div class="rep-res">
+          <div class="rep-res-row" style="color:var(--axial)">${svg('axialN',{size:17})}<span class="lbl">Axial máx.</span><span class="val">−54.2 kN</span></div>
+          <div class="rep-res-row" style="color:var(--shear)">${svg('shearV',{size:17})}<span class="lbl">Cortante máx.</span><span class="val">62.4 kN</span></div>
+          <div class="rep-res-row" style="color:var(--moment)">${svg('momentM',{size:17})}<span class="lbl">Momento máx.</span><span class="val">81.0 kN·m</span></div>
+          <div class="rep-res-row" style="color:var(--deformed)">${svg('deformed',{size:17})}<span class="lbl">Flecha máx.</span><span class="val">12.4 mm</span></div>
+        </div>
+        <div style="padding:12px 16px 0;">
+          <span class="status-chip" style="color:var(--success); border-color:color-mix(in srgb, var(--success) 35%, transparent);">
+            ${svg('stReliable',{size:14})} Reliable <small>9.8 dígitos</small>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div></div></div>
+<p style="font-family:var(--font-mono); font-size:10.5px; color:var(--muted); margin-top:12px;">Los contenedores (topbar, rail, inspector) son los de StructureCo sin modificar — 68 / 164 / 320px de <code>tokens.css</code>. Lo único nuevo es el dibujo dentro de ellos.</p>
+`;
 
 </script>
 </body>
