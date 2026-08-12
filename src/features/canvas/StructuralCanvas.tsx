@@ -61,6 +61,7 @@ import { CanvasTouchLoupe } from './CanvasTouchLoupe';
 import { demandTone, memberDemandRatios, memberSectionModulus, memberYieldStrength } from '../results/elasticDemand';
 import { parseQuickEntryPair } from './quickEntry';
 import { resolveRepeatRecipe, type RepeatRecipe } from './repeatAction';
+import { RepeatActionOverlay } from './RepeatActionOverlay';
 import { prepareDuplicatePreview } from './duplicatePreview';
 import './phase2.css';
 
@@ -1952,17 +1953,16 @@ export const StructuralCanvas = ({
         canvasHeight={size.height}
       /> : null}
       {canvasFeedback ? <div className="canvas-feedback" role="alert">{canvasFeedback}</div> : null}
-      {repeatCandidate ? <button
-        type="button"
-        className="repeat-action-control"
-        aria-keyshortcuts="R"
-        onClick={activateRepeat}
-      >{t('canvas.repeatAction')}</button> : null}
-      {repeatRecipe ? <div className="repeat-preview" role="status">
-        <strong>{t('canvas.repeatPreview')}</strong>
-        <span>{t('canvas.repeatWaiting', { tool: t(toolLabelKeys[repeatRecipe.tool]) })}</span>
-        <button type="button" onClick={() => { setRepeatRecipe(null); setMemberStart(null); setActiveTool('select'); }}>{t('canvas.cancelPlacement')}</button>
-      </div> : null}
+      <RepeatActionOverlay
+        available={Boolean(repeatCandidate)}
+        active={Boolean(repeatRecipe)}
+        actionLabel={t('canvas.repeatAction')}
+        previewLabel={t('canvas.repeatPreview')}
+        instruction={repeatRecipe ? t('canvas.repeatWaiting', { tool: t(toolLabelKeys[repeatRecipe.tool]) }) : ''}
+        cancelLabel={t('canvas.cancelPlacement')}
+        onActivate={activateRepeat}
+        onCancel={() => { setRepeatRecipe(null); setMemberStart(null); setActiveTool('select'); }}
+      />
       {layers.results && layers.labels && resultsAllowed && analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <div className={`canvas-result-legend ${resultTab}`} aria-label={t('canvas.diagramConvention')} data-canvas-chrome="result-legend"><strong>{resultTab === 'axial' ? `N · ${t('results.axial')}` : resultTab === 'shear' ? `V · ${t('results.shear')}` : `M · ${t('results.moment')}`}</strong><span><i /> {t('canvas.exactCurveScale', { scale: t(project.settings.diagramScaleMode === 'individual' ? 'canvas.scaleByMember' : 'canvas.scaleCommon') })}</span><small>{t('canvas.diagramSideDescription', { side: project.settings.diagramSide === 'positive' ? '+y' : '−y' })}</small></div> : null}
       {memberStart ? <div className="canvas-hint" role="status"><span>{t('canvas.touchDestinationNode')}</span><button type="button" onClick={() => setMemberStart(null)} aria-label={t('canvas.cancelMemberCreation')}><X size={14} /></button></div> : null}
       {activeTool === 'node' || (activeTool === 'member' && memberStart) ? <form className="quick-entry-bar" aria-label={t('canvas.cadEntry')} onSubmit={(event) => { event.preventDefault(); submitQuickEntry(); }}>

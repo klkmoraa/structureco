@@ -294,7 +294,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
 
   return (
     <header ref={topbarRef} className="topbar">
-      <div className="brand-block topbar-zone topbar-document-zone" data-topbar-zone="document">
+      <div className="brand-block topbar-zone topbar-document-zone" data-topbar-zone="document" data-topbar-cluster="document">
         <button className="brand-mark brand-home-button" type="button" aria-label={t('navigation.home')} onClick={onOpenHome}>
           <BrandMark size={46} />
         </button>
@@ -359,51 +359,63 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
         </AnimatePresence>
       </div>
 
-      <div className="topbar-zone topbar-context-zone" data-topbar-zone="context" aria-label={t('analysis.caseOrCombination')}>
-        <select
-          className="compact-select combination-select"
-          aria-label={t('analysis.caseOrCombination')}
-          value={selectedCombinationId}
-          onChange={(event) => setSelectedCombinationId(event.target.value)}
-        >
-          <option value="">{t('analysis.activeCases')}</option>
-          {project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}
-        </select>
-        <select
-          className="compact-select mode-select"
-          aria-label={t('analysis.mode')}
-          value={project.settings.calculationMode ?? 'complete'}
-          onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } }))}
-        >
-          <option value="classroom">{t('analysis.modeClassroom')}</option>
-          <option value="complete">{t('analysis.modeComplete')}</option>
-        </select>
-        <select
-          className="compact-select analysis-order-select"
-          aria-label={t('analysis.order')}
-          value={project.settings.analysisMode ?? 'first-order'}
-          onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, analysisMode: event.target.value as 'first-order' | 'p-delta' } }))}
-        >
-          <option value="first-order">{t('analysis.orderFirst')}</option>
-          <option value="p-delta">{t('analysis.orderPDelta')}</option>
-        </select>
-        <select
-          className="compact-select units-select"
-          aria-label={t('units.label')}
-          value={project.settings.units}
-          onChange={(event) => updateProjectView((draft) => ({
-            ...draft,
-            settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units },
-          }))}
-        >
-          <option value="kN-m">kN · m</option>
-          <option value="N-mm">N · mm</option>
-          <option value="kgf-m">kgf · m</option>
-          <option value="kip-ft">kip · ft</option>
-        </select>
+      <div className="topbar-zone topbar-context-zone" data-topbar-zone="context" data-topbar-cluster="context" aria-label={t('analysis.caseOrCombination')}>
+        <label className="topbar-context-control topbar-context-control--scenario" data-context-control="scenario">
+          <span>{t('analysis.caseOrCombination')}</span>
+          <select
+            className="compact-select combination-select"
+            aria-label={t('analysis.caseOrCombination')}
+            value={selectedCombinationId}
+            onChange={(event) => setSelectedCombinationId(event.target.value)}
+          >
+            <option value="">{t('analysis.activeCases')}</option>
+            {project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}
+          </select>
+        </label>
+        <label className="topbar-context-control" data-context-control="mode">
+          <span>{t('analysis.mode')}</span>
+          <select
+            className="compact-select mode-select"
+            aria-label={t('analysis.mode')}
+            value={project.settings.calculationMode ?? 'complete'}
+            onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } }))}
+          >
+            <option value="classroom">{t('analysis.modeClassroom')}</option>
+            <option value="complete">{t('analysis.modeComplete')}</option>
+          </select>
+        </label>
+        <label className="topbar-context-control" data-context-control="order">
+          <span>{t('analysis.order')}</span>
+          <select
+            className="compact-select analysis-order-select"
+            aria-label={t('analysis.order')}
+            value={project.settings.analysisMode ?? 'first-order'}
+            onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, analysisMode: event.target.value as 'first-order' | 'p-delta' } }))}
+          >
+            <option value="first-order">{t('analysis.orderFirst')}</option>
+            <option value="p-delta">{t('analysis.orderPDelta')}</option>
+          </select>
+        </label>
+        <label className="topbar-context-control topbar-context-control--units" data-context-control="units">
+          <span>{t('units.label')}</span>
+          <select
+            className="compact-select units-select"
+            aria-label={t('units.label')}
+            value={project.settings.units}
+            onChange={(event) => updateProjectView((draft) => ({
+              ...draft,
+              settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units },
+            }))}
+          >
+            <option value="kN-m">kN · m</option>
+            <option value="N-mm">N · mm</option>
+            <option value="kgf-m">kgf · m</option>
+            <option value="kip-ft">kip · ft</option>
+          </select>
+        </label>
       </div>
 
-      <div className="top-actions topbar-zone topbar-actions-zone" data-topbar-zone="actions">
+      <div className="top-actions topbar-zone topbar-actions-zone" data-topbar-zone="actions" data-topbar-cluster="actions">
         {/* En pantallas anchas el botón lleva texto y keycap; por debajo de 1536px
             colapsa a icono en CSS y libera el ancho que la zona necesita. */}
         <button
