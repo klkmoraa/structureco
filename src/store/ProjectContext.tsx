@@ -8,7 +8,7 @@ import type { AnalysisResult, ProjectModel, Selection, ThemeMode, Tool } from '.
 import { ProjectModelContext, useProjectModel, type ProjectModelContextValue } from './ProjectModelContext';
 import { ProjectAnalysisContext, useProjectAnalysis, type ProjectAnalysisContextValue, type InfluenceCanvasState } from './ProjectAnalysisContext';
 import { WorkspaceUIContext, useWorkspaceUI, type WorkspaceUIContextValue, type ResultCursor, type ResultTab } from './WorkspaceUIContext';
-import type { ProjectCommand } from '../commands/projectCommand';
+import type { ProjectCommand, ProjectCommandResult } from '../commands/projectCommand';
 import { WORKER_PROTOCOL_VERSION, type AnalysisWorkerPayload, type WorkerRequestEnvelope, type WorkerResponseEnvelope } from '../runtime/workerProtocol';
 import type { ProjectRepository } from '../storage/projectRepository';
 
@@ -387,13 +387,14 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [commitReversibleProjectChange, selectedCombinationId]);
 
-  const executeProjectCommand = useCallback(async (command: ProjectCommand): Promise<void> => {
+  const executeProjectCommand = useCallback(async (command: ProjectCommand): Promise<ProjectCommandResult | undefined> => {
     const { applyProjectPatch, compileProjectCommand } = await import('../commands/projectCommand');
     const current = projectRef.current;
     const compiled = compileProjectCommand(current, command);
     const next = applyProjectPatch(current, compiled.forward);
-    if (JSON.stringify(next) === JSON.stringify(current)) return;
+    if (JSON.stringify(next) === JSON.stringify(current)) return compiled.result;
     commitReversibleProjectChange(current, next, command.description);
+    return compiled.result;
   }, [commitReversibleProjectChange]);
 
   const updateProjectView = useCallback((updater: (project: ProjectModel) => ProjectModel) => {

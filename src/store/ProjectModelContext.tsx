@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { AnalysisResult, ProjectModel, ProjectSettings } from '../types';
-import type { ProjectCommand } from '../commands/projectCommand';
+import type { ProjectCommand, ProjectCommandResult } from '../commands/projectCommand';
 
 /**
  * The structural model, its undo/redo history and persistence state.
@@ -22,7 +22,7 @@ export interface ProjectModelContextValue {
    * `ProjectCommand` is deliberately a subset of mutations, not a universal mutation bus:
    * this route records history and invalidates analysis.
    */
-  executeProjectCommand: (command: ProjectCommand) => Promise<void>;
+  executeProjectCommand: (command: ProjectCommand) => Promise<ProjectCommandResult | undefined>;
 
   /**
    * Applies a discrete reversible edit. It records one history entry and invalidates analysis.

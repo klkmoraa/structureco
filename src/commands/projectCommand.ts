@@ -1,4 +1,9 @@
-import { duplicateModelSelection } from '../data/modelOperations';
+import {
+  createMemberAtPoint,
+  duplicateModelSelection,
+  splitMemberAt,
+  type MemberCreationTemplate,
+} from '../data/modelOperations';
 import type {
   MemberInitialEffect,
   MemberLoad,
@@ -8,6 +13,7 @@ import type {
   PrescribedDisplacement,
   ProjectModel,
   Selection,
+  SupportDefinition,
 } from '../types';
 
 type ProjectEntity = NodeModel | MemberModel | NodalLoad | MemberLoad | PrescribedDisplacement | MemberInitialEffect;
@@ -31,6 +37,18 @@ interface CommandBase { description: string }
 export type ProjectCommand =
   | (CommandBase & { kind: 'member.create'; nodes: NodeModel[]; member: MemberModel })
   | (CommandBase & {
+    kind: 'member.createAtPoint';
+    startNodeId: string;
+    point: { x: number; y: number };
+    template: MemberCreationTemplate;
+  })
+  | (CommandBase & {
+    kind: 'member.split';
+    memberId: string;
+    ratio: number;
+    nodeSupport?: SupportDefinition;
+  })
+  | (CommandBase & {
     kind: 'member.material.apply';
     memberId: string;
     materialId: string;
@@ -47,10 +65,16 @@ export type ProjectCommand =
   | (CommandBase & { kind: 'selection.duplicate'; selection: Selection; offset: { x: number; y: number } })
   | (CommandBase & { kind: 'dxf.import'; nodes: NodeModel[]; members: MemberModel[]; sourceName: string });
 
+export type ProjectCommandResult =
+  | { kind: 'member.create'; memberId: string; nodeId: string; created: true }
+  | { kind: 'member.createAtPoint'; memberId: string; nodeId: string; created: boolean }
+  | { kind: 'member.split'; nodeId: string; firstMemberId: string; secondMemberId: string };
+
 export interface CompiledProjectCommand {
   command: ProjectCommand;
   forward: ProjectPatch;
   inverse: ProjectPatch;
+  result?: ProjectCommandResult;
 }
 
 const COLLECTIONS: ProjectEntityCollection[] = [
@@ -138,12 +162,25 @@ export const applyProjectPatch = (project: ProjectModel, patch: ProjectPatch): P
 
 export const compileProjectCommand = (project: ProjectModel, command: ProjectCommand): CompiledProjectCommand => {
   const next = structuredClone(project);
+  let result: ProjectCommandResult | undefined;
   if (command.kind === 'member.create') {
     next.nodes.push(...structuredClone(command.nodes));
     const member = structuredClone(command.member);
     member.materialOrigin ??= 'custom';
     member.sectionOrigin ??= 'custom';
     next.members.push(member);
+    result = { kind: 'member.create', memberId: member.id, nodeId: member.j, created: true };
+  } else if (command.kind === 'member.createAtPoint') {
+    const created = createMemberAtPoint(next, command);
+    result = { kind: command.kind, ...created };
+  } else if (command.kind === 'member.split') {
+    const split = splitMemberAt(next, command.memberId, command.ratio);
+    if (command.nodeSupport) {
+      const node = next.nodes.find((candidate) => candidate.id === split.nodeId);
+      if (!node) throw new Error(`No existe el nodo ${split.nodeId}.`);
+      node.support = structuredClone(command.nodeSupport);
+    }
+    result = { kind: command.kind, ...split };
   } else if (command.kind === 'member.material.apply') {
     const index = next.members.findIndex((member) => member.id === command.memberId);
     if (index < 0) throw new Error(`No existe el miembro ${command.memberId}.`);
@@ -197,11 +234,11 @@ export const compileProjectCommand = (project: ProjectModel, command: ProjectCom
   } else if (command.kind === 'selection.duplicate') {
     const duplicated = duplicateModelSelection(next, command.selection, command.offset);
     if (!duplicated) throw new Error('La selección no se puede duplicar.');
-  } else {
+  } else if (command.kind === 'dxf.import') {
     next.nodes.push(...structuredClone(command.nodes));
     next.members.push(...structuredClone(command.members));
   }
   validateProjectBoundary(next);
   const forward = diffProjects(project, next, command.description);
-  return { command, forward, inverse: invertProjectPatch(forward) };
+  return { command, forward, inverse: invertProjectPatch(forward), result };
 };

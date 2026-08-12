@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { StrictMode } from 'react';
+import { StrictMode, useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createDefaultProject } from '../data/defaultProject';
 import { ProjectProvider, useProject } from './ProjectContext';
@@ -132,6 +132,29 @@ const SpecialBoundaryHarness = () => {
     <button onClick={() => renameProject('Proyecto renombrado')}>boundary-rename</button>
     <button onClick={replace}>boundary-replace</button>
     <button onClick={undo}>boundary-undo</button>
+  </>;
+};
+
+const TopologyCommandHarness = () => {
+  const { project, analysis, canUndo, canRedo, analyze, executeProjectCommand, undo, redo } = useProject();
+  const [resultNodeId, setResultNodeId] = useState('');
+  const split = async () => {
+    const result = await executeProjectCommand({
+      kind: 'member.split', description: 'Dividir miembro desde Context', memberId: project.members[0].id, ratio: 0.5,
+    });
+    if (result?.kind === 'member.split') setResultNodeId(result.nodeId);
+  };
+  return <>
+    <output aria-label="topology-nodes">{project.nodes.length}</output>
+    <output aria-label="topology-members">{project.members.length}</output>
+    <output aria-label="topology-result-node">{resultNodeId}</output>
+    <output aria-label="topology-analysis">{analysis ? (analysis.success ? 'success' : 'failed') : 'none'}</output>
+    <output aria-label="topology-can-undo">{String(canUndo)}</output>
+    <output aria-label="topology-can-redo">{String(canRedo)}</output>
+    <button onClick={analyze}>topology-analyze</button>
+    <button onClick={split}>topology-split</button>
+    <button onClick={undo}>topology-undo</button>
+    <button onClick={redo}>topology-redo</button>
   </>;
 };
 
@@ -425,5 +448,33 @@ describe('ProjectContext mutation-policy boundaries', () => {
     expect(screen.getByLabelText('boundary-can-undo').textContent).toBe('true');
     await user.click(screen.getByText('boundary-undo'));
     expect(screen.getByLabelText('boundary-project-name').textContent).not.toBe('Proyecto reemplazado');
+  });
+
+  it('publishes a topological command result with one invalidating undo/redo entry', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('structureCo.project', JSON.stringify(createDefaultProject()));
+    render(<ProjectProvider><TopologyCommandHarness /></ProjectProvider>);
+    const initialNodes = screen.getByLabelText('topology-nodes').textContent;
+    const initialMembers = screen.getByLabelText('topology-members').textContent;
+
+    await user.click(screen.getByText('topology-analyze'));
+    await waitFor(() => expect(screen.getByLabelText('topology-analysis').textContent).toBe('success'));
+    await user.click(screen.getByText('topology-split'));
+    await waitFor(() => expect(screen.getByLabelText('topology-result-node').textContent).not.toBe(''));
+
+    expect(screen.getByLabelText('topology-analysis').textContent).toBe('none');
+    expect(Number(screen.getByLabelText('topology-nodes').textContent)).toBe(Number(initialNodes) + 1);
+    expect(Number(screen.getByLabelText('topology-members').textContent)).toBe(Number(initialMembers) + 1);
+    expect(screen.getByLabelText('topology-can-undo').textContent).toBe('true');
+
+    await user.click(screen.getByText('topology-undo'));
+    expect(screen.getByLabelText('topology-nodes').textContent).toBe(initialNodes);
+    expect(screen.getByLabelText('topology-members').textContent).toBe(initialMembers);
+    expect(screen.getByLabelText('topology-can-undo').textContent).toBe('false');
+    expect(screen.getByLabelText('topology-can-redo').textContent).toBe('true');
+
+    await user.click(screen.getByText('topology-redo'));
+    expect(Number(screen.getByLabelText('topology-nodes').textContent)).toBe(Number(initialNodes) + 1);
+    expect(Number(screen.getByLabelText('topology-members').textContent)).toBe(Number(initialMembers) + 1);
   });
 });

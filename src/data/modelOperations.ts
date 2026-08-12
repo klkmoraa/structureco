@@ -489,6 +489,20 @@ export interface EnsureNodeResult {
   splitMemberId?: string;
 }
 
+export type MemberCreationTemplate = Omit<MemberModel, 'id' | 'i' | 'j'>;
+
+export interface CreateMemberAtPointInput {
+  startNodeId: string;
+  point: { x: number; y: number };
+  template: MemberCreationTemplate;
+}
+
+export interface CreateMemberAtPointResult {
+  memberId: string;
+  nodeId: string;
+  created: boolean;
+}
+
 /** Reuses a coincident node or creates a connected joint when the point lies on a member. */
 export const ensureNodeAtPoint = (project: ProjectModel, point: { x: number; y: number }): EnsureNodeResult => {
   const tolerance = projectTopologyTolerance(project);
@@ -510,4 +524,28 @@ export const ensureNodeAtPoint = (project: ProjectModel, point: { x: number; y: 
   const nodeId = nextId('N', project.nodes.map((node) => node.id));
   project.nodes.push({ id: nodeId, ...point, support: { type: 'none' } });
   return { nodeId, created: true };
+};
+
+/** Creates one member intention while keeping endpoint topology inside the domain boundary. */
+export const createMemberAtPoint = (project: ProjectModel, input: CreateMemberAtPointInput): CreateMemberAtPointResult => {
+  const start = project.nodes.find((node) => node.id === input.startNodeId);
+  if (!start) throw new Error(`No existe el nodo ${input.startNodeId}.`);
+  if (Math.hypot(input.point.x - start.x, input.point.y - start.y) <= 1e-10) {
+    throw new Error('Los extremos del miembro deben estar separados.');
+  }
+
+  const endpoint = ensureNodeAtPoint(project, input.point);
+  const existing = project.members.find((member) =>
+    (member.i === start.id && member.j === endpoint.nodeId)
+    || (member.i === endpoint.nodeId && member.j === start.id));
+  if (existing) return { memberId: existing.id, nodeId: endpoint.nodeId, created: false };
+
+  const memberId = nextId('M', project.members.map((member) => member.id));
+  project.members.push({
+    id: memberId,
+    i: start.id,
+    j: endpoint.nodeId,
+    ...structuredClone(input.template),
+  });
+  return { memberId, nodeId: endpoint.nodeId, created: true };
 };

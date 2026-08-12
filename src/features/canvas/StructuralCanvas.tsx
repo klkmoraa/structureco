@@ -8,7 +8,7 @@ import { resolveMemberLocalLoads } from '../../engine/solver';
 import { fromDisplay, toDisplay, unitLabel } from '../../engine/units';
 import { exportSvgAsPng, exportSvgElement } from '../../utils/export';
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
-import { copyModelSelection, ensureNodeAtPoint, pasteModelClipboard, splitMemberAt, structuralSelectionFromIds, toggleStructuralSelection, type ModelClipboard } from '../../data/modelOperations';
+import { copyModelSelection, ensureNodeAtPoint, pasteModelClipboard, structuralSelectionFromIds, toggleStructuralSelection, type ModelClipboard } from '../../data/modelOperations';
 import {
   buildIntersectionSnapCandidates,
   buildPerpendicularSnapCandidates,
@@ -630,37 +630,18 @@ export const StructuralCanvas = ({
       setQuickEntryError(t('canvas.endpointSeparated'));
       return;
     }
-    let nodeId = '';
     let memberId = '';
-    const draft = structuredClone(project);
-    const memberStateBeforeEndpoint = JSON.stringify({ members: draft.members, memberLoads: draft.memberLoads, memberInitialEffects: draft.memberInitialEffects });
-    nodeId = ensureNodeAtPoint(draft, point).nodeId;
-    if (nodeId !== memberStart) {
-      const existing = draft.members.find((member) =>
-        (member.i === memberStart && member.j === nodeId) || (member.i === nodeId && member.j === memberStart));
-      if (existing) {
-        memberId = existing.id;
-      } else {
-        memberId = nextId('M', draft.members.map((member) => member.id));
-        const template = repeatRecipe?.kind === 'member'
-          ? repeatRecipe.template
-          : { type: 'frame' as const, materialOrigin: 'custom' as const, sectionOrigin: 'custom' as const, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 };
-        const member = { id: memberId, i: memberStart, j: nodeId, ...template };
-        const endpointOnlyAddedNodes = memberStateBeforeEndpoint === JSON.stringify({ members: draft.members, memberLoads: draft.memberLoads, memberInitialEffects: draft.memberInitialEffects });
-        if (endpointOnlyAddedNodes) {
-          const existingNodeIds = new Set(project.nodes.map((node) => node.id));
-          await executeProjectCommand({
-            kind: 'member.create',
-            description: `Crear miembro ${memberId}`,
-            nodes: draft.nodes.filter((node) => !existingNodeIds.has(node.id)),
-            member,
-          });
-        } else {
-          draft.members.push(member);
-          updateProject(() => draft);
-        }
-      }
-    }
+    const template = repeatRecipe?.kind === 'member'
+      ? repeatRecipe.template
+      : { type: 'frame' as const, materialOrigin: 'custom' as const, sectionOrigin: 'custom' as const, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 };
+    const result = await executeProjectCommand({
+      kind: 'member.createAtPoint',
+      description: 'Crear miembro',
+      startNodeId: memberStart,
+      point,
+      template,
+    });
+    if (result?.kind === 'member.createAtPoint') memberId = result.memberId;
     setMemberStart(null);
     if (memberId) setSelection({ kind: 'member', id: memberId });
     setQuickEntry({ first: '', second: '' });
@@ -792,12 +773,14 @@ export const StructuralCanvas = ({
       if (!memberStart) { setMemberStart(node.id); setSelection({ kind: 'node', id: node.id }); return; }
       if (memberStart === node.id) { setMemberStart(null); return; }
       const id = nextId('M', project.members.map((member) => member.id));
-      updateProject((draft) => {
-        const template = repeatRecipe?.kind === 'member'
-          ? repeatRecipe.template
-          : { type: 'frame' as const, materialOrigin: 'custom' as const, sectionOrigin: 'custom' as const, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 };
-        draft.members.push({ id, i: memberStart, j: node.id, ...template });
-        return draft;
+      const template = repeatRecipe?.kind === 'member'
+        ? repeatRecipe.template
+        : { type: 'frame' as const, materialOrigin: 'custom' as const, sectionOrigin: 'custom' as const, E: 200e6, A: 0.005, I: 8.333e-6, density: 7850 };
+      void executeProjectCommand({
+        kind: 'member.create',
+        description: `Crear miembro ${id}`,
+        nodes: [],
+        member: { id, i: memberStart, j: node.id, ...template },
       });
       setMemberStart(null);
       setRepeatRecipe(null);
@@ -867,17 +850,15 @@ export const StructuralCanvas = ({
       const dx = nj.x - ni.x;
       const dy = nj.y - ni.y;
       const ratio = clamp(((point.x - ni.x) * dx + (point.y - ni.y) * dy) / Math.max(dx * dx + dy * dy, 1e-18), 1e-6, 1 - 1e-6);
-      let nodeId = '';
-      updateProject((draft) => {
-        const result = splitMemberAt(draft, member.id, ratio);
-        nodeId = result.nodeId;
-        if (tool === 'support') {
-          const target = draft.nodes.find((node) => node.id === nodeId);
-          if (target) target.support = { type: 'pin' };
-        }
-        return draft;
+      void executeProjectCommand({
+        kind: 'member.split',
+        description: `Dividir miembro ${member.id}`,
+        memberId: member.id,
+        ratio,
+        nodeSupport: tool === 'support' ? { type: 'pin' } : undefined,
+      }).then((result) => {
+        if (result?.kind === 'member.split') setSelection({ kind: 'node', id: result.nodeId });
       });
-      if (nodeId) setSelection({ kind: 'node', id: nodeId });
       return;
     }
     if (tool === 'distributedLoad') {
