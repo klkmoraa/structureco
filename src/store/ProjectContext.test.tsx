@@ -10,7 +10,9 @@ import type { ProjectCommand } from '../commands/projectCommand';
 const TransactionHarness = () => {
   const {
     project,
+    analysis,
     canUndo,
+    analyze,
     beginProjectTransaction,
     updateProjectTransient,
     commitProjectTransaction,
@@ -23,7 +25,9 @@ const TransactionHarness = () => {
   });
   return <>
     <output aria-label="x-coordinate">{project.nodes[0].x}</output>
+    <output aria-label="transaction-analysis-state">{analysis ? (analysis.success ? 'success' : 'failed') : 'none'}</output>
     <output aria-label="can-undo">{String(canUndo)}</output>
+    <button onClick={analyze}>transaction-analyze</button>
     <button onClick={() => beginProjectTransaction()}>begin</button>
     <button onClick={move}>move</button>
     <button onClick={commitProjectTransaction}>commit</button>
@@ -91,7 +95,7 @@ const AnalysisSettingsHarness = () => {
 };
 
 const CommandHistoryHarness = () => {
-  const { project, canUndo, canRedo, executeProjectCommand, undo, redo } = useProject();
+  const { project, analysis, canUndo, canRedo, analyze, executeProjectCommand, undo, redo } = useProject();
   const createMember = async () => {
     const source = project.members[0];
     const command: ProjectCommand = {
@@ -102,11 +106,32 @@ const CommandHistoryHarness = () => {
   };
   return <>
     <output aria-label="command-members">{project.members.length}</output>
+    <output aria-label="command-analysis-state">{analysis ? (analysis.success ? 'success' : 'failed') : 'none'}</output>
     <output aria-label="command-undo">{String(canUndo)}</output>
     <output aria-label="command-redo">{String(canRedo)}</output>
+    <button onClick={analyze}>command-analyze</button>
     <button onClick={createMember}>command-create</button>
     <button onClick={undo}>command-undo-action</button>
     <button onClick={redo}>command-redo-action</button>
+  </>;
+};
+
+const SpecialBoundaryHarness = () => {
+  const { project, analysis, canUndo, analyze, renameProject, replaceProject, undo } = useProject();
+  const replace = () => {
+    const next = createDefaultProject();
+    next.id = 'replaced-project';
+    next.name = 'Proyecto reemplazado';
+    replaceProject(next);
+  };
+  return <>
+    <output aria-label="boundary-project-name">{project.name}</output>
+    <output aria-label="boundary-analysis-state">{analysis ? (analysis.success ? 'success' : 'failed') : 'none'}</output>
+    <output aria-label="boundary-can-undo">{String(canUndo)}</output>
+    <button onClick={analyze}>boundary-analyze</button>
+    <button onClick={() => renameProject('Proyecto renombrado')}>boundary-rename</button>
+    <button onClick={replace}>boundary-replace</button>
+    <button onClick={undo}>boundary-undo</button>
   </>;
 };
 
@@ -120,13 +145,13 @@ describe('ProjectContext transactions', () => {
     render(<ProjectProvider><CommandHistoryHarness /></ProjectProvider>);
     const initial = Number(screen.getByLabelText('command-members').textContent);
     await user.click(screen.getByText('command-create'));
-    expect(Number(screen.getByLabelText('command-members').textContent)).toBe(initial + 1);
+    await waitFor(() => expect(Number(screen.getByLabelText('command-members').textContent)).toBe(initial + 1));
     expect(screen.getByLabelText('command-undo').textContent).toBe('true');
     await user.click(screen.getByText('command-undo-action'));
     expect(Number(screen.getByLabelText('command-members').textContent)).toBe(initial);
     expect(screen.getByLabelText('command-redo').textContent).toBe('true');
     await user.click(screen.getByText('command-redo-action'));
-    expect(Number(screen.getByLabelText('command-members').textContent)).toBe(initial + 1);
+    await waitFor(() => expect(Number(screen.getByLabelText('command-members').textContent)).toBe(initial + 1));
   });
 
   it('keeps direct edit history correct under React StrictMode', async () => {
@@ -215,6 +240,42 @@ describe('ProjectContext analysis lifecycle', () => {
     expect(screen.getByLabelText('analysis-member-count').textContent).toBe('1');
     expect(screen.getByLabelText('analysis-state').textContent).toBe('none');
   });
+
+  it('characterizes that a discrete update is undoable and invalidates a completed result', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('structureCo.project', JSON.stringify(createDefaultProject()));
+    render(<ProjectProvider><AnalysisHarness /></ProjectProvider>);
+
+    await user.click(screen.getByText('analyze'));
+    await waitFor(() => expect(screen.getByLabelText('analysis-state').textContent).toBe('success'));
+    await user.click(screen.getByText('edit'));
+
+    expect(screen.getByLabelText('analysis-state').textContent).toBe('none');
+    expect(screen.getByLabelText('analysis-can-undo').textContent).toBe('true');
+    await user.click(screen.getByText('undo-analysis'));
+    expect(screen.getByLabelText('analysis-can-undo').textContent).toBe('false');
+  });
+
+  it('characterizes that a transient gesture invalidates immediately, commits once, and cancel leaves no history', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('structureCo.project', JSON.stringify(createDefaultProject()));
+    render(<ProjectProvider><TransactionHarness /></ProjectProvider>);
+
+    await user.click(screen.getByText('transaction-analyze'));
+    await waitFor(() => expect(screen.getByLabelText('transaction-analysis-state').textContent).toBe('success'));
+    await user.click(screen.getByText('begin'));
+    await user.click(screen.getByText('move'));
+    expect(screen.getByLabelText('transaction-analysis-state').textContent).toBe('none');
+    await user.click(screen.getByText('commit'));
+    expect(screen.getByLabelText('can-undo').textContent).toBe('true');
+    await user.click(screen.getByText('undo'));
+    expect(screen.getByLabelText('can-undo').textContent).toBe('false');
+
+    await user.click(screen.getByText('begin'));
+    await user.click(screen.getByText('move'));
+    await user.click(screen.getByText('cancel'));
+    expect(screen.getByLabelText('can-undo').textContent).toBe('false');
+  });
 });
 
 describe('ProjectContext analysis settings lifecycle', () => {
@@ -289,6 +350,7 @@ describe('ProjectContext analysis settings lifecycle', () => {
     await user.click(screen.getByText('settings-view-preference'));
 
     expect(screen.getByLabelText('settings-analysis-state').textContent).toBe('success');
+    expect(screen.getByLabelText('settings-can-undo').textContent).toBe('false');
   });
 
   it('keeps the existing undo and redo contract for analysis settings changes', async () => {
@@ -307,5 +369,61 @@ describe('ProjectContext analysis settings lifecycle', () => {
     await user.click(screen.getByText('settings-redo'));
     expect(screen.getByLabelText('settings-project-name').textContent).toBe('Proyecto editado');
     expect(screen.getByLabelText('settings-analysis-mode').textContent).toBe('p-delta');
+  });
+
+  it('characterizes that analysis settings invalidate without creating a history entry', async () => {
+    const user = userEvent.setup();
+    renderSettingsHarness();
+    await analyzeSuccessfully(user);
+
+    await user.click(screen.getByText('settings-p-delta'));
+
+    expect(screen.getByLabelText('settings-analysis-state').textContent).toBe('none');
+    expect(screen.getByLabelText('settings-can-undo').textContent).toBe('false');
+  });
+});
+
+describe('ProjectContext mutation-policy boundaries', () => {
+  it('characterizes that a command is reversible and invalidates a completed result', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('structureCo.project', JSON.stringify(createDefaultProject()));
+    render(<ProjectProvider><CommandHistoryHarness /></ProjectProvider>);
+
+    await user.click(screen.getByText('command-analyze'));
+    await waitFor(() => expect(screen.getByLabelText('command-analysis-state').textContent).toBe('success'));
+    await user.click(screen.getByText('command-create'));
+
+    expect(screen.getByLabelText('command-analysis-state').textContent).toBe('none');
+    expect(screen.getByLabelText('command-undo').textContent).toBe('true');
+  });
+
+  it('characterizes that rename preserves the active result and does not create history', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('structureCo.project', JSON.stringify(createDefaultProject()));
+    render(<ProjectProvider><SpecialBoundaryHarness /></ProjectProvider>);
+
+    await user.click(screen.getByText('boundary-analyze'));
+    await waitFor(() => expect(screen.getByLabelText('boundary-analysis-state').textContent).toBe('success'));
+    await user.click(screen.getByText('boundary-rename'));
+
+    expect(screen.getByLabelText('boundary-project-name').textContent).toBe('Proyecto renombrado');
+    expect(screen.getByLabelText('boundary-analysis-state').textContent).toBe('success');
+    expect(screen.getByLabelText('boundary-can-undo').textContent).toBe('false');
+  });
+
+  it('characterizes replaceProject as a loading boundary with opening history and cleared stale results', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('structureCo.project', JSON.stringify(createDefaultProject()));
+    render(<ProjectProvider><SpecialBoundaryHarness /></ProjectProvider>);
+
+    await user.click(screen.getByText('boundary-analyze'));
+    await waitFor(() => expect(screen.getByLabelText('boundary-analysis-state').textContent).toBe('success'));
+    await user.click(screen.getByText('boundary-replace'));
+
+    expect(screen.getByLabelText('boundary-project-name').textContent).toBe('Proyecto reemplazado');
+    expect(screen.getByLabelText('boundary-analysis-state').textContent).toBe('none');
+    expect(screen.getByLabelText('boundary-can-undo').textContent).toBe('true');
+    await user.click(screen.getByText('boundary-undo'));
+    expect(screen.getByLabelText('boundary-project-name').textContent).not.toBe('Proyecto reemplazado');
   });
 });

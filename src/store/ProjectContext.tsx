@@ -122,6 +122,30 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     setInfluenceCanvasState(null);
   }, []);
 
+  /** Publishes a model change without assigning history or analysis semantics. */
+  const publishProject = useCallback((next: ProjectModel) => {
+    projectRef.current = next;
+    setProject(next);
+  }, []);
+
+  /** Publishes a model change whose new state makes any current result stale. */
+  const publishAnalysisAffectingProject = useCallback((next: ProjectModel) => {
+    invalidateAnalysis();
+    publishProject(next);
+  }, [invalidateAnalysis, publishProject]);
+
+  /** Stores one bounded undo checkpoint and discards its redo branch. */
+  const recordHistory = useCallback((previous: ProjectModel, description: string) => {
+    setPast((history) => [...history.slice(-49), { project: previous, description }]);
+    setFuture([]);
+  }, []);
+
+  /** The shared implementation for the two explicitly reversible edit routes. */
+  const commitReversibleProjectChange = useCallback((previous: ProjectModel, next: ProjectModel, description: string) => {
+    recordHistory(previous, description);
+    publishAnalysisAffectingProject(next);
+  }, [publishAnalysisAffectingProject, recordHistory]);
+
   useEffect(() => () => {
     if (analysisTimerRef.current !== null) window.clearTimeout(analysisTimerRef.current);
     analysisWorkerRef.current?.terminate();
@@ -339,19 +363,14 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     const current = projectRef.current;
     if (name === current.name) return;
     const next = { ...current, name };
-    projectRef.current = next;
-    setProject(next);
-  }, []);
+    publishProject(next);
+  }, [publishProject]);
 
   const updateProject = useCallback((updater: (project: ProjectModel) => ProjectModel, analyzeAfter = false) => {
     const current = projectRef.current;
     const next = updater(structuredClone(current));
     if (JSON.stringify(next) === JSON.stringify(current)) return;
-    setPast((history) => [...history.slice(-49), { project: current, description: 'Editar proyecto' }]);
-    setFuture([]);
-    invalidateAnalysis();
-    projectRef.current = next;
-    setProject(next);
+    commitReversibleProjectChange(current, next, 'Editar proyecto');
     if (analyzeAfter) {
       // `invalidateAnalysis` above already bumped the revision; publishing this
       // run without re-checking it would let a result from an older model land
@@ -366,7 +385,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
           });
       }, 0);
     }
-  }, [invalidateAnalysis, selectedCombinationId]);
+  }, [commitReversibleProjectChange, selectedCombinationId]);
 
   const executeProjectCommand = useCallback(async (command: ProjectCommand): Promise<void> => {
     const { applyProjectPatch, compileProjectCommand } = await import('../commands/projectCommand');
@@ -374,20 +393,15 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     const compiled = compileProjectCommand(current, command);
     const next = applyProjectPatch(current, compiled.forward);
     if (JSON.stringify(next) === JSON.stringify(current)) return;
-    setPast((history) => [...history.slice(-49), { project: current, description: command.description }]);
-    setFuture([]);
-    invalidateAnalysis();
-    projectRef.current = next;
-    setProject(next);
-  }, [invalidateAnalysis]);
+    commitReversibleProjectChange(current, next, command.description);
+  }, [commitReversibleProjectChange]);
 
   const updateProjectView = useCallback((updater: (project: ProjectModel) => ProjectModel) => {
     const current = projectRef.current;
     const next = updater(structuredClone(current));
     if (JSON.stringify(next) === JSON.stringify(current)) return;
-    projectRef.current = next;
-    setProject(next);
-  }, []);
+    publishProject(next);
+  }, [publishProject]);
 
   const updateProjectAnalysisSettings = useCallback((updater: (settings: Pick<ProjectModel['settings'], 'analysisMode' | 'pDeltaConfig'>) => Pick<ProjectModel['settings'], 'analysisMode' | 'pDeltaConfig'>) => {
     const current = projectRef.current;
@@ -401,10 +415,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       settings: { ...current.settings, ...nextAnalysisSettings },
     };
     if (JSON.stringify(next) === JSON.stringify(current)) return;
-    invalidateAnalysis();
-    projectRef.current = next;
-    setProject(next);
-  }, [invalidateAnalysis]);
+    publishAnalysisAffectingProject(next);
+  }, [publishAnalysisAffectingProject]);
 
   const beginProjectTransaction = useCallback((description = 'Editar proyecto') => {
     if (transactionStartRef.current) return;
@@ -417,10 +429,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     const current = projectRef.current;
     const next = updater(structuredClone(current));
     if (JSON.stringify(next) === JSON.stringify(current)) return;
-    projectRef.current = next;
-    invalidateAnalysis();
-    setProject(next);
-  }, [invalidateAnalysis]);
+    publishAnalysisAffectingProject(next);
+  }, [publishAnalysisAffectingProject]);
 
   const moveNodeTransient = useCallback((nodeId: string, point: { x: number; y: number }) => {
     const current = projectRef.current;
@@ -431,33 +441,28 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     const nodes = current.nodes.slice();
     nodes[index] = { ...node, x: point.x, y: point.y };
     const next = { ...current, nodes };
-    projectRef.current = next;
-    invalidateAnalysis();
-    setProject(next);
-  }, [invalidateAnalysis]);
+    publishAnalysisAffectingProject(next);
+  }, [publishAnalysisAffectingProject]);
 
   const commitProjectTransaction = useCallback(() => {
     const start = transactionStartRef.current;
     transactionStartRef.current = null;
     if (start && JSON.stringify(start) !== JSON.stringify(projectRef.current)) {
-      setPast((history) => [...history.slice(-49), { project: start, description: transactionDescriptionRef.current }]);
-      setFuture([]);
+      recordHistory(start, transactionDescriptionRef.current);
     }
     setTransactionActive(false);
     setPersistenceRevision((revision) => revision + 1);
-  }, []);
+  }, [recordHistory]);
 
   const cancelProjectTransaction = useCallback(() => {
     const start = transactionStartRef.current;
     transactionStartRef.current = null;
     if (start) {
-      projectRef.current = start;
-      setProject(start);
-      invalidateAnalysis();
+      publishAnalysisAffectingProject(start);
     }
     setTransactionActive(false);
     setPersistenceRevision((revision) => revision + 1);
-  }, [invalidateAnalysis]);
+  }, [publishAnalysisAffectingProject]);
 
   const replaceProject = useCallback((next: ProjectModel, restoredAnalysis?: AnalysisResult, repositoryRevision?: number) => {
     const normalized = normalizeProject(next);
