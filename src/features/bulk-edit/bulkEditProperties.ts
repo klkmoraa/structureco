@@ -1,7 +1,18 @@
-import type { MemberModel, MemberPropertyOrigin, MemberType, NodeModel, SupportType } from '../../types';
+import type {
+  LoadCoordinateSystem,
+  LoadLengthBasis,
+  MemberLoad,
+  MemberModel,
+  MemberPropertyOrigin,
+  MemberType,
+  NodeModel,
+  SupportType,
+} from '../../types';
 import type {
   BulkIncompatibilityReason,
+  BulkMemberLoadPropertyDescriptor,
   BulkMemberPropertyDescriptor,
+  BulkNodalLoadPropertyDescriptor,
   BulkNodePropertyDescriptor,
   BulkPropertyDescriptor,
 } from './bulkEditTypes';
@@ -40,6 +51,43 @@ const customSupportOnly = (node: NodeModel): BulkIncompatibilityReason | undefin
 
 const rollerOnly = (node: NodeModel): BulkIncompatibilityReason | undefined =>
   node.support.type === 'roller' ? undefined : 'support-type';
+
+/** Un campo sólo existe en su familia de carga; fuera de ella no hay dónde escribirlo. */
+const loadFamily = (...types: readonly MemberLoad['type'][]) =>
+  (load: MemberLoad): BulkIncompatibilityReason | undefined =>
+    types.includes(load.type) ? undefined : 'load-family';
+
+const COORDINATE_SYSTEMS = optionsOf<LoadCoordinateSystem>({ global: true, local: true });
+const LENGTH_BASES = optionsOf<LoadLengthBasis>({ real: true, horizontal: true, vertical: true });
+
+const nodalLoadProperties: readonly BulkNodalLoadPropertyDescriptor[] = [
+  { id: 'nodalLoad.caseId', entity: 'nodalLoad', kind: 'enum', editable: true, clearable: false, read: (load) => load.caseId },
+  { id: 'nodalLoad.fx', entity: 'nodalLoad', kind: 'number', editable: true, clearable: false, quantity: 'force', read: (load) => load.fx },
+  { id: 'nodalLoad.fy', entity: 'nodalLoad', kind: 'number', editable: true, clearable: false, quantity: 'force', read: (load) => load.fy },
+  { id: 'nodalLoad.mz', entity: 'nodalLoad', kind: 'number', editable: true, clearable: false, quantity: 'moment', read: (load) => load.mz },
+];
+
+const memberLoadProperties: readonly BulkMemberLoadPropertyDescriptor[] = [
+  { id: 'memberLoad.caseId', entity: 'memberLoad', kind: 'enum', editable: true, clearable: false, read: (load) => load.caseId },
+  {
+    id: 'memberLoad.coordinateSystem', entity: 'memberLoad', kind: 'enum', editable: true, clearable: false,
+    options: COORDINATE_SYSTEMS, ineligible: loadFamily('distributed', 'point'), read: (load) => load.coordinateSystem,
+  },
+  {
+    id: 'memberLoad.lengthBasis', entity: 'memberLoad', kind: 'enum', editable: true, clearable: false,
+    options: LENGTH_BASES, ineligible: loadFamily('distributed'), read: (load) => load.lengthBasis,
+  },
+  { id: 'memberLoad.start', entity: 'memberLoad', kind: 'number', editable: true, clearable: false, unit: 'x/L', ineligible: loadFamily('distributed'), read: (load) => load.start },
+  { id: 'memberLoad.end', entity: 'memberLoad', kind: 'number', editable: true, clearable: false, unit: 'x/L', ineligible: loadFamily('distributed'), read: (load) => load.end },
+  { id: 'memberLoad.qxStart', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'distributedForce', ineligible: loadFamily('distributed'), read: (load) => load.qxStart },
+  { id: 'memberLoad.qxEnd', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'distributedForce', ineligible: loadFamily('distributed'), read: (load) => load.qxEnd },
+  { id: 'memberLoad.qyStart', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'distributedForce', ineligible: loadFamily('distributed'), read: (load) => load.qyStart },
+  { id: 'memberLoad.qyEnd', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'distributedForce', ineligible: loadFamily('distributed'), read: (load) => load.qyEnd },
+  { id: 'memberLoad.position', entity: 'memberLoad', kind: 'number', editable: true, clearable: false, unit: 'x/L', ineligible: loadFamily('point', 'moment'), read: (load) => load.position },
+  { id: 'memberLoad.px', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'force', ineligible: loadFamily('point'), read: (load) => load.px },
+  { id: 'memberLoad.py', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'force', ineligible: loadFamily('point'), read: (load) => load.py },
+  { id: 'memberLoad.moment', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'moment', ineligible: loadFamily('moment'), read: (load) => load.moment },
+];
 
 const memberProperties: readonly BulkMemberPropertyDescriptor[] = [
   {
@@ -172,4 +220,6 @@ const nodeProperties: readonly BulkNodePropertyDescriptor[] = [
 export const bulkPropertyDescriptors: readonly BulkPropertyDescriptor[] = [
   ...memberProperties,
   ...nodeProperties,
+  ...nodalLoadProperties,
+  ...memberLoadProperties,
 ];

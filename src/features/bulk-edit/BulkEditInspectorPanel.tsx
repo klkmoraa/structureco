@@ -26,10 +26,22 @@ export const BulkEditInspectorPanel = ({ selection }: { selection: Extract<Selec
 
   // La selección guarda ids; el panel necesita las entidades. Un id que ya no
   // existe se descarta aquí, de modo que el panel nunca agrega un fantasma.
-  const resolved = useMemo(() => ({
-    members: project.members.filter((member) => selection.memberIds.includes(member.id)),
-    nodes: project.nodes.filter((node) => selection.nodeIds.includes(node.id)),
-  }), [project.members, project.nodes, selection.memberIds, selection.nodeIds]);
+  const resolved = useMemo(() => {
+    const members = project.members.filter((member) => selection.memberIds.includes(member.id));
+    const nodes = project.nodes.filter((node) => selection.nodeIds.includes(node.id));
+    const memberIds = new Set(members.map((member) => member.id));
+    const nodeIds = new Set(nodes.map((node) => node.id));
+    return {
+      members,
+      nodes,
+      // La selección del modelo no transporta cargas, así que entran las que
+      // cuelgan de lo seleccionado. Nunca se edita una carga suelta por error.
+      nodalLoads: project.nodalLoads.filter((load) => nodeIds.has(load.nodeId)),
+      memberLoads: project.memberLoads.filter((load) => memberIds.has(load.memberId)),
+      loadCases: project.loadCases.map((item) => item.id),
+    };
+  }, [project.members, project.nodes, project.nodalLoads, project.memberLoads, project.loadCases,
+    selection.memberIds, selection.nodeIds]);
 
   const apply = async ({ draft, aggregate }: BulkEditApplyRequest) => {
     setError(undefined);

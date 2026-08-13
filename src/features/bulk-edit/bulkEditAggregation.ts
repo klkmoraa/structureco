@@ -59,17 +59,31 @@ const resolveCompatibility = (
     for (const { id } of ids) incompatible.push({ target: { kind, id }, reason: 'entity-kind' });
   };
 
-  if (descriptor.entity === 'member') {
-    classify('member', selection.members, descriptor.ineligible, descriptor.read);
-    reject('node', selection.nodes);
-  } else {
-    reject('member', selection.members);
-    classify('node', selection.nodes, descriptor.ineligible, descriptor.read);
+  // Cada familia se clasifica con su propio descriptor; el resto de la
+  // selección entra entera como `entity-kind`, nunca se omite.
+  const nodalLoads = selection.nodalLoads ?? [];
+  const memberLoads = selection.memberLoads ?? [];
+  const families: Record<BulkEntityKind, readonly { id: string }[]> = {
+    member: selection.members,
+    node: selection.nodes,
+    nodalLoad: nodalLoads,
+    memberLoad: memberLoads,
+  };
+
+  for (const kind of ['member', 'node', 'nodalLoad', 'memberLoad'] as const) {
+    if (kind === descriptor.entity) {
+      classify(
+        kind,
+        families[kind],
+        descriptor.ineligible as ((entity: { id: string }) => BulkIncompatibilityReason | undefined) | undefined,
+        descriptor.read as (entity: { id: string }) => BulkValue,
+      );
+    } else reject(kind, families[kind]);
   }
 
   return {
     compatibility: {
-      selected: selection.members.length + selection.nodes.length,
+      selected: selection.members.length + selection.nodes.length + nodalLoads.length + memberLoads.length,
       compatible,
       incompatible,
     },
@@ -90,6 +104,16 @@ const aggregateValues = (values: readonly BulkValue[]): AggregatedValue => {
   return distinct.length === 1 ? { state: 'same', value: distinct[0] } : { state: 'mixed', values: distinct };
 };
 
+/** Los casos de carga son del proyecto, no del descriptor: se inyectan aquí. */
+const optionsFor = (
+  descriptor: BulkPropertyDescriptor,
+  selection: BulkSelectionInput,
+): readonly string[] | undefined => (
+  descriptor.id === 'nodalLoad.caseId' || descriptor.id === 'memberLoad.caseId'
+    ? selection.loadCases ?? []
+    : descriptor.options
+);
+
 const aggregateProperty = (
   descriptor: BulkPropertyDescriptor,
   selection: BulkSelectionInput,
@@ -103,7 +127,7 @@ const aggregateProperty = (
     clearable: descriptor.clearable,
     quantity: descriptor.quantity,
     unit: descriptor.unit,
-    options: descriptor.options,
+    options: optionsFor(descriptor, selection),
     value: aggregateValues(values),
     compatibility,
   };
@@ -115,9 +139,21 @@ export const aggregateBulkSelection = (selection: BulkSelectionInput): BulkSelec
   const memberTypeCounts = emptyMemberTypeCounts();
   for (const member of selection.members) memberTypeCounts[member.type] += 1;
 
+  const nodalLoads = selection.nodalLoads ?? [];
+  const memberLoads = selection.memberLoads ?? [];
   return {
+    /*
+     * El total es lo que el usuario seleccionó: nudos y miembros. Las cargas
+     * llegan colgadas de esa selección, no elegidas una a una, así que contarlas
+     * aquí diría «5 objetos seleccionados» cuando se marcaron 3.
+     */
     total: selection.members.length + selection.nodes.length,
-    counts: { member: selection.members.length, node: selection.nodes.length },
+    counts: {
+      member: selection.members.length,
+      node: selection.nodes.length,
+      nodalLoad: nodalLoads.length,
+      memberLoad: memberLoads.length,
+    },
     memberTypeCounts,
     properties: bulkPropertyDescriptors.map((descriptor) => aggregateProperty(descriptor, selection)),
   };

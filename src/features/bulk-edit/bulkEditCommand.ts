@@ -2,6 +2,10 @@ import {
   projectCommandSnapshot,
   type MemberBulkChanges,
   type MemberBulkEntry,
+  type MemberLoadBulkChanges,
+  type MemberLoadBulkEntry,
+  type NodalLoadBulkChanges,
+  type NodalLoadBulkEntry,
   type NodeBulkChanges,
   type NodeBulkEntry,
   type ProjectCommand,
@@ -13,6 +17,7 @@ import { findBulkProperty } from './bulkEditAggregation';
 import { canStageBulkChange } from './bulkEditIntent';
 import type {
   BulkEditDraft,
+  BulkEntityKind,
   BulkPropertyId,
   BulkSelectionAggregate,
   BulkStagedChange,
@@ -141,14 +146,75 @@ const changesForNode = (
   return changes;
 };
 
+
+/** Cambios de una carga nodal; nunca alcanzan a una carga de miembro. */
+const changesForNodalLoad = (
+  aggregate: BulkSelectionAggregate,
+  draft: BulkEditDraft,
+  loadId: string,
+): NodalLoadBulkChanges => {
+  const changes: NodalLoadBulkChanges = {};
+  for (const [id, change] of Object.entries(draft) as [BulkPropertyId, BulkStagedChange][]) {
+    const state = findBulkProperty(aggregate, id);
+    if (!canStageBulkChange(state, change)) continue;
+    if (!state.compatibility.compatible.some((target) => target.kind === 'nodalLoad' && target.id === loadId)) continue;
+    if (change.kind !== 'set') continue;
+
+    switch (id) {
+      case 'nodalLoad.caseId': changes.caseId = String(change.value); break;
+      case 'nodalLoad.fx': changes.fx = Number(change.value); break;
+      case 'nodalLoad.fy': changes.fy = Number(change.value); break;
+      case 'nodalLoad.mz': changes.mz = Number(change.value); break;
+      default: break;
+    }
+  }
+  return changes;
+};
+
+/** Cambios de una carga de miembro, ya acotados a su familia por la elegibilidad. */
+const changesForMemberLoad = (
+  aggregate: BulkSelectionAggregate,
+  draft: BulkEditDraft,
+  loadId: string,
+): MemberLoadBulkChanges => {
+  const changes: MemberLoadBulkChanges = {};
+  for (const [id, change] of Object.entries(draft) as [BulkPropertyId, BulkStagedChange][]) {
+    const state = findBulkProperty(aggregate, id);
+    if (!canStageBulkChange(state, change)) continue;
+    if (!state.compatibility.compatible.some((target) => target.kind === 'memberLoad' && target.id === loadId)) continue;
+
+    switch (id) {
+      case 'memberLoad.caseId': if (change.kind === 'set') changes.caseId = String(change.value); break;
+      case 'memberLoad.coordinateSystem':
+        if (change.kind === 'set') changes.coordinateSystem = change.value as MemberLoadBulkChanges['coordinateSystem'];
+        break;
+      case 'memberLoad.lengthBasis':
+        if (change.kind === 'set') changes.lengthBasis = change.value as MemberLoadBulkChanges['lengthBasis'];
+        break;
+      case 'memberLoad.start': if (change.kind === 'set') changes.start = Number(change.value); break;
+      case 'memberLoad.end': if (change.kind === 'set') changes.end = Number(change.value); break;
+      case 'memberLoad.position': if (change.kind === 'set') changes.position = Number(change.value); break;
+      case 'memberLoad.qxStart': changes.qxStart = numeric(change); break;
+      case 'memberLoad.qxEnd': changes.qxEnd = numeric(change); break;
+      case 'memberLoad.qyStart': changes.qyStart = numeric(change); break;
+      case 'memberLoad.qyEnd': changes.qyEnd = numeric(change); break;
+      case 'memberLoad.px': changes.px = numeric(change); break;
+      case 'memberLoad.py': changes.py = numeric(change); break;
+      case 'memberLoad.moment': changes.moment = numeric(change); break;
+      default: break;
+    }
+  }
+  return changes;
+};
+
 /** Una entidad está en la selección si alguna propiedad la clasificó, compatible o no. */
-const isSelected = (aggregate: BulkSelectionAggregate, kind: 'member' | 'node', id: string): boolean =>
+const isSelected = (aggregate: BulkSelectionAggregate, kind: BulkEntityKind, id: string): boolean =>
   aggregate.properties.some((property) => property.compatibility.compatible
     .some((target) => target.kind === kind && target.id === id)
     || property.compatibility.incompatible
       .some((entry) => entry.target.kind === kind && entry.target.id === id));
 
-const hasChanges = (changes: MemberBulkChanges | NodeBulkChanges): boolean => Object.keys(changes).length > 0;
+const hasChanges = (changes: object): boolean => Object.keys(changes).length > 0;
 
 /**
  * Agrupa los miembros por el conjunto exacto de cambios que reciben. Con una
@@ -198,6 +264,38 @@ export const prepareBulkEdit = (
     else nodeGroups.set(key, { changes, nodeIds: [node.id] });
   }
 
+  const nodalLoadGroups = new Map<string, { changes: NodalLoadBulkChanges; loadIds: string[] }>();
+  for (const load of project.nodalLoads) {
+    if (!isSelected(aggregate, 'nodalLoad', load.id)) continue;
+    const target: BulkTargetRef = { kind: 'nodalLoad', id: load.id };
+    const changes = changesForNodalLoad(aggregate, draft, load.id);
+    if (!hasChanges(changes)) {
+      skipped.push(target);
+      continue;
+    }
+    affected.push(target);
+    const key = projectCommandSnapshot(changes);
+    const group = nodalLoadGroups.get(key);
+    if (group) group.loadIds.push(load.id);
+    else nodalLoadGroups.set(key, { changes, loadIds: [load.id] });
+  }
+
+  const memberLoadGroups = new Map<string, { changes: MemberLoadBulkChanges; loadIds: string[] }>();
+  for (const load of project.memberLoads) {
+    if (!isSelected(aggregate, 'memberLoad', load.id)) continue;
+    const target: BulkTargetRef = { kind: 'memberLoad', id: load.id };
+    const changes = changesForMemberLoad(aggregate, draft, load.id);
+    if (!hasChanges(changes)) {
+      skipped.push(target);
+      continue;
+    }
+    affected.push(target);
+    const key = projectCommandSnapshot(changes);
+    const group = memberLoadGroups.get(key);
+    if (group) group.loadIds.push(load.id);
+    else memberLoadGroups.set(key, { changes, loadIds: [load.id] });
+  }
+
   const entries: MemberBulkEntry[] = [...groups.values()].map((group) => ({
     memberIds: group.memberIds,
     changes: group.changes,
@@ -207,12 +305,23 @@ export const prepareBulkEdit = (
     changes: group.changes,
   }));
 
+  const nodalLoadEntries: NodalLoadBulkEntry[] = [...nodalLoadGroups.values()].map((group) => ({
+    loadIds: group.loadIds,
+    changes: group.changes,
+  }));
+  const memberLoadEntries: MemberLoadBulkEntry[] = [...memberLoadGroups.values()].map((group) => ({
+    loadIds: group.loadIds,
+    changes: group.changes,
+  }));
+
   return {
     command: {
       kind: 'selection.bulk.apply',
       description,
       entries,
       nodeEntries,
+      nodalLoadEntries,
+      memberLoadEntries,
       sourceSnapshot: projectCommandSnapshot(project),
     },
     affected,

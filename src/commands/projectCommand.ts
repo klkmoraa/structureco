@@ -8,6 +8,8 @@ import {
   type TopologyRepairReport,
 } from '../data/modelOperations';
 import type {
+  LoadCoordinateSystem,
+  LoadLengthBasis,
   MemberInitialEffect,
   MemberLoad,
   MemberModel,
@@ -101,6 +103,44 @@ export interface NodeBulkEntry {
   readonly changes: NodeBulkChanges;
 }
 
+/**
+ * Cambios preparados sobre cargas. Cada familia lleva sólo los campos que
+ * existen en ella: escribir `py` en una repartida guardaría un valor que el
+ * motor nunca lee, y mover una carga a otro caso la saca de su combinación.
+ */
+export interface NodalLoadBulkChanges {
+  caseId?: string;
+  fx?: number;
+  fy?: number;
+  mz?: number;
+}
+
+export interface MemberLoadBulkChanges {
+  caseId?: string;
+  coordinateSystem?: LoadCoordinateSystem;
+  lengthBasis?: LoadLengthBasis;
+  start?: number;
+  end?: number;
+  qxStart?: number | null;
+  qxEnd?: number | null;
+  qyStart?: number | null;
+  qyEnd?: number | null;
+  position?: number;
+  px?: number | null;
+  py?: number | null;
+  moment?: number | null;
+}
+
+export interface NodalLoadBulkEntry {
+  readonly loadIds: readonly string[];
+  readonly changes: NodalLoadBulkChanges;
+}
+
+export interface MemberLoadBulkEntry {
+  readonly loadIds: readonly string[];
+  readonly changes: MemberLoadBulkChanges;
+}
+
 export type ProjectCommand =
   | (CommandBase & { kind: 'member.create'; nodes: NodeModel[]; member: MemberModel })
   | (CommandBase & {
@@ -134,6 +174,9 @@ export type ProjectCommand =
     entries: readonly MemberBulkEntry[];
     /** Grupos de nudos que reciben exactamente el mismo cambio. */
     nodeEntries: readonly NodeBulkEntry[];
+    /** Grupos de cargas nodales y de miembro, cada familia por separado. */
+    nodalLoadEntries: readonly NodalLoadBulkEntry[];
+    memberLoadEntries: readonly MemberLoadBulkEntry[];
     /** Estado exacto sobre el que se preparó; rechaza una intención obsoleta. */
     sourceSnapshot: string;
   })
@@ -282,14 +325,14 @@ const FRAME_ONLY_FIELDS = [
   'beamTheory', 'releases', 'rotationalSpringI', 'rotationalSpringJ', 'rigidOffsetI', 'rigidOffsetJ', 'shearArea',
 ] as const;
 
-const setOrClear = <Key extends keyof MemberModel>(
-  member: MemberModel,
+const setOrClear = <Entity, Key extends keyof Entity>(
+  entity: Entity,
   key: Key,
-  value: MemberModel[Key] | null | undefined,
+  value: Entity[Key] | null | undefined,
 ) => {
   if (value === undefined) return;
-  if (value === null) delete member[key];
-  else member[key] = value;
+  if (value === null) delete entity[key];
+  else entity[key] = value;
 };
 
 /**
@@ -393,6 +436,33 @@ const rebuildSupport = (current: SupportDefinition, type: SupportDefinition['typ
     return { type, restrainX: false, restrainY: false, restrainR: false, ...(spring ? { spring } : {}) };
   }
   return { type, ...(spring ? { spring } : {}) };
+};
+
+const applyNodalLoadBulkChanges = (current: NodalLoad, changes: NodalLoadBulkChanges): NodalLoad => {
+  const updated: NodalLoad = structuredClone(current);
+  if (changes.caseId !== undefined) updated.caseId = changes.caseId;
+  if (changes.fx !== undefined) updated.fx = changes.fx;
+  if (changes.fy !== undefined) updated.fy = changes.fy;
+  if (changes.mz !== undefined) updated.mz = changes.mz;
+  return updated;
+};
+
+const applyMemberLoadBulkChanges = (current: MemberLoad, changes: MemberLoadBulkChanges): MemberLoad => {
+  const updated: MemberLoad = structuredClone(current);
+  if (changes.caseId !== undefined) updated.caseId = changes.caseId;
+  if (changes.coordinateSystem !== undefined) updated.coordinateSystem = changes.coordinateSystem;
+  if (changes.lengthBasis !== undefined) updated.lengthBasis = changes.lengthBasis;
+  if (changes.start !== undefined) updated.start = changes.start;
+  if (changes.end !== undefined) updated.end = changes.end;
+  if (changes.position !== undefined) updated.position = changes.position;
+  setOrClear(updated, 'qxStart', changes.qxStart);
+  setOrClear(updated, 'qxEnd', changes.qxEnd);
+  setOrClear(updated, 'qyStart', changes.qyStart);
+  setOrClear(updated, 'qyEnd', changes.qyEnd);
+  setOrClear(updated, 'px', changes.px);
+  setOrClear(updated, 'py', changes.py);
+  setOrClear(updated, 'moment', changes.moment);
+  return updated;
 };
 
 const applyNodeBulkChanges = (current: NodeModel, changes: NodeBulkChanges): NodeModel => {
@@ -511,6 +581,20 @@ export const compileProjectCommand = (project: ProjectModel, command: ProjectCom
         const index = next.members.findIndex((member) => member.id === memberId);
         if (index < 0) throw new Error(`No existe el miembro ${memberId}.`);
         next.members[index] = applyMemberBulkChanges(next.members[index], entry.changes);
+      }
+    }
+    for (const entry of command.nodalLoadEntries) {
+      for (const loadId of entry.loadIds) {
+        const index = next.nodalLoads.findIndex((load) => load.id === loadId);
+        if (index < 0) throw new Error(`No existe la carga nodal ${loadId}.`);
+        next.nodalLoads[index] = applyNodalLoadBulkChanges(next.nodalLoads[index], entry.changes);
+      }
+    }
+    for (const entry of command.memberLoadEntries) {
+      for (const loadId of entry.loadIds) {
+        const index = next.memberLoads.findIndex((load) => load.id === loadId);
+        if (index < 0) throw new Error(`No existe la carga de miembro ${loadId}.`);
+        next.memberLoads[index] = applyMemberLoadBulkChanges(next.memberLoads[index], entry.changes);
       }
     }
     const seenNodes = new Set<string>();

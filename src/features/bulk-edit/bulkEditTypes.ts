@@ -1,5 +1,5 @@
 import type { UnitQuantity } from '../../engine/units';
-import type { MemberModel, MemberType, NodeModel } from '../../types';
+import type { MemberLoad, MemberModel, MemberType, NodalLoad, NodeModel } from '../../types';
 
 /**
  * Contratos de la edición múltiple (fase de fundamentos).
@@ -12,7 +12,7 @@ import type { MemberModel, MemberType, NodeModel } from '../../types';
  * intención preparada del usuario.
  */
 
-export type BulkEntityKind = 'member' | 'node';
+export type BulkEntityKind = 'member' | 'node' | 'nodalLoad' | 'memberLoad';
 
 export interface BulkTargetRef {
   kind: BulkEntityKind;
@@ -23,6 +23,15 @@ export interface BulkTargetRef {
 export interface BulkSelectionInput {
   members: readonly MemberModel[];
   nodes: readonly NodeModel[];
+  /**
+   * La selección del modelo sólo transporta nudos y miembros, así que las cargas
+   * entran como «las cargas de lo seleccionado»: quien monta el panel las
+   * resuelve y las pasa aquí ya filtradas.
+   */
+  nodalLoads?: readonly NodalLoad[];
+  memberLoads?: readonly MemberLoad[];
+  /** Casos declarados por el proyecto; acotan el destino de un cambio de caso. */
+  loadCases?: readonly string[];
 }
 
 /** Valor primitivo que una propiedad del modelo puede tener. */
@@ -49,7 +58,9 @@ export type BulkIncompatibilityReason =
   /** El tipo de miembro no admite la propiedad (un rígido no tiene E, A ni I). */
   | 'member-type'
   /** La configuración del apoyo no admite la propiedad (sólo apoyos personalizados). */
-  | 'support-type';
+  | 'support-type'
+  /** La familia de la carga no tiene ese campo (una puntual no reparte q). */
+  | 'load-family';
 
 export interface BulkIncompatibleTarget {
   target: BulkTargetRef;
@@ -90,7 +101,24 @@ export type BulkPropertyId =
   | 'node.support.restrainX'
   | 'node.support.restrainY'
   | 'node.support.restrainR'
-  | 'node.internalHinge';
+  | 'node.internalHinge'
+  | 'nodalLoad.caseId'
+  | 'nodalLoad.fx'
+  | 'nodalLoad.fy'
+  | 'nodalLoad.mz'
+  | 'memberLoad.caseId'
+  | 'memberLoad.coordinateSystem'
+  | 'memberLoad.lengthBasis'
+  | 'memberLoad.start'
+  | 'memberLoad.end'
+  | 'memberLoad.qxStart'
+  | 'memberLoad.qxEnd'
+  | 'memberLoad.qyStart'
+  | 'memberLoad.qyEnd'
+  | 'memberLoad.position'
+  | 'memberLoad.px'
+  | 'memberLoad.py'
+  | 'memberLoad.moment';
 
 interface BulkPropertyDescriptorBase {
   id: BulkPropertyId;
@@ -123,7 +151,23 @@ export interface BulkNodePropertyDescriptor extends BulkPropertyDescriptorBase {
   read: (node: NodeModel) => BulkValue;
 }
 
-export type BulkPropertyDescriptor = BulkMemberPropertyDescriptor | BulkNodePropertyDescriptor;
+export interface BulkNodalLoadPropertyDescriptor extends BulkPropertyDescriptorBase {
+  entity: 'nodalLoad';
+  ineligible?: (load: NodalLoad) => BulkIncompatibilityReason | undefined;
+  read: (load: NodalLoad) => BulkValue;
+}
+
+export interface BulkMemberLoadPropertyDescriptor extends BulkPropertyDescriptorBase {
+  entity: 'memberLoad';
+  ineligible?: (load: MemberLoad) => BulkIncompatibilityReason | undefined;
+  read: (load: MemberLoad) => BulkValue;
+}
+
+export type BulkPropertyDescriptor =
+  | BulkMemberPropertyDescriptor
+  | BulkNodePropertyDescriptor
+  | BulkNodalLoadPropertyDescriptor
+  | BulkMemberLoadPropertyDescriptor;
 
 export interface BulkPropertyState {
   id: BulkPropertyId;

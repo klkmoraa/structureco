@@ -21,7 +21,7 @@ describe('bulk selection aggregation', () => {
     });
 
     expect(aggregate.total).toBe(6);
-    expect(aggregate.counts).toEqual({ member: 4, node: 2 });
+    expect(aggregate.counts).toEqual({ member: 4, node: 2, nodalLoad: 0, memberLoad: 0 });
     expect(aggregate.memberTypeCounts).toEqual({ frame: 2, truss: 1, rigid: 1 });
   });
 
