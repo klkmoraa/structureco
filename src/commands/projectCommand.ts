@@ -2,8 +2,10 @@ import {
   createMemberAtPoint,
   deleteStructuralSelection,
   duplicateModelSelection,
+  repairProjectTopology,
   splitMemberAt,
   type MemberCreationTemplate,
+  type TopologyRepairReport,
 } from '../data/modelOperations';
 import type {
   MemberInitialEffect,
@@ -66,18 +68,34 @@ export type ProjectCommand =
   | (CommandBase & { kind: 'node.delete'; nodeId: string })
   | (CommandBase & { kind: 'selection.delete'; selection: Extract<Selection, { kind: 'multi' }> })
   | (CommandBase & { kind: 'selection.duplicate'; selection: Selection; offset: { x: number; y: number } })
-  | (CommandBase & { kind: 'dxf.import'; nodes: NodeModel[]; members: MemberModel[]; sourceName: string });
+  | (CommandBase & { kind: 'dxf.import'; nodes: NodeModel[]; members: MemberModel[]; sourceName: string })
+  | (CommandBase & {
+    kind: 'topology.repair';
+    /** Exact project state shown when the user reviewed the preview. */
+    sourceSnapshot: string;
+    /** Exact repair result accepted by the user. */
+    repairedSnapshot: string;
+  });
 
 export type ProjectCommandResult =
   | { kind: 'member.create'; memberId: string; nodeId: string; created: true }
   | { kind: 'member.createAtPoint'; memberId: string; nodeId: string; created: boolean }
-  | { kind: 'member.split'; nodeId: string; firstMemberId: string; secondMemberId: string };
+  | { kind: 'member.split'; nodeId: string; firstMemberId: string; secondMemberId: string }
+  | { kind: 'topology.repair'; report: TopologyRepairReport };
 
 export interface CompiledProjectCommand {
   command: ProjectCommand;
   forward: ProjectPatch;
   inverse: ProjectPatch;
   result?: ProjectCommandResult;
+}
+
+export interface PreparedTopologyRepair extends CompiledProjectCommand {
+  command: Extract<ProjectCommand, { kind: 'topology.repair' }>;
+  result: Extract<ProjectCommandResult, { kind: 'topology.repair' }>;
+  report: TopologyRepairReport;
+  repairedProject: ProjectModel;
+  repairedSnapshot: string;
 }
 
 const COLLECTIONS: ProjectEntityCollection[] = [
@@ -89,7 +107,30 @@ const entities = (project: ProjectModel, collection: ProjectEntityCollection): P
   return (value ?? []) as ProjectEntity[];
 };
 
-const same = (first: unknown, second: unknown): boolean => JSON.stringify(first) === JSON.stringify(second);
+const encodeExact = (value: unknown): unknown => {
+  if (value === undefined) return ['undefined'];
+  if (value === null) return ['null'];
+  if (typeof value === 'number') {
+    if (Number.isNaN(value)) return ['number', 'NaN'];
+    if (value === Number.POSITIVE_INFINITY) return ['number', '+Infinity'];
+    if (value === Number.NEGATIVE_INFINITY) return ['number', '-Infinity'];
+    if (Object.is(value, -0)) return ['number', '-0'];
+    return ['number', value];
+  }
+  if (typeof value === 'string') return ['string', value];
+  if (typeof value === 'boolean') return ['boolean', value];
+  if (Array.isArray(value)) return ['array', value.map(encodeExact)];
+  if (typeof value === 'object') {
+    return ['object', Object.keys(value as Record<string, unknown>).sort()
+      .map((key) => [key, encodeExact((value as Record<string, unknown>)[key])])];
+  }
+  throw new Error(`El proyecto contiene un valor no serializable de tipo ${typeof value}.`);
+};
+
+/** Exact, deterministic snapshot that preserves non-finite numbers and undefined fields. */
+export const projectCommandSnapshot = (value: unknown): string => JSON.stringify(encodeExact(value));
+
+const same = (first: unknown, second: unknown): boolean => projectCommandSnapshot(first) === projectCommandSnapshot(second);
 const owns = (value: object, key: PropertyKey): boolean => Object.prototype.hasOwnProperty.call(value, key);
 
 const validateProjectBoundary = (project: ProjectModel): void => {
@@ -242,8 +283,77 @@ export const compileProjectCommand = (project: ProjectModel, command: ProjectCom
   } else if (command.kind === 'dxf.import') {
     next.nodes.push(...structuredClone(command.nodes));
     next.members.push(...structuredClone(command.members));
+  } else if (command.kind === 'topology.repair') {
+    if (projectCommandSnapshot(project) !== command.sourceSnapshot) {
+      throw new Error('El preview de reparación está obsoleto; regénéralo antes de aplicar.');
+    }
+    const report = repairProjectTopology(next);
+    if (projectCommandSnapshot(next) !== command.repairedSnapshot) {
+      throw new Error('La reparación actual no coincide con el preview preparado.');
+    }
+    result = { kind: 'topology.repair', report };
   }
   validateProjectBoundary(next);
   const forward = diffProjects(project, next, command.description);
   return { command, forward, inverse: invertProjectPatch(forward), result };
+};
+
+/**
+ * Runs the established topology repair once on a private clone and freezes the
+ * exact source/result contract that the confirmation step must honor.
+ */
+export const prepareTopologyRepairCommand = (
+  project: ProjectModel,
+  description = 'Reparar topología segura',
+): PreparedTopologyRepair => {
+  const sourceSnapshot = projectCommandSnapshot(project);
+  const repairedProject = structuredClone(project);
+  const report = repairProjectTopology(repairedProject);
+  validateProjectBoundary(repairedProject);
+  const repairedSnapshot = projectCommandSnapshot(repairedProject);
+  const command: Extract<ProjectCommand, { kind: 'topology.repair' }> = {
+    kind: 'topology.repair',
+    description,
+    sourceSnapshot,
+    repairedSnapshot,
+  };
+  const forward = diffProjects(project, repairedProject, description);
+  return {
+    command,
+    forward,
+    inverse: invertProjectPatch(forward),
+    result: { kind: 'topology.repair', report },
+    report,
+    repairedProject,
+    repairedSnapshot,
+  };
+};
+
+/** Applies only the already-reviewed repair. It never recompiles a new one. */
+export const applyPreparedTopologyRepair = (
+  project: ProjectModel,
+  prepared: PreparedTopologyRepair,
+): ProjectModel => {
+  if (projectCommandSnapshot(project) !== prepared.command.sourceSnapshot) {
+    throw new Error('El preview de reparación está obsoleto; regénéralo antes de aplicar.');
+  }
+  if (projectCommandSnapshot(prepared.repairedProject) !== prepared.repairedSnapshot
+    || prepared.command.repairedSnapshot !== prepared.repairedSnapshot
+    || projectCommandSnapshot(prepared.report) !== projectCommandSnapshot(prepared.result.report)) {
+    throw new Error('El resultado preparado no coincide con el preview de reparación.');
+  }
+  // Reconstruct the authoritative domain operation before trusting any patches
+  // carried by the prepared object. This keeps the specific API from becoming
+  // a generic, self-signed patch bus for arbitrary structural edits.
+  const trusted = compileProjectCommand(project, prepared.command);
+  if (projectCommandSnapshot(trusted.forward) !== projectCommandSnapshot(prepared.forward)
+    || projectCommandSnapshot(trusted.inverse) !== projectCommandSnapshot(prepared.inverse)
+    || projectCommandSnapshot(trusted.result) !== projectCommandSnapshot(prepared.result)) {
+    throw new Error('La reparación preparada no coincide con el preview autoritativo.');
+  }
+  const repaired = applyProjectPatch(project, prepared.forward);
+  if (projectCommandSnapshot(repaired) !== prepared.repairedSnapshot) {
+    throw new Error('El resultado aplicado no coincide con el preview de reparación.');
+  }
+  return repaired;
 };

@@ -136,6 +136,7 @@ const useModalFocus = (
   open: boolean,
   onOpenChange: (open: boolean) => void,
   surfaceRef: RefObject<HTMLElement | null>,
+  returnFocusTo?: HTMLElement | null,
 ) => {
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
@@ -192,11 +193,11 @@ const useModalFocus = (
       window.cancelAnimationFrame(focusFrame);
       document.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = previousOverflow;
-      const returnTarget = previousFocusRef.current;
+      const returnTarget = returnFocusTo?.isConnected ? returnFocusTo : previousFocusRef.current;
       returnTarget?.focus({ preventScroll: true });
       window.requestAnimationFrame(() => returnTarget?.focus({ preventScroll: true }));
     };
-  }, [open, onOpenChange, surfaceRef]);
+  }, [open, onOpenChange, returnFocusTo, surfaceRef]);
 };
 
 interface ModalSurfaceProps {
@@ -210,6 +211,8 @@ interface ModalSurfaceProps {
   kind: 'dialog' | 'drawer';
   side?: 'left' | 'right' | 'bottom';
   className?: string;
+  /** Explicit launcher used when another surface transfers focus during lazy loading. */
+  returnFocusTo?: HTMLElement | null;
 }
 
 const ModalSurface = ({
@@ -223,11 +226,12 @@ const ModalSurface = ({
   kind,
   side = 'right',
   className = '',
+  returnFocusTo,
 }: ModalSurfaceProps) => {
   const titleId = useId();
   const descriptionId = useId();
   const surfaceRef = useRef<HTMLElement>(null);
-  useModalFocus(open, onOpenChange, surfaceRef);
+  useModalFocus(open, onOpenChange, surfaceRef, returnFocusTo);
   const reducedMotion = useReducedMotion();
 
   if (typeof document === 'undefined') return null;

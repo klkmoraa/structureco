@@ -8,7 +8,7 @@ import type { AnalysisResult, ProjectModel, Selection, ThemeMode, Tool } from '.
 import { ProjectModelContext, useProjectModel, type ProjectModelContextValue } from './ProjectModelContext';
 import { ProjectAnalysisContext, useProjectAnalysis, type ProjectAnalysisContextValue, type InfluenceCanvasState } from './ProjectAnalysisContext';
 import { WorkspaceUIContext, useWorkspaceUI, type WorkspaceUIContextValue, type ResultCursor, type ResultTab } from './WorkspaceUIContext';
-import type { ProjectCommand, ProjectCommandResult } from '../commands/projectCommand';
+import type { PreparedTopologyRepair, ProjectCommand, ProjectCommandResult } from '../commands/projectCommand';
 import { WORKER_PROTOCOL_VERSION, type AnalysisWorkerPayload, type WorkerRequestEnvelope, type WorkerResponseEnvelope } from '../runtime/workerProtocol';
 import type { ProjectRepository } from '../storage/projectRepository';
 
@@ -397,6 +397,17 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     return compiled.result;
   }, [commitReversibleProjectChange]);
 
+  const executePreparedTopologyRepair = useCallback(async (prepared: PreparedTopologyRepair) => {
+    const { applyPreparedTopologyRepair, projectCommandSnapshot } = await import('../commands/projectCommand');
+    const current = projectRef.current;
+    const next = applyPreparedTopologyRepair(current, prepared);
+    if (projectCommandSnapshot(next) === projectCommandSnapshot(current)) {
+      return { applied: false, report: prepared.report };
+    }
+    commitReversibleProjectChange(current, next, prepared.command.description);
+    return { applied: true, report: prepared.report };
+  }, [commitReversibleProjectChange]);
+
   const updateProjectView = useCallback((updater: (project: ProjectModel) => ProjectModel) => {
     const current = projectRef.current;
     const next = updater(structuredClone(current));
@@ -498,11 +509,13 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const redo = useCallback(() => {
     if (future.length === 0) return;
     const entry = future[0];
-    const normalized = normalizeProject(entry.project);
     setPast((history) => [...history.slice(-49), { project, description: entry.description }]);
     setFuture(future.slice(1));
-    setProject(normalized);
-    projectRef.current = normalized;
+    // History entries are already-valid in-memory snapshots. Re-normalizing
+    // here can add optional keys with `undefined` and makes redo differ from
+    // the exact state that was originally published and previewed.
+    setProject(entry.project);
+    projectRef.current = entry.project;
     invalidateAnalysis();
     setSelection(null);
   }, [future, invalidateAnalysis, project, setSelection]);
@@ -513,9 +526,9 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     canRedo: future.length > 0,
     storageIssue: storageState.issue,
     storageMessage: storageState.message,
-    renameProject, executeProjectCommand, updateProject, updateProjectView, updateProjectAnalysisSettings, beginProjectTransaction, updateProjectTransient,
+    renameProject, executeProjectCommand, executePreparedTopologyRepair, updateProject, updateProjectView, updateProjectAnalysisSettings, beginProjectTransaction, updateProjectTransient,
     moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo,
-  }), [project, past.length, future.length, storageState.issue, storageState.message, renameProject, executeProjectCommand, updateProject, updateProjectView, updateProjectAnalysisSettings, beginProjectTransaction, updateProjectTransient, moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo]);
+  }), [project, past.length, future.length, storageState.issue, storageState.message, renameProject, executeProjectCommand, executePreparedTopologyRepair, updateProject, updateProjectView, updateProjectAnalysisSettings, beginProjectTransaction, updateProjectTransient, moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo]);
 
   const analysisValue = useMemo<ProjectAnalysisContextValue>(() => ({
     analysis, isAnalyzing, selectedCombinationId, learningFocus, influenceCanvasState,

@@ -33,6 +33,7 @@ class ResizeObserverMock {
 
 beforeAll(() => {
   vi.stubGlobal('ResizeObserver', ResizeObserverMock);
+  if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
   if (!globalThis.crypto.randomUUID) {
     Object.defineProperty(globalThis.crypto, 'randomUUID', { value: () => '00000000-0000-4000-8000-000000000000' });
   }
@@ -42,6 +43,16 @@ beforeEach(() => {
   localStorage.clear();
   document.documentElement.dataset.theme = 'light';
   vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  });
 });
 
 afterEach(() => {
@@ -181,6 +192,125 @@ describe('structureCo app shell', () => {
     }, { timeout: 2000 });
 
     expect(screen.queryByText(/No se generaron resultados/i)).toBeNull();
+  });
+
+  it('opens Model Doctor before analysis, isolates the workspace, and returns focus on Escape', async () => {
+    const user = userEvent.setup();
+    const { container } = await renderExampleApp(user);
+    const moreButton = screen.getByRole('button', { name: /más acciones/i });
+
+    await user.click(moreButton);
+    await user.click(within(screen.getByRole('dialog', { name: /más acciones/i }))
+      .getByRole('button', { name: 'Model Doctor' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 })).toBeTruthy();
+    const shell = container.querySelector<HTMLElement>('.app-shell')!;
+    expect(shell.inert).toBe(true);
+    expect(shell.getAttribute('aria-hidden')).toBe('true');
+    expect(screen.queryByTestId('diagram-chart')).toBeNull();
+
+    await user.keyboard('{Control>}k{/Control}');
+    expect(screen.queryByRole('dialog', { name: /paleta de comandos/i })).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'Model Doctor' })).toBeTruthy();
+
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Model Doctor' })).toBeNull());
+    expect(shell.inert).toBe(false);
+    expect(shell.hasAttribute('aria-hidden')).toBe(false);
+    await waitFor(() => expect(document.activeElement).toBe(moreButton));
+  });
+
+  it('keeps a completed analysis while Model Doctor is opened and closed', async () => {
+    const user = userEvent.setup();
+    await renderExampleApp(user);
+
+    await user.click(screen.getByRole('button', { name: /^analizar$/i }));
+    await waitFor(() => {
+      expect(screen.getAllByText(/Diagrama de momento flector/i).length).toBeGreaterThan(0);
+    }, { timeout: 2000 });
+    const diagramsBefore = screen.getAllByText(/Diagrama de momento flector/i).length;
+
+    const menu = await openUtilityMenu(user);
+    await user.click(within(menu).getByRole('button', { name: 'Model Doctor' }));
+    await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Model Doctor' })).toBeNull());
+    expect(screen.getAllByText(/Diagrama de momento flector/i)).toHaveLength(diagramsBefore);
+  });
+
+  it('returns focus through the complete keyboard launcher path', async () => {
+    const user = userEvent.setup();
+    await renderExampleApp(user);
+    const analyzeButton = screen.getByRole('button', { name: /^analizar$/i });
+    analyzeButton.focus();
+
+    await user.keyboard('{Control>}k{/Control}');
+    const palette = await screen.findByRole('dialog', { name: /paleta de comandos/i }, { timeout: 5000 });
+    await user.click(within(palette).getByRole('option', { name: /Model Doctor/i }));
+    await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Model Doctor' })).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(analyzeButton));
+  });
+
+  it('keeps acknowledgement across a real unmount but resets it for a replacement project', async () => {
+    const user = userEvent.setup();
+    const project = createDefaultProject();
+    project.nodalLoads = [];
+    project.memberLoads = [];
+    project.loadCases = project.loadCases.map((loadCase) => ({ ...loadCase, selfWeightFactor: 0 }));
+    localStorage.setItem('structureCo.project', JSON.stringify(project));
+    render(<App />);
+    await openWorkspace(user);
+
+    let menu = await openUtilityMenu(user);
+    await user.click(within(menu).getByRole('button', { name: 'Model Doctor' }));
+    let doctor = await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
+    let noLoads = within(doctor).getByRole('article', { name: /sin cargas/i });
+    await user.click(within(noLoads).getByRole('button', { name: /reconocer/i }));
+    expect(within(noLoads).getByText(/reconocido para esta sesi/i)).toBeTruthy();
+    await user.click(within(doctor).getByRole('button', { name: /cerrar model doctor/i }));
+
+    menu = await openUtilityMenu(user);
+    await user.click(within(menu).getByRole('button', { name: 'Model Doctor' }));
+    doctor = await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
+    expect(within(doctor).getByText(/reconocido para esta sesi/i)).toBeTruthy();
+    await user.click(within(doctor).getByRole('button', { name: /cerrar model doctor/i }));
+
+    await user.click(screen.getByRole('button', { name: /abrir proyectos y ejemplos/i }));
+    await user.click(within(screen.getByRole('menu', { name: /abrir proyectos y ejemplos/i }))
+      .getByRole('menuitem', { name: /proyecto nuevo/i }));
+    menu = await openUtilityMenu(user);
+    await user.click(within(menu).getByRole('button', { name: 'Model Doctor' }));
+    doctor = await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
+    noLoads = within(doctor).getByRole('article', { name: /sin cargas/i });
+    expect(within(noLoads).queryByText(/reconocido para esta sesi/i)).toBeNull();
+  });
+
+  it('collapses expanded mobile Results before opening Model Doctor', async () => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(max-width: 1023px)' || query === '(max-width: 700px)',
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    const user = userEvent.setup();
+    await renderExampleApp(user);
+    const resultsToggle = screen.getByRole('button', { name: 'Resultados' });
+    await user.click(resultsToggle);
+    const results = document.querySelector<HTMLElement>('.results-panel')!;
+    expect(results.classList.contains('mobile-collapsed')).toBe(false);
+
+    const menu = await openUtilityMenu(user);
+    await user.click(within(menu).getByRole('button', { name: 'Model Doctor' }));
+
+    await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
+    await waitFor(() => expect(results.classList.contains('mobile-collapsed')).toBe(true));
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: /más acciones/i })));
   });
 
   it('draws mixed reactions as separate horizontal Rx and vertical Ry arrows', async () => {
@@ -355,6 +485,76 @@ describe('structureCo app shell', () => {
 
     fireEvent.keyDown(canvas, { key: 'h', code: 'KeyH' });
     expect(screen.getByRole('button', { name: /desplazar \(H\)/i }).getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('keeps touch pan intent ahead of the overlap picker on a structural node', async () => {
+    const user = userEvent.setup();
+    const { container } = await renderExampleApp(user);
+    const canvas = screen.getByRole('application', { name: /área de trabajo estructural/i });
+    const node = screen.getByRole('button', { name: /nodo N1, X 0\.000, Y 0\.000/i });
+    const member = screen.getByRole('button', { name: /miembro M1, de N1 a N3/i });
+    const originalElementsFromPoint = document.elementsFromPoint;
+    Object.defineProperty(document, 'elementsFromPoint', {
+      configurable: true,
+      value: () => [node, member],
+    });
+
+    try {
+      fireEvent.pointerDown(node, {
+        pointerId: 2,
+        pointerType: 'touch',
+        isPrimary: true,
+        button: 0,
+        buttons: 1,
+        clientX: 120,
+        clientY: 160,
+      });
+
+      expect(canvas.getAttribute('data-interaction')).toBe('pending');
+      expect(container.querySelector('.selection-overlap-picker')).toBeNull();
+    } finally {
+      Object.defineProperty(document, 'elementsFromPoint', {
+        configurable: true,
+        value: originalElementsFromPoint,
+      });
+    }
+  });
+
+  it('keeps touch selection disabled for object kinds excluded by the selection filter', async () => {
+    const user = userEvent.setup();
+    const project = createDefaultProject();
+    project.settings = {
+      ...project.settings,
+      selectionFilter: { nodes: false, members: true, loads: true },
+    };
+    localStorage.setItem('structureCo.project', JSON.stringify(project));
+    const { container } = render(<App />);
+    await openWorkspace(user);
+    const canvas = screen.getByRole('application', { name: /área de trabajo estructural/i });
+    const node = screen.getByRole('button', { name: /nodo N1, X 0\.000, Y 0\.000/i });
+
+    fireEvent.pointerDown(node, {
+      pointerId: 3,
+      pointerType: 'touch',
+      isPrimary: true,
+      button: 0,
+      buttons: 1,
+      clientX: 120,
+      clientY: 160,
+    });
+    fireEvent.pointerUp(node, {
+      pointerId: 3,
+      pointerType: 'touch',
+      isPrimary: true,
+      button: 0,
+      buttons: 0,
+      clientX: 120,
+      clientY: 160,
+    });
+
+    expect(canvas.getAttribute('data-interaction')).toBe('idle');
+    expect(node.getAttribute('aria-pressed')).toBe('false');
+    expect(container.querySelector('[data-structure-id="N1"] .node-selection-halo')).toBeNull();
   });
 
   it('localizes canvas object names, CAD entry, feedback, and result legend in English', async () => {

@@ -172,6 +172,14 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     setShowProjectMenu(false);
     setShowExportMenu(false);
   };
+
+  const openModelDoctor = () => {
+    // El launcher del menú desaparece al cerrarlo. Dejamos el foco en su
+    // disparador persistente antes de abrir el drawer para que pueda volver allí.
+    mobileMenuButtonRef.current?.focus({ preventScroll: true });
+    setShowMobileMenu(false);
+    emitWorkspaceCommand('open-model-doctor');
+  };
   const closeImportCenter = () => {
     setImportCenterOpen(false);
     window.requestAnimationFrame(() => projectMenuButtonRef.current?.focus());
@@ -466,6 +474,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
 
                 <div className="menu-section">
                   <div className="menu-section-title">{t('menu.sectionAnalysis')}</div>
+                  <button onClick={openModelDoctor}><Search size={17} /> Model Doctor</button>
                   <label className="mobile-menu-field overflow-case"><span>{t('analysis.caseOrCombination')}</span><select value={selectedCombinationId} onChange={(event) => setSelectedCombinationId(event.target.value)}><option value="">{t('analysis.activeCases')}</option>{project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}</select></label>
                   <label className="mobile-menu-field overflow-mode"><span>{t('analysis.mode')}</span><select value={project.settings.calculationMode ?? 'complete'} onChange={(event) => { updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } })); setShowMobileMenu(false); }}><option value="classroom">{t('analysis.modeClassroom')}</option><option value="complete">{t('analysis.modeComplete')}</option></select></label>
                   <label className="mobile-menu-field overflow-analysis-order"><span>{t('analysis.order')}</span><select value={project.settings.analysisMode ?? 'first-order'} onChange={(event) => { updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: event.target.value as 'first-order' | 'p-delta' })); setShowMobileMenu(false); }}><option value="first-order">{t('analysis.orderFirst')}</option><option value="p-delta">{t('analysis.orderPDelta')}</option></select></label>

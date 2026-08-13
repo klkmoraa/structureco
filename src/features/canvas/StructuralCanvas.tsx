@@ -980,6 +980,14 @@ export const StructuralCanvas = ({
             ? selectionFilter.loads
             : true;
       if (!selectable) return;
+      // A one-finger touch on selectable geometry is a pending pan/long-press
+      // gesture. Resolve that intent before the desktop overlap picker: at
+      // connected nodes `elementsFromPoint()` also sees their members and would
+      // otherwise consume the gesture before pending touch intent can run.
+      if (event.pointerType === 'touch') {
+        startPending(event, resolvedTarget);
+        return;
+      }
       {
         const candidates: StructuralTarget[] = [];
         const seen = new Set<string>();

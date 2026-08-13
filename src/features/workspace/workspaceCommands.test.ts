@@ -15,6 +15,16 @@ describe('bus de comandos del workspace', () => {
     unsubscribe();
   });
 
+  it('abre Model Doctor mediante el mismo bus desde cualquier launcher', () => {
+    const handler = vi.fn();
+    const unsubscribe = onWorkspaceCommand('open-model-doctor', handler);
+
+    emitWorkspaceCommand('open-model-doctor');
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
   it('entrega el detalle del comando sin castings en el consumidor', () => {
     const handler = vi.fn();
     const unsubscribe = onWorkspaceCommand('focus-object', handler);

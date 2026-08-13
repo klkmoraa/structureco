@@ -18,13 +18,18 @@ import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
 
 /** La paleta sólo pesa cuando se abre: nadie paga su código por arrancar el editor. */
 const LazyCommandPalette = lazy(() => import('./CommandPalette').then((module) => ({ default: module.CommandPalette })));
+/** Model Doctor y su adaptador de diagnósticos no entran al bundle inicial del editor. */
+const LazyModelDoctor = lazy(() => import('../model-doctor/ModelDoctor').then((module) => ({ default: module.ModelDoctor })));
 
 export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string }) => {
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [modelDoctorOpen, setModelDoctorOpen] = useState(false);
+  const [modelDoctorAcknowledgedIds, setModelDoctorAcknowledgedIds] = useState<Set<string>>(() => new Set());
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
   const inspectorToggleRef = useRef<HTMLButtonElement>(null);
   const inspectorReturnFocusRef = useRef<HTMLElement | null>(null);
+  const doctorReturnFocusRef = useRef<HTMLElement | null>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
   const { project, analysis, setActiveTool, analyze } = useProject();
@@ -87,15 +92,60 @@ export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpe
 
   useEffect(() => onWorkspaceCommand('open-command-palette', () => setPaletteOpen(true)), []);
 
+  const setDoctorBackgroundState = useCallback((modal: boolean) => {
+    const shell = shellRef.current;
+    if (shell) {
+      shell.inert = modal;
+      if (modal) shell.setAttribute('aria-hidden', 'true');
+      else shell.removeAttribute('aria-hidden');
+    }
+  }, []);
+
+  useEffect(() => {
+    setModelDoctorAcknowledgedIds(new Set());
+    setDoctorBackgroundState(false);
+    setModelDoctorOpen(false);
+  }, [projectId, setDoctorBackgroundState]);
+
+  const setDoctorOpen = useCallback((open: boolean) => {
+    // El chunk puede tardar en su primera apertura: la mesa sigue operable
+    // hasta que el Drawer portado confirme que ya existe una superficie modal.
+    if (!open) setDoctorBackgroundState(false);
+    if (open) {
+      const activeElement = document.activeElement;
+      if (activeElement instanceof HTMLElement && activeElement !== document.body && activeElement !== document.documentElement) {
+        doctorReturnFocusRef.current = activeElement;
+      }
+      setMobileInspectorOpen(false);
+      setPaletteOpen(false);
+      if (window.matchMedia?.('(max-width: 1023px)').matches) {
+        emitWorkspaceCommand('collapse-mobile-results');
+      }
+    }
+    setModelDoctorOpen(open);
+  }, [setDoctorBackgroundState]);
+
+  const doctorSurfaceReady = useCallback(() => {
+    if (!modelDoctorOpen) return;
+    setDoctorBackgroundState(true);
+  }, [modelDoctorOpen, setDoctorBackgroundState]);
+
+  useEffect(() => onWorkspaceCommand('open-model-doctor', () => setDoctorOpen(true)), [setDoctorOpen]);
+
+  useEffect(() => () => {
+    setDoctorBackgroundState(false);
+  }, [setDoctorBackgroundState]);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() !== 'k' || !(event.ctrlKey || event.metaKey) || event.altKey) return;
       event.preventDefault();
+      if (modelDoctorOpen) return;
       setPaletteOpen((open) => !open);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [modelDoctorOpen]);
 
   useEffect(() => {
     if (!mobileInspectorOpen) return undefined;
@@ -172,6 +222,14 @@ export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpe
           open
           onClose={() => setPaletteOpen(false)}
           dispatchLayers={dispatchEditorLayers}
+        /></Suspense> : null}
+        {modelDoctorOpen ? <Suspense fallback={<span className="sr-only" role="status">{t('modelDoctor.loading')}</span>}><LazyModelDoctor
+          open
+          onOpenChange={setDoctorOpen}
+          onSurfaceReady={doctorSurfaceReady}
+          acknowledgedIds={modelDoctorAcknowledgedIds}
+          onAcknowledgedIdsChange={setModelDoctorAcknowledgedIds}
+          returnFocusTo={doctorReturnFocusRef.current}
         /></Suspense> : null}
       </>}
     backdrop={mobileInspectorOpen ? <button className="mobile-inspector-backdrop" aria-hidden="true" tabIndex={-1} onClick={closeMobileInspector} /> : null}

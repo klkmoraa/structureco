@@ -18,6 +18,7 @@ import { formatResultNumber } from './resultFormatting';
 import { buildStiffnessSubstitution } from './stiffnessSubstitution';
 import { formatFixed, formatScientific, formatSignificant } from '../../utils/numberFormat';
 import { emitWorkspaceCommand, onWorkspaceCommand } from '../workspace/workspaceCommands';
+import { resolveValidationIssueTarget } from '../workspace/validationIssueTarget';
 import { ProvenanceCard } from './ProvenanceCard';
 import type { ResultRef } from './provenance';
 import { ClassroomPedagogyLevels } from '../classroom/ClassroomPedagogyLevels';
@@ -1027,17 +1028,7 @@ const IssuesView = () => {
   if (!analysis?.issues.length) return <div className="all-clear"><Check size={26} /><strong>{t('results.clearTitle')}</strong><p>{t('results.clearBody')}</p></div>;
   const act = (issue: typeof analysis.issues[number]) => {
     if (issue.objectId) {
-      const target = issue.objectKind
-        ? { kind: issue.objectKind, id: issue.objectId }
-        : project.nodes.some((node) => node.id === issue.objectId)
-          ? { kind: 'node' as const, id: issue.objectId }
-          : project.members.some((member) => member.id === issue.objectId)
-            ? { kind: 'member' as const, id: issue.objectId }
-            : project.nodalLoads.some((load) => load.id === issue.objectId)
-              ? { kind: 'nodalLoad' as const, id: issue.objectId }
-              : project.memberLoads.some((load) => load.id === issue.objectId)
-                ? { kind: 'memberLoad' as const, id: issue.objectId }
-                : null;
+      const target = resolveValidationIssueTarget(project, issue);
       if (target) {
         setSelection(target);
         emitWorkspaceCommand('focus-object', target);

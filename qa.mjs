@@ -35,8 +35,10 @@ async function enterWorkspace(page, { example = false } = {}) {
 
 async function loadCleanApp(page) {
   await page.goto(baseURL, { waitUntil: 'networkidle' });
+  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
+  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 }
 
 async function setOverflowSelect(page, moreName, fieldName, value) {
@@ -616,7 +618,7 @@ async function verifyWelcomeClayMaterial(page) {
 
   const cardSelectors = {
     launcher: '.welcome-launcher-card >> nth=0',
-    import: '.welcome-import-card',
+    import: '.welcome-import-card >> nth=0',
     template: '.welcome-template-card >> nth=0',
   };
 
@@ -741,7 +743,7 @@ async function verifyWelcomeReducedMotionActive() {
 
   const cardSelectors = {
     launcher: '.welcome-launcher-card >> nth=0',
-    import: '.welcome-import-card',
+    import: '.welcome-import-card >> nth=0',
   };
 
   for (const [key, selector] of Object.entries(cardSelectors)) {
@@ -817,14 +819,20 @@ async function desktop() {
   const canvasBox = await page.locator('svg.structural-canvas').boundingBox();
   if (!canvasBox) throw new Error('No se pudo medir el lienzo.');
   const gridBeforeSpacePan = await page.locator('.grid-lines line').first().getAttribute('x1');
+  // Space-pan is intentionally ignored while focus remains on an editor control.
+  // Return focus to the application surface as a keyboard user must do.
+  await page.locator('svg.structural-canvas').focus();
+  const spacePanTarget = await page.locator('.member-object').first().boundingBox();
+  if (!spacePanTarget) throw new Error('No se pudo medir un miembro para probar Space-pan.');
   await page.keyboard.down('Space');
-  await page.mouse.move(canvasBox.x + canvasBox.width - 90, canvasBox.y + canvasBox.height - 80);
+  await page.mouse.move(spacePanTarget.x + spacePanTarget.width / 2, spacePanTarget.y + spacePanTarget.height / 2);
   await page.mouse.down();
-  await page.mouse.move(canvasBox.x + canvasBox.width - 145, canvasBox.y + canvasBox.height - 120, { steps: 4 });
+  await page.mouse.move(spacePanTarget.x + spacePanTarget.width / 2 - 55, spacePanTarget.y + spacePanTarget.height / 2 - 40, { steps: 4 });
   await page.mouse.up();
   await page.keyboard.up('Space');
-  const gridAfterSpacePan = await page.locator('.grid-lines line').first().getAttribute('x1');
-  out.checks.spacePan = gridBeforeSpacePan !== gridAfterSpacePan;
+  out.checks.spacePan = await page.waitForFunction((before) => (
+    document.querySelector('.grid-lines line')?.getAttribute('x1') !== before
+  ), gridBeforeSpacePan, { timeout: 2000 }).then(() => true, () => false);
   const bodyScroll = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, sh: document.documentElement.scrollHeight, ch: document.documentElement.clientHeight }));
   out.metrics.desktop = bodyScroll;
   await page.screenshot({ path: path.join(artifactsDir, 'desktop.png'), fullPage: false });
@@ -863,7 +871,9 @@ async function desktop() {
   const splitBox = await splitTarget.boundingBox();
   if (!splitBox) throw new Error('No se pudo medir el miembro a dividir.');
   await page.mouse.click(splitBox.x + splitBox.width / 2, splitBox.y + splitBox.height / 2);
-  out.checks.memberSplit = await page.locator('.member-object').count() === membersBeforeSplit + 1;
+  out.checks.memberSplit = await page.waitForFunction((expected) => (
+    document.querySelectorAll('.member-object').length === expected
+  ), membersBeforeSplit + 1, { timeout: 2000 }).then(() => true, () => false);
   await page.getByLabel('Unidades').selectOption('N-mm');
   out.checks.unitChanged = await page.getByLabel('Unidades').inputValue() === 'N-mm';
   await toggleThemeFromOverflow(page, 'Más acciones', 'Tema oscuro');
@@ -891,6 +901,7 @@ async function desktop() {
   mechanismPage.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`mechanism ${msg.type()}: ${msg.text()}`); });
   mechanismPage.on('pageerror', err => out.pageErrors.push(`mechanism ${String(err)}`));
   await mechanismPage.goto(baseURL, { waitUntil: 'networkidle' });
+  await mechanismPage.getByTestId('welcome-screen').waitFor({ state: 'visible' });
   await mechanismPage.evaluate((seed) => {
     localStorage.clear();
     localStorage.setItem('structureCo.project', seed);
@@ -1006,20 +1017,27 @@ async function mobile() {
   if (!firstNodeBox) throw new Error('No se pudo medir un nodo móvil.');
   const firstNodeLabelBeforeDrag = await firstNode.getAttribute('aria-label');
   const nodeDragStart = { x: firstNodeBox.x + firstNodeBox.width / 2, y: firstNodeBox.y + firstNodeBox.height / 2 };
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...nodeDragStart, id: 7 }] });
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: nodeDragStart.x + 44, y: nodeDragStart.y + 28, id: 7 }] });
+  // Match Playwright's trusted touchscreen start; Chrome assigns the pointer id.
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [nodeDragStart] });
+  for (const progress of [0.34, 0.67, 1]) {
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ x: nodeDragStart.x + 44 * progress, y: nodeDragStart.y + 28 * progress, id: 0 }],
+    });
+    await page.waitForTimeout(24);
+  }
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await page.waitForTimeout(120);
-  const firstNodeBoxAfterDrag = await firstNode.locator('.node-hit').boundingBox();
-  out.checks.mobileTouchDragOnNodePans = Boolean(firstNodeBoxAfterDrag
-    && Math.hypot(firstNodeBoxAfterDrag.x - firstNodeBox.x, firstNodeBoxAfterDrag.y - firstNodeBox.y) > 10);
+  out.checks.mobileTouchDragOnNodePans = await page.waitForFunction(({ x, y }) => {
+    const rect = document.querySelector('.node-object .node-hit')?.getBoundingClientRect();
+    return Boolean(rect && Math.hypot(rect.x - x, rect.y - y) > 10);
+  }, { x: firstNodeBox.x, y: firstNodeBox.y }, { timeout: 2000 }).then(() => true, () => false);
   out.checks.mobileTouchDragPreservesNode = firstNodeLabelBeforeDrag === await firstNode.getAttribute('aria-label');
   await page.getByRole('button', { name: 'Ajustar modelo a la vista' }).click();
   await page.waitForTimeout(120);
   await page.getByRole('button', { name: 'Herramientas de carga' }).click();
   out.checks.mobileLoadSheet = await page.locator('.mobile-tool-palette-loads').isVisible();
   await page.getByRole('menuitemradio', { name: /Carga puntual/ }).click();
-  out.checks.mobileLoadPlacementMode = await page.getByRole('button', { name: 'Cancelar colocación' }).isVisible();
+  out.checks.mobileLoadPlacementMode = await page.getByRole('button', { name: 'Cancelar colocación' }).first().isVisible();
   const memberLoadsBeforeTouchPlacement = await page.locator('[data-structure-kind="memberLoad"]').count();
   const targetMemberBox = await page.locator('.member-object').first().boundingBox();
   if (!targetMemberBox) throw new Error('No se pudo medir el miembro móvil.');
@@ -1118,8 +1136,8 @@ await educationalExample();
 await browser.close();
 await previewServer.close();
 const failedChecks = Object.entries(out.checks).filter(([, value]) => value === false);
+fs.writeFileSync(path.join(artifactsDir, 'qa-results.json'), JSON.stringify(out, null, 2));
 if (failedChecks.length || out.console.length || out.pageErrors.length) {
   throw new Error(`QA fallida: ${failedChecks.map(([name]) => name).join(', ') || 'errores de consola/página'}`);
 }
-fs.writeFileSync(path.join(artifactsDir, 'qa-results.json'), JSON.stringify(out, null, 2));
 console.log(JSON.stringify(out, null, 2));

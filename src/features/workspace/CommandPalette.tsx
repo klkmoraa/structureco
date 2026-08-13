@@ -122,6 +122,17 @@ export const CommandPalette = ({ open, onClose, dispatchLayers }: CommandPalette
       run: run(analyze),
     });
     items.push({
+      id: 'analysis:model-doctor',
+      group: 'analysis',
+      label: 'Model Doctor',
+      hint: t('palette.modelDoctorHint'),
+      icon: Wrench,
+      run: () => {
+        close();
+        window.requestAnimationFrame(() => emitWorkspaceCommand('open-model-doctor'));
+      },
+    });
+    items.push({
       id: 'analysis:undo', group: 'analysis', label: t('history.undo'), shortcut: 'Ctrl Z',
       icon: Undo2, disabled: !canUndo, run: run(undo),
     });

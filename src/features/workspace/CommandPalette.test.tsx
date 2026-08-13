@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useEffect, useRef } from 'react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -65,6 +65,18 @@ describe('CommandPalette', () => {
     await user.click(screen.getByRole('option', { name: 'Nodo · N' }));
 
     expect(screen.getByTestId('probe').textContent).toMatch(/^node\|/);
+  });
+
+  it('offers Model Doctor before analysis and emits the shared open command', async () => {
+    const user = userEvent.setup();
+    const openDoctor = vi.fn();
+    window.addEventListener(workspaceCommandEventName('open-model-doctor'), openDoctor);
+    renderPalette();
+
+    await user.click(screen.getByRole('option', { name: /Model Doctor/i }));
+
+    await waitFor(() => expect(openDoctor).toHaveBeenCalledTimes(1));
+    window.removeEventListener(workspaceCommandEventName('open-model-doctor'), openDoctor);
   });
 
   it('filters ignoring accents and case, over labels and hints alike', async () => {

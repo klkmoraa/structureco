@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { AnalysisResult, ProjectModel, ProjectSettings } from '../types';
-import type { ProjectCommand, ProjectCommandResult } from '../commands/projectCommand';
+import type { PreparedTopologyRepair, ProjectCommand, ProjectCommandResult } from '../commands/projectCommand';
 
 /**
  * The structural model, its undo/redo history and persistence state.
@@ -23,6 +23,9 @@ export interface ProjectModelContextValue {
    * this route records history and invalidates analysis.
    */
   executeProjectCommand: (command: ProjectCommand) => Promise<ProjectCommandResult | undefined>;
+
+  /** Applies the exact topology state accepted in a Model Doctor preview. */
+  executePreparedTopologyRepair: (prepared: PreparedTopologyRepair) => Promise<TopologyRepairExecutionResult>;
 
   /**
    * Applies a discrete reversible edit. It records one history entry and invalidates analysis.
@@ -56,6 +59,11 @@ export interface ProjectModelContextValue {
   replaceProject: (project: ProjectModel, restoredAnalysis?: AnalysisResult, repositoryRevision?: number) => void;
   undo: () => void;
   redo: () => void;
+}
+
+export interface TopologyRepairExecutionResult {
+  applied: boolean;
+  report: PreparedTopologyRepair['report'];
 }
 
 export const ProjectModelContext = createContext<ProjectModelContextValue | null>(null);

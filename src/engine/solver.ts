@@ -437,6 +437,32 @@ const recoverConnectedDisplacements = (
   return recovered;
 };
 
+/**
+ * Static counterpart of the assembly grounding guard. This deliberately says
+ * only whether the model has any direct support constraint or positive nodal
+ * spring; it does not attempt to diagnose general mechanisms.
+ */
+const hasEvidentGrounding = (project: ProjectModel): boolean => {
+  if (!project.members.length) return false;
+  const participatingNodeIds = new Set(project.members.flatMap((member) => [member.i, member.j]));
+  const hasSupportConstraint = project.nodes.some((node) => {
+    if (!participatingNodeIds.has(node.id)) return false;
+    const support = node.support;
+    if (support.type === 'fixed' || support.type === 'pin' || support.type === 'roller') return true;
+    return support.type === 'custom' && Boolean(support.restrainX || support.restrainY || support.restrainR);
+  });
+  const hasGroundingSpring = project.nodes.some((node) => {
+    if (!participatingNodeIds.has(node.id)) return false;
+    const spring = node.support.spring;
+    return Boolean(spring && [spring.kx, spring.ky, spring.kr, spring.kNormal].some((value) => (value ?? 0) > 0));
+  });
+  return hasSupportConstraint || hasGroundingSpring;
+};
+
+export const getEvidentGroundingIssue = (project: ProjectModel): ValidationIssue | null => hasEvidentGrounding(project)
+  || !project.members.length ? null
+  : { id: 'no-supports', severity: 'error', title: 'Estructura sin restricciones', message: 'Agrega apoyos para impedir los movimientos rígidos del modelo.' };
+
 export const validateProject = (project: ProjectModel): ValidationIssue[] => {
   const issues: ValidationIssue[] = [];
   const push = (issue: ValidationIssue) => issues.push(issue);
@@ -1501,13 +1527,9 @@ export const analyzeProject = (
     }
     const constraintDefinitions = independentConstraints;
     const C = constraintDefinitions.map((definition) => definition.row);
-    const hasGroundingConstraint = constraintDefinitions.some((definition) => definition.kind === 'support');
-    const hasGroundingSpring = project.nodes.some((node) => {
-      const spring = node.support.spring;
-      return Boolean(spring && [spring.kx, spring.ky, spring.kr, spring.kNormal].some((value) => (value ?? 0) > 0));
-    });
-    if (!hasGroundingConstraint && !hasGroundingSpring) {
-      issues.push({ id: 'no-supports', severity: 'error', title: 'Estructura sin restricciones', message: 'Agrega apoyos para impedir los movimientos rígidos del modelo.' });
+    const groundingIssue = getEvidentGroundingIssue(project);
+    if (groundingIssue) {
+      issues.push(groundingIssue);
       return abortedResult(issues);
     }
 
