@@ -80,6 +80,27 @@ export interface MemberBulkEntry {
   readonly changes: MemberBulkChanges;
 }
 
+/**
+ * Cambios preparados de una edición múltiple sobre nudos.
+ *
+ * Mismo contrato que los miembros: ausente es «sin tocar», `null` borra. Las
+ * banderas de restricción y la normal del rodillo sólo se escriben donde el
+ * apoyo resultante puede sostenerlas.
+ */
+export interface NodeBulkChanges {
+  supportType?: SupportDefinition['type'];
+  angleDeg?: number | null;
+  restrainX?: boolean | null;
+  restrainY?: boolean | null;
+  restrainR?: boolean | null;
+  internalHinge?: boolean | null;
+}
+
+export interface NodeBulkEntry {
+  readonly nodeIds: readonly string[];
+  readonly changes: NodeBulkChanges;
+}
+
 export type ProjectCommand =
   | (CommandBase & { kind: 'member.create'; nodes: NodeModel[]; member: MemberModel })
   | (CommandBase & {
@@ -108,9 +129,11 @@ export type ProjectCommand =
   })
   | (CommandBase & { kind: 'member.update'; memberId: string; changes: Partial<Omit<MemberModel, 'id'>> })
   | (CommandBase & {
-    kind: 'member.bulk.apply';
+    kind: 'selection.bulk.apply';
     /** Grupos de miembros que reciben exactamente el mismo cambio. */
     entries: readonly MemberBulkEntry[];
+    /** Grupos de nudos que reciben exactamente el mismo cambio. */
+    nodeEntries: readonly NodeBulkEntry[];
     /** Estado exacto sobre el que se preparó; rechaza una intención obsoleta. */
     sourceSnapshot: string;
   })
@@ -339,6 +362,77 @@ const applyMemberBulkChanges = (current: MemberModel, changes: MemberBulkChanges
   return updated;
 };
 
+/** Componentes de movimiento impuesto que cada tipo de apoyo puede restringir. */
+const prescribedComponentsFor = (support: SupportDefinition): ReadonlySet<string> => {
+  switch (support.type) {
+    case 'pin': return new Set(['ux', 'uy']);
+    case 'fixed': return new Set(['ux', 'uy', 'rz']);
+    case 'roller': return new Set(['normal']);
+    case 'custom': return new Set([
+      ...(support.restrainX ? ['ux'] : []),
+      ...(support.restrainY ? ['uy'] : []),
+      ...(support.restrainR ? ['rz'] : []),
+    ]);
+    case 'none': return new Set();
+  }
+};
+
+/**
+ * Reconstruye el apoyo entero cuando cambia el tipo.
+ *
+ * Escribir sólo `type` dejaría banderas de restricción de un apoyo
+ * personalizado, la normal de un rodillo anterior o un movimiento impuesto que
+ * el nuevo tipo ya no restringe. Se conservan los muelles, que son
+ * independientes del tipo, y se descarta el resto igual que hace el Inspector
+ * al cambiar un apoyo de uno en uno.
+ */
+const rebuildSupport = (current: SupportDefinition, type: SupportDefinition['type']): SupportDefinition => {
+  const spring = current.spring ? structuredClone(current.spring) : undefined;
+  if (type === 'roller') return { type, angleDeg: current.angleDeg ?? 90, ...(spring ? { spring } : {}) };
+  if (type === 'custom') {
+    return { type, restrainX: false, restrainY: false, restrainR: false, ...(spring ? { spring } : {}) };
+  }
+  return { type, ...(spring ? { spring } : {}) };
+};
+
+const applyNodeBulkChanges = (current: NodeModel, changes: NodeBulkChanges): NodeModel => {
+  const updated: NodeModel = structuredClone(current);
+
+  if (changes.supportType !== undefined && changes.supportType !== updated.support.type) {
+    updated.support = rebuildSupport(updated.support, changes.supportType);
+  }
+
+  // Cada bandera vive sólo en un apoyo personalizado, y la normal sólo en un
+  // rodillo: escribirlas fuera de ahí guardaría un valor que nadie lee.
+  if (updated.support.type === 'custom') {
+    if (changes.restrainX === null) delete updated.support.restrainX;
+    else if (changes.restrainX !== undefined) updated.support.restrainX = changes.restrainX;
+    if (changes.restrainY === null) delete updated.support.restrainY;
+    else if (changes.restrainY !== undefined) updated.support.restrainY = changes.restrainY;
+    if (changes.restrainR === null) delete updated.support.restrainR;
+    else if (changes.restrainR !== undefined) updated.support.restrainR = changes.restrainR;
+  }
+  if (updated.support.type === 'roller') {
+    if (changes.angleDeg === null) delete updated.support.angleDeg;
+    else if (changes.angleDeg !== undefined) updated.support.angleDeg = changes.angleDeg;
+  }
+
+  if (changes.internalHinge === null) delete updated.internalHinge;
+  else if (changes.internalHinge !== undefined) updated.internalHinge = changes.internalHinge;
+
+  // El movimiento impuesto que el apoyo resultante no puede restringir deja de
+  // tener sentido físico; conservarlo haría fallar el análisis.
+  const allowed = prescribedComponentsFor(updated.support);
+  if (updated.support.prescribed) {
+    const kept = Object.entries(updated.support.prescribed)
+      .filter(([component, value]) => allowed.has(component) && value !== undefined);
+    if (kept.length === 0) delete updated.support.prescribed;
+    else updated.support.prescribed = Object.fromEntries(kept) as SupportDefinition['prescribed'];
+  }
+
+  return updated;
+};
+
 export const compileProjectCommand = (project: ProjectModel, command: ProjectCommand): CompiledProjectCommand => {
   const next = structuredClone(project);
   let result: ProjectCommandResult | undefined;
@@ -405,7 +499,7 @@ export const compileProjectCommand = (project: ProjectModel, command: ProjectCom
       updated.sectionOrigin = 'custom';
     }
     next.members[index] = updated;
-  } else if (command.kind === 'member.bulk.apply') {
+  } else if (command.kind === 'selection.bulk.apply') {
     if (projectCommandSnapshot(project) !== command.sourceSnapshot) {
       throw new Error('La edición múltiple preparada está obsoleta; vuelve a prepararla antes de aplicarla.');
     }
@@ -418,6 +512,26 @@ export const compileProjectCommand = (project: ProjectModel, command: ProjectCom
         if (index < 0) throw new Error(`No existe el miembro ${memberId}.`);
         next.members[index] = applyMemberBulkChanges(next.members[index], entry.changes);
       }
+    }
+    const seenNodes = new Set<string>();
+    for (const entry of command.nodeEntries) {
+      for (const nodeId of entry.nodeIds) {
+        if (seenNodes.has(nodeId)) throw new Error(`El nudo ${nodeId} recibe dos cambios en la misma edición múltiple.`);
+        seenNodes.add(nodeId);
+        const index = next.nodes.findIndex((item) => item.id === nodeId);
+        if (index < 0) throw new Error(`No existe el nodo ${nodeId}.`);
+        next.nodes[index] = applyNodeBulkChanges(next.nodes[index], entry.changes);
+      }
+    }
+    // Un asiento por caso que el apoyo resultante ya no restringe quedaría
+    // colgando y haría fallar el análisis: se retira con el mismo cambio.
+    if (seenNodes.size > 0 && next.prescribedDisplacements) {
+      const supportById = new Map(next.nodes.map((item) => [item.id, item.support]));
+      next.prescribedDisplacements = next.prescribedDisplacements.filter((item) => {
+        if (!seenNodes.has(item.nodeId)) return true;
+        const support = supportById.get(item.nodeId);
+        return support ? prescribedComponentsFor(support).has(item.component) : true;
+      });
     }
   } else if (command.kind === 'member.delete') {
     if (!next.members.some((member) => member.id === command.memberId)) throw new Error(`No existe el miembro ${command.memberId}.`);

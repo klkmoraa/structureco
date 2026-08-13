@@ -3,7 +3,7 @@ import { applyProjectPatch, compileProjectCommand, projectCommandSnapshot } from
 import { findStandardSection, standardSections } from '../../data/standardSections';
 import type { MemberModel, ProjectModel } from '../../types';
 import { aggregateBulkSelection, findBulkProperty } from './bulkEditAggregation';
-import { prepareBulkMemberEdit } from './bulkEditCommand';
+import { prepareBulkEdit } from './bulkEditCommand';
 import { createBulkMember, resetBulkFixtureIds } from './bulkEditFixtures';
 import { EMPTY_BULK_DRAFT, stageBulkChange } from './bulkEditIntent';
 import type { BulkEditDraft, BulkPropertyId, BulkStagedChange } from './bulkEditTypes';
@@ -42,7 +42,7 @@ const stage = (project: ProjectModel, entries: [BulkPropertyId, BulkStagedChange
 
 const apply = (project: ProjectModel, entries: [BulkPropertyId, BulkStagedChange][]) => {
   const { aggregate, draft } = stage(project, entries);
-  const prepared = prepareBulkMemberEdit(project, aggregate, draft, 'Editar selección');
+  const prepared = prepareBulkEdit(project, aggregate, draft, 'Editar selección');
   const compiled = compileProjectCommand(project, prepared.command);
   return { prepared, compiled, next: applyProjectPatch(project, compiled.forward) };
 };
@@ -174,7 +174,7 @@ describe('prepared bulk member edit', () => {
   it('rejects a prepared edit once the model moved underneath it', () => {
     const project = projectOf([createBulkMember(), createBulkMember()]);
     const { aggregate, draft } = stage(project, [['member.sectionId', { kind: 'set', value: 'w12x53' }]]);
-    const prepared = prepareBulkMemberEdit(project, aggregate, draft, 'Editar selección');
+    const prepared = prepareBulkEdit(project, aggregate, draft, 'Editar selección');
 
     const moved: ProjectModel = structuredClone(project);
     moved.members[0].E = 123456;
@@ -185,7 +185,7 @@ describe('prepared bulk member edit', () => {
   it('refuses the whole operation when one target disappeared', () => {
     const project = projectOf([createBulkMember(), createBulkMember()]);
     const { aggregate, draft } = stage(project, [['member.sectionId', { kind: 'set', value: 'w12x53' }]]);
-    const prepared = prepareBulkMemberEdit(project, aggregate, draft, 'Editar selección');
+    const prepared = prepareBulkEdit(project, aggregate, draft, 'Editar selección');
 
     const reduced: ProjectModel = structuredClone(project);
     reduced.members.splice(1, 1);

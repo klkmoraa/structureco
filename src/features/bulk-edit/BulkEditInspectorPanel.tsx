@@ -3,7 +3,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { useProjectModel } from '../../store/ProjectModelContext';
 import type { Selection } from '../../types';
 import { BulkEditPanel, type BulkEditApplyRequest } from './BulkEditPanel';
-import { prepareBulkMemberEdit } from './bulkEditCommand';
+import { prepareBulkEdit } from './bulkEditCommand';
 import { createBulkEditTranslator } from './bulkEditCopy';
 
 /**
@@ -33,10 +33,10 @@ export const BulkEditInspectorPanel = ({ selection }: { selection: Extract<Selec
 
   const apply = async ({ draft, aggregate }: BulkEditApplyRequest) => {
     setError(undefined);
-    const prepared = prepareBulkMemberEdit(project, aggregate, draft, t('command.description', {
-      count: aggregate.counts.member,
+    const prepared = prepareBulkEdit(project, aggregate, draft, t('command.description', {
+      count: aggregate.total,
     }));
-    if (prepared.command.entries.length === 0) return;
+    if (prepared.command.entries.length === 0 && prepared.command.nodeEntries.length === 0) return;
     try {
       await executeProjectCommand(prepared.command);
     } catch (cause: unknown) {

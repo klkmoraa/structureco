@@ -1,4 +1,11 @@
-import { projectCommandSnapshot, type MemberBulkChanges, type MemberBulkEntry, type ProjectCommand } from '../../commands/projectCommand';
+import {
+  projectCommandSnapshot,
+  type MemberBulkChanges,
+  type MemberBulkEntry,
+  type NodeBulkChanges,
+  type NodeBulkEntry,
+  type ProjectCommand,
+} from '../../commands/projectCommand';
 import { findStandardMaterial } from '../../data/standardMaterials';
 import { findStandardSection } from '../../data/standardSections';
 import type { ProjectModel } from '../../types';
@@ -28,7 +35,7 @@ import type {
  */
 
 export interface PreparedBulkEdit {
-  readonly command: Extract<ProjectCommand, { kind: 'member.bulk.apply' }>;
+  readonly command: Extract<ProjectCommand, { kind: 'selection.bulk.apply' }>;
   /** Miembros que alguna entrada tocaría. */
   readonly affected: readonly BulkTargetRef[];
   /** Seleccionados que ningún cambio alcanza. */
@@ -104,14 +111,51 @@ const changesForMember = (
   return changes;
 };
 
-const hasChanges = (changes: MemberBulkChanges): boolean => Object.keys(changes).length > 0;
+
+/** Cambios que corresponden a un nudo concreto, con la misma regla de elegibilidad. */
+const changesForNode = (
+  aggregate: BulkSelectionAggregate,
+  draft: BulkEditDraft,
+  nodeId: string,
+): NodeBulkChanges => {
+  const changes: NodeBulkChanges = {};
+  for (const [id, change] of Object.entries(draft) as [BulkPropertyId, BulkStagedChange][]) {
+    const state = findBulkProperty(aggregate, id);
+    if (!canStageBulkChange(state, change)) continue;
+    if (!state.compatibility.compatible.some((target) => target.kind === 'node' && target.id === nodeId)) continue;
+
+    switch (id) {
+      case 'node.support.type':
+        if (change.kind === 'set') changes.supportType = change.value as NodeBulkChanges['supportType'];
+        break;
+      case 'node.support.angleDeg': changes.angleDeg = numeric(change); break;
+      case 'node.support.restrainX': changes.restrainX = boolean(change); break;
+      case 'node.support.restrainY': changes.restrainY = boolean(change); break;
+      case 'node.support.restrainR': changes.restrainR = boolean(change); break;
+      case 'node.internalHinge': changes.internalHinge = boolean(change); break;
+      default:
+        // Las propiedades de miembro no entran en un cambio de nudo.
+        break;
+    }
+  }
+  return changes;
+};
+
+/** Una entidad está en la selección si alguna propiedad la clasificó, compatible o no. */
+const isSelected = (aggregate: BulkSelectionAggregate, kind: 'member' | 'node', id: string): boolean =>
+  aggregate.properties.some((property) => property.compatibility.compatible
+    .some((target) => target.kind === kind && target.id === id)
+    || property.compatibility.incompatible
+      .some((entry) => entry.target.kind === kind && entry.target.id === id));
+
+const hasChanges = (changes: MemberBulkChanges | NodeBulkChanges): boolean => Object.keys(changes).length > 0;
 
 /**
  * Agrupa los miembros por el conjunto exacto de cambios que reciben. Con una
  * selección homogénea sale un solo grupo; con tipos mezclados salen tantos como
  * combinaciones de elegibilidad haya, y ninguno escribe de más.
  */
-export const prepareBulkMemberEdit = (
+export const prepareBulkEdit = (
   project: ProjectModel,
   aggregate: BulkSelectionAggregate,
   draft: BulkEditDraft,
@@ -123,10 +167,7 @@ export const prepareBulkMemberEdit = (
 
   for (const member of project.members) {
     const target: BulkTargetRef = { kind: 'member', id: member.id };
-    const selected = aggregate.properties.some((property) => property.entity === 'member'
-      && property.compatibility.compatible.concat(property.compatibility.incompatible.map((entry) => entry.target))
-        .some((candidate) => candidate.kind === 'member' && candidate.id === member.id));
-    if (!selected) continue;
+    if (!isSelected(aggregate, 'member', member.id)) continue;
 
     const changes = changesForMember(aggregate, draft, member.id);
     if (!hasChanges(changes)) {
@@ -140,16 +181,38 @@ export const prepareBulkMemberEdit = (
     else groups.set(key, { changes, memberIds: [member.id] });
   }
 
+  const nodeGroups = new Map<string, { changes: NodeBulkChanges; nodeIds: string[] }>();
+  for (const node of project.nodes) {
+    const target: BulkTargetRef = { kind: 'node', id: node.id };
+    if (!isSelected(aggregate, 'node', node.id)) continue;
+
+    const changes = changesForNode(aggregate, draft, node.id);
+    if (!hasChanges(changes)) {
+      skipped.push(target);
+      continue;
+    }
+    affected.push(target);
+    const key = projectCommandSnapshot(changes);
+    const group = nodeGroups.get(key);
+    if (group) group.nodeIds.push(node.id);
+    else nodeGroups.set(key, { changes, nodeIds: [node.id] });
+  }
+
   const entries: MemberBulkEntry[] = [...groups.values()].map((group) => ({
     memberIds: group.memberIds,
+    changes: group.changes,
+  }));
+  const nodeEntries: NodeBulkEntry[] = [...nodeGroups.values()].map((group) => ({
+    nodeIds: group.nodeIds,
     changes: group.changes,
   }));
 
   return {
     command: {
-      kind: 'member.bulk.apply',
+      kind: 'selection.bulk.apply',
       description,
       entries,
+      nodeEntries,
       sourceSnapshot: projectCommandSnapshot(project),
     },
     affected,
