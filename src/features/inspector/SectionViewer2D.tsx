@@ -1,11 +1,12 @@
 import { useId, useMemo, useState } from 'react';
 import { Box, Ruler } from 'lucide-react';
-import { findStandardSection, type SectionShapeType, type StandardSection } from '../../data/standardSections';
 import { toDisplay, unitLabel } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import type { MemberPropertyOrigin, UnitSystemId } from '../../types';
 import { formatFixed } from '../../utils/numberFormat';
 import { formatInspectorValue } from './numericFormatting';
+import { resolveSectionGeometry, sectionShapeLayout } from './sectionGeometry';
+import { SectionShape, type SectionShapeVariant } from './SectionShape';
 
 export interface SectionViewer2DProps {
   /** Área bruta del miembro (m²) tal como la tiene el modelo. */
@@ -39,26 +40,12 @@ export const SectionViewer2D = ({ area, inertia, sectionId, sectionOrigin, units
   const gradientId = `section-stress-gradient-${uid}`;
   const maskId = `section-stress-mask-${uid}`;
 
-  const geometry = useMemo(() => {
-    const section: StandardSection | null = sectionOrigin === 'catalog' && sectionId
-      ? findStandardSection(sectionId) ?? null
-      : null;
-    const safeArea = area > 0 ? area : 0.01;
-    const safeInertia = inertia > 0 ? inertia : 1e-5;
-    const depth = section?.depth ?? Math.sqrt((12 * safeInertia) / safeArea);
-    const width = section?.width ?? safeArea / (depth > 0 ? depth : 1);
-    return {
-      section,
-      shapeType: (section?.shapeType ?? 'RECT') as SectionShapeType,
-      depth: depth > 0 ? depth : 0.3,
-      width: width > 0 ? width : 0.2,
-      flange: section?.flangeThickness ?? depth * 0.1,
-      web: section?.webThickness ?? width * 0.1,
-      modulus: section?.sectionModulusX ?? (depth > 0 ? safeInertia / (depth / 2) : 0),
-    };
-  }, [area, inertia, sectionId, sectionOrigin]);
+  const geometry = useMemo(
+    () => resolveSectionGeometry({ area, inertia, sectionId, sectionOrigin }),
+    [area, inertia, sectionId, sectionOrigin],
+  );
 
-  const { section, shapeType, depth, width, flange, web, modulus } = geometry;
+  const { section, shapeType, depth, width, modulus } = geometry;
 
   /*
    * Tensiones normales elásticas σ = N/A ± M/W. Se calculan en unidades base
@@ -92,88 +79,11 @@ export const SectionViewer2D = ({ area, inertia, sectionId, sectionOrigin, units
   const stressColor = (sigma: number) => sigma < 0 ? 'var(--sc-color-technical-axial)' : 'var(--sc-color-technical-moment)';
   const stressOpacity = (sigma: number) => peakStress > 0 ? 0.18 + 0.72 * (Math.abs(sigma) / peakStress) : 0;
 
-  const drawWidth = SVG_WIDTH - PADDING * 2;
-  const drawHeight = SVG_HEIGHT - PADDING * 2;
-  const scale = Math.min(drawWidth / Math.max(width, 0.01), drawHeight / Math.max(depth, 0.01)) * 0.9;
-  const pxWidth = width * scale;
-  const pxHeight = depth * scale;
-  const pxFlange = Math.max(flange * scale, 3);
-  const pxWeb = Math.max(web * scale, 3);
-  const cx = SVG_WIDTH / 2;
-  const cy = SVG_HEIGHT / 2;
-  const left = cx - pxWidth / 2;
-  const right = cx + pxWidth / 2;
-  const top = cy - pxHeight / 2;
-  const bottom = cy + pxHeight / 2;
+  const layout = sectionShapeLayout(geometry, { width: SVG_WIDTH, height: SVG_HEIGHT, padding: PADDING });
+  const { left, right, top, bottom, cx, cy, pxWidth, pxHeight } = layout;
 
-  /*
-   * La forma se dibuja una sola vez y sirve para dos cosas: el trazo visible y
-   * la máscara del mapa de tensiones. Antes el modo Stress pintaba un
-   * rectángulo con degradado sobre *cualquier* perfil, así que una I, una C,
-   * un HSS o una L acababan representados como una caja — la tensión se leía
-   * en una sección que no era la del miembro. Con `variant='mask'` el mismo
-   * contorno (huecos incluidos) recorta el degradado, y la geometría real es
-   * la misma en los dos modos.
-   *
-   * En la máscara el blanco es material y el negro es hueco: por eso los
-   * `section-shape-void` se pintan de negro en lugar de con el color del
-   * lienzo, y así el ánima hueca de un tubo sigue vacía bajo el degradado.
-   */
-  const renderShape = (variant: 'draw' | 'outline' | 'mask' = 'draw') => {
-    const isMask = variant === 'mask';
-    const solid = isMask
-      ? { fill: 'white', stroke: 'none' as const }
-      : { className: variant === 'outline' ? 'section-shape section-shape--outline' : 'section-shape' };
-    const hollow = isMask
-      ? { fill: 'black', stroke: 'none' as const }
-      : { className: 'section-shape-void' };
-    switch (shapeType) {
-      case 'I':
-      case 'C': {
-        const webLeft = shapeType === 'C' ? left : cx - pxWeb / 2;
-        const webRight = shapeType === 'C' ? left + pxWeb : cx + pxWeb / 2;
-        const flangeBottom = top + pxFlange;
-        const flangeTop = bottom - pxFlange;
-        return <path
-          {...solid}
-          d={[
-            `M ${left} ${top}`, `H ${right}`, `V ${flangeBottom}`, `H ${webRight}`, `V ${flangeTop}`,
-            `H ${right}`, `V ${bottom}`, `H ${left}`,
-            ...(shapeType === 'I' ? [`V ${flangeTop}`, `H ${webLeft}`, `V ${flangeBottom}`, `H ${left}`] : []),
-            'Z',
-          ].join(' ')}
-          strokeLinejoin="round"
-        />;
-      }
-      case 'HSS_RECT':
-        return <g>
-          <rect {...solid} x={left} y={top} width={pxWidth} height={pxHeight} rx="4" />
-          <rect
-            {...hollow}
-            x={left + pxWeb}
-            y={top + pxFlange}
-            width={Math.max(pxWidth - pxWeb * 2, 2)}
-            height={Math.max(pxHeight - pxFlange * 2, 2)}
-            rx="2"
-          />
-        </g>;
-      case 'HSS_ROUND': {
-        const radius = Math.min(pxWidth, pxHeight) / 2;
-        return <g>
-          <circle {...solid} cx={cx} cy={cy} r={radius} />
-          <circle {...hollow} cx={cx} cy={cy} r={Math.max(radius - pxWeb, 2)} />
-        </g>;
-      }
-      case 'L':
-        return <path
-          {...solid}
-          d={`M ${left} ${top} H ${left + pxWeb} V ${bottom - pxFlange} H ${right} V ${bottom} H ${left} Z`}
-          strokeLinejoin="round"
-        />;
-      default:
-        return <rect {...solid} x={left} y={top} width={pxWidth} height={pxHeight} rx="3" />;
-    }
-  };
+  const renderShape = (variant: SectionShapeVariant = 'draw') =>
+    <SectionShape shapeType={shapeType} layout={layout} variant={variant} />;
 
   /*
    * En Dimensiones, E.N. es la referencia geométrica central. En Stress debe
