@@ -110,9 +110,10 @@ describe('Results analytical center', () => {
 
     const panel = screen.getByRole('region', { name: 'Resultados del análisis' });
     expect(screen.getByText('Centro analítico')).toBeTruthy();
-    for (const family of ['Estado', 'Esfuerzos', 'Forma', 'Avanzado', 'Comprender', 'Avisos']) {
+    for (const family of ['Estado', 'Esfuerzos', 'Forma', 'Avanzado', 'Comprender']) {
       expect(screen.getAllByText(family).length).toBeGreaterThan(0);
     }
+    expect(screen.queryByRole('tab', { name: 'Avisos' })).toBeNull();
     const moment = screen.getByRole('tab', { name: 'Momento' });
     expect(moment.getAttribute('aria-selected')).toBe('true');
     expect(moment.getAttribute('aria-describedby')).toBe('result-family-forces');
@@ -257,9 +258,10 @@ describe('Results analytical center', () => {
     renderResults(project);
 
     expect(screen.getByText('Analysis center')).toBeTruthy();
-    for (const family of ['State', 'Forces', 'Shape', 'Advanced', 'Understand', 'Issues']) {
+    for (const family of ['State', 'Forces', 'Shape', 'Advanced', 'Understand']) {
       expect(screen.getAllByText(family).length).toBeGreaterThan(0);
     }
+    expect(screen.queryByRole('tab', { name: 'Issues' })).toBeNull();
     expect(screen.getByRole('group', { name: 'Results panel size' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Compact' })).toBeTruthy();
     expect(screen.getByText('Ready to analyze').getAttribute('role')).toBe('status');
@@ -606,9 +608,9 @@ describe('Results analytical center', () => {
     renderResults(project);
 
     await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
-    expect(await screen.findByText('Estructura inestable o mecanismo', {}, { timeout: 5000 })).toBeTruthy();
+    expect(await screen.findByText(/Estructura inestable o mecanismo/, {}, { timeout: 5000 })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Modo aula test' }));
-    expect(screen.getByText('Estructura inestable o mecanismo')).toBeTruthy();
+    expect(screen.getByText(/Estructura inestable o mecanismo/)).toBeTruthy();
     expect(screen.queryByText(/hipótesis antes del cálculo/i)).toBeNull();
   }, 10_000);
 

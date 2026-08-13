@@ -30,6 +30,7 @@ export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpe
   const inspectorToggleRef = useRef<HTMLButtonElement>(null);
   const inspectorReturnFocusRef = useRef<HTMLElement | null>(null);
   const doctorReturnFocusRef = useRef<HTMLElement | null>(null);
+  const modelDoctorToastRef = useRef<{ projectId: string; signature: string }>({ projectId, signature: '' });
   const shellRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
   const { project, analysis, setActiveTool, analyze } = useProject();
@@ -131,6 +132,32 @@ export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpe
   }, [modelDoctorOpen, setDoctorBackgroundState]);
 
   useEffect(() => onWorkspaceCommand('open-model-doctor', () => setDoctorOpen(true)), [setDoctorOpen]);
+
+  useEffect(() => {
+    let current = true;
+    void import('../model-doctor/modelDoctorDiagnostics').then(({ buildModelDoctorReport }) => {
+      if (!current) return;
+      const report = buildModelDoctorReport(project);
+      const signature = JSON.stringify(report.findings
+        .map((finding) => ({
+          id: finding.id,
+          severity: finding.severity,
+          affected: finding.affectedObjects.map((object) => `${object.kind}:${object.id}`).sort(),
+        }))
+        .sort((first, second) => first.id.localeCompare(second.id)));
+      const previous = modelDoctorToastRef.current.projectId === project.id
+        ? modelDoctorToastRef.current.signature
+        : '';
+      modelDoctorToastRef.current = { projectId: project.id, signature };
+      if (report.total === 0 || signature === previous) return;
+      emitWorkspaceCommand('show-toast', {
+        message: t('modelDoctor.toastTitle'),
+        description: t('modelDoctor.toastDescription'),
+        tone: 'warning',
+      });
+    });
+    return () => { current = false; };
+  }, [project, t]);
 
   useEffect(() => () => {
     setDoctorBackgroundState(false);

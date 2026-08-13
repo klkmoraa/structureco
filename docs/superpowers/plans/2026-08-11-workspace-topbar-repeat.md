@@ -1,5 +1,9 @@
 # Workspace TopBar and Repeat Implementation Plan
 
+**Clasificación:** `HISTORICAL`
+
+> **HISTORICAL** — Plan ejecutado; conserva decisiones y evidencia de su momento, no certifica el estado actual por sí solo.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make the Workspace TopBar and Repeat affordance visibly clearer and more tactile without changing Workspace behavior or structural-domain contracts.

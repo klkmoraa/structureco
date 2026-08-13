@@ -22,9 +22,9 @@ import {
   Play,
   Redo2,
   Save,
-  Search,
   Sun,
   Undo2,
+  Wrench,
 } from 'lucide-react';
 import { createBlankProject, exampleProjects } from '../../data/defaultProject';
 import { useI18n } from '../../i18n/useI18n';
@@ -70,7 +70,6 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     updateProjectAnalysisSettings,
     replaceProject,
     setTheme,
-    setResultTab,
     undo,
     redo,
     analyze,
@@ -174,11 +173,14 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
   };
 
   const openModelDoctor = () => {
+    emitWorkspaceCommand('open-model-doctor');
+  };
+  const openModelDoctorFromMobileMenu = () => {
     // El launcher del menú desaparece al cerrarlo. Dejamos el foco en su
     // disparador persistente antes de abrir el drawer para que pueda volver allí.
     mobileMenuButtonRef.current?.focus({ preventScroll: true });
     setShowMobileMenu(false);
-    emitWorkspaceCommand('open-model-doctor');
+    openModelDoctor();
   };
   const closeImportCenter = () => {
     setImportCenterOpen(false);
@@ -413,18 +415,17 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
       </div>
 
       <div className="top-actions topbar-zone topbar-actions-zone" data-topbar-zone="actions" data-topbar-cluster="actions">
-        {/* En pantallas anchas el botón lleva texto y keycap; por debajo de 1536px
+        {/* En pantallas anchas el botón lleva texto; por debajo de 1536px
             colapsa a icono en CSS y libera el ancho que la zona necesita. */}
         <button
           type="button"
-          className="topbar-command-button"
-          onClick={() => emitWorkspaceCommand('open-command-palette')}
-          aria-label={t('palette.open')}
-          title={t('palette.open')}
+          className="topbar-command-button model-doctor-launcher"
+          onClick={openModelDoctor}
+          aria-label="Model Doctor"
+          title={t('modelDoctor.description')}
         >
-          <Search size={17} aria-hidden="true" />
-          <span>{t('palette.openShort')}</span>
-          <kbd>Ctrl K</kbd>
+          <Wrench size={17} aria-hidden="true" />
+          <span>Model Doctor</span>
         </button>
         {onOpenSpace3D ? <IconButton
           variant="secondary"
@@ -441,9 +442,8 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           projectId={project.id}
           analysis={analysis}
           isAnalyzing={isAnalyzing}
-          onOpenIssues={() => {
-            setResultTab('issues');
-            emitWorkspaceCommand('expand-mobile-results');
+          onOpenModelDoctor={() => {
+            emitWorkspaceCommand('open-model-doctor');
           }}
         />
         <div className="export-wrap">
@@ -474,7 +474,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
 
                 <div className="menu-section">
                   <div className="menu-section-title">{t('menu.sectionAnalysis')}</div>
-                  <button onClick={openModelDoctor}><Search size={17} /> Model Doctor</button>
+                  <button onClick={openModelDoctorFromMobileMenu}><Wrench size={17} /> Model Doctor</button>
                   <label className="mobile-menu-field overflow-case"><span>{t('analysis.caseOrCombination')}</span><select value={selectedCombinationId} onChange={(event) => setSelectedCombinationId(event.target.value)}><option value="">{t('analysis.activeCases')}</option>{project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}</select></label>
                   <label className="mobile-menu-field overflow-mode"><span>{t('analysis.mode')}</span><select value={project.settings.calculationMode ?? 'complete'} onChange={(event) => { updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } })); setShowMobileMenu(false); }}><option value="classroom">{t('analysis.modeClassroom')}</option><option value="complete">{t('analysis.modeComplete')}</option></select></label>
                   <label className="mobile-menu-field overflow-analysis-order"><span>{t('analysis.order')}</span><select value={project.settings.analysisMode ?? 'first-order'} onChange={(event) => { updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: event.target.value as 'first-order' | 'p-delta' })); setShowMobileMenu(false); }}><option value="first-order">{t('analysis.orderFirst')}</option><option value="p-delta">{t('analysis.orderPDelta')}</option></select></label>

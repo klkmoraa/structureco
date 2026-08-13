@@ -2,6 +2,8 @@
 
 **Clasificación:** `HISTORICAL`
 
+> **HISTORICAL** — Diseño ejecutado; conserva decisiones y evidencia de su momento, no certifica el estado actual por sí solo.
+
 **Baseline:** `2cef4d65862f0c057bb618f7c80a25756c8c1ecb` (`main`)
 
 ## Objetivo

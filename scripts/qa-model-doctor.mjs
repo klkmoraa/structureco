@@ -55,10 +55,15 @@ const enterWorkspace = async (example = false, reload = true) => {
   await page.getByRole('button', { name: /^analizar$/i }).waitFor({ state: 'visible' });
 };
 
-const openDoctorFromMore = async () => {
-  await page.getByRole('button', { name: /más acciones/i }).click();
-  const menu = page.getByRole('dialog', { name: /más acciones/i });
-  await menu.getByRole('button', { name: 'Model Doctor' }).click();
+const openDoctor = async () => {
+  const desktopLauncher = page.locator('.model-doctor-launcher');
+  if (await desktopLauncher.isVisible()) {
+    await desktopLauncher.click();
+  } else {
+    await page.getByRole('button', { name: /más acciones/i }).click();
+    const menu = page.getByRole('dialog', { name: /más acciones/i });
+    await menu.getByRole('button', { name: 'Model Doctor' }).click();
+  }
   const doctor = page.getByRole('dialog', { name: 'Model Doctor' });
   await doctor.waitFor({ state: 'visible' });
   return doctor;
@@ -76,7 +81,7 @@ const loadProject = async (mutate) => {
 const assertGeometry = async (viewport, expectedSide) => {
   await page.setViewportSize(viewport);
   await loadProject((project) => { project.members[0].E = 0; });
-  const doctor = await openDoctorFromMore();
+  const doctor = await openDoctor();
   // `visible` is reached at the start of the spring. Measure only after the
   // surface itself reaches its final viewport edge; a fixed delay flakes on a
   // busy machine and can sample a healthy drawer mid-animation.
@@ -120,7 +125,7 @@ try {
   const resultsToggle = page.getByRole('button', { name: /^resultados$/i });
   await resultsToggle.click();
   const firstMore = page.getByRole('button', { name: /m.s acciones/i });
-  const firstPhoneDoctor = await openDoctorFromMore();
+  const firstPhoneDoctor = await openDoctor();
   if (!(await page.locator('.results-panel').evaluate((panel) => panel.classList.contains('mobile-collapsed')))) throw new Error('Expanded mobile Results did not collapse before first Doctor load');
   await page.keyboard.press('Escape');
   await firstPhoneDoctor.waitFor({ state: 'hidden' });
@@ -128,8 +133,8 @@ try {
   await page.setViewportSize({ width: 1440, height: 900 });
 
   // HEALTHY: all clear, modal isolation and return to the persistent launcher.
-  const more = page.getByRole('button', { name: /más acciones/i });
-  const healthy = await openDoctorFromMore();
+  const doctorLauncher = page.locator('.model-doctor-launcher');
+  const healthy = await openDoctor();
   await healthy.getByRole('heading', { name: /modelo listo para revisar/i }).waitFor();
   const isolated = await page.locator('.app-shell').evaluate((shell) => ({ inert: shell.inert, hidden: shell.getAttribute('aria-hidden') }));
   if (!isolated.inert || isolated.hidden !== 'true') throw new Error('Workspace background was not isolated while Model Doctor was open');
@@ -137,11 +142,11 @@ try {
   if (await page.getByRole('dialog', { name: /paleta de comandos/i }).count()) throw new Error('Command Palette opened over Model Doctor');
   await page.keyboard.press('Escape');
   await healthy.waitFor({ state: 'hidden' });
-  if (!(await more.evaluate((element) => element === document.activeElement))) throw new Error('Focus did not return to More actions');
+  if (!(await doctorLauncher.evaluate((element) => element === document.activeElement))) throw new Error('Focus did not return to the Model Doctor launcher');
 
   // INVALID PROPERTY: critical, explanation and no invalid auto-repair action.
   await loadProject((project) => { project.members[0].E = 0; });
-  const invalid = await openDoctorFromMore();
+  const invalid = await openDoctor();
   await invalid.getByText(/1 crítico/).waitFor();
   const critical = invalid.locator('.model-doctor-finding--critical').first();
   await critical.getByRole('button', { name: /explicar/i }).click();
@@ -153,7 +158,7 @@ try {
   await loadProject((project) => {
     project.nodes = project.nodes.map((node) => ({ ...node, support: { type: 'none' } }));
   });
-  const ungrounded = await openDoctorFromMore();
+  const ungrounded = await openDoctor();
   const groundingFinding = ungrounded.locator('.model-doctor-finding--critical').filter({ hasText: /sin restricciones/i }).first();
   await groundingFinding.waitFor();
   if (await groundingFinding.getByRole('button', { name: /previsualizar|corregir/i }).count()) throw new Error('Evident no-grounding diagnosis offered auto-repair');
@@ -168,14 +173,14 @@ try {
       start: 0, end: 1, px: 0, py: -5, position: 0.75,
     });
   });
-  let topologyDoctor = await openDoctorFromMore();
+  let topologyDoctor = await openDoctor();
   let topologyFinding = topologyDoctor.locator('.model-doctor-finding').filter({ hasText: 'QA-SPLIT' }).first();
   await topologyFinding.waitFor();
   await topologyFinding.getByRole('button', { name: /localizar/i }).click();
   await topologyDoctor.waitFor({ state: 'hidden' });
   await page.locator('.node-object.selected').waitFor();
 
-  topologyDoctor = await openDoctorFromMore();
+  topologyDoctor = await openDoctor();
   topologyFinding = topologyDoctor.locator('.model-doctor-finding').filter({ hasText: 'QA-SPLIT' }).first();
   const sourceBeforePreview = await page.evaluate(() => localStorage.getItem('structureCo.project'));
   const membersBeforeRepair = await page.locator('.member-object').count();
@@ -191,12 +196,12 @@ try {
 
   await page.getByRole('button', { name: /^deshacer$/i }).click();
   if (await page.locator('.member-object').count() !== membersBeforeRepair) throw new Error('One undo did not restore the original topology');
-  topologyDoctor = await openDoctorFromMore();
+  topologyDoctor = await openDoctor();
   await topologyDoctor.locator('.model-doctor-finding').filter({ hasText: 'QA-SPLIT' }).first().waitFor();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: /^rehacer$/i }).click();
   if (await page.locator('.member-object').count() !== membersBeforeRepair + 1) throw new Error('One redo did not restore the repaired topology');
-  topologyDoctor = await openDoctorFromMore();
+  topologyDoctor = await openDoctor();
   if (await topologyDoctor.locator('.model-doctor-finding').filter({ hasText: 'QA-SPLIT' }).count()) throw new Error('Repaired finding returned after redo');
   await page.keyboard.press('Escape');
 
@@ -205,7 +210,7 @@ try {
     project.nodes.push({ id: 'QA-STALE', x: 3, y: 4, support: { type: 'fixed' } });
   });
   const projectNameInput = page.locator('.project-name input');
-  topologyDoctor = await openDoctorFromMore();
+  topologyDoctor = await openDoctor();
   topologyFinding = topologyDoctor.locator('.model-doctor-finding').filter({ hasText: 'QA-STALE' }).first();
   await topologyFinding.getByRole('button', { name: /previsualizar reparaci/i }).click();
   await projectNameInput.evaluate((input) => {
@@ -238,7 +243,7 @@ try {
   await loadProject((project) => {
     for (let index = 0; index < 18; index += 1) project.nodes.push({ id: `ISO-${index}`, x: 20 + index, y: 20 + index, support: { type: 'none' } });
   });
-  const longDoctor = await openDoctorFromMore();
+  const longDoctor = await openDoctor();
   const scroll = await longDoctor.locator('.sc-modal-surface__body').evaluate((body) => ({ client: body.clientHeight, scroll: body.scrollHeight }));
   if (scroll.scroll <= scroll.client) throw new Error('Long findings do not create internal scrolling');
   const undersized = await longDoctor.locator('button').evaluateAll((buttons) => buttons
@@ -255,7 +260,7 @@ try {
   await loadProject((project) => {
     project.nodes.push({ id: 'QA-SAFE-AREA', x: 3, y: 4, support: { type: 'fixed' } });
   });
-  const safeAreaDoctor = await openDoctorFromMore();
+  const safeAreaDoctor = await openDoctor();
   await safeAreaDoctor.evaluate((element) => {
     element.style.setProperty('--model-doctor-safe-area-bottom', '24px');
     element.style.setProperty('--model-doctor-safe-area-left', '44px');
@@ -289,7 +294,7 @@ try {
   await loadProject((project) => {
     project.nodes.push({ id: 'QA-CONTRAST', x: 20, y: 20, support: { type: 'none' } });
   });
-  const dayDoctor = await openDoctorFromMore();
+  const dayDoctor = await openDoctor();
   const dayColors = await dayDoctor.evaluate((element) => ({ background: getComputedStyle(element).backgroundColor, color: getComputedStyle(element).color }));
   const dayWarning = dayDoctor.locator('.model-doctor-finding--warning').first();
   const dayWarningContrast = await contrastRatio(dayWarning.locator('.model-doctor-finding__eyebrow'), '.model-doctor-finding');
@@ -300,7 +305,7 @@ try {
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: /más acciones/i }).click();
   await page.getByRole('dialog', { name: /más acciones/i }).getByRole('button', { name: /tema oscuro/i }).click();
-  const nightDoctor = await openDoctorFromMore();
+  const nightDoctor = await openDoctor();
   const nightColors = await nightDoctor.evaluate((element) => ({ background: getComputedStyle(element).backgroundColor, color: getComputedStyle(element).color }));
   const nightWarningContrast = await contrastRatio(nightDoctor.locator('.model-doctor-finding--warning .model-doctor-finding__eyebrow').first(), '.model-doctor-finding');
   if (nightWarningContrast < 4.5) throw new Error(`Night warning severity contrast is ${nightWarningContrast.toFixed(2)}:1`);
@@ -368,7 +373,7 @@ try {
   // Reduced-motion media is accepted and the feature-specific transitions collapse.
   await loadProject((project) => { project.members[0].E = 0; });
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  const reduced = await openDoctorFromMore();
+  const reduced = await openDoctor();
   const duration = await reduced.locator('.model-doctor-filters button').first().evaluate((element) => getComputedStyle(element).transitionDuration);
   const longestTransitionSeconds = Math.max(...duration.split(',').map((value) => Number.parseFloat(value)));
   if (longestTransitionSeconds > 0.001) throw new Error(`Reduced motion transition remained active: ${duration}`);

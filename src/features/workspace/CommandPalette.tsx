@@ -59,7 +59,6 @@ const RESULT_TABS: ReadonlyArray<{ id: ResultTab; labelKey: TranslationKey }> = 
   { id: 'deformed', labelKey: 'results.deformed' },
   { id: 'influence', labelKey: 'results.influence' },
   { id: 'learn', labelKey: 'results.learn' },
-  { id: 'issues', labelKey: 'results.issues' },
 ];
 
 const LAYER_PRESETS: ReadonlyArray<{ id: EditorLayerPresetId; labelKey: TranslationKey }> = [

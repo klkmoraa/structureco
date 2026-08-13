@@ -1,5 +1,9 @@
 # CRI-34 v5 to v6 Checksum Hotfix Implementation Plan
 
+**Clasificación:** `HISTORICAL`
+
+> **HISTORICAL** — Plan ejecutado; conserva decisiones y evidencia de su momento, no certifica el estado actual por sí solo.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Prevent a false localStorage to IndexedDB migration conflict when a v5 project and its v6 normalization describe the same project.

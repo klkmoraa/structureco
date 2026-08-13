@@ -186,16 +186,17 @@ describe('TopBar copy project JSON', () => {
 });
 
 describe('TopBar information architecture', () => {
-  it('keeps Model Doctor discoverable in secondary analysis actions without widening the TopBar', async () => {
+  it('places Model Doctor in the TopBar command slot and opens it directly', async () => {
     const user = userEvent.setup();
     const openDoctor = vi.fn();
     const unsubscribe = onWorkspaceCommand('open-model-doctor', openDoctor);
     const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);
 
-    expect(container.querySelector('.model-doctor-launcher')).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
-    const menu = screen.getByRole('dialog', { name: 'Más acciones' });
-    await user.click(within(menu).getByRole('button', { name: 'Model Doctor' }));
+    const actions = container.querySelector<HTMLElement>('[data-topbar-zone="actions"]')!;
+    const doctor = within(actions).getByRole('button', { name: 'Model Doctor' });
+    expect(doctor.classList.contains('topbar-command-button')).toBe(true);
+    expect(within(actions).queryByRole('button', { name: /paleta de comandos/i })).toBeNull();
+    await user.click(doctor);
 
     expect(openDoctor).toHaveBeenCalledTimes(1);
     unsubscribe();

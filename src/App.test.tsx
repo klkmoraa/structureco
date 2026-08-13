@@ -197,11 +197,9 @@ describe('structureCo app shell', () => {
   it('opens Model Doctor before analysis, isolates the workspace, and returns focus on Escape', async () => {
     const user = userEvent.setup();
     const { container } = await renderExampleApp(user);
-    const moreButton = screen.getByRole('button', { name: /más acciones/i });
+    const doctorButton = screen.getByRole('button', { name: 'Model Doctor' });
 
-    await user.click(moreButton);
-    await user.click(within(screen.getByRole('dialog', { name: /más acciones/i }))
-      .getByRole('button', { name: 'Model Doctor' }));
+    await user.click(doctorButton);
 
     expect(await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 })).toBeTruthy();
     const shell = container.querySelector<HTMLElement>('.app-shell')!;
@@ -218,7 +216,7 @@ describe('structureCo app shell', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Model Doctor' })).toBeNull());
     expect(shell.inert).toBe(false);
     expect(shell.hasAttribute('aria-hidden')).toBe(false);
-    await waitFor(() => expect(document.activeElement).toBe(moreButton));
+    await waitFor(() => expect(document.activeElement).toBe(doctorButton));
   });
 
   it('keeps a completed analysis while Model Doctor is opened and closed', async () => {
@@ -231,8 +229,7 @@ describe('structureCo app shell', () => {
     }, { timeout: 2000 });
     const diagramsBefore = screen.getAllByText(/Diagrama de momento flector/i).length;
 
-    const menu = await openUtilityMenu(user);
-    await user.click(within(menu).getByRole('button', { name: 'Model Doctor' }));
+    await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
     await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
     await user.keyboard('{Escape}');
 
@@ -244,6 +241,12 @@ describe('structureCo app shell', () => {
     const user = userEvent.setup();
     await renderExampleApp(user);
     const analyzeButton = screen.getByRole('button', { name: /^analizar$/i });
+    analyzeButton.focus();
+
+    await user.keyboard('{Meta>}k{/Meta}');
+    expect(await screen.findByRole('dialog', { name: /paleta de comandos/i }, { timeout: 5000 })).toBeTruthy();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /paleta de comandos/i })).toBeNull());
     analyzeButton.focus();
 
     await user.keyboard('{Control>}k{/Control}');
@@ -266,16 +269,14 @@ describe('structureCo app shell', () => {
     render(<App />);
     await openWorkspace(user);
 
-    let menu = await openUtilityMenu(user);
-    await user.click(within(menu).getByRole('button', { name: 'Model Doctor' }));
+    await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
     let doctor = await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
     let noLoads = within(doctor).getByRole('article', { name: /sin cargas/i });
     await user.click(within(noLoads).getByRole('button', { name: /reconocer/i }));
     expect(within(noLoads).getByText(/reconocido para esta sesi/i)).toBeTruthy();
     await user.click(within(doctor).getByRole('button', { name: /cerrar model doctor/i }));
 
-    menu = await openUtilityMenu(user);
-    await user.click(within(menu).getByRole('button', { name: 'Model Doctor' }));
+    await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
     doctor = await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
     expect(within(doctor).getByText(/reconocido para esta sesi/i)).toBeTruthy();
     await user.click(within(doctor).getByRole('button', { name: /cerrar model doctor/i }));
@@ -283,8 +284,7 @@ describe('structureCo app shell', () => {
     await user.click(screen.getByRole('button', { name: /abrir proyectos y ejemplos/i }));
     await user.click(within(screen.getByRole('menu', { name: /abrir proyectos y ejemplos/i }))
       .getByRole('menuitem', { name: /proyecto nuevo/i }));
-    menu = await openUtilityMenu(user);
-    await user.click(within(menu).getByRole('button', { name: 'Model Doctor' }));
+    await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
     doctor = await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
     noLoads = within(doctor).getByRole('article', { name: /sin cargas/i });
     expect(within(noLoads).queryByText(/reconocido para esta sesi/i)).toBeNull();
@@ -311,6 +311,24 @@ describe('structureCo app shell', () => {
     await waitFor(() => expect(results.classList.contains('mobile-collapsed')).toBe(true));
     await user.keyboard('{Escape}');
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: /más acciones/i })));
+  });
+
+  it('shows one Model Doctor toast for a new diagnosis and does not repeat it while unchanged', async () => {
+    const user = userEvent.setup();
+    const project = createDefaultProject();
+    project.nodalLoads = [];
+    project.memberLoads = [];
+    project.loadCases = project.loadCases.map((loadCase) => ({ ...loadCase, selfWeightFactor: 0 }));
+    localStorage.setItem('structureCo.project', JSON.stringify(project));
+    render(<App />);
+    await openWorkspace(user);
+
+    expect(await screen.findByText('Model Doctor encontró problemas')).toBeTruthy();
+    expect(screen.getByText(/Abre Model Doctor para revisarlos/i)).toBeTruthy();
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Unidades' }), { target: { value: 'N-mm' } });
+
+    await waitFor(() => expect(screen.getAllByText('Model Doctor encontró problemas')).toHaveLength(1));
   });
 
   it('draws mixed reactions as separate horizontal Rx and vertical Ry arrows', async () => {

@@ -12,6 +12,7 @@ import {
   MoveDiagonal2,
   RotateCcw,
   Ruler,
+  Search,
   Scissors,
   Sigma,
   type LucideIcon,
@@ -29,6 +30,7 @@ import {
   type ToolDefinition,
   toolsInGroup,
 } from './toolRegistry';
+import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 
 const toolIcons: Record<Tool, LucideIcon> = {
   select: MousePointer2,
@@ -133,6 +135,33 @@ const PaletteToolButton = ({
   </button>
 );
 
+const CommandPaletteButton = ({ label, accessibleLabel, compact = false }: { label: string; accessibleLabel: string; compact?: boolean }) => <button
+  type="button"
+  className={`sc-tool-button sc-tool-button--navigation tool-button tool-command-palette${compact ? ' is-compact' : ''}`}
+  aria-label={accessibleLabel}
+  aria-keyshortcuts="Control+K Meta+K"
+  onClick={() => emitWorkspaceCommand('open-command-palette')}
+  title={`${label} (Ctrl K)`}
+>
+  <span className="sc-tool-button__icon" aria-hidden="true"><Search size={22} strokeWidth={1.8} /></span>
+  <span className="sc-tool-button__copy"><strong>{label}</strong></span>
+  {!compact ? <kbd>Ctrl K</kbd> : null}
+</button>;
+
+const MobileCommandPaletteButton = ({ label, accessibleLabel, onOpen }: { label: string; accessibleLabel: string; onOpen: () => void }) => <button
+  className="mobile-palette-tool tool-command-palette"
+  type="button"
+  role="menuitem"
+  aria-label={accessibleLabel}
+  aria-keyshortcuts="Control+K Meta+K"
+  onClick={onOpen}
+>
+  <span className="mobile-palette-icon" aria-hidden="true"><Search size={23} strokeWidth={1.8} /></span>
+  <span className="mobile-palette-copy"><strong>{label}</strong></span>
+  <ChevronRight size={19} aria-hidden="true" />
+  <kbd>Ctrl K</kbd>
+</button>;
+
 export interface ToolBarProps {
   compact?: boolean;
 }
@@ -162,6 +191,12 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
     setActiveTool(tool);
     if (mobileMenu) closeMobileMenu();
     else setMobileMenu(null);
+  };
+
+  const openCommandPaletteFromMobile = () => {
+    moreMenuButtonRef.current?.focus({ preventScroll: true });
+    setMobileMenu(null);
+    emitWorkspaceCommand('open-command-palette');
   };
 
   const closeMobileMenu = (restoreFocus = true) => {
@@ -258,6 +293,7 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
             active={activeTool === definition.id}
             onSelect={selectTool}
           />)}
+          {group.id === 'navigate' ? <MobileCommandPaletteButton label={t('palette.openShort')} accessibleLabel={t('palette.open')} onOpen={openCommandPaletteFromMobile} /> : null}
         </div>)}
       </div>
     </section>
@@ -282,6 +318,7 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
                   compact={compact}
                   onSelect={selectTool}
                 />)}
+                {group.id === 'navigate' ? <CommandPaletteButton label={t('palette.openShort')} accessibleLabel={t('palette.open')} compact={compact} /> : null}
               </div>
             </section>;
           })}

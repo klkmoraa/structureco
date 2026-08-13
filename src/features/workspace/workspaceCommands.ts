@@ -34,7 +34,7 @@ export interface WorkspaceCommands {
   'export-svg': void;
   /** Export the structural canvas as a raster image. */
   'export-png': void;
-  /** Raise the command palette; emitted from the TopBar trigger. */
+  /** Raise the command palette; emitted from the ToolRail trigger or keyboard shortcut. */
   'open-command-palette': void;
   /** Open the preventive Model Doctor surface before or after analysis. */
   'open-model-doctor': void;

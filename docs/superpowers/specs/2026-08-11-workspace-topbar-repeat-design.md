@@ -1,5 +1,9 @@
 # Workspace TopBar and Repeat design
 
+**Clasificación:** `HISTORICAL`
+
+> **HISTORICAL** — Diseño ejecutado; conserva decisiones y evidencia de su momento, no certifica el estado actual por sí solo.
+
 ## Scope and approval
 
 The request explicitly approves a focused visual redesign of the Workspace TopBar and Repeat, including commit, push, and GitHub Pages publication. This document records that approved scope; it does not change any solver, result, persistence, topology, or repeat-placement behavior.

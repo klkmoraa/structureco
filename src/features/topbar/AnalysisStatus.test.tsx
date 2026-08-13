@@ -42,7 +42,7 @@ describe('deriveAnalysisStatus', () => {
 
 describe('AnalysisStatus', () => {
   it('remembers a cleared result as stale only within the same project', () => {
-    const props = { isAnalyzing: false, onOpenIssues: vi.fn() };
+    const props = { isAnalyzing: false, onOpenModelDoctor: vi.fn() };
     const { rerender } = render(
       <ProjectProvider>
         <AnalysisStatus {...props} projectId="project-a" analysis={result()} />
@@ -71,23 +71,23 @@ describe('AnalysisStatus', () => {
 
   it('exposes warning and error states as accessible actions', async () => {
     const user = userEvent.setup();
-    const onOpenIssues = vi.fn();
+    const onOpenModelDoctor = vi.fn();
     const { rerender } = render(
       <ProjectProvider>
-        <AnalysisStatus projectId="project-a" analysis={result(true, [issue('warning')])} isAnalyzing={false} onOpenIssues={onOpenIssues} />
+        <AnalysisStatus projectId="project-a" analysis={result(true, [issue('warning')])} isAnalyzing={false} onOpenModelDoctor={onOpenModelDoctor} />
       </ProjectProvider>,
     );
 
-    const warning = screen.getByRole('button', { name: /Revisar advertencias.*Abrir detalles del análisis/ });
+    const warning = screen.getByRole('button', { name: /Revisar advertencias.*Abrir Model Doctor/ });
     await user.click(warning);
-    expect(onOpenIssues).toHaveBeenCalledOnce();
+    expect(onOpenModelDoctor).toHaveBeenCalledOnce();
 
     rerender(
       <ProjectProvider>
-        <AnalysisStatus projectId="project-a" analysis={result(false)} isAnalyzing={false} onOpenIssues={onOpenIssues} />
+        <AnalysisStatus projectId="project-a" analysis={result(false)} isAnalyzing={false} onOpenModelDoctor={onOpenModelDoctor} />
       </ProjectProvider>,
     );
-    expect(screen.getByRole('button', { name: /No se pudo analizar.*Abrir detalles del análisis/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /No se pudo analizar.*Abrir Model Doctor/ })).toBeTruthy();
     expect(screen.getByRole('status').getAttribute('aria-live')).toBe('polite');
   });
 });

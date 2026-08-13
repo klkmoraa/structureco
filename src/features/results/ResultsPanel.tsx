@@ -18,7 +18,6 @@ import { formatResultNumber } from './resultFormatting';
 import { buildStiffnessSubstitution } from './stiffnessSubstitution';
 import { formatFixed, formatScientific, formatSignificant } from '../../utils/numberFormat';
 import { emitWorkspaceCommand, onWorkspaceCommand } from '../workspace/workspaceCommands';
-import { resolveValidationIssueTarget } from '../workspace/validationIssueTarget';
 import { ProvenanceCard } from './ProvenanceCard';
 import type { ResultRef } from './provenance';
 import { ClassroomPedagogyLevels } from '../classroom/ClassroomPedagogyLevels';
@@ -36,7 +35,6 @@ const tabs: Array<{ id: ResultTab; labelKey: TranslationKey; color?: string }> =
   { id: 'influence', labelKey: 'results.influence', color: 'influence' },
   { id: 'deformed', labelKey: 'results.deformed' },
   { id: 'learn', labelKey: 'results.learn' },
-  { id: 'issues', labelKey: 'results.issues' },
 ];
 
 type ResultsPanelMode = 'compact' | 'expanded' | 'focused';
@@ -48,7 +46,6 @@ const resultFamilies: Array<{ id: string; labelKey: TranslationKey; tabs: Result
   { id: 'shape', labelKey: 'results.familyShape', tabs: ['deformed'] },
   { id: 'advanced', labelKey: 'results.familyAdvanced', tabs: ['influence'] },
   { id: 'understand', labelKey: 'results.familyUnderstand', tabs: ['learn'] },
-  { id: 'warnings', labelKey: 'results.familyWarnings', tabs: ['issues'] },
 ];
 
 const classroomProgressCopy: Record<ClassroomProgressStepId, { title: TranslationKey; description: TranslationKey; action: TranslationKey }> = {
@@ -528,7 +525,7 @@ export const ResultsPanel = () => {
           <span id={`result-family-${family.id}`} className="result-tab-family__label">{t(family.labelKey)}</span>
           <div role="presentation">{family.tabs.map((tab) => {
             const index = availableTabs.findIndex((item) => item.id === tab.id);
-            return <button id={`result-tab-${tab.id}`} key={tab.id} data-result-tab={tab.id} role="tab" aria-selected={resultTab === tab.id} aria-describedby={`result-family-${family.id}`} aria-controls="results-content" tabIndex={resultTab === tab.id ? 0 : -1} className={`${resultTab === tab.id ? 'active' : ''} ${tab.color ?? ''}`} onFocus={() => { if (tab.id === 'influence') void loadInfluenceLineView(); }} onPointerEnter={() => { if (tab.id === 'influence') void loadInfluenceLineView(); }} onClick={() => setResultTab(tab.id)} onKeyDown={(event) => {
+            return <button id={`result-tab-${tab.id}`} key={tab.id} data-result-tab={tab.id} role="tab" aria-selected={activeTab.id === tab.id} aria-describedby={`result-family-${family.id}`} aria-controls="results-content" tabIndex={activeTab.id === tab.id ? 0 : -1} className={`${activeTab.id === tab.id ? 'active' : ''} ${tab.color ?? ''}`} onFocus={() => { if (tab.id === 'influence') void loadInfluenceLineView(); }} onPointerEnter={() => { if (tab.id === 'influence') void loadInfluenceLineView(); }} onClick={() => setResultTab(tab.id)} onKeyDown={(event) => {
               let nextIndex = index;
               if (event.key === 'ArrowLeft') nextIndex = (index - 1 + availableTabs.length) % availableTabs.length;
               else if (event.key === 'ArrowRight') nextIndex = (index + 1) % availableTabs.length;
@@ -539,21 +536,20 @@ export const ResultsPanel = () => {
               const next = availableTabs[nextIndex];
               setResultTab(next.id);
               window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-result-tab="${next.id}"]`)?.focus());
-            }}>{t(tab.labelKey)}{tab.id === 'issues' && analysis?.issues.length ? <span className="issue-count">{analysis.issues.length}</span> : null}</button>;
+            }}>{t(tab.labelKey)}</button>;
           })}</div>
         </div>)}
       </nav>
       <div id="results-content" className="results-body" role="tabpanel" aria-labelledby={`result-tab-${activeTab.id}`} aria-busy={isAnalyzing}>
         {!analysis ? <EmptyResults onAnalyze={analyze} /> : null}
-        {analysis && !analysis.success && resultTab !== 'issues' ? <FailedResults onOpenIssues={() => setResultTab('issues')} /> : null}
-        {analysis?.success && resultTab === 'reactions' ? <ReactionTable /> : null}
-        {analysis?.success && resultTab === 'summary' ? <ResultSummary /> : null}
-        {analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <DiagramView type={resultTab as 'axial' | 'shear' | 'moment'} memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
-        {analysis?.success && resultTab === 'influence' ? <Suspense fallback={<div className="results-view-loading" role="status" aria-label={t('results.loadingInfluence')}><LoaderCircle className="spin" size={20} aria-hidden="true" /><span>{t('results.loadingInfluence')}</span></div>}><LazyInfluenceLineView project={project} selection={selection ?? undefined} onCanvasStateChange={setInfluenceCanvasState} /></Suspense> : null}
-        {analysis?.success && resultTab === 'deformed' ? <DeformationView memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
-        {analysis?.success && resultTab === 'learn' ? <LearningSteps /> : null}
+        {analysis && !analysis.success ? <FailedResults onOpenModelDoctor={() => emitWorkspaceCommand('open-model-doctor')} /> : null}
+        {analysis?.success && activeTab.id === 'reactions' ? <ReactionTable /> : null}
+        {analysis?.success && activeTab.id === 'summary' ? <ResultSummary /> : null}
+        {analysis?.success && ['axial', 'shear', 'moment'].includes(activeTab.id) ? <DiagramView type={activeTab.id as 'axial' | 'shear' | 'moment'} memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
+        {analysis?.success && activeTab.id === 'influence' ? <Suspense fallback={<div className="results-view-loading" role="status" aria-label={t('results.loadingInfluence')}><LoaderCircle className="spin" size={20} aria-hidden="true" /><span>{t('results.loadingInfluence')}</span></div>}><LazyInfluenceLineView project={project} selection={selection ?? undefined} onCanvasStateChange={setInfluenceCanvasState} /></Suspense> : null}
+        {analysis?.success && activeTab.id === 'deformed' ? <DeformationView memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
+        {analysis?.success && activeTab.id === 'learn' ? <LearningSteps /> : null}
         {analysis?.success && provenanceRef ? <ProvenanceCard analysis={analysis} resultRef={provenanceRef} /> : null}
-        {analysis && resultTab === 'issues' ? <IssuesView /> : null}
       </div>
     </section>
   </>;
@@ -572,12 +568,12 @@ const EmptyResults = ({ onAnalyze }: { onAnalyze: () => void }) => {
   return <div className="empty-results"><CircleDotDashed size={28} /><div><strong>{currentCopy ? t('results.nextStep', { title: t(currentCopy.title) }) : t('results.readyTitle')}</strong><p>{currentCopy ? t(currentCopy.description) : t('results.readyBody')}</p></div><button onClick={run}>{currentCopy ? t(currentCopy.action) : t('results.analyzeStructure')}</button></div>;
 };
 
-const FailedResults = ({ onOpenIssues }: { onOpenIssues: () => void }) => {
+const FailedResults = ({ onOpenModelDoctor }: { onOpenModelDoctor: () => void }) => {
   const { analysis } = useProject();
   const { t } = useI18n();
   return <div className="failed-results-layout">
     {analysis ? <NumericQualityCard analysis={analysis} /> : null}
-    <div className="failed-results"><AlertCircle size={28} /><div><strong>{t('results.failedTitle')}</strong><p>{t('results.failedBody')}</p></div><button onClick={onOpenIssues}>{t('results.openIssues')}</button></div>
+    <div className="failed-results"><AlertCircle size={28} /><div><strong>{t('results.failedTitle')}</strong><p>{t('results.failedBody')}</p></div><button onClick={onOpenModelDoctor}>{t('modelDoctor.open')}</button></div>
   </div>;
 };
 
@@ -1020,28 +1016,4 @@ const AssertionResults = ({ evaluations }: { evaluations: EducationalAssertionEv
       </div>;
     })}
   </div>;
-};
-
-const IssuesView = () => {
-  const { analysis, project, setSelection, setActiveTool } = useProject();
-  const { t } = useI18n();
-  if (!analysis?.issues.length) return <div className="all-clear"><Check size={26} /><strong>{t('results.clearTitle')}</strong><p>{t('results.clearBody')}</p></div>;
-  const act = (issue: typeof analysis.issues[number]) => {
-    if (issue.objectId) {
-      const target = resolveValidationIssueTarget(project, issue);
-      if (target) {
-        setSelection(target);
-        emitWorkspaceCommand('focus-object', target);
-      }
-      return;
-    }
-    if (issue.suggestedTool) { setActiveTool(issue.suggestedTool); return; }
-    const text = `${issue.id} ${issue.title} ${issue.message}`.toLowerCase();
-    if (text.includes('nodo') || text.includes('geometr')) setActiveTool('node');
-    else if (text.includes('miembro') || text.includes('barra')) setActiveTool('member');
-    else if (text.includes('apoyo') || text.includes('mecanismo') || text.includes('restric')) setActiveTool('support');
-    else if (text.includes('carga')) setActiveTool('pointLoad');
-    else setActiveTool('select');
-  };
-  return <div className="issues-list">{analysis.issues.map((issue) => <div className={`issue-card ${issue.severity}`} key={issue.id}><span className="issue-icon">{issue.severity === 'error' ? '!' : issue.severity === 'warning' ? '△' : 'i'}</span><div><strong>{issue.title}</strong><p>{issue.message}</p>{issue.objectId ? <small>{t('results.object', { id: issue.objectId })}</small> : null}{issue.suggestedFix ? <p className="issue-fix"><b>{t('results.fix')}</b> {issue.suggestedFix}</p> : null}<button className="issue-action" onClick={() => act(issue)}>{t(issue.objectId ? 'results.showOnCanvas' : 'results.correctInModel')}</button></div></div>)}</div>;
 };

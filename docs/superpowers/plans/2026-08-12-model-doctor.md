@@ -2,6 +2,8 @@
 
 **Clasificación:** `HISTORICAL`
 
+> **HISTORICAL** — Plan ejecutado; conserva decisiones y evidencia de su momento, no certifica el estado actual por sí solo.
+
 > **For agentic workers:** Implementar por loops; subagentes sólo investigan o evalúan. El Integrator es el único writer. No commit ni push.
 
 **Goal:** Construir Model Doctor preventivo, localizable, explicativo y con reparación topológica segura, preview exacto y undo/redo.

@@ -79,6 +79,12 @@ describe('CommandPalette', () => {
     window.removeEventListener(workspaceCommandEventName('open-model-doctor'), openDoctor);
   });
 
+  it('does not expose Avisos as an independent result destination', () => {
+    renderPalette();
+
+    expect(screen.queryByRole('option', { name: /Avisos/i })).toBeNull();
+  });
+
   it('filters ignoring accents and case, over labels and hints alike', async () => {
     const user = userEvent.setup();
     renderPalette();

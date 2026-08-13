@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectProvider, useProject } from '../../store/ProjectContext';
+import { onWorkspaceCommand } from '../workspace/workspaceCommands';
 import { ToolBar } from './ToolBar';
 
 const ActiveToolStatus = () => {
@@ -36,7 +37,7 @@ describe('ToolBar mobile action sheets', () => {
       </ProjectProvider>,
     );
     expect(container.querySelector('[data-tool-rail="compact"]')).toBeTruthy();
-    expect(container.querySelectorAll('.desktop-tool-list .sc-tool-button.is-compact')).toHaveLength(12);
+    expect(container.querySelectorAll('.desktop-tool-list .sc-tool-button.is-compact')).toHaveLength(13);
     expect(container.querySelector('[data-tool-id="pointLoad"]')?.getAttribute('aria-keyshortcuts')).toBe('P');
     expect(container.querySelector('[data-tool-id="delete"]')?.getAttribute('aria-keyshortcuts')).toBe('Delete Backspace');
   });
@@ -44,12 +45,27 @@ describe('ToolBar mobile action sheets', () => {
   it('groups every desktop tool by intention without losing actions', () => {
     renderToolBar();
 
-    expect(within(screen.getByRole('group', { name: /navegar/i })).getAllByRole('button')).toHaveLength(2);
+    expect(within(screen.getByRole('group', { name: /navegar/i })).getAllByRole('button')).toHaveLength(3);
     expect(within(screen.getByRole('group', { name: /^crear$/i })).getAllByRole('button')).toHaveLength(3);
     expect(within(screen.getByRole('group', { name: /^cargas$/i })).getAllByRole('button')).toHaveLength(3);
     expect(within(screen.getByRole('group', { name: /anotar e inspeccionar/i })).getAllByRole('button')).toHaveLength(2);
     expect(within(screen.getByRole('group', { name: /^editar$/i })).getAllByRole('button')).toHaveLength(2);
     expect(document.querySelectorAll('[data-tool-id]')).toHaveLength(16);
+  });
+
+  it('opens Buscar comandos from the Navegar group in the ToolRail', async () => {
+    const user = userEvent.setup();
+    const openPalette = vi.fn();
+    const unsubscribe = onWorkspaceCommand('open-command-palette', openPalette);
+    renderToolBar();
+
+    const navigate = screen.getByRole('group', { name: /navegar/i });
+    const commandSearch = within(navigate).getByRole('button', { name: /abrir la paleta de comandos/i });
+    expect(commandSearch.getAttribute('aria-keyshortcuts')).toContain('Control+K');
+    await user.click(commandSearch);
+
+    expect(openPalette).toHaveBeenCalledOnce();
+    unsubscribe();
   });
 
   it('opens the portaled load sheet and selects a point load', async () => {
@@ -120,5 +136,23 @@ describe('ToolBar mobile action sheets', () => {
 
     expect(screen.queryByRole('menu', { name: /más herramientas/i })).toBeNull();
     await waitFor(() => expect(document.activeElement).toBe(moreButton));
+  });
+
+  it('opens Buscar comandos from Navegar on mobile without leaving the tool sheet behind', async () => {
+    const user = userEvent.setup();
+    const openPalette = vi.fn();
+    const unsubscribe = onWorkspaceCommand('open-command-palette', openPalette);
+    renderToolBar();
+    const moreButton = screen.getByRole('button', { name: /más herramientas/i });
+    await user.click(moreButton);
+
+    const navigate = within(screen.getByRole('menu', { name: /más herramientas/i }))
+      .getByRole('group', { name: /navegar/i });
+    await user.click(within(navigate).getByRole('menuitem', { name: /abrir la paleta de comandos/i }));
+
+    expect(openPalette).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('dialog', { name: /más herramientas/i })).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(moreButton));
+    unsubscribe();
   });
 });

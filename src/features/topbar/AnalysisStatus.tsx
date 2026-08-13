@@ -16,7 +16,7 @@ interface AnalysisStatusProps {
   projectId: string;
   analysis: AnalysisResult | null;
   isAnalyzing: boolean;
-  onOpenIssues: () => void;
+  onOpenModelDoctor: () => void;
 }
 
 const statusPresentation: Record<AnalysisVisualStatus, {
@@ -37,7 +37,7 @@ const statusPresentation: Record<AnalysisVisualStatus, {
   error: { icon: CircleX, labelKey: 'analysis.statusError' },
 };
 
-export const AnalysisStatus = ({ projectId, analysis, isAnalyzing, onOpenIssues }: AnalysisStatusProps) => {
+export const AnalysisStatus = ({ projectId, analysis, isAnalyzing, onOpenModelDoctor }: AnalysisStatusProps) => {
   const { t } = useI18n();
   const lifecycleRef = useRef({ projectId, hadAnalysis: Boolean(analysis) });
 
@@ -76,8 +76,8 @@ export const AnalysisStatus = ({ projectId, analysis, isAnalyzing, onOpenIssues 
           type="button"
           className={`analysis-status is-${status}`}
           title={label}
-          aria-label={`${label}. ${t('analysis.statusOpenIssues')}`}
-          onClick={onOpenIssues}
+          aria-label={`${label}. ${t('modelDoctor.open')}`}
+          onClick={onOpenModelDoctor}
         >
           {content}
         </button>
