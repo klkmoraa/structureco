@@ -364,7 +364,7 @@ describe('Inspector selection variants', () => {
     expectDescribedUnit(screen.getByRole('textbox', { name: 'Momento Mz' }), 'kN·m');
   });
 
-  it('makes multiple selection read-only and explains why bulk editing is locked', async () => {
+  it('offers bulk editing for a multiple selection instead of locking it', async () => {
     const user = userEvent.setup();
     renderInspector();
 
@@ -373,12 +373,14 @@ describe('Inspector selection variants', () => {
     expect(within(summary).getByText('Selección múltiple')).toBeTruthy();
     expect(within(summary).getByText('3 objetos')).toBeTruthy();
     expect(screen.getByText('2 nodos · 1 miembros')).toBeTruthy();
-    expect(screen.getByText('Edición masiva bloqueada')).toBeTruthy();
-    expect(screen.getByText(/evitar cambios físicos ambiguos/)).toBeTruthy();
     expect(screen.getAllByText('Calculado').length).toBeGreaterThan(0);
-    const panel = screen.getByRole('tabpanel', { name: 'Inspector' });
-    expect(within(panel).queryByRole('textbox')).toBeNull();
-    expect(within(panel).queryByRole('combobox')).toBeNull();
+
+    // La multiselección dejó de ser de sólo lectura: aparece el panel de
+    // edición múltiple y arranca sin ningún cambio preparado.
+    const panel = screen.getByRole('region', { name: 'Edición múltiple' });
+    expect(within(panel).getByText('3 objetos seleccionados')).toBeTruthy();
+    expect(screen.getByTestId('bulk-changes-count').textContent).toBe('Ningún cambio preparado');
+    expect((screen.getByRole('button', { name: 'Aplicar' }) as HTMLButtonElement).disabled).toBe(true);
   });
 });
 

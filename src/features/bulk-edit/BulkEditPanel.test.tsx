@@ -2,12 +2,12 @@
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BulkEditPanel } from './BulkEditPanel';
+import { BulkEditPanel, type BulkEditApplyRequest } from './BulkEditPanel';
 import { BULK_UNTOUCHED_OPTION } from './BulkPropertyField';
 import { aggregateBulkSelection, findBulkProperty } from './bulkEditAggregation';
 import { createBulkMember, createBulkNode, resetBulkFixtureIds } from './bulkEditFixtures';
 import { EMPTY_BULK_DRAFT, stageBulkChange } from './bulkEditIntent';
-import type { BulkEditIntent, BulkSelectionInput } from './bulkEditTypes';
+import type { BulkSelectionInput } from './bulkEditTypes';
 
 afterEach(cleanup);
 beforeEach(resetBulkFixtureIds);
@@ -22,7 +22,7 @@ const mixedMembers = (): BulkSelectionInput => ({
 });
 
 const renderPanel = (selection: BulkSelectionInput = mixedMembers()) => {
-  const onApply = vi.fn<(intent: BulkEditIntent) => void>();
+  const onApply = vi.fn<(request: BulkEditApplyRequest) => void>();
   const onCancel = vi.fn();
   render(<BulkEditPanel selection={selection} units="kN-m" language="es" onApply={onApply} onCancel={onCancel} />);
   return { onApply, onCancel };
@@ -73,7 +73,7 @@ describe('BulkEditPanel', () => {
     await user.click(applyButton());
 
     expect(onApply).toHaveBeenCalledTimes(1);
-    const intent = onApply.mock.calls[0][0];
+    const intent = onApply.mock.calls[0][0].intent;
     expect(intent.entries).toHaveLength(1);
     expect(intent.entries[0]).toMatchObject({
       property: 'member.sectionId',
@@ -90,7 +90,7 @@ describe('BulkEditPanel', () => {
     await user.selectOptions(field('Sección'), 'w12x53');
     await user.click(applyButton());
 
-    const properties = onApply.mock.calls[0][0].entries.map((entry) => entry.property);
+    const properties = onApply.mock.calls[0][0].intent.entries.map((entry) => entry.property);
     expect(properties).toEqual(['member.sectionId']);
     expect(properties).not.toContain('member.materialId');
     expect(properties).not.toContain('member.type');
@@ -163,7 +163,7 @@ describe('BulkEditPanel', () => {
     await user.click(within(releases).getByRole('radio', { name: 'Sí' }));
     await user.click(applyButton());
 
-    const entry = onApply.mock.calls[0][0].entries[0];
+    const entry = onApply.mock.calls[0][0].intent.entries[0];
     expect(entry.compatible).toHaveLength(2);
     expect(entry.incompatible).toEqual([{ target: { kind: 'member', id: 'M3' }, reason: 'member-type' }]);
   });
@@ -195,7 +195,7 @@ describe('BulkEditPanel', () => {
     await user.click(within(density).getByRole('button', { name: 'Borrar valor' }));
     await user.click(applyButton());
 
-    expect(onApply.mock.calls[0][0].entries[0]).toMatchObject({
+    expect(onApply.mock.calls[0][0].intent.entries[0]).toMatchObject({
       property: 'member.density',
       change: { kind: 'clear' },
     });
@@ -203,7 +203,7 @@ describe('BulkEditPanel', () => {
 
   it('stages a number in the project units and stores it in base units', async () => {
     const user = setup();
-    const onApply = vi.fn<(intent: BulkEditIntent) => void>();
+    const onApply = vi.fn<(request: BulkEditApplyRequest) => void>();
     render(<BulkEditPanel
       selection={{ members: [createBulkMember()], nodes: [] }}
       units="kN-m"
@@ -217,7 +217,7 @@ describe('BulkEditPanel', () => {
     await user.tab();
     await user.click(applyButton());
 
-    expect(onApply.mock.calls[0][0].entries[0]).toMatchObject({
+    expect(onApply.mock.calls[0][0].intent.entries[0]).toMatchObject({
       property: 'member.A',
       change: { kind: 'set', value: 0.02 },
     });
@@ -295,7 +295,7 @@ describe('BulkEditPanel accessibility', () => {
 
     expect(within(releases).getByRole('radio', { name: 'Sí' }).getAttribute('aria-checked')).toBe('true');
     await user.click(applyButton());
-    expect(onApply.mock.calls[0][0].entries[0]).toMatchObject({
+    expect(onApply.mock.calls[0][0].intent.entries[0]).toMatchObject({
       property: 'member.releases.jMoment',
       change: { kind: 'set', value: true },
     });
@@ -331,7 +331,7 @@ describe('BulkEditPanel prepared-intent safety', () => {
 
     expect(density.getAttribute('data-change')).toBe('clear');
     await user.click(applyButton());
-    expect(onApply.mock.calls[0][0].entries[0]).toMatchObject({
+    expect(onApply.mock.calls[0][0].intent.entries[0]).toMatchObject({
       property: 'member.density',
       change: { kind: 'clear' },
     });
@@ -362,13 +362,13 @@ describe('BulkEditPanel prepared-intent safety', () => {
 
     // Una identidad de catálogo y unos números que la contradicen no pueden
     // prepararse a la vez: la sección retira el área.
-    const properties = onApply.mock.calls[0][0].entries.map((entry) => entry.property);
+    const properties = onApply.mock.calls[0][0].intent.entries.map((entry) => entry.property);
     expect(properties).toEqual(['member.sectionId']);
   });
 
   it('drops the staged changes when the selection itself changes', async () => {
     const user = setup();
-    const onApply = vi.fn<(intent: BulkEditIntent) => void>();
+    const onApply = vi.fn<(request: BulkEditApplyRequest) => void>();
     const first: BulkSelectionInput = { members: [createBulkMember({ id: 'M1' })], nodes: [] };
     const second: BulkSelectionInput = { members: [createBulkMember({ id: 'M2' })], nodes: [] };
     const { rerender } = render(<BulkEditPanel selection={first} units="kN-m" language="es" onApply={onApply} />);

@@ -12,6 +12,7 @@ import {
   Sigma,
   Trash2,
 } from 'lucide-react';
+import { BulkEditInspectorPanel } from '../bulk-edit/BulkEditInspectorPanel';
 import { repairProjectTopology } from '../../data/modelOperations';
 import type { StandardMaterial } from '../../data/standardMaterials';
 import type { StandardSection } from '../../data/standardSections';
@@ -506,7 +507,7 @@ export const InspectorProperties = () => {
           { label: t('inspector.total'), value: multiCount },
         ]} />
       </InspectorPropertyGroup>
-      <InspectorLockedState title={t('inspector.bulkEditingLocked')}>{t('inspector.bulkEditingLockedBody')}</InspectorLockedState>
+      <BulkEditInspectorPanel selection={selection} />
     </> : null}
 
     {selectedNode ? <>

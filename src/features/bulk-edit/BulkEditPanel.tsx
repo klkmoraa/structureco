@@ -22,20 +22,22 @@ import type {
   BulkEditIntent,
   BulkPropertyId,
   BulkPropertyState,
+  BulkSelectionAggregate,
   BulkSelectionInput,
 } from './bulkEditTypes';
 import { buildBulkSectionPreview } from './bulkSectionPreviewModel';
 import './bulkEdit.css';
 
 /**
- * Panel aislado de edición múltiple (fase de fundamentos).
+ * Panel de edición múltiple.
  *
- * Se alimenta sólo de props: recibe la selección ya resuelta y devuelve la
- * intención preparada por callback. **No** toca `ProjectModel`, ni el historial,
- * ni la persistencia — `onApply` entrega un `BulkEditIntent` y ahí termina su
- * responsabilidad en esta fase.
+ * Se alimenta sólo de props y no toca `ProjectModel`: recibe la selección ya
+ * resuelta y devuelve por callback lo que hace falta para preparar el comando.
+ * Quien conecta esto con el proyecto es `BulkEditInspectorPanel`; así el panel
+ * sigue renderizándose y probándose con fixtures.
  *
- * Todavía no está conectado al Inspector: se renderiza y se prueba con fixtures.
+ * Mientras se edita, nada sale de aquí: el borrador es estado local, de modo que
+ * escribir en un campo no publica al store, no persiste y no invalida análisis.
  */
 
 /** Las decisiones frecuentes van arriba; el resto queda tras una revelación progresiva. */
@@ -58,13 +60,28 @@ const selectionSignature = (selection: BulkSelectionInput): string => [
   ...selection.nodes.map((node) => `n:${node.id}`),
 ].join('|');
 
+/**
+ * Lo que el panel entrega al confirmar. Lleva la intención (qué se cambió), el
+ * borrador (con qué valores) y la agregación (sobre qué objetos y con qué
+ * compatibilidad), que es exactamente lo que hace falta para preparar el
+ * comando sin volver a recorrer la selección.
+ */
+export interface BulkEditApplyRequest {
+  intent: BulkEditIntent;
+  draft: BulkEditDraft;
+  aggregate: BulkSelectionAggregate;
+}
+
 export interface BulkEditPanelProps {
   selection: BulkSelectionInput;
   units: UnitSystemId;
   language: Language;
-  /** Recibe únicamente la intención preparada; aplicarla es de otra fase. */
-  onApply: (intent: BulkEditIntent) => void;
+  onApply: (request: BulkEditApplyRequest) => void;
   onCancel?: () => void;
+  /** Mensaje de fallo del commit, p. ej. una intención obsoleta. */
+  error?: string;
+  /** Nota bajo el resumen; la usa el Inspector para avisar del análisis. */
+  note?: string;
   className?: string;
 }
 
@@ -74,6 +91,8 @@ export const BulkEditPanel = ({
   language,
   onApply,
   onCancel,
+  error,
+  note,
   className = '',
 }: BulkEditPanelProps) => {
   const t = createBulkEditTranslator(language);
@@ -151,7 +170,8 @@ export const BulkEditPanel = ({
 
     <BulkChangeSummary aggregate={aggregate} rows={summaryRows} units={units} language={language} />
 
-    <p className="bulk-edit-panel__note">{t('action.notWired')}</p>
+    {note ? <p className="bulk-edit-panel__note">{note}</p> : null}
+    {error ? <p className="bulk-edit-panel__error" role="alert">{error}</p> : null}
 
     <footer className="bulk-edit-panel__actions">
       {/* La razón por la que no se puede aplicar es texto visible, no un
@@ -164,7 +184,7 @@ export const BulkEditPanel = ({
         <Button
           variant="primary"
           disabled={intent.entries.length === 0}
-          onClick={() => onApply(intent)}
+          onClick={() => onApply({ intent, draft, aggregate })}
         >
           {intent.entries.length === 0 ? t('action.applyEmpty') : t('action.apply', { count: intent.affected.length })}
         </Button>

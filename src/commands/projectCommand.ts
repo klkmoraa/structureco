@@ -37,6 +37,49 @@ export interface ProjectPatch {
 
 interface CommandBase { description: string }
 
+/**
+ * Cambios preparados de una edición múltiple sobre miembros.
+ *
+ * Una propiedad ausente es «sin tocar» y no se escribe jamás; `null` la borra
+ * explícitamente. Esa distinción es el contrato completo de la operación: un
+ * valor mixto que el usuario no editó nunca llega hasta aquí.
+ *
+ * `materialId` y `sectionId` sólo aceptan una identidad de catálogo y viajan con
+ * las propiedades numéricas que esa identidad implica, igual que
+ * `member.material.apply` / `member.section.apply`. Escribir E, G o densidad por
+ * separado degrada el material a `custom`; escribir A o I degrada la sección.
+ */
+export interface MemberBulkChanges {
+  type?: MemberModel['type'];
+  material?: {
+    materialId: string;
+    properties: Pick<MemberModel, 'E'> & Pick<Partial<MemberModel>, 'G' | 'density'>;
+  };
+  section?: {
+    sectionId: string;
+    properties: Pick<MemberModel, 'A' | 'I'>;
+  };
+  E?: number;
+  A?: number;
+  I?: number;
+  G?: number | null;
+  shearArea?: number | null;
+  density?: number | null;
+  beamTheory?: MemberModel['beamTheory'] | null;
+  iMoment?: boolean | null;
+  jMoment?: boolean | null;
+  rotationalSpringI?: number | null;
+  rotationalSpringJ?: number | null;
+  rigidOffsetI?: number | null;
+  rigidOffsetJ?: number | null;
+}
+
+export interface MemberBulkEntry {
+  /** Miembros que reciben exactamente este conjunto de cambios. */
+  readonly memberIds: readonly string[];
+  readonly changes: MemberBulkChanges;
+}
+
 export type ProjectCommand =
   | (CommandBase & { kind: 'member.create'; nodes: NodeModel[]; member: MemberModel })
   | (CommandBase & {
@@ -64,6 +107,13 @@ export type ProjectCommand =
     properties: Pick<MemberModel, 'A' | 'I'>;
   })
   | (CommandBase & { kind: 'member.update'; memberId: string; changes: Partial<Omit<MemberModel, 'id'>> })
+  | (CommandBase & {
+    kind: 'member.bulk.apply';
+    /** Grupos de miembros que reciben exactamente el mismo cambio. */
+    entries: readonly MemberBulkEntry[];
+    /** Estado exacto sobre el que se preparó; rechaza una intención obsoleta. */
+    sourceSnapshot: string;
+  })
   | (CommandBase & { kind: 'member.delete'; memberId: string })
   | (CommandBase & { kind: 'node.delete'; nodeId: string })
   | (CommandBase & { kind: 'selection.delete'; selection: Extract<Selection, { kind: 'multi' }> })
@@ -204,6 +254,91 @@ export const applyProjectPatch = (project: ProjectModel, patch: ProjectPatch): P
   return next;
 };
 
+/** Propiedades que sólo un pórtico puede sostener; el solver rechaza el resto. */
+const FRAME_ONLY_FIELDS = [
+  'beamTheory', 'releases', 'rotationalSpringI', 'rotationalSpringJ', 'rigidOffsetI', 'rigidOffsetJ', 'shearArea',
+] as const;
+
+const setOrClear = <Key extends keyof MemberModel>(
+  member: MemberModel,
+  key: Key,
+  value: MemberModel[Key] | null | undefined,
+) => {
+  if (value === undefined) return;
+  if (value === null) delete member[key];
+  else member[key] = value;
+};
+
+/**
+ * Escribe un cambio preparado sobre un miembro.
+ *
+ * Tres reglas del dominio se aplican aquí, no en la interfaz:
+ * 1. una identidad de catálogo llega con sus números y fija el origen `catalog`;
+ * 2. escribir E/G/densidad o A/I por separado degrada la identidad a `custom`,
+ *    igual que `member.update`, para que el id nunca contradiga a los números;
+ * 3. cambiar el tipo retira lo que el nuevo tipo no puede sostener, en vez de
+ *    dejar propiedades que harían fallar al solver.
+ */
+const applyMemberBulkChanges = (current: MemberModel, changes: MemberBulkChanges): MemberModel => {
+  const updated: MemberModel = structuredClone(current);
+
+  if (changes.material) {
+    Object.assign(updated, structuredClone(changes.material.properties));
+    updated.materialId = changes.material.materialId;
+    updated.materialOrigin = 'catalog';
+  }
+  if (changes.section) {
+    Object.assign(updated, structuredClone(changes.section.properties));
+    updated.sectionId = changes.section.sectionId;
+    updated.sectionOrigin = 'catalog';
+  }
+
+  const materialChanged = (['E', 'G', 'density'] as const).some(
+    (key) => changes[key] !== undefined && !Object.is(changes[key] ?? undefined, current[key]),
+  );
+  const sectionChanged = (['A', 'I'] as const).some(
+    (key) => changes[key] !== undefined && !Object.is(changes[key], current[key]),
+  );
+
+  if (changes.E !== undefined) updated.E = changes.E;
+  if (changes.A !== undefined) updated.A = changes.A;
+  if (changes.I !== undefined) updated.I = changes.I;
+  setOrClear(updated, 'G', changes.G);
+  setOrClear(updated, 'shearArea', changes.shearArea);
+  setOrClear(updated, 'density', changes.density);
+  setOrClear(updated, 'beamTheory', changes.beamTheory);
+  setOrClear(updated, 'rotationalSpringI', changes.rotationalSpringI);
+  setOrClear(updated, 'rotationalSpringJ', changes.rotationalSpringJ);
+  setOrClear(updated, 'rigidOffsetI', changes.rigidOffsetI);
+  setOrClear(updated, 'rigidOffsetJ', changes.rigidOffsetJ);
+
+  if (changes.iMoment !== undefined || changes.jMoment !== undefined) {
+    const releases = { ...updated.releases };
+    if (changes.iMoment === null) delete releases.iMoment;
+    else if (changes.iMoment !== undefined) releases.iMoment = changes.iMoment;
+    if (changes.jMoment === null) delete releases.jMoment;
+    else if (changes.jMoment !== undefined) releases.jMoment = changes.jMoment;
+    if (Object.keys(releases).length === 0) delete updated.releases;
+    else updated.releases = releases;
+  }
+
+  if (materialChanged) {
+    delete updated.materialId;
+    updated.materialOrigin = 'custom';
+  }
+  if (sectionChanged) {
+    delete updated.sectionId;
+    updated.sectionOrigin = 'custom';
+  }
+
+  if (changes.type !== undefined && changes.type !== updated.type) {
+    updated.type = changes.type;
+    if (changes.type !== 'frame') for (const field of FRAME_ONLY_FIELDS) delete updated[field];
+  }
+
+  return updated;
+};
+
 export const compileProjectCommand = (project: ProjectModel, command: ProjectCommand): CompiledProjectCommand => {
   const next = structuredClone(project);
   let result: ProjectCommandResult | undefined;
@@ -270,6 +405,20 @@ export const compileProjectCommand = (project: ProjectModel, command: ProjectCom
       updated.sectionOrigin = 'custom';
     }
     next.members[index] = updated;
+  } else if (command.kind === 'member.bulk.apply') {
+    if (projectCommandSnapshot(project) !== command.sourceSnapshot) {
+      throw new Error('La edición múltiple preparada está obsoleta; vuelve a prepararla antes de aplicarla.');
+    }
+    const seen = new Set<string>();
+    for (const entry of command.entries) {
+      for (const memberId of entry.memberIds) {
+        if (seen.has(memberId)) throw new Error(`El miembro ${memberId} recibe dos cambios en la misma edición múltiple.`);
+        seen.add(memberId);
+        const index = next.members.findIndex((member) => member.id === memberId);
+        if (index < 0) throw new Error(`No existe el miembro ${memberId}.`);
+        next.members[index] = applyMemberBulkChanges(next.members[index], entry.changes);
+      }
+    }
   } else if (command.kind === 'member.delete') {
     if (!next.members.some((member) => member.id === command.memberId)) throw new Error(`No existe el miembro ${command.memberId}.`);
     deleteStructuralSelection(next, { kind: 'member', id: command.memberId });
