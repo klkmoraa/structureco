@@ -73,3 +73,189 @@
     width: calc(100% - 20px);
   }
 }
+
+.structural-edit-launcher {
+  position: absolute;
+  z-index: 15;
+  right: 18px;
+  bottom: 86px;
+  min-height: 44px;
+  box-shadow: var(--sc-shadow-clay-sm);
+}
+
+/* Repeat is a separate contextual action. Keep both 44 px targets reachable. */
+.structural-edit-launcher.structural-edit-offset-for-repeat {
+  bottom: 126px;
+}
+
+.structural-edit-surface {
+  position: absolute;
+  z-index: 24;
+  right: 18px;
+  bottom: 86px;
+  width: min(430px, calc(100% - 36px));
+  max-height: min(660px, calc(100% - 110px));
+  overflow: auto;
+  padding: 14px;
+  color: var(--text);
+  background: var(--sc-color-surface-1);
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-lg);
+  box-shadow: var(--sc-shadow-clay-lg);
+  overscroll-behavior: contain;
+}
+
+.structural-edit-surface.structural-edit-offset-for-repeat {
+  bottom: 126px;
+}
+
+.structural-edit-surface > form {
+  display: grid;
+  gap: 12px;
+}
+
+.structural-edit-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+}
+
+.structural-edit-header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.structural-edit-header strong { font-size: 0.98rem; }
+.structural-edit-header span,
+.structural-edit-pointer-row small,
+.structural-edit-message,
+.structural-edit-error {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.structural-edit-operation {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.structural-edit-operation > button { min-height: 40px; }
+
+.structural-edit-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.structural-edit-wide-field { grid-column: 1 / -1; }
+
+.structural-edit-wide-field.sc-segmented {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.structural-edit-fields :is(input, button) { min-height: 40px; }
+
+.structural-edit-pointer-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.structural-edit-message,
+.structural-edit-error { margin: 0; }
+.structural-edit-error { color: var(--danger); }
+
+.structural-edit-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.structural-edit-preview-layer {
+  color: var(--accent);
+  opacity: 0.88;
+}
+
+.structural-edit-preview-members line {
+  stroke: currentColor;
+  stroke-width: 4;
+  stroke-dasharray: 9 6;
+  vector-effect: non-scaling-stroke;
+}
+
+.structural-edit-preview-nodes circle {
+  fill: color-mix(in srgb, var(--accent) 24%, var(--surface));
+  stroke: currentColor;
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.structural-edit-preview-axis {
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-dasharray: 14 7 3 7;
+  vector-effect: non-scaling-stroke;
+}
+
+.structural-edit-preview-center :is(circle, path),
+.structural-edit-preview-vector line,
+.structural-edit-preview-vector circle {
+  fill: var(--surface);
+  stroke: currentColor;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+#structural-edit-preview-arrow path { fill: currentColor; }
+
+.structural-canvas.interaction-structural-edit { cursor: crosshair; touch-action: none; }
+
+@media (max-width: 700px) {
+  .structural-edit-launcher {
+    right: 10px;
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .structural-edit-launcher.structural-edit-offset-for-repeat {
+    bottom: calc(126px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .structural-edit-surface {
+    right: 8px;
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    width: calc(100% - 16px);
+    max-height: min(68vh, calc(100% - 80px));
+    padding: 12px;
+    border-radius: var(--sc-radius-lg) var(--sc-radius-lg) var(--sc-radius-sm) var(--sc-radius-sm);
+  }
+
+  .structural-edit-surface.structural-edit-offset-for-repeat {
+    bottom: calc(126px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* The selected Clay segment is intentionally pressed/scaled. Give its
+     layout box a small allowance so its measured touch target remains >=44px. */
+  .structural-edit-operation.sc-segmented > button,
+  .structural-edit-wide-field.sc-segmented > button,
+  .structural-edit-fields button { min-height: 46px; }
+
+  .structural-edit-fields input { min-height: 44px; }
+
+  .structural-edit-pointer-row { grid-template-columns: 1fr; }
+  .structural-edit-pointer-row .sc-button { width: 100%; }
+}
+
+@media (max-width: 430px) {
+  .structural-edit-operation { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .structural-edit-fields { gap: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .structural-edit-launcher,
+  .structural-edit-surface,
+  .structural-edit-preview-layer { animation: none; transition: none; }
+}

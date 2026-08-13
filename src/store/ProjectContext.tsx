@@ -11,6 +11,7 @@ import { WorkspaceUIContext, useWorkspaceUI, type WorkspaceUIContextValue, type 
 import type { PreparedTopologyRepair, ProjectCommand, ProjectCommandResult } from '../commands/projectCommand';
 import { WORKER_PROTOCOL_VERSION, type AnalysisWorkerPayload, type WorkerRequestEnvelope, type WorkerResponseEnvelope } from '../runtime/workerProtocol';
 import type { ProjectRepository } from '../storage/projectRepository';
+import type { PreparedStructuralEdit } from '../data/structuralEditing';
 
 // oxlint-disable-next-line react/only-export-components
 export { useProjectModel } from './ProjectModelContext';
@@ -408,6 +409,15 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     return { applied: true, report: prepared.report };
   }, [commitReversibleProjectChange]);
 
+  const executePreparedStructuralEdit = useCallback(async (prepared: PreparedStructuralEdit) => {
+    const { applyPreparedStructuralEdit, structuralEditSnapshot } = await import('../data/structuralEditing');
+    const current = projectRef.current;
+    const next = applyPreparedStructuralEdit(current, prepared);
+    if (structuralEditSnapshot(next) === structuralEditSnapshot(current)) return { applied: false };
+    commitReversibleProjectChange(current, next, prepared.description);
+    return { applied: true };
+  }, [commitReversibleProjectChange]);
+
   const updateProjectView = useCallback((updater: (project: ProjectModel) => ProjectModel) => {
     const current = projectRef.current;
     const next = updater(structuredClone(current));
@@ -526,9 +536,9 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     canRedo: future.length > 0,
     storageIssue: storageState.issue,
     storageMessage: storageState.message,
-    renameProject, executeProjectCommand, executePreparedTopologyRepair, updateProject, updateProjectView, updateProjectAnalysisSettings, beginProjectTransaction, updateProjectTransient,
+    renameProject, executeProjectCommand, executePreparedTopologyRepair, executePreparedStructuralEdit, updateProject, updateProjectView, updateProjectAnalysisSettings, beginProjectTransaction, updateProjectTransient,
     moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo,
-  }), [project, past.length, future.length, storageState.issue, storageState.message, renameProject, executeProjectCommand, executePreparedTopologyRepair, updateProject, updateProjectView, updateProjectAnalysisSettings, beginProjectTransaction, updateProjectTransient, moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo]);
+  }), [project, past.length, future.length, storageState.issue, storageState.message, renameProject, executeProjectCommand, executePreparedTopologyRepair, executePreparedStructuralEdit, updateProject, updateProjectView, updateProjectAnalysisSettings, beginProjectTransaction, updateProjectTransient, moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo]);
 
   const analysisValue = useMemo<ProjectAnalysisContextValue>(() => ({
     analysis, isAnalyzing, selectedCombinationId, learningFocus, influenceCanvasState,

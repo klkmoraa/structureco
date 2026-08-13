@@ -11,6 +11,11 @@ const ActiveToolStatus = () => {
   return <output aria-label="herramienta activa">{activeTool}</output>;
 };
 
+const SelectionSetter = () => {
+  const { setSelection } = useProject();
+  return <button type="button" onClick={() => setSelection({ kind: 'node', id: 'N1' })}>seleccionar nodo</button>;
+};
+
 const renderToolBar = () => render(
   <ProjectProvider>
     <ToolBar />
@@ -65,6 +70,25 @@ describe('ToolBar mobile action sheets', () => {
     await user.click(commandSearch);
 
     expect(openPalette).toHaveBeenCalledOnce();
+    unsubscribe();
+  });
+
+  it('offers the contextual structural editor from Edit only with a selection', async () => {
+    const user = userEvent.setup();
+    const openEditor = vi.fn();
+    const unsubscribe = onWorkspaceCommand('open-structural-edit', openEditor);
+    render(
+      <ProjectProvider>
+        <ToolBar />
+        <SelectionSetter />
+      </ProjectProvider>,
+    );
+
+    expect(screen.queryByRole('button', { name: /editar selección/i })).toBeNull();
+    await user.click(screen.getByRole('button', { name: /seleccionar nodo/i }));
+    await user.click(screen.getByRole('button', { name: /editar selección/i }));
+
+    expect(openEditor).toHaveBeenCalledOnce();
     unsubscribe();
   });
 
@@ -153,6 +177,32 @@ describe('ToolBar mobile action sheets', () => {
     expect(openPalette).toHaveBeenCalledOnce();
     expect(screen.queryByRole('dialog', { name: /más herramientas/i })).toBeNull();
     await waitFor(() => expect(document.activeElement).toBe(moreButton));
+    unsubscribe();
+  });
+
+  it('closes Más before opening Edit and restores the canvas app from inert state', async () => {
+    const user = userEvent.setup();
+    const openEditor = vi.fn();
+    const unsubscribe = onWorkspaceCommand('open-structural-edit', openEditor);
+    render(
+      <ProjectProvider>
+        <div className="app-shell"><ToolBar /><SelectionSetter /></div>
+      </ProjectProvider>,
+    );
+    await user.click(screen.getByRole('button', { name: /seleccionar nodo/i }));
+    const moreButton = [...document.querySelectorAll<HTMLButtonElement>('.mobile-tool-group')].at(-1);
+    expect(moreButton).toBeTruthy();
+    await user.click(moreButton!);
+    expect(document.querySelector<HTMLElement>('.app-shell')?.inert).toBe(true);
+
+    const moreSheet = document.querySelector<HTMLElement>('.mobile-tool-palette-more');
+    expect(moreSheet).toBeTruthy();
+    const editSelection = moreSheet?.querySelector<HTMLButtonElement>('[data-structural-edit-command]');
+    expect(editSelection).toBeTruthy();
+    await user.click(editSelection!);
+    await waitFor(() => expect(document.querySelector('.mobile-tool-palette-more')).toBeNull());
+    await waitFor(() => expect(document.querySelector<HTMLElement>('.app-shell')?.inert).toBe(false));
+    await waitFor(() => expect(openEditor).toHaveBeenCalledOnce());
     unsubscribe();
   });
 });

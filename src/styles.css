@@ -733,7 +733,9 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .canvas-mode-badge.placing-load button { width:28px; height:28px; margin:-3px -5px -3px 0; flex:0 0 auto; display:grid; place-items:center; border:0; border-radius:8px; background:var(--surface-2); color:var(--muted); }
 .canvas-mode-badge.placing-load button:hover { color:var(--text); background:var(--border-soft); }
 .touch-gesture-hint { display:none; }
-.canvas-status { position: absolute; right: 14px; bottom: 12px; color: var(--subtle); font-size: var(--sc-font-size-technical); display: flex; align-items: center; gap: 5px; padding: 5px 8px; border-radius: 6px; }
+/* Coordinate readout is informational. It must never steal a structural
+   selection gesture from geometry beneath the floating canvas chrome. */
+.canvas-status { position: absolute; right: 14px; bottom: 12px; color: var(--subtle); font-size: var(--sc-font-size-technical); display: flex; align-items: center; gap: 5px; padding: 5px 8px; border-radius: 6px; pointer-events:none; }
 .canvas-feedback { position:absolute; z-index:6; left:50%; top:58px; transform:translateX(-50%); width:max-content; max-width:calc(100% - 28px); padding:9px 12px; border-radius:10px; color:var(--text); font-size:var(--sc-font-size-label); line-height:1.4; text-align:center; }
 .canvas-host .canvas-feedback { border-color:color-mix(in srgb,var(--warning) 35%,var(--border)); }
 .canvas-result-legend { position:absolute; left:16px; top:54px; z-index:8; width:min(260px,calc(100% - 32px)); padding:9px 11px; border-radius:10px; display:grid; grid-template-columns:auto 1fr; align-items:center; gap:4px 9px; pointer-events:none; }
@@ -2971,7 +2973,7 @@ button:not(:disabled):active,.selection-card:active {
 .sc-toast-card__content { flex:1; min-width:0; }
 .sc-toast-card__title { display:block; font-weight:600; font-size:13px; color:var(--sc-color-text-primary); }
 .sc-toast-card__desc { margin:2px 0 0; font-size:11px; color:var(--sc-color-text-secondary); }
-.sc-toast-card__close { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border:none; border-radius:6px; background:transparent; color:var(--sc-color-text-muted); cursor:pointer; padding:0; margin-left:4px; transition:background-color var(--sc-motion-fast) var(--sc-ease-standard), color var(--sc-motion-fast) var(--sc-ease-standard); }
+.sc-toast-card__close { display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border:none; border-radius:8px; background:transparent; color:var(--sc-color-text-muted); cursor:pointer; padding:0; margin:-10px -10px -10px 4px; transition:background-color var(--sc-motion-fast) var(--sc-ease-standard), color var(--sc-motion-fast) var(--sc-ease-standard); }
 .sc-toast-card__close:hover { background:var(--sc-color-surface-2); color:var(--sc-color-text-primary); }
 @media (max-width: 640px) {
   .sc-toast-container { right:16px; left:16px; width:auto; bottom:calc(70px + env(safe-area-inset-bottom)); }

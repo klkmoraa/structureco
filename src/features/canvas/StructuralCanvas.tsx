@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { X } from 'lucide-react';
 import { useProject } from '../../store/ProjectContext';
 import type { DiagramPoint, DiagramQuantity, MemberModel, NodeModel, Selection, Tool } from '../../types';
@@ -63,12 +63,47 @@ import { parseQuickEntryPair } from './quickEntry';
 import { resolveRepeatRecipe, type RepeatRecipe } from './repeatAction';
 import { RepeatActionOverlay } from './RepeatActionOverlay';
 import { prepareDuplicatePreview } from './duplicatePreview';
+import {
+  createStructuralEditGeometryPreview,
+  prepareStructuralEdit,
+  resolveStructuralSelection,
+  structuralEditSnapshot,
+  type PreparedStructuralEdit,
+  type StructuralEditGeometryPreview,
+} from '../../data/structuralEditing';
+import {
+  buildStructuralEditRequest,
+  changeStructuralEditKind,
+  createStructuralEditDraft,
+  structuralEditCapabilities,
+  structuralEditSelectionAnchor,
+  updateDraftFromPointer,
+  type StructuralEditDraft,
+  type StructuralEditKind,
+} from './structuralEditUi';
+import { StructuralEditOverlay } from './StructuralEditOverlay';
+import { CanvasStructuralEditPreviewLayer } from './CanvasStructuralEditPreviewLayer';
 import './phase2.css';
 
 type Camera = CanvasCamera;
 
 /** Shared empty list so the memoised snap candidates keep a stable identity. */
 const EMPTY_SNAP_CANDIDATES: SnapCandidate[] = [];
+
+/** Same empty set for an inactive edit, so pointer preview does not churn props. */
+const EMPTY_STRUCTURAL_EDIT_NODE_IDS: ReadonlySet<string> = new Set();
+
+/**
+ * Canvas geometry is memoised and must keep its event props stable while the
+ * transient edit ghost advances every animation frame. The ref is synchronised
+ * before paint, so events always dispatch to the latest canvas state without
+ * making both heavyweight geometry layers render for a preview-only update.
+ */
+const useStableCanvasEvent = <Args extends unknown[], Result>(callback: (...args: Args) => Result) => {
+  const callbackRef = useRef(callback);
+  useLayoutEffect(() => { callbackRef.current = callback; }, [callback]);
+  return useCallback((...args: Args) => callbackRef.current(...args), []);
+};
 
 /** `id` del grupo que la lupa táctil clona con `<use>` para ampliar la escena. */
 const CANVAS_SCENE_ID = 'canvas-scene-root';
@@ -125,6 +160,14 @@ type CanvasInteraction =
     startDistance: number;
   }
   | { kind: 'node-drag'; pointerId: number; pointerType: string; nodeId: string; grabOffset: ModelPoint }
+  | {
+    kind: 'structural-edit';
+    pointerId: number;
+    pointerType: string;
+    start: ModelPoint;
+    grabOffset: ModelPoint;
+    beforeDraft: StructuralEditDraft;
+  }
   | ({ kind: 'selection-box' } & SelectionBox)
   | { kind: 'long-press'; pointerId: number; target: StructuralTarget };
 
@@ -174,6 +217,7 @@ export const StructuralCanvas = ({
     setSelection,
     setActiveTool,
     executeProjectCommand,
+    executePreparedStructuralEdit,
     updateProject,
     replaceProject,
     beginProjectTransaction,
@@ -204,6 +248,10 @@ export const StructuralCanvas = ({
   const [overlapPicker, setOverlapPicker] = useState<{ x: number; y: number; candidates: Array<Exclude<StructuralTarget, { kind: 'background' }>> } | null>(null);
   const [repeatRecipe, setRepeatRecipe] = useState<RepeatRecipe | null>(null);
   const [duplicateDraft, setDuplicateDraft] = useState<{ selection: Selection; x: string; y: string } | null>(null);
+  const [structuralEditDraft, setStructuralEditDraft] = useState<StructuralEditDraft | null>(null);
+  const [structuralEditLiveDraft, setStructuralEditLiveDraft] = useState<StructuralEditDraft | null>(null);
+  const [structuralEditPointerArmed, setStructuralEditPointerArmed] = useState(false);
+  const [structuralEditCommitError, setStructuralEditCommitError] = useState('');
   const [touchLoupe, setTouchLoupe] = useState<{ screenX: number; screenY: number; modelX: number; modelY: number } | null>(null);
   const spacePressedRef = useRef(false);
   const interactionRef = useRef<CanvasInteraction>(IDLE_INTERACTION);
@@ -216,6 +264,10 @@ export const StructuralCanvas = ({
   const interactionFrameRef = useRef<number | null>(null);
   const nodeMoveFrameRef = useRef<number | null>(null);
   const pendingNodeMoveRef = useRef<{ nodeId: string; point: { x: number; y: number } } | null>(null);
+  const structuralEditFrameRef = useRef<number | null>(null);
+  const pendingStructuralEditDraftRef = useRef<StructuralEditDraft | null>(null);
+  const structuralEditLiveDraftRef = useRef<StructuralEditDraft | null>(null);
+  const structuralEditApplyingRef = useRef(false);
   const selectionCycleRef = useRef<{ x: number; y: number; at: number; key: string; index: number } | null>(null);
   const cycleTimerRef = useRef<number | null>(null);
   const previousSizeRef = useRef<Size | null>(null);
@@ -224,6 +276,54 @@ export const StructuralCanvas = ({
   const [canvasFeedback, setCanvasFeedback] = useState('');
   const selectionBox = interaction.kind === 'selection-box' ? interaction : null;
   const repeatCandidate = useMemo(() => resolveRepeatRecipe(project, selection), [project, selection]);
+  const editCapabilities = useMemo(() => structuralEditCapabilities(project, selection), [project, selection]);
+  const structuralEditPreview = useMemo((): { prepared: PreparedStructuralEdit | null; error: string } => {
+    if (!structuralEditDraft) return { prepared: null, error: '' };
+    if (structuralEditDraft.sourceSnapshot !== structuralEditSnapshot(project)) {
+      return { prepared: null, error: t('modelDoctor.previewStaleBody') };
+    }
+    try {
+      return {
+        prepared: prepareStructuralEdit(project, buildStructuralEditRequest(project, structuralEditDraft)),
+        error: '',
+      };
+    } catch (error) {
+      return { prepared: null, error: error instanceof Error ? error.message : t('canvas.twoValidNumbers') };
+    }
+  }, [project, structuralEditDraft, t]);
+  const structuralEditLivePreview = useMemo((): { preview: StructuralEditGeometryPreview | null; error: string } => {
+    if (!structuralEditLiveDraft || structuralEditPreview.error) return { preview: null, error: structuralEditPreview.error };
+    try {
+      return {
+        preview: createStructuralEditGeometryPreview(project, buildStructuralEditRequest(project, structuralEditLiveDraft)),
+        error: '',
+      };
+    } catch (error) {
+      return { preview: null, error: error instanceof Error ? error.message : t('canvas.twoValidNumbers') };
+    }
+  }, [project, structuralEditLiveDraft, structuralEditPreview.error, t]);
+  const structuralEditExcludedNodeIds = useMemo(() => {
+    // A gesture only changes parameters. Its structural closure is fixed from
+    // the source draft, so do not rebuild this O(N + M) set on every rAF frame.
+    const draft = structuralEditDraft;
+    if (!draft) return EMPTY_STRUCTURAL_EDIT_NODE_IDS;
+    try {
+      return new Set(resolveStructuralSelection(project, draft.selection).nodeIds);
+    } catch {
+      return EMPTY_STRUCTURAL_EDIT_NODE_IDS;
+    }
+  }, [project, structuralEditDraft]);
+  const structuralEditFocusSession = structuralEditDraft?.sourceSnapshot ?? null;
+  useEffect(() => {
+    if (!structuralEditFocusSession) return undefined;
+    // Run after the surface is committed. This is deliberately session-scoped
+    // (not draft-scoped), so numeric typing never steals focus back but a mobile
+    // sheet handoff reliably lands on the first parameter field.
+    const frame = window.requestAnimationFrame(() => {
+      hostRef.current?.querySelector<HTMLInputElement>('.structural-edit-surface input')?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [structuralEditFocusSession]);
   const duplicatePreview = useMemo(() => {
     if (!duplicateDraft) return null;
     try {
@@ -397,10 +497,41 @@ export const StructuralCanvas = ({
     });
   }, [moveNodeTransient]);
 
+  const flushStructuralEditDraft = useCallback(() => {
+    if (structuralEditFrameRef.current !== null) {
+      window.cancelAnimationFrame(structuralEditFrameRef.current);
+      structuralEditFrameRef.current = null;
+    }
+    const pending = pendingStructuralEditDraftRef.current ?? structuralEditLiveDraftRef.current;
+    pendingStructuralEditDraftRef.current = null;
+    structuralEditLiveDraftRef.current = null;
+    if (pending) setStructuralEditDraft(pending);
+    setStructuralEditLiveDraft(null);
+  }, []);
+
+  const scheduleStructuralEditDraft = useCallback((draft: StructuralEditDraft) => {
+    pendingStructuralEditDraftRef.current = draft;
+    if (structuralEditFrameRef.current !== null) return;
+    structuralEditFrameRef.current = window.requestAnimationFrame(() => {
+      structuralEditFrameRef.current = null;
+      const pending = pendingStructuralEditDraftRef.current;
+      pendingStructuralEditDraftRef.current = null;
+      if (pending) {
+        structuralEditLiveDraftRef.current = pending;
+        setStructuralEditLiveDraft(pending);
+      }
+    });
+  }, []);
+
   const cancelNodeDragTransaction = useCallback(() => {
     pendingNodeMoveRef.current = null;
     if (nodeMoveFrameRef.current !== null) window.cancelAnimationFrame(nodeMoveFrameRef.current);
+    if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
     nodeMoveFrameRef.current = null;
+    structuralEditFrameRef.current = null;
+    pendingStructuralEditDraftRef.current = null;
+    structuralEditLiveDraftRef.current = null;
+    setStructuralEditLiveDraft(null);
     cancelProjectTransaction();
   }, [cancelProjectTransaction]);
 
@@ -417,11 +548,15 @@ export const StructuralCanvas = ({
     if (cameraFrameRef.current !== null) window.cancelAnimationFrame(cameraFrameRef.current);
     if (interactionFrameRef.current !== null) window.cancelAnimationFrame(interactionFrameRef.current);
     if (nodeMoveFrameRef.current !== null) window.cancelAnimationFrame(nodeMoveFrameRef.current);
+    if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
     if (cycleTimerRef.current !== null) window.clearTimeout(cycleTimerRef.current);
     if (feedbackTimerRef.current !== null) window.clearTimeout(feedbackTimerRef.current);
     cameraFrameRef.current = null;
     interactionFrameRef.current = null;
     nodeMoveFrameRef.current = null;
+    structuralEditFrameRef.current = null;
+    pendingStructuralEditDraftRef.current = null;
+    structuralEditLiveDraftRef.current = null;
     cycleTimerRef.current = null;
     feedbackTimerRef.current = null;
   }, []);
@@ -534,14 +669,15 @@ export const StructuralCanvas = ({
     return () => { for (const unsubscribe of unsubscribes) unsubscribe(); };
   }, [project.name, showCanvasFeedback, t]);
 
-  const snapPoint = useCallback((point: { x: number; y: number }, excludedNodeId?: string) => {
+  const snapPoint = useCallback((point: { x: number; y: number }, excludedNodeIds?: string | ReadonlySet<string>) => {
     // Reuse the memoised arrays untouched whenever nothing has to be merged or
     // excluded: a pointer move should not copy the whole candidate list.
     const merged = perpendicularSnapCandidates.length
       ? [...baseSnapCandidates, ...perpendicularSnapCandidates]
       : baseSnapCandidates;
-    const candidates = excludedNodeId
-      ? merged.filter((candidate) => !(candidate.kind === 'node' && candidate.sourceIds?.includes(excludedNodeId)))
+    const excluded = typeof excludedNodeIds === 'string' ? new Set([excludedNodeIds]) : excludedNodeIds;
+    const candidates = excluded?.size
+      ? merged.filter((candidate) => !(candidate.kind === 'node' && candidate.sourceIds?.some((id) => excluded.has(id))))
       : merged;
     const result = resolveSnap(point, {
       enabled: project.settings.snap,
@@ -561,9 +697,9 @@ export const StructuralCanvas = ({
     return result.point;
   }, [baseSnapCandidates, camera.scale, drawingOrigin, perpendicularSnapCandidates, project.settings.gridSize, project.settings.snap, project.settings.snapTargets]);
 
-  const modelPointFromClient = useCallback((clientX: number, clientY: number, excludedNodeId?: string) => {
+  const modelPointFromClient = useCallback((clientX: number, clientY: number, excludedNodeIds?: string | ReadonlySet<string>) => {
     const local = localScreenPoint(clientX, clientY);
-    return snapPoint(screenToModelPoint(local, cameraRef.current), excludedNodeId);
+    return snapPoint(screenToModelPoint(local, cameraRef.current), excludedNodeIds);
   }, [localScreenPoint, snapPoint]);
 
   const nodeDragPointFromClient = useCallback((
@@ -697,6 +833,37 @@ export const StructuralCanvas = ({
       kind: 'pan', pointerId, pointerType, start, camera: startCamera, moved, clearSelectionOnTap,
     });
   }, [capturePointer, clearLongPressTimer, transitionInteraction]);
+
+  const startStructuralEditPointer = useCallback((event: ReactPointerEvent) => {
+    const draft = structuralEditDraft;
+    if (!draft || !structuralEditPointerArmed || event.button !== 0) return false;
+    event.preventDefault();
+    clearLongPressTimer();
+    const raw = screenToModelPoint(localScreenPoint(event.clientX, event.clientY), cameraRef.current);
+    const start = draft.kind === 'move'
+      ? structuralEditSelectionAnchor(project, draft.selection)
+      : modelPointFromClient(event.clientX, event.clientY);
+    const grabOffset = draft.kind === 'move'
+      ? { x: start.x - raw.x, y: start.y - raw.y }
+      : { x: 0, y: 0 };
+    capturePointer(event.pointerId);
+    transitionInteraction({
+      kind: 'structural-edit',
+      pointerId: event.pointerId,
+      pointerType: event.pointerType,
+      start,
+      grabOffset,
+      beforeDraft: draft,
+    });
+    if (draft.kind === 'mirror' && draft.fields.mirrorAxis !== 'arbitrary') {
+      try {
+        scheduleStructuralEditDraft(updateDraftFromPointer(draft, project, { start, current: start }));
+      } catch (error) {
+        setStructuralEditCommitError(error instanceof Error ? error.message : t('canvas.twoValidNumbers'));
+      }
+    }
+    return true;
+  }, [capturePointer, clearLongPressTimer, localScreenPoint, modelPointFromClient, project, scheduleStructuralEditDraft, structuralEditDraft, structuralEditPointerArmed, t, transitionInteraction]);
 
   const startPending = useCallback((event: ReactPointerEvent, target: StructuralTarget) => {
     const pending: CanvasInteraction = {
@@ -950,7 +1117,7 @@ export const StructuralCanvas = ({
   const shouldStartPan = useCallback((event: ReactPointerEvent) =>
     event.button === 1 || (event.button === 0 && (activeTool === 'pan' || spacePressedRef.current)), [activeTool]);
 
-  const handleObjectPointerDown = (event: ReactPointerEvent, target: StructuralTarget) => {
+  const handleObjectPointerDown = useStableCanvasEvent((event: ReactPointerEvent, target: StructuralTarget) => {
     event.stopPropagation();
     setOverlapPicker(null);
     if (interactionRef.current.kind === 'pinch') return;
@@ -959,6 +1126,7 @@ export const StructuralCanvas = ({
       startPan(event.pointerId, event.pointerType, { x: event.clientX, y: event.clientY }, false);
       return;
     }
+    if (startStructuralEditPointer(event)) return;
     if (event.button !== 0) return;
     let resolvedTarget = target;
     // Loads are intentionally easy to hit, but they must not block tools whose
@@ -1038,7 +1206,7 @@ export const StructuralCanvas = ({
       return;
     }
     performTargetAction(resolvedTarget, activeTool, { x: event.clientX, y: event.clientY }, event.shiftKey);
-  };
+  });
 
   const handleBackgroundPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
     if (event.target !== event.currentTarget && (event.target as Element).closest('[data-structure-object]')) return;
@@ -1048,6 +1216,7 @@ export const StructuralCanvas = ({
       startPan(event.pointerId, event.pointerType, { x: event.clientX, y: event.clientY }, false);
       return;
     }
+    if (startStructuralEditPointer(event)) return;
     if (event.button !== 0) return;
     if (event.pointerType === 'touch') {
       if (activeTool === 'select' || activeTool === 'pan') {
@@ -1080,6 +1249,15 @@ export const StructuralCanvas = ({
     if (event.isPrimary && activePointersRef.current.size > 0) {
       clearLongPressTimer();
       if (interactionRef.current.kind === 'node-drag') cancelNodeDragTransaction();
+      if (interactionRef.current.kind === 'structural-edit') {
+        pendingStructuralEditDraftRef.current = null;
+        if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
+        structuralEditFrameRef.current = null;
+        setStructuralEditDraft(interactionRef.current.beforeDraft);
+        structuralEditLiveDraftRef.current = null;
+        setStructuralEditLiveDraft(null);
+        setStructuralEditPointerArmed(false);
+      }
       for (const pointerId of activePointersRef.current.keys()) releasePointer(pointerId);
       activePointersRef.current.clear();
       transitionInteraction(IDLE_INTERACTION);
@@ -1089,6 +1267,15 @@ export const StructuralCanvas = ({
     event.preventDefault();
     clearLongPressTimer();
     if (interactionRef.current.kind === 'node-drag') cancelNodeDragTransaction();
+    if (interactionRef.current.kind === 'structural-edit') {
+      pendingStructuralEditDraftRef.current = null;
+      if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
+      structuralEditFrameRef.current = null;
+      setStructuralEditDraft(interactionRef.current.beforeDraft);
+      structuralEditLiveDraftRef.current = null;
+      setStructuralEditLiveDraft(null);
+      setStructuralEditPointerArmed(false);
+    }
     const entries = [...activePointersRef.current.entries()];
     const first = entries[0];
     const second = entries[1];
@@ -1114,7 +1301,7 @@ export const StructuralCanvas = ({
    */
   const syncTouchLoupe = (pointerType: string, current: CanvasInteraction, clientX: number, clientY: number) => {
     const placing = current.kind === 'idle' && (activeTool === 'node' || activeTool === 'member');
-    const tracking = current.kind === 'pending' || current.kind === 'node-drag'
+    const tracking = current.kind === 'pending' || current.kind === 'node-drag' || current.kind === 'structural-edit'
       || current.kind === 'long-press' || current.kind === 'selection-box';
     if (pointerType !== 'touch' || !(placing || tracking)) {
       setTouchLoupe((existing) => existing === null ? existing : null);
@@ -1189,6 +1376,19 @@ export const StructuralCanvas = ({
       scheduleNodeMove(current.nodeId, nodeDragPointFromClient(event.clientX, event.clientY, current.nodeId, current.grabOffset));
       return;
     }
+    if (current.kind === 'structural-edit' && current.pointerId === event.pointerId) {
+      try {
+        const raw = screenToModelPoint(localScreenPoint(event.clientX, event.clientY), cameraRef.current);
+        const point = current.beforeDraft.kind === 'move'
+          ? snapPoint({ x: raw.x + current.grabOffset.x, y: raw.y + current.grabOffset.y }, structuralEditExcludedNodeIds)
+          : modelPointFromClient(event.clientX, event.clientY);
+        scheduleStructuralEditDraft(updateDraftFromPointer(current.beforeDraft, project, { start: current.start, current: point }));
+        setStructuralEditCommitError('');
+      } catch (error) {
+        setStructuralEditCommitError(error instanceof Error ? error.message : t('canvas.twoValidNumbers'));
+      }
+      return;
+    }
     if (current.kind === 'selection-box' && current.pointerId === event.pointerId) {
       scheduleInteractionFrame({
         ...current,
@@ -1229,6 +1429,17 @@ export const StructuralCanvas = ({
         commitProjectTransaction();
       }
       transitionInteraction(IDLE_INTERACTION);
+    } else if (current.kind === 'structural-edit' && current.pointerId === event.pointerId) {
+      if (cancelled) {
+        pendingStructuralEditDraftRef.current = null;
+        if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
+        structuralEditFrameRef.current = null;
+        setStructuralEditDraft(current.beforeDraft);
+        structuralEditLiveDraftRef.current = null;
+        setStructuralEditLiveDraft(null);
+      } else flushStructuralEditDraft();
+      setStructuralEditPointerArmed(false);
+      transitionInteraction(IDLE_INTERACTION);
     } else if (current.kind === 'selection-box' && current.pointerId === event.pointerId) {
       if (!cancelled) finishSelectionBox(current);
       transitionInteraction(IDLE_INTERACTION);
@@ -1245,11 +1456,93 @@ export const StructuralCanvas = ({
     const current = interactionRef.current;
     if (current.kind === 'node-drag') {
       cancelNodeDragTransaction();
+    } else if (current.kind === 'structural-edit') {
+      pendingStructuralEditDraftRef.current = null;
+      if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
+      structuralEditFrameRef.current = null;
+      setStructuralEditDraft(current.beforeDraft);
+      structuralEditLiveDraftRef.current = null;
+      setStructuralEditLiveDraft(null);
+      setStructuralEditPointerArmed(false);
     }
     for (const pointerId of activePointersRef.current.keys()) releasePointer(pointerId);
     activePointersRef.current.clear();
     transitionInteraction(IDLE_INTERACTION);
   }, [cancelNodeDragTransaction, clearLongPressTimer, releasePointer, transitionInteraction]);
+
+  const cancelStructuralEdit = useCallback(() => {
+    cancelActiveInteraction();
+    setStructuralEditDraft(null);
+    structuralEditLiveDraftRef.current = null;
+    setStructuralEditLiveDraft(null);
+    setStructuralEditPointerArmed(false);
+    setStructuralEditCommitError('');
+    window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
+  }, [cancelActiveInteraction]);
+
+  const startStructuralEdit = useCallback((kind: StructuralEditKind) => {
+    if (!selection || !editCapabilities.structural) return;
+    cancelActiveInteraction();
+    setDuplicateDraft(null);
+    setRepeatRecipe(null);
+    setMemberStart(null);
+    setCut(null);
+    setOverlapPicker(null);
+    setActiveTool('select');
+    setStructuralEditPointerArmed(false);
+    structuralEditLiveDraftRef.current = null;
+    setStructuralEditLiveDraft(null);
+    setStructuralEditCommitError('');
+    try {
+      setStructuralEditDraft(createStructuralEditDraft(project, selection, kind));
+    } catch (error) {
+      showCanvasFeedback(error instanceof Error ? error.message : t('canvas.twoValidNumbers'));
+    }
+  }, [cancelActiveInteraction, editCapabilities.structural, project, selection, setActiveTool, showCanvasFeedback, t]);
+
+  useEffect(() => onWorkspaceCommand('open-structural-edit', () => startStructuralEdit('move')), [startStructuralEdit]);
+
+  const changeStructuralEditOperation = useCallback((kind: StructuralEditKind) => {
+    setStructuralEditDraft((current) => current ? changeStructuralEditKind(project, current, kind) : current);
+    structuralEditLiveDraftRef.current = null;
+    setStructuralEditLiveDraft(null);
+    setStructuralEditPointerArmed(false);
+    setStructuralEditCommitError('');
+  }, [project]);
+
+  const updateStructuralEditDraft = useCallback((draft: StructuralEditDraft) => {
+    setStructuralEditDraft(draft);
+    structuralEditLiveDraftRef.current = null;
+    setStructuralEditLiveDraft(null);
+    setStructuralEditCommitError('');
+  }, []);
+
+  const confirmStructuralEdit = useCallback(async () => {
+    const prepared = structuralEditPreview.prepared;
+    if (!prepared?.hasChanges || structuralEditApplyingRef.current) return;
+    structuralEditApplyingRef.current = true;
+    try {
+      await executePreparedStructuralEdit(prepared);
+      if (prepared.createdNodeIds.length || prepared.createdMemberIds.length) {
+        setSelection(structuralSelectionFromIds(prepared.createdNodeIds, prepared.createdMemberIds));
+      }
+      setStructuralEditDraft(null);
+      structuralEditLiveDraftRef.current = null;
+      setStructuralEditLiveDraft(null);
+      setStructuralEditPointerArmed(false);
+      setStructuralEditCommitError('');
+      window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
+    } catch (error) {
+      setStructuralEditCommitError(error instanceof Error ? error.message : t('canvas.twoValidNumbers'));
+    } finally {
+      structuralEditApplyingRef.current = false;
+    }
+  }, [executePreparedStructuralEdit, setSelection, structuralEditPreview.prepared, t]);
+
+  useEffect(() => {
+    if (!structuralEditDraft || JSON.stringify(structuralEditDraft.selection) === JSON.stringify(selection)) return;
+    cancelStructuralEdit();
+  }, [cancelStructuralEdit, selection, structuralEditDraft]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1267,6 +1560,12 @@ export const StructuralCanvas = ({
       }
       const command = event.ctrlKey || event.metaKey;
       const key = event.key.toLowerCase();
+      if (event.key === 'Escape' && structuralEditDraft) {
+        event.preventDefault();
+        cancelStructuralEdit();
+        return;
+      }
+      if (structuralEditDraft) return;
       if (key === 'r' && !command && !event.altKey) {
         if (!repeatCandidate) return;
         event.preventDefault();
@@ -1338,7 +1637,7 @@ export const StructuralCanvas = ({
       window.removeEventListener('blur', cancelActiveInteraction);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [activateRepeat, cancelActiveInteraction, deleteSelection, duplicateDraft, project, repeatCandidate, replaceProject, selection, setActiveTool, setSelection]);
+  }, [activateRepeat, cancelActiveInteraction, cancelStructuralEdit, deleteSelection, duplicateDraft, project, repeatCandidate, replaceProject, selection, setActiveTool, setSelection, structuralEditDraft]);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -1362,7 +1661,7 @@ export const StructuralCanvas = ({
     return evaluateDiagramAt(result.diagramSegments, result.diagramJumps, localX, 'right');
   };
 
-  const showCut = (event: ReactPointerEvent, member: MemberModel) => {
+  const showCut = useStableCanvasEvent((event: ReactPointerEvent, member: MemberModel) => {
     if (!resultsAllowed || !analysis?.success || cut?.pinned) return;
     const rect = svgRef.current!.getBoundingClientRect();
     const model = toModel(event.clientX - rect.left, event.clientY - rect.top);
@@ -1370,7 +1669,7 @@ export const StructuralCanvas = ({
     const nj = nodeMap.get(member.j)!;
     const ratio = grossRatioAtPoint(memberAxis(member, ni, nj), model);
     setCut({ memberId: member.id, ratio, point: memberValueAt(member.id, ratio), clientX: event.clientX, clientY: event.clientY, pinned: false });
-  };
+  });
 
   const globalDiagramMax = useMemo(() => {
     if (!analysis?.success) return 1e-9;
@@ -1401,18 +1700,19 @@ export const StructuralCanvas = ({
     return <g className="grid-lines">{lines}</g>;
   }, [camera, project.settings.gridSize, project.settings.showGrid, size]);
 
-  const handleLoadKeyDown = (event: ReactKeyboardEvent<SVGGElement>, target: Selection) => {
+  const handleLoadKeyDown = useStableCanvasEvent((event: ReactKeyboardEvent<SVGGElement>, target: Selection) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
     setSelection(target);
     onRequestInspector?.();
-  };
+  });
 
   const onCutLeave = useCallback(() => setCut((current) => current?.pinned ? current : null), []);
 
-  const smartLabelCandidates: SmartLabelCandidate[] = [];
-  const selectedNodeIds = selectionVisualState.nodeIds;
-  const selectedMemberIds = selectionVisualState.memberIds;
+  const placedSmartLabels = useMemo(() => {
+    const smartLabelCandidates: SmartLabelCandidate[] = [];
+    const selectedNodeIds = selectionVisualState.nodeIds;
+    const selectedMemberIds = selectionVisualState.memberIds;
 
   for (const node of project.nodes) {
     const selected = selectedNodeIds.includes(node.id);
@@ -1629,7 +1929,41 @@ export const StructuralCanvas = ({
     }
   }
 
-  const placedSmartLabels = layoutSmartLabels(smartLabelCandidates, canvasSafeRect(size), camera.scale);
+    return layoutSmartLabels(smartLabelCandidates, canvasSafeRect(size), camera.scale);
+  }, [
+    activeTool,
+    analysis,
+    camera.scale,
+    distributedLabel,
+    forceLabel,
+    globalDiagramMax,
+    layers,
+    lengthLabel,
+    loadsLayerVisible,
+    memberMap,
+    momentLabel,
+    nodeMap,
+    nodeResultMap,
+    project,
+    resultMap,
+    resultTab,
+    resultsAllowed,
+    selectionVisualState,
+    size,
+    toScreen,
+    units,
+  ]);
+  const smartLabelLayer = useMemo(() => <g className="smart-label-layer" data-label-detail={smartLabelDetailForScale(camera.scale)} aria-hidden="true">
+    {placedSmartLabels.map((label) => {
+      const centerX = label.rect.x + label.rect.width / 2;
+      const centerY = label.rect.y + label.rect.height / 2;
+      return <g key={label.id} className={`smart-label priority-${label.priority} tone-${label.tone ?? 'neutral'}`} data-smart-label={label.id} data-label-priority={label.priority}>
+        {label.leader ? <line className="smart-label-leader" x1={label.anchor.x} y1={label.anchor.y} x2={centerX} y2={centerY} /> : null}
+        <rect x={label.rect.x} y={label.rect.y} width={label.rect.width} height={label.rect.height} rx="6" />
+        <text x={label.rect.x + 8} y={label.rect.y + 15}>{label.text}</text>
+      </g>;
+    })}
+  </g>, [camera.scale, placedSmartLabels]);
   const multiSelectionPoints = selectionVisualState.kind === 'multi' ? [
     ...selectionVisualState.nodeIds.flatMap((nodeId) => {
       const node = nodeMap.get(nodeId);
@@ -1721,6 +2055,15 @@ export const StructuralCanvas = ({
           })}
         </g> : null}
 
+        {structuralEditLivePreview.preview || structuralEditPreview.prepared ? <CanvasStructuralEditPreviewLayer
+          project={project}
+          prepared={structuralEditLivePreview.preview ? null : structuralEditPreview.prepared}
+          geometry={structuralEditLivePreview.preview}
+          size={size}
+          toScreen={toScreen}
+          label={t('canvas.structuralEditTitle')}
+        /> : null}
+
         <CanvasResultLayer
           slot="diagrams"
           project={project}
@@ -1742,8 +2085,8 @@ export const StructuralCanvas = ({
           lengthLabel={lengthLabel}
           forceLabel={forceLabel}
           momentLabel={momentLabel}
-          showResults={layers.results}
-          showDiagnostics={layers.diagnostics}
+          showResults={layers.results && !structuralEditDraft}
+          showDiagnostics={layers.diagnostics && !structuralEditDraft}
           size={size}
           t={t}
         />
@@ -1795,8 +2138,8 @@ export const StructuralCanvas = ({
           lengthLabel={lengthLabel}
           forceLabel={forceLabel}
           momentLabel={momentLabel}
-          showResults={layers.results}
-          showDiagnostics={layers.diagnostics}
+          showResults={layers.results && !structuralEditDraft}
+          showDiagnostics={layers.diagnostics && !structuralEditDraft}
           size={size}
           t={t}
         />
@@ -1842,17 +2185,7 @@ export const StructuralCanvas = ({
           t={t}
         />
 
-        <g className="smart-label-layer" data-label-detail={smartLabelDetailForScale(camera.scale)} aria-hidden="true">
-          {placedSmartLabels.map((label) => {
-            const centerX = label.rect.x + label.rect.width / 2;
-            const centerY = label.rect.y + label.rect.height / 2;
-            return <g key={label.id} className={`smart-label priority-${label.priority} tone-${label.tone ?? 'neutral'}`} data-smart-label={label.id} data-label-priority={label.priority}>
-              {label.leader ? <line className="smart-label-leader" x1={label.anchor.x} y1={label.anchor.y} x2={centerX} y2={centerY} /> : null}
-              <rect x={label.rect.x} y={label.rect.y} width={label.rect.width} height={label.rect.height} rx="6" />
-              <text x={label.rect.x + 8} y={label.rect.y + 15}>{label.text}</text>
-            </g>;
-          })}
-        </g>
+        {smartLabelLayer}
 
         <g className="global-axes" transform={`translate(42 ${size.height - 45})`}>
           <line x1="0" y1="0" x2="58" y2="0" markerEnd="url(#axis-x)" />
@@ -1891,6 +2224,28 @@ export const StructuralCanvas = ({
         </div>
       </form> : null}
 
+      <StructuralEditOverlay
+        // Duplicate and Repeat own an in-progress intention. Do not leave the
+        // Edit launcher visually covered but still keyboard-focusable beneath it.
+        available={editCapabilities.structural && !duplicateDraft && !repeatRecipe}
+        repeatAvailable={Boolean(repeatCandidate) && !structuralEditDraft}
+        draft={structuralEditDraft}
+        capabilities={editCapabilities}
+        prepared={structuralEditPreview.prepared}
+        error={structuralEditCommitError || structuralEditLivePreview.error || structuralEditPreview.error}
+        pointerArmed={structuralEditPointerArmed}
+        lengthUnit={lengthLabel}
+        onStart={startStructuralEdit}
+        onKindChange={changeStructuralEditOperation}
+        onDraftChange={updateStructuralEditDraft}
+        onTogglePointer={() => {
+          setStructuralEditPointerArmed((current) => !current);
+          window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
+        }}
+        onApply={() => { void confirmStructuralEdit(); }}
+        onCancel={cancelStructuralEdit}
+      />
+
       <CanvasChrome
         modeLabel={t(toolLabelKeys[activeTool])}
         placementInstruction={loadPlacementInstruction}
@@ -1922,7 +2277,7 @@ export const StructuralCanvas = ({
       /> : null}
       {canvasFeedback ? <div className="canvas-feedback" role="alert">{canvasFeedback}</div> : null}
       <RepeatActionOverlay
-        available={Boolean(repeatCandidate)}
+        available={Boolean(repeatCandidate) && !structuralEditDraft}
         active={Boolean(repeatRecipe)}
         actionLabel={t('canvas.repeatAction')}
         previewLabel={t('canvas.repeatPreview')}

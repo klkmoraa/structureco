@@ -26,11 +26,51 @@ const browser = await chromium.launch({
   args: ['--allow-file-access-from-files'],
 });
 
+async function disablePwaUpdateLifecycle(page) {
+  await page.addInitScript(() => {
+    const registration = {
+      installing: null,
+      waiting: null,
+      addEventListener: () => undefined,
+    };
+    Object.defineProperty(navigator, 'serviceWorker', {
+      configurable: true,
+      value: {
+        controller: null,
+        register: async () => registration,
+        addEventListener: () => undefined,
+      },
+    });
+  });
+}
+
+async function newQaPage(options) {
+  const page = await browser.newPage(options);
+  await disablePwaUpdateLifecycle(page);
+  return page;
+}
+
+async function activateWelcomeLauncher(page, launcher) {
+  const welcome = page.getByTestId('welcome-screen');
+  await welcome.waitFor({ state: 'visible' });
+  const workspace = page.locator('.app-shell');
+  await launcher.click();
+  try {
+    await workspace.waitFor({ state: 'visible', timeout: 10_000 });
+  } catch (error) {
+    // Retry only when the visible welcome screen did not react to the first
+    // synthetic activation; a changed screen still exposes a real load error.
+    if (!await welcome.isVisible().catch(() => false)) throw error;
+    await launcher.click();
+    await workspace.waitFor({ state: 'visible', timeout: 10_000 });
+  }
+}
+
 async function enterWorkspace(page, { example = false } = {}) {
-  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
-  if (example) await page.getByRole('button', { name: /pórtico de ejemplo/i }).click();
-  else await page.getByRole('button', { name: /continuar proyecto/i }).click();
-  await page.locator('.app-shell').waitFor({ state: 'visible' });
+  const launcher = example
+    ? page.getByRole('button', { name: /pórtico de ejemplo/i }).first()
+    : page.getByRole('button', { name: /continuar proyecto/i }).first();
+  await activateWelcomeLauncher(page, launcher);
 }
 
 async function loadCleanApp(page) {
@@ -133,7 +173,7 @@ async function verifyWelcomeHeaderResponsive(page) {
 // `waitUntil:'domcontentloaded'`, para medir el estado real antes de que la
 // red termine de traer nada diferido.
 async function verifyWelcomeFirstPaintMaterial() {
-  const page = await browser.newPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
+  const page = await newQaPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
   await page.goto(baseURL, { waitUntil: 'domcontentloaded' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 
@@ -398,7 +438,7 @@ async function verifyInspectorResponsiveViewports() {
 
   out.metrics.inspectorResponsive = {};
   for (const current of cases) {
-    const page = await browser.newPage({ viewport: current.size, deviceScaleFactor: 1 });
+    const page = await newQaPage({ viewport: current.size, deviceScaleFactor: 1 });
     page.on('console', msg => {
       if (['error', 'warning'].includes(msg.type())) {
         out.console.push(`inspector ${current.viewport.toLowerCase()} ${msg.type()}: ${msg.text()}`);
@@ -565,7 +605,7 @@ async function verifyResultsPhonePortraitMaterial(page) {
 }
 
 async function verifyResultsPhoneLandscapeMaterial() {
-  const page = await browser.newPage({ viewport: { width: 690, height: 390 }, deviceScaleFactor: 1 });
+  const page = await newQaPage({ viewport: { width: 690, height: 390 }, deviceScaleFactor: 1 });
   page.on('console', msg => {
     if (['error', 'warning'].includes(msg.type())) out.console.push(`results landscape ${msg.type()}: ${msg.text()}`);
   });
@@ -738,6 +778,7 @@ async function verifyWelcomeClayMaterial(page) {
 async function verifyWelcomeReducedMotionActive() {
   const context = await browser.newContext({ reducedMotion: 'reduce' });
   const page = await context.newPage();
+  await disablePwaUpdateLifecycle(page);
   await page.goto(baseURL, { waitUntil: 'networkidle' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 
@@ -776,7 +817,7 @@ async function verifyWelcomeReducedMotionActive() {
 }
 
 async function desktop() {
-  const page = await browser.newPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
+  const page = await newQaPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
   page.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`${msg.type()}: ${msg.text()}`); });
   page.on('pageerror', err => out.pageErrors.push(String(err)));
   await loadCleanApp(page);
@@ -874,8 +915,8 @@ async function desktop() {
   out.checks.memberSplit = await page.waitForFunction((expected) => (
     document.querySelectorAll('.member-object').length === expected
   ), membersBeforeSplit + 1, { timeout: 2000 }).then(() => true, () => false);
-  await page.getByLabel('Unidades').selectOption('N-mm');
-  out.checks.unitChanged = await page.getByLabel('Unidades').inputValue() === 'N-mm';
+  await setOverflowSelect(page, 'Más acciones', 'Unidades', 'N-mm');
+  out.checks.unitChanged = await page.locator('.units-select').inputValue() === 'N-mm';
   await toggleThemeFromOverflow(page, 'Más acciones', 'Tema oscuro');
   out.checks.darkTheme = await page.evaluate(() => document.documentElement.dataset.theme === 'dark');
 
@@ -897,7 +938,7 @@ async function desktop() {
   unstableProject.memberLoads = [];
   await page.close();
 
-  const mechanismPage = await browser.newPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
+  const mechanismPage = await newQaPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
   mechanismPage.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`mechanism ${msg.type()}: ${msg.text()}`); });
   mechanismPage.on('pageerror', err => out.pageErrors.push(`mechanism ${String(err)}`));
   await mechanismPage.goto(baseURL, { waitUntil: 'networkidle' });
@@ -924,12 +965,11 @@ async function desktop() {
 }
 
 async function influenceWorkflow() {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  const page = await newQaPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   page.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`influence ${msg.type()}: ${msg.text()}`); });
   page.on('pageerror', err => out.pageErrors.push(`influence ${String(err)}`));
   await loadCleanApp(page);
-  await page.getByRole('button', { name: /viga simplemente apoyada/i }).click();
-  await page.locator('.app-shell').waitFor({ state: 'visible' });
+  await activateWelcomeLauncher(page, page.getByRole('button', { name: /viga simplemente apoyada/i }).first());
   await page.getByRole('button', { name: 'Analizar', exact: true }).click();
   await page.getByRole('tab', { name: 'Influencia', exact: true }).click();
   await page.getByRole('button', { name: 'Calcular', exact: true }).click();
@@ -979,7 +1019,7 @@ async function influenceWorkflow() {
 }
 
 async function mobile() {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
+  const page = await newQaPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, hasTouch: true, isMobile: true });
   page.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`mobile ${msg.type()}: ${msg.text()}`); });
   page.on('pageerror', err => out.pageErrors.push(`mobile ${String(err)}`));
   await loadCleanApp(page);
@@ -1084,7 +1124,7 @@ async function mobile() {
 }
 
 async function educationalExample() {
-  const page = await browser.newPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
+  const page = await newQaPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
   page.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`educational ${msg.type()}: ${msg.text()}`); });
   page.on('pageerror', err => out.pageErrors.push(`educational ${String(err)}`));
   await loadCleanApp(page);

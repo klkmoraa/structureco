@@ -38,6 +38,8 @@ export interface WorkspaceCommands {
   'open-command-palette': void;
   /** Open the preventive Model Doctor surface before or after analysis. */
   'open-model-doctor': void;
+  /** Open the contextual structural-editing surface for the current selection. */
+  'open-structural-edit': void;
   /** Show a toast notification on screen. */
   'show-toast': {
     message: string;

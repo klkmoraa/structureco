@@ -2,10 +2,11 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StrictMode, useState } from 'react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultProject } from '../data/defaultProject';
 import { ProjectProvider, useProject } from './ProjectContext';
 import type { ProjectCommand } from '../commands/projectCommand';
+import { prepareStructuralEdit, type PreparedStructuralEdit } from '../data/structuralEditing';
 
 const TransactionHarness = () => {
   const {
@@ -158,6 +159,57 @@ const TopologyCommandHarness = () => {
   </>;
 };
 
+const PreparedStructuralEditHarness = () => {
+  const {
+    project,
+    analysis,
+    canUndo,
+    canRedo,
+    analyze,
+    executePreparedStructuralEdit,
+    updateProject,
+    undo,
+    redo,
+  } = useProject();
+  const [prepared, setPrepared] = useState<PreparedStructuralEdit | null>(null);
+  const [error, setError] = useState('');
+  const prepareMove = () => setPrepared(prepareStructuralEdit(project, {
+    kind: 'move', selection: { kind: 'node', id: project.nodes[0].id }, delta: { x: 2, y: -1 },
+  }));
+  const prepareNoop = () => setPrepared(prepareStructuralEdit(project, {
+    kind: 'move', selection: { kind: 'node', id: project.nodes[0].id }, delta: { x: 0, y: 0 },
+  }));
+  const apply = async () => {
+    if (!prepared) return;
+    try {
+      await executePreparedStructuralEdit(prepared);
+      setPrepared(null);
+      setError('');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'error');
+    }
+  };
+  return <>
+    <output aria-label="prepared-x">{project.nodes[0].x}</output>
+    <output aria-label="prepared-y">{project.nodes[0].y}</output>
+    <output aria-label="prepared-project-name">{project.name}</output>
+    <output aria-label="prepared-analysis">{analysis ? (analysis.success ? 'success' : 'failed') : 'none'}</output>
+    <output aria-label="prepared-can-undo">{String(canUndo)}</output>
+    <output aria-label="prepared-can-redo">{String(canRedo)}</output>
+    <output aria-label="prepared-active">{String(Boolean(prepared))}</output>
+    <output aria-label="prepared-preview-x">{prepared?.previewProject.nodes[0].x ?? ''}</output>
+    <output aria-label="prepared-error">{error}</output>
+    <button onClick={analyze}>prepared-analyze</button>
+    <button onClick={prepareMove}>prepared-create</button>
+    <button onClick={prepareNoop}>prepared-create-noop</button>
+    <button onClick={() => setPrepared(null)}>prepared-cancel</button>
+    <button onClick={apply}>prepared-apply</button>
+    <button onClick={() => updateProject((draft) => ({ ...draft, name: 'Cambio concurrente' }))}>prepared-external-change</button>
+    <button onClick={undo}>prepared-undo</button>
+    <button onClick={redo}>prepared-redo</button>
+  </>;
+};
+
 const StructuralDeleteCommandHarness = () => {
   const { project, analysis, canUndo, canRedo, analyze, executeProjectCommand, undo, redo } = useProject();
   const removeNode = async () => {
@@ -184,7 +236,10 @@ const StructuralDeleteCommandHarness = () => {
 };
 
 beforeEach(() => localStorage.clear());
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe('ProjectContext transactions', () => {
   it('records one reversible history entry for one command intention', async () => {
@@ -530,5 +585,116 @@ describe('ProjectContext mutation-policy boundaries', () => {
 
     await user.click(screen.getByText('structural-delete-redo'));
     expect(screen.getByLabelText('structural-delete-snapshot').textContent).toBe(removed);
+  });
+});
+
+describe('ProjectContext prepared structural editing', () => {
+  const renderHarness = () => {
+    const project = createDefaultProject();
+    localStorage.setItem('structureCo.project', JSON.stringify(project));
+    render(<ProjectProvider><PreparedStructuralEditHarness /></ProjectProvider>);
+    return project;
+  };
+
+  it('keeps preview and cancel outside ProjectModel, analysis and history', async () => {
+    const user = userEvent.setup();
+    const source = renderHarness();
+    const originalX = String(source.nodes[0].x);
+
+    await user.click(screen.getByText('prepared-analyze'));
+    await waitFor(() => expect(screen.getByLabelText('prepared-analysis').textContent).toBe('success'));
+    await user.click(screen.getByText('prepared-create'));
+
+    expect(screen.getByLabelText('prepared-active').textContent).toBe('true');
+    expect(screen.getByLabelText('prepared-x').textContent).toBe(originalX);
+    expect(screen.getByLabelText('prepared-preview-x').textContent).toBe(String(source.nodes[0].x + 2));
+    expect(screen.getByLabelText('prepared-analysis').textContent).toBe('success');
+    expect(screen.getByLabelText('prepared-can-undo').textContent).toBe('false');
+
+    await user.click(screen.getByText('prepared-cancel'));
+    expect(screen.getByLabelText('prepared-active').textContent).toBe('false');
+    expect(screen.getByLabelText('prepared-x').textContent).toBe(originalX);
+    expect(screen.getByLabelText('prepared-analysis').textContent).toBe('success');
+    expect(screen.getByLabelText('prepared-can-undo').textContent).toBe('false');
+  });
+
+  it('does not persist a prepared preview or cancellation, then persists exactly the confirmed result', async () => {
+    const user = userEvent.setup();
+    const source = renderHarness();
+    // Let the provider's initial compatibility save settle before observing this operation.
+    await new Promise((resolve) => window.setTimeout(resolve, 320));
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+
+    await user.click(screen.getByText('prepared-create'));
+    await user.click(screen.getByText('prepared-cancel'));
+    await new Promise((resolve) => window.setTimeout(resolve, 320));
+    const projectWritesBeforeConfirm = setItem.mock.calls.filter(([key]) =>
+      key === 'structureCo.project' || key === 'structureCo.project.backup',
+    );
+    expect(projectWritesBeforeConfirm).toHaveLength(0);
+
+    await user.click(screen.getByText('prepared-create'));
+    await user.click(screen.getByText('prepared-apply'));
+    await waitFor(() => expect(screen.getByLabelText('prepared-x').textContent).toBe(String(source.nodes[0].x + 2)));
+    await new Promise((resolve) => window.setTimeout(resolve, 320));
+
+    const projectWritesAfterConfirm = setItem.mock.calls.filter(([key]) => key === 'structureCo.project');
+    expect(projectWritesAfterConfirm.length).toBeGreaterThan(0);
+    const persisted = JSON.parse(localStorage.getItem('structureCo.project') ?? '{}') as typeof source;
+    expect(persisted.nodes[0]).toMatchObject({ x: source.nodes[0].x + 2, y: source.nodes[0].y - 1 });
+  });
+
+  it('commits one exact intent, invalidates without reanalysis, and restores exact undo/redo snapshots', async () => {
+    const user = userEvent.setup();
+    const source = renderHarness();
+    const originalX = String(source.nodes[0].x);
+    const originalY = String(source.nodes[0].y);
+
+    await user.click(screen.getByText('prepared-analyze'));
+    await waitFor(() => expect(screen.getByLabelText('prepared-analysis').textContent).toBe('success'));
+    await user.click(screen.getByText('prepared-create'));
+    const previewX = screen.getByLabelText('prepared-preview-x').textContent;
+    await user.click(screen.getByText('prepared-apply'));
+
+    await waitFor(() => expect(screen.getByLabelText('prepared-x').textContent).toBe(previewX));
+    expect(screen.getByLabelText('prepared-y').textContent).toBe(String(source.nodes[0].y - 1));
+    expect(screen.getByLabelText('prepared-analysis').textContent).toBe('none');
+    expect(screen.getByLabelText('prepared-can-undo').textContent).toBe('true');
+
+    await user.click(screen.getByText('prepared-undo'));
+    expect(screen.getByLabelText('prepared-x').textContent).toBe(originalX);
+    expect(screen.getByLabelText('prepared-y').textContent).toBe(originalY);
+    expect(screen.getByLabelText('prepared-can-undo').textContent).toBe('false');
+    expect(screen.getByLabelText('prepared-can-redo').textContent).toBe('true');
+
+    await user.click(screen.getByText('prepared-redo'));
+    expect(screen.getByLabelText('prepared-x').textContent).toBe(previewX);
+    expect(screen.getByLabelText('prepared-y').textContent).toBe(String(source.nodes[0].y - 1));
+  });
+
+  it('treats a no-op as no history and keeps a valid result', async () => {
+    const user = userEvent.setup();
+    renderHarness();
+    await user.click(screen.getByText('prepared-analyze'));
+    await waitFor(() => expect(screen.getByLabelText('prepared-analysis').textContent).toBe('success'));
+    await user.click(screen.getByText('prepared-create-noop'));
+    await user.click(screen.getByText('prepared-apply'));
+
+    expect(screen.getByLabelText('prepared-analysis').textContent).toBe('success');
+    expect(screen.getByLabelText('prepared-can-undo').textContent).toBe('false');
+  });
+
+  it('rejects a stale preview atomically after another project change', async () => {
+    const user = userEvent.setup();
+    const source = renderHarness();
+    const originalX = String(source.nodes[0].x);
+    await user.click(screen.getByText('prepared-create'));
+    await user.click(screen.getByText('prepared-external-change'));
+    expect(screen.getByLabelText('prepared-project-name').textContent).toBe('Cambio concurrente');
+
+    await user.click(screen.getByText('prepared-apply'));
+    await waitFor(() => expect(screen.getByLabelText('prepared-error').textContent).toMatch(/obsolet/i));
+    expect(screen.getByLabelText('prepared-x').textContent).toBe(originalX);
+    expect(screen.getByLabelText('prepared-project-name').textContent).toBe('Cambio concurrente');
   });
 });

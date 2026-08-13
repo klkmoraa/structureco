@@ -7,6 +7,7 @@ import {
   Delete,
   GitCommitHorizontal,
   Hand,
+  Move,
   MousePointer2,
   MoreHorizontal,
   MoveDiagonal2,
@@ -162,12 +163,21 @@ const MobileCommandPaletteButton = ({ label, accessibleLabel, onOpen }: { label:
   <kbd>Ctrl K</kbd>
 </button>;
 
+/** The portal sheet owns inertness; restore it synchronously when it closes. */
+const setAppShellMobileInert = (inert: boolean) => {
+  const background = document.querySelector<HTMLElement>('.app-shell');
+  if (!background) return;
+  background.inert = inert;
+  if (inert) background.setAttribute('aria-hidden', 'true');
+  else background.removeAttribute('aria-hidden');
+};
+
 export interface ToolBarProps {
   compact?: boolean;
 }
 
 export const ToolBar = ({ compact = false }: ToolBarProps) => {
-  const { activeTool, setActiveTool, project } = useProject();
+  const { activeTool, setActiveTool, project, selection } = useProject();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [mobileMenu, setMobileMenu] = useState<'loads' | 'more' | null>(null);
   const loadMenuButtonRef = useRef<HTMLButtonElement>(null);
@@ -186,6 +196,9 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
   const moreToolActive = TOOL_REGISTRY.some((tool) => tool.mobile === 'more' && tool.id === activeTool);
   const loadGroupHighlighted = mobileMenu ? mobileMenu === 'loads' : loadToolActive;
   const moreGroupHighlighted = mobileMenu ? mobileMenu === 'more' : moreToolActive;
+  const canEditSelection = selection?.kind === 'node'
+    || selection?.kind === 'member'
+    || (selection?.kind === 'multi' && (selection.nodeIds.length > 0 || selection.memberIds.length > 0));
 
   const selectTool = (tool: Tool) => {
     setActiveTool(tool);
@@ -199,9 +212,17 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
     emitWorkspaceCommand('open-command-palette');
   };
 
+  const openStructuralEditFromMobile = () => {
+    closeMobileMenu(false);
+    window.requestAnimationFrame(() => emitWorkspaceCommand('open-structural-edit'));
+  };
+
   const closeMobileMenu = (restoreFocus = true) => {
     const closingMenu = mobileMenu;
     setMobileMenu(null);
+    // Do not wait for the effect cleanup: the selected portal action may open
+    // an immediate canvas interaction on the following animation frame.
+    setAppShellMobileInert(false);
     if (!restoreFocus || !closingMenu) return;
     window.requestAnimationFrame(() => {
       (closingMenu === 'loads' ? loadMenuButtonRef : moreMenuButtonRef).current?.focus();
@@ -211,11 +232,7 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
   useEffect(() => {
     if (!mobileMenu) return undefined;
     const palette = paletteRef.current;
-    const background = document.querySelector<HTMLElement>('.app-shell');
-    if (background) {
-      background.inert = true;
-      background.setAttribute('aria-hidden', 'true');
-    }
+    setAppShellMobileInert(true);
     const focusFrame = window.requestAnimationFrame(() => paletteRef.current?.querySelector<HTMLButtonElement>('.mobile-palette-tool')?.focus());
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -244,10 +261,7 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
     return () => {
       window.cancelAnimationFrame(focusFrame);
       document.removeEventListener('keydown', onKeyDown);
-      if (background) {
-        background.inert = false;
-        background.removeAttribute('aria-hidden');
-      }
+      setAppShellMobileInert(false);
     };
     // closeMobileMenu intentionally captures the currently open sheet.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -265,7 +279,10 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
 
   const paletteTitle = mobileMenu === 'loads' ? t('toolbar.addLoad') : t('toolbar.moreSheetTitle');
   const paletteDescription = mobileMenu === 'loads' ? t('toolbar.loadSheetDescription') : t('toolbar.moreSheetDescription');
-  const paletteGroups = TOOL_GROUPS.filter((group) => mobilePaletteTools.some((tool) => tool.group === group.id));
+  const paletteGroups = TOOL_GROUPS.filter((group) =>
+    mobilePaletteTools.some((tool) => tool.group === group.id)
+      || (group.id === 'edit' && canEditSelection),
+  );
   const mobilePalette = mobileMenu && typeof document !== 'undefined' ? createPortal(<>
     <button type="button" className="mobile-tool-sheet-backdrop" aria-hidden="true" tabIndex={-1} onPointerDown={() => closeMobileMenu()} />
     <section
@@ -294,6 +311,18 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
             onSelect={selectTool}
           />)}
           {group.id === 'navigate' ? <MobileCommandPaletteButton label={t('palette.openShort')} accessibleLabel={t('palette.open')} onOpen={openCommandPaletteFromMobile} /> : null}
+          {group.id === 'edit' && canEditSelection ? <button
+            className="mobile-palette-tool tool-structural-edit"
+            type="button"
+            role="menuitem"
+            aria-label={t('canvas.structuralEditLauncher')}
+            onClick={openStructuralEditFromMobile}
+            data-structural-edit-command
+          >
+            <span className="mobile-palette-icon" aria-hidden="true"><Move size={23} strokeWidth={1.8} /></span>
+            <span className="mobile-palette-copy"><strong>{t('canvas.structuralEditLauncher')}</strong></span>
+            <ChevronRight size={19} aria-hidden="true" />
+          </button> : null}
         </div>)}
       </div>
     </section>
@@ -305,7 +334,7 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
         <div className="desktop-tool-list">
           {TOOL_GROUPS.map((group) => {
             const groupTools = toolsInGroup(group.id, visibleTools);
-            if (!groupTools.length) return null;
+            if (!groupTools.length && !(group.id === 'edit' && canEditSelection)) return null;
             const headingId = `tool-group-${group.id}`;
             return <section key={group.id} className={`tool-group tool-group-${group.id}`} role="group" aria-labelledby={headingId}>
               <h2 id={headingId} className="tool-group-heading">{t(group.labelKey)}</h2>
@@ -319,6 +348,15 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
                   onSelect={selectTool}
                 />)}
                 {group.id === 'navigate' ? <CommandPaletteButton label={t('palette.openShort')} accessibleLabel={t('palette.open')} compact={compact} /> : null}
+                {group.id === 'edit' && canEditSelection ? <EditorToolButton
+                  className={`tool-button tool-structural-edit${compact ? ' is-compact' : ''}`}
+                  label={t('canvas.structuralEditLauncher')}
+                  icon={<Move size={22} strokeWidth={1.8} />}
+                  tone="structure"
+                  compact={compact}
+                  onClick={() => emitWorkspaceCommand('open-structural-edit')}
+                  data-structural-edit-command
+                /> : null}
               </div>
             </section>;
           })}
