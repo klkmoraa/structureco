@@ -61,124 +61,124 @@ const COORDINATE_SYSTEMS = optionsOf<LoadCoordinateSystem>({ global: true, local
 const LENGTH_BASES = optionsOf<LoadLengthBasis>({ real: true, horizontal: true, vertical: true });
 
 const nodalLoadProperties: readonly BulkNodalLoadPropertyDescriptor[] = [
-  { id: 'nodalLoad.caseId', entity: 'nodalLoad', kind: 'enum', editable: true, clearable: false, read: (load) => load.caseId },
-  { id: 'nodalLoad.fx', entity: 'nodalLoad', kind: 'number', editable: true, clearable: false, quantity: 'force', read: (load) => load.fx },
-  { id: 'nodalLoad.fy', entity: 'nodalLoad', kind: 'number', editable: true, clearable: false, quantity: 'force', read: (load) => load.fy },
-  { id: 'nodalLoad.mz', entity: 'nodalLoad', kind: 'number', editable: true, clearable: false, quantity: 'moment', read: (load) => load.mz },
+  { id: 'nodalLoad.caseId', group: 'load.nodal', entity: 'nodalLoad', kind: 'enum', editable: true, clearable: false, read: (load) => load.caseId },
+  { id: 'nodalLoad.fx', group: 'load.nodal', entity: 'nodalLoad', kind: 'number', editable: true, clearable: false, quantity: 'force', read: (load) => load.fx },
+  { id: 'nodalLoad.fy', group: 'load.nodal', entity: 'nodalLoad', kind: 'number', editable: true, clearable: false, quantity: 'force', read: (load) => load.fy },
+  { id: 'nodalLoad.mz', group: 'load.nodal', entity: 'nodalLoad', kind: 'number', editable: true, clearable: false, quantity: 'moment', read: (load) => load.mz },
 ];
 
 const memberLoadProperties: readonly BulkMemberLoadPropertyDescriptor[] = [
-  { id: 'memberLoad.caseId', entity: 'memberLoad', kind: 'enum', editable: true, clearable: false, read: (load) => load.caseId },
+  { id: 'memberLoad.caseId', group: 'load.member', entity: 'memberLoad', kind: 'enum', editable: true, clearable: false, read: (load) => load.caseId },
   {
-    id: 'memberLoad.coordinateSystem', entity: 'memberLoad', kind: 'enum', editable: true, clearable: false,
+    id: 'memberLoad.coordinateSystem', group: 'load.distributedPoint', entity: 'memberLoad', kind: 'enum', editable: true, clearable: false,
     options: COORDINATE_SYSTEMS, ineligible: loadFamily('distributed', 'point'), read: (load) => load.coordinateSystem,
   },
   {
-    id: 'memberLoad.lengthBasis', entity: 'memberLoad', kind: 'enum', editable: true, clearable: false,
+    id: 'memberLoad.lengthBasis', group: 'load.distributed', entity: 'memberLoad', kind: 'enum', editable: true, clearable: false,
     options: LENGTH_BASES, ineligible: loadFamily('distributed'), read: (load) => load.lengthBasis,
   },
-  { id: 'memberLoad.start', entity: 'memberLoad', kind: 'number', editable: true, clearable: false, unit: 'x/L', ineligible: loadFamily('distributed'), read: (load) => load.start },
-  { id: 'memberLoad.end', entity: 'memberLoad', kind: 'number', editable: true, clearable: false, unit: 'x/L', ineligible: loadFamily('distributed'), read: (load) => load.end },
-  { id: 'memberLoad.qxStart', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'distributedForce', ineligible: loadFamily('distributed'), read: (load) => load.qxStart },
-  { id: 'memberLoad.qxEnd', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'distributedForce', ineligible: loadFamily('distributed'), read: (load) => load.qxEnd },
-  { id: 'memberLoad.qyStart', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'distributedForce', ineligible: loadFamily('distributed'), read: (load) => load.qyStart },
-  { id: 'memberLoad.qyEnd', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'distributedForce', ineligible: loadFamily('distributed'), read: (load) => load.qyEnd },
-  { id: 'memberLoad.position', entity: 'memberLoad', kind: 'number', editable: true, clearable: false, unit: 'x/L', ineligible: loadFamily('point', 'moment'), read: (load) => load.position },
-  { id: 'memberLoad.px', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'force', ineligible: loadFamily('point'), read: (load) => load.px },
-  { id: 'memberLoad.py', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'force', ineligible: loadFamily('point'), read: (load) => load.py },
-  { id: 'memberLoad.moment', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'moment', ineligible: loadFamily('moment'), read: (load) => load.moment },
+  { id: 'memberLoad.start', group: 'load.distributed', entity: 'memberLoad', kind: 'number', editable: true, clearable: false, unit: 'x/L', ineligible: loadFamily('distributed'), read: (load) => load.start },
+  { id: 'memberLoad.end', group: 'load.distributed', entity: 'memberLoad', kind: 'number', editable: true, clearable: false, unit: 'x/L', ineligible: loadFamily('distributed'), read: (load) => load.end },
+  { id: 'memberLoad.qxStart', group: 'load.distributed', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'distributedForce', ineligible: loadFamily('distributed'), read: (load) => load.qxStart },
+  { id: 'memberLoad.qxEnd', group: 'load.distributed', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'distributedForce', ineligible: loadFamily('distributed'), read: (load) => load.qxEnd },
+  { id: 'memberLoad.qyStart', group: 'load.distributed', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'distributedForce', ineligible: loadFamily('distributed'), read: (load) => load.qyStart },
+  { id: 'memberLoad.qyEnd', group: 'load.distributed', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'distributedForce', ineligible: loadFamily('distributed'), read: (load) => load.qyEnd },
+  { id: 'memberLoad.position', group: 'load.pointMoment', entity: 'memberLoad', kind: 'number', editable: true, clearable: false, unit: 'x/L', ineligible: loadFamily('point', 'moment'), read: (load) => load.position },
+  { id: 'memberLoad.px', group: 'load.point', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'force', ineligible: loadFamily('point'), read: (load) => load.px },
+  { id: 'memberLoad.py', group: 'load.point', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'force', ineligible: loadFamily('point'), read: (load) => load.py },
+  { id: 'memberLoad.moment', group: 'load.moment', entity: 'memberLoad', kind: 'number', editable: true, clearable: true, quantity: 'moment', ineligible: loadFamily('moment'), read: (load) => load.moment },
 ];
 
 const memberProperties: readonly BulkMemberPropertyDescriptor[] = [
   {
-    id: 'member.type', entity: 'member', kind: 'enum', editable: true, clearable: false,
+    id: 'member.type', group: 'member', entity: 'member', kind: 'enum', editable: true, clearable: false,
     options: MEMBER_TYPES,
     read: (member) => member.type,
   },
   {
-    id: 'member.materialId', entity: 'member', kind: 'material', editable: true, clearable: false,
+    id: 'member.materialId', group: 'member', entity: 'member', kind: 'material', editable: true, clearable: false,
     ineligible: notRigid,
     read: (member) => member.materialId,
   },
   {
-    id: 'member.materialOrigin', entity: 'member', kind: 'enum', editable: false, clearable: false,
+    id: 'member.materialOrigin', group: 'member', entity: 'member', kind: 'enum', editable: false, clearable: false,
     options: PROPERTY_ORIGINS,
     ineligible: notRigid,
     read: (member) => member.materialOrigin,
   },
   {
-    id: 'member.sectionId', entity: 'member', kind: 'section', editable: true, clearable: false,
+    id: 'member.sectionId', group: 'member', entity: 'member', kind: 'section', editable: true, clearable: false,
     ineligible: notRigid,
     read: (member) => member.sectionId,
   },
   {
-    id: 'member.sectionOrigin', entity: 'member', kind: 'enum', editable: false, clearable: false,
+    id: 'member.sectionOrigin', group: 'member', entity: 'member', kind: 'enum', editable: false, clearable: false,
     options: PROPERTY_ORIGINS,
     ineligible: notRigid,
     read: (member) => member.sectionOrigin,
   },
   {
-    id: 'member.E', entity: 'member', kind: 'number', editable: true, clearable: false,
+    id: 'member.E', group: 'member', entity: 'member', kind: 'number', editable: true, clearable: false,
     quantity: 'elasticModulus', ineligible: notRigid,
     read: (member) => member.E,
   },
   {
-    id: 'member.A', entity: 'member', kind: 'number', editable: true, clearable: false,
+    id: 'member.A', group: 'member', entity: 'member', kind: 'number', editable: true, clearable: false,
     quantity: 'area', ineligible: notRigid,
     read: (member) => member.A,
   },
   {
-    id: 'member.I', entity: 'member', kind: 'number', editable: true, clearable: false,
+    id: 'member.I', group: 'member', entity: 'member', kind: 'number', editable: true, clearable: false,
     quantity: 'inertia', ineligible: notRigid,
     read: (member) => member.I,
   },
   {
-    id: 'member.G', entity: 'member', kind: 'number', editable: true, clearable: true,
+    id: 'member.G', group: 'member', entity: 'member', kind: 'number', editable: true, clearable: true,
     quantity: 'elasticModulus', ineligible: notRigid,
     read: (member) => member.G,
   },
   {
-    id: 'member.shearArea', entity: 'member', kind: 'number', editable: true, clearable: true,
+    id: 'member.shearArea', group: 'member', entity: 'member', kind: 'number', editable: true, clearable: true,
     quantity: 'area', ineligible: frameOnly,
     read: (member) => member.shearArea,
   },
   {
-    id: 'member.density', entity: 'member', kind: 'number', editable: true, clearable: true,
+    id: 'member.density', group: 'member', entity: 'member', kind: 'number', editable: true, clearable: true,
     quantity: 'density', ineligible: notRigid,
     read: (member) => member.density,
   },
   {
-    id: 'member.beamTheory', entity: 'member', kind: 'enum', editable: true, clearable: true,
+    id: 'member.beamTheory', group: 'member', entity: 'member', kind: 'enum', editable: true, clearable: true,
     options: BEAM_THEORIES, ineligible: frameOnly,
     read: (member) => member.beamTheory,
   },
   {
-    id: 'member.releases.iMoment', entity: 'member', kind: 'boolean', editable: true, clearable: true,
+    id: 'member.releases.iMoment', group: 'member', entity: 'member', kind: 'boolean', editable: true, clearable: true,
     ineligible: frameOnly,
     read: (member) => member.releases?.iMoment,
   },
   {
-    id: 'member.releases.jMoment', entity: 'member', kind: 'boolean', editable: true, clearable: true,
+    id: 'member.releases.jMoment', group: 'member', entity: 'member', kind: 'boolean', editable: true, clearable: true,
     ineligible: frameOnly,
     read: (member) => member.releases?.jMoment,
   },
   {
-    id: 'member.rotationalSpringI', entity: 'member', kind: 'number', editable: true, clearable: true,
+    id: 'member.rotationalSpringI', group: 'member', entity: 'member', kind: 'number', editable: true, clearable: true,
     quantity: 'rotationalStiffness', ineligible: frameOnly,
     read: (member) => member.rotationalSpringI,
   },
   {
-    id: 'member.rotationalSpringJ', entity: 'member', kind: 'number', editable: true, clearable: true,
+    id: 'member.rotationalSpringJ', group: 'member', entity: 'member', kind: 'number', editable: true, clearable: true,
     quantity: 'rotationalStiffness', ineligible: frameOnly,
     read: (member) => member.rotationalSpringJ,
   },
   {
-    id: 'member.rigidOffsetI', entity: 'member', kind: 'number', editable: true, clearable: true,
+    id: 'member.rigidOffsetI', group: 'member', entity: 'member', kind: 'number', editable: true, clearable: true,
     quantity: 'length', ineligible: frameOnly,
     read: (member) => member.rigidOffsetI,
   },
   {
-    id: 'member.rigidOffsetJ', entity: 'member', kind: 'number', editable: true, clearable: true,
+    id: 'member.rigidOffsetJ', group: 'member', entity: 'member', kind: 'number', editable: true, clearable: true,
     quantity: 'length', ineligible: frameOnly,
     read: (member) => member.rigidOffsetJ,
   },
@@ -186,32 +186,32 @@ const memberProperties: readonly BulkMemberPropertyDescriptor[] = [
 
 const nodeProperties: readonly BulkNodePropertyDescriptor[] = [
   {
-    id: 'node.support.type', entity: 'node', kind: 'enum', editable: true, clearable: false,
+    id: 'node.support.type', group: 'node', entity: 'node', kind: 'enum', editable: true, clearable: false,
     options: SUPPORT_TYPES,
     read: (node) => node.support.type,
   },
   {
-    id: 'node.support.angleDeg', entity: 'node', kind: 'number', editable: true, clearable: true,
+    id: 'node.support.angleDeg', group: 'node', entity: 'node', kind: 'number', editable: true, clearable: true,
     unit: '°', ineligible: rollerOnly,
     read: (node) => node.support.angleDeg,
   },
   {
-    id: 'node.support.restrainX', entity: 'node', kind: 'boolean', editable: true, clearable: true,
+    id: 'node.support.restrainX', group: 'node', entity: 'node', kind: 'boolean', editable: true, clearable: true,
     ineligible: customSupportOnly,
     read: (node) => node.support.restrainX,
   },
   {
-    id: 'node.support.restrainY', entity: 'node', kind: 'boolean', editable: true, clearable: true,
+    id: 'node.support.restrainY', group: 'node', entity: 'node', kind: 'boolean', editable: true, clearable: true,
     ineligible: customSupportOnly,
     read: (node) => node.support.restrainY,
   },
   {
-    id: 'node.support.restrainR', entity: 'node', kind: 'boolean', editable: true, clearable: true,
+    id: 'node.support.restrainR', group: 'node', entity: 'node', kind: 'boolean', editable: true, clearable: true,
     ineligible: customSupportOnly,
     read: (node) => node.support.restrainR,
   },
   {
-    id: 'node.internalHinge', entity: 'node', kind: 'boolean', editable: true, clearable: true,
+    id: 'node.internalHinge', group: 'node', entity: 'node', kind: 'boolean', editable: true, clearable: true,
     read: (node) => node.internalHinge,
   },
 ];

@@ -27,11 +27,14 @@ export const BulkChangeSummary = ({
   rows,
   units,
   language,
+  /** La revisión abre siempre desplegado lo que no cambia; el panel lo pliega. */
+  expandUntouched = false,
 }: {
   aggregate: BulkSelectionAggregate;
   rows: readonly BulkChangeSummaryRow[];
   units: UnitSystemId;
   language: Language;
+  expandUntouched?: boolean;
 }) => {
   const t = createBulkEditTranslator(language);
   const context: BulkFormatContext = { t, language, units };
@@ -62,16 +65,19 @@ export const BulkChangeSummary = ({
             </span>
             <small>
               {row.affected === 1 ? t('changes.affectedOne') : t('changes.affected', { count: row.affected })}
+              {/* Cuántos quedan fuera **y por qué**: un número solo obliga a
+                  volver al campo para averiguar la causa. */}
               {row.skipped > 0
                 ? ` · ${row.skipped === 1 ? t('changes.skippedOne') : t('changes.skipped', { count: row.skipped })}`
                 : ''}
+              {row.reasons.map((reason) => ` · ${t(`reason.${reason}`)}`).join('')}
             </small>
           </dd>
         </div>;
       })}
     </dl> : null}
 
-    {untouched > 0 ? <details className="bulk-changes__untouched" data-testid="bulk-changes-untouched">
+    {untouched > 0 ? <details className="bulk-changes__untouched" data-testid="bulk-changes-untouched" open={expandUntouched}>
       <summary>{untouched === 1 ? t('changes.unchangedCountOne') : t('changes.unchangedCount', { count: untouched })}</summary>
       <ul>
         {rows.filter((row) => row.status === 'unchanged').map((row) => <li key={row.property} data-property={row.property}>

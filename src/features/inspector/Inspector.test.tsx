@@ -380,7 +380,9 @@ describe('Inspector selection variants', () => {
     const panel = screen.getByRole('region', { name: 'Edición múltiple' });
     expect(within(panel).getByText('3 objetos seleccionados')).toBeTruthy();
     expect(screen.getByTestId('bulk-changes-count').textContent).toBe('Ningún cambio preparado');
-    expect((screen.getByRole('button', { name: 'Aplicar' }) as HTMLButtonElement).disabled).toBe(true);
+    // Sin nada preparado no se puede ni abrir la revisión, así que tampoco
+    // llegar a la confirmación.
+    expect((screen.getByRole('button', { name: 'Revisar cambios' }) as HTMLButtonElement).disabled).toBe(true);
   });
 });
 

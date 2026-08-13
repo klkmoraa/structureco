@@ -104,11 +104,16 @@ describe('bulk load edit', () => {
     const project = projectOf([nodal('NL1')], [point('ML1')]);
     const aggregate = aggregateOf(project);
 
-    expect(findBulkProperty(aggregate, 'nodalLoad.fy').compatibility.compatible.map((t) => t.id)).toEqual(['NL1']);
+    const nodal_fy = findBulkProperty(aggregate, 'nodalLoad.fy');
+    expect(nodal_fy.compatibility.compatible.map((t) => t.id)).toEqual(['NL1']);
     expect(findBulkProperty(aggregate, 'memberLoad.py').compatibility.compatible.map((t) => t.id)).toEqual(['ML1']);
-    // Todo lo que no es carga nodal queda fuera por ser de otra familia.
-    expect(new Set(findBulkProperty(aggregate, 'nodalLoad.fy').compatibility.incompatible
-      .map((entry) => entry.reason))).toEqual(new Set(['entity-kind']));
+    // Una carga de miembro no entra en el reparto de una propiedad nodal: ni
+    // como compatible ni como rechazo. El denominador es la familia nodal.
+    expect(nodal_fy.compatibility).toEqual({
+      selected: 1,
+      compatible: [{ kind: 'nodalLoad', id: 'NL1' }],
+      incompatible: [],
+    });
   });
 
   it('edits the magnitude of every compatible load in one command', () => {

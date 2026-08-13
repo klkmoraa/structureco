@@ -21,6 +21,8 @@
     "qa": "npm run build && node qa.mjs",
     "qa:topbar": "npm run build && node scripts/qa-topbar.mjs",
     "qa:model-doctor": "npm run build && node scripts/qa-model-doctor.mjs",
+    "qa:bulk-edit": "npm run build && node scripts/qa-bulk-edit.mjs",
+    "qa:bulk-edit:webkit": "npm run build && node scripts/qa-bulk-edit.mjs --webkit",
     "qa:structural-edits": "npm run build && node scripts/qa-structural-edits.mjs",
     "qa:structural-edits:webkit": "npm run build && node scripts/qa-structural-edits.mjs --webkit",
     "qa:webkit": "npm run build && node qa-webkit.mjs"

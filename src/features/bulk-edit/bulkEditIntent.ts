@@ -135,7 +135,7 @@ export const buildBulkChangeSummary = (
 ): readonly BulkChangeSummaryRow[] => editableBulkProperties(aggregate).map((state) => {
   const change = draft[state.id];
   if (!change || !canStageBulkChange(state, change)) {
-    return { property: state.id, status: 'unchanged', current: state.value, affected: 0, skipped: 0 };
+    return { property: state.id, status: 'unchanged', current: state.value, affected: 0, skipped: 0, reasons: [] };
   }
   return {
     property: state.id,
@@ -144,5 +144,8 @@ export const buildBulkChangeSummary = (
     next: change.kind === 'set' ? change.value : undefined,
     affected: state.compatibility.compatible.length,
     skipped: state.compatibility.incompatible.length,
+    // El motivo viaja con la fila: la revisión tiene que poder decir por qué
+    // queda alguien fuera sin volver a recorrer la compatibilidad.
+    reasons: [...new Set(state.compatibility.incompatible.map((entry) => entry.reason))],
   };
 });

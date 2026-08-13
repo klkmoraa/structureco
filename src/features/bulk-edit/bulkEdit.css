@@ -56,17 +56,83 @@
   line-height: calc(var(--sc-control-height-sm) - 2 * var(--sc-border-width));
 }
 
-.bulk-summary__chip.is-incompatible {
-  border-color: var(--sc-color-state-warning);
+/* El aviso de incompatibles viaja dentro de su propia ficha de familia: un
+   recuento suelto no dice a qué familia pertenece. */
+.bulk-summary__incompatible {
+  margin-inline-start: var(--sc-space-1);
   color: var(--sc-color-state-warning-foreground);
+  font-style: normal;
 }
+
+.bulk-summary__chip:has(.bulk-summary__incompatible) { border-color: var(--sc-color-state-warning); }
+
+/* --- Filtro de alcance --- */
+
+.bulk-edit-panel__scope { display: grid; gap: var(--sc-space-1); }
+/* Mismo motivo y misma especificidad elevada que en el booleano. */
+.bulk-edit-panel__scope .bulk-edit-panel__scope-control { width: 100%; grid-auto-columns: minmax(0, 1fr); }
+
+.bulk-edit-panel__scope .bulk-edit-panel__scope-control button {
+  min-height: var(--sc-control-height-touch);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bulk-edit-panel__scope-hint { color: var(--sc-color-text-muted); font-size: var(--sc-font-size-label); line-height: var(--sc-line-height-compact); }
+
+/* --- Grupos de propiedades --- */
+
+.bulk-edit-panel__groups { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sc-space-4); }
+.bulk-edit-panel__group { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: var(--sc-space-3); }
+
+.bulk-edit-panel__group-title {
+  margin: 0;
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-label);
+  text-transform: uppercase;
+  letter-spacing: var(--sc-tracking-eyebrow);
+}
+
+/* --- Revisión --- */
+
+.bulk-review { display: grid; gap: var(--sc-space-3); }
+
+.bulk-review__title {
+  margin: 0;
+  font-size: var(--sc-font-size-control);
+  font-weight: var(--sc-font-weight-semibold);
+}
+
+.bulk-review__incompatible {
+  margin: 0;
+  padding: var(--sc-space-2) var(--sc-space-3);
+  border-inline-start: 3px solid var(--sc-color-state-warning);
+  border-radius: var(--sc-radius-sm);
+  background: var(--sc-color-surface-inset);
+  color: var(--sc-color-state-warning-foreground);
+  font-size: var(--sc-font-size-label);
+  line-height: var(--sc-line-height-compact);
+}
+
 
 /* --- Campos --- */
 
-.bulk-edit-panel__properties { display: grid; gap: var(--sc-space-3); }
+/*
+ * Una rejilla dimensiona sus columnas al `min-content` de los hijos salvo que se
+ * le diga otra cosa, así que sin `minmax(0, 1fr)` el panel no puede encogerse
+ * por debajo del campo más ancho: en un Inspector acoplado de ~284 px eso
+ * desbordaba el panel en 33 px y aparecía una barra horizontal.
+ */
+.bulk-edit-panel__properties {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sc-space-3);
+}
 
 .bulk-field {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: var(--sc-space-2);
   padding: var(--sc-space-3);
   border: var(--sc-border-width) solid var(--sc-color-border-soft);
@@ -97,6 +163,37 @@
 
 .bulk-field__current small { color: var(--sc-color-text-muted); }
 
+/*
+ * Indicador tri-estado del valor actual de un booleano. No recibe foco ni
+ * puntero: informa, no decide. La marca de `mixed` es una barra —no un tick a
+ * medias—, porque «varios» no es «casi sí».
+ */
+.bulk-field__current-state {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 0.85em;
+  height: 0.85em;
+  border: var(--sc-border-width) solid var(--sc-color-border);
+  border-radius: var(--sc-radius-xs);
+  background: var(--sc-color-surface-input);
+}
+
+.bulk-field__current-state[aria-checked='true'] {
+  border-color: var(--sc-color-action-primary);
+  background: var(--sc-color-action-primary);
+}
+
+.bulk-field__current-state[aria-checked='mixed'] { border-color: var(--sc-color-text-technical); }
+
+.bulk-field__current-state[aria-checked='mixed']::after {
+  content: '';
+  position: absolute;
+  inset: 35% 15%;
+  border-radius: var(--sc-radius-xs);
+  background: var(--sc-color-text-technical);
+}
+
 .bulk-field__control { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sc-space-2); }
 
 .bulk-field__select,
@@ -119,10 +216,25 @@
 .bulk-field__input[aria-invalid='true'] { border-color: var(--sc-color-state-error); }
 
 .bulk-field__segmented-wrap { flex: 1 1 100%; min-width: 0; }
-.bulk-field__segmented { width: 100%; }
+/*
+ * El control segmentado del design system reparte sus columnas por `max-content`
+ * y no deja que el texto salte de linea; su unica regla de encogido depende del
+ * ancho de la ventana, que no describe el ancho del Inspector. En un costado
+ * estrecho de una ventana ancha, los cuatro segmentos de un booleano
+ * («Sin cambios / Si / No / Borrar valor») desbordaban el panel. Aqui las
+ * columnas pueden encogerse y el texto se recorta, sin tocar el design system.
+ */
+/* Se sube la especificidad a propósito: la regla base del design system declara
+   `minmax(max-content, 1fr)` con la misma, y gana la que se cargue después. */
+.bulk-field__segmented-wrap .bulk-field__segmented { width: 100%; grid-auto-columns: minmax(0, 1fr); }
 /* El control segmentado del design system usa la altura `md`; en este panel,
    pensado también para una hoja movil, sube al objetivo tactil. */
-.bulk-field__segmented button { min-height: var(--sc-control-height-touch); }
+.bulk-field__segmented-wrap .bulk-field__segmented button {
+  min-height: var(--sc-control-height-touch);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .bulk-field__action {
   display: inline-flex;

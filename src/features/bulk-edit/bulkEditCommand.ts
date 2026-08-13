@@ -55,19 +55,49 @@ const boolean = (change: BulkStagedChange): boolean | null =>
   change.kind === 'clear' ? null : Boolean(change.value);
 
 /**
+ * Entradas del borrador que de verdad se pueden aplicar, con su conjunto de
+ * objetivos ya indexado.
+ *
+ * Se resuelve **una vez** por preparación. Antes, cada entidad volvía a buscar
+ * su propiedad recorriendo el registro y luego comprobaba su compatibilidad
+ * recorriendo la lista de objetivos: con la selección entera dentro de esa
+ * lista, el coste crecía con el cuadrado del tamaño de la selección. Medido
+ * sobre esta misma rama, preparar pasaba de 62 ms con 600 objetos a 473 ms con
+ * 2400 — casi ocho veces más por cuadruplicar la selección.
+ */
+interface ResolvedBulkChange {
+  id: BulkPropertyId;
+  entity: BulkEntityKind;
+  change: BulkStagedChange;
+  targets: ReadonlySet<string>;
+}
+
+const resolveDraft = (
+  aggregate: BulkSelectionAggregate,
+  draft: BulkEditDraft,
+): readonly ResolvedBulkChange[] => (Object.entries(draft) as [BulkPropertyId, BulkStagedChange][])
+  .flatMap(([id, change]) => {
+    const state = findBulkProperty(aggregate, id);
+    if (!canStageBulkChange(state, change)) return [];
+    return [{
+      id,
+      entity: state.entity,
+      change,
+      targets: new Set(state.compatibility.compatible.map((target) => target.id)),
+    }];
+  });
+
+/**
  * Cambios que corresponden a un miembro concreto. Una propiedad que ese miembro
  * no admite no entra: se queda en `skipped` con su motivo, nunca se escribe.
  */
 const changesForMember = (
-  aggregate: BulkSelectionAggregate,
-  draft: BulkEditDraft,
+  resolved: readonly ResolvedBulkChange[],
   memberId: string,
 ): MemberBulkChanges => {
   const changes: MemberBulkChanges = {};
-  for (const [id, change] of Object.entries(draft) as [BulkPropertyId, BulkStagedChange][]) {
-    const state = findBulkProperty(aggregate, id);
-    if (!canStageBulkChange(state, change)) continue;
-    if (!state.compatibility.compatible.some((target) => target.kind === 'member' && target.id === memberId)) continue;
+  for (const { id, change, targets } of resolved) {
+    if (!targets.has(memberId)) continue;
 
     switch (id) {
       case 'member.type':
@@ -119,15 +149,12 @@ const changesForMember = (
 
 /** Cambios que corresponden a un nudo concreto, con la misma regla de elegibilidad. */
 const changesForNode = (
-  aggregate: BulkSelectionAggregate,
-  draft: BulkEditDraft,
+  resolved: readonly ResolvedBulkChange[],
   nodeId: string,
 ): NodeBulkChanges => {
   const changes: NodeBulkChanges = {};
-  for (const [id, change] of Object.entries(draft) as [BulkPropertyId, BulkStagedChange][]) {
-    const state = findBulkProperty(aggregate, id);
-    if (!canStageBulkChange(state, change)) continue;
-    if (!state.compatibility.compatible.some((target) => target.kind === 'node' && target.id === nodeId)) continue;
+  for (const { id, change, targets } of resolved) {
+    if (!targets.has(nodeId)) continue;
 
     switch (id) {
       case 'node.support.type':
@@ -149,15 +176,12 @@ const changesForNode = (
 
 /** Cambios de una carga nodal; nunca alcanzan a una carga de miembro. */
 const changesForNodalLoad = (
-  aggregate: BulkSelectionAggregate,
-  draft: BulkEditDraft,
+  resolved: readonly ResolvedBulkChange[],
   loadId: string,
 ): NodalLoadBulkChanges => {
   const changes: NodalLoadBulkChanges = {};
-  for (const [id, change] of Object.entries(draft) as [BulkPropertyId, BulkStagedChange][]) {
-    const state = findBulkProperty(aggregate, id);
-    if (!canStageBulkChange(state, change)) continue;
-    if (!state.compatibility.compatible.some((target) => target.kind === 'nodalLoad' && target.id === loadId)) continue;
+  for (const { id, change, targets } of resolved) {
+    if (!targets.has(loadId)) continue;
     if (change.kind !== 'set') continue;
 
     switch (id) {
@@ -173,15 +197,12 @@ const changesForNodalLoad = (
 
 /** Cambios de una carga de miembro, ya acotados a su familia por la elegibilidad. */
 const changesForMemberLoad = (
-  aggregate: BulkSelectionAggregate,
-  draft: BulkEditDraft,
+  resolved: readonly ResolvedBulkChange[],
   loadId: string,
 ): MemberLoadBulkChanges => {
   const changes: MemberLoadBulkChanges = {};
-  for (const [id, change] of Object.entries(draft) as [BulkPropertyId, BulkStagedChange][]) {
-    const state = findBulkProperty(aggregate, id);
-    if (!canStageBulkChange(state, change)) continue;
-    if (!state.compatibility.compatible.some((target) => target.kind === 'memberLoad' && target.id === loadId)) continue;
+  for (const { id, change, targets } of resolved) {
+    if (!targets.has(loadId)) continue;
 
     switch (id) {
       case 'memberLoad.caseId': if (change.kind === 'set') changes.caseId = String(change.value); break;
@@ -207,12 +228,13 @@ const changesForMemberLoad = (
   return changes;
 };
 
-/** Una entidad está en la selección si alguna propiedad la clasificó, compatible o no. */
-const isSelected = (aggregate: BulkSelectionAggregate, kind: BulkEntityKind, id: string): boolean =>
-  aggregate.properties.some((property) => property.compatibility.compatible
-    .some((target) => target.kind === kind && target.id === id)
-    || property.compatibility.incompatible
-      .some((entry) => entry.target.kind === kind && entry.target.id === id));
+/**
+ * Una entidad está en el alcance si la agregación la enumeró. Se lee del alcance
+ * explícito y no de los rechazos de alguna propiedad: deducirlo de un rechazo
+ * ataba la respuesta a que existiera una propiedad que rechazara esa familia.
+ */
+const scopeIndex = (aggregate: BulkSelectionAggregate): ReadonlySet<string> =>
+  new Set(aggregate.targets.map((target) => `${target.kind}:${target.id}`));
 
 const hasChanges = (changes: object): boolean => Object.keys(changes).length > 0;
 
@@ -227,15 +249,26 @@ export const prepareBulkEdit = (
   draft: BulkEditDraft,
   description: string,
 ): PreparedBulkEdit => {
+  // Un índice por preparación, no una búsqueda por entidad.
+  const scope = scopeIndex(aggregate);
+  const resolved = resolveDraft(aggregate, draft);
+  // Se reparte por la familia declarada en el descriptor, no por el prefijo del
+  // identificador: `memberLoad.*` no es una propiedad de miembro.
+  const byEntity = (kind: BulkEntityKind) => resolved.filter((entry) => entry.entity === kind);
+  const memberChanges = byEntity('member');
+  const nodeChanges = byEntity('node');
+  const nodalLoadChanges = byEntity('nodalLoad');
+  const memberLoadChanges = byEntity('memberLoad');
+
   const groups = new Map<string, { changes: MemberBulkChanges; memberIds: string[] }>();
   const affected: BulkTargetRef[] = [];
   const skipped: BulkTargetRef[] = [];
 
   for (const member of project.members) {
     const target: BulkTargetRef = { kind: 'member', id: member.id };
-    if (!isSelected(aggregate, 'member', member.id)) continue;
+    if (!scope.has(`member:${member.id}`)) continue;
 
-    const changes = changesForMember(aggregate, draft, member.id);
+    const changes = changesForMember(memberChanges, member.id);
     if (!hasChanges(changes)) {
       skipped.push(target);
       continue;
@@ -250,9 +283,9 @@ export const prepareBulkEdit = (
   const nodeGroups = new Map<string, { changes: NodeBulkChanges; nodeIds: string[] }>();
   for (const node of project.nodes) {
     const target: BulkTargetRef = { kind: 'node', id: node.id };
-    if (!isSelected(aggregate, 'node', node.id)) continue;
+    if (!scope.has(`node:${node.id}`)) continue;
 
-    const changes = changesForNode(aggregate, draft, node.id);
+    const changes = changesForNode(nodeChanges, node.id);
     if (!hasChanges(changes)) {
       skipped.push(target);
       continue;
@@ -266,9 +299,9 @@ export const prepareBulkEdit = (
 
   const nodalLoadGroups = new Map<string, { changes: NodalLoadBulkChanges; loadIds: string[] }>();
   for (const load of project.nodalLoads) {
-    if (!isSelected(aggregate, 'nodalLoad', load.id)) continue;
+    if (!scope.has(`nodalLoad:${load.id}`)) continue;
     const target: BulkTargetRef = { kind: 'nodalLoad', id: load.id };
-    const changes = changesForNodalLoad(aggregate, draft, load.id);
+    const changes = changesForNodalLoad(nodalLoadChanges, load.id);
     if (!hasChanges(changes)) {
       skipped.push(target);
       continue;
@@ -282,9 +315,9 @@ export const prepareBulkEdit = (
 
   const memberLoadGroups = new Map<string, { changes: MemberLoadBulkChanges; loadIds: string[] }>();
   for (const load of project.memberLoads) {
-    if (!isSelected(aggregate, 'memberLoad', load.id)) continue;
+    if (!scope.has(`memberLoad:${load.id}`)) continue;
     const target: BulkTargetRef = { kind: 'memberLoad', id: load.id };
-    const changes = changesForMemberLoad(aggregate, draft, load.id);
+    const changes = changesForMemberLoad(memberLoadChanges, load.id);
     if (!hasChanges(changes)) {
       skipped.push(target);
       continue;

@@ -78,6 +78,13 @@ const Seed = ({ members }: { members: MemberModel[] }) => {
   return <button type="button" onClick={() => replaceProject(next)}>sembrar</button>;
 };
 
+/** Prepara → revisa → confirma: aplicar exige pasar por la revisión. */
+const confirm = async (user: ReturnType<typeof setup>) => {
+  await user.click(screen.getByRole('button', { name: /^Revisar cambios/ }));
+  const review = screen.getByRole('region', { name: 'Revisar cambios' });
+  await user.click(within(review).getByRole('button', { name: /^Aplicar/ }));
+};
+
 const select = async (user: ReturnType<typeof setup>) => {
   await user.click(screen.getByRole('button', { name: 'sembrar' }));
   await user.click(screen.getByRole('button', { name: 'seleccionar' }));
@@ -94,7 +101,7 @@ describe('BulkEditInspectorPanel', () => {
     await select(user);
 
     await user.selectOptions(screen.getByLabelText('Sección'), 'w12x53');
-    await user.click(screen.getByRole('button', { name: /^Aplicar a 3/ }));
+    await confirm(user);
 
     await waitFor(() => expect(harness.project().members[0].sectionId).toBe('w12x53'));
     for (const item of harness.project().members) {
@@ -113,7 +120,7 @@ describe('BulkEditInspectorPanel', () => {
     await select(user);
 
     await user.selectOptions(screen.getByLabelText('Sección'), 'w12x53');
-    await user.click(screen.getByRole('button', { name: /^Aplicar a 3/ }));
+    await confirm(user);
     await waitFor(() => expect(harness.project().members[0].sectionId).toBe('w12x53'));
 
     harness.undo();
@@ -160,7 +167,7 @@ describe('BulkEditInspectorPanel', () => {
     const releases = document.querySelector('.bulk-field[data-property="member.releases.iMoment"]') as HTMLElement;
     expect(releases.textContent).toContain('1 de 2 compatibles');
     await user.click(within(releases).getByRole('radio', { name: 'Sí' }));
-    await user.click(screen.getByRole('button', { name: /^Aplicar a 1/ }));
+    await confirm(user);
 
     await waitFor(() => expect(harness.project().members[0].releases).toEqual({ iMoment: true }));
     expect(harness.project().members[1].releases).toBeUndefined();

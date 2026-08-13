@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { standardSections } from '../../data/standardSections';
-import { aggregateBulkSelection, findBulkProperty } from './bulkEditAggregation';
+import { aggregateBulkSelection, editableBulkProperties, findBulkProperty } from './bulkEditAggregation';
 import { createBulkMember, createBulkNode, resetBulkFixtureIds } from './bulkEditFixtures';
 
 beforeEach(resetBulkFixtureIds);
@@ -86,16 +86,19 @@ describe('bulk selection aggregation', () => {
   });
 
   it('keeps a legitimately absent optional value distinguishable from a mixed one', () => {
+    // `member.G` no tiene equivalencia canónica —su ausencia sólo significa algo
+    // bajo Timoshenko—, así que sigue agregándose por valor almacenado y prueba
+    // que «ausente» es un valor propio y no «mezclado».
     const absent = property({
-      members: [createBulkMember({ density: undefined }), createBulkMember({ density: undefined })],
+      members: [createBulkMember({ G: undefined }), createBulkMember({ G: undefined })],
       nodes: [],
-    }, 'member.density');
+    }, 'member.G');
     expect(absent.value).toEqual({ state: 'same', value: undefined });
 
     const partial = property({
-      members: [createBulkMember({ density: undefined }), createBulkMember({ density: 7850 })],
+      members: [createBulkMember({ G: undefined }), createBulkMember({ G: 77000000 })],
       nodes: [],
-    }, 'member.density');
+    }, 'member.G');
     expect(partial.value.state).toBe('mixed');
   });
 
@@ -152,10 +155,16 @@ describe('bulk selection aggregation', () => {
   });
 
   it('marks member properties incompatible for a node-only selection', () => {
-    const state = property({ members: [], nodes: [createBulkNode(), createBulkNode()] }, 'member.type');
+    const aggregate = aggregateBulkSelection({ members: [], nodes: [createBulkNode(), createBulkNode()] });
+    const state = findBulkProperty(aggregate, 'member.type');
 
     expect(state.value).toEqual({ state: 'incompatible' });
-    expect(state.compatibility.incompatible.map((entry) => entry.reason)).toEqual(['entity-kind', 'entity-kind']);
+    // Los nudos no «rechazan» la propiedad de un miembro: no son su familia, así
+    // que el denominador es cero y la propiedad no se ofrece.
+    expect(state.compatibility).toEqual({ selected: 0, compatible: [], incompatible: [] });
+    expect(editableBulkProperties(aggregate).map((item) => item.id)).not.toContain('member.type');
+    // Y aun así los nudos siguen enumerados en el alcance.
+    expect(aggregate.targets.map((target) => target.kind)).toEqual(['node', 'node']);
   });
 
   it('aggregates node support type and configuration', () => {

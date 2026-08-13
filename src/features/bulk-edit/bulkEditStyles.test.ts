@@ -49,6 +49,8 @@ describe('bulk edit styles', () => {
       '.bulk-field__segmented button',
       '.bulk-changes__untouched summary',
       '.bulk-edit-panel__buttons .sc-button',
+      // El filtro de alcance es el primer control del panel en una hoja móvil.
+      '.bulk-edit-panel__scope-control button',
     ]) {
       const block = bulkCss.slice(bulkCss.indexOf(selector));
       expect(block.slice(0, block.indexOf('}')), selector).toContain('var(--sc-control-height-touch)');

@@ -12,7 +12,7 @@ import {
   formatAggregatedValue,
   type BulkFormatContext,
 } from './bulkEditPresentation';
-import type { BulkChangeIntent, BulkPropertyState, BulkStagedChange } from './bulkEditTypes';
+import type { AggregatedValue, BulkChangeIntent, BulkPropertyState, BulkStagedChange } from './bulkEditTypes';
 
 /**
  * Campo de una propiedad en la edición múltiple.
@@ -40,6 +40,19 @@ export interface BulkPropertyFieldProps {
   onStage: (change: BulkStagedChange) => void;
   onUntouch: () => void;
 }
+
+/**
+ * Estado tri-estado del **valor actual** de un booleano.
+ *
+ * `mixed` no es «a medias» ni «falso»: es que la selección no comparte valor.
+ * Devolverlo como `false` sería exactamente la confusión que este panel existe
+ * para impedir, así que el estado indeterminado viaja tal cual al árbol de
+ * accesibilidad.
+ */
+const currentChecked = (value: AggregatedValue): 'true' | 'false' | 'mixed' => {
+  if (value.state === 'mixed') return 'mixed';
+  return value.state === 'same' && value.value === true ? 'true' : 'false';
+};
 
 const controlValue = (change: BulkChangeIntent): string => {
   if (change.kind === 'set') return String(change.value);
@@ -208,9 +221,13 @@ export const BulkPropertyField = ({
           onStage={onStage}
           onUntouch={onUntouch}
         />
+        {/* El nombre lleva la propiedad, igual que el de descartar: en un panel
+            con doce campos numéricos, doce botones «Borrar valor» idénticos no
+            se distinguen en la lista de un lector de pantalla. */}
         {state.clearable ? <button
           type="button"
           className="bulk-field__action"
+          aria-label={t('field.clearNamed', { property: label })}
           aria-pressed={change.kind === 'clear'}
           onClick={() => change.kind === 'clear' ? onUntouch() : onStage({ kind: 'clear' })}
         >{t('field.clear')}</button> : null}
@@ -246,6 +263,20 @@ export const BulkPropertyField = ({
         : <label className="bulk-field__label" htmlFor={controlId}>{label}</label>}
       <span className="bulk-field__current" id={currentId}>
         <small>{t('field.current')}</small>
+        {/*
+          * En un booleano el valor actual es tri-estado de verdad, así que se
+          * expone como tal: `mixed` es un estado propio y no puede colapsar a
+          * `false`. El control de intención de abajo es un grupo de radios y no
+          * admite `aria-checked="mixed"`; este indicador es de sólo lectura y no
+          * recibe foco, porque no decide nada — sólo informa.
+          */}
+        {state.kind === 'boolean' ? <span
+          className="bulk-field__current-state"
+          role="checkbox"
+          aria-readonly="true"
+          aria-label={t('field.currentValue', { property: label })}
+          aria-checked={currentChecked(state.value)}
+        /> : null}
         {formatAggregatedValue(state, state.value, context)}
       </span>
     </div>

@@ -160,6 +160,7 @@ describe('bulk change summary', () => {
       next: 'w12x53',
       affected: 10,
       skipped: 0,
+      reasons: [],
     });
 
     for (const row of rows.filter((candidate) => candidate.property !== 'member.sectionId')) {

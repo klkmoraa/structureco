@@ -1,6 +1,10 @@
 import type { MemberType } from '../../types';
+import { canonicalBulkValue } from './bulkEditEffective';
+import { BULK_GATE_PROPERTIES, projectBulkSelection } from './bulkEditProjection';
 import { bulkPropertyDescriptors } from './bulkEditProperties';
+import { BULK_ENTITY_KINDS } from './bulkEditTypes';
 import type {
+  BulkEditDraft,
   AggregatedValue,
   BulkCompatibility,
   BulkEntityKind,
@@ -24,71 +28,42 @@ import type {
  */
 
 /**
- * Reparte la selección entre las entidades que admiten la propiedad y las que no.
- * El motivo viaja con cada entidad rechazada: la UI no tiene que deducirlo.
+ * Reparte la familia de la propiedad entre las entidades que la admiten y las
+ * que no. El motivo viaja con cada entidad rechazada: la UI no tiene que
+ * deducirlo.
  *
- * El descriptor se estrecha una sola vez por tipo de entidad: las entidades del
- * otro tipo entran enteras como `entity-kind` sin volver a comprobar nada.
+ * El denominador es la **familia de la propiedad**, no la selección entera. Un
+ * nudo no es «incompatible con la sección»: sencillamente no es un miembro, y
+ * contarlo como rechazo convierte «2 de 7 compatibles» en un número que no
+ * describe ninguna decisión. Las entidades de otras familias siguen presentes en
+ * `aggregate.targets`, que es el alcance explícito.
  */
 const resolveCompatibility = (
   descriptor: BulkPropertyDescriptor,
-  selection: BulkSelectionInput,
+  family: readonly { id: string }[],
 ): { compatibility: BulkCompatibility; values: BulkValue[] } => {
   const compatible: BulkTargetRef[] = [];
   const incompatible: BulkIncompatibleTarget[] = [];
   const values: BulkValue[] = [];
 
-  const classify = <Entity extends { id: string }>(
-    kind: BulkEntityKind,
-    entities: readonly Entity[],
-    ineligible: ((entity: Entity) => BulkIncompatibilityReason | undefined) | undefined,
-    read: (entity: Entity) => BulkValue,
-  ) => {
-    for (const entity of entities) {
-      const target: BulkTargetRef = { kind, id: entity.id };
-      const reason = ineligible?.(entity);
-      if (reason) incompatible.push({ target, reason });
-      else {
-        compatible.push(target);
-        values.push(read(entity));
-      }
+  const ineligible = descriptor.ineligible as
+    ((entity: { id: string }) => BulkIncompatibilityReason | undefined) | undefined;
+  const read = descriptor.read as (entity: { id: string }) => BulkValue;
+
+  for (const entity of family) {
+    const target: BulkTargetRef = { kind: descriptor.entity, id: entity.id };
+    const reason = ineligible?.(entity);
+    if (reason) incompatible.push({ target, reason });
+    else {
+      compatible.push(target);
+      // Se agrega el valor **efectivo**, no el almacenado: dos apoyos que el
+      // solver resuelve igual no pueden leerse como «Varios» sólo porque uno
+      // omita el campo que el otro guarda explícitamente.
+      values.push(canonicalBulkValue(descriptor.id, read(entity)));
     }
-  };
-
-  const reject = (kind: BulkEntityKind, ids: readonly { id: string }[]) => {
-    for (const { id } of ids) incompatible.push({ target: { kind, id }, reason: 'entity-kind' });
-  };
-
-  // Cada familia se clasifica con su propio descriptor; el resto de la
-  // selección entra entera como `entity-kind`, nunca se omite.
-  const nodalLoads = selection.nodalLoads ?? [];
-  const memberLoads = selection.memberLoads ?? [];
-  const families: Record<BulkEntityKind, readonly { id: string }[]> = {
-    member: selection.members,
-    node: selection.nodes,
-    nodalLoad: nodalLoads,
-    memberLoad: memberLoads,
-  };
-
-  for (const kind of ['member', 'node', 'nodalLoad', 'memberLoad'] as const) {
-    if (kind === descriptor.entity) {
-      classify(
-        kind,
-        families[kind],
-        descriptor.ineligible as ((entity: { id: string }) => BulkIncompatibilityReason | undefined) | undefined,
-        descriptor.read as (entity: { id: string }) => BulkValue,
-      );
-    } else reject(kind, families[kind]);
   }
 
-  return {
-    compatibility: {
-      selected: selection.members.length + selection.nodes.length + nodalLoads.length + memberLoads.length,
-      compatible,
-      incompatible,
-    },
-    values,
-  };
+  return { compatibility: { selected: family.length, compatible, incompatible }, values };
 };
 
 /**
@@ -117,10 +92,12 @@ const optionsFor = (
 const aggregateProperty = (
   descriptor: BulkPropertyDescriptor,
   selection: BulkSelectionInput,
+  family: readonly { id: string }[],
 ): BulkPropertyState => {
-  const { compatibility, values } = resolveCompatibility(descriptor, selection);
+  const { compatibility, values } = resolveCompatibility(descriptor, family);
   return {
     id: descriptor.id,
+    group: descriptor.group,
     entity: descriptor.entity,
     kind: descriptor.kind,
     editable: descriptor.editable,
@@ -135,12 +112,42 @@ const aggregateProperty = (
 
 const emptyMemberTypeCounts = (): Record<MemberType, number> => ({ frame: 0, truss: 0, rigid: 0 });
 
-export const aggregateBulkSelection = (selection: BulkSelectionInput): BulkSelectionAggregate => {
+/** Sin borrador no hay proyección; la constante evita recrear el objeto por llamada. */
+const EMPTY_DRAFT: BulkEditDraft = Object.freeze({});
+
+/**
+ * Agrega la selección. Con un borrador, las propiedades que dependen de una
+ * puerta (`member.type`, `node.support.type`) se agregan sobre la selección
+ * **proyectada**, de modo que habilitar y configurar caben en una sola
+ * confirmación.
+ *
+ * Las puertas mismas se agregan siempre sobre la selección almacenada: su
+ * «Actual» tiene que seguir siendo lo que el modelo guarda hoy, no la decisión
+ * que el usuario acaba de preparar.
+ */
+export const aggregateBulkSelection = (
+  selection: BulkSelectionInput,
+  draft: BulkEditDraft = EMPTY_DRAFT,
+): BulkSelectionAggregate => {
   const memberTypeCounts = emptyMemberTypeCounts();
   for (const member of selection.members) memberTypeCounts[member.type] += 1;
 
+  const projected = projectBulkSelection(selection, draft);
   const nodalLoads = selection.nodalLoads ?? [];
   const memberLoads = selection.memberLoads ?? [];
+  const families: Record<BulkEntityKind, readonly { id: string }[]> = {
+    member: selection.members,
+    node: selection.nodes,
+    nodalLoad: nodalLoads,
+    memberLoad: memberLoads,
+  };
+  const projectedFamilies: Record<BulkEntityKind, readonly { id: string }[]> = {
+    member: projected.members,
+    node: projected.nodes,
+    nodalLoad: nodalLoads,
+    memberLoad: memberLoads,
+  };
+
   return {
     /*
      * El total es lo que el usuario seleccionó: nudos y miembros. Las cargas
@@ -154,8 +161,20 @@ export const aggregateBulkSelection = (selection: BulkSelectionInput): BulkSelec
       nodalLoad: nodalLoads.length,
       memberLoad: memberLoads.length,
     },
+    /*
+     * Alcance explícito. Antes, saber si una entidad estaba en la selección
+     * exigía buscarla entre los rechazos de alguna propiedad, lo que ataba esa
+     * respuesta a que existiera una propiedad que la rechazara.
+     */
+    targets: BULK_ENTITY_KINDS.flatMap((kind) => families[kind].map((entity) => ({ kind, id: entity.id }))),
     memberTypeCounts,
-    properties: bulkPropertyDescriptors.map((descriptor) => aggregateProperty(descriptor, selection)),
+    properties: bulkPropertyDescriptors.map((descriptor) => aggregateProperty(
+      descriptor,
+      selection,
+      BULK_GATE_PROPERTIES.includes(descriptor.id)
+        ? families[descriptor.entity]
+        : projectedFamilies[descriptor.entity],
+    )),
   };
 };
 

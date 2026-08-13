@@ -14,6 +14,9 @@ import type { MemberLoad, MemberModel, MemberType, NodalLoad, NodeModel } from '
 
 export type BulkEntityKind = 'member' | 'node' | 'nodalLoad' | 'memberLoad';
 
+/** Orden canónico de lectura de las familias. */
+export const BULK_ENTITY_KINDS: readonly BulkEntityKind[] = ['member', 'node', 'nodalLoad', 'memberLoad'];
+
 export interface BulkTargetRef {
   kind: BulkEntityKind;
   id: string;
@@ -52,9 +55,12 @@ export type AggregatedValue =
   | { state: 'mixed'; values: readonly BulkValue[] }
   | { state: 'incompatible' };
 
+/**
+ * Motivo por el que una entidad **de la familia de la propiedad** la rechaza.
+ * Pertenecer a otra familia no es un motivo: un nudo no rechaza la sección, es
+ * que la sección no le concierne, y contarlo como rechazo infla el denominador.
+ */
 export type BulkIncompatibilityReason =
-  /** La propiedad no existe en este tipo de entidad (una barra frente a un nudo). */
-  | 'entity-kind'
   /** El tipo de miembro no admite la propiedad (un rígido no tiene E, A ni I). */
   | 'member-type'
   /** La configuración del apoyo no admite la propiedad (sólo apoyos personalizados). */
@@ -67,7 +73,11 @@ export interface BulkIncompatibleTarget {
   reason: BulkIncompatibilityReason;
 }
 
-/** Reparto explícito de la selección: nunca se aplica nada «en silencio». */
+/**
+ * Reparto explícito de la familia de la propiedad: nunca se aplica nada «en
+ * silencio». `selected` es el número de entidades de esa familia presentes en el
+ * alcance, de modo que `compatible + incompatible === selected` siempre.
+ */
 export interface BulkCompatibility {
   selected: number;
   compatible: readonly BulkTargetRef[];
@@ -120,8 +130,35 @@ export type BulkPropertyId =
   | 'memberLoad.py'
   | 'memberLoad.moment';
 
+/**
+ * Grupo con el que la UI ordena las propiedades.
+ *
+ * Los grupos de carga de miembro nombran el **conjunto exacto de familias** que
+ * poseen la propiedad, no una familia representativa: `position` existe en las
+ * puntuales y en los momentos, así que vive en su propio grupo en vez de
+ * colarse en uno de los dos y mentir sobre el otro.
+ */
+export type BulkPropertyGroupId =
+  | 'member'
+  | 'node'
+  | 'load.nodal'
+  /** Común a las tres familias de carga de miembro. */
+  | 'load.member'
+  | 'load.distributedPoint'
+  | 'load.distributed'
+  | 'load.pointMoment'
+  | 'load.point'
+  | 'load.moment';
+
+/** Orden de lectura de los grupos. */
+export const BULK_PROPERTY_GROUPS: readonly BulkPropertyGroupId[] = [
+  'member', 'node', 'load.nodal', 'load.member',
+  'load.distributedPoint', 'load.distributed', 'load.pointMoment', 'load.point', 'load.moment',
+];
+
 interface BulkPropertyDescriptorBase {
   id: BulkPropertyId;
+  group: BulkPropertyGroupId;
   kind: BulkPropertyKind;
   /** Una propiedad derivada se agrega y se muestra, pero el usuario no la fija. */
   editable: boolean;
@@ -171,6 +208,7 @@ export type BulkPropertyDescriptor =
 
 export interface BulkPropertyState {
   id: BulkPropertyId;
+  group: BulkPropertyGroupId;
   entity: BulkEntityKind;
   kind: BulkPropertyKind;
   editable: boolean;
@@ -185,6 +223,8 @@ export interface BulkPropertyState {
 export interface BulkSelectionAggregate {
   total: number;
   counts: Record<BulkEntityKind, number>;
+  /** Alcance completo, en orden canónico de familia. Incluye las cargas colgadas. */
+  targets: readonly BulkTargetRef[];
   memberTypeCounts: Record<MemberType, number>;
   properties: readonly BulkPropertyState[];
 }
@@ -232,4 +272,6 @@ export interface BulkChangeSummaryRow {
   next?: BulkDefinedValue;
   affected: number;
   skipped: number;
+  /** Motivos distintos por los que los `skipped` quedan fuera, sin repetir. */
+  reasons: readonly BulkIncompatibilityReason[];
 }

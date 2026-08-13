@@ -5,8 +5,10 @@ import { es, translate, type Language, type TranslationKey } from '../../i18n/ca
 import type { UnitSystemId } from '../../types';
 import { formatInspectorValue } from '../inspector/numericFormatting';
 import type { BulkEditCopyKey, BulkEditTranslate } from './bulkEditCopy';
+import { BULK_ENTITY_KINDS } from './bulkEditTypes';
 import type {
   AggregatedValue,
+  BulkEntityKind,
   BulkPropertyId,
   BulkPropertyState,
   BulkSelectionAggregate,
@@ -186,23 +188,37 @@ export const bulkPropertyOptionGroups = (
   ];
 };
 
-export interface BulkSelectionCompatibility {
+export interface BulkScopeRow {
+  kind: BulkEntityKind;
+  selected: number;
   compatible: number;
   incompatible: number;
 }
 
 /**
- * Un objeto es compatible con la edición múltiple si alguna propiedad editable
- * lo admite. Un objeto que ninguna propiedad admite se cuenta como incompatible
- * en lugar de desaparecer del recuento.
+ * Reparto exacto del alcance, familia por familia.
+ *
+ * Sustituye al contador global anterior, que restaba un conjunto que incluía las
+ * cargas de un total que no las contaba y podía dar un número negativo. Aquí
+ * cada fila se cierra sobre su propia familia: `compatible + incompatible`
+ * siempre es `selected`, y una familia que no está en el alcance no aparece.
+ *
+ * «Compatible» significa que alguna propiedad **editable** admite ese objeto; un
+ * objeto que ninguna admite se cuenta como incompatible en lugar de desaparecer.
  */
-export const bulkSelectionCompatibility = (
-  aggregate: BulkSelectionAggregate,
-): BulkSelectionCompatibility => {
+export const bulkScopeBreakdown = (aggregate: BulkSelectionAggregate): readonly BulkScopeRow[] => {
   const compatible = new Set<string>();
   for (const property of aggregate.properties) {
     if (!property.editable) continue;
     for (const target of property.compatibility.compatible) compatible.add(`${target.kind}:${target.id}`);
   }
-  return { compatible: compatible.size, incompatible: aggregate.total - compatible.size };
+
+  return BULK_ENTITY_KINDS.flatMap((kind) => {
+    const selected = aggregate.counts[kind];
+    if (selected === 0) return [];
+    const accepted = aggregate.targets.filter(
+      (target) => target.kind === kind && compatible.has(`${target.kind}:${target.id}`),
+    ).length;
+    return [{ kind, selected, compatible: accepted, incompatible: selected - accepted }];
+  });
 };

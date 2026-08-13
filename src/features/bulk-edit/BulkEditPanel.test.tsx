@@ -33,15 +33,29 @@ const setup = () => userEvent.setup({ delay: null });
 
 const field = (label: string) => screen.getByLabelText(label) as HTMLSelectElement;
 const fieldRow = (property: string) => document.querySelector(`.bulk-field[data-property="${property}"]`)!;
-const applyButton = () => screen.getByRole('button', { name: /^Aplicar/ }) as HTMLButtonElement;
+/**
+ * El botón del pie ya no aplica: abre la revisión. Confirmar exige pasar por
+ * ella, que es justo la garantía que estas pruebas deben seguir ejerciendo.
+ */
+const reviewButton = () => screen.getByRole('button', { name: /^Revisar cambios/ }) as HTMLButtonElement;
+
+/** Prepara → revisa → confirma, como hace una persona. */
+const confirm = async (user: ReturnType<typeof setup>) => {
+  await user.click(reviewButton());
+  const review = screen.getByRole('region', { name: 'Revisar cambios' });
+  await user.click(within(review).getByRole('button', { name: /^Aplicar/ }));
+};
 
 describe('BulkEditPanel', () => {
-  it('announces how many objects are selected and how many are compatible', () => {
+  it('announces the scope family by family instead of with a single global count', () => {
     renderPanel();
 
     const summary = screen.getByRole('region', { name: 'Resumen de la selección' });
     expect(within(summary).getByText('10 miembros seleccionados')).toBeTruthy();
-    expect(within(summary).getByText('10 compatibles')).toBeTruthy();
+    // Una fila por familia presente, y ninguna por una familia ausente.
+    expect(summary.querySelector('[data-scope="member"]')?.textContent).toBe('10 miembros');
+    expect(summary.querySelector('[data-scope="node"]')).toBeNull();
+    expect(summary.querySelector('[data-scope="nodalLoad"]')).toBeNull();
   });
 
   it('shows a mixed value as «Varios» and never as the first value of the selection', () => {
@@ -60,7 +74,7 @@ describe('BulkEditPanel', () => {
     renderPanel({ members: [], nodes: [] });
 
     expect(screen.getByText('Sin selección')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: /Aplicar/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Revisar cambios/ })).toBeNull();
   });
 
   it('stages exactly one change when a single field is edited', async () => {
@@ -70,7 +84,7 @@ describe('BulkEditPanel', () => {
     await user.selectOptions(field('Sección'), 'w12x53');
 
     expect(screen.getByTestId('bulk-changes-count').textContent).toBe('1 cambio preparado');
-    await user.click(applyButton());
+    await confirm(user);
 
     expect(onApply).toHaveBeenCalledTimes(1);
     const intent = onApply.mock.calls[0][0].intent;
@@ -88,7 +102,7 @@ describe('BulkEditPanel', () => {
     const { onApply } = renderPanel();
 
     await user.selectOptions(field('Sección'), 'w12x53');
-    await user.click(applyButton());
+    await confirm(user);
 
     const properties = onApply.mock.calls[0][0].intent.entries.map((entry) => entry.property);
     expect(properties).toEqual(['member.sectionId']);
@@ -117,10 +131,10 @@ describe('BulkEditPanel', () => {
     const user = setup();
     const { onApply } = renderPanel();
 
-    expect(applyButton().disabled).toBe(true);
+    expect(reviewButton().disabled).toBe(true);
     await user.selectOptions(field('Sección'), 'w12x53');
-    expect(applyButton().disabled).toBe(false);
-    expect(applyButton().textContent).toContain('Aplicar a 10');
+    expect(reviewButton().disabled).toBe(false);
+    expect(reviewButton().textContent).toContain('Revisar cambios (1)');
     expect(onApply).not.toHaveBeenCalled();
   });
 
@@ -134,7 +148,7 @@ describe('BulkEditPanel', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(field('Sección').value).toBe(BULK_UNTOUCHED_OPTION);
     expect(screen.getByTestId('bulk-changes-count').textContent).toBe('Ningún cambio preparado');
-    expect(applyButton().disabled).toBe(true);
+    expect(reviewButton().disabled).toBe(true);
   });
 
   it('withdraws a single staged change back to untouched', async () => {
@@ -161,7 +175,7 @@ describe('BulkEditPanel', () => {
     expect(releases.textContent).toContain('No aplica a este tipo de miembro');
 
     await user.click(within(releases).getByRole('radio', { name: 'Sí' }));
-    await user.click(applyButton());
+    await confirm(user);
 
     const entry = onApply.mock.calls[0][0].intent.entries[0];
     expect(entry.compatible).toHaveLength(2);
@@ -192,8 +206,8 @@ describe('BulkEditPanel', () => {
 
     await user.click(screen.getByRole('button', { name: /Más propiedades/ }));
     const density = fieldRow('member.density') as HTMLElement;
-    await user.click(within(density).getByRole('button', { name: 'Borrar valor' }));
-    await user.click(applyButton());
+    await user.click(within(density).getByRole('button', { name: /^Borrar valor de / }));
+    await confirm(user);
 
     expect(onApply.mock.calls[0][0].intent.entries[0]).toMatchObject({
       property: 'member.density',
@@ -215,7 +229,7 @@ describe('BulkEditPanel', () => {
     const input = within(fieldRow('member.A') as HTMLElement).getByRole('textbox');
     await user.type(input, '0.02');
     await user.tab();
-    await user.click(applyButton());
+    await confirm(user);
 
     expect(onApply.mock.calls[0][0].intent.entries[0]).toMatchObject({
       property: 'member.A',
@@ -243,6 +257,7 @@ describe('BulkEditPanel', () => {
     });
 
     expect(screen.getByText('2 nudos seleccionados')).toBeTruthy();
+    expect(screen.getByText('2 nudos')).toBeTruthy();
     expect(within(fieldRow('node.support.type') as HTMLElement).getByText('Varios')).toBeTruthy();
   });
 });
@@ -294,7 +309,7 @@ describe('BulkEditPanel accessibility', () => {
     await user.keyboard('{ArrowRight}');
 
     expect(within(releases).getByRole('radio', { name: 'Sí' }).getAttribute('aria-checked')).toBe('true');
-    await user.click(applyButton());
+    await confirm(user);
     expect(onApply.mock.calls[0][0].intent.entries[0]).toMatchObject({
       property: 'member.releases.jMoment',
       change: { kind: 'set', value: true },
@@ -322,7 +337,7 @@ describe('BulkEditPanel prepared-intent safety', () => {
 
     await user.click(screen.getByRole('button', { name: /Más propiedades/ }));
     const density = fieldRow('member.density') as HTMLElement;
-    await user.click(within(density).getByRole('button', { name: 'Borrar valor' }));
+    await user.click(within(density).getByRole('button', { name: /^Borrar valor de / }));
 
     // Entrar y salir del campo vacío no puede retirar el borrado preparado:
     // «vacío» es como se muestra `clear`, no sólo como se muestra `untouched`.
@@ -330,7 +345,7 @@ describe('BulkEditPanel prepared-intent safety', () => {
     await user.tab();
 
     expect(density.getAttribute('data-change')).toBe('clear');
-    await user.click(applyButton());
+    await confirm(user);
     expect(onApply.mock.calls[0][0].intent.entries[0]).toMatchObject({
       property: 'member.density',
       change: { kind: 'clear' },
@@ -358,7 +373,7 @@ describe('BulkEditPanel prepared-intent safety', () => {
     await user.type(area, '0.02');
     await user.tab();
     await user.selectOptions(field('Sección'), 'w12x53');
-    await user.click(applyButton());
+    await confirm(user);
 
     // Una identidad de catálogo y unos números que la contradicen no pueden
     // prepararse a la vez: la sección retira el área.
@@ -374,13 +389,13 @@ describe('BulkEditPanel prepared-intent safety', () => {
     const { rerender } = render(<BulkEditPanel selection={first} units="kN-m" language="es" onApply={onApply} />);
 
     await user.selectOptions(field('Sección'), 'w12x53');
-    expect(applyButton().disabled).toBe(false);
+    expect(reviewButton().disabled).toBe(false);
 
     rerender(<BulkEditPanel selection={second} units="kN-m" language="es" onApply={onApply} />);
 
     // El borrador se refería a M1; aplicarlo sobre M2 escribiría en un objeto
     // que el usuario nunca editó.
-    expect(applyButton().disabled).toBe(true);
+    expect(reviewButton().disabled).toBe(true);
     expect(screen.getByTestId('bulk-changes-count').textContent).toBe('Ningún cambio preparado');
   });
 
@@ -412,5 +427,44 @@ describe('BulkEditPanel prepared-intent safety', () => {
 
     const discard = screen.queryByRole('button', { name: /^Descartar/ });
     expect(discard).toBeNull();
+  });
+});
+
+/**
+ * Descubribilidad de lo que una puerta acaba de habilitar.
+ *
+ * Cambiar el apoyo a «personalizado» hace aparecer sus restricciones. Si nacen
+ * dentro de una revelación progresiva plegada, habilitar y configurar en una
+ * sola pasada deja de existir en la práctica: el usuario no ve lo que acaba de
+ * desbloquear y vuelve a necesitar dos pasadas.
+ */
+describe('BulkEditPanel · what a gate unlocks is visible', () => {
+  const nodes = (): BulkSelectionInput => ({
+    members: [],
+    nodes: [createBulkNode({ support: { type: 'pin' } }), createBulkNode({ support: { type: 'pin' } })],
+  });
+
+  it('shows the custom restraints without opening a disclosure', async () => {
+    const user = setup();
+    renderPanel(nodes());
+
+    await user.selectOptions(screen.getByLabelText('Apoyo'), 'custom');
+
+    for (const property of ['node.support.restrainX', 'node.support.restrainY', 'node.support.restrainR']) {
+      const row = fieldRow(property) as HTMLElement;
+      expect(row, property).toBeTruthy();
+      expect(row.closest('[hidden]'), property).toBeNull();
+    }
+  });
+
+  it('shows the roller normal without opening a disclosure', async () => {
+    const user = setup();
+    renderPanel(nodes());
+
+    await user.selectOptions(screen.getByLabelText('Apoyo'), 'roller');
+
+    const row = fieldRow('node.support.angleDeg') as HTMLElement;
+    expect(row).toBeTruthy();
+    expect(row.closest('[hidden]')).toBeNull();
   });
 });

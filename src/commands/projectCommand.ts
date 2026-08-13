@@ -428,8 +428,13 @@ const prescribedComponentsFor = (support: SupportDefinition): ReadonlySet<string
  * el nuevo tipo ya no restringe. Se conservan los muelles, que son
  * independientes del tipo, y se descarta el resto igual que hace el Inspector
  * al cambiar un apoyo de uno en uno.
+ *
+ * Se exporta porque la edición múltiple necesita **anticipar** este resultado
+ * para saber qué propiedades quedarán disponibles tras cambiar el tipo. Que la
+ * previsión y la escritura compartan esta función es lo que impide que el panel
+ * ofrezca una configuración que el aplicador acabaría descartando.
  */
-const rebuildSupport = (current: SupportDefinition, type: SupportDefinition['type']): SupportDefinition => {
+export const rebuildSupport = (current: SupportDefinition, type: SupportDefinition['type']): SupportDefinition => {
   const spring = current.spring ? structuredClone(current.spring) : undefined;
   if (type === 'roller') return { type, angleDeg: current.angleDeg ?? 90, ...(spring ? { spring } : {}) };
   if (type === 'custom') {
@@ -583,15 +588,24 @@ export const compileProjectCommand = (project: ProjectModel, command: ProjectCom
         next.members[index] = applyMemberBulkChanges(next.members[index], entry.changes);
       }
     }
+    // Las cargas se protegen igual que los miembros y los nudos: dos entradas
+    // sobre la misma carga harían que la última ganara en silencio, y cuál es
+    // «la última» depende del orden de agrupación, no de lo que se preparó.
+    const seenNodalLoads = new Set<string>();
     for (const entry of command.nodalLoadEntries) {
       for (const loadId of entry.loadIds) {
+        if (seenNodalLoads.has(loadId)) throw new Error(`La carga nodal ${loadId} recibe dos cambios en la misma edición múltiple.`);
+        seenNodalLoads.add(loadId);
         const index = next.nodalLoads.findIndex((load) => load.id === loadId);
         if (index < 0) throw new Error(`No existe la carga nodal ${loadId}.`);
         next.nodalLoads[index] = applyNodalLoadBulkChanges(next.nodalLoads[index], entry.changes);
       }
     }
+    const seenMemberLoads = new Set<string>();
     for (const entry of command.memberLoadEntries) {
       for (const loadId of entry.loadIds) {
+        if (seenMemberLoads.has(loadId)) throw new Error(`La carga de miembro ${loadId} recibe dos cambios en la misma edición múltiple.`);
+        seenMemberLoads.add(loadId);
         const index = next.memberLoads.findIndex((load) => load.id === loadId);
         if (index < 0) throw new Error(`No existe la carga de miembro ${loadId}.`);
         next.memberLoads[index] = applyMemberLoadBulkChanges(next.memberLoads[index], entry.changes);
