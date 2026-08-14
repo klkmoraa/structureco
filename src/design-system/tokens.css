@@ -197,6 +197,22 @@
      cortante para la carga repartida, y la interfaz necesita nombrarlo. */
   --sc-color-technical-distributed: var(--sc-color-technical-shear);
 
+  /* Rampa del índice elástico estimado (CRI-42). Es una escala secuencial de
+     una sola familia: comunica *cuánta* demanda hay, no si eso es aceptable.
+     El verde/ámbar/rojo anterior leía como semáforo de seguridad y este
+     producto no hace comprobación normativa. `reference` es un tono aparte —
+     ni rojo ni verde, para no reintroducir el juicio— reservado al único hecho
+     con significado propio: η alcanza el Fy declarado del material. */
+  --sc-color-demand-base: #5f8f9e;
+  --sc-color-demand-peak: #0f4c5c;
+  --sc-color-demand-reference: #6a3fa0;
+  /* Segundo tramo de la rampa: por encima de η = 1 el color sigue creciendo en
+     esta familia hasta el techo declarado, en vez de aplanar toda la sobre-
+     referencia en un solo tono que borraba la magnitud. */
+  --sc-color-demand-reference-peak: #43206c;
+  /* Miembro que no pudo evaluarse: ni color de demanda ni trazo normal. */
+  --sc-color-demand-unevaluated: #8a8f8d;
+
   /* Roles estructurales formalizados (Sección 12 del sistema).
      Mapean sobre los técnicos verificados; los roles "reservados"
      documentan intención sin alterar la codificación actual del canvas. */
@@ -633,6 +649,15 @@
   --sc-color-technical-reaction: #86b9df;
   --sc-color-technical-dimension: #f4d75e;
   --sc-color-technical-axis: #d8a579;
+
+  /* Rampa del índice elástico: en Noche el fondo es oscuro, así que la escala
+     crece hacia el claro en lugar de hacia el oscuro. Misma familia, misma
+     lectura de magnitud. */
+  --sc-color-demand-base: #6f9fb0;
+  --sc-color-demand-peak: #a9dcea;
+  --sc-color-demand-reference: #c4a6f5;
+  --sc-color-demand-reference-peak: #ede2ff;
+  --sc-color-demand-unevaluated: #7f8b8f;
 
   --sc-color-axial-compression: #d9a7f5;
   --sc-color-envelope: #b8aaff;

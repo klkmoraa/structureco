@@ -11,7 +11,7 @@ import { useI18n } from '../../i18n/useI18n';
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { NumericQualityCard } from './NumericQualityCard';
-import { StructuralHealthMeter } from './StructuralHealthMeter';
+import { ElasticDemandCard } from './ElasticDemandCard';
 
 const diagramTab: Record<DiagramQuantity, ResultTab> = { axial: 'axial', shear: 'shear', moment: 'moment' };
 const diagramSymbol: Record<DiagramQuantity, string> = { axial: 'N', shear: 'V', moment: 'M' };
@@ -44,7 +44,7 @@ export const ResultSummary = () => {
         <button disabled={comparisonBusy} onClick={compare}>{comparisonBusy ? <RefreshCw className="spin" size={15} /> : <GitCompareArrows size={15} />} {scenarios ? t('results.updateComparison') : t('results.compareCases')}</button>
       </div>
     </header>
-    <StructuralHealthMeter />
+    <ElasticDemandCard />
     <NumericQualityCard analysis={analysis} />
     {analysis.pDelta ? <section className="p-delta-summary" aria-label={t('pdelta.summaryTitle')}>
       <strong>{t('pdelta.summaryTitle')} <span className="experimental-badge">{t('pdelta.experimental')}</span></strong>

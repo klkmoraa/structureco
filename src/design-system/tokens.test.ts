@@ -184,6 +184,14 @@ describe('Phase 4 design-token contract', () => {
       '--sc-color-technical-reaction',
       '--sc-color-technical-dimension',
       '--sc-color-technical-axis',
+      // La rampa del índice elástico se dibuja sobre el lienzo como cualquier
+      // otro rol técnico: sus dos extremos y la referencia deben verse en ambos
+      // temas, no sólo el extremo alto.
+      '--sc-color-demand-base',
+      '--sc-color-demand-peak',
+      '--sc-color-demand-reference',
+      '--sc-color-demand-reference-peak',
+      '--sc-color-demand-unevaluated',
     ];
 
     for (const [foreground, background, minimum] of textPairs) {
