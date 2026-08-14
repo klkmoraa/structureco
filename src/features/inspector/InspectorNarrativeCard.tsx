@@ -12,6 +12,7 @@ import {
   memberElasticIndexView,
   type ElasticIndexGap,
 } from '../results/elasticDemand';
+import { describeReliabilityCheck, reliabilityCheckLabel } from '../results/reliabilityCopy';
 
 export interface InspectorNarrativeCardProps {
   member: MemberModel;
@@ -53,6 +54,12 @@ export const InspectorNarrativeCard = ({ member, result, analysis, units }: Insp
         <strong>{t('elastic.unavailableTitle')}</strong>
       </header>
       {blockedKey ? <p className="inspector-narrative-body">{t(blockedKey)}</p> : null}
+      {/* Bloqueado no es «limitado»: se cita la causa, en el idioma activo, sin
+          etiquetar la lectura como algo intermedio y utilizable. */}
+      {view.blocker === 'unreliable' && view.governingCheck ? <p className="elastic-demand-blocked-cause" data-testid="inspector-blocked-cause">
+        <span>{t('elastic.blockedGoverning', { check: reliabilityCheckLabel(view.governingCheck, t) })}</span>
+        <span className="elastic-demand-limited-message">{describeReliabilityCheck(view.governingCheck, t)}</span>
+      </p> : null}
       {view.gaps.length ? <ul className="elastic-demand-missing">
         {view.gaps.map((gap) => <li key={gap}>{t(gapLabel[gap])}</li>)}
       </ul> : null}
@@ -60,7 +67,7 @@ export const InspectorNarrativeCard = ({ member, result, analysis, units }: Insp
     </section>;
   }
 
-  const { index, confidence, limitedCheck } = view;
+  const { index, confidence, governingCheck } = view;
   const axialPercent = Math.round(index.axialShare * 100);
   const bendingPercent = 100 - axialPercent;
   const mode = axialPercent >= 70 ? 'axial' : bendingPercent >= 70 ? 'bending' : 'combined';
@@ -103,9 +110,9 @@ export const InspectorNarrativeCard = ({ member, result, analysis, units }: Insp
 
     {confidence === 'limited' ? <p className="elastic-demand-limited" role="note" data-testid="inspector-limited-cause">
       <strong>{t('elastic.limitedConfidence')}</strong>
-      {limitedCheck ? <>
-        <span>{t('elastic.limitedGoverning', { check: limitedCheck.label })}</span>
-        <span className="elastic-demand-limited-message">{limitedCheck.message}</span>
+      {governingCheck ? <>
+        <span>{t('elastic.limitedGoverning', { check: reliabilityCheckLabel(governingCheck, t) })}</span>
+        <span className="elastic-demand-limited-message">{describeReliabilityCheck(governingCheck, t)}</span>
         <button type="button" onClick={() => emitWorkspaceCommand('open-model-doctor')}>
           {t('elastic.actionDoctor')}
         </button>

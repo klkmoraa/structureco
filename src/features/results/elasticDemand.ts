@@ -125,7 +125,7 @@ export interface ElasticDemandAvailable {
   coverage: 'complete' | 'partial';
   confidence: ElasticDemandConfidence;
   /** Check que degradó el análisis a `limited`; `null` si es `reliable`. */
-  limitedCheck: ReliabilityCheck | null;
+  governingCheck: ReliabilityCheck | null;
   /**
    * El mayor η **entre los miembros evaluables**. Con `coverage === 'partial'`
    * no es el gobernante de la estructura y la interfaz debe decir sobre cuántos
@@ -148,9 +148,13 @@ export interface ElasticDemandUnavailable {
   status: 'unavailable';
   coverage: 'unavailable';
   blocker: ElasticDemandBlocker;
-  /** `null` cuando el bloqueo es anterior a poder clasificar el análisis. */
+  /**
+   * `null` siempre que hay bloqueo por confiabilidad: un análisis no confiable
+   * no es una lectura «limitada», es una que no se publica.
+   */
   confidence: ElasticDemandConfidence | null;
-  limitedCheck: ReliabilityCheck | null;
+  /** El check que impide o degrada la lectura, para citarlo como causa. */
+  governingCheck: ReliabilityCheck | null;
   gaps: MemberElasticIndexGap[];
   /** Unión sin repetir de los datos que faltan, en orden estable. */
   missing: ElasticIndexGap[];
@@ -168,10 +172,15 @@ export type MemberElasticIndexView =
   | {
     status: 'available';
     confidence: ElasticDemandConfidence;
-    limitedCheck: ReliabilityCheck | null;
+    governingCheck: ReliabilityCheck | null;
     index: MemberElasticIndex;
   }
-  | { status: 'unavailable'; blocker: ElasticDemandBlocker | null; gaps: ElasticIndexGap[] };
+  | {
+    status: 'unavailable';
+    blocker: ElasticDemandBlocker | null;
+    governingCheck: ReliabilityCheck | null;
+    gaps: ElasticIndexGap[];
+  };
 
 const EMPTY_RATIOS: ReadonlyMap<string, number> = new Map();
 const EMPTY_IDS: ReadonlySet<string> = new Set();
@@ -288,21 +297,26 @@ export const elasticDemandGate = (
   analysis: AnalysisResult | null | undefined,
 ): {
   blocker: 'no-analysis' | 'unreliable' | null;
-  confidence: ElasticDemandConfidence;
-  limitedCheck: ReliabilityCheck | null;
+  /** `null` cuando el análisis está bloqueado: no hay lectura que calificar. */
+  confidence: ElasticDemandConfidence | null;
+  /** El check que gobierna el nivel actual, sea `limited` o `unreliable`. */
+  governingCheck: ReliabilityCheck | null;
 } => {
   if (!analysis || !analysis.memberResults?.length) {
-    return { blocker: 'no-analysis', confidence: 'reliable', limitedCheck: null };
+    return { blocker: 'no-analysis', confidence: null, governingCheck: null };
   }
   const reliability = resolveReliability(analysis);
   if (!reliability.usable || reliability.level === 'unreliable' || reliability.level === 'failed') {
-    return { blocker: 'unreliable', confidence: 'limited', limitedCheck: reliability.governing ?? null };
+    /* `confidence: null`, no `'limited'`. Un análisis no confiable no es una
+       lectura limitada: es una lectura que no se publica, y decir «limitada»
+       la presentaba como algo intermedio y utilizable que no es. */
+    return { blocker: 'unreliable', confidence: null, governingCheck: reliability.governing ?? null };
   }
   /* «Confiabilidad limitada» a secas es una etiqueta sobre la que el usuario no
-     puede actuar: viaja con el check que la gobierna y su mensaje. */
+     puede actuar: viaja con el check que la gobierna. */
   return reliability.level === 'limited'
-    ? { blocker: null, confidence: 'limited', limitedCheck: reliability.governing ?? null }
-    : { blocker: null, confidence: 'reliable', limitedCheck: null };
+    ? { blocker: null, confidence: 'limited', governingCheck: reliability.governing ?? null }
+    : { blocker: null, confidence: 'reliable', governingCheck: null };
 };
 
 /** Vista de una barra para el Inspector: misma puerta y mismo clasificador. */
@@ -312,11 +326,13 @@ export const memberElasticIndexView = (
   analysis: AnalysisResult | null | undefined,
 ): MemberElasticIndexView => {
   const gate = elasticDemandGate(analysis);
-  if (gate.blocker) return { status: 'unavailable', blocker: gate.blocker, gaps: [] };
+  if (gate.blocker) {
+    return { status: 'unavailable', blocker: gate.blocker, governingCheck: gate.governingCheck, gaps: [] };
+  }
   const index = memberElasticIndex(member, result);
   return index.status === 'available'
-    ? { status: 'available', confidence: gate.confidence, limitedCheck: gate.limitedCheck, index }
-    : { status: 'unavailable', blocker: null, gaps: index.gaps };
+    ? { status: 'available', confidence: gate.confidence ?? 'reliable', governingCheck: gate.governingCheck, index }
+    : { status: 'unavailable', blocker: null, governingCheck: null, gaps: index.gaps };
 };
 
 /** Vista de toda la estructura: la consumen el Resumen y el mapa del lienzo. */
@@ -330,8 +346,8 @@ export const elasticDemandView = (
       status: 'unavailable',
       coverage: 'unavailable',
       blocker: gate.blocker,
-      confidence: gate.blocker === 'unreliable' ? gate.confidence : null,
-      limitedCheck: gate.limitedCheck,
+      confidence: null,
+      governingCheck: gate.governingCheck,
       gaps: [],
       missing: [],
       evaluated: 0,
@@ -362,7 +378,7 @@ export const elasticDemandView = (
       coverage: 'unavailable',
       blocker: 'no-evaluable-member',
       confidence: gate.confidence,
-      limitedCheck: gate.limitedCheck,
+      governingCheck: gate.governingCheck,
       gaps,
       missing: GAP_ORDER.filter((gap) => seen.has(gap)),
       evaluated: 0,
@@ -376,8 +392,8 @@ export const elasticDemandView = (
   return {
     status: 'available',
     coverage: gaps.length === 0 ? 'complete' : 'partial',
-    confidence: gate.confidence,
-    limitedCheck: gate.limitedCheck,
+    confidence: gate.confidence ?? 'reliable',
+    governingCheck: gate.governingCheck,
     highest: readings[0],
     readings,
     gaps,

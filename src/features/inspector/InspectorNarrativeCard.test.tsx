@@ -128,8 +128,30 @@ describe('InspectorNarrativeCard', () => {
     const { container } = await renderCard(memberOf(), analysisFor(a36.yieldStrength / 2, 'limited'));
     const note = container.querySelector('[data-testid="inspector-limited-cause"]');
     expect(note?.textContent).toMatch(/Confiabilidad limitada/);
-    expect(note?.textContent).toContain(governingCheck.label);
-    expect(note?.textContent).toContain(governingCheck.message);
+    expect(note?.textContent).toMatch(/Condición numérica del sistema/);
+    // Reconstruida en el idioma activo, no copiada del motor.
+    expect(note?.textContent).not.toContain(governingCheck.label);
+    expect(note?.textContent).not.toContain(governingCheck.message);
+  });
+
+  it('never labels a blocked analysis as limited', async () => {
+    const { container } = await renderCard(memberOf(), analysisFor(a36.yieldStrength / 2, 'unreliable'));
+    expect(container.textContent).not.toMatch(/Confiabilidad limitada/);
+    expect(container.querySelector('[data-testid="inspector-limited-cause"]')).toBeNull();
+    const cause = container.querySelector('[data-testid="inspector-blocked-cause"]');
+    expect(cause?.textContent).toMatch(/Control que lo impide/);
+  });
+
+  it('follows the active language for the reliability cause', async () => {
+    (context.project.settings as { language: string }).language = 'en';
+    const { container } = await renderCard(memberOf(), analysisFor(a36.yieldStrength / 2, 'limited'));
+    const copy = container.textContent ?? '';
+    (context.project.settings as { language: string }).language = 'es';
+
+    expect(copy).toContain('Numerical condition of the system');
+    expect(copy).not.toContain(governingCheck.label);
+    expect(copy).not.toContain(governingCheck.message);
+    expect(copy).not.toContain('supera');
   });
 
   it('reads a purely axial member without demanding W', async () => {

@@ -4483,6 +4483,21 @@ button:not(:disabled):active,.selection-card:active {
   font-size:var(--sc-font-size-technical);
   line-height:var(--sc-line-height-compact);
 }
+/* Causa de un análisis bloqueado. Deliberadamente distinta de
+   `.elastic-demand-limited`: `limited` es una lectura que sí se publica,
+   `unreliable` es una que no, y no deben parecer el mismo estado. */
+.elastic-demand-blocked-cause {
+  margin:0;
+  padding:6px 8px;
+  display:grid;
+  gap:3px;
+  border-inline-start:3px solid var(--sc-color-state-error);
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  color:var(--text);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+}
 .elastic-demand-missing {
   margin:0;
   padding-inline-start:18px;

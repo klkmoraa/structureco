@@ -13,6 +13,7 @@ import {
   elasticIndexPaint,
   type ElasticIndexGap,
 } from './elasticDemand';
+import { describeReliabilityCheck, reliabilityCheckLabel } from './reliabilityCopy';
 
 /**
  * Índice elástico estimado de la estructura.
@@ -45,21 +46,26 @@ export const ElasticDemandCard = () => {
     emitWorkspaceCommand('focus-object', { kind: 'member', id: memberId });
   };
 
-  /** La causa de `limited`, citada literalmente desde el check que la gobierna. */
-  const limitedNote = view.confidence === 'limited' && view.limitedCheck
-    ? <p className="elastic-demand-limited" role="note" data-testid="elastic-limited-cause">
-      <strong>{t('elastic.limitedConfidence')}</strong>
-      <span>{t('elastic.limitedGoverning', { check: view.limitedCheck.label })}</span>
-      <span className="elastic-demand-limited-message">{view.limitedCheck.message}</span>
-      <button type="button" onClick={() => emitWorkspaceCommand('open-model-doctor')}>
-        {t('elastic.actionDoctor')}
-      </button>
-    </p>
-    : view.confidence === 'limited'
-      ? <p className="elastic-demand-limited" role="note" data-testid="elastic-limited-cause">
-        <strong>{t('elastic.limitedConfidence')}</strong>
-      </p>
-      : null;
+  /**
+   * La causa del nivel de confiabilidad, reconstruida en el idioma activo desde
+   * los campos estructurados del check. Nunca `check.label` ni `check.message`:
+   * el motor los redacta en español fijo como diagnóstico interno.
+   */
+  const cause = view.governingCheck
+    ? <>
+      <span>{t(view.confidence === 'limited' ? 'elastic.limitedGoverning' : 'elastic.blockedGoverning', {
+        check: reliabilityCheckLabel(view.governingCheck, t),
+      })}</span>
+      <span className="elastic-demand-limited-message">{describeReliabilityCheck(view.governingCheck, t)}</span>
+    </>
+    : null;
+
+  const doctorButton = <button
+    type="button"
+    className="elastic-demand-action"
+    data-testid="elastic-index-action"
+    onClick={() => emitWorkspaceCommand('open-model-doctor')}
+  >{t('elastic.actionDoctor')}</button>;
 
   if (view.status === 'unavailable') {
     const blockedKey: TranslationKey = view.blocker === 'no-analysis'
@@ -84,16 +90,16 @@ export const ElasticDemandCard = () => {
         </span> : null}
       </header>
       <p className="elastic-demand-blocked">{t(blockedKey)}</p>
-      {view.blocker === 'unreliable' ? limitedNote : null}
+      {/* Un análisis no confiable no es una lectura «limitada»: se dice qué lo
+          bloquea y por qué, sin etiquetarlo como algo intermedio y utilizable.
+          Un solo acceso al Doctor del modelo, aquí abajo con las demás acciones. */}
+      {view.blocker === 'unreliable' && cause ? <p className="elastic-demand-blocked-cause" data-testid="elastic-blocked-cause">
+        {cause}
+      </p> : null}
       {view.missing.length ? <ul className="elastic-demand-missing">
         {view.missing.map((gap) => <li key={gap}>{t(gapLabel[gap])}</li>)}
       </ul> : null}
-      {view.blocker === 'unreliable' ? <button
-        type="button"
-        className="elastic-demand-action"
-        data-testid="elastic-index-action"
-        onClick={() => emitWorkspaceCommand('open-model-doctor')}
-      >{t('elastic.actionDoctor')}</button>
+      {view.blocker === 'unreliable' ? doctorButton
         : firstGap ? <button
           type="button"
           className="elastic-demand-action"
@@ -160,7 +166,11 @@ export const ElasticDemandCard = () => {
       <span className="elastic-index-reference" style={{ left: `${ELASTIC_REFERENCE_RATIO * 100}%` }} />
     </div>
 
-    {limitedNote}
+    {view.confidence === 'limited' ? <p className="elastic-demand-limited" role="note" data-testid="elastic-limited-cause">
+      <strong>{t('elastic.limitedConfidence')}</strong>
+      {cause}
+      {doctorButton}
+    </p> : null}
 
     <dl className="elastic-demand-grid">
       <div>

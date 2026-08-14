@@ -242,23 +242,33 @@ describe('elastic index — per member', () => {
 describe('elastic index — reliability gate', () => {
   it('publishes an ordinary reading only for a reliable analysis', () => {
     expect(elasticDemandGate(analysisOf([result()], 'reliable')))
-      .toEqual({ blocker: null, confidence: 'reliable', limitedCheck: null });
+      .toEqual({ blocker: null, confidence: 'reliable', governingCheck: null });
   });
 
   it('names the check that governs a limited analysis', () => {
     // «Confiabilidad limitada» sin causa es una etiqueta que el usuario no puede
-    // accionar: se publica el check gobernante con su mensaje.
+    // accionar: se publica el check gobernante.
     const gate = elasticDemandGate(analysisOf([result()], 'limited'));
     expect(gate.blocker).toBeNull();
     expect(gate.confidence).toBe('limited');
-    expect(gate.limitedCheck?.id).toBe('condition');
-    expect(gate.limitedCheck?.message).toContain('supera');
+    expect(gate.governingCheck?.id).toBe('condition');
   });
 
-  it('blocks the index for unreliable and failed analyses', () => {
-    expect(elasticDemandGate(analysisOf([result()], 'unreliable')).blocker).toBe('unreliable');
-    expect(elasticDemandGate(analysisOf([result()], 'failed')).blocker).toBe('unreliable');
-    expect(elasticDemandGate(null).blocker).toBe('no-analysis');
+  it('never reports an unreliable analysis as merely limited', () => {
+    // `limited` es una lectura que sí se publica, marcada. `unreliable` es una
+    // que no se publica: llamarla «limitada» la presentaba como algo intermedio
+    // y utilizable que no es.
+    for (const level of ['unreliable', 'failed'] as const) {
+      const gate = elasticDemandGate(analysisOf([result()], level));
+      expect(gate.blocker, level).toBe('unreliable');
+      expect(gate.confidence, level).toBeNull();
+      // Pero la causa sigue disponible para citarla como motivo del bloqueo.
+      expect(gate.governingCheck?.id, level).toBe('condition');
+    }
+  });
+
+  it('reports no confidence and no cause when there is nothing to classify', () => {
+    expect(elasticDemandGate(null)).toEqual({ blocker: 'no-analysis', confidence: null, governingCheck: null });
   });
 });
 
@@ -334,6 +344,9 @@ describe('elastic index — structure view model', () => {
     expect(view.blocker).toBe('unreliable');
     expect(view.coverage).toBe('unavailable');
     expect(view.ratios.size).toBe(0);
+    // Ni «limitada» ni ninguna otra calificación: la lectura no se publica.
+    expect(view.confidence).toBeNull();
+    expect(view.governingCheck?.id).toBe('condition');
   });
 
   it('publishes a limited analysis marked as limited and names its governing check', () => {
@@ -343,8 +356,7 @@ describe('elastic index — structure view model', () => {
     );
     if (view.status !== 'available') throw new Error('esperaba una vista disponible marcada como limitada');
     expect(view.confidence).toBe('limited');
-    expect(view.limitedCheck?.id).toBe('condition');
-    expect(view.limitedCheck?.message).toContain('supera');
+    expect(view.governingCheck?.id).toBe('condition');
   });
 
   it('gives the inspector the same reading the summary publishes', () => {
@@ -362,13 +374,17 @@ describe('elastic index — structure view model', () => {
     const b1 = member({ id: 'B1' });
     const perMember = memberElasticIndexView(b1, result({ memberId: 'B1', maxMoment: 30 }), analysisOf([result()], 'limited'));
     if (perMember.status !== 'available') throw new Error('esperaba una lectura disponible');
-    expect(perMember.limitedCheck?.id).toBe('condition');
+    expect(perMember.governingCheck?.id).toBe('condition');
   });
 
   it('blocks the inspector reading on the same reliability gate as the summary', () => {
     const b1 = member({ id: 'B1' });
     const perMember = memberElasticIndexView(b1, result({ memberId: 'B1', maxMoment: 30 }), analysisOf([result()], 'unreliable'));
-    expect(perMember).toEqual({ status: 'unavailable', blocker: 'unreliable', gaps: [] });
+    expect(perMember.status).toBe('unavailable');
+    if (perMember.status !== 'unavailable') return;
+    expect(perMember.blocker).toBe('unreliable');
+    expect(perMember.governingCheck?.id).toBe('condition');
+    expect(perMember.gaps).toEqual([]);
   });
 });
 

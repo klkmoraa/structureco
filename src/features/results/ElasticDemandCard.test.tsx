@@ -114,6 +114,7 @@ afterEach(() => {
   setSelection.mockClear();
   setMembers(memberOf());
   (context.project.settings as { units: string }).units = 'kN-m';
+  (context.project.settings as { language: string }).language = 'es';
   context.analysis = analysisFor(a36.yieldStrength / 2);
 });
 
@@ -244,8 +245,62 @@ describe('ElasticDemandCard — limited reliability', () => {
     context.analysis = analysisFor(a36.yieldStrength / 2, 'limited');
     await renderCard();
     const note = screen.getByTestId('elastic-limited-cause');
-    expect(note.textContent).toContain(governingCheck.label);
-    expect(note.textContent).toContain(governingCheck.message);
+    expect(note.textContent).toMatch(/Condición numérica del sistema/);
+    // La causa se reconstruye desde los campos estructurados, no se copia del
+    // motor: ni su etiqueta ni su mensaje internos llegan a la pantalla.
+    expect(note.textContent).not.toContain(governingCheck.label);
+    expect(note.textContent).not.toContain(governingCheck.message);
+  });
+});
+
+describe('ElasticDemandCard — unreliable is not limited', () => {
+  it('never labels a blocked analysis as limited', async () => {
+    context.analysis = analysisFor(a36.yieldStrength / 2, 'unreliable');
+    const { container } = await renderCard();
+    expect(screen.getByTestId('elastic-demand-card').dataset.status).toBe('unavailable');
+    expect(container.textContent).not.toMatch(/Confiabilidad limitada/);
+    expect(container.querySelector('[data-testid="elastic-limited-cause"]')).toBeNull();
+  });
+
+  it('offers exactly one Model Doctor action, not two', async () => {
+    context.analysis = analysisFor(a36.yieldStrength / 2, 'unreliable');
+    const { container } = await renderCard();
+    const doctorButtons = [...container.querySelectorAll('button')]
+      .filter((button) => /Doctor del modelo/.test(button.textContent ?? ''));
+    expect(doctorButtons).toHaveLength(1);
+  });
+
+  it('still cites what blocks the reading, as a blocker rather than a degradation', async () => {
+    context.analysis = analysisFor(a36.yieldStrength / 2, 'unreliable');
+    await renderCard();
+    const cause = screen.getByTestId('elastic-blocked-cause');
+    expect(cause.textContent).toMatch(/Control que lo impide/);
+    expect(cause.textContent).toMatch(/Condición numérica del sistema/);
+  });
+});
+
+describe('ElasticDemandCard — reliability cause follows the active language', () => {
+  it('does not leak the engine Spanish prose into an English interface', async () => {
+    (context.project.settings as { language: string }).language = 'en';
+    context.analysis = analysisFor(a36.yieldStrength / 2, 'limited');
+    const { container } = await renderCard();
+    const copy = container.textContent ?? '';
+
+    expect(copy).toContain('Numerical condition of the system');
+    expect(copy).toContain('Governing check');
+    // Nada del texto interno del motor, que siempre viene en español.
+    expect(copy).not.toContain(governingCheck.label);
+    expect(copy).not.toContain(governingCheck.message);
+    expect(copy).not.toContain('supera');
+    expect(copy).not.toContain('equilibrado');
+  });
+
+  it('does not leak English into a Spanish interface either', async () => {
+    context.analysis = analysisFor(a36.yieldStrength / 2, 'limited');
+    const { container } = await renderCard();
+    const copy = container.textContent ?? '';
+    expect(copy).toContain('Condición numérica del sistema');
+    expect(copy).not.toContain('Numerical condition');
   });
 });
 
