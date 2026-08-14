@@ -8,8 +8,6 @@
     "structureCo-backup-*/**",
     "structureCo-worktrees/**",
     "structureco-sites/**",
-    "structureco-sites-test/**",
-    "structureco-sites-test-publish/**",
     "structureco-sites-worktrees/**",
     "structureco-design-review/**",
     "structureco-palette-lab/**",
