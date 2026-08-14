@@ -126,7 +126,12 @@ describe('ToolBar mobile action sheets', () => {
     expect(command).toBeTruthy();
     await user.click(command!);
 
-    expect(openGenerator).toHaveBeenCalledOnce();
+    // La hoja móvil difiere el comando un frame a propósito (`ToolBar.tsx`:
+    // `openStructureGeneratorFromMobile`), para cerrarse y devolver la
+    // inertness antes de que el generador tome el foco. Sin esperar ese frame
+    // la aserción gana o pierde según lo cargado que venga el entorno.
+    await waitFor(() => expect(openGenerator).toHaveBeenCalledOnce());
+    // La inertness sí se restituye de forma síncrona al cerrar.
     expect(document.querySelector<HTMLElement>('.app-shell')?.inert).toBe(false);
     unsubscribe();
   });

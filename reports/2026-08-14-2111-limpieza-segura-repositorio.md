@@ -6,9 +6,11 @@
 
 ## Qué cambió
 
-Se eliminó únicamente material con evidencia estática de no tener consumidores: un componente huérfano de Aula, cinco helpers de exportación/importación superados, un asset de plantilla ajena que se publicaba en cada build, el CSS legacy del antiguo "portón de resultados" de Aula, 33 claves i18n de esa misma familia muerta, y tres artefactos sueltos de sesiones previas en la raíz. Total: **1069 líneas y 5 archivos menos**, sin tocar solver, teoría estructural, schema ni UX visible.
+Se eliminó únicamente material con evidencia estática de no tener consumidores: un componente huérfano de Aula, cinco helpers de exportación/importación superados, un asset de plantilla ajena que se publicaba en cada build, el CSS legacy del antiguo "portón de resultados" de Aula, 33 claves i18n de esa misma familia muerta, tres artefactos sueltos de sesiones previas en la raíz y —tras reverificar su desconexión total— los dos subproyectos vendorizados `structureco-sites-test*`. Sin tocar solver, teoría estructural, schema ni UX visible.
 
-No se modificó ningún archivo de la frontera matemática protegida (`src/engine/**`, `src/workers/**`, `src/data/**`, `src/store/ProjectContext.tsx`, `src/types.ts`), y por tanto `scripts/protected-baseline.sha256` no requiere refresco.
+Además, en una segunda pasada previa al merge: se auditó el cambio de CRI-42 en `src/engine/units.ts`, se refrescó **sólo esa entrada** del baseline protegido, y se corrigió la carrera asíncrona que hacía fallar `ToolBar.test.tsx` en suite completa. **El gate completo queda verde.**
+
+Ningún archivo de la frontera matemática protegida (`src/engine/**`, `src/workers/**`, `src/data/**`, `src/store/ProjectContext.tsx`, `src/types.ts`) fue modificado por esta rama; el único movimiento en esa frontera es el refresco documentado de la entrada de `units.ts` en el baseline.
 
 ## Por qué
 
@@ -72,7 +74,6 @@ Los tres entraron en `dd7bcbf` ("chore: subir configuración local de plugins y 
 
 | Elemento | Motivo |
 |---|---|
-| `structureco-sites-test/` y `structureco-sites-test-publish/` | **La mayor oportunidad pendiente**: 5.3 MB cada uno, 53 archivos cada uno, prácticamente idénticos (sólo difiere `package.json`). Son un proyecto Next.js/Cloudflare aparte, sin build, sin pruebas y sin despliegue (`netlify.toml` publica `dist/` de la raíz); su única referencia en todo el repo son dos patrones de ignorado en `.oxlintrc.json`. No se borran porque eliminar un subproyecto vendorizado completo excede una limpieza segura y requiere decisión del usuario. |
 | Exports muertos en `src/engine/**`, `src/workers/**`, `src/data/**`, `src/types.ts` | Frontera matemática protegida. Quedan 7 valores sin referencias (`spacingDivisionCount`, `splitMemberAtNode`, `envelopeCoverage`, `orderFramePath`, `buildAxleTrainEnvelope`, `isProfilingActive`, `formatDisplay`). Tocarlos exigiría refrescar el baseline protegido, que requiere autorización explícita. |
 | `src/space3d/engine/solver.ts` (`emptySpace3DAnalysisResult`) y `src/space3d/model/types.ts` (`zeroSpace3DDofValues`, `Space3DDofKey`) | Solver y schema de Space 3D. Fuera de alcance por instrucción. |
 | `src/features/results/elasticDemand.ts` (`ElasticCoverage`) | Trabajo de CRI-42 recién aterrizado y citado en su reporte del 2026-08-14; sin beneficio en retirarlo ahora. |
@@ -98,6 +99,10 @@ Los tres entraron en `dd7bcbf` ("chore: subir configuración local de plugins y 
 - `src/styles.css` — retiradas las reglas de la familia muerta de Aula; `.classroom-mode-card` preservada.
 - `src/design-system/material.css` — `.hide-classroom-results` fuera de la lista de superficie `flat`.
 - `src/i18n/catalogs.ts` — 33 claves `classroom.*` muertas fuera de `es` y de `en`.
+- `structureco-sites-test/` y `structureco-sites-test-publish/` — eliminados (106 archivos, 10,6 MB) tras la reverificación de la segunda pasada.
+- `.oxlintrc.json` — retirados los dos patrones de ignorado de esos directorios.
+- `scripts/protected-baseline.sha256` — refrescada únicamente la entrada de `src/engine/units.ts`.
+- `src/features/canvas/ToolBar.test.tsx` — la aserción de la hoja móvil espera el frame que el producto programa.
 
 ## Cómo verificar
 
@@ -120,25 +125,86 @@ npm run verify:space3d
 | `lint` (oxlint) | 0 errores, 2 avisos (`prototypes/ios-app/src/components/Structure.tsx:40,47`) | idéntico | Sin cambio |
 | `typecheck` (`tsc -b`) | limpio | limpio | Sin cambio |
 | `verify:docs` | 27 documentos clasificados, enlaces válidos | idéntico | Sin cambio |
-| `test` (suite completa) | 204 archivos · 2047 pasan · 1 falla · 8 omitidas | 204 archivos · 2047 pasan · 1 falla · 8 omitidas | **Idéntico** |
+| `test` (suite completa) | 204 archivos · 2047 pasan · **1 falla** · 8 omitidas | 204 archivos · **2048 pasan · 0 fallan** · 8 omitidas | **Verde** |
 | `build` | correcto | correcto | Sin cambio |
-| `verify:protected` | **falla**: `MODIFICADO src/engine/units.ts` | **falla**: `MODIFICADO src/engine/units.ts` | **Preexistente, idéntico** |
+| `verify:protected` | **falla**: `MODIFICADO src/engine/units.ts` | **Frontera protegida intacta: 38 archivos** | **Verde** |
 | `verify:perf` | 840 882 B / 219 015 B gzip | 830 288 B / 216 914 B gzip | **−10 594 B (−1,26 %) / −2 101 B gzip (−0,96 %)** |
-| `verify:space3d` | — | capacidad aprobada 150 nudos / 300 barras | Correcto |
+| `verify:space3d` | — | 20 archivos · 212 pasan · capacidad 150 nudos / 300 barras | Correcto |
+| `validate:ci` | — | 2 workflows sin problemas | Correcto |
 
-El comportamiento no cambió: mismo número de pruebas, mismas que pasan, mismas que fallan.
+`npm run verify` completo sale con código 0. La única variación en el conteo de pruebas es la que pasó de fallar a pasar; ninguna prueba se omitió, se relajó ni se eliminó.
 
-## Dos fallos preexistentes que esta rama no introduce ni corrige
+## Segunda pasada (2026-08-14, previa al merge)
 
-Ambos ya estaban en `main` antes de tocar nada, verificados con el árbol limpio:
+### Eliminación de los subproyectos vendorizados
 
-1. **`verify:protected` falla en `main`.** `src/engine/units.ts` se modificó en `4d82a55` ("feat: replantear la demanda elástica como Índice elástico estimado (CRI-42)") sin refrescar `scripts/protected-baseline.sha256`. Hash actual `b70de244…`, baseline `96f10225…`. **No se refrescó el baseline en esta rama**: hacerlo requiere autorización explícita del usuario y es exactamente la operación que el gate existe para impedir que se haga por inercia. El CI de `main` debe estar rojo por esto.
+Se reverificó la desconexión de `structureco-sites-test/` y `structureco-sites-test-publish/` contra todas las superficies posibles:
 
-2. **`ToolBar.test.tsx > reaches the structure generator from the compact Más sheet` falla en la suite completa pero pasa aislada** (`npx vitest run src/features/canvas/ToolBar.test.tsx` → 11/11). Es contaminación de estado entre archivos, no un fallo de la prueba en sí.
+- **Workflows**: ni `ci.yml` ni `release-qa.yml` los mencionan; sólo ejecutan scripts de la raíz.
+- **Deploy**: `netlify.toml` publica `dist/` de la raíz. La rama `gh-pages` contiene únicamente el build de la app (`assets`, `favicon.svg`, `fonts`, `index.html`, `site.webmanifest`, `sw.js`) y **cero rastro** de estos directorios.
+- **Scripts y runtime**: sin `.gitmodules`, sin `workspaces` en el `package.json` raíz, sin workflows anidados, y `vite.config.ts` no los incluye ni necesita excluirlos (el `include` de pruebas es `src/**`).
+- **Docs**: no aparecen en `docs/README.md` ni en ningún documento clasificado.
+- **Dirección de la dependencia**: `structureco-sites-test/scripts/sync-structureco.mjs` lee `../dist`, es decir, **el sitio consume el build de structureCo, nunca al revés**. Borrarlo no puede afectar a la app.
+
+Tras esa verificación, únicas menciones en todo el repositorio: dos patrones de ignorado en `.oxlintrc.json`. Se eliminaron ambos directorios (106 archivos, 10,6 MB) y esos dos patrones. Se conservan `structureco-sites/**` y `structureco-sites-worktrees/**` en el ignore porque siguen correspondiendo a directorios locales declarados en `.gitignore`.
+
+### Auditoría de CRI-42 en `src/engine/units.ts` y refresco puntual del baseline
+
+Se auditó el diff completo entre `5c39db6` y `4d82a55`. El cambio añade **una sola cantidad nueva**, `sectionModulus`:
+
+- un miembro nuevo en la unión `UnitQuantity`, con su comentario;
+- su etiqueta y su factor en los cuatro sistemas de unidades.
+
+**Prueba de que es puramente aditivo**: revirtiendo programáticamente sólo las líneas de `sectionModulus` sobre el archivo posterior, el resultado es **byte-idéntico** al archivo anterior. Ni un factor, ni una etiqueta, ni `unitLabel`, `toDisplay`, `fromDisplay` o `formatDisplay` cambiaron.
+
+**Los factores son correctos** como conversión de longitud³, coherentes con los de área (longitud²) e inercia (longitud⁴) ya existentes:
+
+| Sistema | Etiqueta | Factor en el archivo | Verificación |
+|---|---|---|---|
+| `kN-m` | m³ | 1 | base |
+| `N-mm` | mm³ | 1 000 000 000 | 1000³ ✓ |
+| `kgf-m` | cm³ | 1 000 000 | 100³ ✓ |
+| `kip-ft` | in³ | 61 023,7440947323 | (1/0,0254)³ = 61 023,7440947323 ✓ exacto |
+
+**Es de presentación, no de cálculo.** Sus únicos consumidores son `InspectorNarrativeCard.tsx` y `ElasticDemandCard.tsx`, y ambos lo usan sólo dentro de `toDisplay(...)` / `unitLabel(...)` para renderizar. El índice η se calcula en unidades base (`elasticDemand.ts:249`, `maxMoment / section.sectionModulus`), sin pasar por la conversión. Ningún archivo de `src/engine/solver.ts` ni de `src/workers/**` lo referencia. `src/engine/units.test.ts` ya cubre las cuatro conversiones y la etiqueta `in³`.
+
+Confirmado eso, se refrescó **únicamente esa entrada** de `scripts/protected-baseline.sha256`, con edición quirúrgica de una sola línea (no se ejecutó `--update`, que reescribiría el archivo entero):
+
+```
+- 96f102253ed09b6a6bf05b41857e6d000f0d86a1447843680df63af84825ccc2  src/engine/units.ts
++ b70de24464d32e9bc3d2c215b6ad08377588ad9a8bd0509af093e3ce5e35ee19  src/engine/units.ts
+```
+
+`diff` sobre el baseline confirma exactamente un par `-`/`+`; las otras 37 entradas quedan intactas. `verify:protected` pasa: «Frontera protegida intacta: 38 archivos verificados».
+
+### Diagnóstico y corrección del aislamiento de `ToolBar.test.tsx`
+
+**Reproducción determinista.** Se obtuvo el orden real de ejecución (`vitest list`): `ToolBar.test.tsx` es el archivo 19. Ejecutar exactamente ese prefijo de 19 archivos reproduce el fallo el 100 % de las veces. Bisecando por parejas, cuatro archivos previos lo disparan: `App.test.tsx`, `engine/performance.test.ts`, `topbar/TopBar.test.tsx` y `datasheet/DatasheetPanel.test.tsx`.
+
+**No era fuga de DOM.** Instrumentando la prueba en el escenario que falla, el documento estaba limpio: 1 `.app-shell`, 1 `.mobile-tool-palette-more`, 2 `.mobile-tool-group`, 2 `[data-structure-generator-command]`; el botón se encontraba, no estaba deshabilitado y no tenía ancestro `inert`. El clic ocurría; lo que no había ocurrido todavía era la emisión.
+
+**Causa real.** `ToolBar.tsx:222-223` difiere la emisión un frame **a propósito**:
+
+```ts
+const openStructureGeneratorFromMobile = () => {
+  closeMobileMenu(false);
+  window.requestAnimationFrame(() => emitWorkspaceCommand('open-structure-generator'));
+};
+```
+
+La hoja se cierra y devuelve la inertness antes de que el generador tome el foco. En jsdom `requestAnimationFrame` se apoya en un temporizador de ~16 ms, así que si la aserción se evalúa de forma síncrona tras el clic, gana o pierde según lo cargado que venga el proceso — de ahí que cuatro archivos pesados distintos la volteen. La prueba hermana que usa el botón de escritorio (`ToolBar.tsx:379`, emisión síncrona) nunca falla.
+
+**Corrección.** Envolver esa única aserción en `waitFor`, que es justo esperar el frame que el producto programa:
+
+```ts
+await waitFor(() => expect(openGenerator).toHaveBeenCalledOnce());
+```
+
+Sin `skip`, sin relajar la aserción (sigue siendo `toHaveBeenCalledOnce`), sin tocar el producto. La aserción de inertness se deja síncrona a propósito, porque `closeMobileMenu` restituye `inert` de forma síncrona y el comentario del código lo declara explícitamente; verificarlo tras la espera dejaría de comprobar esa garantía.
+
+**Verificación**: las cuatro parejas que reproducían pasan; el prefijo exacto de 19 archivos pasa (314 pruebas); la suite completa pasa.
 
 ## Pendiente / siguiente paso
 
-- **Decisión del usuario**: ¿se borran `structureco-sites-test/` y `structureco-sites-test-publish/`? Son 10,6 MB y 106 archivos duplicados sin ninguna conexión con la aplicación. Es el borrado con mayor rendimiento pendiente, pero no se hace sin confirmación.
-- **Decisión del usuario**: los dos fallos preexistentes de arriba. El de `verify:protected` sólo se resuelve autorizando el refresco del baseline (o revirtiendo el cambio en `units.ts`).
 - Auditoría dedicada de las ~305 claves i18n restantes, familia por familia, resolviendo primero cada prefijo dinámico.
 - Sin merge a `main` y sin publicar Pages, según lo pedido.
