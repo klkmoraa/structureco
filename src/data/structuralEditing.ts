@@ -98,7 +98,7 @@ const assertPoint = (point: Point2D, label: string) => {
 };
 
 /** Removes floating noise around exact zero/integer cardinal results. */
-const cleanCoordinate = (value: number): number => {
+export const cleanCoordinate = (value: number): number => {
   if (Math.abs(value) <= COORDINATE_EPSILON) return 0;
   const integer = Math.round(value);
   return Math.abs(value - integer) <= COORDINATE_EPSILON ? integer : value;
