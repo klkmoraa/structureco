@@ -1,0 +1,1 @@
+var e=e=>`structureco:${e}`;function t(...[t,n]){typeof window>`u`||window.dispatchEvent(new CustomEvent(e(t),{detail:n}))}var n=(t,n)=>{if(typeof window>`u`)return()=>{};let r=e=>{n(e.detail)};return window.addEventListener(e(t),r),()=>window.removeEventListener(e(t),r)};export{n,t};
