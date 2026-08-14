@@ -1,11 +1,18 @@
 import type { MemberInitialEffect, MemberLoad, MemberModel, NodalLoad, NodeModel, PrescribedDisplacement, ProjectModel, Selection } from '../types';
 
-const nextId = (prefix: string, ids: Iterable<string>): string => {
+/**
+ * Primer ID libre de una familia. Se exporta para que toda ruta que cree
+ * entidades —pegar, dividir, duplicar o insertar una geometría generada—
+ * reparta identidad con exactamente la misma regla.
+ */
+export const nextEntityId = (prefix: string, ids: Iterable<string>): string => {
   const used = new Set(ids);
   let index = 1;
   while (used.has(`${prefix}${index}`)) index += 1;
   return `${prefix}${index}`;
 };
+
+const nextId = nextEntityId;
 
 const interpolate = (start: number, end: number, ratio: number) => start + (end - start) * ratio;
 

@@ -9,6 +9,7 @@ import { ProjectModelContext, useProjectModel, type ProjectModelContextValue } f
 import { ProjectAnalysisContext, useProjectAnalysis, type ProjectAnalysisContextValue, type InfluenceCanvasState } from './ProjectAnalysisContext';
 import { WorkspaceUIContext, useWorkspaceUI, type WorkspaceUIContextValue, type ResultCursor, type ResultTab } from './WorkspaceUIContext';
 import type { PreparedTopologyRepair, ProjectCommand, ProjectCommandResult } from '../commands/projectCommand';
+import type { PreparedStructureGeneration } from '../commands/structureGeneration';
 import { WORKER_PROTOCOL_VERSION, type AnalysisWorkerPayload, type WorkerRequestEnvelope, type WorkerResponseEnvelope } from '../runtime/workerProtocol';
 import type { ProjectRepository } from '../storage/projectRepository';
 import type { PreparedStructuralEdit } from '../data/structuralEditing';
@@ -418,6 +419,23 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     return { applied: true };
   }, [commitReversibleProjectChange]);
 
+  /**
+   * Confirma una generación revisada. Todo el lote entra por
+   * `commitReversibleProjectChange`, así que la geometría completa —decenas de
+   * nodos y miembros— ocupa un solo punto de historial y un solo undo, y el
+   * resultado vigente se invalida una vez, no una vez por entidad creada.
+   */
+  const executePreparedStructureGeneration = useCallback(async (prepared: PreparedStructureGeneration) => {
+    const { applyPreparedStructureGeneration } = await import('../commands/structureGeneration');
+    const { projectCommandSnapshot } = await import('../commands/projectCommand');
+    const current = projectRef.current;
+    const next = applyPreparedStructureGeneration(current, prepared);
+    const created = { nodeIds: prepared.createdNodeIds, memberIds: prepared.createdMemberIds };
+    if (projectCommandSnapshot(next) === projectCommandSnapshot(current)) return { applied: false, ...created };
+    commitReversibleProjectChange(current, next, prepared.description);
+    return { applied: true, ...created };
+  }, [commitReversibleProjectChange]);
+
   const updateProjectView = useCallback((updater: (project: ProjectModel) => ProjectModel) => {
     const current = projectRef.current;
     const next = updater(structuredClone(current));
@@ -536,9 +554,9 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     canRedo: future.length > 0,
     storageIssue: storageState.issue,
     storageMessage: storageState.message,
-    renameProject, executeProjectCommand, executePreparedTopologyRepair, executePreparedStructuralEdit, updateProject, updateProjectView, updateProjectAnalysisSettings, beginProjectTransaction, updateProjectTransient,
+    renameProject, executeProjectCommand, executePreparedTopologyRepair, executePreparedStructuralEdit, executePreparedStructureGeneration, updateProject, updateProjectView, updateProjectAnalysisSettings, beginProjectTransaction, updateProjectTransient,
     moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo,
-  }), [project, past.length, future.length, storageState.issue, storageState.message, renameProject, executeProjectCommand, executePreparedTopologyRepair, executePreparedStructuralEdit, updateProject, updateProjectView, updateProjectAnalysisSettings, beginProjectTransaction, updateProjectTransient, moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo]);
+  }), [project, past.length, future.length, storageState.issue, storageState.message, renameProject, executeProjectCommand, executePreparedTopologyRepair, executePreparedStructuralEdit, executePreparedStructureGeneration, updateProject, updateProjectView, updateProjectAnalysisSettings, beginProjectTransaction, updateProjectTransient, moveNodeTransient, commitProjectTransaction, cancelProjectTransaction, replaceProject, undo, redo]);
 
   const analysisValue = useMemo<ProjectAnalysisContextValue>(() => ({
     analysis, isAnalyzing, selectedCombinationId, learningFocus, influenceCanvasState,

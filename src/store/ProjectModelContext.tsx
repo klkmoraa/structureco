@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { AnalysisResult, ProjectModel, ProjectSettings } from '../types';
 import type { PreparedTopologyRepair, ProjectCommand, ProjectCommandResult } from '../commands/projectCommand';
+import type { PreparedStructureGeneration } from '../commands/structureGeneration';
 import type { PreparedStructuralEdit } from '../data/structuralEditing';
 
 /**
@@ -30,6 +31,12 @@ export interface ProjectModelContextValue {
 
   /** Applies the exact structural-edit state shown by a local canvas preview. */
   executePreparedStructuralEdit: (prepared: PreparedStructuralEdit) => Promise<PreparedStructuralEditExecutionResult>;
+
+  /**
+   * Applies the exact geometry shown by a generation preview.
+   * The whole generated batch lands as one history entry, never as one mutation per member.
+   */
+  executePreparedStructureGeneration: (prepared: PreparedStructureGeneration) => Promise<StructureGenerationExecutionResult>;
 
   /**
    * Applies a discrete reversible edit. It records one history entry and invalidates analysis.
@@ -72,6 +79,13 @@ export interface TopologyRepairExecutionResult {
 
 export interface PreparedStructuralEditExecutionResult {
   applied: boolean;
+}
+
+export interface StructureGenerationExecutionResult {
+  applied: boolean;
+  /** IDs realmente creados, para que la superficie pueda seleccionarlos. */
+  nodeIds: readonly string[];
+  memberIds: readonly string[];
 }
 
 export const ProjectModelContext = createContext<ProjectModelContextValue | null>(null);

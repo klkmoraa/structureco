@@ -1,3 +1,6 @@
+import { placeGeneratedStructure } from '../data/generators/generatorPlacement';
+import { generateStructure } from '../data/generators/structureGenerators';
+import type { GeneratorParams } from '../data/generators/generatorTypes';
 import {
   createMemberAtPoint,
   deleteStructuralSelection,
@@ -186,6 +189,23 @@ export type ProjectCommand =
   | (CommandBase & { kind: 'selection.duplicate'; selection: Selection; offset: { x: number; y: number } })
   | (CommandBase & { kind: 'dxf.import'; nodes: NodeModel[]; members: MemberModel[]; sourceName: string })
   | (CommandBase & {
+    /**
+     * Generación de una geometría completa como un solo lote reversible.
+     *
+     * El comando lleva **parámetros**, no geometría: la geometría se vuelve a
+     * generar aquí y sólo se acepta si coincide con la que mostró el preview.
+     * Un comando que transportara nodos y miembros sería un bus para inyectar
+     * cualquier geometría; éste no puede crear nada que el núcleo determinista
+     * de generación no produzca a partir de estos mismos parámetros.
+     */
+    kind: 'structure.generate';
+    params: GeneratorParams;
+    /** Estado exacto sobre el que se preparó; rechaza una intención obsoleta. */
+    sourceSnapshot: string;
+    /** Geometría exacta que mostró el preview; rechaza un resultado distinto. */
+    generatedSnapshot: string;
+  })
+  | (CommandBase & {
     kind: 'topology.repair';
     /** Exact project state shown when the user reviewed the preview. */
     sourceSnapshot: string;
@@ -197,7 +217,8 @@ export type ProjectCommandResult =
   | { kind: 'member.create'; memberId: string; nodeId: string; created: true }
   | { kind: 'member.createAtPoint'; memberId: string; nodeId: string; created: boolean }
   | { kind: 'member.split'; nodeId: string; firstMemberId: string; secondMemberId: string }
-  | { kind: 'topology.repair'; report: TopologyRepairReport };
+  | { kind: 'topology.repair'; report: TopologyRepairReport }
+  | { kind: 'structure.generate'; nodeIds: string[]; memberIds: string[] };
 
 export interface CompiledProjectCommand {
   command: ProjectCommand;
@@ -641,6 +662,24 @@ export const compileProjectCommand = (project: ProjectModel, command: ProjectCom
   } else if (command.kind === 'selection.duplicate') {
     const duplicated = duplicateModelSelection(next, command.selection, command.offset);
     if (!duplicated) throw new Error('La selección no se puede duplicar.');
+  } else if (command.kind === 'structure.generate') {
+    if (projectCommandSnapshot(project) !== command.sourceSnapshot) {
+      throw new Error('La generación preparada está obsoleta; vuelve a prepararla antes de aplicarla.');
+    }
+    // El núcleo es determinista, así que regenerar aquí tiene que dar
+    // exactamente lo que el usuario revisó. Si no coincide, la intención ya no
+    // es la que se aprobó y no se escribe nada.
+    const placed = placeGeneratedStructure(project, generateStructure(structuredClone(command.params)));
+    if (projectCommandSnapshot({ nodes: placed.nodes, members: placed.members }) !== command.generatedSnapshot) {
+      throw new Error('La geometría generada no coincide con la vista previa preparada.');
+    }
+    next.nodes.push(...placed.nodes.map((node) => structuredClone(node)));
+    next.members.push(...placed.members.map((member) => structuredClone(member)));
+    result = {
+      kind: 'structure.generate',
+      nodeIds: placed.nodes.map((node) => node.id),
+      memberIds: placed.members.map((member) => member.id),
+    };
   } else if (command.kind === 'dxf.import') {
     next.nodes.push(...structuredClone(command.nodes));
     next.members.push(...structuredClone(command.members));
