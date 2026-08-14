@@ -38,6 +38,11 @@ export interface WorkspaceCommands {
   'open-command-palette': void;
   /** Open the preventive Model Doctor surface before or after analysis. */
   'open-model-doctor': void;
+  /**
+   * Open the structural datasheet. It projects the current model as a table and
+   * shares the workspace selection, so it needs no payload of its own.
+   */
+  'open-datasheet': void;
   /** Open the contextual structural-editing surface for the current selection. */
   'open-structural-edit': void;
   /**

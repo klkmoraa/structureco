@@ -22,6 +22,7 @@ import {
   Play,
   Redo2,
   Save,
+  Sheet,
   Sun,
   Undo2,
   Wrench,
@@ -427,6 +428,13 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           <Wrench size={17} aria-hidden="true" />
           <span>Model Doctor</span>
         </button>
+        <IconButton
+          variant="secondary"
+          className="icon-button datasheet-launcher"
+          label={t('datasheet.open')}
+          title={t('datasheet.description')}
+          onClick={() => emitWorkspaceCommand('open-datasheet')}
+        ><Sheet size={19} /></IconButton>
         {onOpenSpace3D ? <IconButton
           variant="secondary"
           className="icon-button space3d-open-button"

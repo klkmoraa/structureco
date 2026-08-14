@@ -9,6 +9,7 @@ import {
   Play,
   Redo2,
   Search,
+  Sheet,
   Sun,
   Undo2,
   Wrench,
@@ -130,6 +131,19 @@ export const CommandPalette = ({ open, onClose, dispatchLayers }: CommandPalette
       run: () => {
         close();
         window.requestAnimationFrame(() => emitWorkspaceCommand('open-model-doctor'));
+      },
+    });
+    // La hoja de datos audita el modelo, no lo analiza: vive con las
+    // herramientas y no depende de que exista un resultado.
+    items.push({
+      id: 'tool:datasheet',
+      group: 'tools',
+      label: t('datasheet.title'),
+      hint: t('datasheet.description'),
+      icon: Sheet,
+      run: () => {
+        close();
+        window.requestAnimationFrame(() => emitWorkspaceCommand('open-datasheet'));
       },
     });
     items.push({

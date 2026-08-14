@@ -26,6 +26,7 @@ código + pruebas + gates ejecutables
 | [Este índice](README.md) | Clasificación, jerarquía y rutas de autoridad. |
 | [Mapa de arquitectura](architecture/README.md) | Subsistemas vigentes, fronteras y navegación técnica. |
 | [Space 3D · S3D-1](architecture/structureco-space-3d-s3d1.md) | Contrato, evidencia y límites actuales del dominio 3D experimental. |
+| [Datasheet estructural](architecture/structureco-datasheet-cri-81.md) | Contrato del datasheet: rejilla propia, editabilidad y ruta de casos y combinaciones. |
 
 ## Documentos de referencia
 
@@ -50,6 +51,7 @@ código + pruebas + gates ejecutables
 | [Plan de Fase 3](superpowers/plans/structureco-fase-3-plan.md) | [README principal](../README.md) y gates actuales |
 | [Plan de Fase 4](superpowers/plans/structureco-fase-4-plan.md) | [Space 3D · S3D-1](architecture/structureco-space-3d-s3d1.md) |
 | [Diseño de edición estructural avanzada 2D](superpowers/specs/2026-08-12-advanced-2d-structural-editing-design.md) | Código, pruebas y gates actuales |
+| [Diseño del datasheet estructural · CRI-81](superpowers/specs/2026-08-13-structural-datasheet-cri-81-design.md) | [Datasheet estructural](architecture/structureco-datasheet-cri-81.md) |
 | [Plan de edición estructural avanzada 2D](superpowers/plans/2026-08-12-advanced-2d-structural-editing.md) | Código, pruebas y gates actuales |
 
 ## Evidencia de auditoría y handoff

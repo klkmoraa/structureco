@@ -20,11 +20,15 @@ import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
 const LazyCommandPalette = lazy(() => import('./CommandPalette').then((module) => ({ default: module.CommandPalette })));
 /** Model Doctor y su adaptador de diagnósticos no entran al bundle inicial del editor. */
 const LazyModelDoctor = lazy(() => import('../model-doctor/ModelDoctor').then((module) => ({ default: module.ModelDoctor })));
+/** La hoja de datos sólo se descarga cuando alguien la abre. */
+const LazyDatasheet = lazy(() => import('../datasheet/DatasheetPanel').then((module) => ({ default: module.DatasheetPanel })));
 
 export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string }) => {
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [modelDoctorOpen, setModelDoctorOpen] = useState(false);
+  const [datasheetOpen, setDatasheetOpen] = useState(false);
+  const datasheetReturnFocusRef = useRef<HTMLElement | null>(null);
   const [modelDoctorAcknowledgedIds, setModelDoctorAcknowledgedIds] = useState<Set<string>>(() => new Set());
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
   const inspectorToggleRef = useRef<HTMLButtonElement>(null);
@@ -132,6 +136,24 @@ export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpe
   }, [modelDoctorOpen, setDoctorBackgroundState]);
 
   useEffect(() => onWorkspaceCommand('open-model-doctor', () => setDoctorOpen(true)), [setDoctorOpen]);
+
+  useEffect(() => onWorkspaceCommand('open-datasheet', () => {
+    // Se recuerda el lanzador antes de abrir: el Drawer devuelve el foco al
+    // cerrar, y sin esto volvería al `body` cuando lo abre la paleta, que ya se
+    // ha desmontado para entonces.
+    const activeElement = document.activeElement;
+    datasheetReturnFocusRef.current = activeElement instanceof HTMLElement
+      && activeElement !== document.body
+      && activeElement !== document.documentElement
+      ? activeElement
+      : null;
+    setMobileInspectorOpen(false);
+    setPaletteOpen(false);
+    setDatasheetOpen(true);
+  }), []);
+
+  // Abrir otro proyecto invalida lo que la hoja estaba mostrando.
+  useEffect(() => { setDatasheetOpen(false); }, [projectId]);
 
   useEffect(() => {
     let current = true;
@@ -249,6 +271,11 @@ export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpe
           open
           onClose={() => setPaletteOpen(false)}
           dispatchLayers={dispatchEditorLayers}
+        /></Suspense> : null}
+        {datasheetOpen ? <Suspense fallback={null}><LazyDatasheet
+          open
+          onOpenChange={setDatasheetOpen}
+          returnFocusTo={datasheetReturnFocusRef.current}
         /></Suspense> : null}
         {modelDoctorOpen ? <Suspense fallback={<span className="sr-only" role="status">{t('modelDoctor.loading')}</span>}><LazyModelDoctor
           open
