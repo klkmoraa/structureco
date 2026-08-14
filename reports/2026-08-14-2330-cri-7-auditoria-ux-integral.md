@@ -18,7 +18,11 @@ Esta es una auditoría **de diagnóstico**. No rediseña ni modifica la UX de pr
 | **Se trata aparte** | **Space 3D**, marcado experimental por el propio producto. Sus hallazgos van en una sección separada y **no** se mezclan con la priorización del producto 2D. |
 | **No se toca** | Solver, schema, lógica, CSS y componentes de producción. Los únicos archivos añadidos son el script de auditoría y su evidencia bajo `reports/evidence/2026-08-14-cri-7-ux-audit/`. |
 
-**El Brandbook Clay se leyó íntegro antes de emitir cualquier juicio de diseño** (`brand/brandbook-clay.html`, 14 secciones). Sus reglas se usan como criterio normativo declarado del proyecto. Donde el código se aparta de él, se cita la regla concreta. Donde el brandbook mismo marca una decisión abierta, se dice.
+**El Brandbook Clay se leyó íntegro antes de emitir cualquier juicio de diseño** (`brand/brandbook-clay.html`, 14 secciones).
+
+> **Regla transversal de autoridad.** El Brandbook Clay oficial de StructureCo es la **autoridad normativa** para identidad visual y UX visual del producto. El código, los tokens y los componentes actuales representan únicamente el **estado implementado** — no una fuente alternativa de verdad que compita con el brandbook. En consecuencia, en todo este informe:
+> - Cuando código/tokens difieren del brandbook, se clasifica como **desviación del contrato visual a reconciliar** — el brandbook fija el objetivo, la implementación actual es el punto de partida a corregir en una fase posterior. No se plantea como una disyuntiva de «qué documento manda».
+> - Sólo se deja como **decisión pendiente** aquello que el propio brandbook declara explícitamente abierto en su texto. Todo lo demás donde el código se aparta del brandbook tiene ya una dirección clara: converger hacia el brandbook.
 
 `.claude/skills/mobile-app-ui-design` se usó **sólo** como referencia de heurística táctil y ergonómica (tamaños de objetivo, alcance del pulgar, hojas inferiores). Ninguna de sus recomendaciones estéticas genéricas entra en este informe: la estética de referencia es Clay.
 
@@ -420,7 +424,7 @@ Conviven pues dos pesos de trazo: 1.8 en los glifos técnicos y 2.0 en toda la i
 - **Flujo:** identidad, transversal.
 - **Evidencia:** `tokens.css:61-62,130`, `public/favicon.svg:2`, `public/site.webmanifest:11`.
 
-**Problema observado.** El Brandbook §03 deja una decisión abierta explícita: «esta propuesta introduce `#159a72` … reemplaza tanto al token vigente `#00795f` como al histórico del favicon/PWA `#157A55`. Antes de adoptarlo, decidir cuál de los tres queda como fuente única de verdad».
+**Problema observado.** El Brandbook §03 dice, en sus propias palabras: «esta propuesta introduce `#159a72` … reemplaza tanto al token vigente `#00795f` como al histórico del favicon/PWA `#157A55`. Antes de adoptarlo, decidir cuál de los tres queda como fuente única de verdad». Es el propio brandbook el que deja esta elección abierta — no es una lectura de este informe.
 
 Estado hoy:
 
@@ -434,21 +438,21 @@ Es decir: el verde del brandbook existe en la paleta pero no manda; el que manda
 
 - **Severidad:** **Media** (identidad, no función).
 - **Impacto:** la marca no es reconocible como un único verde en los tres puntos donde más se ve.
-- **Local o sistémico:** **sistémico**, y es una **decisión de producto pendiente**, no un bug. No debe «arreglarse» eligiendo por cuenta propia: el brandbook pide explícitamente que alguien decida.
+- **Local o sistémico:** **sistémico.** Sigue como **decisión pendiente** — y sólo por eso, no por regla general: es el único de los hallazgos de identidad de este informe donde el propio brandbook nombra explícitamente los tres valores en pugna y pide que se elija uno antes de adoptarlo. No debe «arreglarse» eligiendo por cuenta propia durante la investigación; sí debe resolverse pronto, porque hasta que se decida, ninguno de los tres valores tiene autoridad clara sobre los otros dos.
 - **Qué funciona bien y hay que conservar:** la **paleta técnica** sí es disciplinada y coincide exactamente con el Brandbook §04 en tema claro: axial `#1f88b8`, cortante `#4a9463`, momento `#c94f3f`, deformada `#7d63c9`. Y el principio de que ningún significado dependa sólo del color está respetado (trazo continuo/discontinuo, iconos y etiquetas acompañan).
 
 ---
 
-### F-12 · El tema oscuro redefine la paleta técnica, contra el principio de «una sola paleta»
+### F-12 · El tema oscuro implementa una paleta técnica distinta a la que fija el Brandbook — desviación a reconciliar
 
 - **Flujo:** transversal, tema oscuro.
 - **Evidencia:** `tokens.css:189-192` frente a `tokens.css:645-648`.
 
-**Problema observado.** El Brandbook §04 es categórico: «**Una sola paleta, no dos**: estos siete colores son idénticos en tema día y tema noche — solo el fondo y las superficies cambian de fase. Antes cada tema tenía su propio matiz…; ahora un mismo `#159a72` se reconoce igual en ambos».
+**Problema observado.** El Brandbook §04 fija el objetivo con precisión: «**Una sola paleta, no dos**: estos siete colores son idénticos en tema día y tema noche — solo el fondo y las superficies cambian de fase. Antes cada tema tenía su propio matiz…; ahora un mismo `#159a72` se reconoce igual en ambos». A diferencia de F-11, el brandbook **no** deja esto abierto: describe una paleta técnica única como el estado correcto del sistema.
 
-El código hace lo que el brandbook dice que se dejó de hacer:
+La implementación actual todavía no llegó a ese objetivo — mantiene el esquema anterior de un matiz por tema:
 
-| Rol | Claro | Oscuro |
+| Rol | Claro | Oscuro (estado implementado hoy) |
 |---|---|---|
 | axial | `#1f88b8` | `#72c3df` |
 | cortante | `#4a9463` | `#78be83` |
@@ -457,8 +461,8 @@ El código hace lo que el brandbook dice que se dejó de hacer:
 
 - **Severidad:** **Media.**
 - **Impacto:** el color deja de ser un identificador estable entre temas justo donde más importa —los cuatro roles del solver—. Alguien que trabaje de día y revise de noche ve dos azules distintos para «axial».
-- **Local o sistémico:** **sistémico**, y también **decisión pendiente**: es defendible que sobre fondo oscuro haga falta subir la luminosidad para mantener contraste. Lo que no es defensible es que el brandbook declare una cosa y los tokens hagan otra sin dejar constancia. **Hay que decidir cuál de los dos documentos manda**, no aplicar uno por inercia.
-- **Qué funciona bien y hay que conservar:** el patrón de tema **no** tiene el bug clásico de colores huérfanos contra el que advierte el Brandbook §14.4. La app resuelve el tema en JS (`ProjectContext.tsx:45-49`) y **siempre** escribe un `data-theme` explícito, así que ningún color queda definido sólo dentro de un `@media`. Es una solución distinta de la del brandbook pero igual de correcta.
+- **Local o sistémico:** **sistémico.** Esto **no** es una decisión pendiente ni una disyuntiva entre dos fuentes de autoridad: el Brandbook Clay ya fija el objetivo (una sola paleta técnica, recalibrada sólo en luminosidad si el contraste sobre fondo oscuro lo exige, no en matiz). La paleta día/noche distinta que hoy implementan los tokens es el **estado actual a reconciliar contra ese contrato en una fase posterior**, no una alternativa igualmente válida.
+- **Qué funciona bien y hay que conservar:** el patrón de tema **no** tiene el bug clásico de colores huérfanos contra el que advierte el Brandbook §14.4. La app resuelve el tema en JS (`ProjectContext.tsx:45-49`) y **siempre** escribe un `data-theme` explícito, así que ningún color queda definido sólo dentro de un `@media`. Ese mecanismo de resolución de tema es correcto y debe conservarse tal cual al reconciliar la paleta con el brandbook — lo que hay que corregir es qué valores de color carga en tema oscuro, no cómo decide cuándo aplicarlos.
   **Matiz observado:** el tema se lee del sistema **una sola vez**, en el inicializador de `useState`. No hay suscripción a `matchMedia`, así que si el sistema operativo cambia a oscuro con la app abierta, la app no lo sigue hasta recargar. El producto tiene dos estados de tema (claro/oscuro) donde el brandbook describe tres (claro/oscuro/según el sistema).
 
 ---
@@ -604,7 +608,8 @@ El patrón común de los seis: **el área de modelo es el recurso escaso y todo 
 | H-5 | Los márgenes de encuadre derivados del chrome medido eliminan el desajuste de F-07 sin coste perceptible. | Sustituir las constantes por medición y comparar encuadres antes/después en los 11 viewports. | Medir en cada frame es caro; hay que acotar a cambios de tamaño. |
 | H-6 | Conectar el botón de rail al `sc-tool-button` existente cierra F-04 sin tocar el design system. | Cambio de una clase en `ToolBar.tsx` + captura comparada. | La regla legacy `.tool-button.active` la usan otros botones; hay que auditar quién más depende de ella. |
 | H-7 | La deriva de radios/iconos/breakpoints se detiene con gates de token, no con una limpieza puntual. | Regla de lint que prohíba literales nuevos de `border-radius`, `font-size` y `@media (width)` fuera de tokens. | Una limpieza masiva de 1.099 instancias es un diff enorme y arriesgado; conviene congelar primero y migrar por área. |
-| **Decisiones que no son hipótesis** | **F-11** (cuál de los verdes es la fuente única) y **F-12** (si la paleta técnica es una o dos). El Brandbook §03 pide explícitamente que se decida. **Requieren decisión del propietario, no investigación.** | | |
+| H-8 | Reconciliar la paleta técnica de tema oscuro (F-12) con la paleta única que fija el Brandbook §04 es viable manteniendo el contraste actual. | Recalcular contraste de los cuatro roles técnicos sobre `#0d151c`/`#0a1116` usando el matiz único de tema claro, recalibrado sólo en luminosidad; comparar contra los mínimos AA que cita el propio brandbook (§04). | Si el matiz único no alcanza AA sobre fondo oscuro sin subir luminosidad más allá de lo que el brandbook anticipa, hay que decidir el ajuste exacto antes de tocar tokens — no es una limpieza mecánica. |
+| **Decisión que no es hipótesis** | **F-11** (cuál de los tres verdes es la fuente única de marca). Es el único caso de este informe donde el propio Brandbook §03 nombra los valores en pugna y pide explícitamente que se elija uno. **Requiere decisión del propietario, no investigación.** F-12 no entra aquí: el brandbook ya fija su objetivo, así que su resolución es H-8, una hipótesis de reconciliación como cualquier otra. | | |
 
 ---
 
@@ -634,4 +639,4 @@ El script vuelve a generar `audit-data.json` y las capturas. `CRI7_ONLY_EXTRA=1`
 - Contraste medido por píxel en ambos temas (no cubierto aquí; §04 del brandbook publica ratios, no se recalcularon).
 - Prueba con lectores de pantalla reales.
 - Barrido continuo de anchuras entre 320 y 1920 buscando más reglas contradictorias del tipo F-01; esta pasada usó 11 viewports representativos, no un barrido.
-- F-11 y F-12 esperan decisión del propietario del repositorio.
+- F-11 espera decisión del propietario del repositorio (único caso donde el propio Brandbook deja abierta la elección). F-12 no espera decisión: el brandbook ya fija su objetivo; queda pendiente de reconciliación en fase posterior (H-8).
