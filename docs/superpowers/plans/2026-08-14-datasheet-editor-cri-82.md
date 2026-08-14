@@ -1,5 +1,12 @@
 # Datasheet como editor estructural (CRI-82) — Implementation Plan
 
+**Clasificación:** `HISTORICAL`
+
+> **HISTORICAL** — Plan de ejecución de CRI-82; conserva el método y la evidencia
+> de esa entrega y no certifica por sí solo el estado actual. El contrato vigente
+> es [Datasheet estructural](../../architecture/structureco-datasheet.md), el
+> código y sus pruebas.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Convertir el datasheet de sólo lectura de CRI-81 en un editor estructural visual donde se editan nudos, barras y cargas viendo el resultado antes de aplicarlo, con unidades correctas, validación y cambios múltiples atómicos.
