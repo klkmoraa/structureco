@@ -27,6 +27,7 @@ código + pruebas + gates ejecutables
 | [Mapa de arquitectura](architecture/README.md) | Subsistemas vigentes, fronteras y navegación técnica. |
 | [Space 3D · S3D-1](architecture/structureco-space-3d-s3d1.md) | Contrato, evidencia y límites actuales del dominio 3D experimental. |
 | [Datasheet estructural](architecture/structureco-datasheet.md) | Contrato del datasheet: rejilla propia, editabilidad, ruta de escritura y qué no repara. |
+| [Índice elástico estimado](architecture/structureco-elastic-index.md) | Contrato de η: qué significa, cuándo se publica, por qué no es una verificación normativa. |
 
 ## Documentos de referencia
 

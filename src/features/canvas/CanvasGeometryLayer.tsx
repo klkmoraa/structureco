@@ -12,7 +12,7 @@ import {
   toGlobalVector,
 } from '../../graphics/structureGeometry';
 import { formatFixed } from '../../utils/numberFormat';
-import { demandColorVariable } from '../results/elasticDemand';
+import { elasticIndexBand, elasticIndexColor } from '../results/elasticDemand';
 import type { TranslationKey } from '../../i18n/catalogs';
 
 export type StructuralTarget =
@@ -238,6 +238,9 @@ const CanvasGeometryLayerImpl = ({
           // `toFixed` para no depender del locale ni de la política de
           // presentación, que gobierna sólo lo que el usuario lee.
           const demandAttribute = demandRatio === undefined ? undefined : String(Math.round(demandRatio * 1000) / 1000);
+          /* La banda redunda la magnitud sin depender del color: el CSS la usa
+             para el patrón de trazo, y queda legible en una captura en gris. */
+          const demandBand = demandRatio === undefined ? undefined : elasticIndexBand(demandRatio);
           return (
             <g
               key={member.id}
@@ -245,9 +248,10 @@ const CanvasGeometryLayerImpl = ({
               data-structure-kind="member"
               data-structure-id={member.id}
               data-demand-ratio={demandAttribute}
+              data-demand-band={demandBand}
               /* El color térmico viaja como custom property y no como `stroke`:
                  así la selección y el foco pedagógico siguen ganando por CSS. */
-              style={demandRatio === undefined ? undefined : { '--member-demand-color': demandColorVariable(demandRatio) } as CSSProperties}
+              style={demandRatio === undefined ? undefined : { '--member-demand-color': elasticIndexColor(demandRatio) } as CSSProperties}
               className={`member-object ${selected ? 'selected' : ''} ${learningHighlighted ? 'learning-highlight' : ''} ${member.type}${demandRatio === undefined ? '' : ' has-demand'}`}
               role="button"
               tabIndex={0}

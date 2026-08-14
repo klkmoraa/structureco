@@ -58,7 +58,7 @@ import { CanvasResultLayer, diagramPixelScaleFor, reactionClearanceFor } from '.
 import { CanvasInteractionLayer } from './CanvasInteractionLayer';
 import { CanvasMiniMap } from './CanvasMiniMap';
 import { CanvasTouchLoupe } from './CanvasTouchLoupe';
-import { demandTone, memberDemandRatios, memberSectionModulus, memberYieldStrength } from '../results/elasticDemand';
+import { elasticDemandGate, elasticDemandView, elasticIndexBand, sectionElasticIndex } from '../results/elasticDemand';
 import { parseQuickEntryPair } from './quickEntry';
 import { resolveRepeatRecipe, type RepeatRecipe } from './repeatAction';
 import { RepeatActionOverlay } from './RepeatActionOverlay';
@@ -427,11 +427,16 @@ export const StructuralCanvas = ({
         : null;
   const loadsLayerVisible = layers.loads || loadPlacementInstruction !== null;
   /**
-   * El mapa de calor es una lectura derivada, no un estado: se recalcula sólo
+   * El mapa de demanda es una lectura derivada, no un estado: se recalcula sólo
    * cuando la capa está encendida, así el coste no lo paga quien no lo pidió.
+   *
+   * Sale del mismo view-model que el Resumen y el Inspector, de modo que una
+   * barra sin Fy o sin W verificables —o un análisis no confiable— simplemente
+   * no aparece en el mapa: conserva su color de dibujo técnico en lugar de
+   * recibir un η fabricado.
    */
   const heatmapRatios = useMemo(
-    () => layers.heatmap && resultsAllowed ? memberDemandRatios(project, analysis) : EMPTY_DEMAND_RATIOS,
+    () => layers.heatmap && resultsAllowed ? elasticDemandView(project, analysis).ratios : EMPTY_DEMAND_RATIOS,
     [analysis, layers.heatmap, project, resultsAllowed],
   );
   /** Rectángulo de modelo que cabe hoy en pantalla; es lo que el radar enmarca. */
@@ -447,21 +452,21 @@ export const StructuralCanvas = ({
     };
   }, [camera, canvasMeasured, size.height, size.width]);
   /**
-   * Tarjeta contextual: la utilización elástica *en esa sección concreta*, no la
-   * de la barra entera. Con N y M ya resueltos en el punto, σ es una división;
-   * lo que aporta es leer η junto a los esfuerzos en lugar de en otro panel.
+   * Tarjeta contextual: el índice elástico *en esa sección concreta*, no el de
+   * la barra entera. Comparte `sectionElasticIndex` y la puerta de confiabilidad
+   * con los paneles, así que aquí tampoco se publica un η sin Fy o sin W
+   * verificables: en ese caso el corte dice «no disponible» y explica por qué.
    */
   const cutDemand = useMemo(() => {
     if (!cut?.point || !resultsAllowed) return null;
     const member = memberMap.get(cut.memberId);
-    if (!member || member.type === 'rigid' || member.A <= 0) return null;
-    const { modulus } = memberSectionModulus(member);
-    const { yieldStrength, estimated } = memberYieldStrength(member);
-    if (yieldStrength <= 0) return null;
-    const sigma = Math.abs(cut.point.axial) / member.A + (modulus > 0 ? Math.abs(cut.point.moment) / modulus : 0);
-    const ratio = sigma / yieldStrength;
-    return Number.isFinite(ratio) ? { ratio, estimated, tone: demandTone(ratio) } : null;
-  }, [cut, memberMap, resultsAllowed]);
+    if (!member) return null;
+    if (elasticDemandGate(analysis).blocker) return { status: 'unavailable' as const };
+    const index = sectionElasticIndex(member, cut.point.axial, cut.point.moment);
+    return index.status === 'available'
+      ? { status: 'available' as const, ratio: index.ratio, band: elasticIndexBand(index.ratio) }
+      : { status: 'unavailable' as const };
+  }, [analysis, cut, memberMap, resultsAllowed]);
   const cutEquilibrium = useMemo(() => {
     if (!cut?.point || !analysis?.success) return null;
     const memberResult = resultMap.get(cut.memberId);
@@ -2401,9 +2406,13 @@ export const StructuralCanvas = ({
           <div className="cut-title-row">
             <strong>{t('canvas.cutTitle', { member: cut.memberId })}</strong>
             {cutDemand ? <span
-              className={`cut-demand-badge tone-${cutDemand.tone}`}
-              title={t(cutDemand.estimated ? 'canvas.cutDemandEstimated' : 'canvas.cutDemandHint')}
-            >η {formatFixed(cutDemand.ratio * 100, 0)}%</span> : null}
+              className="cut-demand-badge"
+              data-status={cutDemand.status}
+              data-band={cutDemand.status === 'available' ? cutDemand.band : undefined}
+              title={t(cutDemand.status === 'available' ? 'canvas.cutDemandHint' : 'canvas.cutDemandUnavailableHint')}
+            >{cutDemand.status === 'available'
+              ? `η ${formatFixed(cutDemand.ratio, 2)}`
+              : t('canvas.cutDemandUnavailable')}</span> : null}
             <span>{t(cut.pinned ? 'canvas.pinned' : 'canvas.preview')}</span>
           </div>
           <span>x = {formatFixed(toDisplay(cut.point.x, units, 'length'), 3)} {lengthLabel} <small className="cut-station">({formatFixed(cut.ratio * 100, 1)}% s/L)</small></span>

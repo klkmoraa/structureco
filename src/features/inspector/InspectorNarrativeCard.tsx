@@ -1,43 +1,91 @@
-import { AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { CircleSlash, Gauge, Info } from 'lucide-react';
 import { toDisplay, unitLabel } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
-import type { MemberModel, MemberResult, UnitSystemId } from '../../types';
+import type { TranslationKey } from '../../i18n/catalogs';
+import type { AnalysisResult, MemberModel, MemberResult, UnitSystemId } from '../../types';
 import { formatFixed } from '../../utils/numberFormat';
-import { formatInspectorNumber, formatInspectorValue } from './numericFormatting';
-import { DEMAND_WARNING_RATIO, DEMAND_YIELD_RATIO, demandTone, memberElasticDemand } from '../results/elasticDemand';
+import { formatInspectorValue } from './numericFormatting';
+import {
+  ELASTIC_REFERENCE_RATIO,
+  elasticIndexBand,
+  memberElasticIndexView,
+  type ElasticIndexBand,
+  type ElasticIndexGap,
+} from '../results/elasticDemand';
 
 export interface InspectorNarrativeCardProps {
   member: MemberModel;
   result: MemberResult;
+  /** El índice comparte la puerta de confiabilidad con el Resumen. */
+  analysis: AnalysisResult | null | undefined;
   units: UnitSystemId;
 }
 
-/**
- * Diagnóstico en lenguaje natural de la barra seleccionada.
- *
- * Los números ya están arriba, en la lista de valores derivados. Lo que falta es
- * la frase que un calculista diría en voz alta al mirarlos: cómo trabaja la
- * barra (flexión, axil o combinado), cuánto margen elástico le queda y si eso
- * es cómodo o no. El régimen se declara siempre como *estimación* — depende del
- * módulo elástico supuesto y del límite del material, y ninguno de los dos es
- * una comprobación normativa.
- */
-export const InspectorNarrativeCard = ({ member, result, units }: InspectorNarrativeCardProps) => {
-  const { t } = useI18n();
-  const demand = memberElasticDemand(member, result);
-  if (!demand) return null;
+const bandLabel: Record<ElasticIndexBand, TranslationKey> = {
+  low: 'elastic.bandLow',
+  moderate: 'elastic.bandModerate',
+  high: 'elastic.bandHigh',
+  'at-reference': 'elastic.bandAtReference',
+};
 
-  const axialPercent = Math.round(demand.axialShare * 100);
+const gapLabel: Record<ElasticIndexGap, TranslationKey> = {
+  'yield-strength': 'elastic.missingYield',
+  'section-modulus': 'elastic.missingModulus',
+  'section-geometry': 'elastic.missingGeometry',
+};
+
+/**
+ * Cómo trabaja la barra seleccionada, y cuánta demanda elástica estimada tiene.
+ *
+ * La narrativa de régimen —axil, flexión o combinado— se mantiene: describe la
+ * mecánica de la barra y no afirma nada sobre su seguridad. Lo que se fue es el
+ * veredicto («queda margen cómodo», «revisa sección») y su medidor con corte en
+ * 0,85: eran un juicio de aceptación que una estimación elástica no sostiene.
+ *
+ * En su lugar va el mismo view-model que publica el Resumen —
+ * `memberElasticIndexView` — de forma que el panel y la tarjeta global no
+ * pueden discrepar ni en el valor ni en el estado ni en el significado.
+ */
+export const InspectorNarrativeCard = ({ member, result, analysis, units }: InspectorNarrativeCardProps) => {
+  const { t } = useI18n();
+  const view = memberElasticIndexView(member, result, analysis);
+
+  if (view.status === 'unavailable') {
+    const blockedKey: TranslationKey | null = view.blocker === 'no-analysis'
+      ? 'elastic.blockedNoAnalysis'
+      : view.blocker === 'unreliable' ? 'elastic.blockedUnreliable' : null;
+    return <section className="inspector-narrative" data-status="unavailable" aria-label={t('elastic.unavailableTitle')}>
+      <header>
+        <CircleSlash size={15} aria-hidden="true" />
+        <strong>{t('elastic.unavailableTitle')}</strong>
+      </header>
+      {blockedKey ? <p className="inspector-narrative-body">{t(blockedKey)}</p> : null}
+      {view.gaps.length ? <ul className="elastic-demand-missing">
+        {view.gaps.map((gap) => <li key={gap}>{t(gapLabel[gap])}</li>)}
+      </ul> : null}
+      <small className="inspector-narrative-basis">{t('elastic.limitNote')}</small>
+    </section>;
+  }
+
+  const { index, confidence } = view;
+  const axialPercent = Math.round(index.axialShare * 100);
   const bendingPercent = 100 - axialPercent;
   const mode = axialPercent >= 70 ? 'axial' : bendingPercent >= 70 ? 'bending' : 'combined';
-  const tone = demandTone(demand.ratio);
-  const percent = demand.ratio * 100;
-  const ToneIcon = tone === 'overstressed' ? ShieldAlert : tone === 'warning' ? AlertTriangle : CheckCircle2;
+  const band = elasticIndexBand(index.ratio);
+  const percent = index.ratio * 100;
+  const ratioText = formatFixed(index.ratio, 2, 'inspector');
 
-  return <section className={`inspector-narrative tone-${tone}`} aria-label={t('inspector.narrativeTitle')}>
+  return <section
+    className="inspector-narrative"
+    data-status="available"
+    data-confidence={confidence}
+    data-band={band}
+    aria-label={t('inspector.narrativeTitle')}
+  >
     <header>
-      <ToneIcon size={15} aria-hidden="true" />
+      <Gauge size={15} aria-hidden="true" />
       <strong>{t('inspector.narrativeTitle')}</strong>
+      <span className="elastic-demand-band" data-band={band} data-testid="inspector-elastic-band">{t(bandLabel[band])}</span>
     </header>
 
     <p className="inspector-narrative-body">{t(
@@ -47,52 +95,53 @@ export const InspectorNarrativeCard = ({ member, result, units }: InspectorNarra
       { id: member.id, axial: axialPercent, bending: bendingPercent },
     )}</p>
 
+    <p className="elastic-index-value" data-testid="inspector-elastic-value">{t('elastic.value', {
+      ratio: ratioText,
+      percent: formatFixed(percent, 0, 'inspector'),
+    })}</p>
+
+    {/* Decorativa: el valor y la banda ya están en texto, y η puede superar 1. */}
+    <div className="elastic-index-scale" data-band={band} aria-hidden="true">
+      <span className="elastic-index-fill" style={{ width: `${Math.min(percent, 100)}%` }} />
+      <span className="elastic-index-reference" style={{ left: `${ELASTIC_REFERENCE_RATIO * 100}%` }} />
+    </div>
+
+    {confidence === 'limited'
+      ? <p className="elastic-demand-limited" role="note">{t('elastic.limitedConfidence')}</p>
+      : null}
+
     <dl className="inspector-narrative-values">
       <div>
-        <dt>N</dt>
-        <dd>{formatFixed(toDisplay(demand.maxAxial, units, 'force'), 2, 'inspector')} {unitLabel(units, 'force')}</dd>
+        <dt>N*</dt>
+        <dd>{formatFixed(toDisplay(index.maxAxial, units, 'force'), 2, 'inspector')} {unitLabel(units, 'force')}</dd>
       </div>
       <div>
-        <dt>M</dt>
-        <dd>{formatFixed(toDisplay(demand.maxMoment, units, 'moment'), 2, 'inspector')} {unitLabel(units, 'moment')}</dd>
+        <dt>M*</dt>
+        <dd>{formatFixed(toDisplay(index.maxMoment, units, 'moment'), 2, 'inspector')} {unitLabel(units, 'moment')}</dd>
       </div>
       <div>
         {/* σ comparte dimensión con el módulo elástico: se muestra con esa
             cantidad para no colar un MPa fijo en un proyecto imperial. */}
-        <dt>σ</dt>
-        <dd>{formatInspectorValue(toDisplay(demand.sigmaTotal, units, 'elasticModulus'), unitLabel(units, 'elasticModulus'))}</dd>
+        <dt>σ*</dt>
+        <dd>{formatInspectorValue(toDisplay(index.sigmaTotal, units, 'elasticModulus'), unitLabel(units, 'elasticModulus'))}</dd>
       </div>
     </dl>
 
-    <div
-      className="inspector-narrative-meter"
-      role="meter"
-      aria-valuenow={Math.round(percent)}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-label={t('inspector.narrativeUtilization')}
-    >
-      <span className={`meter-fill tone-${tone}`} style={{ width: `${Math.min(percent, 100)}%` }} />
-      {/* Las dos marcas del medidor de salud, aquí también: si un panel enseña
-          el corte de aviso y el otro no, la misma η se lee distinta. */}
-      <span className="meter-threshold" style={{ left: `${DEMAND_WARNING_RATIO * 100}%` }} aria-hidden="true" />
-      <span className="meter-threshold is-yield" style={{ left: `${DEMAND_YIELD_RATIO * 100}%` }} aria-hidden="true" />
-    </div>
+    <details className="elastic-how">
+      <summary>{t('elastic.howTitle')}</summary>
+      <p className="elastic-how-chain">{t('elastic.howChain')}</p>
+      <ul className="elastic-how-steps">
+        <li>{t('elastic.materialLabel')}: {formatInspectorValue(toDisplay(index.material.yieldStrength, units, 'elasticModulus'), unitLabel(units, 'elasticModulus'))} · {t('elastic.provenanceCatalog', { name: index.material.name, id: index.material.id })}</li>
+        <li>{t('elastic.sectionLabel')}: {formatInspectorValue(toDisplay(index.section.sectionModulus, units, 'sectionModulus'), unitLabel(units, 'sectionModulus'))} · {t('elastic.provenanceCatalog', { name: index.section.name, id: index.section.id })}</li>
+        <li>{t('elastic.howRatio', {
+          sigma: formatInspectorValue(toDisplay(index.sigmaTotal, units, 'elasticModulus'), unitLabel(units, 'elasticModulus')),
+          yield: formatInspectorValue(toDisplay(index.material.yieldStrength, units, 'elasticModulus'), unitLabel(units, 'elasticModulus')),
+          ratio: ratioText,
+        })}</li>
+      </ul>
+      <p className="elastic-how-reference"><Info size={13} aria-hidden="true" />{t('elastic.referenceNote')}</p>
+    </details>
 
-    <p className="inspector-narrative-verdict">{t(
-      tone === 'overstressed' ? 'inspector.narrativeOverstressed'
-        : tone === 'warning' ? 'inspector.narrativeWarning'
-          : 'inspector.narrativeSafe',
-      { percent: formatFixed(percent, 0, 'inspector') },
-    )}</p>
-
-    <small className="inspector-narrative-basis">{t(
-      demand.estimatedYield ? 'inspector.narrativeBasisEstimated' : 'inspector.narrativeBasis',
-      {
-        yield: formatInspectorNumber(toDisplay(demand.yieldStrength, units, 'elasticModulus')),
-        yieldUnit: unitLabel(units, 'elasticModulus'),
-        section: demand.sectionName ?? t('inspector.sectionEquivalent'),
-      },
-    )}</small>
+    <small className="inspector-narrative-basis">{t('elastic.envelopeNote')} {t('elastic.limitNote')}</small>
   </section>;
 };

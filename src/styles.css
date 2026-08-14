@@ -3975,12 +3975,21 @@ button:not(:disabled):active,.selection-card:active {
   transform:translateY(1px);
 }
 
-/* --- Mapa de calor estructural ---------------------------------------- */
-/* El color térmico sustituye al trazo neutro, pero cede ante selección y
-   foco pedagógico: el estado de interacción manda sobre la lectura. */
+/* --- Mapa de demanda estructural -------------------------------------- */
+/* Rampa secuencial de magnitud, no semáforo de seguridad: el color dice cuánta
+   demanda elástica estimada hay, nunca si eso es aceptable. Las barras sin η
+   publicable (sin Fy o W verificables, o análisis no confiable) no entran en el
+   mapa y conservan su trazo técnico — el mapa no rellena huecos.
+
+   El color cede ante selección y foco pedagógico: el estado de interacción
+   manda sobre la lectura. */
 .member-object.has-demand .member-line { stroke:var(--member-demand-color); }
+/* Alcanzar la referencia Fy se redunda en forma, no sólo en color. */
+.member-object.has-demand[data-demand-band='at-reference'] .member-line {
+  stroke-dasharray:7 3;
+}
 .member-object.has-demand.selected .member-line,
-.member-object.has-demand.learning-highlight .member-line { stroke:var(--selection); }
+.member-object.has-demand.learning-highlight .member-line { stroke:var(--selection); stroke-dasharray:none; }
 
 /* --- Minimapa radar ---------------------------------------------------- */
 .canvas-minimap {
@@ -4107,9 +4116,10 @@ button:not(:disabled):active,.selection-card:active {
   font-weight:750;
   letter-spacing:.03em;
 }
-.cut-demand-badge.tone-safe { color:var(--sc-color-state-success); }
-.cut-demand-badge.tone-warning { color:var(--sc-color-state-warning-foreground); }
-.cut-demand-badge.tone-overstressed { color:var(--sc-color-state-error-foreground); }
+.cut-demand-badge[data-status='available'] { color:var(--sc-color-demand-peak); }
+.cut-demand-badge[data-band='at-reference'] { color:var(--sc-color-demand-reference); border-width:2px; }
+/* Sin dato verificable el corte no inventa un η: lo dice, en gris y en texto. */
+.cut-demand-badge[data-status='unavailable'] { color:var(--subtle); border-style:dashed; }
 .cut-station { color:var(--subtle); font-family:var(--sc-font-mono); }
 
 /* --- Inspector: vista previa de la selección --------------------------- */
@@ -4247,33 +4257,34 @@ button:not(:disabled):active,.selection-card:active {
   text-overflow:ellipsis;
 }
 
-/* --- Inspector narrativo ---------------------------------------------- */
+/* --- Índice elástico estimado (Inspector + Resumen) -------------------- */
+/* Una sola hoja para las dos superficies: el view-model es el mismo
+   (`elasticDemand`), así que la apariencia tampoco puede divergir. Sin tonos
+   `safe/warning/overstressed` —codificaban un juicio de seguridad— y sin la
+   marca del 0,85. La única marca del riel es la referencia η = 1. */
 .inspector-narrative {
   margin-top:10px;
   padding:11px;
   display:grid;
   gap:8px;
   border:var(--sc-clay-edge);
-  border-left:3px solid var(--sc-color-state-success);
+  border-left:3px solid var(--sc-color-demand-peak);
   border-radius:var(--sc-radius-sm);
   background:var(--sc-color-surface-1);
   box-shadow:var(--sc-shadow-clay-xs);
 }
-.inspector-narrative.tone-warning { border-left-color:var(--sc-color-state-warning); }
-.inspector-narrative.tone-overstressed { border-left-color:var(--sc-color-state-error); }
-.inspector-narrative > header { display:flex; align-items:center; gap:6px; color:var(--text); }
-.inspector-narrative.tone-safe > header svg { color:var(--sc-color-state-success); }
-.inspector-narrative.tone-warning > header svg { color:var(--sc-color-state-warning-foreground); }
-.inspector-narrative.tone-overstressed > header svg { color:var(--sc-color-state-error-foreground); }
+.inspector-narrative[data-status='unavailable'] { border-left-color:var(--sc-color-border); }
+.inspector-narrative[data-band='at-reference'] { border-left-color:var(--sc-color-demand-reference); }
+.inspector-narrative > header { display:flex; align-items:center; gap:6px; flex-wrap:wrap; color:var(--text); }
+.inspector-narrative > header svg { color:var(--sc-color-demand-peak); }
+.inspector-narrative[data-status='unavailable'] > header svg { color:var(--subtle); }
 .inspector-narrative > header strong { font-size:13px; }
-.inspector-narrative-body,
-.inspector-narrative-verdict {
+.inspector-narrative-body {
   margin:0;
   color:var(--muted);
   font-size:var(--sc-font-size-technical);
   line-height:var(--sc-line-height-compact);
 }
-.inspector-narrative-verdict { color:var(--text); font-weight:600; }
 .inspector-narrative-values { margin:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
 .inspector-narrative-values > div {
   padding:5px 7px;
@@ -4293,46 +4304,80 @@ button:not(:disabled):active,.selection-card:active {
   overflow:hidden;
   text-overflow:ellipsis;
 }
-.inspector-narrative-meter,
-.structural-health-track {
-  position:relative;
-  height:10px;
-  border-radius:var(--sc-radius-pill);
-  background:var(--sc-color-surface-2);
-  box-shadow:var(--sc-shadow-clay-pressed);
-  overflow:hidden;
-}
-.inspector-narrative-meter .meter-fill,
-.structural-health-fill {
-  position:absolute;
-  inset-block:0;
-  inset-inline-start:0;
-  border-radius:var(--sc-radius-pill);
-  background:var(--sc-color-state-success);
-  transition:width var(--sc-motion-standard) var(--sc-ease-standard);
-}
-.inspector-narrative-meter .meter-fill.tone-warning,
-.structural-health-fill.tone-warning { background:var(--sc-color-state-warning); }
-.inspector-narrative-meter .meter-fill.tone-overstressed,
-.structural-health-fill.tone-overstressed { background:var(--sc-color-state-error); }
-.inspector-narrative-meter .meter-threshold,
-.structural-health-mark {
-  position:absolute;
-  inset-block:0;
-  width:2px;
-  background:color-mix(in srgb,var(--text) 42%,transparent);
-}
-.inspector-narrative-meter .meter-threshold.is-yield,
-.structural-health-mark.is-yield { background:var(--sc-color-state-error); transform:translateX(-2px); }
 .inspector-narrative-basis,
-.structural-health-basis {
+.elastic-demand-limit {
   color:var(--subtle);
   font-size:var(--sc-font-size-caption);
   line-height:var(--sc-line-height-compact);
 }
 
-/* --- Medidor de salud estructural ------------------------------------- */
-.structural-health {
+/* El valor publicado. Es el dato principal de las dos tarjetas y por eso va en
+   monoespaciada tabular: dos lecturas seguidas alinean sus dígitos. */
+.elastic-index-value {
+  margin:0;
+  color:var(--text);
+  font-family:var(--sc-font-mono);
+  font-size:15px;
+  font-weight:700;
+  font-variant-numeric:var(--sc-numeric-variant);
+}
+
+/* Riel de magnitud. Decorativo por contrato (`aria-hidden`): η puede superar 1
+   y `role="meter"` obliga a aria-valuenow ≤ aria-valuemax; el valor y la banda
+   ya viajan en texto justo encima. */
+.elastic-index-scale {
+  position:relative;
+  height:12px;
+  border-radius:var(--sc-radius-pill);
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  overflow:hidden;
+}
+.elastic-index-fill {
+  position:absolute;
+  inset-block:0;
+  inset-inline-start:0;
+  border-radius:var(--sc-radius-pill);
+  background:linear-gradient(90deg,var(--sc-color-demand-base),var(--sc-color-demand-peak));
+  transition:width var(--sc-motion-standard) var(--sc-ease-standard);
+}
+/* Alcanzar la referencia no se dice sólo con color: el relleno cambia de
+   textura, así una captura en escala de grises sigue distinguiéndolo. */
+.elastic-index-scale[data-band='at-reference'] .elastic-index-fill {
+  background:repeating-linear-gradient(
+    135deg,
+    var(--sc-color-demand-reference) 0 5px,
+    color-mix(in srgb,var(--sc-color-demand-reference) 55%,transparent) 5px 10px
+  );
+}
+.elastic-index-reference {
+  position:absolute;
+  inset-block:0;
+  width:2px;
+  transform:translateX(-2px);
+  background:color-mix(in srgb,var(--text) 55%,transparent);
+}
+
+/* Banda nombrada: redunda en texto lo que la rampa dice en color, y el estilo
+   del borde la redunda otra vez en forma. */
+.elastic-demand-band {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:3px 10px;
+  border:1px solid currentColor;
+  border-radius:var(--sc-radius-pill);
+  color:var(--sc-color-demand-peak);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+  font-weight:750;
+}
+.elastic-demand-band[data-band='low'] { border-style:dotted; }
+.elastic-demand-band[data-band='moderate'] { border-style:dashed; }
+.elastic-demand-band[data-band='at-reference'] { color:var(--sc-color-demand-reference); border-width:2px; }
+
+/* --- Tarjeta del índice elástico (Resumen) ---------------------------- */
+.elastic-demand {
   display:grid;
   gap:9px;
   padding:12px;
@@ -4341,34 +4386,60 @@ button:not(:disabled):active,.selection-card:active {
   background:var(--sc-color-surface-1);
   box-shadow:var(--sc-shadow-clay-xs);
 }
-.structural-health-header { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
-.structural-health-title { display:flex; align-items:center; gap:6px; }
-.structural-health-title strong { font-size:13px; }
-.structural-health.tone-safe .structural-health-title svg { color:var(--sc-color-state-success); }
-.structural-health.tone-warning .structural-health-title svg { color:var(--sc-color-state-warning-foreground); }
-.structural-health.tone-overstressed .structural-health-title svg { color:var(--sc-color-state-error-foreground); }
-.structural-health-badge {
+.elastic-demand-header { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.elastic-demand-title { display:flex; align-items:center; gap:6px; }
+.elastic-demand-title strong { font-size:13px; }
+.elastic-demand[data-status='available'] .elastic-demand-title svg { color:var(--sc-color-demand-peak); }
+.elastic-demand[data-band='at-reference'] .elastic-demand-title svg { color:var(--sc-color-demand-reference); }
+.elastic-demand[data-status='unavailable'] .elastic-demand-title svg { color:var(--subtle); }
+.elastic-demand-blocked {
+  margin:0;
+  color:var(--text);
+  font-size:var(--sc-font-size-technical);
+  line-height:var(--sc-line-height-compact);
+}
+.elastic-demand-missing {
+  margin:0;
+  padding-inline-start:18px;
+  display:grid;
+  gap:4px;
+  color:var(--muted);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+}
+.elastic-demand-limited {
+  margin:0;
+  padding:6px 8px;
+  border-inline-start:3px solid var(--sc-color-state-warning);
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  color:var(--text);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+}
+.elastic-demand-action {
+  justify-self:start;
   display:inline-flex;
   align-items:center;
-  gap:5px;
-  padding:3px 10px;
-  border:1px solid currentColor;
+  gap:6px;
+  min-height:var(--sc-size-target-touch);
+  padding:6px 12px;
+  border:var(--sc-clay-edge);
   border-radius:var(--sc-radius-pill);
-  font-family:var(--sc-font-mono);
+  background:var(--sc-color-surface-2);
+  color:var(--accent);
+  font:inherit;
   font-size:var(--sc-font-size-caption);
-  font-weight:750;
+  cursor:pointer;
 }
-.structural-health-badge.tone-safe { color:var(--sc-color-state-success); }
-.structural-health-badge.tone-warning { color:var(--sc-color-state-warning-foreground); }
-.structural-health-badge.tone-overstressed { color:var(--sc-color-state-error-foreground); }
-.structural-health-track { height:13px; }
-.structural-health-grid {
+.elastic-demand-action:hover { text-decoration:underline; }
+.elastic-demand-grid {
   margin:0;
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(112px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
   gap:6px;
 }
-.structural-health-grid > div {
+.elastic-demand-grid > div {
   padding:6px 8px;
   display:grid;
   gap:2px;
@@ -4377,18 +4448,31 @@ button:not(:disabled):active,.selection-card:active {
   box-shadow:var(--sc-shadow-clay-pressed);
   min-width:0;
 }
-.structural-health-grid dt { color:var(--subtle); font-size:var(--sc-font-size-caption); font-family:var(--sc-font-mono); }
-.structural-health-grid dd {
+.elastic-demand-grid dt { color:var(--subtle); font-size:var(--sc-font-size-caption); font-family:var(--sc-font-mono); }
+.elastic-demand-grid dd {
   margin:0;
+  display:grid;
+  gap:2px;
   color:var(--text);
   font-family:var(--sc-font-mono);
   font-size:12px;
   font-variant-numeric:var(--sc-numeric-variant);
+  min-width:0;
 }
-.structural-health-locate {
+/* La procedencia es lo que hace auditable el número: se muestra siempre, con
+   el id del catálogo y no sólo el nombre comercial. */
+.elastic-demand-grid dd small {
+  color:var(--subtle);
+  font-family:var(--sc-font-ui);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+  overflow-wrap:anywhere;
+}
+.elastic-demand-locate {
   display:inline-flex;
   align-items:center;
   gap:5px;
+  min-height:var(--sc-size-target-touch);
   padding:0;
   border:0;
   background:transparent;
@@ -4396,17 +4480,61 @@ button:not(:disabled):active,.selection-card:active {
   font:inherit;
   cursor:pointer;
 }
-.structural-health-locate:hover { text-decoration:underline; }
-.structural-health-split {
+.elastic-demand-locate:hover { text-decoration:underline; }
+
+/* Disclosure de la cadena de derivación: cerrado por defecto para no competir
+   con el valor, disponible sin salir de la tarjeta. */
+.elastic-how { font-size:var(--sc-font-size-caption); color:var(--muted); }
+.elastic-how > summary {
+  min-height:var(--sc-size-target-touch);
   display:flex;
-  height:8px;
-  border-radius:var(--sc-radius-pill);
-  overflow:hidden;
-  background:var(--sc-color-surface-inset);
+  align-items:center;
+  color:var(--accent);
+  cursor:pointer;
 }
-.structural-health-split i { display:block; }
-.structural-health-split .is-axial { background:var(--axial); }
-.structural-health-split .is-bending { background:var(--moment); }
+.elastic-how-chain {
+  margin:6px 0 4px;
+  font-family:var(--sc-font-mono);
+  color:var(--text);
+  overflow-x:auto;
+}
+.elastic-how-steps {
+  margin:0;
+  padding-inline-start:18px;
+  display:grid;
+  gap:3px;
+  font-family:var(--sc-font-mono);
+  font-variant-numeric:var(--sc-numeric-variant);
+  overflow-wrap:anywhere;
+}
+.elastic-how-split { margin:6px 0 0; font-family:var(--sc-font-mono); }
+.elastic-how-reference {
+  margin:6px 0 0;
+  display:flex;
+  align-items:flex-start;
+  gap:6px;
+  line-height:var(--sc-line-height-compact);
+}
+.elastic-how-reference svg { flex:none; margin-top:2px; }
+.elastic-demand-skipped { display:grid; gap:4px; font-size:var(--sc-font-size-caption); color:var(--muted); }
+.elastic-demand-skipped p { margin:0; }
+.elastic-demand-skipped ul { margin:0; padding-inline-start:18px; display:grid; gap:3px; }
+.elastic-demand-skipped button {
+  padding:0;
+  border:0;
+  background:transparent;
+  color:var(--accent);
+  font:inherit;
+  text-align:start;
+  cursor:pointer;
+}
+.elastic-demand-skipped button:hover { text-decoration:underline; }
+
+@media (max-width: 640px) {
+  .elastic-demand-grid { grid-template-columns:1fr; }
+  .inspector-narrative-values { grid-template-columns:1fr; }
+  .elastic-index-value { font-size:14px; }
+}
 
 /* --- Resultados más compactos ------------------------------------------ */
 /* Las etiquetas de familia repetían en la barra lo que la propia pestaña ya

@@ -579,6 +579,7 @@ export const InspectorProperties = () => {
         {memberResult && (!classroomMode || resultsVisible) ? <InspectorNarrativeCard
           member={selectedMember}
           result={memberResult}
+          analysis={analysis}
           units={units}
         /> : null}
         <InspectorPropertyGroup title={t('inspector.derivedValues')} mode="derived" description={t('inspector.memberDerivedDescription')}>
