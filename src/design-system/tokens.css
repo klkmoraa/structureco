@@ -206,6 +206,12 @@
   --sc-color-demand-base: #5f8f9e;
   --sc-color-demand-peak: #0f4c5c;
   --sc-color-demand-reference: #6a3fa0;
+  /* Segundo tramo de la rampa: por encima de η = 1 el color sigue creciendo en
+     esta familia hasta el techo declarado, en vez de aplanar toda la sobre-
+     referencia en un solo tono que borraba la magnitud. */
+  --sc-color-demand-reference-peak: #43206c;
+  /* Miembro que no pudo evaluarse: ni color de demanda ni trazo normal. */
+  --sc-color-demand-unevaluated: #8a8f8d;
 
   /* Roles estructurales formalizados (Sección 12 del sistema).
      Mapean sobre los técnicos verificados; los roles "reservados"
@@ -650,6 +656,8 @@
   --sc-color-demand-base: #6f9fb0;
   --sc-color-demand-peak: #a9dcea;
   --sc-color-demand-reference: #c4a6f5;
+  --sc-color-demand-reference-peak: #ede2ff;
+  --sc-color-demand-unevaluated: #7f8b8f;
 
   --sc-color-axial-compression: #d9a7f5;
   --sc-color-envelope: #b8aaff;

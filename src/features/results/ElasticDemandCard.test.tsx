@@ -28,12 +28,36 @@ const memberOf = (overrides: Partial<MemberModel> = {}): MemberModel => ({
   ...overrides,
 });
 
-const resultFor = (axial: number): MemberResult => ({
+const resultFor = (axial: number, moment = 0): MemberResult => ({
   memberId: 'B7', length: 4,
   localDisplacements: [], localEndForces: [], diagramSegments: [], diagramJumps: [],
   criticalPoints: [], diagram: [], deformation: [], deformationSegments: [], deformationCriticalPoints: [],
-  maxAxial: axial, minAxial: 0, maxShear: 0, minShear: 0, maxMoment: 0, minMoment: 0,
+  maxAxial: axial, minAxial: 0, maxShear: 0, minShear: 0, maxMoment: moment, minMoment: 0,
 } as unknown as MemberResult);
+
+/**
+ * Caso combinado: con momento, W sí interviene y la tarjeta debe declararlo.
+ * El caso puramente axial vive en su propio bloque porque ahí W no participa.
+ */
+const bendingAnalysis = (): AnalysisResult => ({
+  success: true,
+  memberResults: [resultFor(a36.yieldStrength / 4, 20)],
+  nodeResults: [],
+  issues: [],
+  displacements: [0],
+  reliability: { completed: true, usable: true, level: 'reliable', checks: [], reasons: [] },
+} as unknown as AnalysisResult);
+
+/** El check que gobierna un nivel `limited`: es lo que la tarjeta debe citar. */
+const governingCheck = {
+  id: 'condition' as const,
+  label: 'Condición κ₁ del sistema equilibrado',
+  value: 4.2e10,
+  limitedAbove: 1e10,
+  unreliableAbove: 1e12,
+  level: 'limited' as const,
+  message: 'Condición κ₁ del sistema equilibrado: 4.200e+10 supera 1e+10.',
+};
 
 const analysisFor = (axial: number, level: ReliabilityLevel = 'reliable'): AnalysisResult => ({
   success: level !== 'failed',
@@ -41,7 +65,27 @@ const analysisFor = (axial: number, level: ReliabilityLevel = 'reliable'): Analy
   nodeResults: [],
   issues: [],
   displacements: [0],
-  reliability: { completed: true, usable: level !== 'failed', level, checks: [], reasons: [] },
+  reliability: {
+    completed: true,
+    usable: level !== 'failed',
+    level,
+    checks: level === 'reliable' ? [] : [governingCheck],
+    governing: level === 'reliable' ? undefined : governingCheck,
+    reasons: level === 'reliable' ? [] : [governingCheck.message],
+  },
+} as unknown as AnalysisResult);
+
+/** Dos miembros con resultados propios: sirve para probar cobertura parcial. */
+const analysisForPair = (first: number, second: number): AnalysisResult => ({
+  success: true,
+  memberResults: [
+    { ...resultFor(first), memberId: 'B7' },
+    { ...resultFor(second), memberId: 'B8' },
+  ],
+  nodeResults: [],
+  issues: [],
+  displacements: [0],
+  reliability: { completed: true, usable: true, level: 'reliable', checks: [], reasons: [] },
 } as unknown as AnalysisResult);
 
 const setSelection = vi.fn();
@@ -92,6 +136,7 @@ describe('ElasticDemandCard — available reading', () => {
   });
 
   it('shows the provenance of every published input', async () => {
+    context.analysis = bendingAnalysis();
     const { container } = await renderCard();
     const copy = container.textContent ?? '';
     expect(copy).toContain(a36.name);
@@ -102,6 +147,7 @@ describe('ElasticDemandCard — available reading', () => {
   });
 
   it('discloses the derivation chain without opening it by default', async () => {
+    context.analysis = bendingAnalysis();
     const { container } = await renderCard();
     const disclosure = container.querySelector('details.elastic-how');
     expect(disclosure).not.toBeNull();
@@ -123,8 +169,11 @@ describe('ElasticDemandCard — available reading', () => {
     expect(container.querySelector('[role="meter"]')).toBeNull();
     const scale = container.querySelector('.elastic-index-scale');
     expect(scale?.getAttribute('aria-hidden')).toBe('true');
-    // Banda nombrada en texto: no depende del color.
-    expect(screen.getByTestId('elastic-index-band').textContent).toBe('Alcanza el Fy de referencia');
+    // Sin bandas: por encima de 1 sólo se nombra el hecho físico.
+    expect(screen.getByTestId('elastic-at-reference').textContent).toMatch(/alcanza el Fy declarado/);
+    for (const band of ['Magnitud baja', 'Magnitud media', 'Magnitud alta']) {
+      expect(container.textContent, band).not.toContain(band);
+    }
     expect(screen.getByTestId('elastic-index-value').textContent).toBe('η 1.40 · 140 % de Fy de referencia');
   });
 
@@ -157,8 +206,11 @@ describe('ElasticDemandCard — unavailable reading', () => {
   });
 
   it('says exactly which datum is missing instead of deriving W from A and I', async () => {
+    // Con flexión real W es obligatorio: la sección sin identidad bloquea η.
     setMembers(memberOf({ sectionId: undefined, sectionOrigin: 'custom' }));
+    context.analysis = bendingAnalysis();
     const { container } = await renderCard();
+    expect(screen.getByTestId('elastic-demand-card').dataset.status).toBe('unavailable');
     expect(container.textContent).toMatch(/Falta W/);
   });
 
@@ -186,5 +238,52 @@ describe('ElasticDemandCard — limited reliability', () => {
     expect(card.dataset.status).toBe('available');
     expect(card.dataset.confidence).toBe('limited');
     expect(container.textContent).toMatch(/Confiabilidad limitada/);
+  });
+
+  it('names the governing check instead of leaving the label unactionable', async () => {
+    context.analysis = analysisFor(a36.yieldStrength / 2, 'limited');
+    await renderCard();
+    const note = screen.getByTestId('elastic-limited-cause');
+    expect(note.textContent).toContain(governingCheck.label);
+    expect(note.textContent).toContain(governingCheck.message);
+  });
+});
+
+describe('ElasticDemandCard — coverage', () => {
+  it('declares complete coverage when every member could be evaluated', async () => {
+    await renderCard();
+    expect(screen.getByTestId('elastic-demand-card').dataset.coverage).toBe('complete');
+    expect(screen.getByTestId('elastic-coverage').textContent).toBe('1 de 1 miembros evaluados');
+    expect(screen.getByTestId('elastic-index-scope').textContent).toMatch(/Mayor índice del modelo/);
+  });
+
+  it('never calls the highest evaluable member governing when coverage is partial', async () => {
+    // B8 es el más exigido del modelo pero no puede leerse: la tarjeta debe
+    // decir «mayor entre 1/2 evaluables», no presentar B7 como gobernante.
+    setMembers(memberOf(), memberOf({ id: 'B8', materialId: undefined, materialOrigin: 'legacy' }));
+    context.analysis = analysisForPair(a36.yieldStrength / 2, a36.yieldStrength * 9);
+    const { container } = await renderCard();
+
+    expect(screen.getByTestId('elastic-demand-card').dataset.coverage).toBe('partial');
+    expect(screen.getByTestId('elastic-coverage').textContent).toBe('Cobertura parcial · 1 de 2 miembros evaluados');
+    const scope = screen.getByTestId('elastic-index-scope').textContent ?? '';
+    expect(scope).toContain('1/2');
+    expect(scope).toMatch(/podría ser uno de los no evaluados/);
+    expect(container.textContent).not.toMatch(/gobernante/i);
+    // Y el η publicado sigue siendo el del miembro que sí se pudo leer.
+    expect(screen.getByTestId('elastic-index-value').textContent).toBe('η 0.50 · 50 % de Fy de referencia');
+  });
+});
+
+describe('ElasticDemandCard — purely axial demand', () => {
+  it('publishes η with A and Fy alone when there is no bending', async () => {
+    setMembers(memberOf({ sectionId: undefined, sectionOrigin: 'custom' }));
+    const { container } = await renderCard();
+    expect(screen.getByTestId('elastic-demand-card').dataset.status).toBe('available');
+    expect(screen.getByTestId('elastic-index-value').textContent).toBe('η 0.50 · 50 % de Fy de referencia');
+    expect(container.textContent).toMatch(/Demanda puramente axial/);
+    // Y la cadena de derivación omite W en lugar de fingir uno.
+    const disclosure = container.querySelector('details.elastic-how');
+    expect(within(disclosure as HTMLElement).getByText('N* → A → σ* → Fy → η')).toBeTruthy();
   });
 });

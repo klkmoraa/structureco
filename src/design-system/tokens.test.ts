@@ -190,6 +190,8 @@ describe('Phase 4 design-token contract', () => {
       '--sc-color-demand-base',
       '--sc-color-demand-peak',
       '--sc-color-demand-reference',
+      '--sc-color-demand-reference-peak',
+      '--sc-color-demand-unevaluated',
     ];
 
     for (const [foreground, background, minimum] of textPairs) {

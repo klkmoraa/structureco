@@ -3985,11 +3985,72 @@ button:not(:disabled):active,.selection-card:active {
    manda sobre la lectura. */
 .member-object.has-demand .member-line { stroke:var(--member-demand-color); }
 /* Alcanzar la referencia Fy se redunda en forma, no sólo en color. */
-.member-object.has-demand[data-demand-band='at-reference'] .member-line {
+.member-object.has-demand[data-demand-at-reference='true'] .member-line {
   stroke-dasharray:7 3;
 }
+/* Un miembro que no pudo evaluarse no puede parecer uno de η baja: se dibuja
+   punteado y atenuado, y la leyenda cuenta cuántos son. */
+.member-object.is-unevaluated .member-line {
+  stroke:var(--sc-color-demand-unevaluated);
+  stroke-dasharray:2 4;
+  opacity:.55;
+}
 .member-object.has-demand.selected .member-line,
-.member-object.has-demand.learning-highlight .member-line { stroke:var(--selection); stroke-dasharray:none; }
+.member-object.has-demand.learning-highlight .member-line,
+.member-object.is-unevaluated.selected .member-line,
+.member-object.is-unevaluated.learning-highlight .member-line {
+  stroke:var(--selection);
+  stroke-dasharray:none;
+  opacity:1;
+}
+
+/* --- Leyenda del mapa de demanda -------------------------------------- */
+/* Sin leyenda el color es decoración: declara qué mide la rampa, cuántos
+   miembros entraron en la lectura y dónde deja de distinguir magnitud. */
+.canvas-demand-legend {
+  position:absolute;
+  inset-block-end:12px;
+  inset-inline-start:12px;
+  z-index:3;
+  max-width:min(320px,calc(100% - 24px));
+  padding:9px 11px;
+  display:grid;
+  gap:5px;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-sm);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  color:var(--muted);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+  pointer-events:none;
+}
+.canvas-demand-legend strong { color:var(--text); font-size:12px; }
+.canvas-demand-legend small { margin:0; }
+.canvas-demand-ramp {
+  height:9px;
+  border-radius:var(--sc-radius-pill);
+  background:linear-gradient(
+    90deg,
+    var(--sc-color-demand-base) 0%,
+    var(--sc-color-demand-peak) 50%,
+    var(--sc-color-demand-reference) 50%,
+    var(--sc-color-demand-reference-peak) 100%
+  );
+}
+.canvas-demand-scale {
+  display:flex;
+  justify-content:space-between;
+  font-family:var(--sc-font-mono);
+  font-variant-numeric:var(--sc-numeric-variant);
+}
+.canvas-demand-scale i { font-style:normal; }
+.canvas-demand-unevaluated { color:var(--sc-color-demand-unevaluated); }
+.canvas-demand-saturated { color:var(--sc-color-state-warning-foreground); }
+
+@media (max-width: 640px) {
+  .canvas-demand-legend { inset-block-end:8px; inset-inline-start:8px; max-width:calc(100% - 16px); }
+}
 
 /* --- Minimapa radar ---------------------------------------------------- */
 .canvas-minimap {
@@ -4117,7 +4178,7 @@ button:not(:disabled):active,.selection-card:active {
   letter-spacing:.03em;
 }
 .cut-demand-badge[data-status='available'] { color:var(--sc-color-demand-peak); }
-.cut-demand-badge[data-band='at-reference'] { color:var(--sc-color-demand-reference); border-width:2px; }
+.cut-demand-badge[data-at-reference='true'] { color:var(--sc-color-demand-reference); border-width:2px; }
 /* Sin dato verificable el corte no inventa un η: lo dice, en gris y en texto. */
 .cut-demand-badge[data-status='unavailable'] { color:var(--subtle); border-style:dashed; }
 .cut-station { color:var(--subtle); font-family:var(--sc-font-mono); }
@@ -4274,7 +4335,7 @@ button:not(:disabled):active,.selection-card:active {
   box-shadow:var(--sc-shadow-clay-xs);
 }
 .inspector-narrative[data-status='unavailable'] { border-left-color:var(--sc-color-border); }
-.inspector-narrative[data-band='at-reference'] { border-left-color:var(--sc-color-demand-reference); }
+.inspector-narrative[data-at-reference='true'] { border-left-color:var(--sc-color-demand-reference); }
 .inspector-narrative > header { display:flex; align-items:center; gap:6px; flex-wrap:wrap; color:var(--text); }
 .inspector-narrative > header svg { color:var(--sc-color-demand-peak); }
 .inspector-narrative[data-status='unavailable'] > header svg { color:var(--subtle); }
@@ -4343,7 +4404,7 @@ button:not(:disabled):active,.selection-card:active {
 }
 /* Alcanzar la referencia no se dice sólo con color: el relleno cambia de
    textura, así una captura en escala de grises sigue distinguiéndolo. */
-.elastic-index-scale[data-band='at-reference'] .elastic-index-fill {
+.elastic-index-scale[data-at-reference='true'] .elastic-index-fill {
   background:repeating-linear-gradient(
     135deg,
     var(--sc-color-demand-reference) 0 5px,
@@ -4358,9 +4419,9 @@ button:not(:disabled):active,.selection-card:active {
   background:color-mix(in srgb,var(--text) 55%,transparent);
 }
 
-/* Banda nombrada: redunda en texto lo que la rampa dice en color, y el estilo
-   del borde la redunda otra vez en forma. */
-.elastic-demand-band {
+/* Cobertura: cuántos miembros entraron en la lectura. Va en la cabecera porque
+   cambia lo que el número significa, no es un detalle de procedencia. */
+.elastic-demand-coverage {
   display:inline-flex;
   align-items:center;
   gap:5px;
@@ -4372,9 +4433,33 @@ button:not(:disabled):active,.selection-card:active {
   font-size:var(--sc-font-size-caption);
   font-weight:750;
 }
-.elastic-demand-band[data-band='low'] { border-style:dotted; }
-.elastic-demand-band[data-band='moderate'] { border-style:dashed; }
-.elastic-demand-band[data-band='at-reference'] { color:var(--sc-color-demand-reference); border-width:2px; }
+.elastic-demand-coverage[data-coverage='partial'],
+.elastic-demand-coverage[data-coverage='unavailable'] {
+  color:var(--sc-color-state-warning-foreground);
+  border-style:dashed;
+}
+
+/* Alcance de la lectura: «mayor entre X/Y evaluables» cuando falta cobertura.
+   Es texto normal, no una nota al pie, porque acota la afirmación principal. */
+.elastic-index-scope {
+  margin:0;
+  color:var(--muted);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+}
+.elastic-demand[data-coverage='partial'] .elastic-index-scope { color:var(--text); }
+
+/* η ≥ 1: el único hecho con significado físico propio, dicho en palabras. */
+.elastic-index-reference-note {
+  margin:0;
+  padding:5px 8px;
+  border-inline-start:3px solid var(--sc-color-demand-reference);
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  color:var(--text);
+  font-size:var(--sc-font-size-caption);
+  line-height:var(--sc-line-height-compact);
+}
 
 /* --- Tarjeta del índice elástico (Resumen) ---------------------------- */
 .elastic-demand {
@@ -4390,7 +4475,7 @@ button:not(:disabled):active,.selection-card:active {
 .elastic-demand-title { display:flex; align-items:center; gap:6px; }
 .elastic-demand-title strong { font-size:13px; }
 .elastic-demand[data-status='available'] .elastic-demand-title svg { color:var(--sc-color-demand-peak); }
-.elastic-demand[data-band='at-reference'] .elastic-demand-title svg { color:var(--sc-color-demand-reference); }
+.elastic-demand[data-at-reference='true'] .elastic-demand-title svg { color:var(--sc-color-demand-reference); }
 .elastic-demand[data-status='unavailable'] .elastic-demand-title svg { color:var(--subtle); }
 .elastic-demand-blocked {
   margin:0;
@@ -4410,6 +4495,9 @@ button:not(:disabled):active,.selection-card:active {
 .elastic-demand-limited {
   margin:0;
   padding:6px 8px;
+  display:grid;
+  gap:3px;
+  justify-items:start;
   border-inline-start:3px solid var(--sc-color-state-warning);
   border-radius:var(--sc-radius-xs);
   background:var(--sc-color-surface-2);
@@ -4417,6 +4505,23 @@ button:not(:disabled):active,.selection-card:active {
   font-size:var(--sc-font-size-caption);
   line-height:var(--sc-line-height-compact);
 }
+/* La causa, literal desde el check que gobierna: «limitada» a secas no es
+   accionable. */
+.elastic-demand-limited-message {
+  color:var(--muted);
+  font-family:var(--sc-font-mono);
+  overflow-wrap:anywhere;
+}
+.elastic-demand-limited button {
+  min-height:var(--sc-size-target-touch);
+  padding:0;
+  border:0;
+  background:transparent;
+  color:var(--accent);
+  font:inherit;
+  cursor:pointer;
+}
+.elastic-demand-limited button:hover { text-decoration:underline; }
 .elastic-demand-action {
   justify-self:start;
   display:inline-flex;

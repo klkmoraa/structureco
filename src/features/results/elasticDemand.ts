@@ -30,7 +30,7 @@
  */
 import { findStandardMaterial } from '../../data/standardMaterials';
 import { findStandardSection } from '../../data/standardSections';
-import { resolveReliability } from '../../engine/reliability';
+import { resolveReliability, type ReliabilityCheck } from '../../engine/reliability';
 import type { AnalysisResult, MemberModel, MemberResult, ProjectModel } from '../../types';
 
 /**
@@ -40,6 +40,16 @@ import type { AnalysisResult, MemberModel, MemberResult, ProjectModel } from '..
  */
 export const ELASTIC_REFERENCE_RATIO = 1;
 
+/**
+ * Techo de la rampa del mapa de demanda.
+ *
+ * El color no puede seguir creciendo indefinidamente, pero aplanar todo η ≥ 1 en
+ * un mismo tono borraba la magnitud justo donde más importa: 1,01 y 4,00 se
+ * veían idénticos. La rampa sigue subiendo hasta aquí y, a partir de este valor,
+ * **se declara saturada** en lugar de fingir que aún distingue.
+ */
+export const ELASTIC_SATURATION_RATIO = 2;
+
 /** El dato concreto que impide publicar η en una barra. */
 export type ElasticIndexGap = 'section-geometry' | 'yield-strength' | 'section-modulus';
 
@@ -47,9 +57,19 @@ export type ElasticIndexGap = 'section-geometry' | 'yield-strength' | 'section-m
 export type ElasticDemandBlocker = 'no-analysis' | 'unreliable' | 'no-evaluable-member';
 
 /**
+ * Cuánto del modelo entra realmente en la lectura.
+ *
+ * `partial` es la distinción que faltaba: con miembros no evaluables, el mayor η
+ * entre los evaluables **no gobierna la estructura** —el miembro más exigido
+ * puede ser justo uno de los que no se pudo leer— y llamarlo «gobernante»
+ * afirmaba algo que la lectura no sabe.
+ */
+export type ElasticCoverage = 'complete' | 'partial' | 'unavailable';
+
+/**
  * `limited` no es un resultado ordinario: el análisis pasó los controles
  * mínimos pero alguno quedó fuera de su margen cómodo, así que la lectura se
- * publica marcada y nunca como una medida corriente.
+ * publica marcada, con la causa a la vista, y nunca como una medida corriente.
  */
 export type ElasticDemandConfidence = 'reliable' | 'limited';
 
@@ -87,7 +107,8 @@ export interface MemberElasticIndex {
   /** Fracción de σ* aportada por el axil, en [0, 1]. */
   axialShare: number;
   material: ElasticYieldSource;
-  section: ElasticSectionSource;
+  /** `null` en demanda puramente axial: sin flexión no hay W que declarar. */
+  section: ElasticSectionSource | null;
 }
 
 export interface MemberElasticIndexGap {
@@ -101,37 +122,59 @@ export type MemberElasticIndexReading = MemberElasticIndex | MemberElasticIndexG
 
 export interface ElasticDemandAvailable {
   status: 'available';
+  coverage: 'complete' | 'partial';
   confidence: ElasticDemandConfidence;
-  /** La barra con mayor η entre las que sí pudieron leerse. */
-  governing: MemberElasticIndex;
+  /** Check que degradó el análisis a `limited`; `null` si es `reliable`. */
+  limitedCheck: ReliabilityCheck | null;
+  /**
+   * El mayor η **entre los miembros evaluables**. Con `coverage === 'partial'`
+   * no es el gobernante de la estructura y la interfaz debe decir sobre cuántos
+   * miembros se midió.
+   */
+  highest: MemberElasticIndex;
   /** Ordenadas de mayor a menor η. */
   readings: MemberElasticIndex[];
-  /** Barras excluidas de la lectura, con el dato que les falta. */
+  /** Miembros excluidos de la lectura, con el dato que les falta. */
   gaps: MemberElasticIndexGap[];
-  /** id → η, sólo de las barras publicables. Es lo que consume el lienzo. */
+  evaluated: number;
+  total: number;
+  /** id → η, sólo de los miembros publicables. Es lo que tiñe el lienzo. */
   ratios: ReadonlyMap<string, number>;
+  /** ids que el lienzo debe dibujar como **no evaluados**, no como normales. */
+  unevaluated: ReadonlySet<string>;
 }
 
 export interface ElasticDemandUnavailable {
   status: 'unavailable';
+  coverage: 'unavailable';
   blocker: ElasticDemandBlocker;
   /** `null` cuando el bloqueo es anterior a poder clasificar el análisis. */
   confidence: ElasticDemandConfidence | null;
+  limitedCheck: ReliabilityCheck | null;
   gaps: MemberElasticIndexGap[];
   /** Unión sin repetir de los datos que faltan, en orden estable. */
   missing: ElasticIndexGap[];
+  evaluated: 0;
+  total: number;
   /** Siempre vacío: sin lectura publicable no se tiñe el lienzo. */
   ratios: ReadonlyMap<string, number>;
+  unevaluated: ReadonlySet<string>;
 }
 
 export type ElasticDemandView = ElasticDemandAvailable | ElasticDemandUnavailable;
 
-/** Vista por barra, la que consume el Inspector. Misma puerta que el Resumen. */
+/** Vista por miembro, la que consume el Inspector. Misma puerta que el Resumen. */
 export type MemberElasticIndexView =
-  | { status: 'available'; confidence: ElasticDemandConfidence; index: MemberElasticIndex }
+  | {
+    status: 'available';
+    confidence: ElasticDemandConfidence;
+    limitedCheck: ReliabilityCheck | null;
+    index: MemberElasticIndex;
+  }
   | { status: 'unavailable'; blocker: ElasticDemandBlocker | null; gaps: ElasticIndexGap[] };
 
 const EMPTY_RATIOS: ReadonlyMap<string, number> = new Map();
+const EMPTY_IDS: ReadonlySet<string> = new Set();
 
 const GAP_ORDER: ElasticIndexGap[] = ['section-geometry', 'yield-strength', 'section-modulus'];
 
@@ -171,20 +214,30 @@ export const sectionElasticIndex = (
   axial: number,
   moment: number,
 ): MemberElasticIndexReading => {
-  const gaps: ElasticIndexGap[] = [];
   if (member.type === 'rigid' || !(member.A > 0)) {
     return { status: 'unavailable', memberId: member.id, gaps: ['section-geometry'] };
   }
+
+  const maxAxial = Math.abs(axial);
+  /* Un elemento de dos fuerzas no tiene rigidez a flexión: su momento es cero
+     por formulación, no por casualidad numérica. */
+  const maxMoment = member.type === 'truss' ? 0 : Math.abs(moment);
+  /* W sólo hace falta si hay flexión que evaluar. Exigirlo siempre dejaba «No
+     disponible» una lectura puramente axial que estaba completa —σ* = |N*|/A y
+     nada más— y empujaba a asignar una sección cualquiera para poder verla. */
+  const needsSectionModulus = maxMoment > 0;
+
+  const gaps: ElasticIndexGap[] = [];
   const material = memberYieldStrength(member);
   if (!material) gaps.push('yield-strength');
   const section = memberSectionModulus(member);
-  if (!section) gaps.push('section-modulus');
-  if (!material || !section) return { status: 'unavailable', memberId: member.id, gaps };
+  if (needsSectionModulus && !section) gaps.push('section-modulus');
+  if (!material || (needsSectionModulus && !section)) {
+    return { status: 'unavailable', memberId: member.id, gaps };
+  }
 
-  const maxAxial = Math.abs(axial);
-  const maxMoment = Math.abs(moment);
   const sigmaAxial = maxAxial / member.A;
-  const sigmaBending = maxMoment / section.sectionModulus;
+  const sigmaBending = needsSectionModulus && section ? maxMoment / section.sectionModulus : 0;
   const sigmaTotal = sigmaAxial + sigmaBending;
   if (!Number.isFinite(sigmaTotal)) {
     return { status: 'unavailable', memberId: member.id, gaps: ['section-geometry'] };
@@ -202,7 +255,9 @@ export const sectionElasticIndex = (
     ratio: sigmaTotal / material.yieldStrength,
     axialShare: sigmaTotal > 0 ? sigmaAxial / sigmaTotal : 0,
     material,
-    section,
+    /* Sin flexión no se publica un W que no participó en el cálculo, aunque el
+       miembro tenga sección de catálogo: la procedencia describe lo que entró. */
+    section: needsSectionModulus ? section : null,
   };
 };
 
@@ -231,13 +286,23 @@ export const memberElasticIndex = (
  */
 export const elasticDemandGate = (
   analysis: AnalysisResult | null | undefined,
-): { blocker: 'no-analysis' | 'unreliable' | null; confidence: ElasticDemandConfidence } => {
-  if (!analysis || !analysis.memberResults?.length) return { blocker: 'no-analysis', confidence: 'reliable' };
+): {
+  blocker: 'no-analysis' | 'unreliable' | null;
+  confidence: ElasticDemandConfidence;
+  limitedCheck: ReliabilityCheck | null;
+} => {
+  if (!analysis || !analysis.memberResults?.length) {
+    return { blocker: 'no-analysis', confidence: 'reliable', limitedCheck: null };
+  }
   const reliability = resolveReliability(analysis);
   if (!reliability.usable || reliability.level === 'unreliable' || reliability.level === 'failed') {
-    return { blocker: 'unreliable', confidence: 'limited' };
+    return { blocker: 'unreliable', confidence: 'limited', limitedCheck: reliability.governing ?? null };
   }
-  return { blocker: null, confidence: reliability.level === 'limited' ? 'limited' : 'reliable' };
+  /* «Confiabilidad limitada» a secas es una etiqueta sobre la que el usuario no
+     puede actuar: viaja con el check que la gobierna y su mensaje. */
+  return reliability.level === 'limited'
+    ? { blocker: null, confidence: 'limited', limitedCheck: reliability.governing ?? null }
+    : { blocker: null, confidence: 'reliable', limitedCheck: null };
 };
 
 /** Vista de una barra para el Inspector: misma puerta y mismo clasificador. */
@@ -250,7 +315,7 @@ export const memberElasticIndexView = (
   if (gate.blocker) return { status: 'unavailable', blocker: gate.blocker, gaps: [] };
   const index = memberElasticIndex(member, result);
   return index.status === 'available'
-    ? { status: 'available', confidence: gate.confidence, index }
+    ? { status: 'available', confidence: gate.confidence, limitedCheck: gate.limitedCheck, index }
     : { status: 'unavailable', blocker: null, gaps: index.gaps };
 };
 
@@ -263,11 +328,16 @@ export const elasticDemandView = (
   if (gate.blocker) {
     return {
       status: 'unavailable',
+      coverage: 'unavailable',
       blocker: gate.blocker,
       confidence: gate.blocker === 'unreliable' ? gate.confidence : null,
+      limitedCheck: gate.limitedCheck,
       gaps: [],
       missing: [],
+      evaluated: 0,
+      total: 0,
       ratios: EMPTY_RATIOS,
+      unevaluated: EMPTY_IDS,
     };
   }
 
@@ -282,55 +352,76 @@ export const elasticDemandView = (
     else gaps.push(index);
   }
 
+  const total = readings.length + gaps.length;
+  const unevaluated = new Set(gaps.map((gap) => gap.memberId));
+
   if (readings.length === 0) {
     const seen = new Set(gaps.flatMap((gap) => gap.gaps));
     return {
       status: 'unavailable',
+      coverage: 'unavailable',
       blocker: 'no-evaluable-member',
       confidence: gate.confidence,
+      limitedCheck: gate.limitedCheck,
       gaps,
       missing: GAP_ORDER.filter((gap) => seen.has(gap)),
+      evaluated: 0,
+      total,
       ratios: EMPTY_RATIOS,
+      unevaluated,
     };
   }
 
   readings.sort((first, second) => second.ratio - first.ratio);
   return {
     status: 'available',
+    coverage: gaps.length === 0 ? 'complete' : 'partial',
     confidence: gate.confidence,
-    governing: readings[0],
+    limitedCheck: gate.limitedCheck,
+    highest: readings[0],
     readings,
     gaps,
+    evaluated: readings.length,
+    total,
     ratios: new Map(readings.map((reading) => [reading.memberId, reading.ratio])),
+    unevaluated,
   };
 };
 
 /**
- * Bandas de **magnitud**, no de seguridad.
+ * Pintura del mapa de demanda: una rampa **continua**, no un conjunto de bandas.
  *
- * Son tercios exactos de la referencia: sirven para nombrar en texto lo que el
- * color ya dice de forma continua, y para que un lector que no distingue el
- * color no dependa de él. No son umbrales de aceptación ni de aviso — el corte
- * en 0,85 que existía antes no tenía derivación técnica y desapareció. El único
- * punto con significado propio es η = 1: la estimación alcanza el Fy declarado.
- */
-export type ElasticIndexBand = 'low' | 'moderate' | 'high' | 'at-reference';
-
-export const elasticIndexBand = (ratio: number): ElasticIndexBand =>
-  ratio >= ELASTIC_REFERENCE_RATIO ? 'at-reference'
-    : ratio >= 2 / 3 ? 'high'
-      : ratio >= 1 / 3 ? 'moderate' : 'low';
-
-/**
- * Color del mapa de demanda: una rampa secuencial continua.
+ * η es una magnitud continua y el único punto con significado físico propio es
+ * η = 1 —la estimación alcanza el Fy declarado—. Las bandas por tercios que hubo
+ * aquí eran cortes inventados, exactamente igual que el 0,85 al que sustituyeron:
+ * nombraban tramos que la física no distingue.
  *
- * El semáforo verde/ámbar/rojo anterior codificaba un juicio de seguridad que
- * esta lectura no puede sostener. Una rampa de una sola familia comunica
- * *cuánta* demanda hay sin decir si eso está bien, y deja un único color aparte
- * —el de la referencia— para el hecho verificable de que η alcanza Fy.
+ * Por encima de la referencia la rampa **sigue creciendo** en una segunda
+ * familia hasta `ELASTIC_SATURATION_RATIO`; más allá el color ya no puede
+ * distinguir y `saturated` lo declara para que la leyenda lo diga en palabras.
  */
-export const elasticIndexColor = (ratio: number): string => {
-  if (ratio >= ELASTIC_REFERENCE_RATIO) return 'var(--sc-color-demand-reference)';
-  const percent = Math.round(Math.max(0, Math.min(1, ratio)) * 100);
-  return `color-mix(in oklab, var(--sc-color-demand-peak) ${percent}%, var(--sc-color-demand-base))`;
+export interface ElasticIndexPaint {
+  color: string;
+  /** η ≥ 1: la estimación alcanza el Fy declarado. Nada más. */
+  atReference: boolean;
+  /** El color ya no distingue magnitud; hay que leer el número. */
+  saturated: boolean;
+}
+
+const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
+
+export const elasticIndexPaint = (ratio: number): ElasticIndexPaint => {
+  if (ratio >= ELASTIC_REFERENCE_RATIO) {
+    const above = clamp01((ratio - ELASTIC_REFERENCE_RATIO) / (ELASTIC_SATURATION_RATIO - ELASTIC_REFERENCE_RATIO));
+    return {
+      color: `color-mix(in oklab, var(--sc-color-demand-reference-peak) ${Math.round(above * 100)}%, var(--sc-color-demand-reference))`,
+      atReference: true,
+      saturated: ratio > ELASTIC_SATURATION_RATIO,
+    };
+  }
+  return {
+    color: `color-mix(in oklab, var(--sc-color-demand-peak) ${Math.round(clamp01(ratio) * 100)}%, var(--sc-color-demand-base))`,
+    atReference: false,
+    saturated: false,
+  };
 };

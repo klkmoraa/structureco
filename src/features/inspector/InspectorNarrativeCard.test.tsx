@@ -23,20 +23,38 @@ const memberOf = (overrides: Partial<MemberModel> = {}): MemberModel => ({
   ...overrides,
 });
 
-const resultFor = (axial: number): MemberResult => ({
+const resultFor = (axial: number, moment = 0): MemberResult => ({
   memberId: 'B7', length: 4,
   localDisplacements: [], localEndForces: [], diagramSegments: [], diagramJumps: [],
   criticalPoints: [], diagram: [], deformation: [], deformationSegments: [], deformationCriticalPoints: [],
-  maxAxial: axial, minAxial: 0, maxShear: 0, minShear: 0, maxMoment: 0, minMoment: 0,
+  maxAxial: axial, minAxial: 0, maxShear: 0, minShear: 0, maxMoment: moment, minMoment: 0,
 } as unknown as MemberResult);
 
-const analysisFor = (axial: number, level: ReliabilityLevel = 'reliable'): AnalysisResult => ({
+/** El check que gobierna un nivel `limited`: es lo que el panel debe citar. */
+const governingCheck = {
+  id: 'condition' as const,
+  label: 'Condición κ₁ del sistema equilibrado',
+  value: 4.2e10,
+  limitedAbove: 1e10,
+  unreliableAbove: 1e12,
+  level: 'limited' as const,
+  message: 'Condición κ₁ del sistema equilibrado: 4.200e+10 supera 1e+10.',
+};
+
+const analysisFor = (axial: number, level: ReliabilityLevel = 'reliable', moment = 0): AnalysisResult => ({
   success: level !== 'failed',
-  memberResults: [resultFor(axial)],
+  memberResults: [resultFor(axial, moment)],
   nodeResults: [],
   issues: [],
   displacements: [0],
-  reliability: { completed: true, usable: level !== 'failed', level, checks: [], reasons: [] },
+  reliability: {
+    completed: true,
+    usable: level !== 'failed',
+    level,
+    checks: level === 'reliable' ? [] : [governingCheck],
+    governing: level === 'reliable' ? undefined : governingCheck,
+    reasons: level === 'reliable' ? [] : [governingCheck.message],
+  },
 } as unknown as AnalysisResult);
 
 const context = {
@@ -73,7 +91,7 @@ describe('InspectorNarrativeCard', () => {
     const { container } = await renderCard(member, analysis);
     expect(container.querySelector('[data-testid="inspector-elastic-value"]')?.textContent)
       .toBe('η 0.50 · 50 % de Fy de referencia');
-    expect(view.governing.ratio).toBeCloseTo(0.5, 12);
+    expect(view.highest.ratio).toBeCloseTo(0.5, 12);
   });
 
   it('keeps the working-mode narrative and drops the safety verdict', async () => {
@@ -86,8 +104,8 @@ describe('InspectorNarrativeCard', () => {
     expect(copy).toMatch(/no es una verificación normativa ni una declaración de seguridad/);
   });
 
-  it('names the provenance of Fy and W', async () => {
-    const { container } = await renderCard(memberOf(), analysisFor(a36.yieldStrength / 2));
+  it('names the provenance of Fy and W when both take part', async () => {
+    const { container } = await renderCard(memberOf(), analysisFor(a36.yieldStrength / 4, 'reliable', 20));
     const copy = container.textContent ?? '';
     expect(copy).toContain(a36.name);
     expect(copy).toContain(ipe300.name);
@@ -97,9 +115,29 @@ describe('InspectorNarrativeCard', () => {
     const { container } = await renderCard(memberOf(), analysisFor(a36.yieldStrength * 1.4));
     expect(container.querySelector('[role="meter"]')).toBeNull();
     expect(container.querySelector('.elastic-index-scale')?.getAttribute('aria-hidden')).toBe('true');
-    expect(container.querySelector('[data-testid="inspector-elastic-band"]')?.textContent)
-      .toBe('Alcanza el Fy de referencia');
+    // Sin bandas: lo único que se nombra por encima de 1 es el hecho físico.
+    expect(container.querySelector('[data-testid="inspector-at-reference"]')?.textContent)
+      .toMatch(/alcanza el Fy declarado/);
+    for (const band of ['Magnitud baja', 'Magnitud media', 'Magnitud alta']) {
+      expect(container.textContent, band).not.toContain(band);
+    }
     expect(container.innerHTML).not.toContain('85%');
+  });
+
+  it('names the governing check behind a limited reliability instead of just labelling it', async () => {
+    const { container } = await renderCard(memberOf(), analysisFor(a36.yieldStrength / 2, 'limited'));
+    const note = container.querySelector('[data-testid="inspector-limited-cause"]');
+    expect(note?.textContent).toMatch(/Confiabilidad limitada/);
+    expect(note?.textContent).toContain(governingCheck.label);
+    expect(note?.textContent).toContain(governingCheck.message);
+  });
+
+  it('reads a purely axial member without demanding W', async () => {
+    const axialOnly = memberOf({ sectionId: undefined, sectionOrigin: 'custom' });
+    const { container } = await renderCard(axialOnly, analysisFor(a36.yieldStrength / 2));
+    expect(container.querySelector('[data-testid="inspector-elastic-value"]')?.textContent)
+      .toBe('η 0.50 · 50 % de Fy de referencia');
+    expect(container.textContent).toMatch(/Demanda puramente axial/);
   });
 
   it('says what is missing instead of assuming a yield strength', async () => {

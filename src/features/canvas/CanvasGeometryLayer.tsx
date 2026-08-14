@@ -12,7 +12,7 @@ import {
   toGlobalVector,
 } from '../../graphics/structureGeometry';
 import { formatFixed } from '../../utils/numberFormat';
-import { elasticIndexBand, elasticIndexColor } from '../results/elasticDemand';
+import { elasticIndexPaint } from '../results/elasticDemand';
 import type { TranslationKey } from '../../i18n/catalogs';
 
 export type StructuralTarget =
@@ -48,6 +48,8 @@ export interface CanvasGeometryLayerProps {
    * de calor": la barra conserva su color de dibujo técnico.
    */
   heatmapRatios: ReadonlyMap<string, number>;
+  /** `true` mientras la capa está encendida: es lo que hace visible «no evaluado». */
+  demandMapActive: boolean;
   resultTab: ResultTab;
   units: Units;
   forceLabel: string;
@@ -63,7 +65,7 @@ export interface CanvasGeometryLayerProps {
 
 const CanvasGeometryLayerImpl = ({
   slot, project, nodeMap, memberMap, toScreen, camera, selectionVisualState, learningFocus, memberStartId,
-  layers, loadsLayerVisible, heatmapRatios, resultTab, units, forceLabel, momentLabel, distributedLabel, t,
+  layers, loadsLayerVisible, heatmapRatios, demandMapActive, resultTab, units, forceLabel, momentLabel, distributedLabel, t,
   onObjectPointerDown, onSelect, onLoadKeyDown, onShowCut, onCutLeave,
 }: CanvasGeometryLayerProps) => {
   const selectedNodeIds = selectionVisualState.nodeIds;
@@ -238,9 +240,11 @@ const CanvasGeometryLayerImpl = ({
           // `toFixed` para no depender del locale ni de la política de
           // presentación, que gobierna sólo lo que el usuario lee.
           const demandAttribute = demandRatio === undefined ? undefined : String(Math.round(demandRatio * 1000) / 1000);
-          /* La banda redunda la magnitud sin depender del color: el CSS la usa
-             para el patrón de trazo, y queda legible en una captura en gris. */
-          const demandBand = demandRatio === undefined ? undefined : elasticIndexBand(demandRatio);
+          const paint = demandRatio === undefined ? null : elasticIndexPaint(demandRatio);
+          /* Un miembro que no pudo evaluarse no puede quedarse con su trazo
+             técnico normal: sería indistinguible de uno con η baja. Se marca como
+             **no evaluado** y la leyenda cuenta cuántos son. */
+          const unevaluated = demandMapActive && demandRatio === undefined;
           return (
             <g
               key={member.id}
@@ -248,11 +252,13 @@ const CanvasGeometryLayerImpl = ({
               data-structure-kind="member"
               data-structure-id={member.id}
               data-demand-ratio={demandAttribute}
-              data-demand-band={demandBand}
+              data-demand-at-reference={paint?.atReference ? 'true' : undefined}
+              data-demand-saturated={paint?.saturated ? 'true' : undefined}
+              data-elastic-index={unevaluated ? 'unevaluated' : paint ? 'evaluated' : undefined}
               /* El color térmico viaja como custom property y no como `stroke`:
                  así la selección y el foco pedagógico siguen ganando por CSS. */
-              style={demandRatio === undefined ? undefined : { '--member-demand-color': elasticIndexColor(demandRatio) } as CSSProperties}
-              className={`member-object ${selected ? 'selected' : ''} ${learningHighlighted ? 'learning-highlight' : ''} ${member.type}${demandRatio === undefined ? '' : ' has-demand'}`}
+              style={paint === null ? undefined : { '--member-demand-color': paint.color } as CSSProperties}
+              className={`member-object ${selected ? 'selected' : ''} ${learningHighlighted ? 'learning-highlight' : ''} ${member.type}${paint === null ? '' : ' has-demand'}${unevaluated ? ' is-unevaluated' : ''}`}
               role="button"
               tabIndex={0}
               aria-keyshortcuts="Enter Space"

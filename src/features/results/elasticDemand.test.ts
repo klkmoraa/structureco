@@ -12,10 +12,10 @@ import type {
 import * as elasticDemand from './elasticDemand';
 import {
   ELASTIC_REFERENCE_RATIO,
+  ELASTIC_SATURATION_RATIO,
   elasticDemandGate,
   elasticDemandView,
-  elasticIndexBand,
-  elasticIndexColor,
+  elasticIndexPaint,
   memberElasticIndex,
   memberElasticIndexView,
   memberSectionModulus,
@@ -51,12 +51,24 @@ const result = (overrides: Partial<MemberResult> = {}): MemberResult => ({
   ...overrides,
 } as MemberResult);
 
+/** El check que gobierna un nivel `limited`: es lo que la interfaz debe citar. */
+const governingCheck = {
+  id: 'condition' as const,
+  label: 'Condición κ₁ del sistema equilibrado',
+  value: 4.2e10,
+  limitedAbove: 1e10,
+  unreliableAbove: 1e12,
+  level: 'limited' as const,
+  message: 'Condición κ₁ del sistema equilibrado: 4.200e+10 supera 1e+10.',
+};
+
 const reliability = (level: ReliabilityLevel): ResultReliability => ({
   completed: true,
   usable: level !== 'failed',
   level,
-  checks: [],
-  reasons: level === 'reliable' ? [] : [`nivel ${level}`],
+  checks: level === 'reliable' ? [] : [governingCheck],
+  governing: level === 'reliable' ? undefined : governingCheck,
+  reasons: level === 'reliable' ? [] : [governingCheck.message],
 });
 
 const projectOf = (...members: MemberModel[]): ProjectModel => ({
@@ -149,13 +161,13 @@ describe('elastic index — per member', () => {
   it('reports exactly which datum is missing instead of estimating it', () => {
     const noYield = memberElasticIndex(
       member(identity({ materialOrigin: 'legacy', materialId: undefined })),
-      result({ maxAxial: 100 }),
+      result({ maxAxial: 100, maxMoment: 12 }),
     );
     expect(noYield).toEqual({ status: 'unavailable', memberId: 'B1', gaps: ['yield-strength'] });
 
     const noModulus = memberElasticIndex(
       member(identity({ sectionOrigin: 'custom', sectionId: undefined })),
-      result({ maxAxial: 100 }),
+      result({ maxAxial: 100, maxMoment: 12 }),
     );
     expect(noModulus).toEqual({ status: 'unavailable', memberId: 'B1', gaps: ['section-modulus'] });
 
@@ -164,9 +176,43 @@ describe('elastic index — per member', () => {
         materialOrigin: 'legacy', materialId: undefined,
         sectionOrigin: 'legacy', sectionId: undefined,
       })),
-      result({ maxAxial: 100 }),
+      result({ maxAxial: 100, maxMoment: 12 }),
     );
     expect(nothing).toEqual({ status: 'unavailable', memberId: 'B1', gaps: ['yield-strength', 'section-modulus'] });
+  });
+
+  it('needs only A and Fy when the demand is purely axial', () => {
+    // σ* = |N*|/A y nada más: exigir W ahí dejaba «No disponible» una lectura
+    // que sí era completa, y empujaba a inventar una sección para verla.
+    const index = memberElasticIndex(
+      member(identity({ sectionOrigin: 'custom', sectionId: undefined })),
+      result({ maxAxial: 100, minAxial: -40 }),
+    );
+    if (index.status !== 'available') throw new Error('esperaba un índice disponible sin W');
+    expect(index.section).toBeNull();
+    expect(index.sigmaBending).toBe(0);
+    expect(index.sigmaAxial).toBeCloseTo(100 / ipe300.area, 6);
+    expect(index.ratio).toBeCloseTo(index.sigmaAxial / a36.yieldStrength, 9);
+    expect(index.axialShare).toBe(1);
+  });
+
+  it('treats a truss bar as bending-free by formulation', () => {
+    // Un elemento de dos fuerzas no tiene rigidez a flexión: su envolvente de
+    // momento es cero por construcción, no por casualidad numérica.
+    const index = memberElasticIndex(
+      member({ type: 'truss', ...identity({ sectionOrigin: 'legacy', sectionId: undefined }) }),
+      result({ maxAxial: 80 }),
+    );
+    if (index.status !== 'available') throw new Error('esperaba un índice disponible sin W');
+    expect(index.maxMoment).toBe(0);
+    expect(index.section).toBeNull();
+  });
+
+  it('still demands W as soon as there is any bending to evaluate', () => {
+    expect(memberElasticIndex(
+      member(identity({ sectionOrigin: 'custom', sectionId: undefined })),
+      result({ maxAxial: 100, maxMoment: 1e-6 }),
+    )).toEqual({ status: 'unavailable', memberId: 'B1', gaps: ['section-modulus'] });
   });
 
   it('declines members with no usable section geometry', () => {
@@ -184,17 +230,29 @@ describe('elastic index — per member', () => {
     expect(sectionElasticIndex(member(identity({ materialOrigin: 'legacy', materialId: undefined })), 100, 0).status)
       .toBe('unavailable');
   });
+
+  it('reads a purely axial section without W too', () => {
+    expect(sectionElasticIndex(member(identity({ sectionOrigin: 'custom', sectionId: undefined })), 100, 0).status)
+      .toBe('available');
+    expect(sectionElasticIndex(member(identity({ sectionOrigin: 'custom', sectionId: undefined })), 100, 5).status)
+      .toBe('unavailable');
+  });
 });
 
 describe('elastic index — reliability gate', () => {
   it('publishes an ordinary reading only for a reliable analysis', () => {
     expect(elasticDemandGate(analysisOf([result()], 'reliable')))
-      .toEqual({ blocker: null, confidence: 'reliable' });
+      .toEqual({ blocker: null, confidence: 'reliable', limitedCheck: null });
   });
 
-  it('marks a limited analysis as limited and never as an ordinary result', () => {
-    expect(elasticDemandGate(analysisOf([result()], 'limited')))
-      .toEqual({ blocker: null, confidence: 'limited' });
+  it('names the check that governs a limited analysis', () => {
+    // «Confiabilidad limitada» sin causa es una etiqueta que el usuario no puede
+    // accionar: se publica el check gobernante con su mensaje.
+    const gate = elasticDemandGate(analysisOf([result()], 'limited'));
+    expect(gate.blocker).toBeNull();
+    expect(gate.confidence).toBe('limited');
+    expect(gate.limitedCheck?.id).toBe('condition');
+    expect(gate.limitedCheck?.message).toContain('supera');
   });
 
   it('blocks the index for unreliable and failed analyses', () => {
@@ -205,7 +263,7 @@ describe('elastic index — reliability gate', () => {
 });
 
 describe('elastic index — structure view model', () => {
-  it('publishes the governing member with its provenance when everything is verifiable', () => {
+  it('publishes the highest evaluable index with full coverage when nothing is missing', () => {
     const view = elasticDemandView(
       projectOf(member({ id: 'B1' }), member({ id: 'B2' })),
       analysisOf([
@@ -214,14 +272,21 @@ describe('elastic index — structure view model', () => {
       ]),
     );
     if (view.status !== 'available') throw new Error('esperaba una vista disponible');
+    expect(view.coverage).toBe('complete');
     expect(view.confidence).toBe('reliable');
-    expect(view.governing.memberId).toBe('B2');
+    expect(view.evaluated).toBe(2);
+    expect(view.total).toBe(2);
+    expect(view.highest.memberId).toBe('B2');
     expect(view.readings.map((reading) => reading.memberId)).toEqual(['B2', 'B1']);
-    expect(view.ratios.get('B2')).toBeCloseTo(view.governing.ratio, 12);
+    expect(view.ratios.get('B2')).toBeCloseTo(view.highest.ratio, 12);
     expect(view.gaps).toEqual([]);
+    expect(view.unevaluated.size).toBe(0);
   });
 
-  it('keeps unverifiable members out of the ratios instead of fabricating them', () => {
+  it('never calls the highest evaluable member governing when coverage is partial', () => {
+    // B2 es el miembro más exigido del modelo, pero no puede leerse. Llamar
+    // «gobernante» a B1 afirmaba sobre toda la estructura algo que la lectura no
+    // sabe: sólo es el mayor entre los evaluables, y así debe declararse.
     const view = elasticDemandView(
       projectOf(
         member({ id: 'B1' }),
@@ -233,9 +298,14 @@ describe('elastic index — structure view model', () => {
       ]),
     );
     if (view.status !== 'available') throw new Error('esperaba una vista disponible');
-    expect(view.governing.memberId).toBe('B1');
+    expect(view).not.toHaveProperty('governing');
+    expect(view.coverage).toBe('partial');
+    expect(view.evaluated).toBe(1);
+    expect(view.total).toBe(2);
+    expect(view.highest.memberId).toBe('B1');
     expect(view.ratios.has('B2')).toBe(false);
     expect(view.gaps).toEqual([{ status: 'unavailable', memberId: 'B2', gaps: ['yield-strength'] }]);
+    expect([...view.unevaluated]).toEqual(['B2']);
   });
 
   it('reports unavailable — with what is missing — when no member can be read', () => {
@@ -245,12 +315,16 @@ describe('elastic index — structure view model', () => {
     );
     expect(view.status).toBe('unavailable');
     if (view.status !== 'unavailable') return;
+    expect(view.coverage).toBe('unavailable');
     expect(view.blocker).toBe('no-evaluable-member');
     expect(view.missing).toEqual(['section-modulus']);
+    expect(view.evaluated).toBe(0);
+    expect(view.total).toBe(1);
     expect(view.ratios.size).toBe(0);
+    expect([...view.unevaluated]).toEqual(['B1']);
   });
 
-  it('never publishes η for an unreliable analysis, however complete the data is', () => {
+  it('never publishes eta for an unreliable analysis, however complete the data is', () => {
     const view = elasticDemandView(
       projectOf(member({ id: 'B1' })),
       analysisOf([result({ memberId: 'B1', maxMoment: 30 })], 'unreliable'),
@@ -258,16 +332,19 @@ describe('elastic index — structure view model', () => {
     expect(view.status).toBe('unavailable');
     if (view.status !== 'unavailable') return;
     expect(view.blocker).toBe('unreliable');
+    expect(view.coverage).toBe('unavailable');
     expect(view.ratios.size).toBe(0);
   });
 
-  it('publishes a limited analysis as explicitly limited', () => {
+  it('publishes a limited analysis marked as limited and names its governing check', () => {
     const view = elasticDemandView(
       projectOf(member({ id: 'B1' })),
       analysisOf([result({ memberId: 'B1', maxMoment: 30 })], 'limited'),
     );
     if (view.status !== 'available') throw new Error('esperaba una vista disponible marcada como limitada');
     expect(view.confidence).toBe('limited');
+    expect(view.limitedCheck?.id).toBe('condition');
+    expect(view.limitedCheck?.message).toContain('supera');
   });
 
   it('gives the inspector the same reading the summary publishes', () => {
@@ -277,8 +354,15 @@ describe('elastic index — structure view model', () => {
     const view = elasticDemandView(projectOf(b1), analysis);
     const perMember = memberElasticIndexView(b1, b1Result, analysis);
     if (view.status !== 'available' || perMember.status !== 'available') throw new Error('esperaba lecturas disponibles');
-    expect(perMember.index.ratio).toBeCloseTo(view.governing.ratio, 12);
+    expect(perMember.index.ratio).toBeCloseTo(view.highest.ratio, 12);
     expect(perMember.confidence).toBe(view.confidence);
+  });
+
+  it('hands the inspector the governing check of a limited analysis too', () => {
+    const b1 = member({ id: 'B1' });
+    const perMember = memberElasticIndexView(b1, result({ memberId: 'B1', maxMoment: 30 }), analysisOf([result()], 'limited'));
+    if (perMember.status !== 'available') throw new Error('esperaba una lectura disponible');
+    expect(perMember.limitedCheck?.id).toBe('condition');
   });
 
   it('blocks the inspector reading on the same reliability gate as the summary', () => {
@@ -288,40 +372,53 @@ describe('elastic index — structure view model', () => {
   });
 });
 
-describe('elastic index — magnitude scale', () => {
-  it('has no safety semantics left in its vocabulary', () => {
-    // `safe` era una declaración de seguridad estructural que esta lectura no
-    // puede sostener, y 0,85 era un umbral sin derivación técnica.
-    expect(elasticDemand).not.toHaveProperty('DEMAND_WARNING_RATIO');
-    expect(elasticDemand).not.toHaveProperty('demandTone');
-    const bands = [0, 0.2, 0.5, 0.8, 0.85, 0.99, 1, 2].map(elasticIndexBand);
-    expect(bands).not.toContain('safe');
-    expect(bands).not.toContain('overstressed');
+describe('elastic index — continuous magnitude scale', () => {
+  it('has no bands and no safety semantics left in its vocabulary', () => {
+    // eta es continua. Los tercios 1/3–2/3 eran cortes inventados igual que el
+    // 0,85 al que sustituyeron: nombraban tramos que la física no distingue.
+    for (const removed of ['DEMAND_WARNING_RATIO', 'demandTone', 'elasticIndexBand', 'elasticIndexColor']) {
+      expect(elasticDemand, removed).not.toHaveProperty(removed);
+    }
   });
 
-  it('bins magnitude in even thirds of the reference, with no cut at 0.85', () => {
-    expect(elasticIndexBand(0)).toBe('low');
-    expect(elasticIndexBand(1 / 3 - 1e-9)).toBe('low');
-    expect(elasticIndexBand(1 / 3)).toBe('moderate');
-    expect(elasticIndexBand(2 / 3 - 1e-9)).toBe('moderate');
-    expect(elasticIndexBand(2 / 3)).toBe('high');
-    // 0,85 y 0,84 pertenecen a la misma banda: el corte anterior ya no existe.
-    expect(elasticIndexBand(0.84)).toBe(elasticIndexBand(0.85));
-    expect(elasticIndexBand(ELASTIC_REFERENCE_RATIO - 1e-9)).toBe('high');
-    expect(elasticIndexBand(ELASTIC_REFERENCE_RATIO)).toBe('at-reference');
-    expect(elasticIndexBand(2.5)).toBe('at-reference');
-  });
-
-  it('paints the canvas as a continuous magnitude ramp, not a traffic light', () => {
-    // Dos η distintas por debajo de la referencia dan dos colores distintos: el
-    // lienzo comunica cuánto, no "aprobado / reprobado".
-    expect(elasticIndexColor(0.2)).not.toBe(elasticIndexColor(0.6));
-    expect(elasticIndexColor(0.5))
+  it('keeps the paint strictly monotonic below the reference', () => {
+    const colors = [0, 0.1, 0.25, 0.5, 0.75, 0.99].map((ratio) => elasticIndexPaint(ratio).color);
+    expect(new Set(colors).size).toBe(colors.length);
+    expect(elasticIndexPaint(0.5).color)
       .toBe('color-mix(in oklab, var(--sc-color-demand-peak) 50%, var(--sc-color-demand-base))');
-    expect(elasticIndexColor(0)).toBe('color-mix(in oklab, var(--sc-color-demand-peak) 0%, var(--sc-color-demand-base))');
-    // η ≥ 1 es el único hecho con significado propio: la estimación alcanza Fy.
-    expect(elasticIndexColor(ELASTIC_REFERENCE_RATIO)).toBe('var(--sc-color-demand-reference)');
-    expect(elasticIndexColor(3)).toBe('var(--sc-color-demand-reference)');
+    expect(elasticIndexPaint(0).color)
+      .toBe('color-mix(in oklab, var(--sc-color-demand-peak) 0%, var(--sc-color-demand-base))');
+    for (const ratio of [0, 0.5, 0.99]) {
+      expect(elasticIndexPaint(ratio).atReference, String(ratio)).toBe(false);
+      expect(elasticIndexPaint(ratio).saturated, String(ratio)).toBe(false);
+    }
+  });
+
+  it('keeps communicating magnitude above the reference instead of flattening it', () => {
+    // Antes, todo eta >= 1 recibía el mismo color: 1,01 y 4,00 se veían igual y
+    // el mapa dejaba de decir cuánto justo donde más importa.
+    const above = [1, 1.25, 1.5, 1.75, ELASTIC_SATURATION_RATIO].map((ratio) => elasticIndexPaint(ratio).color);
+    expect(new Set(above).size).toBe(above.length);
+    expect(elasticIndexPaint(ELASTIC_REFERENCE_RATIO).color)
+      .toBe('color-mix(in oklab, var(--sc-color-demand-reference-peak) 0%, var(--sc-color-demand-reference))');
+    expect(elasticIndexPaint(1.5).color)
+      .toBe('color-mix(in oklab, var(--sc-color-demand-reference-peak) 50%, var(--sc-color-demand-reference))');
+    for (const ratio of [ELASTIC_REFERENCE_RATIO, 1.5, 9]) {
+      expect(elasticIndexPaint(ratio).atReference, String(ratio)).toBe(true);
+    }
+  });
+
+  it('declares saturation explicitly rather than pretending the ramp still grows', () => {
+    expect(elasticIndexPaint(ELASTIC_SATURATION_RATIO).saturated).toBe(false);
+    expect(elasticIndexPaint(ELASTIC_SATURATION_RATIO + 1e-9).saturated).toBe(true);
+    expect(elasticIndexPaint(50).saturated).toBe(true);
+    // Y saturado significa saturado: el color deja de moverse, y se declara.
+    expect(elasticIndexPaint(50).color).toBe(elasticIndexPaint(ELASTIC_SATURATION_RATIO).color);
+  });
+
+  it('marks the reference at exactly eta = 1 and nowhere else', () => {
+    expect(elasticIndexPaint(ELASTIC_REFERENCE_RATIO - 1e-9).atReference).toBe(false);
+    expect(elasticIndexPaint(ELASTIC_REFERENCE_RATIO).atReference).toBe(true);
   });
 });
 
@@ -334,6 +431,6 @@ describe('elastic index — unit invariance', () => {
     (imperialProject.settings as { units: string }).units = 'kip-ft';
     const imperial = elasticDemandView(imperialProject, analysisOf([result({ maxAxial: 120, maxMoment: 45 })]));
     if (metric.status !== 'available' || imperial.status !== 'available') throw new Error('esperaba vistas disponibles');
-    expect(imperial.governing.ratio).toBe(metric.governing.ratio);
+    expect(imperial.highest.ratio).toBe(metric.highest.ratio);
   });
 });
