@@ -21,16 +21,22 @@ import type { MemberModel, NodeModel, ProjectModel } from '../../types';
 export type DatasheetEntity = 'nodes' | 'members';
 
 /**
- * Por qué una celda no se puede editar. Se declara desde la fase de sólo
- * lectura para que CRI-82 abra exactamente las celdas `pending` y ninguna más.
+ * Por qué una celda no se edita, o **dónde** se edita.
+ *
+ * CRI-81 declaró `pending` como promesa de la fase de edición. CRI-82 la cumple
+ * y la sustituye: cada celda editable dice ahora si se edita en la propia celda
+ * o sólo en el editor visual del panel, porque escribe varios campos a la vez y
+ * aplicarla a medias dejaría estados que nadie pidió.
  */
 export type DatasheetEditability =
   /** Nunca editable: identidad y referencias estructurales. */
   | 'identity'
   /** Nunca editable: se calcula del modelo. */
   | 'derived'
-  /** Editable, todavía no en esta fase. */
-  | 'pending';
+  /** Editable en la propia celda. */
+  | 'inline'
+  /** Editable sólo en el editor visual del panel. */
+  | 'panel';
 
 /**
  * Valor de una celda.
@@ -42,11 +48,15 @@ export type DatasheetEditability =
  *   no dependan del idioma.
  * - `text` es texto ya legible que no procede de un enumerado (nombre de
  *   catálogo, resumen de liberaciones).
+ * - `ref` es una referencia a algo que el usuario nombra (un caso de carga). A
+ *   diferencia de `token`, su etiqueta **es** dato del proyecto y no una
+ *   traducción, así que ordenar por ella es lo correcto y no depende del idioma.
  */
 export type DatasheetValue =
   | { kind: 'text'; text: string }
   | { kind: 'number'; value: number | null; quantity?: UnitQuantity }
-  | { kind: 'token'; token: string; labelKey: TranslationKey };
+  | { kind: 'token'; token: string; labelKey: TranslationKey }
+  | { kind: 'ref'; id: string; label: string };
 
 export interface DatasheetColumn {
   id: string;
@@ -64,11 +74,20 @@ export interface DatasheetRow {
   values: Readonly<Record<string, DatasheetValue>>;
 }
 
+export interface DatasheetFacetOption {
+  token: string;
+  /** Etiqueta traducible de un enumerado del dominio. */
+  labelKey?: TranslationKey;
+  /** Etiqueta que escribe el usuario; excluyente con `labelKey`. */
+  label?: string;
+  count: number;
+}
+
 export interface DatasheetFacet {
   columnId: string;
   labelKey: TranslationKey;
   /** Tokens presentes en el modelo actual, en orden estable de catálogo. */
-  options: ReadonlyArray<{ token: string; labelKey: TranslationKey; count: number }>;
+  options: readonly DatasheetFacetOption[];
 }
 
 export type DatasheetSortDirection = 'asc' | 'desc';
@@ -114,11 +133,11 @@ const TOKEN_ORDER: Record<string, readonly string[]> = {
 
 export const NODE_COLUMNS: readonly DatasheetColumn[] = [
   { id: 'id', labelKey: 'datasheet.column.id', editability: 'identity' },
-  { id: 'x', labelKey: 'datasheet.column.x', editability: 'pending', quantity: 'length', numeric: true },
-  { id: 'y', labelKey: 'datasheet.column.y', editability: 'pending', quantity: 'length', numeric: true },
-  { id: 'support', labelKey: 'datasheet.column.support', editability: 'pending' },
+  { id: 'x', labelKey: 'datasheet.column.x', editability: 'inline', quantity: 'length', numeric: true },
+  { id: 'y', labelKey: 'datasheet.column.y', editability: 'inline', quantity: 'length', numeric: true },
+  { id: 'support', labelKey: 'datasheet.column.support', editability: 'inline' },
   { id: 'restraints', labelKey: 'datasheet.column.restraints', editability: 'derived' },
-  { id: 'hinge', labelKey: 'datasheet.column.hinge', editability: 'pending' },
+  { id: 'hinge', labelKey: 'datasheet.column.hinge', editability: 'inline' },
   { id: 'loads', labelKey: 'datasheet.column.loads', editability: 'derived', numeric: true },
 ];
 
@@ -126,15 +145,17 @@ export const MEMBER_COLUMNS: readonly DatasheetColumn[] = [
   { id: 'id', labelKey: 'datasheet.column.id', editability: 'identity' },
   { id: 'i', labelKey: 'datasheet.column.nodeI', editability: 'identity' },
   { id: 'j', labelKey: 'datasheet.column.nodeJ', editability: 'identity' },
-  { id: 'type', labelKey: 'datasheet.column.memberType', editability: 'pending' },
+  { id: 'type', labelKey: 'datasheet.column.memberType', editability: 'inline' },
   { id: 'length', labelKey: 'datasheet.column.length', editability: 'derived', quantity: 'length', numeric: true },
-  { id: 'material', labelKey: 'datasheet.column.material', editability: 'pending' },
+  { id: 'material', labelKey: 'datasheet.column.material', editability: 'inline' },
   { id: 'materialOrigin', labelKey: 'datasheet.column.materialOrigin', editability: 'derived' },
-  { id: 'E', labelKey: 'datasheet.column.elasticModulus', editability: 'pending', quantity: 'elasticModulus', numeric: true },
-  { id: 'section', labelKey: 'datasheet.column.section', editability: 'pending' },
-  { id: 'A', labelKey: 'datasheet.column.area', editability: 'pending', quantity: 'area', numeric: true },
-  { id: 'I', labelKey: 'datasheet.column.inertia', editability: 'pending', quantity: 'inertia', numeric: true },
-  { id: 'releases', labelKey: 'datasheet.column.releases', editability: 'pending' },
+  { id: 'E', labelKey: 'datasheet.column.elasticModulus', editability: 'inline', quantity: 'elasticModulus', numeric: true },
+  { id: 'section', labelKey: 'datasheet.column.section', editability: 'inline' },
+  { id: 'A', labelKey: 'datasheet.column.area', editability: 'inline', quantity: 'area', numeric: true },
+  { id: 'I', labelKey: 'datasheet.column.inertia', editability: 'inline', quantity: 'inertia', numeric: true },
+  // Dos booleanos en una sola celda: se editan juntos en el panel o no se
+  // entiende cuál de los dos extremos se está liberando.
+  { id: 'releases', labelKey: 'datasheet.column.releases', editability: 'panel' },
   { id: 'loads', labelKey: 'datasheet.column.loads', editability: 'derived', numeric: true },
 ];
 
@@ -291,6 +312,7 @@ export const datasheetRowSearchText = (
   for (const value of Object.values(row.values)) {
     if (value.kind === 'text') parts.push(value.text);
     else if (value.kind === 'token') parts.push(translateToken(value.labelKey));
+    else if (value.kind === 'ref') parts.push(value.label);
     else if (value.value !== null) parts.push(formatNumeric(value.value, value.quantity));
   }
   return parts.join(' ').toLowerCase();
@@ -324,17 +346,21 @@ export const datasheetFacets = (
   return datasheetFacetColumnIds(entity).flatMap((columnId) => {
     const column = columns.find((candidate) => candidate.id === columnId);
     if (!column) return [];
-    const counts = new Map<string, { labelKey: TranslationKey; count: number }>();
+    const counts = new Map<string, { labelKey?: TranslationKey; label?: string; count: number }>();
     for (const row of rows) {
       const value = row.values[columnId];
-      if (value?.kind !== 'token') continue;
-      const current = counts.get(value.token);
+      // Una faceta agrupa por clave estable: el token de un enumerado o el id de
+      // una referencia. La etiqueta acompaña, pero nunca es la que agrupa.
+      const token = value?.kind === 'token' ? value.token : value?.kind === 'ref' ? value.id : null;
+      if (token === null || !value) continue;
+      const current = counts.get(token);
       if (current) current.count += 1;
-      else counts.set(value.token, { labelKey: value.labelKey, count: 1 });
+      else if (value.kind === 'token') counts.set(token, { labelKey: value.labelKey, count: 1 });
+      else if (value.kind === 'ref') counts.set(token, { label: value.label, count: 1 });
     }
     const order = TOKEN_ORDER[columnId] ?? [];
     const options = [...counts.entries()]
-      .map(([token, entry]) => ({ token, labelKey: entry.labelKey, count: entry.count }))
+      .map(([token, entry]) => ({ token, labelKey: entry.labelKey, label: entry.label, count: entry.count }))
       .sort((first, second) => {
         const firstIndex = order.indexOf(first.token);
         const secondIndex = order.indexOf(second.token);
@@ -356,7 +382,8 @@ export const filterDatasheetRows = (
   if (active.length === 0) return [...rows];
   return rows.filter((row) => active.every(([columnId, tokens]) => {
     const value = row.values[columnId];
-    return value?.kind === 'token' && tokens.has(value.token);
+    if (value?.kind === 'token') return tokens.has(value.token);
+    return value?.kind === 'ref' && tokens.has(value.id);
   }));
 };
 
@@ -366,8 +393,19 @@ export const filterDatasheetRows = (
  * Los números se comparan como números y la ausencia (`null`) va siempre al
  * final, ascendente o descendente: una celda vacía no es «menor que cero», es
  * una celda sin dato, y enterrarla entre valores reales la haría parecer uno.
- * Los tokens se comparan por su clave estable, nunca por su traducción.
+ * Los tokens se comparan por su clave estable, nunca por su traducción. Una
+ * referencia se compara por su etiqueta porque ésa es la que escribió el
+ * usuario: ordenar los casos de carga por su id interno no diría nada.
  */
+const comparableText = (value: DatasheetValue): string => {
+  switch (value.kind) {
+    case 'token': return value.token;
+    case 'text': return value.text;
+    case 'ref': return value.label;
+    case 'number': return '';
+  }
+};
+
 const compareValues = (first: DatasheetValue | undefined, second: DatasheetValue | undefined): number => {
   if (!first || !second) return 0;
   if (first.kind === 'number' && second.kind === 'number') {
@@ -375,9 +413,7 @@ const compareValues = (first: DatasheetValue | undefined, second: DatasheetValue
     if (second.value === null) return -1;
     return first.value - second.value;
   }
-  const firstText = first.kind === 'token' ? first.token : first.kind === 'text' ? first.text : '';
-  const secondText = second.kind === 'token' ? second.token : second.kind === 'text' ? second.text : '';
-  return firstText.localeCompare(secondText, undefined, { numeric: true, sensitivity: 'base' });
+  return comparableText(first).localeCompare(comparableText(second), undefined, { numeric: true, sensitivity: 'base' });
 };
 
 /**

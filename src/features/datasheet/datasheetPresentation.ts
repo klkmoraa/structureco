@@ -28,6 +28,7 @@ export const datasheetCellText = (
   if (!value) return '—';
   if (value.kind === 'text') return value.text;
   if (value.kind === 'token') return t(value.labelKey);
+  if (value.kind === 'ref') return value.label;
   return value.value === null ? '—' : formatDatasheetNumber(value.value, units, value.quantity);
 };
 
@@ -44,16 +45,17 @@ export const datasheetColumnHeader = (
 const EDITABILITY_MESSAGES: Record<DatasheetEditability, TranslationKey> = {
   identity: 'datasheet.readOnly.identity',
   derived: 'datasheet.readOnly.derived',
-  pending: 'datasheet.readOnly.pending',
+  inline: 'datasheet.edit.inlineHint',
+  panel: 'datasheet.edit.panelHint',
 };
 
 /**
  * Lo que se anuncia al intentar editar una celda.
  *
  * Cada motivo dice algo distinto y verdadero: una identidad no se editará nunca,
- * un valor derivado se cambia editando su origen, y una celda pendiente llegará
- * en la fase de edición. Un mensaje único los haría indistinguibles, y el
- * silencio sería peor todavía.
+ * un valor derivado se cambia editando su origen, y una celda editable dice
+ * dónde se edita. Un mensaje único los haría indistinguibles, y el silencio
+ * sería peor todavía.
  */
 export const editabilityMessageKey = (editability: DatasheetEditability): TranslationKey =>
   EDITABILITY_MESSAGES[editability];

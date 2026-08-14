@@ -1908,7 +1908,8 @@ export const es = {
 
   'datasheet.readOnly.identity': '{column} es una identidad estructural y no se edita.',
   'datasheet.readOnly.derived': '{column} se calcula del modelo; cambia el dato de origen.',
-  'datasheet.readOnly.pending': '{column} todavía no se edita en esta fase.',
+  'datasheet.edit.inlineHint': 'Pulsa Intro o F2 para editar {column}.',
+  'datasheet.edit.panelHint': '{column} se edita en el panel de la derecha.',
 } as const;
 
 export type TranslationKey = keyof typeof es;
@@ -3825,7 +3826,8 @@ export const en: Catalog = {
 
   'datasheet.readOnly.identity': '{column} is a structural identity and is never edited.',
   'datasheet.readOnly.derived': '{column} is computed from the model; change its source value.',
-  'datasheet.readOnly.pending': '{column} is not editable in this phase yet.',
+  'datasheet.edit.inlineHint': 'Press Enter or F2 to edit {column}.',
+  'datasheet.edit.panelHint': '{column} is edited in the right-hand panel.',
 };
 
 export const catalogs: Record<Language, Catalog> = { es, en };

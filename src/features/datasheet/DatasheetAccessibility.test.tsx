@@ -151,19 +151,26 @@ describe('datasheet accessibility', () => {
     await waitFor(() => expect(liveMessage()).toBe('Restricciones se calcula del modelo; cambia el dato de origen.'));
   });
 
-  it('explains that an editable cell is not open in this phase yet', async () => {
+  it('tells an editable cell where it is edited instead of staying silent', async () => {
     const { user } = await renderDatasheet();
     focusedCell().focus();
     await user.keyboard('{ArrowRight}{F2}');
-    await waitFor(() => expect(liveMessage()).toBe('X todavía no se edita en esta fase.'));
+    await waitFor(() => expect(liveMessage()).toBe('Pulsa Intro o F2 para editar X.'));
   });
 
-  it('marks every cell as read-only for assistive technology', async () => {
+  it('marks read-only exactly the cells that will never be editable', async () => {
     await renderDatasheet();
     const body = screen.getByRole('grid').querySelector('tbody') as HTMLElement;
     const cells = [...body.querySelectorAll('th, td')];
     expect(cells.length).toBeGreaterThan(0);
-    expect(cells.every((cell) => cell.getAttribute('aria-readonly') === 'true')).toBe(true);
+    // `aria-readonly` sigue exactamente al contrato de editabilidad: anunciarlo
+    // en una celda que sí se edita mandaría al lector de pantalla al sitio
+    // equivocado, y callarlo en una identidad prometería una edición imposible.
+    for (const cell of cells) {
+      const editability = cell.getAttribute('data-editability');
+      const closed = editability === 'identity' || editability === 'derived';
+      expect(cell.getAttribute('aria-readonly'), editability ?? '').toBe(closed ? 'true' : 'false');
+    }
   });
 
   it('reports the sort state of every column', async () => {

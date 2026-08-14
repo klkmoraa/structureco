@@ -203,7 +203,7 @@ export const DatasheetGrid = ({
                 key={column.id}
                 {...(columnIndex === 0 ? { scope: 'row' as const } : {})}
                 aria-colindex={columnIndex + 1}
-                aria-readonly
+                aria-readonly={column.editability === 'identity' || column.editability === 'derived'}
                 tabIndex={focused ? 0 : -1}
                 data-datasheet-focused={focused ? 'true' : undefined}
                 data-editability={column.editability}

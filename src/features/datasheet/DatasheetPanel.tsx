@@ -255,7 +255,9 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
                 aria-pressed={active}
                 onClick={() => toggleFacet(facet.columnId, option.token)}
               >
-                {t(option.labelKey)}
+                {/* Un enumerado del dominio se traduce; lo que nombra el usuario
+                    se muestra tal cual. El token nunca se enseña: es la clave. */}
+                {option.labelKey ? t(option.labelKey) : option.label ?? option.token}
                 <span className="datasheet-chip__count">{option.count}</span>
               </button>;
             })}

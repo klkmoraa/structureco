@@ -61,12 +61,31 @@ describe('datasheet projection', () => {
 
   it('declares why every column is read-only', () => {
     expect(NODE_COLUMNS.find((column) => column.id === 'id')?.editability).toBe('identity');
-    expect(NODE_COLUMNS.find((column) => column.id === 'x')?.editability).toBe('pending');
     expect(NODE_COLUMNS.find((column) => column.id === 'restraints')?.editability).toBe('derived');
     // Las referencias estructurales de una barra nunca se editan desde la tabla.
     expect(MEMBER_COLUMNS.find((column) => column.id === 'i')?.editability).toBe('identity');
     expect(MEMBER_COLUMNS.find((column) => column.id === 'j')?.editability).toBe('identity');
     expect(MEMBER_COLUMNS.find((column) => column.id === 'length')?.editability).toBe('derived');
+  });
+});
+
+describe('contrato de editabilidad', () => {
+  const editable = (columns: readonly { id: string; editability: string }[]) => columns
+    .filter((column) => column.editability === 'inline' || column.editability === 'panel')
+    .map((column) => column.id);
+
+  it('no deja ninguna columna en el estado provisional de CRI-81', () => {
+    expect([...NODE_COLUMNS, ...MEMBER_COLUMNS].map((column) => column.editability)).not.toContain('pending');
+  });
+
+  it('abre exactamente las columnas que CRI-81 declaró pendientes', () => {
+    expect(editable(NODE_COLUMNS)).toEqual(['x', 'y', 'support', 'hinge']);
+    expect(editable(MEMBER_COLUMNS)).toEqual(['type', 'material', 'E', 'section', 'A', 'I', 'releases']);
+  });
+
+  it('deja en el panel lo que escribe varios campos a la vez', () => {
+    expect(MEMBER_COLUMNS.find((column) => column.id === 'releases')?.editability).toBe('panel');
+    expect(NODE_COLUMNS.find((column) => column.id === 'x')?.editability).toBe('inline');
   });
 });
 
