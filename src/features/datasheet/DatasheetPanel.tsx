@@ -17,6 +17,7 @@ import {
   projectDatasheetRows,
   type DatasheetColumn,
   type DatasheetEntity,
+  type DatasheetRow,
   type DatasheetSort,
 } from './datasheetModel';
 import { editabilityMessageKey, formatDatasheetNumber } from './datasheetPresentation';
@@ -37,9 +38,24 @@ import './datasheet.css';
 
 const selectionIds = (selection: Selection, entity: DatasheetEntity): ReadonlySet<string> => {
   if (!selection) return new Set();
+  if (entity === 'loads') {
+    // `Selection.multi` sólo transporta nudos y miembros, así que una tabla de
+    // cargas sincroniza como mucho la fila enfocada. No se amplía `Selection`:
+    // editar varias cargas no lo necesita, porque las ediciones son por celda.
+    return selection.kind === 'nodalLoad' || selection.kind === 'memberLoad'
+      ? new Set([selection.id])
+      : new Set();
+  }
   if (selection.kind === 'multi') return new Set(entity === 'nodes' ? selection.nodeIds : selection.memberIds);
   const expected = entity === 'nodes' ? 'node' : 'member';
   return selection.kind === expected ? new Set([selection.id]) : new Set();
+};
+
+/** Selección de una carga: siempre simple, porque `multi` no la sabe transportar. */
+const buildLoadSelection = (rows: readonly DatasheetRow[], ids: readonly string[]): Selection => {
+  const row = ids.length === 1 ? rows.find((candidate) => candidate.id === ids[0]) : undefined;
+  if (!row) return null;
+  return row.kind === 'nodalLoad' ? { kind: 'nodalLoad', id: row.id } : { kind: 'memberLoad', id: row.id };
 };
 
 /** Construye la selección del workspace conservando la de la otra entidad. */
@@ -47,7 +63,9 @@ const buildSelection = (
   entity: DatasheetEntity,
   ids: readonly string[],
   current: Selection,
+  rows: readonly DatasheetRow[],
 ): Selection => {
+  if (entity === 'loads') return buildLoadSelection(rows, ids);
   const other = current?.kind === 'multi'
     ? (entity === 'nodes' ? current.memberIds : current.nodeIds)
     : current?.kind === (entity === 'nodes' ? 'member' : 'node')
@@ -124,7 +142,9 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
     if (!open || !selection || selection.kind === 'multi') return;
     const targetEntity: DatasheetEntity | null = selection.kind === 'node'
       ? 'nodes'
-      : selection.kind === 'member' ? 'members' : null;
+      : selection.kind === 'member'
+        ? 'members'
+        : selection.kind === 'nodalLoad' || selection.kind === 'memberLoad' ? 'loads' : null;
     if (targetEntity) setEntity(targetEntity);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sólo en la apertura
   }, [open]);
@@ -145,29 +165,29 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
     const current = [...selectedIds];
     if (mode === 'replace') {
       rangeAnchorRef.current = rowId;
-      setSelection(buildSelection(entity, [rowId], selection));
+      setSelection(buildSelection(entity, [rowId], selection, rows));
       return;
     }
     if (mode === 'additive') {
       rangeAnchorRef.current = rowId;
       const next = current.includes(rowId) ? current.filter((id) => id !== rowId) : [...current, rowId];
-      setSelection(buildSelection(entity, next, selection));
+      setSelection(buildSelection(entity, next, selection, rows));
       return;
     }
     const anchor = rangeAnchorRef.current ?? rowId;
     const from = rows.findIndex((row) => row.id === anchor);
     const to = rows.findIndex((row) => row.id === rowId);
     if (from < 0 || to < 0) {
-      setSelection(buildSelection(entity, [rowId], selection));
+      setSelection(buildSelection(entity, [rowId], selection, rows));
       return;
     }
     const range = rows.slice(Math.min(from, to), Math.max(from, to) + 1).map((row) => row.id);
-    setSelection(buildSelection(entity, range, selection));
+    setSelection(buildSelection(entity, range, selection, rows));
   }, [entity, rows, selectedIds, selection, setSelection]);
 
   const onActivateRow = useCallback((rowId: string) => {
     rangeAnchorRef.current = rowId;
-    setSelection(buildSelection(entity, [rowId], selection));
+    setSelection(buildSelection(entity, [rowId], selection, rows));
   }, [entity, selection, setSelection]);
 
   const onRequestEdit = useCallback((column: DatasheetColumn) => {
@@ -176,7 +196,7 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
 
   const onClearSelection = useCallback(() => {
     if (selectedIds.size === 0) return false;
-    setSelection(buildSelection(entity, [], selection));
+    setSelection(buildSelection(entity, [], selection, rows));
     rangeAnchorRef.current = null;
     return true;
   }, [entity, selectedIds.size, selection, setSelection]);
@@ -213,16 +233,22 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
       <div className="datasheet-main">
         <div className="datasheet-toolbar">
           <div className="datasheet-entity" role="group" aria-label={t('datasheet.entityGroup')}>
-            {(['nodes', 'members'] as const).map((candidate) => <button
+            {(['nodes', 'members', 'loads'] as const).map((candidate) => <button
               key={candidate}
               type="button"
               className={entity === candidate ? 'active' : ''}
               aria-pressed={entity === candidate}
               onClick={() => setEntity(candidate)}
             >
-              {t(candidate === 'nodes' ? 'datasheet.entity.nodes' : 'datasheet.entity.members')}
+              {t(candidate === 'nodes'
+                ? 'datasheet.entity.nodes'
+                : candidate === 'members' ? 'datasheet.entity.members' : 'datasheet.entity.loads')}
               <span className="datasheet-entity__count">
-                {candidate === 'nodes' ? project.nodes.length : project.members.length}
+                {candidate === 'nodes'
+                  ? project.nodes.length
+                  : candidate === 'members'
+                    ? project.members.length
+                    : project.nodalLoads.length + project.memberLoads.length}
               </span>
             </button>)}
           </div>

@@ -4,6 +4,7 @@ import {
   MEMBER_COLUMNS,
   NODE_COLUMNS,
   applyDatasheetPipeline,
+  datasheetColumns,
   datasheetFacets,
   datasheetRowSearchText,
   filterDatasheetRows,
@@ -86,6 +87,74 @@ describe('contrato de editabilidad', () => {
   it('deja en el panel lo que escribe varios campos a la vez', () => {
     expect(MEMBER_COLUMNS.find((column) => column.id === 'releases')?.editability).toBe('panel');
     expect(NODE_COLUMNS.find((column) => column.id === 'x')?.editability).toBe('inline');
+  });
+});
+
+describe('entidad de cargas', () => {
+  const loadRows = projectDatasheetRows(project, 'loads');
+
+  it('proyecta las cargas nodales y las de barra en una sola tabla', () => {
+    expect(ids(loadRows)).toEqual(['NL1', 'ML1']);
+    expect(loadRows.map((row) => row.kind)).toEqual(['nodalLoad', 'memberLoad']);
+  });
+
+  it('nombra el objeto y la familia de cada carga', () => {
+    expect(loadRows[0].values.object).toEqual({ kind: 'text', text: 'N3' });
+    expect(loadRows[0].values.family).toMatchObject({ kind: 'token', token: 'nodal' });
+    expect(loadRows[1].values.family).toMatchObject({ kind: 'token', token: 'distributed' });
+  });
+
+  it('muestra el caso con el nombre que le puso el usuario', () => {
+    expect(loadRows[0].values.case).toEqual({ kind: 'ref', id: 'LC1', label: 'Permanente' });
+  });
+
+  it('deja el id a la vista cuando el caso ya no existe', () => {
+    const orphan = createDatasheetProject({ loadCases: [] });
+    const rows = projectDatasheetRows(orphan, 'loads');
+    expect(rows[0].values.case).toEqual({ kind: 'ref', id: 'LC1', label: 'LC1' });
+  });
+
+  it('deja vacía toda celda fuera de la familia de la fila', () => {
+    // Una repartida no tiene Fx: la celda es ausencia real, no cero.
+    expect(loadRows[1].values.fx).toEqual({ kind: 'number', value: null, quantity: 'force' });
+    expect(loadRows[0].values.qyStart).toEqual({ kind: 'number', value: null, quantity: 'distributedForce' });
+  });
+
+  it('guarda las magnitudes en unidades base', () => {
+    expect(loadRows[0].values.fx).toEqual({ kind: 'number', value: 10, quantity: 'force' });
+    expect(loadRows[1].values.qyStart).toEqual({ kind: 'number', value: -12, quantity: 'distributedForce' });
+  });
+
+  it('ofrece familia como faceta y esconde el caso cuando no discrimina', () => {
+    expect(datasheetFacets(loadRows, 'loads').map((facet) => facet.columnId)).toEqual(['family']);
+  });
+
+  it('ofrece el caso cuando hay más de uno en juego', () => {
+    const mixed = createDatasheetProject({
+      nodalLoads: [
+        { id: 'NL1', nodeId: 'N3', caseId: 'LC1', fx: 10, fy: -5, mz: 0 },
+        { id: 'NL2', nodeId: 'N1', caseId: 'LC2', fx: 0, fy: -2, mz: 0 },
+      ],
+    });
+    const facets = datasheetFacets(projectDatasheetRows(mixed, 'loads'), 'loads');
+    expect(facets.map((facet) => facet.columnId)).toEqual(['family', 'case']);
+    expect(facets[1].options.map((option) => option.label)).toEqual(['Permanente', 'Variable']);
+  });
+
+  it('filtra por el id del caso y no por su nombre', () => {
+    expect(ids(filterDatasheetRows(loadRows, { case: new Set(['LC1']) }))).toEqual(['NL1', 'ML1']);
+    expect(ids(filterDatasheetRows(loadRows, { case: new Set(['LC2']) }))).toEqual([]);
+  });
+
+  it('cierra las columnas de identidad de la carga', () => {
+    const byId = new Map(datasheetColumns('loads').map((column) => [column.id, column.editability]));
+    expect(byId.get('id')).toBe('identity');
+    expect(byId.get('object')).toBe('identity');
+    // Convertir una repartida en puntual no es editar un campo: es sustituir la
+    // carga por otra de otra familia, con otros campos obligatorios.
+    expect(byId.get('family')).toBe('identity');
+    expect(byId.get('case')).toBe('inline');
+    expect(byId.get('qyStart')).toBe('inline');
   });
 });
 

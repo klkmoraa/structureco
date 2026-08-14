@@ -2,7 +2,7 @@ import type { UnitQuantity } from '../../engine/units';
 import { findStandardMaterial } from '../../data/standardMaterials';
 import { findStandardSection } from '../../data/standardSections';
 import type { TranslationKey } from '../../i18n/catalogs';
-import type { MemberModel, NodeModel, ProjectModel } from '../../types';
+import type { MemberLoad, MemberModel, NodalLoad, NodeModel, ProjectModel } from '../../types';
 
 /**
  * Proyección tabular del modelo estructural.
@@ -18,7 +18,7 @@ import type { MemberModel, NodeModel, ProjectModel } from '../../types';
  * ordenaría distinto en kN-m y en kip-ft.
  */
 
-export type DatasheetEntity = 'nodes' | 'members';
+export type DatasheetEntity = 'nodes' | 'members' | 'loads';
 
 /**
  * Por qué una celda no se edita, o **dónde** se edita.
@@ -68,9 +68,11 @@ export interface DatasheetColumn {
   numeric?: boolean;
 }
 
+export type DatasheetRowKind = 'node' | 'member' | 'nodalLoad' | 'memberLoad';
+
 export interface DatasheetRow {
   id: string;
-  kind: 'node' | 'member';
+  kind: DatasheetRowKind;
   values: Readonly<Record<string, DatasheetValue>>;
 }
 
@@ -123,12 +125,31 @@ const BOOLEAN_LABELS: Record<string, TranslationKey> = {
   no: 'datasheet.boolean.no',
 };
 
+const LOAD_FAMILY_LABELS: Record<string, TranslationKey> = {
+  nodal: 'datasheet.loadFamily.nodal',
+  distributed: 'datasheet.loadFamily.distributed',
+  point: 'datasheet.loadFamily.point',
+  moment: 'datasheet.loadFamily.moment',
+};
+
+const COORDINATE_SYSTEM_LABELS: Record<string, TranslationKey> = {
+  global: 'datasheet.coordinateSystem.global',
+  local: 'datasheet.coordinateSystem.local',
+};
+
+const LENGTH_BASIS_LABELS: Record<string, TranslationKey> = {
+  real: 'datasheet.lengthBasis.real',
+  horizontal: 'datasheet.lengthBasis.horizontal',
+  vertical: 'datasheet.lengthBasis.vertical',
+};
+
 /** Orden de presentación de los tokens; el orden alfabético no dice nada aquí. */
 const TOKEN_ORDER: Record<string, readonly string[]> = {
   support: ['none', 'pin', 'roller', 'fixed', 'custom'],
   type: ['frame', 'truss', 'rigid'],
   materialOrigin: ['catalog', 'custom', 'imported', 'legacy'],
   hinge: ['no', 'yes'],
+  family: ['nodal', 'distributed', 'point', 'moment'],
 };
 
 export const NODE_COLUMNS: readonly DatasheetColumn[] = [
@@ -159,12 +180,46 @@ export const MEMBER_COLUMNS: readonly DatasheetColumn[] = [
   { id: 'loads', labelKey: 'datasheet.column.loads', editability: 'derived', numeric: true },
 ];
 
+/**
+ * Columnas de la tabla de cargas: la **unión** de las dos familias del modelo.
+ *
+ * Una celda que no pertenece a la familia de su fila se proyecta como ausencia
+ * (`value: null`), no como cero: una repartida no tiene un Fx que valga cero,
+ * tiene un Fx que no existe.
+ *
+ * Objeto y familia son `identity`. Cambiar el nudo de una carga es reconectar
+ * el modelo, no editar una propiedad; y convertir una repartida en puntual es
+ * sustituir la carga por otra con otros campos obligatorios, no cambiar un
+ * valor. Las dos tienen sus propias operaciones fuera de esta tabla.
+ */
+export const LOAD_COLUMNS: readonly DatasheetColumn[] = [
+  { id: 'id', labelKey: 'datasheet.column.id', editability: 'identity' },
+  { id: 'object', labelKey: 'datasheet.column.loadObject', editability: 'identity' },
+  { id: 'family', labelKey: 'datasheet.column.loadFamily', editability: 'identity' },
+  { id: 'case', labelKey: 'datasheet.column.loadCase', editability: 'inline' },
+  { id: 'fx', labelKey: 'datasheet.column.fx', editability: 'inline', quantity: 'force', numeric: true },
+  { id: 'fy', labelKey: 'datasheet.column.fy', editability: 'inline', quantity: 'force', numeric: true },
+  { id: 'mz', labelKey: 'datasheet.column.mz', editability: 'inline', quantity: 'moment', numeric: true },
+  { id: 'coordinateSystem', labelKey: 'datasheet.column.coordinateSystem', editability: 'inline' },
+  { id: 'lengthBasis', labelKey: 'datasheet.column.lengthBasis', editability: 'inline' },
+  { id: 'start', labelKey: 'datasheet.column.start', editability: 'inline', numeric: true },
+  { id: 'end', labelKey: 'datasheet.column.end', editability: 'inline', numeric: true },
+  { id: 'qxStart', labelKey: 'datasheet.column.qxStart', editability: 'inline', quantity: 'distributedForce', numeric: true },
+  { id: 'qxEnd', labelKey: 'datasheet.column.qxEnd', editability: 'inline', quantity: 'distributedForce', numeric: true },
+  { id: 'qyStart', labelKey: 'datasheet.column.qyStart', editability: 'inline', quantity: 'distributedForce', numeric: true },
+  { id: 'qyEnd', labelKey: 'datasheet.column.qyEnd', editability: 'inline', quantity: 'distributedForce', numeric: true },
+  { id: 'position', labelKey: 'datasheet.column.position', editability: 'inline', numeric: true },
+  { id: 'px', labelKey: 'datasheet.column.px', editability: 'inline', quantity: 'force', numeric: true },
+  { id: 'py', labelKey: 'datasheet.column.py', editability: 'inline', quantity: 'force', numeric: true },
+  { id: 'moment', labelKey: 'datasheet.column.momentValue', editability: 'inline', quantity: 'moment', numeric: true },
+];
+
 export const datasheetColumns = (entity: DatasheetEntity): readonly DatasheetColumn[] =>
-  entity === 'nodes' ? NODE_COLUMNS : MEMBER_COLUMNS;
+  entity === 'nodes' ? NODE_COLUMNS : entity === 'members' ? MEMBER_COLUMNS : LOAD_COLUMNS;
 
 /** Columnas cuyos tokens se ofrecen como filtro; el resto tiene demasiados valores. */
 export const datasheetFacetColumnIds = (entity: DatasheetEntity): readonly string[] =>
-  entity === 'nodes' ? ['support'] : ['type', 'materialOrigin'];
+  entity === 'nodes' ? ['support'] : entity === 'members' ? ['type', 'materialOrigin'] : ['family', 'case'];
 
 const booleanValue = (value: boolean): DatasheetValue => ({
   kind: 'token',
@@ -268,6 +323,81 @@ const memberRow = (
   };
 };
 
+/** Celda que no existe en esta familia. Ausencia declarada, nunca cero. */
+const absent = (quantity?: UnitQuantity): DatasheetValue => ({ kind: 'number', value: null, quantity });
+
+const optionalNumber = (value: number | undefined, quantity?: UnitQuantity): DatasheetValue =>
+  ({ kind: 'number', value: value ?? null, quantity });
+
+/**
+ * Caso de una carga. Un caso borrado deja su id a la vista en vez de una celda
+ * vacía, que escondería que la carga apunta a algo que ya no existe.
+ */
+const caseValue = (caseId: string, caseNames: ReadonlyMap<string, string>): DatasheetValue =>
+  ({ kind: 'ref', id: caseId, label: caseNames.get(caseId) ?? caseId });
+
+const nodalLoadRow = (load: NodalLoad, caseNames: ReadonlyMap<string, string>): DatasheetRow => ({
+  id: load.id,
+  kind: 'nodalLoad',
+  values: {
+    id: { kind: 'text', text: load.id },
+    object: { kind: 'text', text: load.nodeId },
+    family: { kind: 'token', token: 'nodal', labelKey: LOAD_FAMILY_LABELS.nodal },
+    case: caseValue(load.caseId, caseNames),
+    fx: { kind: 'number', value: load.fx, quantity: 'force' },
+    fy: { kind: 'number', value: load.fy, quantity: 'force' },
+    mz: { kind: 'number', value: load.mz, quantity: 'moment' },
+    coordinateSystem: absent(),
+    lengthBasis: absent(),
+    start: absent(),
+    end: absent(),
+    qxStart: absent('distributedForce'),
+    qxEnd: absent('distributedForce'),
+    qyStart: absent('distributedForce'),
+    qyEnd: absent('distributedForce'),
+    position: absent(),
+    px: absent('force'),
+    py: absent('force'),
+    moment: absent('moment'),
+  },
+});
+
+const memberLoadRow = (load: MemberLoad, caseNames: ReadonlyMap<string, string>): DatasheetRow => {
+  const distributed = load.type === 'distributed';
+  const point = load.type === 'point';
+  const moment = load.type === 'moment';
+  return {
+    id: load.id,
+    kind: 'memberLoad',
+    values: {
+      id: { kind: 'text', text: load.id },
+      object: { kind: 'text', text: load.memberId },
+      family: { kind: 'token', token: load.type, labelKey: LOAD_FAMILY_LABELS[load.type] },
+      case: caseValue(load.caseId, caseNames),
+      fx: absent('force'),
+      fy: absent('force'),
+      mz: absent('moment'),
+      // Un momento se aplica en un punto: no tiene ejes de referencia que elegir.
+      coordinateSystem: moment
+        ? absent()
+        : { kind: 'token', token: load.coordinateSystem, labelKey: COORDINATE_SYSTEM_LABELS[load.coordinateSystem] },
+      lengthBasis: distributed
+        ? { kind: 'token', token: load.lengthBasis, labelKey: LENGTH_BASIS_LABELS[load.lengthBasis] }
+        : absent(),
+      start: distributed ? { kind: 'number', value: load.start } : absent(),
+      end: distributed ? { kind: 'number', value: load.end } : absent(),
+      qxStart: distributed ? optionalNumber(load.qxStart, 'distributedForce') : absent('distributedForce'),
+      qxEnd: distributed ? optionalNumber(load.qxEnd, 'distributedForce') : absent('distributedForce'),
+      qyStart: distributed ? optionalNumber(load.qyStart, 'distributedForce') : absent('distributedForce'),
+      qyEnd: distributed ? optionalNumber(load.qyEnd, 'distributedForce') : absent('distributedForce'),
+      position: point || moment ? optionalNumber(load.position) : absent(),
+      px: point ? optionalNumber(load.px, 'force') : absent('force'),
+      py: point ? optionalNumber(load.py, 'force') : absent('force'),
+      moment: moment ? optionalNumber(load.moment, 'moment') : absent('moment'),
+    },
+  };
+};
+
 /**
  * Proyecta el modelo a filas. Recorre cada colección una sola vez y cuenta las
  * cargas con índices previos: contar dentro del bucle de nudos convertiría una
@@ -277,6 +407,14 @@ export const projectDatasheetRows = (
   project: ProjectModel,
   entity: DatasheetEntity,
 ): DatasheetRow[] => {
+  if (entity === 'loads') {
+    const caseNames = new Map(project.loadCases.map((item) => [item.id, item.name]));
+    return [
+      ...project.nodalLoads.map((load) => nodalLoadRow(load, caseNames)),
+      ...project.memberLoads.map((load) => memberLoadRow(load, caseNames)),
+    ];
+  }
+
   if (entity === 'nodes') {
     const loadsByNode = new Map<string, number>();
     for (const load of project.nodalLoads) loadsByNode.set(load.nodeId, (loadsByNode.get(load.nodeId) ?? 0) + 1);

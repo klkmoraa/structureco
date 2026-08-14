@@ -7,6 +7,7 @@ import type { TranslationKey } from '../../i18n/catalogs';
 import type { MemberModel, NodeModel, ProjectModel, UnitSystemId } from '../../types';
 import { resolveSectionGeometry, sectionShapeLayout } from '../inspector/sectionGeometry';
 import { SectionShape } from '../inspector/SectionShape';
+import type { DatasheetRowKind } from './datasheetModel';
 import { formatDatasheetNumber } from './datasheetPresentation';
 
 /**
@@ -287,7 +288,7 @@ const describeMemberLoad = (load: ProjectModel['memberLoads'][number], units: Un
 export interface DatasheetContextPanelProps {
   project: ProjectModel;
   /** Fila enfocada; `null` cuando la tabla está vacía o el objeto desapareció. */
-  target: { kind: 'node' | 'member'; id: string } | null;
+  target: { kind: DatasheetRowKind; id: string } | null;
   units: UnitSystemId;
   t: Translate;
   onFocusObject: () => void;
