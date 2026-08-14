@@ -68,6 +68,34 @@ describe('datasheet styles', () => {
     expect(focused).not.toMatch(/background/);
   });
 
+  it('distinguishes pending, focus and selection with three different signals', () => {
+    // Las tres pueden coincidir en la misma celda. Si compartieran señal no
+    // habría forma de saber si una celda está seleccionada o sin aplicar.
+    const pending = ruleFor(".datasheet-grid tbody td[data-pending='true']");
+    expect(pending).toMatch(/box-shadow:\s*inset/);
+    expect(pending).not.toMatch(/outline:/);
+    expect(pending).not.toMatch(/background/);
+  });
+
+  it('keeps the cell editor flat, like the grid it sits in', () => {
+    expect(ruleFor('.datasheet-cell-editor')).not.toMatch(/--sc-shadow-clay-(?:xs|sm|md|lg|floating)/);
+  });
+
+  it('styles every editing surface it renders', () => {
+    for (const selector of [
+      '.datasheet-cell-editor',
+      '.datasheet-draft-bar',
+      '.datasheet-review',
+      '.datasheet-review__actions',
+      '.datasheet-node-preview__ghost',
+      '.datasheet-load-preview',
+      '.datasheet-mode',
+      '.datasheet-checks',
+    ]) {
+      expect(ruleFor(selector), selector).not.toBe('');
+    }
+  });
+
   it('declares touch targets with the 44 px token on small viewports', () => {
     expect(css).toMatch(/min-height:\s*var\(--sc-control-height-touch\)/);
   });

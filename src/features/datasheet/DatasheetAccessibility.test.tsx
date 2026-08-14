@@ -184,6 +184,27 @@ describe('datasheet accessibility', () => {
     }
   });
 
+  it('announces the pending count in a live region', async () => {
+    const { user } = await renderDatasheet();
+    focusedCell().focus();
+    await user.keyboard('{ArrowRight}{F2}');
+    const input = await screen.findByRole('textbox', { name: 'X de N1' });
+    await user.clear(input);
+    await user.type(input, 'dos{Enter}');
+    // El recuento no puede vivir sólo en un color de celda.
+    const statuses = [...document.querySelectorAll('[role="status"]')].map((node) => node.textContent);
+    await waitFor(() => expect(statuses.join(' ')).toBeTruthy());
+    expect(screen.getByRole('region', { name: 'Revisión de cambios' })).toBeTruthy();
+  });
+
+  it('labels the cell editor with its column and its row', async () => {
+    const { user } = await renderDatasheet();
+    focusedCell().focus();
+    await user.keyboard('{ArrowRight}{F2}');
+    // Un editor rotulado sólo «X» no dice de qué nudo es.
+    expect(await screen.findByRole('textbox', { name: 'X de N1' })).toBeTruthy();
+  });
+
   it('reports the sort state of every column', async () => {
     await renderDatasheet();
     const headers = within(screen.getByRole('grid')).getAllByRole('columnheader');

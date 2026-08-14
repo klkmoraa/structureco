@@ -4,7 +4,7 @@
 
 > **HISTORICAL** — Este documento describe el diseño con el que se ejecutó
 > CRI-81 y no prueba el estado actual del producto. El contrato vigente es
-> [Datasheet estructural](../../architecture/structureco-datasheet-cri-81.md),
+> [Datasheet estructural](../../architecture/structureco-datasheet.md),
 > el código y sus pruebas.
 
 ## Problema

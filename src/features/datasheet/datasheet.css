@@ -507,6 +507,282 @@
   stroke: none;
 }
 
+.datasheet-node-preview__ghost {
+  /* La posición anterior del nudo: se lee como referencia, no como objeto. */
+  fill: none;
+  stroke: var(--sc-color-structure-node);
+  stroke-width: 1.4;
+  stroke-dasharray: 3 2.5;
+  opacity: 0.65;
+}
+
+.datasheet-load-preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-bottom: var(--sc-space-2);
+  border-radius: var(--sc-radius-xs);
+  background: var(--sc-color-bg-canvas);
+}
+
+.datasheet-load-preview__base {
+  stroke: var(--sc-color-structure-member);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.datasheet-load-preview__arrow {
+  fill: var(--sc-color-load-point);
+  stroke: var(--sc-color-load-point);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+/* ------------------------------------------------------------------ */
+/* Edición                                                             */
+/* ------------------------------------------------------------------ */
+
+/*
+  Tres estados que pueden coincidir en la misma celda, con tres señales que no
+  se confunden: la selección es fondo, el foco es anillo y lo pendiente es una
+  marca en el borde de inicio. Compartir cualquiera de ellas haría ilegible una
+  celda seleccionada, enfocada y sin aplicar a la vez.
+*/
+.datasheet-grid tbody th[data-pending='true'],
+.datasheet-grid tbody td[data-pending='true'] {
+  box-shadow: inset 3px 0 0 0 var(--sc-color-state-info);
+  color: var(--sc-color-text-primary);
+  font-weight: var(--sc-font-weight-medium);
+}
+
+/* El editor ocupa la celda a ras, sin relieve: la rejilla sigue siendo plana. */
+.datasheet-cell-editor {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--sc-radius-xs);
+  background: var(--sc-color-surface-input);
+  color: var(--sc-color-text-primary);
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-technical);
+}
+
+.datasheet-cell-editor:focus-visible {
+  outline: var(--sc-focus-ring-width) solid var(--sc-color-focus);
+  outline-offset: 1px;
+}
+
+.datasheet-grid tbody td.is-numeric .datasheet-cell-editor {
+  text-align: right;
+}
+
+.datasheet-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: var(--sc-space-2);
+  margin-bottom: var(--sc-space-2);
+}
+
+.datasheet-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sc-space-2);
+  margin: 0;
+  padding: var(--sc-space-2);
+  border: 1px solid var(--sc-color-border-soft);
+  border-radius: var(--sc-radius-xs);
+}
+
+.datasheet-checks legend {
+  padding: 0 var(--sc-space-1);
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: var(--sc-tracking-eyebrow);
+}
+
+.datasheet-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  color: var(--sc-color-text-secondary);
+  font-size: var(--sc-font-size-caption);
+}
+
+.datasheet-mode {
+  display: flex;
+  gap: var(--sc-space-1);
+  margin-bottom: var(--sc-space-2);
+}
+
+.datasheet-mode button {
+  flex: 1;
+  padding: var(--sc-space-1) var(--sc-space-2);
+  border: 1px solid var(--sc-color-border-soft);
+  border-radius: var(--sc-radius-xs);
+  background: transparent;
+  color: var(--sc-color-text-secondary);
+  font-family: var(--sc-font-ui);
+  font-size: var(--sc-font-size-caption);
+  cursor: pointer;
+  transition: var(--sc-transition-control);
+}
+
+.datasheet-mode button.active {
+  border-color: var(--sc-color-border-strong);
+  background: var(--sc-color-surface-pressed);
+  color: var(--sc-color-text-primary);
+}
+
+.datasheet-mode button:focus-visible {
+  outline: var(--sc-focus-ring-width) solid var(--sc-color-focus);
+  outline-offset: 2px;
+}
+
+.datasheet-transition {
+  display: flex;
+  gap: var(--sc-space-3);
+  margin: 0 0 var(--sc-space-2);
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-technical);
+}
+
+.datasheet-transition span {
+  display: flex;
+  flex-direction: column;
+}
+
+.datasheet-transition small {
+  color: var(--sc-color-text-muted);
+  font-family: var(--sc-font-ui);
+  font-size: var(--sc-font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: var(--sc-tracking-eyebrow);
+}
+
+.datasheet-section-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--sc-space-2);
+  margin-bottom: var(--sc-space-2);
+}
+
+.datasheet-section-pair small {
+  display: block;
+  margin-bottom: var(--sc-space-1);
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: var(--sc-tracking-eyebrow);
+}
+
+/*
+  Barra del borrador. Se ancla al pie del carril para que el recuento y las dos
+  acciones estén siempre a la vista mientras se recorren las tarjetas.
+*/
+.datasheet-draft-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-2);
+  padding-top: var(--sc-space-2);
+  border-top: 1px solid var(--sc-color-border-soft);
+  background: var(--sc-color-surface-1);
+}
+
+.datasheet-draft-bar p {
+  flex: 1;
+  margin: 0;
+  color: var(--sc-color-text-secondary);
+  font-size: var(--sc-font-size-caption);
+}
+
+/* ------------------------------------------------------------------ */
+/* Revisión                                                            */
+/* ------------------------------------------------------------------ */
+
+.datasheet-review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-3);
+  min-width: 0;
+  padding: var(--sc-space-3);
+  overflow-y: auto;
+}
+
+.datasheet-review__header h2 {
+  margin: 0;
+  color: var(--sc-color-text-primary);
+  font-size: var(--sc-font-size-body);
+}
+
+.datasheet-review__header p {
+  margin: var(--sc-space-1) 0 0;
+  color: var(--sc-color-text-secondary);
+  font-size: var(--sc-font-size-caption);
+}
+
+.datasheet-review__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-2);
+  margin: 0;
+}
+
+.datasheet-review__list > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--sc-space-2);
+  align-items: baseline;
+}
+
+.datasheet-review__list dt {
+  color: var(--sc-color-text-muted);
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-technical);
+}
+
+.datasheet-review__list dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.datasheet-review__transition {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  color: var(--sc-color-text-technical);
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-technical);
+}
+
+.datasheet-review__list small {
+  display: block;
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc-font-size-caption);
+}
+
+.datasheet-review__errors {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-1);
+  margin: 0;
+  padding-left: var(--sc-space-4);
+  color: var(--sc-color-state-error-foreground);
+  font-size: var(--sc-font-size-caption);
+}
+
+.datasheet-review__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sc-space-2);
+  margin-top: auto;
+  padding-top: var(--sc-space-2);
+  border-top: 1px solid var(--sc-color-border-soft);
+}
+
 /* ------------------------------------------------------------------ */
 /* Adaptación a pantallas estrechas                                    */
 /* ------------------------------------------------------------------ */
@@ -532,7 +808,9 @@
   .datasheet-entity button,
   .datasheet-chip,
   .datasheet-focus-action,
-  .datasheet-sort {
+  .datasheet-sort,
+  .datasheet-mode button,
+  .datasheet-cell-editor {
     min-height: var(--sc-control-height-touch);
   }
 
@@ -548,7 +826,8 @@
 @media (prefers-reduced-motion: reduce) {
   .datasheet-entity button,
   .datasheet-chip,
-  .datasheet-focus-action {
+  .datasheet-focus-action,
+  .datasheet-mode button {
     transition: none;
   }
 }
