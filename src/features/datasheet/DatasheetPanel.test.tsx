@@ -151,31 +151,36 @@ describe('datasheet panel', () => {
     window.removeEventListener(workspaceCommandEventName('focus-object'), focused);
   });
 
-  it('previews the focused object without offering any way to write it', async () => {
+  it('offers a visual editor for the focused object', async () => {
     const { user } = await renderDatasheet();
     const context = screen.getByRole('complementary', { name: 'Detalle del objeto enfocado' });
     expect(within(context).getByRole('region', { name: 'Nodo' })).toBeTruthy();
-    expect(within(context).getByRole('region', { name: 'Apoyo' })).toBeTruthy();
+    const supportCard = within(context).getByRole('region', { name: 'Apoyo' });
+    // Las cargas del nudo siguen a la vista, pero se editan en su pestaña.
     expect(within(context).getByRole('region', { name: 'Carga' })).toBeTruthy();
-    // «Enfocar» es la única acción; no hay ningún campo editable en la fase.
-    expect(within(context).queryAllByRole('textbox')).toHaveLength(0);
-    expect(within(context).queryAllByRole('spinbutton')).toHaveLength(0);
-    expect(within(context).getAllByRole('button').map((button) => button.textContent)).toEqual(['Enfocar']);
+    expect(within(context).getByLabelText(/^X \(m\)/)).toBeTruthy();
+    // El rótulo «Apoyo» está en el título de la tarjeta y en su desplegable:
+    // se busca el control dentro de la tarjeta, no en el panel entero.
+    expect(within(supportCard).getByRole('combobox', { name: 'Apoyo' })).toBeTruthy();
 
-    await user.click(screen.getByRole('button', { name: /Barras/ }));
+    await user.click(within(screen.getByRole('group', { name: 'Tipo de objeto' })).getByRole('button', { name: /^Barras/ }));
     const memberContext = screen.getByRole('complementary', { name: 'Detalle del objeto enfocado' });
     expect(within(memberContext).getByRole('region', { name: 'Material' })).toBeTruthy();
     expect(within(memberContext).getByRole('region', { name: 'Sección' })).toBeTruthy();
+    expect(within(memberContext).getByRole('region', { name: 'Liberaciones' })).toBeTruthy();
   });
 
   it('names the catalog section of a member and the equivalent one otherwise', async () => {
     const { user } = await renderDatasheet();
-    await user.click(screen.getByRole('button', { name: /Barras/ }));
-    const context = () => screen.getByRole('complementary', { name: 'Detalle del objeto enfocado' });
-    expect(within(context()).getByText('W12x26')).toBeTruthy();
+    await user.click(within(screen.getByRole('group', { name: 'Tipo de objeto' })).getByRole('button', { name: /^Barras/ }));
+    const sectionCard = () => screen.getByRole('region', { name: 'Sección' });
+    // El visor rotula el perfil; el desplegable lo ofrece como opción, así que
+    // se afirma sobre el visor y no sobre cualquier aparición del nombre.
+    expect(within(sectionCard()).getByTestId('section-viewer-2d').textContent).toContain('W12x26');
 
     await user.click(within(rowFor('M2')).getByRole('rowheader'));
-    await waitFor(() => expect(within(context()).getByText('Sección equivalente')).toBeTruthy());
+    await waitFor(() => expect(within(sectionCard()).getByTestId('section-viewer-2d').textContent)
+      .toContain('Rectangular equivalente'));
   });
 
   it('keeps the grid usable when nothing matches', async () => {

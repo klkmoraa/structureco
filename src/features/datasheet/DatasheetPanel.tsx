@@ -7,7 +7,7 @@ import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { Selection } from '../../types';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import type { DatasheetCellEditorProps } from './DatasheetCellEditor';
-import { DatasheetContextPanel } from './DatasheetContextPanel';
+import { DatasheetEditorPanel } from './DatasheetEditorPanel';
 import { DatasheetGrid } from './DatasheetGrid';
 import { DatasheetReviewPanel, type DatasheetPasteReport } from './DatasheetReviewPanel';
 import { applyDatasheetPlan } from './datasheetEditApply';
@@ -122,6 +122,14 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
   const [editing, setEditing] = useState<GridPosition | null>(null);
   /** Presente sólo cuando el borrador viene de un pegado, con lo que descartó. */
   const [paste, setPaste] = useState<DatasheetPasteReport | null>(null);
+  /**
+   * De dónde viene el borrador. La rejilla no tiene dónde explicar un cambio
+   * pendiente, así que a partir de dos —o de un error— necesita la revisión. El
+   * panel editor sí lo explica: enseña el preview, el error junto a su campo y
+   * su propia barra de Aplicar, y sustituirlo por la revisión mientras se edita
+   * le quitaría al usuario justo lo que estaba mirando.
+   */
+  const [draftSource, setDraftSource] = useState<'grid' | 'panel' | null>(null);
   /** Ancla del rango con `Mayús`; es estado de interacción, no del modelo. */
   const rangeAnchorRef = useRef<string | null>(null);
 
@@ -155,6 +163,7 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
     setDraft(EMPTY_DATASHEET_DRAFT);
     setEditing(null);
     setPaste(null);
+    setDraftSource(null);
     rangeAnchorRef.current = null;
   }, [entity]);
 
@@ -248,12 +257,14 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
     updateProject((current) => applyDatasheetPlan(current, target));
     setDraft(EMPTY_DATASHEET_DRAFT);
     setPaste(null);
+    setDraftSource(null);
   }, [updateProject]);
 
   const onCancelDraft = useCallback(() => {
     setDraft(EMPTY_DATASHEET_DRAFT);
     setEditing(null);
     setPaste(null);
+    setDraftSource(null);
   }, []);
 
   const onCommitEdit = useCallback((rowId: string, fieldId: DatasheetFieldId, raw: string) => {
@@ -268,6 +279,7 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
       return;
     }
     setDraft(next);
+    setDraftSource('grid');
   }, [applyPlan, draft, project, units]);
 
   const onPasteBlock = useCallback((text: string, anchor: GridPosition) => {
@@ -280,6 +292,7 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
     // El recorte se guarda aunque sea cero: la revisión tiene que poder decir
     // que un pegado entró entero, no sólo cuándo se descartó algo.
     setPaste({ droppedOutside: result.droppedOutside, droppedReadOnly: result.droppedReadOnly });
+    setDraftSource('grid');
   }, [columns, entity, rows]);
 
   const draftText = useCallback((row: DatasheetRow, column: DatasheetColumn): string | undefined => {
@@ -311,13 +324,25 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
     return column ? t(column.labelKey) : fieldId;
   }, [columns, entity, t]);
 
+  /** Escritura desde el panel editor: nunca se aplica sola, siempre al borrador. */
+  const onStageFromPanel = useCallback((fieldId: DatasheetFieldId, raw: string) => {
+    if (!target) return;
+    setDraft((current) => stageDatasheetEdit(current, target.id, fieldId, raw));
+    setDraftSource('panel');
+  }, [target]);
+
+  const panelDraftText = useCallback(
+    (fieldId: DatasheetFieldId) => (target ? draft[draftKey(target.id, fieldId)] : undefined),
+    [draft, target],
+  );
+
   /**
-   * Un solo cambio pendiente se revisa en el propio editor, que ya lo enseña con
-   * su preview. Abrir un panel de revisión para una celda sería ruido; a partir
-   * de dos, o con cualquier error, la revisión es lo único que puede explicar
-   * qué se va a escribir y qué no.
+   * La revisión sustituye al panel sólo cuando el borrador viene de la rejilla,
+   * que no tiene dónde explicar un cambio pendiente, o de un pegado, que además
+   * tiene que decir qué descartó.
    */
-  const reviewing = plan.errors.length > 0 || plan.changes.length > 1 || paste !== null;
+  const reviewing = paste !== null
+    || (draftSource === 'grid' && (plan.errors.length > 0 || plan.changes.length > 1));
 
   const onClearSelection = useCallback(() => {
     if (selectedIds.size === 0) return false;
@@ -453,11 +478,20 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
           onApply={() => applyPlan(plan)}
           onCancel={onCancelDraft}
         />
-        : <DatasheetContextPanel
-          project={previewProject}
+        : <DatasheetEditorPanel
+          project={project}
+          previewProject={previewProject}
           target={target}
           units={units}
+          language={language}
           t={t}
+          draftText={panelDraftText}
+          onStage={onStageFromPanel}
+          pendingCount={datasheetDraftCount(draft)}
+          planApplicable={plan.applicable}
+          planErrors={plan.errors}
+          onApply={() => applyPlan(plan)}
+          onCancelDraft={onCancelDraft}
           onFocusObject={onFocusObject}
           focusLabel={t('datasheet.focusObject')}
         />}
