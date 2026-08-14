@@ -84,13 +84,6 @@ export interface DatasheetEditPlan {
   applicable: boolean;
 }
 
-export const EMPTY_DATASHEET_PLAN: DatasheetEditPlan = Object.freeze({
-  changes: [],
-  errors: [],
-  coincidentNodeIds: [],
-  applicable: false,
-});
-
 /**
  * Índice de una sola pasada. Buscar cada fila recorriendo el modelo convertiría
  * un pegado de cien celdas en un recorrido cuadrático sobre el proyecto entero.

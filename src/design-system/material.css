@@ -36,8 +36,7 @@
 .education-explorer,
 .diagram-cursor-readout,
 .learning-toolbar,
-.learning-steps details,
-.hide-classroom-results {
+.learning-steps details {
   background: var(--sc-color-surface-1);
   border: 1px solid var(--sc-color-border-soft);
   box-shadow: none;
