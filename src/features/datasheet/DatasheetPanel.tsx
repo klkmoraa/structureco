@@ -6,8 +6,22 @@ import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { Selection } from '../../types';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
+import type { DatasheetCellEditorProps } from './DatasheetCellEditor';
 import { DatasheetContextPanel } from './DatasheetContextPanel';
 import { DatasheetGrid } from './DatasheetGrid';
+import { DatasheetReviewPanel, type DatasheetPasteReport } from './DatasheetReviewPanel';
+import { applyDatasheetPlan } from './datasheetEditApply';
+import {
+  EMPTY_DATASHEET_DRAFT,
+  datasheetDraftCount,
+  draftKey,
+  interpretDatasheetEdits,
+  stageDatasheetEdit,
+  type DatasheetEditDraft,
+  type DatasheetEditPlan,
+} from './datasheetEditDraft';
+import { datasheetField, datasheetRowField, type DatasheetFieldId } from './datasheetEditModel';
+import { mapPasteToEdits, parseClipboardGrid } from './datasheetPaste';
 import { clampGridPosition, type GridPosition } from './datasheetGridNavigation';
 import {
   applyDatasheetPipeline,
@@ -20,7 +34,12 @@ import {
   type DatasheetRow,
   type DatasheetSort,
 } from './datasheetModel';
-import { editabilityMessageKey, formatDatasheetNumber } from './datasheetPresentation';
+import {
+  datasheetEditorText,
+  datasheetFieldOptions,
+  editabilityMessageKey,
+  formatDatasheetNumber,
+} from './datasheetPresentation';
 import './datasheet.css';
 
 /**
@@ -86,8 +105,8 @@ export interface DatasheetPanelProps {
 }
 
 export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetPanelProps) => {
-  const { t } = useI18n();
-  const { project } = useProjectModel();
+  const { language, t } = useI18n();
+  const { project, updateProject } = useProjectModel();
   const { selection, setSelection } = useWorkspaceUI();
   const [entity, setEntity] = useState<DatasheetEntity>('nodes');
   const [query, setQuery] = useState('');
@@ -95,6 +114,14 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
   const [sort, setSort] = useState<DatasheetSort | null>(null);
   const [focus, setFocus] = useState<GridPosition>({ row: 0, column: 0 });
   const [announcement, setAnnouncement] = useState('');
+  /**
+   * Borrador de edición. No es estado del modelo: es lo que el usuario tecleó y
+   * todavía no aplicó, y desaparece al aplicar, al cancelar o al cerrar.
+   */
+  const [draft, setDraft] = useState<DatasheetEditDraft>(EMPTY_DATASHEET_DRAFT);
+  const [editing, setEditing] = useState<GridPosition | null>(null);
+  /** Presente sólo cuando el borrador viene de un pegado, con lo que descartó. */
+  const [paste, setPaste] = useState<DatasheetPasteReport | null>(null);
   /** Ancla del rango con `Mayús`; es estado de interacción, no del modelo. */
   const rangeAnchorRef = useRef<string | null>(null);
 
@@ -119,11 +146,15 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
 
   const selectedIds = useMemo(() => selectionIds(selection, entity), [selection, entity]);
 
-  // Cambiar de entidad invalida orden, filtros y foco: sus columnas son otras.
+  // Cambiar de entidad invalida orden, filtros, foco y borrador: sus filas y sus
+  // columnas son otras, así que un cambio pendiente ya no tendría dónde caer.
   useEffect(() => {
     setFilters({});
     setSort(null);
     setFocus({ row: 0, column: 0 });
+    setDraft(EMPTY_DATASHEET_DRAFT);
+    setEditing(null);
+    setPaste(null);
     rangeAnchorRef.current = null;
   }, [entity]);
 
@@ -188,11 +219,105 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
   const onActivateRow = useCallback((rowId: string) => {
     rangeAnchorRef.current = rowId;
     setSelection(buildSelection(entity, [rowId], selection, rows));
-  }, [entity, selection, setSelection]);
+  }, [entity, rows, selection, setSelection]);
 
   const onRequestEdit = useCallback((column: DatasheetColumn) => {
     setAnnouncement(t(editabilityMessageKey(column.editability), { column: t(column.labelKey) }));
   }, [t]);
+
+  /* ---------------------------------------------------------------------- *
+   * Edición: borrador → plan → preview → una sola escritura.
+   * ---------------------------------------------------------------------- */
+
+  const plan = useMemo(
+    () => interpretDatasheetEdits(project, draft, units),
+    [project, draft, units],
+  );
+
+  /**
+   * Proyecto con el plan aplicado. Alimenta todos los previews, y sale de la
+   * misma función que la escritura real: si fueran dos caminos podrían divergir,
+   * y entonces lo que se ve antes de aplicar dejaría de ser lo que se escribe.
+   */
+  const previewProject = useMemo(() => applyDatasheetPlan(project, plan), [project, plan]);
+
+  const applyPlan = useCallback((target: DatasheetEditPlan) => {
+    if (!target.applicable) return;
+    // Una sola escritura: el plan entero entra como una entrada de historial y
+    // no existe camino por el que se aplique una parte.
+    updateProject((current) => applyDatasheetPlan(current, target));
+    setDraft(EMPTY_DATASHEET_DRAFT);
+    setPaste(null);
+  }, [updateProject]);
+
+  const onCancelDraft = useCallback(() => {
+    setDraft(EMPTY_DATASHEET_DRAFT);
+    setEditing(null);
+    setPaste(null);
+  }, []);
+
+  const onCommitEdit = useCallback((rowId: string, fieldId: DatasheetFieldId, raw: string) => {
+    setEditing(null);
+    const next = stageDatasheetEdit(draft, rowId, fieldId, raw);
+    const nextPlan = interpretDatasheetEdits(project, next, units);
+    // Con el borrador vacío, un cambio válido y único se aplica ya: pedir
+    // «Aplicar» por cada celda haría inservible una hoja de datos. En cualquier
+    // otro caso el cambio se suma al borrador y pasa por revisión.
+    if (datasheetDraftCount(draft) === 0 && nextPlan.applicable && nextPlan.changes.length === 1) {
+      applyPlan(nextPlan);
+      return;
+    }
+    setDraft(next);
+  }, [applyPlan, draft, project, units]);
+
+  const onPasteBlock = useCallback((text: string, anchor: GridPosition) => {
+    const result = mapPasteToEdits({ block: parseClipboardGrid(text), rows, columns, entity, anchor });
+    if (result.edits.length === 0 && result.droppedOutside === 0 && result.droppedReadOnly === 0) return;
+    setDraft((current) => result.edits.reduce(
+      (accumulated, edit) => stageDatasheetEdit(accumulated, edit.rowId, edit.fieldId, edit.raw),
+      current,
+    ));
+    // El recorte se guarda aunque sea cero: la revisión tiene que poder decir
+    // que un pegado entró entero, no sólo cuándo se descartó algo.
+    setPaste({ droppedOutside: result.droppedOutside, droppedReadOnly: result.droppedReadOnly });
+  }, [columns, entity, rows]);
+
+  const draftText = useCallback((row: DatasheetRow, column: DatasheetColumn): string | undefined => {
+    const fieldId = datasheetRowField(entity, column.id, row.kind);
+    return fieldId ? draft[draftKey(row.id, fieldId)] : undefined;
+  }, [draft, entity]);
+
+  const editorFor = useCallback((row: DatasheetRow, column: DatasheetColumn): DatasheetCellEditorProps | null => {
+    const fieldId = datasheetRowField(entity, column.id, row.kind);
+    if (!fieldId) return null;
+    const field = datasheetField(fieldId);
+    return {
+      field,
+      initialText: draft[draftKey(row.id, fieldId)]
+        ?? datasheetEditorText(row.values[column.id], units, field),
+      options: datasheetFieldOptions(field, project, language, t),
+      label: t('datasheet.edit.cellLabel', { column: t(column.labelKey), row: row.id }),
+      onCommit: (raw) => onCommitEdit(row.id, fieldId, raw),
+      onCancel: () => setEditing(null),
+    };
+  }, [draft, entity, language, onCommitEdit, project, t, units]);
+
+  /** Etiqueta de un campo para la revisión, que no conoce las columnas. */
+  const fieldLabel = useCallback((fieldId: DatasheetFieldId): string => {
+    const column = columns.find((candidate) => {
+      const rowKinds = ['node', 'member', 'nodalLoad', 'memberLoad'] as const;
+      return rowKinds.some((kind) => datasheetRowField(entity, candidate.id, kind) === fieldId);
+    });
+    return column ? t(column.labelKey) : fieldId;
+  }, [columns, entity, t]);
+
+  /**
+   * Un solo cambio pendiente se revisa en el propio editor, que ya lo enseña con
+   * su preview. Abrir un panel de revisión para una celda sería ruido; a partir
+   * de dos, o con cualquier error, la revisión es lo único que puede explicar
+   * qué se va a escribir y qué no.
+   */
+  const reviewing = plan.errors.length > 0 || plan.changes.length > 1 || paste !== null;
 
   const onClearSelection = useCallback(() => {
     if (selectedIds.size === 0) return false;
@@ -305,20 +430,37 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
           onRequestEdit={onRequestEdit}
           onClearSelection={onClearSelection}
           emptyMessage={t('datasheet.emptyFiltered')}
+          editing={editing}
+          onBeginEdit={setEditing}
+          onPasteBlock={onPasteBlock}
+          draftText={draftText}
+          editorFor={editorFor}
         />
 
         <p className="datasheet-keyboard-hint">{t('datasheet.keyboardHint')}</p>
         <p className="sr-only" role="status" aria-live="polite">{announcement}</p>
       </div>
 
-      <DatasheetContextPanel
-        project={project}
-        target={target}
-        units={units}
-        t={t}
-        onFocusObject={onFocusObject}
-        focusLabel={t('datasheet.focusObject')}
-      />
+      {reviewing
+        ? <DatasheetReviewPanel
+          plan={plan}
+          paste={paste}
+          project={project}
+          units={units}
+          language={language}
+          t={t}
+          fieldLabel={fieldLabel}
+          onApply={() => applyPlan(plan)}
+          onCancel={onCancelDraft}
+        />
+        : <DatasheetContextPanel
+          project={previewProject}
+          target={target}
+          units={units}
+          t={t}
+          onFocusObject={onFocusObject}
+          focusLabel={t('datasheet.focusObject')}
+        />}
     </div>
   </Drawer>;
 };

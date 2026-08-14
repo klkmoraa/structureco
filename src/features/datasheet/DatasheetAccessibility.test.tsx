@@ -16,9 +16,10 @@ import { createDatasheetProject } from './datasheetFixtures';
  *
  * 1. **El foco no es la selección.** Recorrer la tabla con las flechas no puede
  *    ir cambiando el objeto seleccionado en el lienzo.
- * 2. **Intentar editar dice por qué no se puede.** Ni se ofrece una edición que
- *    no existe ni se ignora la pulsación en silencio, y el motivo es distinto
- *    según sea identidad, valor derivado o celda pendiente de CRI-82.
+ * 2. **Intentar editar abre el editor o dice por qué no.** Ni se ofrece una
+ *    edición que no existe ni se ignora la pulsación en silencio: una celda
+ *    `inline` abre su editor, y una `identity`, `derived` o `panel` explica en
+ *    la región viva por qué no se escribe ahí.
  */
 
 afterEach(cleanup);
@@ -151,11 +152,21 @@ describe('datasheet accessibility', () => {
     await waitFor(() => expect(liveMessage()).toBe('Restricciones se calcula del modelo; cambia el dato de origen.'));
   });
 
-  it('tells an editable cell where it is edited instead of staying silent', async () => {
+  it('opens the editor with F2 on a cell that is edited in place', async () => {
     const { user } = await renderDatasheet();
     focusedCell().focus();
+    // Columna 2 de nudos: X, que se edita en la propia celda.
     await user.keyboard('{ArrowRight}{F2}');
-    await waitFor(() => expect(liveMessage()).toBe('Pulsa Intro o F2 para editar X.'));
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'X de N1' })).toBeTruthy());
+  });
+
+  it('tells a panel-only cell where it is edited instead of staying silent', async () => {
+    const { user } = await renderDatasheet();
+    await user.click(screen.getByRole('button', { name: /Barras/ }));
+    focusedCell().focus();
+    // Columna 12 de barras: Liberaciones, que escribe dos campos a la vez.
+    await user.keyboard('{Control>}{End}{/Control}{ArrowLeft}{F2}');
+    await waitFor(() => expect(liveMessage()).toBe('Liberaciones se edita en el panel de la derecha.'));
   });
 
   it('marks read-only exactly the cells that will never be editable', async () => {

@@ -1939,6 +1939,29 @@ export const es = {
   'datasheet.readOnly.derived': '{column} se calcula del modelo; cambia el dato de origen.',
   'datasheet.edit.inlineHint': 'Pulsa Intro o F2 para editar {column}.',
   'datasheet.edit.panelHint': '{column} se edita en el panel de la derecha.',
+  'datasheet.edit.cellLabel': '{column} de {row}',
+
+  'datasheet.draft.count': '{count} cambios pendientes',
+  'datasheet.draft.countOne': '1 cambio pendiente',
+  'datasheet.draft.apply': 'Aplicar',
+  'datasheet.draft.cancel': 'Cancelar',
+
+  'datasheet.review.title': 'Revisión de cambios',
+  'datasheet.review.ready': 'Se escribirán {count} celdas.',
+  'datasheet.review.blocked': '{count} celdas no son válidas; no se escribirá ninguna.',
+  'datasheet.review.applyAll': 'Aplicar todo',
+  'datasheet.review.to': 'pasa a',
+  'datasheet.review.droppedTitle': 'Parte del pegado se descartó',
+  'datasheet.review.dropped': '{outside} celdas caen fuera de la tabla y {readOnly} sobre columnas que no se editan.',
+  'datasheet.review.coincidentLabel': 'Nudos coincidentes',
+  'datasheet.review.coincident': 'Estos nudos quedarían en el mismo punto: {ids}. La hoja no los fusiona; usa el Model Doctor si quieres unirlos.',
+
+  'datasheet.error.notANumber': '{row}: «{raw}» no es un número.',
+  'datasheet.error.notPositive': '{row}: «{raw}» debe ser mayor que cero.',
+  'datasheet.error.outOfRange': '{row}: «{raw}» está fuera del intervalo admitido.',
+  'datasheet.error.unknownOption': '{row}: «{raw}» no es una opción válida.',
+  'datasheet.error.ineligible': '{row} no admite este campo.',
+  'datasheet.error.unknownRow': '{row} ya no existe en el modelo.',
 } as const;
 
 export type TranslationKey = keyof typeof es;
@@ -3886,6 +3909,29 @@ export const en: Catalog = {
   'datasheet.readOnly.derived': '{column} is computed from the model; change its source value.',
   'datasheet.edit.inlineHint': 'Press Enter or F2 to edit {column}.',
   'datasheet.edit.panelHint': '{column} is edited in the right-hand panel.',
+  'datasheet.edit.cellLabel': '{column} of {row}',
+
+  'datasheet.draft.count': '{count} pending changes',
+  'datasheet.draft.countOne': '1 pending change',
+  'datasheet.draft.apply': 'Apply',
+  'datasheet.draft.cancel': 'Cancel',
+
+  'datasheet.review.title': 'Change review',
+  'datasheet.review.ready': '{count} cells will be written.',
+  'datasheet.review.blocked': '{count} cells are invalid; none will be written.',
+  'datasheet.review.applyAll': 'Apply all',
+  'datasheet.review.to': 'becomes',
+  'datasheet.review.droppedTitle': 'Part of the paste was dropped',
+  'datasheet.review.dropped': '{outside} cells fall outside the table and {readOnly} on columns that are not editable.',
+  'datasheet.review.coincidentLabel': 'Coincident nodes',
+  'datasheet.review.coincident': 'These nodes would share a point: {ids}. The sheet does not merge them; use the Model Doctor to join them.',
+
+  'datasheet.error.notANumber': '{row}: "{raw}" is not a number.',
+  'datasheet.error.notPositive': '{row}: "{raw}" must be greater than zero.',
+  'datasheet.error.outOfRange': '{row}: "{raw}" is outside the allowed range.',
+  'datasheet.error.unknownOption': '{row}: "{raw}" is not a valid option.',
+  'datasheet.error.ineligible': '{row} does not accept this field.',
+  'datasheet.error.unknownRow': '{row} no longer exists in the model.',
 };
 
 export const catalogs: Record<Language, Catalog> = { es, en };

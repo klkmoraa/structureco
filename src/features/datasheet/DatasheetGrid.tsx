@@ -8,6 +8,7 @@ import {
   moveGridFocus,
   type GridPosition,
 } from './datasheetGridNavigation';
+import { DatasheetCellEditor, type DatasheetCellEditorProps } from './DatasheetCellEditor';
 import type { DatasheetColumn, DatasheetRow, DatasheetSort } from './datasheetModel';
 import { datasheetCellText, datasheetColumnHeader } from './datasheetPresentation';
 
@@ -26,11 +27,19 @@ export interface DatasheetGridProps {
   onSelectRow: (rowId: string, mode: 'replace' | 'additive' | 'range') => void;
   /** `Enter` o doble pulsación sobre una fila. */
   onActivateRow: (rowId: string) => void;
-  /** `Enter`/`F2`: intento de edición sobre la celda enfocada. */
+  /** `Enter`/`F2` sobre una celda que no se edita aquí: anuncia el motivo. */
   onRequestEdit: (column: DatasheetColumn) => void;
   /** `Esc` con selección activa; devuelve `true` si consumió la tecla. */
   onClearSelection: () => boolean;
   emptyMessage: string;
+  /** Celda con el editor abierto; `null` mientras se navega. */
+  editing: GridPosition | null;
+  onBeginEdit: (position: GridPosition) => void;
+  onPasteBlock: (text: string, anchor: GridPosition) => void;
+  /** Texto pendiente de una celda; marca el indicador de borrador. */
+  draftText: (row: DatasheetRow, column: DatasheetColumn) => string | undefined;
+  /** Props del editor, o `null` si esa celda no se edita en esta fila. */
+  editorFor: (row: DatasheetRow, column: DatasheetColumn) => DatasheetCellEditorProps | null;
 }
 
 const sortIcon = (state: 'asc' | 'desc' | null) => {
@@ -73,6 +82,11 @@ export const DatasheetGrid = ({
   onRequestEdit,
   onClearSelection,
   emptyMessage,
+  editing,
+  onBeginEdit,
+  onPasteBlock,
+  draftText,
+  editorFor,
 }: DatasheetGridProps) => {
   const bodyRef = useRef<HTMLTableSectionElement>(null);
   const rowCount = rows.length;
@@ -111,19 +125,21 @@ export const DatasheetGrid = ({
       return;
     }
 
-    if (key === 'Enter') {
+    if (key === 'Enter' || key === 'F2') {
       event.preventDefault();
       const row = rows[safeFocus.row];
       const column = columns[safeFocus.column];
-      if (row) onActivateRow(row.id);
-      if (column) onRequestEdit(column);
-      return;
-    }
-
-    if (key === 'F2') {
-      event.preventDefault();
-      const column = columns[safeFocus.column];
-      if (column) onRequestEdit(column);
+      // `Enter` además selecciona la fila; `F2` sólo abre el editor, que es lo
+      // que deja consultar una celda sin mover la selección del lienzo.
+      if (key === 'Enter' && row) onActivateRow(row.id);
+      if (!column) return;
+      // Una celda que sí se edita abre su editor; la que no, dice por qué. El
+      // silencio sería peor que cualquiera de las dos respuestas.
+      if (row && column.editability === 'inline' && editorFor(row, column)) {
+        onBeginEdit({ row: safeFocus.row, column: safeFocus.column });
+      } else {
+        onRequestEdit(column);
+      }
       return;
     }
 
@@ -143,7 +159,20 @@ export const DatasheetGrid = ({
         event.stopPropagation();
       }
     }
-  }, [columnCount, columns, moveFocus, onActivateRow, onClearSelection, onRequestEdit, onSelectRow, rowCount, rows, safeFocus]);
+  }, [columnCount, columns, editorFor, moveFocus, onActivateRow, onBeginEdit, onClearSelection, onRequestEdit, onSelectRow, rowCount, rows, safeFocus]);
+
+  // El editor se lleva el foco al abrirse; al cerrarse hay que devolverlo, o la
+  // rejilla se queda sin su única parada de tabulación y el teclado se pierde.
+  const wasEditingRef = useRef(false);
+  useEffect(() => {
+    if (editing) {
+      wasEditingRef.current = true;
+      return;
+    }
+    if (!wasEditingRef.current) return;
+    wasEditingRef.current = false;
+    bodyRef.current?.querySelector<HTMLElement>('[data-datasheet-focused="true"]')?.focus();
+  }, [editing]);
 
   const onCellMouseDown = useCallback((event: ReactMouseEvent<HTMLElement>, row: DatasheetRow, rowIndex: number, columnIndex: number) => {
     moveFocus({ row: rowIndex, column: columnIndex });
@@ -187,7 +216,19 @@ export const DatasheetGrid = ({
           })}
         </tr>
       </thead>
-      <tbody ref={bodyRef} onKeyDown={onKeyDown}>
+      <tbody
+        ref={bodyRef}
+        onKeyDown={onKeyDown}
+        onPaste={(event) => {
+          // Dentro del editor el pegado es del control: pegar un número en una
+          // celda abierta no puede significar «pega un bloque sobre la tabla».
+          if (editing) return;
+          const text = event.clipboardData.getData('text/plain');
+          if (!text) return;
+          event.preventDefault();
+          onPasteBlock(text, safeFocus);
+        }}
+      >
         {rows.map((row, rowIndex) => {
           const selected = selectedIds.has(row.id);
           return <tr
@@ -199,6 +240,9 @@ export const DatasheetGrid = ({
             {columns.map((column, columnIndex) => {
               const focused = rowIndex === safeFocus.row && columnIndex === safeFocus.column;
               const Cell = columnIndex === 0 ? 'th' : 'td';
+              const pending = draftText(row, column);
+              const isEditing = editing?.row === rowIndex && editing.column === columnIndex;
+              const editorProps = isEditing ? editorFor(row, column) : null;
               return <Cell
                 key={column.id}
                 {...(columnIndex === 0 ? { scope: 'row' as const } : {})}
@@ -207,11 +251,22 @@ export const DatasheetGrid = ({
                 tabIndex={focused ? 0 : -1}
                 data-datasheet-focused={focused ? 'true' : undefined}
                 data-editability={column.editability}
+                data-pending={pending !== undefined ? 'true' : undefined}
                 className={column.numeric ? 'is-numeric' : undefined}
                 onMouseDown={(event) => onCellMouseDown(event, row, rowIndex, columnIndex)}
-                onDoubleClick={() => onRequestEdit(column)}
+                onDoubleClick={() => {
+                  if (column.editability === 'inline' && editorFor(row, column)) {
+                    onBeginEdit({ row: rowIndex, column: columnIndex });
+                  } else {
+                    onRequestEdit(column);
+                  }
+                }}
               >
-                {datasheetCellText(row.values[column.id], units, t)}
+                {/* Lo pendiente se enseña tal como se tecleó, no reformateado:
+                    reescribirlo mientras se revisa haría dudar de qué se guardó. */}
+                {editorProps
+                  ? <DatasheetCellEditor {...editorProps} />
+                  : pending ?? datasheetCellText(row.values[column.id], units, t)}
               </Cell>;
             })}
           </tr>;

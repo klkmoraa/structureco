@@ -129,6 +129,30 @@ const SECTION_SHAPE_KEYS: Record<SectionShapeType, TranslationKey> = {
   RECT: 'inspector.sectionShapeRect',
 };
 
+/**
+ * Catálogo completo de materiales o de secciones, ya agrupado y traducido.
+ *
+ * Se separa de `bulkPropertyOptions` porque el catálogo no depende del estado
+ * agregado de ninguna selección: es el mismo para la edición múltiple y para el
+ * datasheet, que no tiene agregación que ofrecer.
+ */
+export const bulkCatalogOptions = (
+  kind: 'material' | 'section',
+  language: Language,
+): readonly BulkPropertyOption[] => kind === 'material'
+  ? standardMaterials.map((material) => ({
+    value: material.id,
+    label: bulkMaterialLabel(language, material.id),
+    group: translate(language, MATERIAL_CATEGORY_KEYS[material.category]),
+  }))
+  : SECTION_SHAPE_ORDER.flatMap((shapeType) => standardSections
+    .filter((section) => section.shapeType === shapeType)
+    .map((section) => ({
+      value: section.id,
+      label: bulkSectionLabel(language, section.id),
+      group: translate(language, SECTION_SHAPE_KEYS[shapeType]),
+    })));
+
 /** Opciones que el usuario puede fijar. No incluye `untouched` ni `clear`. */
 export const bulkPropertyOptions = (
   state: BulkPropertyState,
@@ -138,19 +162,8 @@ export const bulkPropertyOptions = (
     case 'enum':
       return (state.options ?? []).map((option) => ({ value: option, label: bulkOptionLabel(t, state.id, option) }));
     case 'material':
-      return standardMaterials.map((material) => ({
-        value: material.id,
-        label: bulkMaterialLabel(language, material.id),
-        group: translate(language, MATERIAL_CATEGORY_KEYS[material.category]),
-      }));
     case 'section':
-      return SECTION_SHAPE_ORDER.flatMap((shapeType) => standardSections
-        .filter((section) => section.shapeType === shapeType)
-        .map((section) => ({
-          value: section.id,
-          label: bulkSectionLabel(language, section.id),
-          group: translate(language, SECTION_SHAPE_KEYS[shapeType]),
-        })));
+      return bulkCatalogOptions(state.kind, language);
     default:
       return [];
   }
