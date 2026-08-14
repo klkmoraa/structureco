@@ -349,7 +349,7 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
     setSelection(buildSelection(entity, [], selection, rows));
     rangeAnchorRef.current = null;
     return true;
-  }, [entity, selectedIds.size, selection, setSelection]);
+  }, [entity, rows, selectedIds.size, selection, setSelection]);
 
   const onFocusObject = useCallback(() => {
     if (!target) return;

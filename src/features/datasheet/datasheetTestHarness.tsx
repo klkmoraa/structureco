@@ -31,24 +31,6 @@ const ENTITY_LABELS: Record<DatasheetEntity, RegExp> = {
  */
 const keepOpen = () => {};
 
-interface HarnessProps {
-  onProject: (project: ProjectModel) => void;
-  onSelection: (selection: Selection) => void;
-  onUndo: (undo: () => void) => void;
-}
-
-const Harness = ({ onProject, onSelection, onUndo }: HarnessProps) => {
-  const { project, replaceProject, undo } = useProjectModel();
-  const { selection } = useWorkspaceUI();
-  onProject(project);
-  onSelection(selection);
-  onUndo(undo);
-  if (project.id !== 'datasheet-fixture') {
-    return <button type="button" onClick={() => replaceProject(createDatasheetProject())}>sembrar</button>;
-  }
-  return <DatasheetPanel open onOpenChange={keepOpen} />;
-};
-
 export interface RenderDatasheetOptions {
   entity?: DatasheetEntity;
 }
@@ -59,15 +41,25 @@ export const renderDatasheet = async ({ entity = 'nodes' }: RenderDatasheetOptio
   const selectionRef = { current: null as Selection };
   const undoRef = { current: (() => {}) as () => void };
 
-  render(
-    <ProjectProvider>
-      <Harness
-        onProject={(project) => { projectRef.current = project; }}
-        onSelection={(selection) => { selectionRef.current = selection; }}
-        onUndo={(undo) => { undoRef.current = undo; }}
-      />
-    </ProjectProvider>,
-  );
+  /*
+   * El arnés se declara aquí dentro y no en el módulo porque este archivo
+   * exporta ayudantes, no componentes: un componente de primer nivel en un
+   * `.tsx` que exporta funciones rompe la regla de Fast Refresh sin ganar nada.
+   * Se monta una sola vez por llamada, así que su identidad no importa.
+   */
+  const Harness = () => {
+    const { project, replaceProject, undo } = useProjectModel();
+    const { selection } = useWorkspaceUI();
+    projectRef.current = project;
+    selectionRef.current = selection;
+    undoRef.current = undo;
+    if (project.id !== 'datasheet-fixture') {
+      return <button type="button" onClick={() => replaceProject(createDatasheetProject())}>sembrar</button>;
+    }
+    return <DatasheetPanel open onOpenChange={keepOpen} />;
+  };
+
+  render(<ProjectProvider><Harness /></ProjectProvider>);
 
   await user.click(screen.getByRole('button', { name: 'sembrar' }));
   await screen.findByRole('grid');
