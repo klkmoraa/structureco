@@ -6,6 +6,7 @@ import {
   Crosshair,
   Delete,
   GitCommitHorizontal,
+  Grid3x3,
   Hand,
   Move,
   MousePointer2,
@@ -217,6 +218,11 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
     window.requestAnimationFrame(() => emitWorkspaceCommand('open-structural-edit'));
   };
 
+  const openStructureGeneratorFromMobile = () => {
+    closeMobileMenu(false);
+    window.requestAnimationFrame(() => emitWorkspaceCommand('open-structure-generator'));
+  };
+
   const closeMobileMenu = (restoreFocus = true) => {
     const closingMenu = mobileMenu;
     setMobileMenu(null);
@@ -281,7 +287,11 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
   const paletteDescription = mobileMenu === 'loads' ? t('toolbar.loadSheetDescription') : t('toolbar.moreSheetDescription');
   const paletteGroups = TOOL_GROUPS.filter((group) =>
     mobilePaletteTools.some((tool) => tool.group === group.id)
-      || (group.id === 'edit' && canEditSelection),
+      || (group.id === 'edit' && canEditSelection)
+      // Generar no es una herramienta del registro y no depende de la
+      // selección, pero pertenece a «Crear»: sin esto su grupo no existiría en
+      // la hoja y la única vía en compacto sería la paleta de comandos.
+      || (group.id === 'create' && mobileMenu === 'more'),
   );
   const mobilePalette = mobileMenu && typeof document !== 'undefined' ? createPortal(<>
     <button type="button" className="mobile-tool-sheet-backdrop" aria-hidden="true" tabIndex={-1} onPointerDown={() => closeMobileMenu()} />
@@ -311,6 +321,18 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
             onSelect={selectTool}
           />)}
           {group.id === 'navigate' ? <MobileCommandPaletteButton label={t('palette.openShort')} accessibleLabel={t('palette.open')} onOpen={openCommandPaletteFromMobile} /> : null}
+          {group.id === 'create' ? <button
+            className="mobile-palette-tool tool-structure-generator"
+            type="button"
+            role="menuitem"
+            aria-label={t('generator.launcher')}
+            onClick={openStructureGeneratorFromMobile}
+            data-structure-generator-command
+          >
+            <span className="mobile-palette-icon" aria-hidden="true"><Grid3x3 size={23} strokeWidth={1.8} /></span>
+            <span className="mobile-palette-copy"><strong>{t('generator.launcher')}</strong></span>
+            <ChevronRight size={19} aria-hidden="true" />
+          </button> : null}
           {group.id === 'edit' && canEditSelection ? <button
             className="mobile-palette-tool tool-structural-edit"
             type="button"
@@ -348,6 +370,15 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
                   onSelect={selectTool}
                 />)}
                 {group.id === 'navigate' ? <CommandPaletteButton label={t('palette.openShort')} accessibleLabel={t('palette.open')} compact={compact} /> : null}
+                {group.id === 'create' ? <EditorToolButton
+                  className={`tool-button tool-structure-generator${compact ? ' is-compact' : ''}`}
+                  label={t('generator.launcher')}
+                  icon={<Grid3x3 size={22} strokeWidth={1.8} />}
+                  tone="structure"
+                  compact={compact}
+                  onClick={() => emitWorkspaceCommand('open-structure-generator')}
+                  data-structure-generator-command
+                /> : null}
                 {group.id === 'edit' && canEditSelection ? <EditorToolButton
                   className={`tool-button tool-structural-edit${compact ? ' is-compact' : ''}`}
                   label={t('canvas.structuralEditLauncher')}

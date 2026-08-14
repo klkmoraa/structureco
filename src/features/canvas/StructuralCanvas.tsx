@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { X } from 'lucide-react';
 import { useProject } from '../../store/ProjectContext';
 import type { DiagramPoint, DiagramQuantity, MemberModel, NodeModel, Selection, Tool } from '../../types';
@@ -83,6 +83,16 @@ import {
 } from './structuralEditUi';
 import { StructuralEditOverlay } from './StructuralEditOverlay';
 import { CanvasStructuralEditPreviewLayer } from './CanvasStructuralEditPreviewLayer';
+import { CanvasStructureGeneratorLayer } from './CanvasStructureGeneratorLayer';
+import type { StructureGenerationGhost } from '../../data/generators/generatorGhost';
+
+/**
+ * El generador y su núcleo determinista sólo pesan cuando se abre: nadie paga su
+ * código —ni el de los catálogos que ofrece— por arrancar el editor.
+ */
+const LazyStructureGeneratorSurface = lazy(() =>
+  import('../structure-generator/StructureGeneratorSurface')
+    .then((module) => ({ default: module.StructureGeneratorSurface })));
 import './phase2.css';
 
 type Camera = CanvasCamera;
@@ -252,6 +262,18 @@ export const StructuralCanvas = ({
   const [structuralEditLiveDraft, setStructuralEditLiveDraft] = useState<StructuralEditDraft | null>(null);
   const [structuralEditPointerArmed, setStructuralEditPointerArmed] = useState(false);
   const [structuralEditCommitError, setStructuralEditCommitError] = useState('');
+  /**
+   * Generador de estructuras. El lienzo guarda sólo lo que tiene que dibujar
+   * —el ghost y su ancla— y quién está pidiendo un punto; los parámetros viven
+   * en la superficie, que es la única que sabe traducirlos.
+   */
+  const [generatorOpen, setGeneratorOpen] = useState(false);
+  const [generatorGhost, setGeneratorGhost] = useState<StructureGenerationGhost | null>(null);
+  const [generatorOrigin, setGeneratorOrigin] = useState<{ x: number; y: number } | null>(null);
+  const [generatorOriginPicking, setGeneratorOriginPicking] = useState(false);
+  const [generatorPickedOrigin, setGeneratorPickedOrigin] = useState<{ x: number; y: number; token: number } | null>(null);
+  const generatorOriginPickingRef = useRef(false);
+  const generatorPickTokenRef = useRef(0);
   const [touchLoupe, setTouchLoupe] = useState<{ screenX: number; screenY: number; modelX: number; modelY: number } | null>(null);
   const spacePressedRef = useRef(false);
   const interactionRef = useRef<CanvasInteraction>(IDLE_INTERACTION);
@@ -865,6 +887,46 @@ export const StructuralCanvas = ({
     return true;
   }, [capturePointer, clearLongPressTimer, localScreenPoint, modelPointFromClient, project, scheduleStructuralEditDraft, structuralEditDraft, structuralEditPointerArmed, t, transitionInteraction]);
 
+  /**
+   * Un solo clic entrega el origen de inserción y desarma el puntero.
+   *
+   * Se resuelve antes que cualquier herramienta y antes de la guardia que
+   * ignora los objetos del modelo: elegir el origen sobre un nudo existente es
+   * justamente el caso que más se quiere —el punto se ajusta a él— y no un
+   * accidente que haya que evitar. No abre interacción ni captura el puntero
+   * porque no hay arrastre: es un punto, no un gesto.
+   */
+  const pickGeneratorOrigin = useCallback((event: ReactPointerEvent): boolean => {
+    if (!generatorOriginPickingRef.current || event.button !== 0) return false;
+    event.preventDefault();
+    clearLongPressTimer();
+    const point = modelPointFromClient(event.clientX, event.clientY);
+    generatorPickTokenRef.current += 1;
+    setGeneratorPickedOrigin({ x: point.x, y: point.y, token: generatorPickTokenRef.current });
+    generatorOriginPickingRef.current = false;
+    setGeneratorOriginPicking(false);
+    return true;
+  }, [clearLongPressTimer, modelPointFromClient]);
+
+  const toggleGeneratorOriginPick = useCallback(() => {
+    setGeneratorOriginPicking((armed) => {
+      const next = !armed;
+      generatorOriginPickingRef.current = next;
+      return next;
+    });
+  }, []);
+
+  /** El punto ya llegó al formulario; el lienzo puede olvidarlo. */
+  const resolveGeneratorOriginPick = useCallback(() => setGeneratorPickedOrigin(null), []);
+
+  const closeGenerator = useCallback(() => {
+    setGeneratorOpen(false);
+    setGeneratorGhost(null);
+    setGeneratorOrigin(null);
+    setGeneratorOriginPicking(false);
+    generatorOriginPickingRef.current = false;
+  }, []);
+
   const startPending = useCallback((event: ReactPointerEvent, target: StructuralTarget) => {
     const pending: CanvasInteraction = {
       kind: 'pending',
@@ -1242,6 +1304,13 @@ export const StructuralCanvas = ({
   };
 
   const handlePointerDownCapture = (event: ReactPointerEvent<SVGSVGElement>) => {
+    // En captura, para que elegir el origen sobre un nudo existente entregue el
+    // punto y no lo seleccione además: el manejador del objeto está por debajo
+    // y nunca llega a verlo.
+    if (pickGeneratorOrigin(event)) {
+      event.stopPropagation();
+      return;
+    }
     if (event.pointerType !== 'touch') return;
     // A fresh primary contact starts a new touch sequence. Some mobile engines
     // may omit one of the final pointer events after a pinch; discard any stale
@@ -1501,6 +1570,7 @@ export const StructuralCanvas = ({
   }, [cancelActiveInteraction, editCapabilities.structural, project, selection, setActiveTool, showCanvasFeedback, t]);
 
   useEffect(() => onWorkspaceCommand('open-structural-edit', () => startStructuralEdit('move')), [startStructuralEdit]);
+  useEffect(() => onWorkspaceCommand('open-structure-generator', () => setGeneratorOpen(true)), []);
 
   const changeStructuralEditOperation = useCallback((kind: StructuralEditKind) => {
     setStructuralEditDraft((current) => current ? changeStructuralEditKind(project, current, kind) : current);
@@ -2055,6 +2125,13 @@ export const StructuralCanvas = ({
           })}
         </g> : null}
 
+        {generatorGhost ? <CanvasStructureGeneratorLayer
+          ghost={generatorGhost}
+          origin={generatorOrigin}
+          toScreen={toScreen}
+          label={t('generator.title')}
+        /> : null}
+
         {structuralEditLivePreview.preview || structuralEditPreview.prepared ? <CanvasStructuralEditPreviewLayer
           project={project}
           prepared={structuralEditLivePreview.preview ? null : structuralEditPreview.prepared}
@@ -2224,10 +2301,21 @@ export const StructuralCanvas = ({
         </div>
       </form> : null}
 
+      {generatorOpen ? <Suspense fallback={null}><LazyStructureGeneratorSurface
+        pickedOrigin={generatorPickedOrigin}
+        originPicking={generatorOriginPicking}
+        onToggleOriginPick={toggleGeneratorOriginPick}
+        onOriginPickResolved={resolveGeneratorOriginPick}
+        onGhostChange={setGeneratorGhost}
+        onOriginChange={setGeneratorOrigin}
+        onClose={closeGenerator}
+      /></Suspense> : null}
+
       <StructuralEditOverlay
         // Duplicate and Repeat own an in-progress intention. Do not leave the
         // Edit launcher visually covered but still keyboard-focusable beneath it.
-        available={editCapabilities.structural && !duplicateDraft && !repeatRecipe}
+        // Generating owns the whole canvas surface for the same reason.
+        available={editCapabilities.structural && !duplicateDraft && !repeatRecipe && !generatorOpen}
         repeatAvailable={Boolean(repeatCandidate) && !structuralEditDraft}
         draft={structuralEditDraft}
         capabilities={editCapabilities}

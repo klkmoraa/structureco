@@ -40,6 +40,11 @@ export interface WorkspaceCommands {
   'open-model-doctor': void;
   /** Open the contextual structural-editing surface for the current selection. */
   'open-structural-edit': void;
+  /**
+   * Open the structure generator over the canvas. It needs no selection: it
+   * creates geometry rather than transforming what is already there.
+   */
+  'open-structure-generator': void;
   /** Show a toast notification on screen. */
   'show-toast': {
     message: string;

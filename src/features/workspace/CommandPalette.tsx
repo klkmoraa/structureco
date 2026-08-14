@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type Dispatch
 import {
   ChartNoAxesCombined,
   Download,
+  Grid3x3,
   Layers3,
   LocateFixed,
   Moon,
@@ -138,6 +139,21 @@ export const CommandPalette = ({ open, onClose, dispatchLayers }: CommandPalette
     items.push({
       id: 'analysis:redo', group: 'analysis', label: t('history.redo'), shortcut: 'Ctrl Y',
       icon: Redo2, disabled: !canRedo, run: run(redo),
+    });
+
+    // La generación vive con las herramientas de creación, no con las de
+    // análisis: crea geometría. No depende de la selección, así que nunca
+    // aparece deshabilitada por no haber elegido nada.
+    items.push({
+      id: 'tool:structure-generator',
+      group: 'tools',
+      label: t('generator.launcher'),
+      hint: t('generator.paletteHint'),
+      icon: Grid3x3,
+      run: () => {
+        close();
+        window.requestAnimationFrame(() => emitWorkspaceCommand('open-structure-generator'));
+      },
     });
 
     for (const tool of TOOL_REGISTRY) {

@@ -79,6 +79,19 @@ describe('CommandPalette', () => {
     window.removeEventListener(workspaceCommandEventName('open-model-doctor'), openDoctor);
   });
 
+  it('offers the structure generator and emits the shared open command', async () => {
+    const user = userEvent.setup();
+    const openGenerator = vi.fn();
+    window.addEventListener(workspaceCommandEventName('open-structure-generator'), openGenerator);
+    renderPalette();
+
+    // Se busca por lo que hace, no por el nombre de una familia concreta.
+    await user.click(screen.getByRole('option', { name: /Generar estructura/i }));
+
+    await waitFor(() => expect(openGenerator).toHaveBeenCalledTimes(1));
+    window.removeEventListener(workspaceCommandEventName('open-structure-generator'), openGenerator);
+  });
+
   it('does not expose Avisos as an independent result destination', () => {
     renderPalette();
 

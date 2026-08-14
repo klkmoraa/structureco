@@ -42,7 +42,9 @@ describe('ToolBar mobile action sheets', () => {
       </ProjectProvider>,
     );
     expect(container.querySelector('[data-tool-rail="compact"]')).toBeTruthy();
-    expect(container.querySelectorAll('.desktop-tool-list .sc-tool-button.is-compact')).toHaveLength(13);
+    // Trece herramientas del registro más «Generar estructura», que no es una
+    // herramienta de lienzo pero sí una acción de creación con su mismo botón.
+    expect(container.querySelectorAll('.desktop-tool-list .sc-tool-button.is-compact')).toHaveLength(14);
     expect(container.querySelector('[data-tool-id="pointLoad"]')?.getAttribute('aria-keyshortcuts')).toBe('P');
     expect(container.querySelector('[data-tool-id="delete"]')?.getAttribute('aria-keyshortcuts')).toBe('Delete Backspace');
   });
@@ -51,7 +53,8 @@ describe('ToolBar mobile action sheets', () => {
     renderToolBar();
 
     expect(within(screen.getByRole('group', { name: /navegar/i })).getAllByRole('button')).toHaveLength(3);
-    expect(within(screen.getByRole('group', { name: /^crear$/i })).getAllByRole('button')).toHaveLength(3);
+    // Nudo, barra y apoyo, más el generador de estructuras.
+    expect(within(screen.getByRole('group', { name: /^crear$/i })).getAllByRole('button')).toHaveLength(4);
     expect(within(screen.getByRole('group', { name: /^cargas$/i })).getAllByRole('button')).toHaveLength(3);
     expect(within(screen.getByRole('group', { name: /anotar e inspeccionar/i })).getAllByRole('button')).toHaveLength(2);
     expect(within(screen.getByRole('group', { name: /^editar$/i })).getAllByRole('button')).toHaveLength(2);
@@ -89,6 +92,42 @@ describe('ToolBar mobile action sheets', () => {
     await user.click(screen.getByRole('button', { name: /editar selección/i }));
 
     expect(openEditor).toHaveBeenCalledOnce();
+    unsubscribe();
+  });
+
+  it('offers the structure generator from Create without needing a selection', async () => {
+    const user = userEvent.setup();
+    const openGenerator = vi.fn();
+    const unsubscribe = onWorkspaceCommand('open-structure-generator', openGenerator);
+    renderToolBar();
+
+    // Generar crea geometría en vez de transformar la que hay: no puede
+    // depender de que algo esté seleccionado.
+    const create = screen.getByRole('group', { name: /^crear$/i });
+    await user.click(within(create).getByRole('button', { name: /generar estructura/i }));
+
+    expect(openGenerator).toHaveBeenCalledOnce();
+    unsubscribe();
+  });
+
+  it('reaches the structure generator from the compact Más sheet', async () => {
+    const user = userEvent.setup();
+    const openGenerator = vi.fn();
+    const unsubscribe = onWorkspaceCommand('open-structure-generator', openGenerator);
+    render(
+      <ProjectProvider>
+        <div className="app-shell"><ToolBar /></div>
+      </ProjectProvider>,
+    );
+    const moreButton = [...document.querySelectorAll<HTMLButtonElement>('.mobile-tool-group')].at(-1);
+    await user.click(moreButton!);
+
+    const command = document.querySelector<HTMLButtonElement>('.mobile-tool-palette-more [data-structure-generator-command]');
+    expect(command).toBeTruthy();
+    await user.click(command!);
+
+    expect(openGenerator).toHaveBeenCalledOnce();
+    expect(document.querySelector<HTMLElement>('.app-shell')?.inert).toBe(false);
     unsubscribe();
   });
 
