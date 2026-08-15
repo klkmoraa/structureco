@@ -63,6 +63,20 @@
  * `--sc-color-bg-canvas` se mantiene sin tocar en ambos temas porque es el
  * fondo contra el que se midió todo. No alteres un color semántico sin volver
  * a medirlo sobre los cuatro fondos (lienzo y superficie × Día y Noche).
+ *
+ * CORRECCIÓN SOBRE 74dfc76 — misma franja, más croma
+ * ---------------------------------------------------------------------------
+ * El primer paso de este cierre resolvió el suelo de contraste apagando el
+ * color: `V/cortante` cayó en un teal oscuro (`#08816d`) que leía corporativo,
+ * no técnico. La franja de luminancia [0,146 … 0,293] no cambia — sigue siendo
+ * la única en la que un HEX único llega a 3:1 en los cuatro fondos — pero
+ * dentro de ella el croma sí es un grado de libertad, y la primera pasada no
+ * lo usó. Este paso sube la saturación de cada rol técnico y de estado hasta
+ * el borde de esa franja en vez de hundirse en ella, sin tocar el mecanismo
+ * de invariancia ni añadir tokens nuevos por rol. La única excepción real es
+ * `warning` vs `cota`: compartían `--sc-amber-500` (mismo HEX, dos roles) y
+ * ahora tienen primitivas separadas — no por contraste, sino porque el
+ * brandbook exige que se puedan distinguir cuando conviven.
  */
 
 :root {
@@ -103,24 +117,28 @@
   --sc-lime-ink: #16250d;
 
   /* Cian de trazo: la segunda dimensión de marca. Vive en el dibujo
-     técnico y en los gradientes de identidad, nunca en controles. */
+     técnico y en los gradientes de identidad, nunca en controles. Es
+     también el HEX de N/axial — el brandbook reutiliza a propósito el
+     trazo de marca como color técnico, así que los dos se mueven juntos. */
   --sc-cyan-300: #95d0e5;
-  --sc-cyan-600: #1092d9;
+  --sc-cyan-600: #0f95d1;
 
   /* Azul de interacción (selección / foco / información) */
   --sc-blue-100: #e8effd;
   --sc-blue-300: #9dbdf6;
-  --sc-blue-500: #7d81f8;
+  --sc-blue-500: #6a5df2;
   --sc-blue-600: #294db7;
   --sc-blue-700: #1847ab;
 
   /* Acentos de estado y dominio */
-  --sc-violet-500: #9153e1;
-  --sc-pink-500: #c15b8f;
+  --sc-violet-500: #8b5cf6;
+  --sc-pink-500: #c94a8f;
   --sc-coral-500: #ed4b46;
   --sc-red-500: #ed4b46;
+  --sc-red-600: #d92e28;
   --sc-red-700: #96362d;
-  --sc-amber-500: #ac850d;
+  --sc-amber-500: #d9720a;
+  --sc-amber-700: #b8860b;
   --sc-plum-500: #9b61cd;
 
   /* Acentos decorativos de la referencia clay. Sólo contenedores de icono y
@@ -195,10 +213,14 @@
   --sc-color-selection-stroke: var(--sc-blue-500);
 
   /* Estados — INVARIANTES. El color es la señal; la tinta de texto que va
-     encima de una superficie no puede serlo (ver la cabecera del archivo). */
-  --sc-color-state-success: #149e39;
+     encima de una superficie no puede serlo (ver la cabecera del archivo).
+     El éxito usa un verde de hue distinto al de marca y al de cortante
+     (142° frente a 136° y 163° en OKLab) para que los tres convivan sin
+     confundirse; el error usa un rojo carmín (#d92e28) en vez del coral de
+     carga/momento (#ed4b46) — antes compartían el mismo HEX. */
+  --sc-color-state-success: #2f9a2a;
   --sc-color-state-warning: var(--sc-amber-500);
-  --sc-color-state-error: var(--sc-red-500);
+  --sc-color-state-error: var(--sc-red-600);
   --sc-color-state-critical: #c93028;
   --sc-color-state-info: var(--sc-blue-500);
   --sc-color-state-stale: var(--sc-amber-500);
@@ -225,10 +247,11 @@
   --sc-color-canario-ink: #6f5210;
 
   /* Aula es un acento de EXPERIENCIA (a quién le habla la app), no un resultado
-     del solver, y por eso nunca comparte hue con la deformada. #c15b8f es la
-     señal fijada por el brandbook (3,95:1 en el peor fondo). Para un control
-     RELLENO con texto encima hace falta un escalón más profundo: sobre #c15b8f
-     el blanco sólo llega a 4,07:1, por debajo del suelo de texto. */
+     del solver, y por eso nunca comparte hue con la deformada. #c94a8f es la
+     señal fijada por el brandbook (3,72:1 en el peor fondo; el cierre cromático
+     anterior usaba #c15b8f, algo más apagado). Para un control RELLENO con
+     texto encima hace falta un escalón más profundo: sobre #c94a8f el blanco
+     sólo llega a 4,32:1, por debajo del suelo de texto — de ahí `-solid`. */
   --sc-color-aula: var(--sc-pink-500);
   --sc-color-aula-solid: #c23e82;
   --sc-color-aula-foreground: var(--sc-white);
@@ -270,12 +293,12 @@
      no fue sólo una decisión de identidad — subió el suelo real de toda la
      familia técnica por encima de 3:1 por primera vez. */
   --sc-color-technical-load: var(--sc-coral-500);      /* 3,60:1 */
-  --sc-color-technical-axial: #1092d9;                 /* 3,34:1 */
-  --sc-color-technical-shear: #08816d;                 /* 3,34:1 */
+  --sc-color-technical-axial: var(--sc-cyan-600);      /* 3,29:1 */
+  --sc-color-technical-shear: #059669;                 /* 3,68:1 */
   --sc-color-technical-moment: #ed4b46;                /* 3,60:1 */
-  --sc-color-technical-deformed: var(--sc-violet-500); /* 3,46:1 */
-  --sc-color-technical-reaction: #2c6cda;              /* 3,26:1 */
-  --sc-color-technical-dimension: var(--sc-amber-500); /* 3,36:1 */
+  --sc-color-technical-deformed: var(--sc-violet-500); /* 3,79:1 */
+  --sc-color-technical-reaction: #3a72e3;              /* 3,59:1 */
+  --sc-color-technical-dimension: var(--sc-amber-700); /* 3,18:1 */
   --sc-color-technical-axis: #ad5e18;                  /* 3,36:1 */
   /* Alias del rol distribuido: la codificación del canvas usa el color de
      cortante para la carga repartida, y la interfaz necesita nombrarlo. */

@@ -5,9 +5,9 @@
     {
       "path": "brandbook-clay.html",
       "sourceName": "1-brandbook-clay.html",
-      "bytes": 229429,
-      "sha256": "D1536841D7DE02AB94C98616F562919083F31615C2C14D92E39916EA093B35DA",
-      "revision": "2026-08-15 · cierre cromatico previo a CRI-10: la familia teal se retira y la marca pasa a la lima #89d448, con una sola paleta semantica para Dia y Noche. Sustituye al hash 40D356E6...5501."
+      "bytes": 233155,
+      "sha256": "1B3D7C053AAFF3426ADEEB5B2F30ECC05CD187675994571B73D959641DB03A99",
+      "revision": "2026-08-15 · segunda pasada del cierre cromatico previo a CRI-10: sube la saturacion de la familia tecnica dentro de la misma franja de luminancia (cortante deja el teal oscuro #08816d por el esmeralda #059669), y separa error de momento y cota de aviso, que antes compartian HEX. Sustituye al hash D1536841...B35DA."
     },
     {
       "path": "logo.svg",

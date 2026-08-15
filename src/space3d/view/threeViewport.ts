@@ -102,18 +102,18 @@ export interface Space3DViewport {
  */
 const TOKEN_COLORS = {
   member: ['--sc-color-canvas-member', '#23312c'],
-  memberSelected: ['--sc-color-selection-stroke', '#7d81f8'],
+  memberSelected: ['--sc-color-selection-stroke', '#6a5df2'],
   node: ['--sc-color-text-primary', '#23312c'],
-  nodeSelected: ['--sc-color-selection-stroke', '#7d81f8'],
-  support: ['--sc-color-technical-reaction', '#2c6cda'],
+  nodeSelected: ['--sc-color-selection-stroke', '#6a5df2'],
+  support: ['--sc-color-technical-reaction', '#3a72e3'],
   load: ['--sc-color-technical-load', '#ed4b46'],
   moment: ['--sc-color-technical-moment', '#ed4b46'],
-  deformed: ['--sc-color-technical-deformed', '#9153e1'],
+  deformed: ['--sc-color-technical-deformed', '#8b5cf6'],
   grid: ['--sc-color-canvas-grid', '#e8e1d7'],
   gridStrong: ['--sc-color-canvas-grid-strong', '#d9d0c4'],
   axisX: ['--sc-color-technical-axis', '#ad5e18'],
   axisY: ['--sc-color-action-ink', '#468c09'],
-  axisZ: ['--sc-color-brand-secondary', '#1092d9'],
+  axisZ: ['--sc-color-brand-secondary', '#0f95d1'],
   label: ['--sc-color-text-secondary', '#607068'],
 } as const;
 

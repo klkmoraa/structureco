@@ -36,18 +36,27 @@
        Calibrada a luminancia media: es la única franja en la que un mismo HEX
        llega a 3:1 sobre el marfil (#f7f4ee) Y sobre el laboratorio (#0d151c),
        y además sobre las dos superficies. Ninguno puede ser pastel — el pastel
-       vive fuera de esa franja. */
-    --axial:#1092d9; --momento:#ed4b46; --deformada:#9153e1; --cortante:#08816d;
-    --reaccion:#2c6cda; --eje:#ad5e18; --seleccion:#7d81f8; --exito:#149e39;
+       vive fuera de esa franja. Dentro de esa franja el croma SÍ es libre: esta
+       es la segunda pasada del cierre cromático, y sube la saturación de cada
+       rol hasta el borde de la franja en vez de hundirse en ella (ver la nota
+       "vivo, no apagado" más abajo). */
+    --axial:#0f95d1; --momento:#ed4b46; --deformada:#8b5cf6; --cortante:#059669;
+    --reaccion:#3a72e3; --eje:#ad5e18; --seleccion:#6a5df2; --exito:#2f9a2a;
+    /* El error es un rojo carmín propio, no el coral de --momento: comparten
+       familia (rojo) pero no HEX, para que un momento y un error puedan
+       convivir en pantalla sin leerse como el mismo dato. */
+    --error:#d92e28;
     /* El amarillo es el único hue que no puede ser relleno y tinta a la vez: un canario pastel
        sobre marfil da 1.3:1. Por eso se parte en dos roles — el relleno es igual en ambos temas,
        y la tinta SOLO se usa encima de ese relleno (5.1:1), nunca sobre el fondo de página.
-       --cota es el mismo hue en versión dibujable, para cotas y avisos con trazo. */
-    --canario:#f4d75e; --canario-ink:#6f5210; --cota:#ac850d;
+       --aviso-trazo es el aviso dibujado (mecanismo, borde de campo con error, ícono de toast).
+       --cota es la anotación de medida (cotas, eje neutro de sección) — antes compartía el
+       mismo HEX que el aviso y las dos no se distinguían cuando convivían en una vista. */
+    --canario:#f4d75e; --canario-ink:#6f5210; --cota:#b8860b; --aviso-trazo:#d9720a;
     /* Aula es un acento de EXPERIENCIA (a quién le habla la app), no un resultado técnico del
        solver — por eso vive en su propia familia de color, nunca comparte hue con --deformada.
        --aula es la señal; --aula-solid es el escalón para un control relleno con texto. */
-    --aula:#c15b8f; --aula-solid:#c23e82; --aula-soft: color-mix(in srgb, var(--aula) 14%, var(--surface));
+    --aula:#c94a8f; --aula-solid:#c23e82; --aula-soft: color-mix(in srgb, var(--aula) 14%, var(--surface));
 
     --shadow: 13px 15px 34px rgba(83,72,55,.17), -10px -10px 24px rgba(255,255,255,.95), inset 0 1px 0 rgba(255,255,255,.9);
     --shadow-sm: 8px 9px 19px rgba(83,72,55,.15), -7px -7px 16px rgba(255,255,255,.92);
@@ -255,7 +264,7 @@
   .do b{ font-size:13.5px; display:block; margin-top:6px; }
   .do p{ font-size:12.5px; color:var(--muted); margin:7px 0 0; }
   .yes{ color:var(--brand); font:800 10.5px var(--font-mono); letter-spacing:.05em; }
-  .no{ color:var(--momento); font:800 10.5px var(--font-mono); letter-spacing:.05em; }
+  .no{ color:var(--error); font:800 10.5px var(--font-mono); letter-spacing:.05em; }
 
   .materia3{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:28px; }
   @media (max-width:820px){ .materia3{ grid-template-columns:1fr; } }
@@ -325,7 +334,7 @@
   @media (max-width:600px){ .compare{ grid-template-columns:1fr; } }
   .compare .bad,.compare .good{ padding:16px; border-radius:var(--r-md); font-size:13px; box-shadow:var(--inset); }
   .compare .tag2{ font-family:var(--font-mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; display:block; margin-bottom:6px; }
-  .compare .bad .tag2{ color:var(--momento); } .compare .good .tag2{ color:var(--brand); }
+  .compare .bad .tag2{ color:var(--error); } .compare .good .tag2{ color:var(--brand); }
 
   footer{ padding-block:44px; }
   footer .inner{ display:flex; flex-wrap:wrap; gap:10px 24px; justify-content:space-between; align-items:center; }
@@ -364,13 +373,13 @@
   .btn-ghost:hover{ background:var(--brand-soft); }
   .btn-danger{
     color:#fff;
-    background:linear-gradient(160deg, color-mix(in srgb, var(--momento) 78%, white) 0%, var(--momento) 48%, color-mix(in srgb, var(--momento) 82%, black) 100%);
-    box-shadow: 0 5px 11px color-mix(in srgb, var(--momento) 28%, transparent), inset 0 1.5px 0 rgba(255,255,255,.38), inset 0 -6px 9px color-mix(in srgb, var(--momento) 25%, black 20%);
+    background:linear-gradient(160deg, color-mix(in srgb, var(--error) 78%, white) 0%, var(--error) 48%, color-mix(in srgb, var(--error) 82%, black) 100%);
+    box-shadow: 0 5px 11px color-mix(in srgb, var(--error) 28%, transparent), inset 0 1.5px 0 rgba(255,255,255,.38), inset 0 -6px 9px color-mix(in srgb, var(--error) 25%, black 20%);
   }
   .btn-danger:hover{ transform:translateY(-1px); filter:brightness(1.04); }
   .btn-danger:active{
     transform:translateY(1px) scale(.97);
-    box-shadow: inset 3px 4px 8px color-mix(in srgb, var(--momento) 50%, black 25%), inset -2px -2px 6px color-mix(in srgb, var(--momento) 25%, white 12%);
+    box-shadow: inset 3px 4px 8px color-mix(in srgb, var(--error) 50%, black 25%), inset -2px -2px 6px color-mix(in srgb, var(--error) 25%, white 12%);
   }
   .btn:disabled{ opacity:.4; cursor:not-allowed; box-shadow:none; transform:none; filter:none; }
   .btn:focus-visible{ outline:2px solid var(--axial); outline-offset:2px; }
@@ -416,7 +425,7 @@
   .banner.warning{ background:color-mix(in srgb, var(--canario) 20%, var(--surface)); }
   .banner.warning .note-chip{ width:26px; height:26px; }
   .banner.warning .note-chip svg{ width:15px; height:15px; color:var(--canario-ink); }
-  .banner.error{ background:color-mix(in srgb, var(--momento) 10%, var(--surface)); } .banner.error svg{ color:var(--momento); }
+  .banner.error{ background:color-mix(in srgb, var(--error) 10%, var(--surface)); } .banner.error svg{ color:var(--error); }
 
   .spinner{ width:26px; height:26px; border-radius:50%; border:3px solid var(--line); border-top-color:var(--brand); animation:spin .8s linear infinite; }
   @keyframes spin{ to{ transform:rotate(360deg); } }
@@ -448,7 +457,7 @@
   .ov-popover b{ display:block; font-size:12.5px; margin-bottom:6px; }
   .ov-popover p{ font-size:11.5px; color:var(--muted); margin:0 0 12px; }
   .ov-dialog{ width:250px; padding:24px; border-radius:var(--r-lg); background:var(--raised); box-shadow:var(--shadow); text-align:center; }
-  .ov-dialog .dial-icon{ width:44px; height:44px; border-radius:50%; margin:0 auto 14px; display:grid; place-items:center; background:color-mix(in srgb, var(--momento) 14%, var(--surface)); color:var(--momento); }
+  .ov-dialog .dial-icon{ width:44px; height:44px; border-radius:50%; margin:0 auto 14px; display:grid; place-items:center; background:color-mix(in srgb, var(--error) 14%, var(--surface)); color:var(--error); }
   .ov-dialog h4{ font-size:14.5px; margin-bottom:6px; }
   .ov-dialog p{ font-size:12px; color:var(--muted); margin-bottom:16px; }
   .ov-dialog .dial-actions{ display:flex; gap:8px; justify-content:center; }
@@ -824,17 +833,19 @@
       <div class="palette">
         <div class="swatch" style="background:var(--brand); color:var(--brand-ink);"><b>Lima marca</b><span>#89D448 · relleno de CTA · tinta #16250D</span></div>
         <div class="swatch lighttxt" style="background:var(--brand-edge);"><b>Lima trazo</b><span>#468C09 · cantos · snap · línea de influencia</span></div>
-        <div class="swatch lighttxt" style="background:var(--axial);"><b>Axial N</b><span>#1092D9 · azul técnico</span></div>
-        <div class="swatch lighttxt" style="background:var(--momento);"><b>Momento M</b><span>#ED4B46 · carga puntual · error</span></div>
-        <div class="swatch lighttxt" style="background:var(--deformada);"><b>Deformada δ</b><span>#9153E1 · desplazamientos del solver</span></div>
-        <div class="swatch lighttxt" style="background:var(--cortante);"><b>Cortante V</b><span>#08816D · verde estructural</span></div>
-        <div class="swatch lighttxt" style="background:var(--reaccion);"><b>Reacción</b><span>#2C6CDA · apoyos</span></div>
-        <div class="swatch lighttxt" style="background:var(--seleccion);"><b>Selección y foco</b><span>#7D81F8 · qué está elegido</span></div>
+        <div class="swatch lighttxt" style="background:var(--axial);"><b>Axial N</b><span>#0F95D1 · azul-cian técnico</span></div>
+        <div class="swatch lighttxt" style="background:var(--momento);"><b>Momento M</b><span>#ED4B46 · carga puntual</span></div>
+        <div class="swatch lighttxt" style="background:var(--error);"><b>Error</b><span>#D92E28 · carmín, distinto del momento</span></div>
+        <div class="swatch lighttxt" style="background:var(--deformada);"><b>Deformada δ</b><span>#8B5CF6 · desplazamientos del solver</span></div>
+        <div class="swatch lighttxt" style="background:var(--cortante);"><b>Cortante V</b><span>#059669 · esmeralda vivo</span></div>
+        <div class="swatch lighttxt" style="background:var(--reaccion);"><b>Reacción</b><span>#3A72E3 · apoyos</span></div>
+        <div class="swatch lighttxt" style="background:var(--seleccion);"><b>Selección y foco</b><span>#6A5DF2 · qué está elegido</span></div>
         <div class="swatch" style="background:var(--canario); color:var(--canario-ink);"><b>Canario · aviso</b><span>#F4D75E · relleno + tinta #6F5210</span></div>
-        <div class="swatch lighttxt" style="background:var(--cota);"><b>Cota · aviso dibujable</b><span>#AC850D · el canario, como trazo</span></div>
+        <div class="swatch lighttxt" style="background:var(--aviso-trazo);"><b>Aviso · trazo</b><span>#D9720A · el canario, dibujado</span></div>
+        <div class="swatch lighttxt" style="background:var(--cota);"><b>Cota</b><span>#B8860B · anotación de medida</span></div>
         <div class="swatch lighttxt" style="background:var(--eje);"><b>Eje y corte</b><span>#AD5E18 · tierra</span></div>
-        <div class="swatch lighttxt" style="background:var(--exito);"><b>Éxito</b><span>#149E39 · confirmación</span></div>
-        <div class="swatch lighttxt" style="background:var(--aula);"><b>Aula</b><span>#C15B8F · experiencia, no resultado</span></div>
+        <div class="swatch lighttxt" style="background:var(--exito);"><b>Éxito</b><span>#2F9A2A · confirmación</span></div>
+        <div class="swatch lighttxt" style="background:var(--aula);"><b>Aula</b><span>#C94A8F · experiencia, no resultado</span></div>
         <div class="swatch" style="background:var(--base); border:1px solid var(--line);"><b>Base día</b><span>#F7F4EE · marfil técnico</span></div>
         <div class="swatch lighttxt" style="background:#0d151c;"><b>Base noche</b><span>#0D151C · laboratorio</span></div>
       </div>
@@ -852,6 +863,16 @@
           como sobre laboratorio. El pastel queda fuera de esa franja por definición: es demasiado claro para verse
           sobre papel. Lo pastel-vivo de la marca vive donde sí cabe, en el <b>relleno</b> del CTA, que es superficie y
           no trazo — y por eso lleva tinta oscura y canto medido, nunca texto blanco.</p>
+      </div>
+      <div class="note note-info">
+        <span class="note-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12.5l2 2 4.5-5"/><circle cx="12" cy="12" r="9"/></svg></span>
+        <p><b>Vivo dentro de la franja, no apagado.</b> La franja de luminancia fija el suelo de contraste, no la
+          saturación. La primera pasada de este cierre resolvió el suelo bajando el croma —<code>--cortante</code> cayó
+          en <code>#08816d</code>, un teal oscuro y grisáceo que leía a "corporativo", no a marca técnica. Esta pasada
+          sube la saturación de cada rol hasta el borde de la misma franja: mismo suelo de contraste, verde de verdad
+          en vez de teal apagado. El único cambio de fondo —no sólo de vividez— es que <code>--error</code> se separa
+          de <code>--momento</code> y <code>--cota</code> se separa de <code>--aviso-trazo</code>: antes compartían HEX
+          y no se podían distinguir cuando convivían en una vista.</p>
       </div>
       <p class="caption" style="margin-top:16px; max-width:60ch;">Ningún significado depende solo del color: cada rol
         técnico se refuerza con forma (línea continua/discontinua), icono o etiqueta — heredado del principio de
@@ -876,8 +897,10 @@
           <p><b>El canario es la excepción, y por eso tiene regla propia:</b> es el único hue cuya versión "suave" no
             existe — un 14% de amarillo sobre superficie clara no da contraste para ningún texto. El canario siempre
             va a relleno pleno con <code>--canario-ink</code> encima. Nunca es trazo suelto, nunca es tinta sobre el
-            fondo de página, nunca lleva texto blanco. Cuando un aviso necesita <i>dibujarse</i> —una cota, un borde,
-            un icono— no se usa el canario sino <code>--cota</code>, que es el mismo hue bajado a la franja legible.</p>
+            fondo de página, nunca lleva texto blanco. Cuando un aviso necesita <i>dibujarse</i> —un borde de campo,
+            un icono, un miembro en mecanismo— no se usa el canario sino <code>--aviso-trazo</code>, el mismo hue
+            bajado a la franja legible. <code>--cota</code> es un rol distinto: la anotación de medida del dibujo
+            técnico, no un aviso.</p>
         </div>
         <div class="note">
           <span class="note-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 16.5h.01"/><path d="M10.3 3.9 2.6 17.4a1.8 1.8 0 0 0 1.6 2.7h15.6a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z"/></svg></span>
@@ -902,8 +925,17 @@
               <tr><td>#468c09 sobre #15232b (edge sobre superficie noche)</td><td>3.84:1</td><td>El mismo HEX, y el peor de sus cuatro fondos</td></tr>
               <tr><td>#6f5210 sobre #f4d75e (tinta sobre canario)</td><td>5.10:1</td><td>AA texto normal — en ambos temas</td></tr>
               <tr><td>#f4d75e sobre #f7f4ee (canario como trazo)</td><td>1.30:1</td><td><b>Prohibido</b> — por eso el canario nunca es tinta</td></tr>
-              <tr><td>#ed4b46 (momento) — peor de sus cuatro fondos</td><td>3.36:1</td><td>1.4.11 en día y en noche con un solo HEX</td></tr>
-              <tr><td>#1092d9 (axial) — peor de sus cuatro fondos</td><td>3.12:1</td><td>1.4.11 en día y en noche con un solo HEX</td></tr>
+              <tr><td>#ed4b46 (momento) — peor de sus cuatro fondos</td><td>3.60:1</td><td>1.4.11 en día y en noche con un solo HEX</td></tr>
+              <tr><td>#d92e28 (error) — peor de sus cuatro fondos</td><td>3.34:1</td><td>Rojo propio, ya no comparte HEX con momento</td></tr>
+              <tr><td>#0f95d1 (axial) — peor de sus cuatro fondos</td><td>3.29:1</td><td>1.4.11 en día y en noche con un solo HEX</td></tr>
+              <tr><td>#059669 (cortante) — peor de sus cuatro fondos</td><td>3.68:1</td><td>Esmeralda vivo, sustituye al teal #08816d</td></tr>
+              <tr><td>#8b5cf6 (deformada) — peor de sus cuatro fondos</td><td>3.79:1</td><td>1.4.11 en día y en noche con un solo HEX</td></tr>
+              <tr><td>#3a72e3 (reacción) — peor de sus cuatro fondos</td><td>3.59:1</td><td>1.4.11 en día y en noche con un solo HEX</td></tr>
+              <tr><td>#6a5df2 (selección/foco) — peor de sus cuatro fondos</td><td>3.41:1</td><td>Distinto de axial y de reacción a la vez</td></tr>
+              <tr><td>#2f9a2a (éxito) — peor de sus cuatro fondos</td><td>3.55:1</td><td>Hue propio, distinto de marca y de cortante</td></tr>
+              <tr><td>#d9720a (aviso, trazo) — peor de sus cuatro fondos</td><td>3.23:1</td><td>Ya no comparte HEX con la cota</td></tr>
+              <tr><td>#b8860b (cota) — peor de sus cuatro fondos</td><td>3.18:1</td><td>Anotación de medida, separada del aviso</td></tr>
+              <tr><td>#c94a8f (aula) — peor de sus cuatro fondos</td><td>3.72:1</td><td>1.4.11 en día y en noche con un solo HEX</td></tr>
               <tr><td>#ffffff sobre #c93028 (error sólido)</td><td>5.33:1</td><td>Los rellenos de estado sí llevan blanco: son más profundos</td></tr>
               <tr><td>#23312c (ink) sobre #f7f4ee</td><td>12.36:1</td><td>Texto de párrafo — muy por encima de AAA</td></tr>
             </tbody>
@@ -926,18 +958,20 @@
 <span class="tok">--brand-edge</span>:    <span class="val">#468c09</span>;  <span class="cm">/* canto y trazo — lo unico dibujable */</span>
 
 <span class="cm">/* Tecnicos — mismo HEX en dia y en noche */</span>
-<span class="tok">--axial</span>:        <span class="val">#1092d9</span>;
-<span class="tok">--cortante</span>:     <span class="val">#08816d</span>;
-<span class="tok">--momento</span>:      <span class="val">#ed4b46</span>;  <span class="cm">/* carga puntual y error */</span>
-<span class="tok">--deformada</span>:    <span class="val">#9153e1</span>;
-<span class="tok">--reaccion</span>:     <span class="val">#2c6cda</span>;
+<span class="tok">--axial</span>:        <span class="val">#0f95d1</span>;
+<span class="tok">--cortante</span>:     <span class="val">#059669</span>;
+<span class="tok">--momento</span>:      <span class="val">#ed4b46</span>;  <span class="cm">/* carga puntual */</span>
+<span class="tok">--error</span>:        <span class="val">#d92e28</span>;  <span class="cm">/* carmin, distinto del momento */</span>
+<span class="tok">--deformada</span>:    <span class="val">#8b5cf6</span>;
+<span class="tok">--reaccion</span>:     <span class="val">#3a72e3</span>;
 <span class="tok">--eje</span>:          <span class="val">#ad5e18</span>;
-<span class="tok">--seleccion</span>:    <span class="val">#7d81f8</span>;  <span class="cm">/* seleccion y foco */</span>
-<span class="tok">--exito</span>:        <span class="val">#149e39</span>;
-<span class="tok">--cota</span>:         <span class="val">#ac850d</span>;  <span class="cm">/* aviso dibujable */</span>
+<span class="tok">--seleccion</span>:    <span class="val">#6a5df2</span>;  <span class="cm">/* seleccion y foco */</span>
+<span class="tok">--exito</span>:        <span class="val">#2f9a2a</span>;
+<span class="tok">--aviso-trazo</span>:  <span class="val">#d9720a</span>;  <span class="cm">/* aviso dibujable */</span>
+<span class="tok">--cota</span>:         <span class="val">#b8860b</span>;  <span class="cm">/* anotacion de medida */</span>
 <span class="tok">--canario</span>:      <span class="val">#f4d75e</span>;  <span class="cm">/* relleno de aviso */</span>
 <span class="tok">--canario-ink</span>:  <span class="val">#6f5210</span>;  <span class="cm">/* tinta, solo encima del relleno */</span>
-<span class="tok">--aula</span>:         <span class="val">#c15b8f</span>;
+<span class="tok">--aula</span>:         <span class="val">#c94a8f</span>;
 <span class="tok">--aula-solid</span>:   <span class="val">#c23e82</span>;  <span class="cm">/* relleno con texto encima */</span></code></pre>
         </div>
       </div>
