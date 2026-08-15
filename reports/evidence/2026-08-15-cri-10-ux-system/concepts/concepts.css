@@ -781,35 +781,23 @@ body {
 .dk.is-active { background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); color: var(--sc-color-action-ink); }
 
 /* --------------------------------------------------------------------- */
-/* WELCOME · segunda pasada — reestructura, no redecora.                  */
-/*                                                                        */
-/* Qué cambia de estructura respecto a la pasada anterior (`9775872`),    */
-/* y por qué — el detalle completo está en el informe de esta pasada:     */
-/*   1. La Cinta de trabajo (Resolver/Datasheet/Doctor/undo) sale de       */
-/*      Welcome. Es una barra de ANÁLISIS ACTIVO — aquí no hay análisis    */
-/*      activo. `.wh` es una cabecera propia y ligera, coherente con la    */
-/*      que ya tiene `WelcomeScreen.tsx` en producción (no una invención). */
-/*   2. «Continuar proyecto» deja de ser una tarjeta más entre cuatro      */
-/*      iguales — se convierte en `.spotlight`, la acción más fuerte de    */
-/*      toda la pantalla. Es el caso más común (quien vuelve a trabajar)   */
-/*      y competía en pie de igualdad con «nuevo ejercicio».               */
-/*   3. Los tres pasos (Modela/Carga/Analiza) SALEN — relleno genérico de  */
-/*      onboarding que no le dice nada a quien ya sabe lo que es esto; el  */
-/*      badge + subtítulo + highlights ya cubren esa promesa.              */
-/*   4. El pórtico 3D gana una vitrina propia (`.stage`) con la misma      */
-/*      superficie que el lienzo real (`--sc-color-bg-canvas`) y marcas de */
-/*      esquina — dialoga con «la mesa y el instrumento» en vez de flotar  */
-/*      junto al texto.                                                    */
-/*   5. Cada superficie interactiva sube de `surface-1` a                  */
-/*      `surface-elevated` y de canto sutil a `border-strong` EN REPOSO —  */
-/*      es la corrección directa del problema de Noche: antes una tarjeta  */
-/*      compartía el mismo fondo que el `.ws__frame` que la contenía, y en */
-/*      Noche eso es prácticamente invisible (`#15232b` sobre `#15232b`).  */
+/* ENTRADA · tercera pasada — rediseño total, lenguaje de app iOS en clay. */
+/*                                                                         */
+/* Qué cambia de raíz respecto a `4039c5c`:                                */
+/*   1. La entrada deja de ser UNA pantalla larga y pasa a ser un FLUJO de  */
+/*      hojas (`.sheet`) que se despegan una sobre otra, como una app       */
+/*      nativa: Bienvenida → Cómo trabajas → Por dónde empiezas → Mesa.     */
+/*      Quien ya tiene proyectos entra directo a la Mesa y no cruza nada.   */
+/*   2. Lenguaje iOS traducido a arcilla, NUNCA a vidrio: asa de hoja,      */
+/*      título grande, lista agrupada con inserción, botón de ancho         */
+/*      completo abajo, puntos de paso. Todo con canto, cavidad y volumen   */
+/*      clay — cero `backdrop-filter`, cero desenfoque decorativo.          */
+/*   3. El pórtico es material de verdad (ver `portico3d.js`): grano de      */
+/*      superficie, relieve difuso, canto redondeado, oclusión en juntas.   */
 /* --------------------------------------------------------------------- */
 
-/* Mesa de dibujo: la rejilla técnica de fondo de toda la pantalla, igual
-   mecanismo que `.welcome-screen` en `styles.css` (dos rejillas superpuestas,
-   fina y mayor, ambas del token de borde, nunca del acento). */
+/* Mesa de dibujo: la rejilla técnica de fondo, mismo mecanismo que
+   `.welcome-screen` en `styles.css` (dos rejillas, del token de borde). */
 .ws {
   flex: 1 1 auto; min-height: 0; overflow: hidden;
   --ws-grid-fine: color-mix(in srgb, var(--sc-color-border) 30%, transparent);
@@ -821,9 +809,181 @@ body {
     linear-gradient(90deg, var(--ws-grid-fine) 1px, transparent 1px);
   background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px;
 }
-.ws__pad { padding: var(--sc-space-5) var(--sc-space-7) var(--sc-space-7); display: grid; gap: var(--sc-space-4); }
 
-/* -- Cabecera propia de Welcome (NO la Cinta de trabajo) ---------------- */
+/* ====================================================================== */
+/* PÓRTICO CLAY — el material vive aquí; la geometría, en portico3d.js     */
+/* ====================================================================== */
+.p3d { display: block; width: 100%; max-width: 460px; height: auto; overflow: visible; }
+/* Dentro de la hoja del flujo el pórtico se acota: con 460px la hoja del paso 1
+   medía 954px y no cabía en un 1440x900 real. Medido contra el DOM. */
+.sheet2__stage .p3d { max-width: 340px; }
+/* Canto redondeado real: el trazo del propio color con `linejoin:round`
+   redondea la arista. La arcilla no tiene aristas vivas — es la diferencia
+   entre una caja de cartón y una pieza modelada a mano. */
+.p3d__face {
+  filter: brightness(calc(1.72 * var(--face-shade, 1) - 0.283));
+  stroke-width: 1.6; stroke-linejoin: round;
+}
+/* Caída de luz dentro de cada cara. `multiply` no: sobre el marfil ensucia.
+   `soft-light` conserva el tono del token y sólo modula el volumen. */
+.p3d__falloff { mix-blend-mode: soft-light; stroke: none; pointer-events: none; }
+.p3d__ground line { stroke: var(--sc-color-border-strong); stroke-width: 1; vector-effect: non-scaling-stroke; opacity: 0.55; }
+/* Sombra de CONTACTO: neutra (color de borde, no de marca), corta y pegada al
+   pie. Nunca el halo ambiental de marca que este hero tuvo una vez y que
+   producción ya retiró. */
+.p3d__contact { fill: var(--sc-color-border-strong); opacity: 0.22; filter: blur(5px); }
+/* Oclusión ambiental en las juntas: sin esto las piezas parecen pegadas, no
+   apoyadas. Es sombra de contacto entre dos sólidos, no una sombra proyectada. */
+.p3d__ao { fill: #0b1410; opacity: 0.16; filter: blur(3.5px); pointer-events: none; }
+.p3d__ao--soft { opacity: 0.11; }
+/* Luz de canto sobre la arista superior del dintel. Vive EN el canto, con
+   1.5px de ancho: es un filo iluminado, no un resplandor alrededor. */
+.p3d__rim { stroke: #ffffff; stroke-width: 1.5; stroke-linecap: round; opacity: 0.34; }
+:root[data-theme='dark'] .p3d__rim { opacity: 0.2; }
+:root[data-theme='dark'] .p3d__ao { opacity: 0.3; }
+:root[data-theme='dark'] .p3d__contact { opacity: 0.34; }
+
+/* ====================================================================== */
+/* HOJAS · el flujo de entrada. Cada paso es una hoja clay.                */
+/* ====================================================================== */
+
+/* Escenario: centra la hoja y deja ver el fondo de mesa alrededor. */
+.flow { height: 100%; display: grid; place-items: center; padding: var(--sc-space-6); position: relative; }
+
+/* Pila: las hojas de atrás asoman por arriba, como una baraja. Es lo que
+   comunica «esto tiene pasos» sin escribirlo. */
+.flow__stack { position: relative; width: min(560px, 100%); }
+.flow__ghost {
+  position: absolute; left: 50%; translate: -50% 0;
+  border-radius: var(--sc-radius-sheet);
+  background: var(--sc-color-surface-1);
+  border: 1px solid var(--sc-color-border);
+  box-shadow: var(--sc-shadow-clay-sm);
+}
+.flow__ghost--1 { width: 94%; top: -13px; height: 40px; opacity: 0.75; }
+.flow__ghost--2 { width: 87%; top: -25px; height: 40px; opacity: 0.45; }
+
+.sheet2 {
+  position: relative;
+  display: grid; gap: var(--sc-space-5);
+  padding: var(--sc-space-4) var(--sc-space-6) var(--sc-space-6);
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-sheet);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-shadow-clay-lg);
+}
+/* Asa de hoja — la señal iOS de «esto se arrastra». En clay es una cavidad,
+   no una barra flotante: va hundida en la propia superficie. */
+.sheet2__grab { width: 38px; height: 5px; margin: 0 auto; border-radius: 999px; background: var(--sc-color-surface-2); box-shadow: var(--sc-shadow-clay-pressed); }
+
+.sheet2__nav { display: flex; align-items: center; gap: var(--sc-space-3); min-height: 34px; }
+.sheet2__back { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--sc-color-border-strong); border-radius: 999px; background: var(--sc-color-surface-elevated); box-shadow: var(--sc-shadow-clay-xs); color: var(--sc-color-text-secondary); }
+.sheet2__back svg { width: 17px; height: 17px; }
+.sheet2__step { flex: 1 1 auto; text-align: center; color: var(--sc-color-text-muted); font-family: var(--sc-font-mono); font-size: 10.5px; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; }
+.sheet2__skip { border: 0; background: transparent; color: var(--sc-color-text-link); font-size: 12.5px; font-weight: 700; }
+
+/* Título grande iOS: alineado a la izquierda, peso alto, tracking cerrado. */
+.sheet2__head { display: grid; gap: 8px; }
+.sheet2__head h1 { margin: 0; font-family: var(--sc-font-display); font-size: 30px; line-height: 1.1; letter-spacing: var(--sc-tracking-display); font-weight: 750; text-wrap: balance; }
+.sheet2__head p { margin: 0; color: var(--sc-color-text-secondary); font-size: 14.5px; line-height: 1.5; max-width: 46ch; }
+.sheet2__head em { font-style: normal; color: var(--sc-color-action-ink); }
+
+/* Puntos de paso — el indicador de progreso de una app nativa. */
+.dots { display: flex; justify-content: center; gap: 7px; }
+.dots i { width: 7px; height: 7px; border-radius: 999px; background: var(--sc-color-surface-2); box-shadow: var(--sc-shadow-clay-pressed); }
+.dots i.is-on { width: 22px; background: var(--sc-color-action-primary); box-shadow: inset 0 1px 0 rgba(255,255,255,.35); }
+
+/* Botón de ancho completo abajo — el patrón de acción primaria en móvil. */
+.cta {
+  width: 100%; min-height: 50px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  border: 1px solid var(--sc-color-action-edge); border-radius: var(--sc10-radius-lg);
+  background: var(--sc-gradient-clay-action); color: var(--sc-color-action-foreground);
+  box-shadow: var(--sc-shadow-clay-action);
+  font-size: 15px; font-weight: 750;
+}
+.cta:hover { box-shadow: var(--sc-shadow-clay-action-hover); }
+.cta:active { box-shadow: var(--sc-shadow-clay-action-pressed); transform: var(--sc-clay-press-transform); }
+.cta svg { width: 18px; height: 18px; }
+.cta--ghost { background: var(--sc-color-surface-elevated); border-color: var(--sc-color-border-strong); color: var(--sc-color-text-primary); box-shadow: var(--sc-shadow-clay-xs); }
+.cta--ghost:active { box-shadow: var(--sc-shadow-clay-pressed); }
+.sheet2__foot { display: grid; gap: var(--sc-space-3); }
+.sheet2__link { border: 0; background: transparent; color: var(--sc-color-text-link); font-size: 13.5px; font-weight: 700; text-align: center; }
+
+/* Vitrina del pórtico dentro de la hoja: la superficie del lienzo real. */
+.sheet2__stage {
+  position: relative; display: grid; justify-items: center; gap: 8px;
+  padding: clamp(12px, 2.2vw, 18px) 16px 12px;
+  border-radius: var(--sc10-radius-xl);
+  background: var(--sc-color-bg-canvas);
+  box-shadow: var(--sc-shadow-clay-pressed);
+}
+.stage__tick { position: absolute; width: 16px; height: 16px; border-color: var(--sc-color-border-strong); opacity: 0.8; }
+.stage__tick--tl { top: 10px; left: 10px; border-top: 1.5px solid; border-left: 1.5px solid; }
+.stage__tick--tr { top: 10px; right: 10px; border-top: 1.5px solid; border-right: 1.5px solid; }
+.stage__tick--bl { bottom: 10px; left: 10px; border-bottom: 1.5px solid; border-left: 1.5px solid; }
+.stage__tick--br { bottom: 10px; right: 10px; border-bottom: 1.5px solid; border-right: 1.5px solid; }
+.stage__cap { font-family: var(--sc-font-mono); font-size: 10.5px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sc-color-text-muted); }
+.stage__cap b { color: var(--sc-color-text-secondary); font-weight: 650; }
+
+/* -- Tarjetas de elección (paso «cómo trabajas») ------------------------ */
+/* Selección = HUNDIDA (Brandbook §08). No se resalta con más elevación. */
+.pick { display: grid; gap: var(--sc-space-3); }
+.pick__i {
+  --lc: var(--sc-color-action-ink);
+  display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: var(--sc-space-3);
+  padding: var(--sc-space-4); text-align: left;
+  border: 1.5px solid var(--sc-color-border-strong); border-radius: var(--sc10-radius-lg);
+  background: var(--sc-color-surface-elevated); box-shadow: var(--sc-shadow-clay-sm);
+}
+.pick__i:hover { border-color: var(--lc); box-shadow: var(--sc-shadow-clay-md); }
+.pick__i.is-on { border-color: var(--lc); background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); }
+.pick__i--aula { --lc: var(--sc-color-aula); }
+.pick__ico { width: 46px; height: 46px; display: grid; place-items: center; border-radius: var(--sc10-radius-md); border: 1.5px solid color-mix(in srgb, var(--lc) 42%, var(--sc-color-border-strong)); background: var(--sc-color-action-subtle); color: var(--lc); box-shadow: var(--sc-shadow-clay-xs); }
+.pick__i--aula .pick__ico { background: var(--sc-color-accent-violet-soft); }
+.pick__ico svg { width: 22px; height: 22px; }
+.pick__txt { min-width: 0; display: grid; gap: 3px; }
+.pick__txt strong { font-size: 15px; font-weight: 750; letter-spacing: var(--sc-tracking-tight); }
+.pick__txt span { color: var(--sc-color-text-secondary); font-size: 12.5px; line-height: 1.45; }
+.pick__check { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 999px; border: 1.5px solid var(--sc-color-border-strong); color: transparent; }
+.pick__i.is-on .pick__check { border-color: var(--lc); background: var(--lc); color: var(--sc-color-on-signal); }
+.pick__check svg { width: 14px; height: 14px; }
+
+/* -- Lista agrupada con inserción (paso «por dónde empiezas») ------------ */
+/* El patrón de lista de ajustes de iOS, en clay: el grupo es una cavidad y
+   cada fila una superficie dentro de ella, separadas por filete. */
+.rows { border-radius: var(--sc10-radius-lg); background: var(--sc-color-surface-2); box-shadow: var(--sc-shadow-clay-pressed); overflow: hidden; }
+.rows__i {
+  width: 100%; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: var(--sc-space-3);
+  padding: var(--sc-space-3) var(--sc-space-4); text-align: left;
+  border: 0; border-bottom: 1px solid var(--sc-color-border-soft);
+  background: var(--sc-color-surface-elevated); color: var(--sc-color-text-primary);
+}
+.rows__i:last-child { border-bottom: 0; }
+.rows__i:hover { background: var(--sc-color-surface-1); }
+.rows__i:active { background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); }
+.rows__ico { width: 38px; height: 38px; display: grid; place-items: center; border-radius: var(--sc10-radius-md); border: 1.5px solid color-mix(in srgb, var(--rc, var(--sc-color-action-ink)) 40%, var(--sc-color-border-strong)); background: var(--sc-color-action-subtle); color: var(--rc, var(--sc-color-action-ink)); box-shadow: var(--sc-shadow-clay-xs); }
+.rows__ico svg { width: 19px; height: 19px; }
+.rows__i--aula { --rc: var(--sc-color-aula); }
+.rows__i--aula .rows__ico { background: var(--sc-color-accent-violet-soft); }
+.rows__i--3d { --rc: var(--sc-color-brand-secondary); }
+.rows__i--3d .rows__ico { background: color-mix(in srgb, var(--sc-color-brand-secondary) 18%, var(--sc-color-surface-elevated)); }
+.rows__t { min-width: 0; display: grid; gap: 2px; }
+.rows__t strong { font-size: 14px; font-weight: 700; }
+.rows__t span { color: var(--sc-color-text-secondary); font-size: 12px; }
+.rows__i > svg:last-child { width: 17px; height: 17px; color: var(--sc-color-text-muted); }
+.rows__tag { font-size: 9.5px; font-weight: 750; padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, var(--rc, var(--sc-color-action-ink)) 18%, transparent); color: var(--rc, var(--sc-color-action-ink)); white-space: nowrap; }
+
+/* ====================================================================== */
+/* MESA · el destino del flujo, y la entrada directa de quien ya volvió.   */
+/* ====================================================================== */
+/* `minmax(0, 1fr)` y no el `auto` implícito: una sola columna `auto` se
+   dimensiona al MAX-CONTENT del hijo más ancho, así que la cabecera (marca +
+   velocidad + dos botones) ensanchaba la columna entera y TODO el contenido
+   se salía por la derecha en Compact — 51px de desbordamiento, invisible en
+   Expanded. Es el mismo motivo por el que `.ws__frame` lleva la suya. */
+.ws__pad { padding: var(--sc-space-5) var(--sc-space-7) var(--sc-space-7); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sc-space-4); }
+
 .wh { display: flex; align-items: center; gap: var(--sc-space-3); min-height: 52px; }
 .wh__brand { display: flex; align-items: center; gap: 10px; font-family: var(--sc-font-display); font-weight: 750; font-size: 17px; letter-spacing: var(--sc-tracking-tight); }
 .wh__mark { width: 30px; height: 30px; flex: 0 0 auto; display: grid; place-items: center; border-radius: var(--sc10-radius-sm); background: var(--sc-color-action-primary); border: 1px solid var(--sc-color-action-edge); color: var(--sc-color-action-foreground); font-weight: 800; font-size: 13px; }
@@ -831,113 +991,62 @@ body {
 .wh__actions { display: flex; align-items: center; gap: var(--sc-space-2); }
 .wh__actions .ib { background: var(--sc-color-surface-elevated); border-color: var(--sc-color-border-strong); }
 
-/* -- El único bloque grande: la hoja clay que contiene todo lo demás ---- */
-.ws__frame { border: var(--sc-clay-edge); border-radius: var(--sc-radius-hero); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-md); padding: clamp(24px, 3.6vw, 40px); display: grid; gap: clamp(24px, 3.6vh, 40px); }
-.ws__speed { display: flex; align-items: center; gap: var(--sc-space-2); }
+.ws__frame { border: var(--sc-clay-edge); border-radius: var(--sc-radius-hero); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-md); padding: clamp(22px, 3.2vw, 34px); display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(20px, 3vh, 30px); }
 
-/* -- Hero: copy + vitrina del pórtico 3D --------------------------------- */
-.hero3 { display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr); align-items: center; gap: clamp(28px, 4vw, 56px); }
-.hero3__copy { min-width: 0; display: grid; gap: 4px; align-content: start; }
-.badge2 { display: inline-flex; align-items: center; gap: 8px; width: max-content; margin-bottom: 14px; padding: 6px 14px 6px 11px; border-radius: 999px; background: var(--sc-color-surface-elevated); border: 1px solid var(--sc-color-border-strong); color: var(--sc-color-text-secondary); font-family: var(--sc-font-mono); font-size: 11px; font-weight: 650; letter-spacing: 0.03em; }
-.badge2 svg { width: 14px; height: 14px; color: var(--sc-color-action-ink); }
-.title2 { margin: 0; font-family: var(--sc-font-display); font-size: clamp(2.1rem, 1.5rem + 2.4vw, 3.1rem); line-height: 1.05; letter-spacing: var(--sc-tracking-display); font-weight: 720; }
-/* El énfasis es tinta plana de marca, NUNCA degradado — esta es la corrección
-   que `src/styles.css` ya hizo (`.welcome-title-accent{background:none}`
-   gana la cascada sobre la declaración con gradiente que la precede). */
-.title2 em { font-style: normal; color: var(--sc-color-action-ink); }
-.sub2 { margin: 14px 0 0; color: var(--sc-color-text-secondary); font-size: 16px; line-height: 1.55; max-width: 40ch; }
-/* Antes eran pills (mismo peso visual que un CTA); son prueba de confianza
-   TERCIARIA y ahora se leen como tal — texto plano con separadores, no
-   botones que no lo son. */
-.hl2 { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 18px 0 0; padding: 0; color: var(--sc-color-text-secondary); font-size: 12.5px; }
-.hl2__i { display: inline-flex; align-items: center; gap: 6px; font-weight: 650; }
-.hl2__i svg { width: 14px; height: 14px; color: var(--sc-color-state-success); flex: 0 0 auto; }
-.hl2__sep { color: var(--sc-color-text-disabled); }
+/* Saludo de la mesa: título grande de app, no titular de landing. */
+.mesa__hi { display: grid; gap: 5px; }
+.mesa__hi h1 { margin: 0; font-family: var(--sc-font-display); font-size: 27px; line-height: 1.12; letter-spacing: var(--sc-tracking-display); font-weight: 750; }
+.mesa__hi p { margin: 0; color: var(--sc-color-text-secondary); font-size: 14px; }
 
-.hero3__fig { min-width: 0; display: grid; place-items: center; }
-
-/* -- Vitrina del pórtico: la misma superficie que el lienzo real --------- */
-.stage {
-  position: relative;
-  padding: clamp(20px, 3vw, 32px) clamp(16px, 2.4vw, 28px) 18px;
-  border-radius: var(--sc10-radius-xl);
-  background: var(--sc-color-bg-canvas);
-  box-shadow: var(--sc-shadow-clay-pressed);
-  display: grid; justify-items: center; gap: 10px;
-}
-.stage__tick { position: absolute; width: 18px; height: 18px; border-color: var(--sc-color-border-strong); opacity: 0.85; }
-.stage__tick--tl { top: 10px; left: 10px; border-top: 1.5px solid; border-left: 1.5px solid; }
-.stage__tick--tr { top: 10px; right: 10px; border-top: 1.5px solid; border-right: 1.5px solid; }
-.stage__tick--bl { bottom: 10px; left: 10px; border-bottom: 1.5px solid; border-left: 1.5px solid; }
-.stage__tick--br { bottom: 10px; right: 10px; border-bottom: 1.5px solid; border-right: 1.5px solid; }
-.portico3d { display: block; width: 100%; max-width: 480px; height: auto; overflow: visible; }
-/* Sombreado por cara: mismo mecanismo y misma calibración que `.portal-hero__face`
-   en producción (recta ajustada a los tres shades reales de DEFAULT_PORTAL —
-   0.584/0.703/0.835 — no al rango [0,1] teórico, o las tres caras se aplanan). */
-.portico3d__face { filter: brightness(calc(1.72 * var(--face-shade, 1) - 0.283)); stroke: none; }
-.portico3d__ground line { stroke: var(--sc-color-border-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
-/* Sombra de CONTACTO, neutra (color de borde, no de marca) y muy localizada
-   bajo cada zapata — nunca el halo ambiental de marca que este hero tenía
-   antes (`radial-gradient` + `blur(26px)`, ya retirado en producción). */
-.portico3d__contact { fill: var(--sc-color-border-strong); opacity: 0.2; filter: blur(6px); }
-.stage__cap { font-family: var(--sc-font-mono); font-size: 10.5px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sc-color-text-muted); }
-.stage__cap b { color: var(--sc-color-text-secondary); font-weight: 650; }
-
-/* -- Spotlight: la acción más fuerte de la pantalla ---------------------- */
-/* Reemplaza a la tarjeta «Continuar proyecto» de la pasada anterior, que
-   competía en igualdad con «nuevo ejercicio». Quien vuelve a trabajar es el
-   caso más común — el tinte de marca y el tamaño lo dicen sin necesitar más
-   color que el que ya usa cualquier superficie de acción. */
-.spotlight {
-  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sc-space-4);
-  padding: var(--sc-space-4) var(--sc-space-5);
-  border: 1.5px solid var(--sc-color-action-edge);
-  border-radius: var(--sc10-radius-xl);
+/* Tarjeta de continuación: la acción más probable, con su propia vitrina 3D
+   a un lado — el pórtico deja de ser adorno del hero y pasa a ser la
+   previsualización del proyecto al que vas a volver. */
+.resume {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.72fr); align-items: stretch; gap: var(--sc-space-5);
+  padding: var(--sc-space-5);
+  border: 1.5px solid var(--sc-color-action-edge); border-radius: var(--sc10-radius-xl);
   background: color-mix(in srgb, var(--sc-color-action-primary) 10%, var(--sc-color-surface-elevated));
   box-shadow: var(--sc-shadow-clay-sm);
 }
-.spotlight__thumb { width: 60px; height: 46px; flex: 0 0 auto; border-radius: var(--sc10-radius-md); background: var(--sc-color-bg-canvas); border: 1px solid var(--sc-color-border-strong); position: relative; overflow: hidden; }
-.spotlight__thumb svg { position: absolute; top: 0; left: 0; }
-.spotlight__body { min-width: 0; display: grid; gap: 3px; }
-.spotlight__eyebrow { color: var(--sc-color-action-ink); font-size: 11px; font-weight: 750; text-transform: uppercase; letter-spacing: 0.06em; }
-.spotlight__body strong { font-size: 17px; font-weight: 750; letter-spacing: var(--sc-tracking-tight); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.spotlight__body span { color: var(--sc-color-text-secondary); font-size: 12.5px; }
-.spotlight__go { height: 44px; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; padding: 0 var(--sc-space-4); border: 1px solid var(--sc-color-action-edge); border-radius: var(--sc10-radius-md); background: var(--sc-gradient-clay-action); color: var(--sc-color-action-foreground); box-shadow: var(--sc-shadow-clay-action); font-size: 14px; font-weight: 750; white-space: nowrap; }
-.spotlight__go:hover { box-shadow: var(--sc-shadow-clay-action-hover); }
-.spotlight__go:active { box-shadow: var(--sc-shadow-clay-action-pressed); transform: var(--sc-clay-press-transform); }
-.spotlight__go svg { width: 17px; height: 17px; }
+.resume__l { min-width: 0; display: grid; align-content: center; gap: var(--sc-space-3); }
+.resume__eyebrow { color: var(--sc-color-action-ink); font-size: 11px; font-weight: 750; text-transform: uppercase; letter-spacing: 0.07em; }
+.resume__l h2 { margin: 0; font-size: 21px; font-weight: 750; letter-spacing: var(--sc-tracking-tight); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resume__meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.resume__meta span { padding: 4px 10px; border-radius: 999px; background: var(--sc-color-surface-elevated); border: 1px solid var(--sc-color-border-strong); color: var(--sc-color-text-secondary); font-family: var(--sc-font-mono); font-size: 11px; font-weight: 650; }
+.resume__go { width: max-content; }
+.resume__r { border-radius: var(--sc10-radius-lg); background: var(--sc-color-bg-canvas); box-shadow: var(--sc-shadow-clay-pressed); position: relative; overflow: hidden; display: grid; place-items: center; min-height: 150px; }
+.resume__r svg { position: absolute; top: 0; left: 0; }
 
-/* -- Secundarios: tres, no cuatro — «continuar» ya se fue a spotlight ---- */
-.secondary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sc-space-3); }
-.launcher {
+/* Trío de accesos: mismo peso entre sí, por debajo de la continuación. */
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sc-space-3); }
+.tile {
   --lc: var(--sc-color-action-ink);
-  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--sc-space-3);
+  display: grid; gap: var(--sc-space-3); align-content: start;
   padding: var(--sc-space-4); text-align: left;
   border: 1.5px solid var(--sc-color-border-strong); border-radius: var(--sc10-radius-lg);
   background: var(--sc-color-surface-elevated); box-shadow: var(--sc-shadow-clay-sm);
 }
-.launcher:hover { border-color: var(--lc); box-shadow: var(--sc-shadow-clay-lg); transform: translateY(-2px); }
-.launcher:active { box-shadow: var(--sc-shadow-clay-pressed); transform: translateY(1px); }
-.launcher__i { width: 44px; height: 44px; flex: 0 0 auto; display: grid; place-items: center; border-radius: var(--sc10-radius-md); border: 1.5px solid color-mix(in srgb, var(--lc) 40%, var(--sc-color-border-strong)); box-shadow: var(--sc-shadow-clay-xs); background: var(--sc-color-action-subtle); color: var(--lc); }
-.launcher__i svg { width: 21px; height: 21px; }
-.launcher--aula { --lc: var(--sc-color-aula); }
-.launcher--aula .launcher__i { background: var(--sc-color-accent-violet-soft); }
-.launcher--3d { --lc: var(--sc-color-brand-secondary); }
-.launcher--3d .launcher__i { background: color-mix(in srgb, var(--sc-color-brand-secondary) 18%, var(--sc-color-surface-elevated)); }
-.launcher__body { min-width: 0; display: grid; gap: 5px; align-content: start; }
-.launcher__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.launcher__head strong { font-size: 14.5px; font-weight: 750; letter-spacing: var(--sc-tracking-tight); }
-.launcher__body > span { color: var(--sc-color-text-secondary); font-size: 12px; line-height: 1.45; }
-.launcher__pill { font-size: 9.5px; font-weight: 750; padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, var(--lc) 18%, transparent); color: var(--lc); white-space: nowrap; }
+.tile:hover { border-color: var(--lc); box-shadow: var(--sc-shadow-clay-md); transform: translateY(-2px); }
+.tile:active { box-shadow: var(--sc-shadow-clay-pressed); transform: translateY(1px); }
+.tile__ico { width: 44px; height: 44px; display: grid; place-items: center; border-radius: var(--sc10-radius-md); border: 1.5px solid color-mix(in srgb, var(--lc) 42%, var(--sc-color-border-strong)); background: var(--sc-color-action-subtle); color: var(--lc); box-shadow: var(--sc-shadow-clay-xs); }
+.tile__ico svg { width: 21px; height: 21px; }
+.tile--aula { --lc: var(--sc-color-aula); }
+.tile--aula .tile__ico { background: var(--sc-color-accent-violet-soft); }
+.tile--3d { --lc: var(--sc-color-brand-secondary); }
+.tile--3d .tile__ico { background: color-mix(in srgb, var(--sc-color-brand-secondary) 18%, var(--sc-color-surface-elevated)); }
+.tile__h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tile__h strong { font-size: 14.5px; font-weight: 750; letter-spacing: var(--sc-tracking-tight); }
+.tile > span { color: var(--sc-color-text-secondary); font-size: 12px; line-height: 1.45; }
+.tile__tag { font-size: 9.5px; font-weight: 750; padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, var(--lc) 18%, transparent); color: var(--lc); white-space: nowrap; }
 
-/* -- Más proyectos: lo que NO está en el spotlight ------------------------*/
+/* Recientes + recuperación */
 .recientes { display: grid; gap: var(--sc-space-3); padding: var(--sc-space-4); border: 1.5px solid var(--sc-color-border-strong); border-radius: var(--sc10-radius-xl); background: var(--sc-color-surface-elevated); box-shadow: var(--sc-shadow-clay-sm); }
 .recientes__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sc-space-3); }
 .recientes__head h2 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 750; }
 .recientes__head h2 svg { width: 16px; height: 16px; color: var(--sc-color-text-secondary); }
 .recientes__head span { color: var(--sc-color-text-muted); font-family: var(--sc-font-mono); font-size: 10px; font-weight: 650; letter-spacing: 0.05em; text-transform: uppercase; }
 .hub__rows { display: grid; gap: 2px; }
-.hrow { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--sc-space-3); padding: var(--sc-space-2) var(--sc-space-2); border-radius: var(--sc10-radius-md); }
+.hrow { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--sc-space-3); padding: var(--sc-space-2); border-radius: var(--sc10-radius-md); }
 .hrow:hover { background: var(--sc-color-surface-2); }
 .hrow__id { min-width: 0; display: grid; gap: 1px; }
 .hrow__id strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 650; }
@@ -945,17 +1054,15 @@ body {
 .hrow__actions { display: flex; gap: 4px; }
 .hrow__actions .ib { width: 32px; height: 32px; background: var(--sc-color-surface-elevated); border-color: var(--sc-color-border-strong); }
 
-/* Recuperación — atención por excepción: SÓLO existe si hay algo que
-   recuperar, y cuando existe es una alerta con canto de color, no un
-   `<details>` escondido detrás de un resumen gris. */
 .recovery { display: flex; align-items: center; gap: var(--sc-space-3); padding: var(--sc-space-3) var(--sc-space-4); border: 1.5px solid color-mix(in srgb, var(--sc-color-state-warning) 55%, var(--sc-color-border-strong)); border-radius: var(--sc10-radius-lg); background: color-mix(in srgb, var(--sc-color-state-warning) 12%, var(--sc-color-surface-elevated)); }
-.recovery svg { width: 18px; height: 18px; flex: 0 0 auto; color: var(--sc-color-state-warning-foreground); }
+.recovery > svg { width: 18px; height: 18px; flex: 0 0 auto; color: var(--sc-color-state-warning-foreground); }
 .recovery__body { flex: 1 1 auto; min-width: 0; display: grid; gap: 1px; }
 .recovery__body strong { font-size: 12.5px; font-weight: 750; color: var(--sc-color-state-warning-foreground); }
 .recovery__body span { color: var(--sc-color-text-secondary); font-size: 11.5px; }
-.recovery button { flex: 0 0 auto; height: 34px; padding: 0 var(--sc-space-3); border: 1px solid var(--sc-color-state-warning-foreground); border-radius: var(--sc10-radius-md); background: var(--sc-color-surface-elevated); color: var(--sc-color-state-warning-foreground); font-size: 12px; font-weight: 700; }
+.recovery button { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 var(--sc-space-3); border: 1px solid var(--sc-color-state-warning-foreground); border-radius: var(--sc10-radius-md); background: var(--sc-color-surface-elevated); color: var(--sc-color-state-warning-foreground); font-size: 12px; font-weight: 700; }
+.recovery button svg { width: 14px; height: 14px; }
 
-/* -- Vitrina: filtros + importar + plantillas --------------------------- */
+/* Vitrina de plantillas */
 .showcase2 { display: grid; gap: var(--sc-space-4); }
 .showcase2__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--sc-space-3); }
 .showcase2__head h2 { margin: 0; font-family: var(--sc-font-display); font-size: 18px; font-weight: 750; letter-spacing: var(--sc-tracking-tight); }
@@ -987,21 +1094,22 @@ body {
 .ws__foot { display: flex; align-items: center; justify-content: center; gap: 7px; padding: var(--sc-space-2) 0 0; color: var(--sc-color-text-muted); font-size: 11px; text-align: center; }
 .ws__foot svg { width: 13px; height: 13px; color: var(--sc-color-action-ink); }
 
-/* -- Compact (K0): todo apila a una columna, el pórtico va primero ------- */
-.frame[data-class='K0'] .wh__brand strong { display: none; }
-.frame[data-class='K0'] .hero3 { grid-template-columns: 1fr; gap: var(--sc-space-4); }
-.frame[data-class='K0'] .hero3__fig { order: -1; }
-.frame[data-class='K0'] .stage { padding: 18px 14px 14px; }
-.frame[data-class='K0'] .portico3d { max-width: 280px; }
-.frame[data-class='K0'] .title2 { font-size: 2rem; }
-.frame[data-class='K0'] .spotlight { grid-template-columns: auto 1fr; grid-template-areas: "thumb body" "go go"; row-gap: var(--sc-space-3); }
-.frame[data-class='K0'] .spotlight__thumb { grid-area: thumb; }
-.frame[data-class='K0'] .spotlight__body { grid-area: body; }
-.frame[data-class='K0'] .spotlight__go { grid-area: go; width: 100%; justify-content: center; }
-.frame[data-class='K0'] .secondary { grid-template-columns: 1fr; }
-.frame[data-class='K0'] .tplgrid { grid-template-columns: 1fr 1fr; }
-.frame[data-class='K0'] .ws__frame { padding: var(--sc-space-4); border-radius: var(--sc10-radius-xl); gap: var(--sc-space-5); }
+/* -- Compact (K0) -------------------------------------------------------- */
+.frame[data-class='K0'] .flow { padding: var(--sc-space-3); align-items: end; }
+.frame[data-class='K0'] .flow__stack { width: 100%; }
+.frame[data-class='K0'] .sheet2 { padding: var(--sc-space-3) var(--sc-space-4) var(--sc-space-5); gap: var(--sc-space-4); border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
+.frame[data-class='K0'] .sheet2__head h1 { font-size: 25px; }
+.frame[data-class='K0'] .p3d { max-width: 250px; }
 .frame[data-class='K0'] .ws__pad { padding: var(--sc-space-3) var(--sc-space-3) var(--sc-space-5); gap: var(--sc-space-3); }
+.frame[data-class='K0'] .wh__brand strong { display: none; }
+.frame[data-class='K0'] .recientes__head span { display: none; }
+.frame[data-class='K0'] .ws__frame { padding: var(--sc-space-4); border-radius: var(--sc10-radius-xl); gap: var(--sc-space-5); }
+.frame[data-class='K0'] .resume { grid-template-columns: 1fr; gap: var(--sc-space-4); }
+.frame[data-class='K0'] .resume__r { order: -1; min-height: 128px; }
+.frame[data-class='K0'] .resume__go { width: 100%; justify-content: center; }
+.frame[data-class='K0'] .trio { grid-template-columns: 1fr; }
+.frame[data-class='K0'] .tplgrid { grid-template-columns: 1fr 1fr; }
+.frame[data-class='K0'] .mesa__hi h1 { font-size: 23px; }
 
 /* Fila de versión comparada — la usa el drawer de conflicto de revisión
    (`21-recuperacion-conflicto`), no Welcome (que ahora usa `.hrow`). Se quedó

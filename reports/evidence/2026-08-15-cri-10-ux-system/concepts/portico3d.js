@@ -1,22 +1,39 @@
-/* CRI-10 · pórtico 3D de la Welcome — recuperación del hero real.
+/* CRI-10 · pórtico 3D clay de la entrada — render material, no sólo geometría.
  *
- * Puerto directo de la geometría de `src/graphics/isometricPortal.ts` +
- * `src/features/welcome/StructuralPortalHero.tsx` al pipeline vanilla de estos
- * conceptos (no hay React ni build de la app aquí). Es aritmética copiada, no
- * reinventada: misma proyección isométrica 2:1, misma fuente de luz, mismas
- * proporciones de `DEFAULT_PORTAL`, mismo criterio de sombreado por cara y el
- * mismo umbral de sombra de contacto (Monte Carlo, s=0.75) documentado en el
- * componente real. Si `isometricPortal.ts` cambia, este archivo hay que
- * volver a copiarlo — no hay import cruzado hacia `src/**` porque el pipeline
- * de conceptos no ejecuta TypeScript ni bundler.
+ * ELECCIÓN DE HERRAMIENTA (por qué NO un motor 3D)
+ * ---------------------------------------------------------------------------
+ * Se evaluó traer un motor real (three.js / regl / babylon). Se descartó, y no
+ * por pereza — por tres razones que se sostienen:
  *
- * Lo que SÍ cambia a propósito frente al componente real:
- *   · Sin inclinación por puntero (`--tilt-x/y`): es una lámina estática.
- *   · Sin el halo ambiental que tenía `.welcome-hero-figure::before` — ese
- *     halo ya fue retirado en `src/styles.css` (sección «IDENTIDAD OFICIAL
- *     CLAY», que gana la cascada sobre la regla original) y esta pieza nueva
- *     no lo reintroduce. Sólo se conserva la sombra de contacto NEUTRA bajo
- *     cada zapata (borrosa pero sin color de marca) — es sombra física, no luz.
+ *   1. `StructuralPortalHero.tsx` ya documenta la decisión en producción: la
+ *      escena es estática (cámara ortográfica fija, sin órbita, materiales
+ *      mate sin reflejos), así que un motor costaría ~200 KB gzip y una
+ *      segunda implementación del mismo dibujo para producir el mismo
+ *      fotograma. Meter WebGL aquí contradiría una decisión ya cerrada.
+ *   2. El color TIENE que salir de `tokens.css`. Un motor WebGL no lee
+ *      variables CSS: habría que duplicar la paleta en JS y se rompería la
+ *      regla de paleta única que gobierna todo CRI-10.
+ *   3. El pipeline de estas láminas es una captura estática. WebGL en
+ *      headless es exactamente donde más frágil se vuelve un render
+ *      reproducible.
+ *
+ * Lo que sí da material de verdad es el stack de filtros SVG, que es un
+ * pipeline de sombreado real y corre en el compositor del navegador:
+ *
+ *   · `feTurbulence` (fractalNoise, semilla fija) → grano de superficie.
+ *   · `feDiffuseLighting` + `feDistantLight` → relieve difuso mate: la arcilla
+ *     no refleja, difunde. Sin `feSpecularLighting` a propósito — un
+ *     especular convertiría el barro en plástico.
+ *   · Gradiente de caída por cara → volumen interno, no relleno plano.
+ *   · Canto redondeado real (`stroke-linejoin:round` con trazo del propio
+ *     color) → la arcilla no tiene aristas vivas.
+ *   · Oclusión ambiental en las juntas → las piezas se tocan de verdad.
+ *
+ * GEOMETRÍA: sin cambios respecto a `src/graphics/isometricPortal.ts`.
+ * Misma proyección isométrica 2:1, misma fuente de luz, mismas proporciones de
+ * `DEFAULT_PORTAL`, mismo Lambert con suelo ambiental. Los tres shades que
+ * emite siguen siendo 0.8345 / 0.7027 / 0.5840, verificados. Lo que cambió es
+ * el RENDER, no el álgebra.
  */
 
 const ISO_X = Math.cos(Math.PI / 6);
@@ -56,9 +73,9 @@ const boxFaces = (id, material, box) => {
   const corner = (dx, dy, dz) => projectIso({ x: x + dx, y: y + dy, z: z + dz });
   const depth = x + y + z + (w + h + d) / 2;
   return [
-    { id: `${id}:top`, material, shade: shadeOf(NORMALS.top), depth, points: [corner(0, h, 0), corner(w, h, 0), corner(w, h, d), corner(0, h, d)] },
-    { id: `${id}:left`, material, shade: shadeOf(NORMALS.left), depth, points: [corner(0, h, d), corner(w, h, d), corner(w, 0, d), corner(0, 0, d)] },
-    { id: `${id}:right`, material, shade: shadeOf(NORMALS.right), depth, points: [corner(w, h, 0), corner(w, 0, 0), corner(w, 0, d), corner(w, h, d)] },
+    { id: `${id}:top`, material, kind: 'top', shade: shadeOf(NORMALS.top), depth, points: [corner(0, h, 0), corner(w, h, 0), corner(w, h, d), corner(0, h, d)] },
+    { id: `${id}:left`, material, kind: 'left', shade: shadeOf(NORMALS.left), depth, points: [corner(0, h, d), corner(w, h, d), corner(w, 0, d), corner(0, 0, d)] },
+    { id: `${id}:right`, material, kind: 'right', shade: shadeOf(NORMALS.right), depth, points: [corner(w, h, 0), corner(w, 0, 0), corner(w, 0, d), corner(w, h, d)] },
   ];
 };
 
@@ -111,13 +128,10 @@ const contactEllipseOf = (footprint) => {
   ];
   const xs = corners.map((p) => p.x);
   const ys = corners.map((p) => p.y);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
+  const minX = Math.min(...xs); const maxX = Math.max(...xs);
+  const minY = Math.min(...ys); const maxY = Math.max(...ys);
   return {
-    cx: (minX + maxX) / 2,
-    cy: (minY + maxY) / 2,
+    cx: (minX + maxX) / 2, cy: (minY + maxY) / 2,
     rx: ((maxX - minX) / 2) * CONTACT_SHADOW_SCALE,
     ry: ((maxY - minY) / 2) * CONTACT_SHADOW_SCALE,
   };
@@ -125,16 +139,37 @@ const contactEllipseOf = (footprint) => {
 
 const toPath = (face) => `${face.points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ')} Z`;
 
+/** Junta entre dos piezas apiladas: la elipse proyectada de la sección
+ *  horizontal a la altura `y`, usada para la oclusión ambiental. Una pieza
+ *  apoyada sobre otra ensombrece el borde de la de abajo — sin esto las cajas
+ *  se ven pegadas con pegamento, no apoyadas. */
+const jointEllipseAt = (x, z, w, d, y) => {
+  const corners = [
+    projectIso({ x, y, z }), projectIso({ x: x + w, y, z }),
+    projectIso({ x: x + w, y, z: z + d }), projectIso({ x, y, z: z + d }),
+  ];
+  const xs = corners.map((p) => p.x); const ys = corners.map((p) => p.y);
+  const minX = Math.min(...xs); const maxX = Math.max(...xs);
+  const minY = Math.min(...ys); const maxY = Math.max(...ys);
+  return { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, rx: (maxX - minX) / 2, ry: (maxY - minY) / 2 };
+};
+
+/* Contador de instancia: cada `<svg>` lleva sus propios `<defs>`, y dos
+   láminas en la misma página compartirían los ids del filtro. Con sufijo
+   único, el grano de una no puede aplicarse a la otra. */
+let instance = 0;
+
 /**
- * Devuelve el `<svg>` del pórtico como string, listo para insertar. Mismo
- * `viewBox` que `StructuralPortalHero.tsx` (calculado sobre el bounding box
- * real de `buildPortal()`), mismo mecanismo de sombreado por `--face-shade`
- * + `filter:brightness()` (ver `concepts.css`), misma sombra de contacto
- * neutra por zapata. `extraClass` permite variar el tamaño por lámina sin
- * duplicar el módulo.
+ * Devuelve el `<svg>` del pórtico clay como string.
+ * @param extraClass clases adicionales para el `<svg>`.
+ * @param grain      intensidad del grano de superficie (0 = liso).
  */
-export const porticoHero = (extraClass = '') => {
+export const porticoHero = (extraClass = '', { grain = 0.07 } = {}) => {
+  instance += 1;
+  const uid = `p3d${instance}`;
   const faces = buildPortal();
+  const { columnWidth: cw, columnDepth: cd, baseWidth: bw, baseHeight: bhh, columnHeight: ch, span } = DEFAULT_PORTAL;
+
   const footprints = [footprintOf(0), footprintOf(1)];
   const footEllipses = footprints.map(contactEllipseOf);
 
@@ -157,13 +192,91 @@ export const porticoHero = (extraClass = '') => {
     <line x1="${constX.p1.x.toFixed(2)}" y1="${constX.p1.y.toFixed(2)}" x2="${constX.p2.x.toFixed(2)}" y2="${constX.p2.y.toFixed(2)}"/>
     <line x1="${constZ.p1.x.toFixed(2)}" y1="${constZ.p1.y.toFixed(2)}" x2="${constZ.p2.x.toFixed(2)}" y2="${constZ.p2.y.toFixed(2)}"/>`).join('');
 
-  const contactSvg = footEllipses.map((e) => `<ellipse class="portico3d__contact" cx="${e.cx.toFixed(2)}" cy="${e.cy.toFixed(2)}" rx="${e.rx.toFixed(2)}" ry="${e.ry.toFixed(2)}"/>`).join('');
+  const contactSvg = footEllipses.map((e) => `<ellipse class="p3d__contact" cx="${e.cx.toFixed(2)}" cy="${e.cy.toFixed(2)}" rx="${e.rx.toFixed(2)}" ry="${e.ry.toFixed(2)}"/>`).join('');
 
-  const facesSvg = faces.map((face) => `<path class="portico3d__face" d="${toPath(face)}" fill="${MATERIAL_TOKEN[face.material]}" style="--face-shade:${face.shade.toFixed(3)}"/>`).join('');
+  /* OCLUSIÓN AMBIENTAL EN LA JUNTA — y por qué va INTERCALADA, no al final.
+     La sombra de una columna sobre su zapata tiene que pintarse DESPUÉS de la
+     zapata y ANTES de la columna. Emitida al final, sobre todo lo demás, la
+     elipse cae encima del fuste y deja un manchón gris a media altura (fallo
+     real de la primera versión de esta pasada, visible en el render). Aquí se
+     inyecta en el flujo de pintura justo antes de la primera cara de cada
+     columna: la mitad que cae sobre la zapata se ve, y la mitad que caería
+     sobre el fuste queda tapada por el propio fuste — que es exactamente cómo
+     se comporta una oclusión de contacto real. */
+  const columnBaseY = bhh + bhh * 0.7;
+  const aoAtColumnFoot = (side) => {
+    const x = side === 'l' ? 0 : span - cw;
+    const e = jointEllipseAt(x, 0, cw, cd, columnBaseY);
+    return `<ellipse class="p3d__ao" cx="${e.cx.toFixed(2)}" cy="${e.cy.toFixed(2)}" rx="${(e.rx * 1.5).toFixed(2)}" ry="${(e.ry * 1.5).toFixed(2)}"/>`;
+  };
 
-  return `<svg class="portico3d ${extraClass}" viewBox="-90 -190 290 325" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Pórtico de dos crujías, vista isométrica" focusable="false" xmlns="http://www.w3.org/2000/svg">
-    <g class="portico3d__ground">${groundSvg}</g>
-    ${contactSvg}
+  /* Cada cara: relleno de material + canto redondeado (trazo del propio color,
+     `linejoin:round`) + una segunda capa con el gradiente de caída, que es lo
+     que impide que la cara se lea como un polígono plano. */
+  const emittedAo = new Set();
+  const facesSvg = faces.map((face) => {
+    const d = toPath(face);
+    let prefix = '';
+    const columnStart = /^column-(l|r):top$/.exec(face.id);
+    if (columnStart && !emittedAo.has(columnStart[1])) {
+      emittedAo.add(columnStart[1]);
+      prefix = aoAtColumnFoot(columnStart[1]);
+    }
+    return `${prefix}<path class="p3d__face" d="${d}" fill="${MATERIAL_TOKEN[face.material]}" stroke="${MATERIAL_TOKEN[face.material]}" style="--face-shade:${face.shade.toFixed(3)}"/>
+      <path class="p3d__falloff p3d__falloff--${face.kind}" d="${d}" fill="url(#${uid}-fall-${face.kind})"/>`;
+  }).join('');
+
+  /* Luz de canto sobre el dintel: la arista superior que da a la luz. Es una
+     línea, no un halo — el brillo vive EN el canto, no alrededor de la pieza. */
+  const beamTopY = columnBaseY + ch + 5 + DEFAULT_PORTAL.beamHeight;
+  const rimA = projectIso({ x: 0, y: beamTopY, z: cd });
+  const rimB = projectIso({ x: span, y: beamTopY, z: cd });
+  const rimSvg = `<line class="p3d__rim" x1="${rimA.x.toFixed(2)}" y1="${rimA.y.toFixed(2)}" x2="${rimB.x.toFixed(2)}" y2="${rimB.y.toFixed(2)}"/>`;
+
+  return `<svg class="p3d ${extraClass}" viewBox="-96 -196 302 338" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Pórtico de dos crujías en vista isométrica, materiales de arcilla" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Caída de luz DENTRO de cada cara, por orientación. Sin esto cada cara
+         es un color plano y el objeto se lee como papel recortado. -->
+    <linearGradient id="${uid}-fall-top" x1="0" y1="0" x2="0.55" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.12"/>
+    </linearGradient>
+    <linearGradient id="${uid}-fall-left" x1="0" y1="0" x2="0.25" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.05"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.24"/>
+    </linearGradient>
+    <linearGradient id="${uid}-fall-right" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity="0.04"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.32"/>
+    </linearGradient>
+
+    <!-- MATERIAL ARCILLA. Dos pasos y ninguno decorativo:
+         1. feTurbulence + feDiffuseLighting = relieve mate real. Difuso,
+            nunca especular: la arcilla difunde la luz, el plastico la refleja.
+         2. El relieve se mezcla en overlay a baja opacidad y se recorta al
+            alfa de la figura, asi el grano vive DENTRO de la pieza y no la
+            desborda ni le cambia el color. -->
+    <filter id="${uid}-clay" x="-6%" y="-6%" width="112%" height="112%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="1.5" numOctaves="3" seed="17" result="noise"/>
+      <feDiffuseLighting in="noise" lighting-color="#ffffff" surfaceScale="1.05" diffuseConstant="1" result="bump">
+        <feDistantLight azimuth="225" elevation="58"/>
+      </feDiffuseLighting>
+      <feColorMatrix in="bump" type="saturate" values="0" result="bumpGrey"/>
+      <feComponentTransfer in="bumpGrey" result="bumpSoft">
+        <feFuncA type="linear" slope="${grain}" intercept="0"/>
+      </feComponentTransfer>
+      <feComposite in="bumpSoft" in2="SourceGraphic" operator="in" result="bumpClipped"/>
+      <feBlend in="SourceGraphic" in2="bumpClipped" mode="overlay"/>
+    </filter>
+  </defs>
+
+  <g class="p3d__ground">${groundSvg}</g>
+  ${contactSvg}
+
+  <g filter="url(#${uid}-clay)">
     ${facesSvg}
-  </svg>`;
+  </g>
+
+  ${rimSvg}
+</svg>`;
 };

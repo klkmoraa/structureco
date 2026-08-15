@@ -111,7 +111,60 @@ if (overflowing.length > 0) {
   await browser.close(); server.close();
   process.exit(1);
 }
-console.log(`✓ La Cinta no desborda en ninguna de las ${await page.$$eval('.frame[data-class="K0"] .cinta', (n) => n.length)} láminas Compact.\n`);
+console.log(`✓ La Cinta no desborda en ninguna de las ${await page.$$eval('.frame[data-class="K0"] .cinta', (n) => n.length)} láminas Compact.`);
+
+/**
+ * COMPROBACIÓN DE DESBORDAMIENTO DEL MARCO COMPLETO — añadida en la pasada de
+ * rediseño de la entrada, y añadida PORQUE ESTA MISMA PASADA SE LE ESCAPÓ UN
+ * FALLO REAL: la comprobación de arriba sólo mira `.cinta`, y la nueva Mesa
+ * ya no tiene Cinta. Un contenedor `display:grid` con la columna implícita
+ * `auto` se dimensionó al max-content de su cabecera y sacó 51px de TODO el
+ * contenido fuera del marco de 390px — con el gate en verde.
+ *
+ * Aquí se mide cada elemento contra el borde derecho de su propio marco, que
+ * es la única forma de detectar un desbordamiento que no produce scroll (el
+ * marco recorta con `overflow:hidden`, así que `scrollWidth` no lo delata).
+ * Se reporta sólo el ancestro más externo de cada cadena: si `.ws__frame` se
+ * sale, sus 200 descendientes también, y listarlos no añade información.
+ *
+ * El SVG queda fuera de la comprobación A PROPÓSITO, y no para que pase: en
+ * este cuaderno un dibujo MÁS GRANDE que su marco es lo normal y lo correcto
+ * — `.lienzo` y las miniaturas son mirillas sobre un plano mayor, igual que
+ * el lienzo del producto. Lo que se persigue aquí es el desbordamiento de
+ * CAJA (contenedores de texto y controles), que siempre es un fallo.
+ */
+const clipped = await page.$$eval('.frame', (frames) => {
+  const out = [];
+  for (const frame of frames) {
+    const edge = frame.getBoundingClientRect().right;
+    const offenders = [];
+    for (const el of frame.querySelectorAll('*')) {
+      if (el instanceof SVGElement) continue;
+      const box = el.getBoundingClientRect();
+      if (box.width > 0 && box.right > edge + 1) offenders.push(el);
+    }
+    // Sólo el más externo de cada rama: descarta lo que ya tiene un ancestro marcado.
+    const outermost = offenders.filter((el) => !offenders.some((other) => other !== el && other.contains(el)));
+    for (const el of outermost) {
+      out.push({
+        frame: frame.dataset.name ?? '?',
+        selector: `${el.tagName.toLowerCase()}${el.getAttribute('class') ? `.${el.getAttribute('class').trim().split(/\s+/).join('.')}` : ''}`,
+        over: Math.round(el.getBoundingClientRect().right - edge),
+      });
+    }
+  }
+  return out;
+});
+if (clipped.length > 0) {
+  console.error(
+    '\n✗ Hay contenido que se sale del marco (recortado, no visible):\n' +
+    clipped.map((c) => `   ${c.frame}: ${c.selector} sobresale ${c.over}px`).join('\n') +
+    '\n  Suele ser un contenedor grid/flex sin `minmax(0, 1fr)` o sin `min-width: 0`.',
+  );
+  await browser.close(); server.close();
+  process.exit(1);
+}
+console.log(`✓ Ningún elemento se sale de su marco en las ${frames.length} láminas.\n`);
 
 let written = 0;
 for (const theme of ['light', 'dark']) {
