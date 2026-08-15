@@ -50,23 +50,62 @@ export const ICON = {
   get grad() { return this._('<path d="M12 3.5L22 8.5 12 13.5 2 8.5z"/><path d="M6 10.8V16c0 1.9 2.7 3.4 6 3.4s6-1.5 6-3.4v-5.2"/>'); },
   get canvasIcon() { return this._('<rect x="3.5" y="4.5" width="17" height="15" rx="1.8"/><path d="M3.5 15l4.5-4.5 3.5 3.5 3-3 6 6"/>'); },
   get sliders() { return this._('<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/>'); },
+  get cloud() { return this._('<path d="M7 18.5a4.3 4.3 0 01-.6-8.56 5.5 5.5 0 0110.6-1.8A4.2 4.2 0 0117.5 18.5z"/>'); },
+  get cloudCheck() { return this._('<path d="M7 17.5a4.3 4.3 0 01-.6-8.56 5.5 5.5 0 0110.6-1.8A4.2 4.2 0 0117.5 17.5z"/>', '<path d="M9.3 13.3l1.9 1.9 3.5-3.9"/>'); },
 };
 
-/** Cinta. Tres naturalezas y sólo tres. */
-export const cinta = ({ estado, compact = false, doctor = 0, name = 'Pórtico de ejemplo' } = {}) => `
+/**
+ * Cinta. Tres naturalezas y sólo tres — pero cada naturaleza tiene más de un
+ * control, y CADA UNO necesita una puerta visible propia. La corrección de
+ * discoverability de esta pasada toca esta función porque las 22 láminas la
+ * comparten: arreglarla aquí las corrige a todas a la vez.
+ *
+ * Cuatro cambios sobre la versión anterior, cada uno cierra un hallazgo de la
+ * revisión (ver `reports/2026-08-15-XXXX-cri-10-correccion-discoverability.md`):
+ *
+ *  1. `persist` — la sesión ya no tiene dónde vivir. PER-01/02/03 (guardado,
+ *     sin conexión, conflicto) no tenían ningún control en la Cinta anterior.
+ *  2. Model Doctor **ya no depende de `doctor > 0`**. Antes el lanzador sólo
+ *     se pintaba con hallazgos — con 0 hallazgos (el caso más común al
+ *     empezar a modelar) la herramienta de diagnóstico completa desaparecía
+ *     de la interfaz. Ahora es permanente y el recuento es un badge que se
+ *     superpone, nunca una condición de existencia.
+ *  3. El caret suelto junto a «Resolver» se sustituye por un control
+ *     ETIQUETADO con el nombre de la combinación activa. Es la puerta a
+ *     `analysis-setup` (SHL-07/08/09/10) y antes era indistinguible de
+ *     cualquier otro icono de la Cinta.
+ *  4. El menú de documento (`doc__menu`) se declara explícito: antes era un
+ *     caret sin más contenido que un rótulo genérico.
+ *  5. **El lanzador de la Hoja de datos (Datasheet) vuelve a ser permanente.**
+ *     La primera pasada no le dio ningún lugar en la Cinta — sólo quedaba
+ *     alcanzable por `Ctrl+K` o por el verbo «Fila en tabla» del zócalo, que
+ *     exige selección. Hoy el icono de Datasheet **no se oculta ni en
+ *     Compact** (a diferencia de Model Doctor, que sí lo hacía — F-06). Se
+ *     restaura al mismo nivel que Doctor. Su coste de ancho en Compact se
+ *     verifica en `render-concepts.mjs` (paso 3, comprobación de
+ *     desbordamiento): si no cupiera en 320-360px, el orden de degradación
+ *     es compartir un solo disparador «Diagnóstico y datos» que despliega
+ *     los dos — pero **no se asume sin medir**.
+ */
+export const cinta = ({ estado, compact = false, doctor = 0, persist = 'guardado', context = 'Servicio 1', name = 'Pórtico de ejemplo' } = {}) => `
 <header class="cinta">
   <div class="mark">S</div>
-  ${compact ? '' : '<div class="doc"><span class="doc__name">' + name + '</span></div>'}
-  ${compact ? '<div class="doc"><span class="doc__name">' + name + '</span></div>' : ''}
-  <button class="ib ib--ghost">${ICON.caret}</button>
+  <div class="doc">
+    <span class="doc__name">${name}</span>
+    <button class="ib ib--ghost doc__menu" aria-haspopup="menu" aria-label="Menú del documento">${ICON.caret}</button>
+  </div>
+  ${persistChip(persist, compact)}
   ${compact ? '' : `<button class="ib">${ICON.undo}</button><button class="ib" data-state="disabled">${ICON.redo}</button>`}
   <div class="cinta__spacer"></div>
   ${compact ? '' : `<span class="aviso">${ICON.info} Herramienta de apoyo</span>`}
-  ${doctor > 0 ? `<button class="ib">${ICON.doctor}</button>` : ''}
+  <button class="ib" aria-label="Hoja de datos">${ICON.table}</button>
+  <button class="ib doctor-launcher" aria-label="Model Doctor${doctor > 0 ? ` · ${doctor} hallazgos` : ''}">
+    ${ICON.doctor}${doctor > 0 ? `<i class="badge-count">${doctor}</i>` : ''}
+  </button>
   ${estado ? estadoChip(estado, compact) : ''}
   <div class="resolver">
     <button class="resolver__go">${ICON.play}${compact ? '' : ' Resolver'}</button>
-    <button class="resolver__more">${ICON.caret}</button>
+    ${compact ? '' : `<button class="resolver__ctx" aria-haspopup="dialog" aria-label="Contexto de análisis — combinación activa ${context}">${context} ${ICON.caret}</button>`}
   </div>
 </header>`;
 
@@ -85,6 +124,28 @@ export const estadoChip = (key, compact = false) => {
   return `<button class="estado estado--${e.cls}">
     <span class="estado__glyph">${ICON[e.icon]}</span>
     ${compact ? '' : `<span class="estado__copy">${e.t}<small>${e.s}</small></span>`}
+  </button>`;
+};
+
+/**
+ * Chip de persistencia — PER-01/02/03. No existía ningún control equivalente
+ * en la primera pasada de esta especificación: el guardado automático, el
+ * trabajo sin conexión y el conflicto de revisión no tenían dónde vivir en la
+ * Cinta. Vive junto a la identidad del documento porque es un hecho sobre
+ * ESTE documento, no sobre el análisis — por eso está a la izquierda y el
+ * chip de estado del análisis está a la derecha.
+ */
+export const PERSIST = {
+  guardado:  { cls: 'ok',   icon: 'cloudCheck', t: 'Guardado' },
+  guardando: { cls: 'busy', icon: 'cloud',      t: 'Guardando…' },
+  sinred:    { cls: 'busy', icon: 'cloud',      t: 'Sin conexión · guardado local' },
+  conflicto: { cls: 'bad',  icon: 'bang',       t: 'Conflicto de revisión' },
+};
+export const persistChip = (key, compact = false) => {
+  const p = PERSIST[key];
+  return `<button class="persist persist--${p.cls}" aria-label="${p.t}" aria-haspopup="${key === 'conflicto' ? 'dialog' : 'false'}">
+    <span class="persist__glyph">${ICON[p.icon]}</span>
+    ${compact ? '' : `<span class="persist__copy">${p.t}</span>`}
   </button>`;
 };
 
@@ -138,15 +199,28 @@ export const riel = (active = 'select') => `
  * ese orden, y antes de tocar los controles de cámara o el estado, que no se
  * degradan nunca. Sin esta regla los grupos se solapan, que es exactamente lo
  * que CRI-7 midió (17.5% de chrome flotante en 1024×768).
+ *
+ * Dos correcciones de discoverability sobre la versión anterior:
+ *
+ *  1. **El disparador de capas lleva un badge cuando algo se ha plegado
+ *     dentro de él.** Antes SNAP/Rejilla desaparecían sin más en Compact: el
+ *     usuario no tenía ninguna señal de que seguían existiendo un nivel más
+ *     abajo. Un badge sin número («•») basta — no es un recuento, es «hay
+ *     más aquí».
+ *  2. **`globalScope` añade «Vista global»** al chip de modo cuando hay un
+ *     resultado vigente y NO hay selección. Es el equivalente visible de lo
+ *     que hoy dice `results.contextGlobal` en el «Centro analítico» del
+ *     panel de Results — un concepto real que la descomposición de Results
+ *     (D-03) no puede permitirse perder sólo por dejar de tener panel.
  */
-export const flotantes = ({ modo = 'Seleccionar', hint = 'toca un objeto', capa = null, compact = false } = {}) => `
+export const flotantes = ({ modo = 'Seleccionar', hint = 'toca un objeto', capa = null, compact = false, globalScope = false } = {}) => `
 <div class="flot flot--modo">
   <span class="chip">${ICON.select} ${modo} <small>· ${hint}</small></span>
-  ${capa ? `<span class="chip chip--on"><i class="chip__dot" style="--cc:${capa.c}"></i> ${capa.t}</span>` : ''}
+  ${capa ? `<span class="chip chip--on"><i class="chip__dot" style="--cc:${capa.c}"></i> ${capa.t}${globalScope ? ' <small>· vista global</small>' : ''}</span>` : ''}
 </div>
 <div class="flot flot--vista">
   ${compact ? '' : '<span class="chip chip--on">SNAP</span><span class="chip">Rejilla</span>'}
-  <button class="ib">${ICON.layers}</button>
+  <button class="ib" style="position:relative">${ICON.layers}${compact ? '<i class="badge-dot"></i>' : ''}</button>
 </div>
 <div class="flot flot--camara">
   ${compact ? '' : '<span class="chip lectura">X 4.00 · Y 2.60 m</span>'}
@@ -270,14 +344,111 @@ export const portico = ({ w, h, sel = null, layer = null, labels = 'auto' } = {}
 /** Miniatura: el objeto y su entorno inmediato. Pulsarla encuadra. */
 export const mini = (sel) => `<div class="mini">${portico({ w: 272, h: 92, sel, labels: 'none' })}</div>`;
 
-/** Zócalo de selección: los verbos vienen al objeto. */
-export const zocalo = ({ x, y, id, glyph, verbs, danger = true }) => `
+/**
+ * Zócalo de selección: los verbos vienen al objeto.
+ *
+ * `overflow` abre el panel del `⋯` con los verbos secundarios visibles. La
+ * primera pasada de esta especificación nunca mostraba este estado en
+ * ninguna lámina: Copiar, Pegar, Duplicar y Repetir existían en el texto
+ * (§6.4) pero no en una sola imagen, que es exactamente el motivo por el que
+ * una revisión visual los siente «desaparecidos» aunque estén especificados.
+ */
+export const zocalo = ({ x, y, id, glyph, verbs, danger = true, overflow = null }) => `
 <div class="zocalo" style="left:${x}px; top:${y}px">
   <span class="zocalo__id">${ICON[glyph]} ${id}</span>
   ${verbs.map((v) => `<button class="zac">${v.i ? ICON[v.i] : ''} ${v.t}</button>`).join('')}
   <span class="zocalo__sep"></span>
   ${danger ? `<button class="zac zac--danger">${ICON.trash}</button>` : ''}
-  <button class="zac">${ICON.more}</button>
+  <button class="zac ${overflow ? 'is-open' : ''}" aria-expanded="${overflow ? 'true' : 'false'}" aria-haspopup="menu">${ICON.more}</button>
+  ${overflow ? `<div class="zocalo-overflow" role="menu">
+    ${overflow.map((v) => `<button class="zoc-item" role="menuitem">${ICON[v.i]}<span>${v.t}</span>${v.k ? `<kbd>${v.k}</kbd>` : ''}</button>`).join('')}
+  </div>` : ''}
+</div>`;
+
+/**
+ * Contenido del menú de documento — antes un caret sin inventario declarado.
+ * Ocho entradas, cada una trazable a una tarea de CRI-8: cierra los huecos
+ * de acceso #2 (cambiar de proyecto) y #3 (importar DXF) que CRI-8 §9.2
+ * marcó como graves, y da a la paleta de comandos la puerta táctil que el
+ * texto de §12 ya prometía pero el menú no tenía escrita.
+ */
+export const docMenu = () => `
+<div class="docmenu" role="menu">
+  <button class="docmenu__i" role="menuitem">${ICON.member}<span>Renombrar proyecto</span></button>
+  <button class="docmenu__i" role="menuitem">${ICON.table}<span>Cambiar de proyecto…</span><small>Project Hub</small></button>
+  <button class="docmenu__i" role="menuitem">${ICON.copy}<span>Duplicar proyecto</span></button>
+  <div class="docmenu__sep"></div>
+  <button class="docmenu__i" role="menuitem">${ICON.canvasIcon}<span>Importar…</span><small>DXF · JSON · PDF</small></button>
+  <button class="docmenu__i" role="menuitem">${ICON.table}<span>Exportar…</span><small>PDF · imagen · impresión</small></button>
+  <div class="docmenu__sep"></div>
+  <button class="docmenu__i" role="menuitem">${ICON.search}<span>Buscar comandos…</span><kbd>Ctrl K</kbd></button>
+  <button class="docmenu__i" role="menuitem">${ICON.sliders}<span>Preferencias</span><small>Unidades · idioma · tema · modo</small></button>
+  <div class="docmenu__sep"></div>
+  <button class="docmenu__i" role="menuitem">${ICON.grad}<span>Space 3D</span><small>Experimental</small></button>
+  <button class="docmenu__i" role="menuitem">${ICON.back}<span>Volver a Inicio</span></button>
+</div>`;
+
+/**
+ * Enlaces a `dense` desde el pie de los resultados del Detalle. Es la
+ * corrección directa de un hueco real: en la primera pasada, `dense`
+ * (reacciones, influencia, aprender) no tenía NINGÚN lanzador visible — sólo
+ * existía como destino conceptual en el texto de §9.2. Sin selección, además,
+ * no había ninguna ruta a él en absoluto (ver `estadoQuickLinks`).
+ */
+export const denseLinks = () => `
+<div class="dense-links">
+  <button class="dl-item">${ICON.table} Reacciones</button>
+  <button class="dl-item">${ICON.split} Influencia</button>
+  <button class="dl-item">${ICON.grad} Aprender</button>
+</div>`;
+
+/**
+ * Panel de enlaces rápidos del chip de estado, EXPANDIDO. Además de la causa
+ * (D-14, ya cubierta), el chip de estado es la única superficie PERMANENTE
+ * que sigue viva cuando no hay selección — así que es también donde vive el
+ * equivalente de «Centro analítico · Vista global» de hoy: sin él, un
+ * resultado resuelto sin selección no tenía ninguna puerta a Reacciones,
+ * Índice elástico o Aprender.
+ */
+export const estadoQuickLinks = () => `
+<div class="estado-panel">
+  <div class="estado-panel__h">${ICON.check} Resuelto · Vista global <small>· sin selección, se muestra el modelo completo</small></div>
+  <div class="estado-panel__links">
+    <button class="dl-item">${ICON.table} Reacciones</button>
+    <button class="dl-item">${ICON.sliders} Índice elástico</button>
+    <button class="dl-item">${ICON.grad} Aprender</button>
+  </div>
+</div>`;
+
+/**
+ * Contenido de la superficie `view` invocada — antes descrita sólo como
+ * «dueño único de la visibilidad», sin estructura. Se itemiza aquí: capas del
+ * lienzo, snap, y el filtro de selección (SEL-06), que CRI-8 §9.1 nombró
+ * como la tercera función más escondida del producto actual.
+ */
+export const viewPanel = () => `
+<div class="view-panel">
+  <div class="view-panel__sect">
+    <h5>Capas del lienzo</h5>
+    <div class="view-rows">
+      ${[['node', 'Nudos', true], ['member', 'Miembros', true], ['load', 'Cargas', true], ['dim', 'Cotas', false], ['grad', 'Ejes', false]]
+        .map(([i, t, on]) => `<label class="view-row"><span>${ICON[i]} ${t}</span><span class="mini-switch ${on ? 'is-on' : ''}"><i></i></span></label>`).join('')}
+    </div>
+  </div>
+  <div class="view-panel__sect">
+    <h5>Snap</h5>
+    <div class="view-rows">
+      ${[['Rejilla', true], ['Nudos', true], ['Puntos medios', true], ['Intersecciones', false], ['Perpendicular', false]]
+        .map(([t, on]) => `<label class="view-row"><span>${t}</span><span class="mini-switch ${on ? 'is-on' : ''}"><i></i></span></label>`).join('')}
+    </div>
+  </div>
+  <div class="view-panel__sect">
+    <h5>Precisión CAD</h5>
+    <div class="view-rows">
+      <label class="view-row"><span>Filtro de selección — sólo miembros</span><span class="mini-switch is-on"><i></i></span></label>
+    </div>
+    <p class="view-panel__hint">Un objeto no seleccionable se atenúa en el lienzo; no desaparece.</p>
+  </div>
 </div>`;
 
 export const prow = (k, sub, control) => `

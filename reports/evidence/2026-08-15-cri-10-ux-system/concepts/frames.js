@@ -2,7 +2,7 @@
  * verificada contra la evidencia de CRI-7 y contra el árbol actual. Ninguna
  * pantalla existe para enseñar estilo.
  */
-import { ICON, cinta, estadoChip, riel, flotantes, portico, mini, zocalo, prow, fieldNum, fieldSel, fieldMix, metric } from './parts.js';
+import { ICON, cinta, estadoChip, riel, flotantes, portico, mini, zocalo, prow, fieldNum, fieldSel, fieldMix, metric, docMenu, denseLinks, estadoQuickLinks, viewPanel } from './parts.js';
 
 const F = [];
 /** @param spec {name,w,h,caption,theme,cls,rail,input,body} */
@@ -122,7 +122,8 @@ const inspectorMiembro = ({ conResultados = false } = {}) => `
       <div class="proc__r"><span>Caso</span><b>Combinación «Servicio 1»</b></div>
       <div class="proc__r"><span>Convención</span><b>Tracción en fibra inferior positiva</b></div>
       <div class="proc__r"><span>Confianza</span><b>Lectura limitada — ver causa</b></div>
-    </div>` : `
+    </div>
+    ${denseLinks()}` : `
     <div class="det__sect">
       <h5>Resultados de este objeto</h5>
       <div class="causa">
@@ -723,6 +724,156 @@ ${cinta({ estado: 'resuelto' })}
       <div class="spec"><span class="cbx" style="width:44px;height:44px"><i></i></span><small>táctil · 44×44 de acierto, glifo de 16</small></div>
       <div class="spec"><span style="display:inline-block;width:110px;height:30px;border-radius:6px;background:repeating-linear-gradient(180deg,var(--sc-color-surface-2) 0 15px,var(--sc-color-surface-1) 15px 30px)"></span><small>fila de tabla · 30px, y el control sigue siendo 36/44</small></div>
     </div>
+  </div>
+</div>` });
+
+/* ------------------------------------------------------------------ */
+/* 17-21 · CORRECCIÓN DE DISCOVERABILITY — capacidades que no tenían        */
+/* puerta visible en la primera pasada, ahora demostradas abiertas.        */
+/* ------------------------------------------------------------------ */
+
+frame({ name: '17-menu-documento', w: 1440, h: 900, cls: 'X2', rail: 'labels', theme: 'light',
+  caption: 'Menú de documento, abierto · antes era un caret sin inventario. Cierra dos huecos que CRI-8 §9.2 marcó como graves: cambiar de proyecto (#2) e importar DXF (#3) sólo eran alcanzables desde la Welcome.',
+  body: `
+${cinta({ estado: 'sin' })}
+${docMenu()}
+<div class="body">
+  ${riel('select')}
+  <div class="lienzo">
+    ${portico({ w: 1272, h: 840 })}
+    ${flotantes({ modo: 'Seleccionar', hint: 'toca un objeto' })}
+  </div>
+</div>` });
+
+frame({ name: '18-zocalo-desbordamiento', w: 1440, h: 900, cls: 'X2', rail: 'labels', theme: 'light',
+  caption: 'Zócalo · desbordamiento abierto · Copiar, Pegar, Duplicar y Repetir — hoy sin ninguna afordancia visible (CRI-8 §6.3, §9.1 #4-5) — demostrados por primera vez en una lámina, no sólo descritos en prosa.',
+  body: `
+${cinta({ estado: 'sin' })}
+<div class="body">
+  ${riel('select')}
+  <div class="lienzo">
+    ${portico({ w: 1272, h: 840, sel: 'B3' })}
+    <div class="rot rot--sel" style="left:636px;top:264px">B-03 · IPE-240</div>
+    <div class="zocalo__fiel" style="left:636px;top:212px;height:40px"></div>
+    ${zocalo({ x: 636, y: 152, id: 'B-03', glyph: 'member', verbs: [
+      { i: 'gen', t: 'Sección' }, { i: 'split', t: 'Dividir' }, { i: 'dist', t: 'Carga' },
+    ], overflow: [
+      { i: 'copy', t: 'Copiar', k: 'Ctrl C' },
+      { i: 'canvasIcon', t: 'Pegar', k: 'Ctrl V' },
+      { i: 'copy', t: 'Duplicar', k: 'Ctrl D' },
+      { i: 'repeat', t: 'Repetir', k: 'R' },
+      { i: 'dim', t: 'Cota' },
+      { i: 'cut', t: 'Corte aquí' },
+    ] })}
+    ${flotantes({ modo: 'Seleccionar', hint: '1 miembro' })}
+  </div>
+</div>` });
+
+frame({ name: '19-vista-invocada', w: 1440, h: 900, cls: 'X2', rail: 'labels', theme: 'light',
+  caption: 'Superficie `view`, invocada y abierta · antes descrita sólo como «dueño único de la visibilidad», sin contenido declarado. Itemiza capas, snap y el filtro de selección — la tercera función más escondida del producto actual (CRI-8 §9.1 #3).',
+  body: `
+${cinta({ estado: 'limitado' })}
+<div class="body">
+  ${riel('select')}
+  <div class="lienzo">
+    ${portico({ w: 1272, h: 840 })}
+    ${flotantes({ modo: 'Seleccionar', hint: 'toca un objeto' })}
+    <div class="scrim" style="background:transparent"></div>
+    <div class="sc-popover-anchor" style="position:absolute;top:56px;right:56px;z-index:11;border:1px solid var(--sc-color-border);border-radius:var(--sc10-radius-xl);background:var(--sc-color-surface-elevated);box-shadow:var(--sc-shadow-clay-lg);overflow:hidden">
+      ${viewPanel()}
+    </div>
+  </div>
+</div>` });
+
+frame({ name: '20-dense-reacciones', w: 1440, h: 900, cls: 'X2', rail: 'labels', theme: 'light',
+  caption: 'Reacciones (`dense`), invocada desde el Detalle · antes `dense` no tenía NINGÚN lanzador visible en ninguna lámina — sólo un destino conceptual en el texto. Ahora tiene puerta explícita y demostrada.',
+  body: `
+${cinta({ estado: 'limitado' })}
+<div class="body">
+  ${riel('select')}
+  <div class="lienzo">
+    ${portico({ w: 1272, h: 840 })}
+    ${flotantes({ modo: 'Seleccionar', hint: 'toca un objeto' })}
+  </div>
+</div>
+<div class="scrim"></div>
+<div class="drawer">
+  <div class="drawer__h">
+    <span class="det__glyph">${ICON.table}</span>
+    <div style="flex:1">
+      <h3>Reacciones</h3>
+      <p>Combinación activa: Servicio 1 · abierto desde el Detalle de un objeto</p>
+    </div>
+    <button class="btn">${ICON.back} Salir</button>
+  </div>
+  <div class="drawer__b">
+    <table class="tabla">
+      <thead><tr><th>Nudo</th><th class="n">Rx (kN)</th><th class="n">Ry (kN)</th><th class="n">M (kN·m)</th><th style="width:80px"></th></tr></thead>
+      <tbody>
+        <tr><td style="font-family:var(--sc-font-mono);font-weight:700">N1</td><td class="n">7.79</td><td class="n">65.00</td><td class="n">0.00</td><td><button class="btn" style="height:30px">${ICON.target}</button></td></tr>
+        <tr class="is-sel"><td style="font-family:var(--sc-font-mono);font-weight:700">N2</td><td class="n">−7.79</td><td class="n">65.00</td><td class="n">0.00</td><td><button class="btn" style="height:30px">${ICON.target}</button></td></tr>
+      </tbody>
+    </table>
+    <div class="causa" style="--st:var(--sc-color-state-info)">
+      <div class="causa__q">${ICON.info} Suma de reacciones</div>
+      <div class="causa__w">ΣRy = 130.00 kN, igual a la carga vertical total aplicada (equilibrio verificado).</div>
+    </div>
+  </div>
+</div>` });
+
+frame({ name: '02b-vista-global', w: 1440, h: 900, cls: 'X2', rail: 'labels', theme: 'light',
+  caption: 'Vista global · resuelto, sin selección, chip de estado expandido · el equivalente visible del «Centro analítico» de hoy. Sin esto, un resultado resuelto sin selección no tenía ninguna puerta a Reacciones, Índice elástico ni Aprender.',
+  body: `
+${cinta({ estado: 'resuelto' })}
+${estadoQuickLinks()}
+<div class="body">
+  ${riel('select')}
+  <div class="lienzo">
+    ${portico({ w: 1272, h: 840, layer: 'M' })}
+    <div class="rot rot--mom" style="left:636px;top:196px">M máx. 36.35 kN·m · x 3.000 m</div>
+    <div class="rot rot--mom rot--fold" style="left:280px;top:262px">M</div>
+    <div class="rot rot--mom rot--fold" style="left:992px;top:262px">M</div>
+    ${flotantes({ modo: 'Seleccionar', hint: 'toca un objeto', capa: CAPA.M, globalScope: true })}
+  </div>
+</div>` });
+
+frame({ name: '21-recuperacion-conflicto', w: 1440, h: 900, cls: 'X2', rail: 'labels', theme: 'light',
+  caption: 'Persistencia en conflicto (PER-03), resuelto desde la mesa · el hueco de acceso más grave de CRI-8 §9.2 #1 — la restauración vivía sólo en el Project Hub, en otra pantalla. El chip de persistencia es ahora la puerta directa a `recovery`.',
+  body: `
+${cinta({ estado: 'limitado', persist: 'conflicto' })}
+<div class="body">
+  ${riel('select')}
+  <div class="lienzo">
+    ${portico({ w: 1272, h: 840 })}
+    ${flotantes({ modo: 'Seleccionar', hint: 'toca un objeto' })}
+  </div>
+</div>
+<div class="scrim"></div>
+<div class="drawer">
+  <div class="drawer__h">
+    <span class="det__glyph" style="background:color-mix(in srgb,var(--sc-color-state-error) 12%,var(--sc-color-surface-1));color:var(--sc-color-state-error)">${ICON.bang}</span>
+    <div style="flex:1">
+      <h3>Conflicto de revisión</h3>
+      <p>Este proyecto cambió en otra pestaña o dispositivo mientras trabajabas aquí.</p>
+    </div>
+    <button class="btn">${ICON.back} Salir</button>
+  </div>
+  <div class="drawer__b">
+    <div class="causa causa--error">
+      <div class="causa__q">${ICON.cross} Dos versiones no reconciliadas</div>
+      <div class="causa__w">La sesión local (esta mesa) y la copia guardada difieren. Ninguna se descarta en silencio: la copia en conflicto se guardó aparte en la misma transacción antes de mostrarte esto.</div>
+    </div>
+    <div class="rec" style="grid-template-columns:44px 1fr auto">
+      <div class="rec__t">${portico({ w: 44, h: 34, labels: 'none' })}</div>
+      <div class="rec__c"><strong>Sesión local · esta mesa</strong><small>Editado hace 40 s · 4 nudos · 3 barras</small></div>
+      <button class="btn btn--primary">Conservar ésta</button>
+    </div>
+    <div class="rec" style="grid-template-columns:44px 1fr auto">
+      <div class="rec__t">${portico({ w: 44, h: 34, sel: 'B3', labels: 'none' })}</div>
+      <div class="rec__c"><strong>Copia guardada · otra sesión</strong><small>Guardado hace 2 min · 4 nudos · 3 barras</small></div>
+      <button class="btn">Conservar ésta</button>
+    </div>
+    <button class="btn" style="width:max-content">Comparar antes de decidir</button>
   </div>
 </div>` });
 

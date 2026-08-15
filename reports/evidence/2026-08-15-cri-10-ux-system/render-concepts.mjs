@@ -78,6 +78,36 @@ if (frames.length === 0) {
   process.exit(1);
 }
 
+/**
+ * COMPROBACIÓN DE DESBORDAMIENTO DE LA CINTA — nueva en esta pasada de
+ * corrección. Al devolver el lanzador de Datasheet a la Cinta (permanente,
+ * al mismo nivel que Model Doctor), la Cinta de Compact gana un icono más.
+ * En vez de asumir que cabe en 320-390px, se mide contra el propio DOM
+ * renderizado — el mismo principio que sostiene `qa-topbar.mjs` en el
+ * producto real: «cero desbordamiento horizontal» no se declara, se
+ * comprueba. Si algún día deja de caber, esta comprobación falla en vez de
+ * dejar una Cinta cortada en una lámina que nadie vuelve a mirar de cerca.
+ */
+const overflowing = await page.$$eval('.frame[data-class="K0"] .cinta', (nodes) =>
+  nodes
+    .filter((node) => node.scrollWidth > node.clientWidth + 1)
+    .map((node) => ({
+      frame: node.closest('.frame')?.dataset.name ?? '?',
+      scrollWidth: node.scrollWidth,
+      clientWidth: node.clientWidth,
+    })),
+);
+if (overflowing.length > 0) {
+  console.error(
+    '\n✗ La Cinta desborda horizontalmente en Compact:\n' +
+    overflowing.map((o) => `   ${o.frame}: contenido ${o.scrollWidth}px > banda ${o.clientWidth}px`).join('\n') +
+    '\n  El lanzador de Datasheet no cabe junto al de Model Doctor en este ancho: comparte disparador o degrada antes.',
+  );
+  await browser.close(); server.close();
+  process.exit(1);
+}
+console.log(`✓ La Cinta no desborda en ninguna de las ${await page.$$eval('.frame[data-class="K0"] .cinta', (n) => n.length)} láminas Compact.\n`);
+
 let written = 0;
 for (const theme of ['light', 'dark']) {
   await page.evaluate((t) => { document.documentElement.setAttribute('data-theme', t); }, theme);
