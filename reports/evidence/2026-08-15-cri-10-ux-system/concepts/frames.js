@@ -2,7 +2,7 @@
  * verificada contra la evidencia de CRI-7 y contra el árbol actual. Ninguna
  * pantalla existe para enseñar estilo.
  */
-import { ICON, cinta, estadoChip, riel, flotantes, portico, mini, zocalo, prow, fieldNum, fieldSel, fieldMix, metric, docMenu, denseLinks, estadoQuickLinks, viewPanel } from './parts.js';
+import { ICON, cinta, estadoChip, riel, flotantes, portico, mini, zocalo, prow, fieldNum, fieldSel, fieldMix, metric, docMenu, denseLinks, estadoQuickLinks, viewPanel, contextLine, resultTabs, diagramCurve, maxMinCard, densityToggle, persistChip, ATTENTION_RING } from './parts.js';
 
 const F = [];
 /** @param spec {name,w,h,caption,theme,cls,rail,input,body} */
@@ -875,6 +875,274 @@ ${cinta({ estado: 'limitado', persist: 'conflicto' })}
     </div>
     <button class="btn" style="width:max-content">Comparar antes de decidir</button>
   </div>
+</div>` });
+
+/* ------------------------------------------------------------------ */
+/* 22 · RESULTS/DENSE CON TARJETAS RECUPERADAS — Expanded y Compact         */
+/* Familias y tabs verificados contra `ResultsPanel.tsx:29-48`.            */
+/* ------------------------------------------------------------------ */
+
+frame({ name: '22-results-dense-expanded', w: 1440, h: 900, cls: 'X2', rail: 'labels', theme: 'light',
+  caption: 'Results/`dense` con tarjetas recuperadas · Expanded. Tabs agrupados por familia (Estado · Fuerzas · Forma · Avanzado · Entender), curva + tarjeta de máximo/mínimo con objeto, posición y unidad — el patrón de las capturas actuales, invocado, no residente.',
+  body: `
+${cinta({ estado: 'limitado' })}
+<div class="body">
+  ${riel('select')}
+  <div class="lienzo">
+    ${portico({ w: 1272, h: 840, sel: 'B3', layer: 'M' })}
+    ${flotantes({ modo: 'Seleccionar', hint: '1 miembro', capa: CAPA.M })}
+  </div>
+</div>
+<div class="scrim"></div>
+<div class="drawer drawer--wide">
+  <div class="drawer__h">
+    <span class="det__glyph">${ICON.member}</span>
+    <div style="flex:1">
+      <h3>Resultados</h3>
+      ${contextLine(['B-03', 'Momento', 'Servicio 1'])}
+    </div>
+    ${estadoChip('limitado')}
+    <button class="btn">${ICON.back} Salir</button>
+  </div>
+  <div class="drawer__b">
+    ${resultTabs('moment')}
+    <div class="det__sect">
+      ${diagramCurve('var(--sc-color-technical-moment)', 'sag')}
+    </div>
+    ${maxMinCard('var(--sc-color-technical-moment)', 'M · Momento', 'B-03', '36.35', '−31.15', 'kN·m', '3.000 m', '0.000 m')}
+    <div class="proc">
+      <div class="proc__h">${ICON.info} Procedencia de M máx.</div>
+      <div class="proc__r"><span>Caso</span><b>Combinación «Servicio 1»</b></div>
+      <div class="proc__r"><span>Convención</span><b>Tracción en fibra inferior positiva</b></div>
+      <div class="proc__r"><span>Confianza</span><b>Lectura limitada — ver causa</b></div>
+    </div>
+    <div class="causa">
+      <div class="causa__q">${ICON.half} Lectura limitada — cortante sin deformación por corte</div>
+      <div class="causa__w">La teoría activa es Euler–Bernoulli. En B-03 el canto es 1/25 del vano, donde esa hipótesis es razonable; la flecha puede quedar del lado bajo.</div>
+    </div>
+    <div class="dense-links">
+      <button class="dl-item">${ICON.table} Fila en la hoja de datos</button>
+      <button class="dl-item">${ICON.target} Localizar en el modelo</button>
+    </div>
+  </div>
+</div>` });
+
+frame({ name: '22b-results-dense-compact', w: 390, h: 844, cls: 'K0', rail: 'none', theme: 'light', input: 'touch',
+  caption: 'Results/`dense` · Compact, pantalla completa. Los mismos tabs por familia, la misma tarjeta — los datos siguen planos y comparables, NO se simplifican a cards decorativas. El overlay de momento sigue en el lienzo detrás.',
+  body: `
+${cinta({ estado: 'limitado', compact: true })}
+<div class="body">
+  <div class="lienzo">
+    ${portico({ w: 390, h: 200, sel: 'B3', layer: 'M' })}
+    ${flotantes({ modo: 'Seleccionar', hint: '1 miembro', capa: CAPA.M, compact: true })}
+  </div>
+</div>
+<div class="hoja" style="height:610px">
+  <div class="hoja__grip"><i></i></div>
+  <div class="det__head" style="padding-top:0">
+    <span class="det__glyph">${ICON.member}</span>
+    <div style="flex:1">
+      <strong style="display:block;font-size:15px">Resultados</strong>
+      ${contextLine(['B-03', 'Momento', 'Servicio 1'])}
+    </div>
+  </div>
+  <div class="det__body" style="gap:14px">
+    ${resultTabs('moment', { compact: true })}
+    ${diagramCurve('var(--sc-color-technical-moment)', 'sag', 340, 120)}
+    ${maxMinCard('var(--sc-color-technical-moment)', 'M · Momento', 'B-03', '36.35', '−31.15', 'kN·m', '3.000 m', '0.000 m')}
+    <div class="dense-links">
+      <button class="dl-item">${ICON.table} Fila en la hoja</button>
+      <button class="dl-item">${ICON.target} Localizar</button>
+    </div>
+  </div>
+</div>` });
+
+/* ------------------------------------------------------------------ */
+/* 23 · CANVAS ↔ DETALLE ↔ DENSE — el overlay sigue siendo la evidencia    */
+/* principal; Forma (Deformada) también recuperada como familia.          */
+/* ------------------------------------------------------------------ */
+
+frame({ name: '23-nvm-deformada-continuidad', w: 1440, h: 900, cls: 'X2', rail: 'labels', theme: 'light',
+  caption: 'Deformada (familia Forma) · el overlay sobre el lienzo sigue siendo la evidencia principal — la tarjeta del Detalle es la lectura condensada, y «Ver detalle completo» es la puerta a `dense` con la curva y la tarjeta de máximo. Ninguna sustituye a la otra.',
+  body: `
+${cinta({ estado: 'limitado' })}
+<div class="body">
+  ${riel('select')}
+  <div class="lienzo">
+    ${portico({ w: 952, h: 840, sel: 'B3', layer: 'd' })}
+    ${zocalo({ x: 476, y: 120, id: 'B-03', glyph: 'member', verbs: [{ i: 'info', t: 'Procedencia' }, { i: 'table', t: 'Fila' }], danger: false })}
+    ${flotantes({ modo: 'Seleccionar', hint: '1 miembro', capa: CAPA.d })}
+  </div>
+  <aside class="detalle">
+    <div class="det__head">
+      <span class="det__glyph">${ICON.member}</span>
+      <span class="det__title"><strong>B-03</strong><span>Miembro · N3 → N4 · 6.000 m</span></span>
+    </div>
+    <div class="det__body">
+      ${mini('B3')}
+      <div class="det__sect">
+        <h5>Resultados de este objeto</h5>
+        <div class="metrics">
+          ${metric('d', 'Flecha δ máx.', '11.4', 'mm', 'x = 3.000 m')}
+          ${metric('M', 'M máx.', '36.35', 'kN·m')}
+        </div>
+      </div>
+      <button class="btn btn--full">${ICON.chev} Ver detalle completo</button>
+    </div>
+  </aside>
+</div>` });
+
+/* ------------------------------------------------------------------ */
+/* 24 · ATENCIÓN POR EXCEPCIÓN — normalidad silenciosa vs. señal viva      */
+/* ------------------------------------------------------------------ */
+
+const cintaAttnDemo = (mode) => {
+  const normal = mode === 'normal';
+  return `<header class="cinta" style="border-radius:14px">
+    <div class="mark">S</div>
+    <div class="doc"><span class="doc__name">Pórtico de ejemplo</span><button class="ib ib--ghost">${ICON.caret}</button></div>
+    ${persistChip(normal ? 'guardado' : 'conflicto', false).replace('class="persist', `class="${normal ? '' : ATTENTION_RING} persist`)}
+    <button class="ib">${ICON.undo}</button><button class="ib" data-state="disabled">${ICON.redo}</button>
+    <div class="cinta__spacer"></div>
+    <span class="aviso">${ICON.info} Herramienta de apoyo</span>
+    <button class="ib ${normal ? '' : ATTENTION_RING} doctor-launcher" aria-label="Model Doctor${normal ? '' : ' · 2 hallazgos'}">${ICON.doctor}${normal ? '' : '<i class="badge-count">2</i>'}</button>
+    ${estadoChip(normal ? 'resuelto' : 'nofiable', false).replace('class="estado', `class="${normal ? '' : ATTENTION_RING} estado`)}
+    <div class="resolver"><button class="resolver__go">${ICON.play} Resolver</button><button class="resolver__ctx">Servicio 1 ${ICON.caret}</button></div>
+  </header>`;
+};
+
+frame({ name: '24-atencion-normal-vs-excepcion', w: 1440, h: 300, cls: 'X2', rail: 'none', theme: 'light',
+  caption: 'Atención por excepción · misma Cinta, dos estados del mundo. Normal: persistencia discreta, Doctor sin badge, estado compacto sin ganar peso. Excepción (conflicto + no fiable + 2 hallazgos): esas tres señales concretas ganan presencia — el resto de la Cinta no cambia.',
+  body: `
+<div style="padding:24px;display:grid;gap:28px">
+  <div style="display:grid;gap:8px">
+    <div class="compare__label">✓ <b>Normal</b> — silenciosa. Guardado, 0 hallazgos, resuelto: ningún control compite por atención, el chrome vuelve a su presupuesto mínimo.</div>
+    <div class="compare__frame">${cintaAttnDemo('normal')}</div>
+  </div>
+  <div style="display:grid;gap:8px">
+    <div class="compare__label">⚠ <b>Excepción</b> — señal viva. Conflicto + 2 hallazgos + no fiable: sólo esas tres señales ganan anillo y peso — Deshacer, el aviso y Resolver siguen exactamente igual.</div>
+    <div class="compare__frame">${cintaAttnDemo('atencion')}</div>
+  </div>
+</div>` });
+
+/* ------------------------------------------------------------------ */
+/* 25 · HIPÓTESIS ESENCIAL vs. COMPLETA — misma tarea, misma capacidad,    */
+/* distinta presentación. A validar en CRI-11, no una decisión tomada.     */
+/* ------------------------------------------------------------------ */
+
+frame({ name: '25-esencial-vs-completa', w: 1440, h: 340, cls: 'X2', rail: 'none', theme: 'light',
+  caption: 'Hipótesis Esencial/Completa · misma tarea (B-03 seleccionado, cambiar sección), mismo `Selection`, mismo comando — sólo cambia cuánto se muestra a la vez. Dos aplicaciones NO: es `densityToggle`, una preferencia sobre la misma capa de presentación.',
+  body: `
+<div class="compare">
+  <div class="compare__col">
+    <div class="compare__label">${densityToggle('Esencial')} <b>menos chrome, rutas claras</b></div>
+    <div class="compare__frame">
+      <div style="padding:16px;background:var(--sc-color-bg-app)">
+        <div class="zocalo" style="position:static;transform:none;box-shadow:var(--sc-shadow-clay-md);width:max-content">
+          <span class="zocalo__id">${ICON.member} B-03</span>
+          <button class="zac">${ICON.gen} Sección</button>
+          <span class="zocalo__sep"></span>
+          <button class="zac zac--danger">${ICON.trash}</button>
+          <button class="zac">${ICON.more}</button>
+        </div>
+        <div style="height:12px"></div>
+        <div class="disclosure-more">${ICON.chev} Más herramientas (Dividir · Cota · Corte · Invertir)</div>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--sc-color-text-secondary);line-height:1.5;margin:0">Un verbo primario. Todo lo demás está a un toque de disclosure, no borrado — ideal para aprender o trabajar sin ruido.</p>
+  </div>
+  <div class="compare__col">
+    <div class="compare__label">${densityToggle('Completa')} <b>todo accesible, rutas de experto</b></div>
+    <div class="compare__frame">
+      <div style="padding:16px;background:var(--sc-color-bg-app)">
+        <div class="zocalo" style="position:static;transform:none;box-shadow:var(--sc-shadow-clay-md);width:max-content">
+          <span class="zocalo__id">${ICON.member} B-03</span>
+          <button class="zac">${ICON.gen} Sección</button>
+          <button class="zac">${ICON.split} Dividir</button>
+          <button class="zac">${ICON.dist} Carga</button>
+          <span class="zocalo__sep"></span>
+          <button class="zac zac--danger">${ICON.trash}</button>
+          <button class="zac">${ICON.more}</button>
+        </div>
+        <div style="height:12px"></div>
+        <div style="display:flex;gap:8px;align-items:center;color:var(--sc-color-text-muted);font-size:11px;font-family:var(--sc-font-mono)">
+          <kbd style="border:1px solid var(--sc-color-border);border-radius:4px;padding:2px 6px">Ctrl K</kbd> paleta siempre visible como ruta rápida
+        </div>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--sc-color-text-secondary);line-height:1.5;margin:0">Tres verbos primarios, atajos a la vista, densidad alta donde aporta — para quien ya conoce la mesa.</p>
+  </div>
+</div>` });
+
+/* ------------------------------------------------------------------ */
+/* 26 · RIEL ESTABLE + ZÓCALO CONTEXTUAL — memoria muscular real           */
+/* ------------------------------------------------------------------ */
+
+const rielMini = (activeId) => `
+<div class="rielmini">
+  <div class="rielmini__g"><small>Navegar</small>
+    <span class="rielmini__i ${activeId === 'select' ? 'is-active' : ''}">${ICON.select} Seleccionar</span>
+    <span class="rielmini__i">${ICON.pan} Desplazar</span>
+  </div>
+  <div class="rielmini__g"><small>Crear</small>
+    <span class="rielmini__i ${activeId === 'node' ? 'is-active' : ''}">${ICON.node} Nudo</span>
+    <span class="rielmini__i">${ICON.member} Miembro</span>
+    <span class="rielmini__i">${ICON.support} Apoyo</span>
+  </div>
+  <div class="rielmini__g"><small>Cargar</small>
+    <span class="rielmini__i">${ICON.load} Puntual</span>
+    <span class="rielmini__i">${ICON.dist} Distribuida</span>
+  </div>
+</div>`;
+
+frame({ name: '26-riel-estable-zocalo', w: 1440, h: 580, cls: 'X2', rail: 'none', theme: 'light',
+  caption: 'Riel estable + zócalo contextual · el mismo riel, letra por letra, con dos selecciones muy distintas. Lo único que cambia es el zócalo bajo el objeto — el riel es memoria muscular, no un panel que se reordena con la selección.',
+  body: `
+<div class="compare">
+  <div class="compare__col">
+    <div class="compare__label">Selección: <b>nudo N3</b></div>
+    <div class="compare__frame" style="display:flex;height:280px">
+      ${rielMini('select')}
+      <div class="lienzo" style="flex:1;position:relative">
+        ${portico({ w: 500, h: 280, sel: 'B3', labels: 'none' })}
+        ${zocalo({ x: 250, y: 60, id: 'N3', glyph: 'node', verbs: [{ i: 'support', t: 'Apoyo' }, { i: 'load', t: 'Carga' }] })}
+      </div>
+    </div>
+  </div>
+  <div class="compare__col">
+    <div class="compare__label">Selección: <b>carga distribuida</b></div>
+    <div class="compare__frame" style="display:flex;height:280px">
+      ${rielMini('select')}
+      <div class="lienzo" style="flex:1;position:relative">
+        ${portico({ w: 500, h: 280, labels: 'none' })}
+        ${zocalo({ x: 250, y: 60, id: 'q-02', glyph: 'dist', verbs: [{ i: 'sliders', t: 'Valor' }, { i: 'layers', t: 'Caso' }, { i: 'repeat', t: 'Convertir' }] })}
+      </div>
+    </div>
+  </div>
+</div>
+<p style="padding:0 24px 20px;font-size:12px;color:var(--sc-color-text-secondary)">El riel rotulado vs. iconos (Expanded vs. Medium) sigue siendo hipótesis de CRI-9/CRI-10 §5.2 — aquí sólo se demuestra que su CONTENIDO no cambia con la selección, que es una afirmación distinta.</p>` });
+
+/* ------------------------------------------------------------------ */
+/* 27 · CONTINUIDAD canvas ↔ dense ↔ canvas — dense también hace `peek`    */
+/* ------------------------------------------------------------------ */
+
+frame({ name: '27-dense-peek-continuidad', w: 1440, h: 900, cls: 'X2', rail: 'labels', theme: 'light',
+  caption: 'Continuidad canvas → dense → canvas · localizar desde `dense` NO cierra la superficie: se pliega a `peek`, igual que ya hace Datasheet y Model Doctor. El bucle completo: canvas ↔ tarjeta ↔ procedencia ↔ dense ↔ canvas.',
+  body: `
+${cinta({ estado: 'limitado' })}
+<div class="body">
+  ${riel('select')}
+  <div class="lienzo">
+    ${portico({ w: 1272, h: 784, sel: 'B3', layer: 'M' })}
+    <div class="rot rot--sel" style="left:636px;top:246px">B-03 · IPE-240</div>
+    ${zocalo({ x: 636, y: 140, id: 'B-03', glyph: 'member', verbs: [{ i: 'info', t: 'Procedencia' }, { i: 'table', t: 'Fila' }], danger: false })}
+    ${flotantes({ modo: 'Seleccionar', hint: '1 miembro', capa: CAPA.M })}
+  </div>
+</div>
+<div class="peek">
+  <span class="det__glyph" style="width:30px;height:30px;background:var(--sc-color-surface-2);color:var(--sc-color-text-secondary)">${ICON.table}</span>
+  <div class="peek__l"><strong>Resultados · Fuerzas · Momento — B-03</strong><small>Servicio 1 · lectura limitada · sin cambios sin aplicar</small></div>
+  <button class="btn btn--primary">${ICON.back} Volver a Resultados</button>
 </div>` });
 
 /* ------------------------------------------------------------------ */

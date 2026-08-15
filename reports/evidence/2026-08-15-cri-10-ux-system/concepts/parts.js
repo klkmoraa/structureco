@@ -465,3 +465,87 @@ export const metric = (cls, label, value, unit, detail = '') => `
   <strong>${value}<small>${unit}</small></strong>
   ${detail ? `<span style="color:var(--sc-color-text-muted);font-size:11px">${detail}</span>` : ''}
 </div>`;
+
+/* ===================================================================== */
+/* EVOLUCIÓN CRI-10 — piezas nuevas de esta pasada                        */
+/*                                                                         */
+/* Recuperan el patrón de tabs agrupados por familia + tarjetas técnicas   */
+/* del `ResultsPanel` real (verificado en `src/features/results/`), pero   */
+/* como contenido de la superficie `dense` INVOCADA — nunca como panel     */
+/* residente. Las familias y sus tabs son las cinco reales de              */
+/* `resultFamilies` en `ResultsPanel.tsx:43-48`, no inventadas:            */
+/*   Estado (Resumen · Reacciones) · Fuerzas (Axial · Cortante · Momento)  */
+/*   Forma (Deformada) · Avanzado (Influencia) · Entender (Aprender)       */
+/* ===================================================================== */
+
+/** Línea de contexto — el contrato de §6 del informe de evolución: objeto
+ *  (o alcance) · evidencia · caso, siempre en ese orden, siempre compacta. */
+export const contextLine = (parts) => `<div class="ctxline">${parts.map((p, i) => `<span class="ctxline__seg ${i === 0 ? 'is-primary' : ''}">${p}</span>`).join('<span class="ctxline__sep">·</span>')}</div>`;
+
+/**
+ * Nav de tabs agrupados por familia. `active` es el id del tab activo.
+ * Estructura y colores verificados contra `ResultsPanel.tsx:29-48`: sólo
+ * Fuerzas y Avanzado llevan color técnico en el tab; Forma (Deformada) se
+ * lee por el color de sus tarjetas y de la capa, no por el tab.
+ */
+const RESULT_FAMILIES = [
+  { id: 'state', label: 'Estado', tabs: [{ id: 'summary', label: 'Resumen' }, { id: 'reactions', label: 'Reacciones' }] },
+  { id: 'forces', label: 'Fuerzas', tabs: [
+    { id: 'axial', label: 'Axial', color: 'var(--sc-color-technical-axial)' },
+    { id: 'shear', label: 'Cortante', color: 'var(--sc-color-technical-shear)' },
+    { id: 'moment', label: 'Momento', color: 'var(--sc-color-technical-moment)' },
+  ] },
+  { id: 'shape', label: 'Forma', tabs: [{ id: 'deformed', label: 'Deformada', color: 'var(--sc-color-technical-deformed)' }] },
+  { id: 'advanced', label: 'Avanzado', tabs: [{ id: 'influence', label: 'Influencia', color: 'var(--sc-color-technical-shear)' }] },
+  { id: 'understand', label: 'Entender', tabs: [{ id: 'learn', label: 'Aprender' }] },
+];
+export const resultTabs = (active, { compact = false } = {}) => `
+<nav class="rtabs" role="tablist" aria-label="Resultados">
+  ${RESULT_FAMILIES.map((fam) => `
+    <div class="rtabs__fam" role="presentation">
+      <span class="rtabs__famlabel">${fam.label}</span>
+      <div class="rtabs__group" role="presentation">
+        ${fam.tabs.map((tab) => `<button class="rtabs__tab ${tab.id === active ? 'is-active' : ''}" role="tab" aria-selected="${tab.id === active}" style="--tabc:${tab.color ?? 'var(--sc-color-text-primary)'}">${tab.label}</button>`).join('')}
+      </div>
+    </div>`).join('')}
+</nav>`;
+
+/**
+ * Curva de diagrama simplificada + cursor — representa la forma, no el
+ * cálculo. `shape` es 'sag' (parábola, para M/δ) o 'step' (escalón, para V).
+ */
+export const diagramCurve = (color, shape = 'sag', w = 560, h = 140) => {
+  const path = shape === 'sag'
+    ? `M8,${h - 20} Q${w / 2},20 ${w - 8},${h - 20}`
+    : `M8,${h - 20} L${w * 0.42},${h - 20} L${w * 0.42},28 L${w * 0.58},28 L${w * 0.58},${h - 40} L${w - 8},${h - 40}`;
+  return `<svg class="dcurve" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <line x1="8" y1="${h - 20}" x2="${w - 8}" y2="${h - 20}" stroke="var(--sc-color-border)" stroke-width="1"/>
+    <path d="${path} L${w - 8},${h - 20} L8,${h - 20} Z" fill="color-mix(in srgb, ${color} 12%, transparent)" stroke="none"/>
+    <path d="${path}" fill="none" stroke="${color}" stroke-width="2"/>
+    <circle cx="${w * 0.5}" cy="${shape === 'sag' ? 20 : 28}" r="4" fill="${color}"/>
+  </svg>`;
+};
+
+/** Tarjeta de máximo/mínimo — objeto, posición y unidad, siempre juntos.
+ *  Verificado contra `memberResult.maxMoment/minMoment` + `criticalPoints`
+ *  (`ResultsPanel.tsx:635-698`): la posición y el objeto ya viajan con el
+ *  valor en el modelo de datos real; la tarjeta no inventa ese vínculo. */
+export const maxMinCard = (color, label, obj, maxV, minV, unit, maxX, minX) => `
+<div class="mmcard" style="--mmc:${color}">
+  <div class="mmcard__h">${label} <span class="mmcard__obj">${obj}</span></div>
+  <div class="mmcard__row">
+    <div class="mmcard__v"><span>Máx.</span><strong>${maxV}<small>${unit}</small></strong><small>x = ${maxX}</small></div>
+    <div class="mmcard__v"><span>Mín.</span><strong>${minV}<small>${unit}</small></strong><small>x = ${minX}</small></div>
+  </div>
+</div>`;
+
+/** Segmentado Esencial/Completa — la hipótesis de §5, nunca una app distinta. */
+export const densityToggle = (active) => `
+<div class="denstoggle" role="radiogroup" aria-label="Densidad de la interfaz">
+  ${['Esencial', 'Completa'].map((t) => `<button class="denstoggle__i ${t === active ? 'is-active' : ''}" role="radio" aria-checked="${t === active}">${t}</button>`).join('')}
+</div>`;
+
+/** Anillo de atención — se aplica a un control ya existente cuando pasa de
+ *  silencioso a requerir atención. No es un componente nuevo: es un estado
+ *  de los que ya existen (`.persist`, `.estado`, `.doctor-launcher`). */
+export const ATTENTION_RING = 'attn-ring';

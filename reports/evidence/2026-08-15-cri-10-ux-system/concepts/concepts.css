@@ -837,3 +837,71 @@ body {
 .focusring { outline: var(--sc10-focus-ring-width) solid var(--sc-color-focus); outline-offset: var(--sc-focus-ring-offset); }
 .swatchrow { display: flex; gap: 2px; }
 .swatch { width: 56px; height: 44px; display: grid; align-content: end; padding: 4px; border-radius: var(--sc10-radius-xs); color: #fff; font-family: var(--sc-font-mono); font-size: 9px; }
+
+/* ===================================================================== */
+/* EVOLUCIÓN CRI-10                                                       */
+/* ===================================================================== */
+
+/* Línea de contexto — §6: objeto · evidencia · caso, siempre compacta. */
+.ctxline { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-size: var(--sc10-font-size-caption); color: var(--sc-color-text-secondary); }
+.ctxline__seg.is-primary { color: var(--sc-color-text-primary); font-weight: 700; }
+.ctxline__sep { color: var(--sc-color-text-muted); }
+
+/* Tabs de Results agrupados por familia — recuperados de `ResultsPanel.tsx`. */
+.rtabs { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; padding-bottom: 2px; border-bottom: 1px solid var(--sc-color-border); }
+.rtabs__fam { display: grid; gap: 4px; }
+.rtabs__famlabel { color: var(--sc-color-text-muted); font-size: 10px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; }
+.rtabs__group { display: flex; gap: 2px; }
+.rtabs__tab {
+  height: 34px; padding: 0 12px;
+  border: 0; border-radius: var(--sc10-radius-sm) var(--sc10-radius-sm) 0 0;
+  background: transparent; color: var(--sc-color-text-secondary);
+  font-size: var(--sc10-font-size-caption); font-weight: 650;
+  position: relative;
+}
+.rtabs__tab::after { content: ''; position: absolute; left: 8px; right: 8px; bottom: -3px; height: 2px; border-radius: 2px; background: transparent; }
+.rtabs__tab.is-active { color: var(--tabc); background: var(--sc-color-surface-inset); }
+.rtabs__tab.is-active::after { background: var(--tabc); }
+
+/* Curva de diagrama simplificada dentro de `dense`. */
+.dcurve { display: block; width: 100%; height: auto; }
+
+/* Tarjeta de máximo/mínimo — objeto, posición, unidad, siempre juntos. */
+.mmcard { border: 1px solid color-mix(in srgb, var(--mmc) 24%, var(--sc-color-border)); border-radius: var(--sc10-radius-lg); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-xs); overflow: hidden; }
+.mmcard__h { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: color-mix(in srgb, var(--mmc) 8%, var(--sc-color-surface-1)); border-bottom: 1px solid color-mix(in srgb, var(--mmc) 18%, var(--sc-color-border)); font-size: var(--sc10-font-size-caption); font-weight: 700; color: var(--mmc); }
+.mmcard__obj { font-family: var(--sc-font-mono); color: var(--sc-color-text-secondary); font-weight: 600; }
+.mmcard__row { display: grid; grid-template-columns: 1fr 1fr; }
+.mmcard__v { display: grid; gap: 2px; padding: 12px 14px; }
+.mmcard__v:first-child { border-right: 1px solid var(--sc-color-border-soft); }
+.mmcard__v > span { color: var(--sc-color-text-secondary); font-size: 11px; }
+.mmcard__v > strong { font-family: var(--sc-font-mono); font-size: 17px; font-variant-numeric: tabular-nums; color: var(--sc-color-text-primary); }
+.mmcard__v > strong small { color: var(--sc-color-text-secondary); font-family: var(--sc-font-ui); font-size: 11px; font-weight: 400; }
+.mmcard__v > small { color: var(--sc-color-text-muted); font-family: var(--sc-font-mono); font-size: 11px; }
+
+/* Segmentado Esencial/Completa. */
+.denstoggle { display: inline-grid; grid-auto-flow: column; gap: 2px; padding: 2px; border-radius: var(--sc10-radius-md); background: var(--sc-color-surface-2); box-shadow: var(--sc-shadow-clay-pressed); }
+.denstoggle__i { height: 30px; padding: 0 12px; border: 0; border-radius: calc(var(--sc10-radius-md) - 2px); background: transparent; color: var(--sc-color-text-secondary); font-size: 11px; font-weight: 700; }
+.denstoggle__i.is-active { background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); color: var(--sc-color-action-ink); }
+
+/* Anillo de atención — se aplica a un control que ya existe, no crea uno. */
+.attn-ring { box-shadow: 0 0 0 2px color-mix(in srgb, var(--sc-color-state-warning) 55%, transparent), var(--sc-shadow-clay-xs) !important; }
+.attn-ring.persist--bad, .attn-ring.estado--fallido { box-shadow: 0 0 0 2px color-mix(in srgb, var(--sc-color-state-error) 55%, transparent) !important; }
+
+/* Comparación lado a lado (atención, esencial/completa, riel estable). */
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 24px; }
+.compare__col { display: grid; gap: 10px; align-content: start; }
+.compare__label { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; letter-spacing: 0.03em; color: var(--sc-color-text-secondary); }
+.compare__label b { color: var(--sc-color-text-primary); }
+.compare__frame { border: 1px solid var(--sc-color-border); border-radius: var(--sc10-radius-xl); overflow: hidden; background: var(--sc-color-bg-app); box-shadow: var(--sc-shadow-clay-sm); }
+
+/* Riel comparativo en miniatura, para demostrar estabilidad de contenido. */
+.rielmini { width: 148px; display: grid; gap: 6px; padding: 10px; background: var(--sc-color-surface-toolbar); border-right: 1px solid var(--sc-color-border-soft); }
+.rielmini__g { display: grid; gap: 3px; }
+.rielmini__g > small { color: var(--sc-color-text-muted); font-size: 9px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.rielmini__i { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 6px; border-radius: 7px; font-size: 10px; font-weight: 650; color: var(--sc-color-text-secondary); }
+.rielmini__i.is-active { background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); color: var(--sc-color-action-ink); }
+.rielmini__i svg { width: 13px; height: 13px; flex: 0 0 auto; }
+
+/* Disclosure "más herramientas" — Esencial pliega lo avanzado, no lo borra. */
+.disclosure-more { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 1px dashed var(--sc-color-border-strong); border-radius: var(--sc10-radius-sm); color: var(--sc-color-text-muted); font-size: 11px; font-weight: 650; background: transparent; }
+.disclosure-more svg { width: 14px; height: 14px; flex: 0 0 auto; }
