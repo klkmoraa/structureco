@@ -633,7 +633,7 @@ ${cinta({ estado: 'resuelto' })}
       <small style="color:var(--sc-color-text-muted);font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase">Qué NO afirma</small>
     </div>
     ${estadoSpec('sin', 'anillo punteado', 'No hay resultado y no lo ha habido.', 'Que el modelo esté bien o mal.')}
-    ${estadoSpec('resuelto', 'círculo + check', 'El solver convergió y el número es utilizable tal cual.', 'Que la estructura sea segura ni que cumpla norma.')}
+    ${estadoSpec('resuelto', 'círculo + check', 'El solver convergió y existe un resultado vigente.', 'Que la estructura sea segura, que cumpla norma, ni que el número esté aprobado para usarse sin criterio profesional.')}
     ${estadoSpec('limitado', 'círculo + media luna', 'Convergió, pero hay una condición declarada que acota la lectura.', 'Que el número esté mal. Está acotado, no invalidado.')}
     ${estadoSpec('nofiable', 'círculo + exclamación', 'Convergió, pero una condición invalida la confianza en el número.', 'Que no haya número. Lo hay, y no debe usarse.')}
     ${estadoSpec('obsoleto', 'círculo + barra', 'El modelo cambió: NO hay resultado vigente.', 'Nada sobre el resultado anterior — se destruyó, no se marcó.')}

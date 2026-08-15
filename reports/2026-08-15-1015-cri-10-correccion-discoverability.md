@@ -105,7 +105,7 @@ Leyenda de columnas: **P/C/I** = Persistente / Contextual / Invocada (CRI-9 §2.
 | ID | Capacidad | Superficie actual | Nueva superficie (corregida) | P/C/I | Cómo se descubre | Primer punto de acceso visible | Estado | Notas |
 |---|---|---|---|---|---|---|---|---|
 | SEL-01 | Seleccionar un objeto | 5 puertas (lienzo, Datasheet, paleta, Doctor, Results) | Mismas 5 puertas, `Selection` único | Contextual (fuente) | Cada superficie | Lienzo (principal) | `clear` | Fortaleza preservada (§18 #1) |
-| SEL-02 | Resolver solapados con puntero | Automático | Selector de candidatos (§7.3) | Contextual | Se abre por disparador computable (WCAG 2.5.8) | Lienzo | `clear` | |
+| SEL-02 | Resolver solapados con puntero | Automático | Selector de candidatos (§7.3) | Contextual | Se abre por disparador propio de StructureCo — ≥2 candidatos en la región de captura, o hit-regions solapadas (§7.1) | Lienzo | `clear` | Corregido en la pasada de precisión: WCAG 2.5.8 es un piso de tamaño/espaciado, no el disparador |
 | SEL-03 | Selección con marco | Lienzo | Lienzo, + semántica direccional propuesta (§7.5) | Contextual | Arrastre sobre el lienzo | Lienzo | `clear`/`ABIERTA-3` | El marco en sí es claro; la semántica direccional es adición declarada, no decidida |
 | SEL-04 | Multiselección acumulativa | Lienzo (Shift+clic, marco) + Datasheet | Sin cambio | Contextual | Igual | Lienzo / Datasheet | `clear` | |
 | SEL-05 | Deseleccionar | `Escape` + clic en fondo | Sin cambio | Contextual | Igual | Teclado / lienzo | `clear` | |
@@ -283,7 +283,7 @@ El resto de gates de la especificación base no se tocó y sigue en verde: `canv
 
 **Las 22 láminas originales se regeneran automáticamente** porque comparten `cinta()` y `flotantes()`: corregir esas dos funciones una vez corrige el chrome permanente en las 22 a la vez. Es la razón por la que la corrección se hizo en los componentes compartidos y no lámina por lámina.
 
-**7 láminas nuevas**, cada una demostrando una capacidad que antes no tenía ninguna imagen que la probara:
+**6 láminas nuevas** (`02b`, `17`, `18`, `19`, `20`, `21`), cada una demostrando una capacidad que antes no tenía ninguna imagen que la probara:
 
 | Lámina | Demuestra |
 |---|---|
@@ -325,9 +325,9 @@ Lo que sigue abierto es lo que ya estaba abierto en la especificación base y no
 | GAP-1 | Ancho exacto de la Cinta de Compact con Datasheet + Doctor + persistencia + estado + resolver, en el producto real (no en la lámina de 390px fija) | El gate de esta pasada mide el DOM de la lámina, no el producto. CRI-11 debe repetir la medición contra el prototipo real, con nombres de proyecto y combinaciones reales (más largos que «Servicio 1») |
 | GAP-2 | ABIERTA-1 de la base (riel rotulado vs. iconos, descubribilidad) | Sigue pendiente de tarea cronometrada, sin cambios en esta pasada |
 | GAP-3 | ABIERTA-4 de la base (cuántos verbos primarios caben en el zócalo antes de desbordar, en Compact apaisado, en los dos idiomas) | El zócalo con overflow abierto (lámina 18) es más ancho que el zócalo cerrado; su comportamiento en 844×390 con overflow abierto no se ha medido |
-| GAP-4 | LEDGER-07 de la base (el aviso de responsabilidad) | Sigue siendo decisión del propietario, sin relación con esta corrección |
+| ~~GAP-4~~ | ~~LEDGER-07 de la base (el aviso de responsabilidad)~~ | **Cerrado en la corrección de precisión posterior** (`reports/2026-08-15-*-cri-10-correccion-precision.md`). Ya no es un gap: es una decisión de UX/producto aprobada — ver §20.2 de la especificación base |
 
-Estos cuatro **ya estaban documentados** en la especificación base (§21) o son la consecuencia directa y medible de esta corrección (GAP-1, GAP-3); ninguno es nuevo por descuido.
+Estos cuatro **ya estaban documentados** en la especificación base (§21) o son la consecuencia directa y medible de esta corrección (GAP-1, GAP-3); ninguno es nuevo por descuido. **Nota de una corrección posterior:** GAP-4 dejó de estar abierto — se mantiene tachado aquí por fidelidad histórica de este informe, no porque siga pendiente.
 
 ---
 
@@ -341,7 +341,7 @@ reports/evidence/2026-08-15-cri-10-ux-system/
   concepts/concepts.css        +.persist, +.badge-count, +.badge-dot, +.docmenu*,
                                 +.zocalo-overflow/.zoc-item, +.dense-links, +.estado-panel,
                                 +.view-panel/.mini-switch
-  concepts/frames.js           +7 láminas nuevas (02b, 17, 18, 19, 20, 21);
+  concepts/frames.js           +6 láminas nuevas (02b, 17, 18, 19, 20, 21);
                                 Detalle ahora incluye denseLinks() en su pie
   render-concepts.mjs          +comprobación de desbordamiento de la Cinta en Compact
   shots/*.png                  28 láminas (24 día + 4 noche), todas regeneradas
