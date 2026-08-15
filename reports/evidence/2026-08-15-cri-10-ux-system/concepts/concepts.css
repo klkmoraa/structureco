@@ -1,0 +1,698 @@
+/* CRI-10 · hoja de los conceptos visuales.
+ *
+ * Consume `src/design-system/tokens.css` REAL por enlace relativo. Ningún color
+ * se escribe a mano aquí: si un concepto se ve verde lima es porque el token lo
+ * es, no porque este archivo lo haya decidido. Es la única forma de que un
+ * concepto sirva como especificación y no como ilustración.
+ *
+ * La capa `--sc10-*` de abajo es la ÚNICA licencia que se toma: son los valores
+ * que CRI-10 propone cambiar en `tokens.css` y que hoy divergen del Brandbook.
+ * Vivir aquí, separados y nombrados, es lo que hace que el ledger de §20 de la
+ * especificación sea verificable — cada `--sc10-*` es una fila de ese ledger.
+ */
+
+:root {
+  /* LEDGER-01 · escala de radios del Brandbook §06 (xs 6 · sm 8 · md 13 · lg 18
+     · xl 26). Hoy los tokens dicen sm 12 · md 14 · lg 26 · xl 26: el peldaño de
+     18 no existe y los dos radios más usados de la app están fuera de escala. */
+  --sc10-radius-xs: 6px;
+  --sc10-radius-sm: 8px;
+  --sc10-radius-md: 13px;
+  --sc10-radius-lg: 18px;
+  --sc10-radius-xl: 26px;
+
+  /* LEDGER-02 · anillo de foco. Brandbook §08: «un anillo de 2px … separado 2px
+     del borde». El token vigente dice 3px. */
+  --sc10-focus-ring-width: 2px;
+
+  /* LEDGER-03 · suelo tipográfico. F-03 encontró 229 declaraciones ≤11px, con
+     valores del solver a 10px y el aviso legal a 10px. El suelo pasa a 12px, y
+     todo número de ingeniería a 14px. */
+  --sc10-font-size-caption: 12px;
+  --sc10-font-size-value: 14px;
+
+  /* Medidas de composición despejadas en `canvas-budget-cri10.mjs`. */
+  --sc10-band: 60px;
+  --sc10-band-compact: 52px;
+  --sc10-rail: 168px;
+  --sc10-rail-icons: 76px;
+  --sc10-detail: 320px;
+  --sc10-dock-compact: 64px;
+}
+
+/* --------------------------------------------------------------------- */
+/* Andamio de la lámina — no es producto, es el marco que la rotula.      */
+/* --------------------------------------------------------------------- */
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  background: #6b6b6b;
+  font-family: var(--sc-font-ui);
+}
+.plate { display: flex; flex-direction: column; gap: 8px; }
+.plate__caption {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.plate__caption b { font-family: var(--sc-font-mono); font-weight: 500; opacity: 0.75; }
+
+/* El marco: cada concepto es una ventana de tamaño real. */
+.frame {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--sc-color-bg-app);
+  color: var(--sc-color-text-primary);
+  font-size: var(--sc-font-size-body);
+  line-height: var(--sc-line-height-body);
+}
+
+/* --------------------------------------------------------------------- */
+/* CINTA · la única banda permanente. Tres naturalezas, y sólo tres.      */
+/* Izquierda: qué documento y qué le hiciste. Derecha: qué dice el        */
+/* análisis y qué hacer ahora.                                            */
+/* --------------------------------------------------------------------- */
+
+.cinta {
+  height: var(--sc10-band);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-3);
+  padding: 0 var(--sc-space-4);
+  border-bottom: 1px solid var(--sc-color-border-soft);
+  background: var(--sc-color-surface-toolbar);
+}
+.frame[data-class='K0'] .cinta { height: var(--sc10-band-compact); padding: 0 var(--sc-space-3); gap: var(--sc-space-2); }
+
+.mark {
+  width: 32px; height: 32px;
+  flex: 0 0 auto;
+  display: grid; place-items: center;
+  border-radius: var(--sc10-radius-sm);
+  background: var(--sc-color-action-primary);
+  border: 1px solid var(--sc-color-action-edge);
+  color: var(--sc-color-action-foreground);
+  font-weight: 800; font-size: 15px;
+}
+.doc { min-width: 0; display: flex; align-items: center; gap: var(--sc-space-1); }
+.doc__name {
+  min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 6px var(--sc-space-2);
+  border-radius: var(--sc10-radius-sm);
+  font-size: var(--sc-font-size-control);
+  font-weight: 650;
+  letter-spacing: var(--sc-tracking-tight);
+}
+.doc__name:hover { background: var(--sc-color-surface-2); }
+.cinta__spacer { flex: 1 1 auto; min-width: var(--sc-space-4); }
+
+/* Botón de icono de la cinta — 40px puntero, 44 táctil. */
+.ib {
+  width: 40px; height: 40px;
+  flex: 0 0 auto;
+  display: grid; place-items: center;
+  border: 1px solid var(--sc-color-border);
+  border-radius: var(--sc10-radius-md);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-shadow-clay-xs);
+  color: var(--sc-color-text-secondary);
+}
+.frame[data-input='touch'] .ib { width: 44px; height: 44px; }
+.ib--ghost { border-color: transparent; background: transparent; box-shadow: none; }
+.ib[data-state='disabled'] { opacity: 0.62; }
+.ib svg { width: 20px; height: 20px; }
+
+/* Chip de estado — la afirmación más crítica del producto vive aquí.
+   Forma + color + palabra. Nunca sólo color, nunca sólo `title`. */
+.estado {
+  display: inline-flex; align-items: center; gap: var(--sc-space-2);
+  height: 40px; padding: 0 var(--sc-space-3);
+  border: 1px solid color-mix(in srgb, var(--st) 34%, var(--sc-color-border));
+  border-radius: var(--sc10-radius-md);
+  background: color-mix(in srgb, var(--st) 8%, var(--sc-color-surface-1));
+  color: var(--sc-color-text-primary);
+  font-size: var(--sc10-font-size-caption);
+  font-weight: 650;
+  --st: var(--sc-color-state-pending);
+}
+.frame[data-input='touch'] .estado { height: 44px; }
+.estado__glyph { width: 18px; height: 18px; flex: 0 0 auto; color: var(--st); }
+.estado__copy { display: grid; gap: 1px; line-height: 1.25; }
+.estado__copy small { color: var(--sc-color-text-secondary); font-size: 11px; font-weight: 500; }
+.estado--sin      { --st: var(--sc-color-state-pending); }
+.estado--calc     { --st: var(--sc-color-state-info); }
+.estado--resuelto { --st: var(--sc-color-state-success); }
+.estado--limitado { --st: var(--sc-color-state-warning); }
+.estado--nofiable { --st: var(--sc-color-state-warning); }
+.estado--obsoleto { --st: var(--sc-color-state-warning); }
+.estado--fallido  { --st: var(--sc-color-state-error); }
+
+/* Aviso de responsabilidad: permanente, enfocable, 12px. Deja de ser banda. */
+.aviso {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 40px; padding: 0 var(--sc-space-2);
+  border-radius: var(--sc10-radius-sm);
+  color: var(--sc-color-text-muted);
+  font-size: var(--sc10-font-size-caption);
+}
+.aviso svg { width: 15px; height: 15px; }
+
+/* Acción global partida: el botón resuelve, el cursor abre el contexto. */
+.resolver { display: inline-flex; flex: 0 0 auto; }
+.resolver__go, .resolver__more {
+  height: 40px;
+  display: inline-flex; align-items: center; gap: var(--sc-space-2);
+  border: 1px solid var(--sc-color-action-edge);
+  background: var(--sc-gradient-clay-action);
+  color: var(--sc-color-action-foreground);
+  box-shadow: var(--sc-shadow-clay-action);
+  font-size: var(--sc-font-size-control);
+  font-weight: 700;
+}
+.frame[data-input='touch'] .resolver__go, .frame[data-input='touch'] .resolver__more { height: 44px; }
+.resolver__go { padding: 0 var(--sc-space-4); border-radius: var(--sc10-radius-md) 0 0 var(--sc10-radius-md); border-right-width: 0; }
+.resolver__more { width: 34px; justify-content: center; border-radius: 0 var(--sc10-radius-md) var(--sc10-radius-md) 0; }
+.resolver__go svg { width: 16px; height: 16px; }
+.resolver__more svg { width: 14px; height: 14px; }
+
+/* --------------------------------------------------------------------- */
+/* CUERPO · riel + lienzo + detalle                                       */
+/* --------------------------------------------------------------------- */
+
+.body { flex: 1 1 auto; min-height: 0; display: flex; }
+
+.riel {
+  width: var(--sc10-rail);
+  flex: 0 0 auto;
+  display: flex; flex-direction: column; gap: var(--sc-space-4);
+  padding: var(--sc-space-3) var(--sc-space-3);
+  border-right: 1px solid var(--sc-color-border-soft);
+  background: var(--sc-color-surface-toolbar);
+  overflow: hidden;
+}
+.frame[data-rail='icons'] .riel { width: var(--sc10-rail-icons); align-items: center; padding-inline: 0; }
+
+.riel__group { display: grid; gap: var(--sc-space-1); }
+.riel__group > h4 {
+  margin: 0 0 2px var(--sc-space-2);
+  color: var(--sc-color-text-muted);
+  font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.frame[data-rail='icons'] .riel__group > h4 { display: none; }
+.frame[data-rail='icons'] .riel__group { justify-items: center; }
+/* En riel de iconos el grupo se separa con un filete: la agrupación no se
+   pierde al perder el rótulo, sólo cambia de soporte. */
+.frame[data-rail='icons'] .riel__group + .riel__group { border-top: 1px solid var(--sc-color-border-soft); padding-top: var(--sc-space-3); }
+
+/* Tecla de herramienta. Elegida = HUNDIDA (Brandbook §08), nunca rellena. */
+.tool {
+  width: 100%; min-height: 44px;
+  display: grid; grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center; gap: var(--sc-space-3);
+  padding: 0 var(--sc-space-2);
+  border: 1px solid color-mix(in srgb, var(--sc-color-border) 58%, var(--sc-color-surface-elevated));
+  border-radius: var(--sc10-radius-md);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-shadow-clay-xs);
+  color: var(--sc-color-text-primary);
+  --tc: var(--sc-color-tool-navigation);
+}
+.tool__icon { width: 22px; height: 22px; display: grid; place-items: center; color: var(--tc); }
+.tool__icon svg { width: 20px; height: 20px; }
+.tool__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--sc10-font-size-caption); font-weight: 650; }
+.tool kbd { color: var(--sc-color-text-muted); font-family: var(--sc-font-mono); font-size: 11px; }
+.tool.is-active {
+  border-color: color-mix(in srgb, var(--tc) 26%, var(--sc-color-border));
+  background: var(--sc-color-surface-inset);
+  color: var(--tc);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  transform: var(--sc-clay-press-transform);
+}
+.tool.is-active kbd { color: color-mix(in srgb, var(--tc) 74%, var(--sc-color-text-secondary)); }
+.tool--structure  { --tc: var(--sc-color-tool-structure); }
+.tool--load       { --tc: var(--sc-color-tool-point-load); }
+.tool--dist       { --tc: var(--sc-color-tool-distributed-load); }
+.tool--moment     { --tc: var(--sc-color-tool-moment); }
+.tool--dim        { --tc: var(--sc-color-tool-dimension); }
+.tool--cut        { --tc: var(--sc-color-tool-cut); }
+/* Riel de iconos: la tecla se cuadra y el rótulo se va al `aria-label` y al
+   badge de modo. La letra se queda: es el rótulo que sí cabe. */
+.frame[data-rail='icons'] .tool { width: 56px; grid-template-columns: 1fr; justify-items: center; gap: 1px; padding: 4px 0; min-height: 48px; }
+.frame[data-rail='icons'] .tool__name { display: none; }
+.frame[data-rail='icons'] .tool kbd { font-size: 10px; }
+
+/* --------------------------------------------------------------------- */
+/* LIENZO · plano. Ninguna sombra clay entra aquí (Brandbook §02).        */
+/* --------------------------------------------------------------------- */
+
+.lienzo {
+  flex: 1 1 auto; min-width: 0;
+  position: relative;
+  overflow: hidden;
+  background: var(--sc-color-bg-canvas);
+  background-image:
+    linear-gradient(var(--sc-color-canvas-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--sc-color-canvas-grid) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+.lienzo > svg { position: absolute; top: 0; left: 0; }
+
+/* Los tres grupos flotantes. Cada uno anclado, cada uno con orden de
+   degradación declarado. Nada flotante fuera de estos tres. */
+.flot { position: absolute; z-index: 3; display: flex; align-items: center; gap: var(--sc-space-2); }
+.flot--modo   { top: 12px; left: 12px; }
+.flot--vista  { top: 12px; right: 12px; }
+.flot--camara { bottom: 12px; right: 12px; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 var(--sc-space-3);
+  border: 1px solid var(--sc-color-border-canvas-chrome);
+  border-radius: 999px;
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-shadow-clay-xs);
+  color: var(--sc-color-text-primary);
+  font-size: var(--sc10-font-size-caption);
+  font-weight: 650;
+  white-space: nowrap;
+}
+.frame[data-input='touch'] .chip { height: 36px; }
+.chip svg { width: 15px; height: 15px; }
+.chip small { color: var(--sc-color-text-secondary); font-weight: 500; }
+.chip--on { background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); }
+.chip__dot { width: 9px; height: 9px; border-radius: 50%; background: var(--cc); }
+
+.camara { display: inline-flex; border-radius: var(--sc10-radius-md); overflow: hidden; border: 1px solid var(--sc-color-border-canvas-chrome); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-xs); }
+.camara button { width: 38px; height: 38px; display: grid; place-items: center; border: 0; border-left: 1px solid var(--sc-color-border-soft); background: transparent; color: var(--sc-color-text-secondary); }
+.camara button:first-child { border-left: 0; }
+.frame[data-input='touch'] .camara button { width: 44px; height: 44px; }
+.camara svg { width: 18px; height: 18px; }
+.lectura { font-family: var(--sc-font-mono); font-size: var(--sc10-font-size-caption); font-variant-numeric: tabular-nums; }
+
+/* Rótulo sobre el lienzo. Plano, con canto medido, nunca clay. 12px mínimo. */
+.rot {
+  position: absolute; z-index: 2;
+  padding: 3px 7px;
+  border: 1px solid var(--rc, var(--sc-color-border-canvas-chrome));
+  border-radius: var(--sc10-radius-xs);
+  background: var(--sc-color-bg-canvas);
+  color: var(--rc, var(--sc-color-text-primary));
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc10-font-size-caption);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+.rot--id { font-family: var(--sc-font-ui); font-weight: 700; padding: 2px 6px; }
+.rot--carga  { --rc: var(--sc-color-technical-load); }
+.rot--dist   { --rc: var(--sc-color-technical-shear); }
+.rot--mom    { --rc: var(--sc-color-technical-moment); }
+.rot--reac   { --rc: var(--sc-color-technical-reaction); }
+.rot--cota   { --rc: var(--sc-color-technical-dimension); }
+.rot--axial  { --rc: var(--sc-color-technical-axial); }
+.rot--def    { --rc: var(--sc-color-technical-deformed); }
+.rot--sel    { --rc: var(--sc-color-selection-stroke); background: var(--sc-color-selection); font-weight: 700; }
+/* Rótulo colapsado: cuando dos no caben sin solaparse, el de menor prioridad
+   se reduce a un punto que se expande al enfocarlo. No se borra: se pliega. */
+.rot--fold { width: 16px; height: 16px; padding: 0; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 800; }
+
+/* --------------------------------------------------------------------- */
+/* ZÓCALO DE SELECCIÓN · las acciones vienen al objeto                    */
+/* --------------------------------------------------------------------- */
+
+.zocalo {
+  position: absolute; z-index: 5;
+  display: flex; align-items: center; gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--sc-color-border);
+  border-radius: var(--sc10-radius-lg);
+  background: var(--sc-color-surface-elevated);
+  box-shadow: var(--sc-shadow-clay-md);
+  transform: translateX(-50%);
+}
+.zocalo__id {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 34px; padding: 0 var(--sc-space-2) 0 var(--sc-space-2);
+  margin-right: 2px;
+  border-radius: var(--sc10-radius-sm);
+  background: var(--sc-color-selection);
+  color: var(--sc-color-selection-stroke);
+  font-size: var(--sc10-font-size-caption); font-weight: 800;
+  white-space: nowrap;
+}
+.zocalo__id svg { width: 15px; height: 15px; }
+.zocalo__sep { width: 1px; height: 22px; margin: 0 3px; background: var(--sc-color-border-soft); }
+.zac {
+  height: 34px; min-width: 34px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 var(--sc-space-2);
+  border: 0; border-radius: var(--sc10-radius-sm);
+  background: transparent;
+  color: var(--sc-color-text-primary);
+  font-size: var(--sc10-font-size-caption); font-weight: 650;
+  white-space: nowrap;
+}
+.frame[data-input='touch'] .zac { height: 44px; min-width: 44px; }
+.frame[data-input='touch'] .zocalo__id { height: 44px; }
+.zac svg { width: 16px; height: 16px; color: var(--sc-color-text-secondary); }
+.zac:hover { background: var(--sc-color-surface-2); }
+.zac--danger { color: var(--sc-color-state-error-foreground); }
+.zac--danger svg { color: var(--sc-color-state-error); }
+/* Fiel del zócalo: la línea que dice de qué objeto habla. Sin ella el zócalo
+   es un menú suelto; con ella es la ficha de ESE objeto. */
+.zocalo__fiel { position: absolute; z-index: 4; width: 1px; background: var(--sc-color-selection-stroke); opacity: 0.5; }
+
+/* --------------------------------------------------------------------- */
+/* DETALLE · el Inspector. Existe SÓLO si hay selección.                  */
+/* --------------------------------------------------------------------- */
+
+.detalle {
+  width: var(--sc10-detail);
+  flex: 0 0 auto;
+  display: flex; flex-direction: column;
+  border-left: 1px solid var(--sc-color-border-soft);
+  background: var(--sc-color-surface-1);
+  overflow: hidden;
+}
+/* En Medium el detalle se SUPERPONE: el lienzo conserva su caja y su cámara,
+   y lo que se reduce es el rectángulo seguro. Sin scrim, sin reflow. */
+.detalle--inset {
+  position: absolute; z-index: 6; top: 10px; right: 10px; bottom: 10px;
+  width: var(--sc10-detail);
+  border: 1px solid var(--sc-color-border);
+  border-radius: var(--sc10-radius-xl);
+  box-shadow: var(--sc-shadow-clay-lg);
+}
+
+.det__head { flex: 0 0 auto; display: flex; align-items: flex-start; gap: var(--sc-space-3); padding: var(--sc-space-4); border-bottom: 1px solid var(--sc-color-border-soft); }
+.det__glyph { width: 36px; height: 36px; flex: 0 0 auto; display: grid; place-items: center; border-radius: var(--sc10-radius-md); background: var(--sc-color-selection); color: var(--sc-color-selection-stroke); }
+.det__glyph svg { width: 20px; height: 20px; }
+.det__title { min-width: 0; flex: 1 1 auto; display: grid; gap: 2px; }
+.det__title strong { font-size: 16px; letter-spacing: var(--sc-tracking-tight); }
+.det__title span { color: var(--sc-color-text-secondary); font-size: var(--sc10-font-size-caption); }
+.det__body { flex: 1 1 auto; min-height: 0; overflow: hidden; padding: var(--sc-space-4); display: grid; gap: var(--sc-space-4); align-content: start; }
+
+.det__sect { display: grid; gap: var(--sc-space-2); }
+.det__sect > h5 { margin: 0; color: var(--sc-color-text-muted); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* Miniatura de contexto: el objeto y su entorno inmediato. Accionable —
+   pulsarla encuadra. Es de las mejores ideas del producto actual. */
+.mini { height: 92px; border: 1px solid var(--sc-color-border-soft); border-radius: var(--sc10-radius-md); background: var(--sc-color-bg-canvas); position: relative; overflow: hidden; }
+.mini svg { position: absolute; top: 0; left: 0; }
+
+.prow { display: grid; grid-template-columns: minmax(96px, 0.44fr) minmax(0, 0.56fr); gap: var(--sc-space-3); align-items: center; min-height: 40px; padding: 6px 0; border-bottom: 1px solid var(--sc-color-border-soft); }
+.prow__k { display: grid; gap: 1px; }
+.prow__k strong { font-size: var(--sc10-font-size-caption); font-weight: 650; }
+.prow__k small { color: var(--sc-color-text-secondary); font-size: 11px; }
+.field {
+  min-height: 36px;
+  display: flex; align-items: center;
+  border: 1px solid var(--sc-color-border-soft);
+  border-radius: var(--sc10-radius-md);
+  background: var(--sc-color-surface-2);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  overflow: hidden;
+}
+.frame[data-input='touch'] .field { min-height: 44px; }
+.field input, .field .val { flex: 1 1 auto; min-width: 0; padding: 0 var(--sc-space-3); border: 0; background: transparent; color: inherit; font-family: var(--sc-font-mono); font-size: var(--sc10-font-size-value); font-variant-numeric: tabular-nums; text-align: right; }
+.field .unit { flex: 0 0 auto; min-width: 42px; display: grid; place-items: center; align-self: stretch; padding: 0 8px; border-left: 1px solid var(--sc-color-border-soft); color: var(--sc-color-text-secondary); font-size: 11px; }
+.field--select .val { text-align: left; font-family: var(--sc-font-ui); }
+.field--mixed .val { color: var(--sc-color-text-muted); font-style: italic; }
+
+/* Métrica de resultado. El número lleva su procedencia colgada. */
+.metric { display: grid; gap: 2px; padding-left: var(--sc-space-3); border-left: 2px solid var(--mc); }
+.metric > span { color: var(--sc-color-text-secondary); font-size: 11px; }
+.metric > strong { display: flex; align-items: baseline; gap: 4px; color: var(--mc); font-family: var(--sc-font-mono); font-size: 17px; font-variant-numeric: tabular-nums; }
+.metric > strong small { color: var(--sc-color-text-secondary); font-family: var(--sc-font-ui); font-size: 11px; font-weight: 400; }
+.metric--N { --mc: var(--sc-color-technical-axial); }
+.metric--V { --mc: var(--sc-color-technical-shear); }
+.metric--M { --mc: var(--sc-color-technical-moment); }
+.metric--d { --mc: var(--sc-color-technical-deformed); }
+.metric--R { --mc: var(--sc-color-technical-reaction); }
+.metrics { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sc-space-3) var(--sc-space-4); }
+
+/* Tarjeta de procedencia — la función más distintiva del producto, y hoy la
+   que va a tipografía más pequeña. Aquí es un objeto de primera clase. */
+.proc {
+  display: grid; gap: 6px;
+  padding: var(--sc-space-3);
+  border: 1px solid color-mix(in srgb, var(--sc-color-state-info) 26%, var(--sc-color-border));
+  border-radius: var(--sc10-radius-md);
+  background: color-mix(in srgb, var(--sc-color-state-info) 5%, var(--sc-color-surface-1));
+}
+.proc__h { display: flex; align-items: center; gap: 6px; color: var(--sc-color-text-secondary); font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.proc__h svg { width: 14px; height: 14px; }
+.proc__r { display: grid; grid-template-columns: 88px 1fr; gap: var(--sc-space-2); font-size: var(--sc10-font-size-caption); }
+.proc__r > span { color: var(--sc-color-text-secondary); }
+.proc__r > b { font-weight: 650; }
+.proc__r > b.mono { font-family: var(--sc-font-mono); font-variant-numeric: tabular-nums; }
+
+/* --------------------------------------------------------------------- */
+/* ESTADO · qué / por qué / qué hacer, siempre por elemento enfocable     */
+/* --------------------------------------------------------------------- */
+
+.causa {
+  display: grid; gap: var(--sc-space-2);
+  padding: var(--sc-space-3);
+  border: 1px solid color-mix(in srgb, var(--st) 34%, var(--sc-color-border));
+  border-radius: var(--sc10-radius-md);
+  background: color-mix(in srgb, var(--st) 7%, var(--sc-color-surface-1));
+  --st: var(--sc-color-state-warning);
+}
+.causa--error { --st: var(--sc-color-state-error); }
+.causa__q { display: flex; align-items: center; gap: 6px; font-size: var(--sc10-font-size-value); font-weight: 700; }
+.causa__q svg { width: 16px; height: 16px; color: var(--st); flex: 0 0 auto; }
+.causa__w { color: var(--sc-color-text-secondary); font-size: var(--sc10-font-size-caption); line-height: 1.45; }
+.causa__do { display: flex; gap: var(--sc-space-2); flex-wrap: wrap; }
+
+.btn {
+  height: 36px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 var(--sc-space-3);
+  border: 1px solid var(--sc-color-border);
+  border-radius: var(--sc10-radius-md);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-shadow-clay-xs);
+  color: var(--sc-color-text-primary);
+  font-size: var(--sc10-font-size-caption); font-weight: 650;
+}
+.frame[data-input='touch'] .btn { height: 44px; padding: 0 var(--sc-space-4); }
+.btn svg { width: 15px; height: 15px; }
+.btn--primary { border-color: var(--sc-color-action-edge); background: var(--sc-gradient-clay-action); color: var(--sc-color-action-foreground); box-shadow: var(--sc-shadow-clay-action); font-weight: 700; }
+.btn--full { width: 100%; justify-content: center; }
+
+/* --------------------------------------------------------------------- */
+/* SELECTOR DE CANDIDATOS · precisión sin puntería                        */
+/* --------------------------------------------------------------------- */
+
+.cand {
+  position: absolute; z-index: 8;
+  width: 244px;
+  display: grid;
+  border: 1px solid var(--sc-color-border);
+  border-radius: var(--sc10-radius-lg);
+  background: var(--sc-color-surface-elevated);
+  box-shadow: var(--sc-shadow-clay-lg);
+  overflow: hidden;
+}
+.cand__h { display: flex; align-items: center; justify-content: space-between; gap: var(--sc-space-2); padding: 8px var(--sc-space-3); border-bottom: 1px solid var(--sc-color-border-soft); color: var(--sc-color-text-secondary); font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.cand__h b { font-family: var(--sc-font-mono); font-size: var(--sc10-font-size-caption); color: var(--sc-color-text-primary); letter-spacing: 0; text-transform: none; }
+.cand__i { display: grid; grid-template-columns: 20px 1fr; gap: var(--sc-space-2); align-items: center; min-height: 44px; padding: 6px var(--sc-space-3); border-bottom: 1px solid var(--sc-color-border-soft); }
+.cand__i:last-child { border-bottom: 0; }
+.cand__i.is-on { background: var(--sc-color-selection); }
+.cand__i svg { width: 18px; height: 18px; color: var(--cg, var(--sc-color-text-secondary)); }
+.cand__t { min-width: 0; display: grid; gap: 1px; }
+.cand__t strong { font-size: var(--sc10-font-size-caption); font-weight: 700; }
+.cand__t small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--sc-color-text-secondary); font-size: 11px; font-family: var(--sc-font-mono); }
+/* La lupa ve; el selector elige. Dos fases de un contrato, nunca superpuestas. */
+.lupa { position: absolute; z-index: 7; width: 128px; height: 128px; border-radius: 50%; border: 2px solid var(--sc-color-border-canvas-chrome); background: var(--sc-color-bg-canvas); box-shadow: var(--sc-shadow-clay-md); overflow: hidden; transform: translate(-50%, -50%); }
+/* La lupa clona el MISMO dibujo y lo centra en el punto tocado, igual que el
+   producto hace hoy con `<use>` sobre la escena real: así no puede
+   desincronizarse del lienzo. --px/--py son el punto bajo el dedo. */
+.lupa svg {
+  position: absolute; top: 0; left: 0;
+  transform-origin: 0 0;
+  transform: translate(64px, 64px) scale(2.4) translate(calc(-1 * var(--px)), calc(-1 * var(--py)));
+}
+.lupa__x { position: absolute; inset: 0; }
+.lupa__x::before, .lupa__x::after { content: ''; position: absolute; background: color-mix(in srgb, var(--sc-color-selection-stroke) 55%, transparent); }
+.lupa__x::before { left: 50%; top: 0; bottom: 0; width: 1px; }
+.lupa__x::after { top: 50%; left: 0; right: 0; height: 1px; }
+/* El dedo, dibujado para poder juzgar la oclusión: es el motivo del patrón. */
+.dedo { position: absolute; z-index: 6; width: 62px; height: 62px; border-radius: 50%; background: color-mix(in srgb, var(--sc-color-text-primary) 22%, transparent); transform: translate(-50%, -50%); }
+
+/* --------------------------------------------------------------------- */
+/* SUPERFICIES INVOCADAS · dense, doctor, hoja, peek                      */
+/* --------------------------------------------------------------------- */
+
+.scrim { position: absolute; inset: 0; z-index: 9; background: var(--sc-color-overlay-sheet); }
+.drawer {
+  position: absolute; z-index: 10; top: 0; bottom: 0; right: 0;
+  width: 640px;
+  display: flex; flex-direction: column;
+  border-left: 1px solid var(--sc-color-border);
+  border-radius: var(--sc10-radius-xl) 0 0 var(--sc10-radius-xl);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-shadow-clay-lg);
+  overflow: hidden;
+}
+.drawer--wide { width: 860px; }
+.drawer__h { flex: 0 0 auto; display: flex; align-items: center; gap: var(--sc-space-3); padding: var(--sc-space-4); border-bottom: 1px solid var(--sc-color-border-soft); }
+.drawer__h h3 { margin: 0; font-size: 17px; letter-spacing: var(--sc-tracking-tight); }
+.drawer__h p { margin: 2px 0 0; color: var(--sc-color-text-secondary); font-size: var(--sc10-font-size-caption); }
+.drawer__b { flex: 1 1 auto; min-height: 0; overflow: hidden; padding: var(--sc-space-4); display: grid; gap: var(--sc-space-3); align-content: start; }
+
+/* PEEK · la superficie NO se cierra al localizar: se pliega a una banda viva
+   que conserva su desplazamiento, su filtro y su borrador. */
+.peek {
+  position: absolute; z-index: 10; left: 0; right: 0; bottom: 0;
+  height: 56px;
+  display: flex; align-items: center; gap: var(--sc-space-3);
+  padding: 0 var(--sc-space-4);
+  border-top: 1px solid var(--sc-color-border);
+  background: var(--sc-color-surface-elevated);
+  box-shadow: var(--sc-shadow-sheet);
+}
+.peek__l { min-width: 0; flex: 1 1 auto; display: grid; gap: 1px; }
+.peek__l strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--sc10-font-size-caption); font-weight: 700; }
+.peek__l small { color: var(--sc-color-text-secondary); font-size: 11px; }
+.peek__n { display: inline-flex; align-items: center; gap: 2px; }
+
+/* Tabla densa. Densidad de datos ≠ densidad de controles (P-05). */
+.tabla { width: 100%; border-collapse: collapse; font-size: var(--sc10-font-size-caption); }
+.tabla th { position: sticky; top: 0; padding: 8px var(--sc-space-2); border-bottom: 1px solid var(--sc-color-border); background: var(--sc-color-surface-2); color: var(--sc-color-text-secondary); font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-align: left; text-transform: uppercase; white-space: nowrap; }
+.tabla th.n, .tabla td.n { text-align: right; font-family: var(--sc-font-mono); font-variant-numeric: tabular-nums; }
+.tabla td { height: 34px; padding: 0 var(--sc-space-2); border-bottom: 1px solid var(--sc-color-border-soft); white-space: nowrap; }
+.frame[data-input='touch'] .tabla td { height: 44px; }
+.tabla tr.is-sel td { background: var(--sc-color-selection); }
+.tabla tr.is-sel td:first-child { box-shadow: inset 3px 0 0 var(--sc-color-selection-stroke); }
+/* La casilla de 13×13 px de hoy es una edición estructural real. El área de
+   acierto sube a 36/44; el glifo se queda en 16. */
+.cbx { width: 36px; height: 36px; display: inline-grid; place-items: center; margin: -1px -8px; }
+.frame[data-input='touch'] .cbx { width: 44px; height: 44px; }
+.cbx i { width: 16px; height: 16px; border: 1.8px solid var(--sc-color-border-strong); border-radius: 4px; background: var(--sc-color-surface-1); }
+.cbx.is-on i { border-color: var(--sc-color-action-edge); background: var(--sc-color-action-primary); }
+
+.facets { display: flex; align-items: center; gap: var(--sc-space-2); flex-wrap: wrap; }
+.facet { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 var(--sc-space-3); border: 1px solid var(--sc-color-border); border-radius: 999px; background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-xs); font-size: var(--sc10-font-size-caption); font-weight: 650; }
+.frame[data-input='touch'] .facet { height: 40px; }
+.facet b { display: inline-grid; place-items: center; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 999px; background: var(--sc-color-surface-2); color: var(--sc-color-text-secondary); font-family: var(--sc-font-mono); font-size: 11px; }
+.facet.is-on { background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); color: var(--sc-color-action-ink); }
+.facet.is-on b { background: var(--sc-color-action-primary); color: var(--sc-color-action-foreground); }
+
+/* Tarjeta de hallazgo: QUÉ / POR QUÉ / QUÉ HACER en tres campos, nunca un
+   párrafo. El modelo ya los separa; el diseño los hace visibles. */
+.find { display: grid; gap: var(--sc-space-2); padding: var(--sc-space-3); border: 1px solid var(--sc-color-border); border-left: 3px solid var(--sv); border-radius: var(--sc10-radius-md); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-xs); --sv: var(--sc-color-state-warning); }
+.find--crit { --sv: var(--sc-color-state-error); }
+.find--sug  { --sv: var(--sc-color-state-info); }
+.find.is-on { background: var(--sc-color-surface-elevated); box-shadow: var(--sc-shadow-clay-sm); }
+.find__q { display: flex; align-items: center; gap: var(--sc-space-2); }
+.find__q svg { width: 16px; height: 16px; color: var(--sv); flex: 0 0 auto; }
+.find__q strong { flex: 1 1 auto; font-size: var(--sc10-font-size-value); }
+.find__sev { padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--sv) 14%, var(--sc-color-surface-1)); color: var(--sc-color-text-primary); font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+.find__w { color: var(--sc-color-text-secondary); font-size: var(--sc10-font-size-caption); line-height: 1.45; }
+.find__do { display: flex; align-items: center; gap: var(--sc-space-2); flex-wrap: wrap; }
+.find__ob { display: inline-flex; gap: 4px; }
+.oid { padding: 2px 7px; border: 1px solid var(--sc-color-selection-stroke); border-radius: var(--sc10-radius-xs); background: var(--sc-color-selection); color: var(--sc-color-selection-stroke); font-family: var(--sc-font-mono); font-size: 11px; font-weight: 700; }
+
+/* Hoja de Compact: llega por el borde que preserva la dimensión mayor. */
+.hoja {
+  position: absolute; z-index: 10; left: 0; right: 0; bottom: 0;
+  display: flex; flex-direction: column;
+  border-top: 1px solid var(--sc-color-border);
+  border-radius: var(--sc10-radius-xl) var(--sc10-radius-xl) 0 0;
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-shadow-sheet);
+  overflow: hidden;
+}
+.hoja--lateral { left: auto; top: 0; right: 0; bottom: 0; width: var(--sc10-detail); border-radius: var(--sc10-radius-xl) 0 0 var(--sc10-radius-xl); border-top: 0; border-left: 1px solid var(--sc-color-border); }
+.hoja__grip { flex: 0 0 auto; height: 24px; display: grid; place-items: center; }
+.hoja__grip i { width: 40px; height: 4px; border-radius: 999px; background: var(--sc-color-border-strong); }
+
+/* Dock flotante de Compact. Cinco destinos, 44px, safe-area. */
+.dock {
+  position: absolute; z-index: 8; left: 0; right: 0; bottom: 0;
+  height: var(--sc10-dock-compact);
+  display: flex; align-items: center; justify-content: space-around;
+  padding: 0 var(--sc-space-2);
+  border-top: 1px solid var(--sc-color-border-soft);
+  background: var(--sc-color-surface-toolbar);
+}
+.dock--lateral { left: auto; top: 0; right: 0; bottom: 0; width: var(--sc10-dock-compact); height: auto; flex-direction: column; justify-content: center; gap: var(--sc-space-1); border-top: 0; border-left: 1px solid var(--sc-color-border-soft); }
+.dk { width: 56px; min-height: 48px; display: grid; justify-items: center; align-content: center; gap: 2px; border: 0; border-radius: var(--sc10-radius-md); background: transparent; color: var(--sc-color-text-secondary); font-size: 10px; font-weight: 650; }
+.dk svg { width: 22px; height: 22px; }
+.dk.is-active { background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); color: var(--sc-color-action-ink); }
+
+/* --------------------------------------------------------------------- */
+/* WELCOME                                                                */
+/* --------------------------------------------------------------------- */
+
+.wel { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: var(--sc-space-8); padding: var(--sc-space-7) var(--sc-space-8); overflow: hidden; }
+.wel__l { display: grid; gap: var(--sc-space-5); align-content: start; }
+.wel__eyebrow { display: inline-flex; align-items: center; gap: 6px; width: max-content; padding: 5px var(--sc-space-3); border: 1px solid var(--sc-color-border); border-radius: 999px; background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-xs); color: var(--sc-color-text-secondary); font-family: var(--sc-font-mono); font-size: var(--sc10-font-size-caption); }
+.wel h1 { margin: 0; font-size: 40px; line-height: 1.06; letter-spacing: var(--sc-tracking-display); font-weight: 720; }
+.wel h1 em { font-style: normal; background: var(--sc-gradient-display); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.wel__sub { margin: 0; color: var(--sc-color-text-secondary); font-size: 15px; max-width: 40ch; }
+/* La continuación va PRIMERO y es la acción primaria: quien vuelve a trabajar
+   no debería cruzar una portada para llegar a su proyecto. */
+.cont { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--sc-space-4); padding: var(--sc-space-4); border: 1px solid var(--sc-color-action-edge); border-radius: var(--sc10-radius-xl); background: color-mix(in srgb, var(--sc-color-action-primary) 9%, var(--sc-color-surface-1)); box-shadow: var(--sc-shadow-clay-sm); }
+.cont__thumb { width: 88px; height: 64px; border: 1px solid var(--sc-color-border-soft); border-radius: var(--sc10-radius-md); background: var(--sc-color-bg-canvas); position: relative; overflow: hidden; }
+.cont__thumb svg { position: absolute; top: 0; left: 0; }
+.cont__c { min-width: 0; display: grid; gap: 3px; }
+.cont__c strong { font-size: 16px; }
+.cont__c span { color: var(--sc-color-text-secondary); font-size: var(--sc10-font-size-caption); }
+.cont__meta { display: flex; gap: var(--sc-space-2); margin-top: 3px; }
+.wel__cards { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sc-space-3); }
+.wcard { display: grid; gap: 6px; padding: var(--sc-space-4); border: 1px solid var(--sc-color-border); border-radius: var(--sc10-radius-lg); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-xs); }
+.wcard__i { width: 36px; height: 36px; display: grid; place-items: center; border-radius: var(--sc10-radius-md); background: var(--sc-color-accent-blue-soft); color: var(--sc-color-text-link); }
+.wcard--aula .wcard__i { background: color-mix(in srgb, var(--sc-color-aula) 14%, var(--sc-color-surface-1)); color: var(--sc-color-aula); }
+.wcard__i svg { width: 20px; height: 20px; }
+.wcard strong { font-size: var(--sc10-font-size-value); }
+.wcard span { color: var(--sc-color-text-secondary); font-size: var(--sc10-font-size-caption); line-height: 1.4; }
+.wel__r { position: relative; display: grid; align-content: center; gap: var(--sc-space-4); }
+.wel__recent { display: grid; gap: var(--sc-space-2); }
+.rec { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: var(--sc-space-3); padding: var(--sc-space-2) var(--sc-space-3); border: 1px solid var(--sc-color-border-soft); border-radius: var(--sc10-radius-md); background: var(--sc-color-surface-1); }
+.rec__t { width: 44px; height: 34px; border: 1px solid var(--sc-color-border-soft); border-radius: var(--sc10-radius-xs); background: var(--sc-color-bg-canvas); position: relative; overflow: hidden; }
+.rec__t svg { position: absolute; top: 0; left: 0; }
+.rec__c { min-width: 0; display: grid; gap: 1px; }
+.rec__c strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--sc10-font-size-caption); font-weight: 650; }
+.rec__c small { color: var(--sc-color-text-secondary); font-size: 11px; }
+
+/* --------------------------------------------------------------------- */
+/* PALETA DE COMANDOS                                                     */
+/* --------------------------------------------------------------------- */
+
+.pal { position: absolute; z-index: 11; top: 76px; left: 50%; width: 560px; transform: translateX(-50%); border: 1px solid var(--sc-color-border); border-radius: var(--sc10-radius-xl); background: var(--sc-color-surface-elevated); box-shadow: var(--sc-shadow-clay-lg); overflow: hidden; }
+.pal__q { display: flex; align-items: center; gap: var(--sc-space-3); padding: var(--sc-space-3) var(--sc-space-4); border-bottom: 1px solid var(--sc-color-border-soft); }
+.pal__q svg { width: 18px; height: 18px; color: var(--sc-color-text-muted); }
+.pal__q input { flex: 1; border: 0; background: transparent; color: inherit; font-family: inherit; font-size: 15px; }
+.pal__g { padding: var(--sc-space-2) var(--sc-space-4) 4px; color: var(--sc-color-text-muted); font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.pal__i { display: grid; grid-template-columns: 20px 1fr auto; align-items: center; gap: var(--sc-space-3); min-height: 40px; padding: 0 var(--sc-space-4); font-size: var(--sc10-font-size-caption); }
+.pal__i.is-on { background: var(--sc-color-selection); }
+.pal__i svg { width: 17px; height: 17px; color: var(--sc-color-text-secondary); }
+.pal__i kbd { font-family: var(--sc-font-mono); font-size: 11px; color: var(--sc-color-text-muted); }
+
+/* --------------------------------------------------------------------- */
+/* LÁMINAS DE SISTEMA · estados y micro-UX                                */
+/* --------------------------------------------------------------------- */
+
+.sheetpad { flex: 1 1 auto; min-height: 0; overflow: hidden; padding: var(--sc-space-6); display: grid; gap: var(--sc-space-5); align-content: start; }
+.sysrow { display: grid; gap: var(--sc-space-3); }
+.sysrow > h4 { margin: 0; color: var(--sc-color-text-muted); font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.sysgrid { display: flex; gap: var(--sc-space-3); flex-wrap: wrap; align-items: flex-start; }
+.spec { display: grid; gap: 6px; justify-items: start; }
+.spec > small { color: var(--sc-color-text-muted); font-family: var(--sc-font-mono); font-size: 11px; }
+.focusring { outline: var(--sc10-focus-ring-width) solid var(--sc-color-focus); outline-offset: var(--sc-focus-ring-offset); }
+.swatchrow { display: flex; gap: 2px; }
+.swatch { width: 56px; height: 44px; display: grid; align-content: end; padding: 4px; border-radius: var(--sc10-radius-xs); color: #fff; font-family: var(--sc-font-mono); font-size: 9px; }
