@@ -781,15 +781,30 @@ body {
 .dk.is-active { background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); color: var(--sc-color-action-ink); }
 
 /* --------------------------------------------------------------------- */
-/* WELCOME · reconstrucción — entrada de trabajo, no portada.             */
-/* Recupera, verificado contra `src/features/welcome/WelcomeScreen.tsx` y  */
-/* `src/styles.css` (sección «IDENTIDAD OFICIAL CLAY»): el pórtico 3D real, */
-/* los cuatro lanzadores, el hub de proyectos (recientes + recuperación),  */
-/* la vitrina de plantillas con filtros y los tres pasos. Mismo criterio   */
-/* clay que ya ganó la cascada en producción: superficie sólida, SIN el    */
-/* halo ambiental de marca que `.welcome-hero-figure::before` tenía antes  */
-/* de esa reconciliación (`display:none` ya la retiró) y SIN el texto con  */
-/* degradado que `.welcome-title-accent` tenía antes de la misma pasada.   */
+/* WELCOME · segunda pasada — reestructura, no redecora.                  */
+/*                                                                        */
+/* Qué cambia de estructura respecto a la pasada anterior (`9775872`),    */
+/* y por qué — el detalle completo está en el informe de esta pasada:     */
+/*   1. La Cinta de trabajo (Resolver/Datasheet/Doctor/undo) sale de       */
+/*      Welcome. Es una barra de ANÁLISIS ACTIVO — aquí no hay análisis    */
+/*      activo. `.wh` es una cabecera propia y ligera, coherente con la    */
+/*      que ya tiene `WelcomeScreen.tsx` en producción (no una invención). */
+/*   2. «Continuar proyecto» deja de ser una tarjeta más entre cuatro      */
+/*      iguales — se convierte en `.spotlight`, la acción más fuerte de    */
+/*      toda la pantalla. Es el caso más común (quien vuelve a trabajar)   */
+/*      y competía en pie de igualdad con «nuevo ejercicio».               */
+/*   3. Los tres pasos (Modela/Carga/Analiza) SALEN — relleno genérico de  */
+/*      onboarding que no le dice nada a quien ya sabe lo que es esto; el  */
+/*      badge + subtítulo + highlights ya cubren esa promesa.              */
+/*   4. El pórtico 3D gana una vitrina propia (`.stage`) con la misma      */
+/*      superficie que el lienzo real (`--sc-color-bg-canvas`) y marcas de */
+/*      esquina — dialoga con «la mesa y el instrumento» en vez de flotar  */
+/*      junto al texto.                                                    */
+/*   5. Cada superficie interactiva sube de `surface-1` a                  */
+/*      `surface-elevated` y de canto sutil a `border-strong` EN REPOSO —  */
+/*      es la corrección directa del problema de Noche: antes una tarjeta  */
+/*      compartía el mismo fondo que el `.ws__frame` que la contenía, y en */
+/*      Noche eso es prácticamente invisible (`#15232b` sobre `#15232b`).  */
 /* --------------------------------------------------------------------- */
 
 /* Mesa de dibujo: la rejilla técnica de fondo de toda la pantalla, igual
@@ -806,73 +821,121 @@ body {
     linear-gradient(90deg, var(--ws-grid-fine) 1px, transparent 1px);
   background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px;
 }
-.ws__pad { padding: var(--sc-space-6) var(--sc-space-7); }
-.ws__frame { border: var(--sc-clay-edge); border-radius: var(--sc-radius-hero); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-md); padding: clamp(28px, 4vw, 44px); display: grid; gap: clamp(32px, 5vh, 52px); }
+.ws__pad { padding: var(--sc-space-5) var(--sc-space-7) var(--sc-space-7); display: grid; gap: var(--sc-space-4); }
 
-/* Velocidad de uso — misma hipótesis Esencial/Completa que el resto de CRI-10,
-   aplicada aquí a CUÁNTO se muestra bajo el pliegue, no a otra app. */
+/* -- Cabecera propia de Welcome (NO la Cinta de trabajo) ---------------- */
+.wh { display: flex; align-items: center; gap: var(--sc-space-3); min-height: 52px; }
+.wh__brand { display: flex; align-items: center; gap: 10px; font-family: var(--sc-font-display); font-weight: 750; font-size: 17px; letter-spacing: var(--sc-tracking-tight); }
+.wh__mark { width: 30px; height: 30px; flex: 0 0 auto; display: grid; place-items: center; border-radius: var(--sc10-radius-sm); background: var(--sc-color-action-primary); border: 1px solid var(--sc-color-action-edge); color: var(--sc-color-action-foreground); font-weight: 800; font-size: 13px; }
+.wh__spacer { flex: 1 1 auto; }
+.wh__actions { display: flex; align-items: center; gap: var(--sc-space-2); }
+.wh__actions .ib { background: var(--sc-color-surface-elevated); border-color: var(--sc-color-border-strong); }
+
+/* -- El único bloque grande: la hoja clay que contiene todo lo demás ---- */
+.ws__frame { border: var(--sc-clay-edge); border-radius: var(--sc-radius-hero); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-md); padding: clamp(24px, 3.6vw, 40px); display: grid; gap: clamp(24px, 3.6vh, 40px); }
 .ws__speed { display: flex; align-items: center; gap: var(--sc-space-2); }
 
-/* -- Hero: copy + pórtico 3D ------------------------------------------- */
-.hero2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.86fr); align-items: center; gap: clamp(24px, 4vw, 56px); }
-.hero2__copy { min-width: 0; display: grid; gap: 4px; align-content: start; }
-.badge2 { display: inline-flex; align-items: center; gap: 8px; width: max-content; margin-bottom: 14px; padding: 6px 14px 6px 11px; border-radius: 999px; background: var(--sc-color-surface-2); box-shadow: var(--sc-shadow-clay-xs); color: var(--sc-color-text-secondary); font-family: var(--sc-font-mono); font-size: 11px; font-weight: 650; letter-spacing: 0.03em; }
+/* -- Hero: copy + vitrina del pórtico 3D --------------------------------- */
+.hero3 { display: grid; grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr); align-items: center; gap: clamp(28px, 4vw, 56px); }
+.hero3__copy { min-width: 0; display: grid; gap: 4px; align-content: start; }
+.badge2 { display: inline-flex; align-items: center; gap: 8px; width: max-content; margin-bottom: 14px; padding: 6px 14px 6px 11px; border-radius: 999px; background: var(--sc-color-surface-elevated); border: 1px solid var(--sc-color-border-strong); color: var(--sc-color-text-secondary); font-family: var(--sc-font-mono); font-size: 11px; font-weight: 650; letter-spacing: 0.03em; }
 .badge2 svg { width: 14px; height: 14px; color: var(--sc-color-action-ink); }
 .title2 { margin: 0; font-family: var(--sc-font-display); font-size: clamp(2.1rem, 1.5rem + 2.4vw, 3.1rem); line-height: 1.05; letter-spacing: var(--sc-tracking-display); font-weight: 720; }
 /* El énfasis es tinta plana de marca, NUNCA degradado — esta es la corrección
    que `src/styles.css` ya hizo (`.welcome-title-accent{background:none}`
-   gana la cascada sobre la declaración con gradiente que la precede). Un
-   concepto que reintrodujera el clip de texto estaría contradiciendo lo que
-   el propio producto ya corrigió. */
+   gana la cascada sobre la declaración con gradiente que la precede). */
 .title2 em { font-style: normal; color: var(--sc-color-action-ink); }
-.sub2 { margin: 16px 0 0; color: var(--sc-color-text-secondary); font-size: 16px; line-height: 1.55; max-width: 42ch; }
-.hl2 { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 0; padding: 0; }
-.hl2__i { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 999px; background: var(--sc-color-surface-2); box-shadow: var(--sc-shadow-clay-xs); color: var(--sc-color-text-secondary); font-size: 12px; font-weight: 650; }
-.hl2__i svg { width: 15px; height: 15px; color: var(--sc-color-state-success); flex: 0 0 auto; }
+.sub2 { margin: 14px 0 0; color: var(--sc-color-text-secondary); font-size: 16px; line-height: 1.55; max-width: 40ch; }
+/* Antes eran pills (mismo peso visual que un CTA); son prueba de confianza
+   TERCIARIA y ahora se leen como tal — texto plano con separadores, no
+   botones que no lo son. */
+.hl2 { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 18px 0 0; padding: 0; color: var(--sc-color-text-secondary); font-size: 12.5px; }
+.hl2__i { display: inline-flex; align-items: center; gap: 6px; font-weight: 650; }
+.hl2__i svg { width: 14px; height: 14px; color: var(--sc-color-state-success); flex: 0 0 auto; }
+.hl2__sep { color: var(--sc-color-text-disabled); }
 
-/* -- Pórtico 3D: pieza física, no luz flotante -------------------------- */
-.hero2__fig { position: relative; display: grid; place-items: center; min-width: 0; }
-.portico3d { display: block; width: 100%; max-width: 420px; height: auto; overflow: visible; }
+.hero3__fig { min-width: 0; display: grid; place-items: center; }
+
+/* -- Vitrina del pórtico: la misma superficie que el lienzo real --------- */
+.stage {
+  position: relative;
+  padding: clamp(20px, 3vw, 32px) clamp(16px, 2.4vw, 28px) 18px;
+  border-radius: var(--sc10-radius-xl);
+  background: var(--sc-color-bg-canvas);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  display: grid; justify-items: center; gap: 10px;
+}
+.stage__tick { position: absolute; width: 18px; height: 18px; border-color: var(--sc-color-border-strong); opacity: 0.85; }
+.stage__tick--tl { top: 10px; left: 10px; border-top: 1.5px solid; border-left: 1.5px solid; }
+.stage__tick--tr { top: 10px; right: 10px; border-top: 1.5px solid; border-right: 1.5px solid; }
+.stage__tick--bl { bottom: 10px; left: 10px; border-bottom: 1.5px solid; border-left: 1.5px solid; }
+.stage__tick--br { bottom: 10px; right: 10px; border-bottom: 1.5px solid; border-right: 1.5px solid; }
+.portico3d { display: block; width: 100%; max-width: 480px; height: auto; overflow: visible; }
 /* Sombreado por cara: mismo mecanismo y misma calibración que `.portal-hero__face`
    en producción (recta ajustada a los tres shades reales de DEFAULT_PORTAL —
    0.584/0.703/0.835 — no al rango [0,1] teórico, o las tres caras se aplanan). */
 .portico3d__face { filter: brightness(calc(1.72 * var(--face-shade, 1) - 0.283)); stroke: none; }
 .portico3d__ground line { stroke: var(--sc-color-border-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
 /* Sombra de CONTACTO, neutra (color de borde, no de marca) y muy localizada
-   bajo cada zapata — es lo que ancla el objeto a la mesa. No es el halo
-   ambiental de marca que este mismo hero tenía antes (`radial-gradient` +
-   `blur(26px)`, retirado en producción con `display:none` sobre
-   `.welcome-hero-figure::before`): esa pieza NO se reintroduce aquí. */
-.portico3d__contact { fill: var(--sc-color-border-strong); opacity: 0.16; filter: blur(6px); }
+   bajo cada zapata — nunca el halo ambiental de marca que este hero tenía
+   antes (`radial-gradient` + `blur(26px)`, ya retirado en producción). */
+.portico3d__contact { fill: var(--sc-color-border-strong); opacity: 0.2; filter: blur(6px); }
+.stage__cap { font-family: var(--sc-font-mono); font-size: 10.5px; font-weight: 650; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sc-color-text-muted); }
+.stage__cap b { color: var(--sc-color-text-secondary); font-weight: 650; }
 
-/* -- Cuatro lanzadores: mismo peso visual, acento por dominio ----------- */
-.launchers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sc-space-3); }
-.launcher { --lc: var(--sc-color-action-ink); position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: var(--sc-space-3); padding: var(--sc-space-4); border: var(--sc-clay-edge); border-radius: var(--sc10-radius-lg); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-sm); text-align: left; }
-.launcher:hover { border-color: var(--sc-color-border-strong); box-shadow: var(--sc-shadow-clay-lg); transform: translateY(-2px); }
+/* -- Spotlight: la acción más fuerte de la pantalla ---------------------- */
+/* Reemplaza a la tarjeta «Continuar proyecto» de la pasada anterior, que
+   competía en igualdad con «nuevo ejercicio». Quien vuelve a trabajar es el
+   caso más común — el tinte de marca y el tamaño lo dicen sin necesitar más
+   color que el que ya usa cualquier superficie de acción. */
+.spotlight {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sc-space-4);
+  padding: var(--sc-space-4) var(--sc-space-5);
+  border: 1.5px solid var(--sc-color-action-edge);
+  border-radius: var(--sc10-radius-xl);
+  background: color-mix(in srgb, var(--sc-color-action-primary) 10%, var(--sc-color-surface-elevated));
+  box-shadow: var(--sc-shadow-clay-sm);
+}
+.spotlight__thumb { width: 60px; height: 46px; flex: 0 0 auto; border-radius: var(--sc10-radius-md); background: var(--sc-color-bg-canvas); border: 1px solid var(--sc-color-border-strong); position: relative; overflow: hidden; }
+.spotlight__thumb svg { position: absolute; top: 0; left: 0; }
+.spotlight__body { min-width: 0; display: grid; gap: 3px; }
+.spotlight__eyebrow { color: var(--sc-color-action-ink); font-size: 11px; font-weight: 750; text-transform: uppercase; letter-spacing: 0.06em; }
+.spotlight__body strong { font-size: 17px; font-weight: 750; letter-spacing: var(--sc-tracking-tight); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spotlight__body span { color: var(--sc-color-text-secondary); font-size: 12.5px; }
+.spotlight__go { height: 44px; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; padding: 0 var(--sc-space-4); border: 1px solid var(--sc-color-action-edge); border-radius: var(--sc10-radius-md); background: var(--sc-gradient-clay-action); color: var(--sc-color-action-foreground); box-shadow: var(--sc-shadow-clay-action); font-size: 14px; font-weight: 750; white-space: nowrap; }
+.spotlight__go:hover { box-shadow: var(--sc-shadow-clay-action-hover); }
+.spotlight__go:active { box-shadow: var(--sc-shadow-clay-action-pressed); transform: var(--sc-clay-press-transform); }
+.spotlight__go svg { width: 17px; height: 17px; }
+
+/* -- Secundarios: tres, no cuatro — «continuar» ya se fue a spotlight ---- */
+.secondary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sc-space-3); }
+.launcher {
+  --lc: var(--sc-color-action-ink);
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--sc-space-3);
+  padding: var(--sc-space-4); text-align: left;
+  border: 1.5px solid var(--sc-color-border-strong); border-radius: var(--sc10-radius-lg);
+  background: var(--sc-color-surface-elevated); box-shadow: var(--sc-shadow-clay-sm);
+}
+.launcher:hover { border-color: var(--lc); box-shadow: var(--sc-shadow-clay-lg); transform: translateY(-2px); }
 .launcher:active { box-shadow: var(--sc-shadow-clay-pressed); transform: translateY(1px); }
-.launcher__i { width: 46px; height: 46px; flex: 0 0 auto; display: grid; place-items: center; border-radius: var(--sc10-radius-md); border: var(--sc-clay-edge); box-shadow: var(--sc-shadow-clay-xs); background: var(--sc-color-action-subtle); color: var(--lc); }
-.launcher__i svg { width: 22px; height: 22px; }
+.launcher__i { width: 44px; height: 44px; flex: 0 0 auto; display: grid; place-items: center; border-radius: var(--sc10-radius-md); border: 1.5px solid color-mix(in srgb, var(--lc) 40%, var(--sc-color-border-strong)); box-shadow: var(--sc-shadow-clay-xs); background: var(--sc-color-action-subtle); color: var(--lc); }
+.launcher__i svg { width: 21px; height: 21px; }
 .launcher--aula { --lc: var(--sc-color-aula); }
 .launcher--aula .launcher__i { background: var(--sc-color-accent-violet-soft); }
-.launcher--recent { --lc: var(--sc-color-text-link); }
-.launcher--recent .launcher__i { background: var(--sc-color-accent-blue-soft); }
 .launcher--3d { --lc: var(--sc-color-brand-secondary); }
-.launcher--3d .launcher__i { background: color-mix(in srgb, var(--sc-color-brand-secondary) 16%, var(--sc-color-surface-1)); }
-.launcher__body { min-width: 0; display: grid; gap: 4px; align-content: start; }
-.launcher__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.launcher__head strong { font-size: 15px; font-weight: 750; letter-spacing: var(--sc-tracking-tight); }
-.launcher__head small { color: var(--sc-color-text-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
-.launcher__body > span { color: var(--sc-color-text-secondary); font-size: 12px; line-height: 1.4; }
-.launcher__pill { font-size: 10px; font-weight: 750; padding: 3px 9px; border-radius: 999px; background: color-mix(in srgb, var(--lc) 16%, transparent); color: var(--lc); white-space: nowrap; }
-.launcher__arrow { grid-column: 3; align-self: center; color: var(--sc-color-text-muted); flex: 0 0 auto; }
-.launcher:hover .launcher__arrow { color: var(--lc); }
+.launcher--3d .launcher__i { background: color-mix(in srgb, var(--sc-color-brand-secondary) 18%, var(--sc-color-surface-elevated)); }
+.launcher__body { min-width: 0; display: grid; gap: 5px; align-content: start; }
+.launcher__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.launcher__head strong { font-size: 14.5px; font-weight: 750; letter-spacing: var(--sc-tracking-tight); }
+.launcher__body > span { color: var(--sc-color-text-secondary); font-size: 12px; line-height: 1.45; }
+.launcher__pill { font-size: 9.5px; font-weight: 750; padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, var(--lc) 18%, transparent); color: var(--lc); white-space: nowrap; }
 
-/* -- Hub de proyectos: recientes + recuperación ------------------------- */
-.hub { display: grid; gap: var(--sc-space-3); padding: var(--sc-space-4); border: var(--sc-clay-edge); border-radius: var(--sc10-radius-xl); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-sm); }
-.hub__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sc-space-3); }
-.hub__head h2 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 750; }
-.hub__head h2 svg { width: 17px; height: 17px; color: var(--sc-color-text-secondary); }
-.hub__head span { color: var(--sc-color-text-muted); font-family: var(--sc-font-mono); font-size: 10px; font-weight: 650; letter-spacing: 0.05em; text-transform: uppercase; }
+/* -- Más proyectos: lo que NO está en el spotlight ------------------------*/
+.recientes { display: grid; gap: var(--sc-space-3); padding: var(--sc-space-4); border: 1.5px solid var(--sc-color-border-strong); border-radius: var(--sc10-radius-xl); background: var(--sc-color-surface-elevated); box-shadow: var(--sc-shadow-clay-sm); }
+.recientes__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sc-space-3); }
+.recientes__head h2 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 750; }
+.recientes__head h2 svg { width: 16px; height: 16px; color: var(--sc-color-text-secondary); }
+.recientes__head span { color: var(--sc-color-text-muted); font-family: var(--sc-font-mono); font-size: 10px; font-weight: 650; letter-spacing: 0.05em; text-transform: uppercase; }
 .hub__rows { display: grid; gap: 2px; }
 .hrow { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--sc-space-3); padding: var(--sc-space-2) var(--sc-space-2); border-radius: var(--sc10-radius-md); }
 .hrow:hover { background: var(--sc-color-surface-2); }
@@ -880,66 +943,65 @@ body {
 .hrow__id strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 650; }
 .hrow__id small { color: var(--sc-color-text-secondary); font-size: 11px; font-family: var(--sc-font-mono); }
 .hrow__actions { display: flex; gap: 4px; }
-.hrow__actions .ib { width: 32px; height: 32px; }
-.hub__recovery { border-top: 1px solid var(--sc-color-border-soft); padding-top: var(--sc-space-3); margin-top: 2px; }
-.hub__recovery summary { display: flex; align-items: center; gap: 8px; list-style: none; cursor: pointer; color: var(--sc-color-state-warning-foreground); font-size: 12px; font-weight: 700; }
-.hub__recovery summary::marker, .hub__recovery summary::-webkit-details-marker { display: none; }
-.hub__recovery summary svg { width: 15px; height: 15px; }
-.hub__recoveryrow { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: var(--sc-space-2); padding: var(--sc-space-2) var(--sc-space-3); border: 1px solid color-mix(in srgb, var(--sc-color-state-warning) 34%, var(--sc-color-border)); border-radius: var(--sc10-radius-md); background: color-mix(in srgb, var(--sc-color-state-warning) 7%, var(--sc-color-surface-1)); color: var(--sc-color-text-primary); font-size: 12px; font-weight: 650; text-align: left; }
-.hub__recoveryrow svg { width: 15px; height: 15px; color: var(--sc-color-state-warning-foreground); flex: 0 0 auto; }
-.hub__empty { padding: var(--sc-space-4); border: 1px dashed var(--sc-color-border); border-radius: var(--sc10-radius-md); color: var(--sc-color-text-secondary); font-size: 12px; text-align: center; }
+.hrow__actions .ib { width: 32px; height: 32px; background: var(--sc-color-surface-elevated); border-color: var(--sc-color-border-strong); }
+
+/* Recuperación — atención por excepción: SÓLO existe si hay algo que
+   recuperar, y cuando existe es una alerta con canto de color, no un
+   `<details>` escondido detrás de un resumen gris. */
+.recovery { display: flex; align-items: center; gap: var(--sc-space-3); padding: var(--sc-space-3) var(--sc-space-4); border: 1.5px solid color-mix(in srgb, var(--sc-color-state-warning) 55%, var(--sc-color-border-strong)); border-radius: var(--sc10-radius-lg); background: color-mix(in srgb, var(--sc-color-state-warning) 12%, var(--sc-color-surface-elevated)); }
+.recovery svg { width: 18px; height: 18px; flex: 0 0 auto; color: var(--sc-color-state-warning-foreground); }
+.recovery__body { flex: 1 1 auto; min-width: 0; display: grid; gap: 1px; }
+.recovery__body strong { font-size: 12.5px; font-weight: 750; color: var(--sc-color-state-warning-foreground); }
+.recovery__body span { color: var(--sc-color-text-secondary); font-size: 11.5px; }
+.recovery button { flex: 0 0 auto; height: 34px; padding: 0 var(--sc-space-3); border: 1px solid var(--sc-color-state-warning-foreground); border-radius: var(--sc10-radius-md); background: var(--sc-color-surface-elevated); color: var(--sc-color-state-warning-foreground); font-size: 12px; font-weight: 700; }
 
 /* -- Vitrina: filtros + importar + plantillas --------------------------- */
 .showcase2 { display: grid; gap: var(--sc-space-4); }
 .showcase2__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--sc-space-3); }
-.showcase2__head h2 { margin: 0; font-family: var(--sc-font-display); font-size: 19px; font-weight: 750; letter-spacing: var(--sc-tracking-tight); }
+.showcase2__head h2 { margin: 0; font-family: var(--sc-font-display); font-size: 18px; font-weight: 750; letter-spacing: var(--sc-tracking-tight); }
 .showcase2__head p { margin: 3px 0 0; color: var(--sc-color-text-secondary); font-size: 12.5px; }
 .ftabs { display: inline-flex; gap: 3px; padding: 3px; border-radius: var(--sc10-radius-lg); background: var(--sc-color-surface-2); box-shadow: var(--sc-shadow-clay-pressed); }
 .ftabs button { height: 30px; padding: 0 13px; border: 0; border-radius: var(--sc10-radius-md); background: transparent; color: var(--sc-color-text-secondary); font-size: 12px; font-weight: 650; }
-.ftabs button.is-active { background: var(--sc-color-surface-1); color: var(--sc-color-action-ink); box-shadow: var(--sc-shadow-clay-xs); }
-.importcard { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sc-space-3); padding: var(--sc-space-3) var(--sc-space-4); border: 1.5px dashed color-mix(in srgb, var(--sc-color-action-ink) 40%, var(--sc-color-border)); border-radius: var(--sc10-radius-lg); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-sm); text-align: left; }
-.importcard:hover { border-color: var(--sc-color-action-ink); box-shadow: var(--sc-shadow-clay-md); }
+.ftabs button.is-active { background: var(--sc-color-surface-elevated); color: var(--sc-color-action-ink); box-shadow: var(--sc-shadow-clay-xs); }
+.importcard { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sc-space-3); padding: var(--sc-space-3) var(--sc-space-4); border: 1.5px dashed var(--sc-color-action-ink); border-radius: var(--sc10-radius-lg); background: var(--sc-color-surface-elevated); box-shadow: var(--sc-shadow-clay-sm); text-align: left; }
+.importcard:hover { box-shadow: var(--sc-shadow-clay-md); }
 .importcard__i { width: 38px; height: 38px; flex: 0 0 auto; display: grid; place-items: center; border-radius: var(--sc10-radius-md); background: var(--sc-color-action-subtle); color: var(--sc-color-action-ink); }
 .importcard__i svg { width: 19px; height: 19px; }
 .importcard strong { font-size: 13.5px; font-weight: 750; }
 .importcard small { display: block; margin-top: 1px; color: var(--sc-color-text-secondary); font-size: 11.5px; }
 .tplgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--sc-space-3); }
-.tplcard { display: grid; gap: var(--sc-space-3); padding: var(--sc-space-3); border: var(--sc-clay-edge); border-radius: var(--sc10-radius-lg); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-sm); text-align: left; }
-.tplcard:hover { border-color: var(--sc-color-border-strong); box-shadow: var(--sc-shadow-clay-md); }
+.tplcard { display: grid; gap: var(--sc-space-3); padding: var(--sc-space-3); border: 1.5px solid var(--sc-color-border-strong); border-radius: var(--sc10-radius-lg); background: var(--sc-color-surface-elevated); box-shadow: var(--sc-shadow-clay-sm); text-align: left; }
+.tplcard:hover { border-color: var(--sc-color-action-ink); box-shadow: var(--sc-shadow-clay-md); }
 .tplcard__top { display: flex; align-items: center; justify-content: space-between; }
 .tplcard__badge { font-size: 9.5px; font-weight: 750; padding: 3px 8px; border-radius: var(--sc10-radius-xs); text-transform: uppercase; letter-spacing: 0.06em; }
-.tplcard__badge--academic { background: color-mix(in srgb, var(--sc-color-state-warning) 15%, transparent); color: var(--sc-color-state-warning-foreground); }
-.tplcard__badge--truss { background: color-mix(in srgb, var(--sc-color-state-info) 15%, transparent); color: var(--sc-color-state-info); }
-.tplcard__badge--beam { background: color-mix(in srgb, var(--sc-color-technical-shear) 15%, transparent); color: var(--sc-color-technical-shear); }
-.tplcard__badge--frame { background: color-mix(in srgb, var(--sc-color-action-ink) 15%, transparent); color: var(--sc-color-action-ink); }
+.tplcard__badge--academic { background: color-mix(in srgb, var(--sc-color-state-warning) 18%, transparent); color: var(--sc-color-state-warning-foreground); }
+.tplcard__badge--truss { background: color-mix(in srgb, var(--sc-color-state-info) 18%, transparent); color: var(--sc-color-state-info); }
+.tplcard__badge--beam { background: color-mix(in srgb, var(--sc-color-technical-shear) 18%, transparent); color: var(--sc-color-technical-shear); }
+.tplcard__badge--frame { background: color-mix(in srgb, var(--sc-color-action-ink) 18%, transparent); color: var(--sc-color-action-ink); }
 .tplcard__top svg { width: 17px; height: 17px; color: var(--sc-color-text-muted); }
 .tplcard strong { display: block; font-size: 13px; font-weight: 750; }
 .tplcard span { display: block; margin-top: 3px; color: var(--sc-color-text-secondary); font-size: 11px; line-height: 1.4; }
 .tplcard__foot { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px solid var(--sc-color-border-soft); color: var(--sc-color-text-muted); font-size: 11px; font-weight: 650; }
 .tplcard__foot svg { width: 13px; height: 13px; }
 
-/* -- Tres pasos ----------------------------------------------------------*/
-.wf { padding: var(--sc-space-5); border: var(--sc-clay-edge); border-radius: var(--sc10-radius-2xl, var(--sc10-radius-xl)); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-sm); }
-.wf__head { display: flex; align-items: center; gap: 9px; margin-bottom: var(--sc-space-4); color: var(--sc-color-action-ink); }
-.wf__head svg { width: 17px; height: 17px; }
-.wf__head h2 { margin: 0; font-size: 14px; font-weight: 750; color: var(--sc-color-text-primary); }
-.wfsteps { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sc-space-5); margin: 0; padding: 0; }
-.wfstep { display: grid; gap: 8px; }
-.wfstep__n { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 999px; background: var(--sc-color-surface-1); border: var(--sc-clay-edge); box-shadow: var(--sc-shadow-clay-xs); color: var(--sc-color-action-ink); font-weight: 800; font-size: 12px; }
-.wfstep strong { display: block; font-size: 13px; font-weight: 750; }
-.wfstep p { margin: 2px 0 0; color: var(--sc-color-text-secondary); font-size: 11.5px; line-height: 1.5; }
-
-.ws__foot { display: flex; align-items: center; justify-content: center; gap: 7px; padding: var(--sc-space-4) 0 0; color: var(--sc-color-text-muted); font-size: 11px; text-align: center; }
+.ws__foot { display: flex; align-items: center; justify-content: center; gap: 7px; padding: var(--sc-space-2) 0 0; color: var(--sc-color-text-muted); font-size: 11px; text-align: center; }
 .ws__foot svg { width: 13px; height: 13px; color: var(--sc-color-action-ink); }
 
-/* -- Compact (K0): todo apila a una columna ------------------------------*/
-.frame[data-class='K0'] .hero2 { grid-template-columns: 1fr; }
-.frame[data-class='K0'] .hero2__fig { order: -1; }
-.frame[data-class='K0'] .portico3d { max-width: 260px; }
-.frame[data-class='K0'] .launchers { grid-template-columns: 1fr; }
-.frame[data-class='K0'] .wfsteps { grid-template-columns: 1fr; gap: var(--sc-space-4); }
+/* -- Compact (K0): todo apila a una columna, el pórtico va primero ------- */
+.frame[data-class='K0'] .wh__brand strong { display: none; }
+.frame[data-class='K0'] .hero3 { grid-template-columns: 1fr; gap: var(--sc-space-4); }
+.frame[data-class='K0'] .hero3__fig { order: -1; }
+.frame[data-class='K0'] .stage { padding: 18px 14px 14px; }
+.frame[data-class='K0'] .portico3d { max-width: 280px; }
+.frame[data-class='K0'] .title2 { font-size: 2rem; }
+.frame[data-class='K0'] .spotlight { grid-template-columns: auto 1fr; grid-template-areas: "thumb body" "go go"; row-gap: var(--sc-space-3); }
+.frame[data-class='K0'] .spotlight__thumb { grid-area: thumb; }
+.frame[data-class='K0'] .spotlight__body { grid-area: body; }
+.frame[data-class='K0'] .spotlight__go { grid-area: go; width: 100%; justify-content: center; }
+.frame[data-class='K0'] .secondary { grid-template-columns: 1fr; }
 .frame[data-class='K0'] .tplgrid { grid-template-columns: 1fr 1fr; }
-.frame[data-class='K0'] .ws__frame { padding: var(--sc-space-4); border-radius: var(--sc10-radius-xl); }
+.frame[data-class='K0'] .ws__frame { padding: var(--sc-space-4); border-radius: var(--sc10-radius-xl); gap: var(--sc-space-5); }
+.frame[data-class='K0'] .ws__pad { padding: var(--sc-space-3) var(--sc-space-3) var(--sc-space-5); gap: var(--sc-space-3); }
 
 /* Fila de versión comparada — la usa el drawer de conflicto de revisión
    (`21-recuperacion-conflicto`), no Welcome (que ahora usa `.hrow`). Se quedó
