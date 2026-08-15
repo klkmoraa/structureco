@@ -509,7 +509,12 @@ body {
 .view-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; padding: 0 4px; font-size: 12px; font-weight: 600; }
 .view-row svg { width: 15px; height: 15px; color: var(--sc-color-text-secondary); vertical-align: -3px; margin-right: 4px; }
 .view-panel__hint { margin: 0; color: var(--sc-color-text-secondary); font-size: 11px; line-height: 1.4; }
-.mini-switch { width: 30px; height: 18px; position: relative; border-radius: 999px; background: var(--sc-color-border); flex: 0 0 auto; }
+/* Track SIEMPRE hundido (Brandbook §08 recipe de `.switch`: la ranura es una
+   cavidad permanente, no una superficie que se colorea; sólo la perilla es
+   la pieza que sube). RECONCILIACIÓN CLAY: antes el track era plano — sin
+   `box-shadow` — así que el interruptor sólo comunicaba estado por color,
+   nunca por materia. */
+.mini-switch { width: 30px; height: 18px; position: relative; border-radius: 999px; background: var(--sc-color-border); box-shadow: var(--sc-shadow-clay-pressed); flex: 0 0 auto; }
 .mini-switch i { width: 14px; height: 14px; position: absolute; top: 2px; left: 2px; border-radius: 50%; background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-xs); }
 .mini-switch.is-on { background: var(--sc-color-action-ink); }
 .mini-switch.is-on i { transform: translateX(12px); }
@@ -860,7 +865,13 @@ body {
   position: relative;
 }
 .rtabs__tab::after { content: ''; position: absolute; left: 8px; right: 8px; bottom: -3px; height: 2px; border-radius: 2px; background: transparent; }
-.rtabs__tab.is-active { color: var(--tabc); background: var(--sc-color-surface-inset); }
+/* RECONCILIACIÓN CLAY: la pestaña activa sólo recoloreaba fondo/texto — el
+   único "seleccionado" del sistema sin cavidad. Brandbook §08: "la regla clay
+   que más se olvida: un botón activo se hunde, no se resalta con más
+   elevación." La familia técnica se sigue leyendo por el subrayado de color
+   (`::after`), no por luz — el hundido es materia, no una segunda señal de
+   color. */
+.rtabs__tab.is-active { color: var(--tabc); background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); }
 .rtabs__tab.is-active::after { background: var(--tabc); }
 
 /* Curva de diagrama simplificada dentro de `dense`. */
