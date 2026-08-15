@@ -135,15 +135,21 @@ export const UNKNOWNS = [
   },
   {
     id: 'U-14',
-    question: '¿Aula tolera que los resultados dejen de tener superficie residente?',
-    status: 'ABIERTO — nuevo en CRI-9, el riesgo más importante de D-03',
+    question:
+      '¿Debe la arquitectura de composición preservar una vía de compatibilidad para que Aula, si su dirección de producto lo exige, '
+      + 'recupere una presentación más inmediata de resultados?',
+    status: 'ABIERTO — unknown de compatibilidad; validación específica de Aula diferida',
     effect:
-      'D-03 retira la banda de resultados de 54px en Compact y los 320px en Expanded. En Aula el bucle Resolver→leer es la tarea central. '
-      + 'Si el resultado deja de estar a la vista, el bucle pedagógico puede romperse.',
+      'D-03 retira la banda de resultados residente en las tres clases, incluida la que hoy usa Aula. Esto NO afirma que Aula necesite esa banda '
+      + 'ni que el bucle Resolver→leer se rompa sin ella: Aula está fuera de alcance de CRI-9 y sigue estacionada, sin dirección de producto reabierta. '
+      + 'Lo único que la arquitectura debe garantizar mientras tanto es COMPATIBILIDAD: que, si al reabrirse esa dirección se determina que Aula '
+      + 'necesita una superficie de resultados más inmediata, el repliegue conceptual ya declarado en D-03 — una tarjeta de resultado dentro del '
+      + '`inset` de la guía, sin reintroducir el panel monolítico ni crear un segundo sistema de composición para Aula — sea alcanzable dentro del '
+      + 'mismo catálogo de superficies y sin reabrir esta arquitectura.',
     needed:
-      'CRI-11 debe prototipar el bucle completo con la audiencia de Aula por separado, midiendo tiempo hasta el primer resultado leído. '
-      + 'Si falla, el repliegue declarado es que en modo Aula el estado de análisis se acompañe de una tarjeta de resultado en el `inset` de la guía, '
-      + 'sin reintroducir el panel monolítico.',
+      'La validación específica — si Aula realmente lo necesita, en qué grado, y con qué medición — NO es una tarea de CRI-11 ni de esta fase: '
+      + 'queda diferida hasta que se reabra la dirección de producto de Aula. Hasta entonces esto se sostiene como restricción de compatibilidad '
+      + 'sobre la arquitectura, no como un riesgo con prototipo asignado.',
   },
   {
     id: 'U-15',

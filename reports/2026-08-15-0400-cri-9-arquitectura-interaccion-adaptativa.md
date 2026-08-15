@@ -634,10 +634,10 @@ De los diez heredados, **siete quedan resueltos con cita de código**. Tabla com
 | **U-11** | Disponibilidad de `navigator.clipboard.readText()` | Comprobación en `qa:webkit` más Chromium y Firefox, con y sin contexto seguro | Condiciona la forma de DAT-06, no la decisión D-07 |
 | **U-12** | Coste de sacar `settings.show*` del esquema | Inventario de lecturas, plan de migración con versión, pasada de `verify:protected` | Condiciona si D-10 se aplica en su forma plena o en su repliegue |
 | **U-13** | Umbral de histéresis del resolutor | Prototipo de CRI-11 con arrastre continuo entre 900 y 1300 px, midiendo recomposiciones por segundo | Es una medición, no una opinión |
-| **U-14** | **¿Aula tolera resultados no residentes?** | CRI-11 debe prototipar el bucle Resolver→leer con la audiencia de Aula **por separado**, midiendo tiempo hasta el primer resultado leído | **Es el riesgo más importante de D-03.** Repliegue declarado abajo |
+| **U-14** | **Unknown de compatibilidad:** ¿debe la arquitectura preservar una vía para que Aula recupere una presentación más inmediata de resultados, si su dirección de producto lo exige más adelante? | **No es tarea de CRI-11.** Aula sigue fuera de alcance y estacionada; su validación específica queda diferida hasta que se reabra su dirección de producto | La arquitectura sostiene la compatibilidad (repliegue conceptual abajo); no se afirma ni se descarta que Aula la necesite |
 | **U-15** | Contraste por píxel y lectores de pantalla reales | Medición por píxel en ambos temas y una pasada real | Heredado de CRI-7; pertenece a CRI-10 |
 
-**Repliegue declarado para U-14:** si el prototipo demuestra que Aula pierde el bucle pedagógico, en modo Aula el estado de análisis se acompaña de una tarjeta de resultado dentro del `inset` de la guía — **sin reintroducir el panel monolítico**. La descomposición de D-03 se mantiene; lo que cambia es qué se pone en permanencia para una audiencia concreta.
+**Repliegue conceptual que U-14 preserva, sin activarlo:** si al reabrirse la dirección de producto de Aula se determina que el bucle Resolver→leer necesita una superficie más inmediata, el estado de análisis en modo Aula podría acompañarse de una tarjeta de resultado dentro del `inset` de la guía — **sin reintroducir el panel monolítico** y sin crear un segundo sistema de composición para Aula. La descomposición de D-03 no cambia por esto: lo único que U-14 exige es que ese camino siga siendo alcanzable dentro del catálogo de superficies ya definido, el día en que alguien decida evaluarlo.
 
 ---
 
@@ -658,7 +658,7 @@ De los diez heredados, **siete quedan resueltos con cita de código**. Tabla com
 | **M-3** | Conectar el resolutor al rail y al detalle. Aquí muere F-01 y aparece Medium. | **Medio** — cambio visible en 1024–1440 | Sí, con bandera |
 | **M-4** | Broker: extraer foco, retorno y ocupación de `WorkspaceShell`, y añadir la migración de superficies. | **Medio** — el foco es delicado y hoy funciona bien | Sí |
 | **M-5** | Descomponer el Inspector en `detail` / `analysis-setup` / `view`. | **Medio-alto** — muchas rutas de usuario | Parcialmente |
-| **M-6** | Descomponer Results (D-03). | **Alto** — afecta a Aula (U-14) | Parcialmente |
+| **M-6** | Descomponer Results (D-03). | **Alto** — U-14 exige que la compatibilidad con una presentación más inmediata (para Aula u otra audiencia) siga siendo alcanzable | Parcialmente |
 | **M-7** | `contextual-actions` y el contrato de precisión (D-06/D-07). | **Medio** — es adición, no sustitución | Sí |
 | **M-8** | `DraftLifecycle` y los invariantes de transición. | **Medio** | Sí |
 | **M-9** | Sacar `settings.show*` del esquema (D-10). | **El más alto** — migración de esquema, `verify:protected` | No sin migración inversa |
@@ -667,7 +667,7 @@ De los diez heredados, **siete quedan resueltos con cita de código**. Tabla com
 
 | # | Riesgo | Mitigación |
 |---|---|---|
-| 1 | **Aula pierde inmediatez de resultados** (U-14) | Prototipo separado en CRI-11 con repliegue ya declarado |
+| 1 | **La descomposición de Results cierra, sin querer, la vía de compatibilidad que U-14 exige preservar** | El catálogo de superficies conserva el repliegue conceptual (tarjeta de resultado en el `inset` de la guía) como alcanzable sin reabrir arquitectura; su activación y validación quedan diferidas a cuando se reabra la dirección de producto de Aula, fuera de esta fase |
 | 2 | **Migración de esquema de `show*`** (U-12) | Repliegue declarado en D-10: dueño único en la UI sin tocar el esquema |
 | 3 | **El foco se degrada al extraer el broker** | Hoy funciona bien; M-4 debe ir acompañada de pruebas que fijen el comportamiento actual **antes** de mover nada |
 | 4 | **Oscilación del resolutor en redimensionado continuo** (U-13) | T-INV-5 exige histéresis; su valor se mide en CRI-11 |
@@ -702,7 +702,7 @@ El riesgo 6 merece énfasis. `qa-topbar.mjs` barre de 1024 a 1600 px, pero sólo
 | Una sola persistencia | Intacta. D-08 **declara** la precedencia existente; no añade almacén |
 | Misma semántica de selección/comandos/undo | Intacta. Se refuerza: la selección es inmutable ante transiciones |
 | `success ≠ reliable ≠ safe` | Intacto y **reforzado**: D-14 le da por fin ruta táctil y de teclado |
-| Aula comparte análisis y no se rediseña | Cumplido. Sólo se declara su presentación; U-14 protege su bucle |
+| Aula comparte análisis y no se rediseña | Cumplido. Sólo se declara su presentación; U-14 sostiene la compatibilidad sin reabrir su dirección de producto |
 | Space3D separado y experimental | Cumplido. D-15 lo congela salvo dos contratos neutrales |
 | No inventar capacidades ni datos | Cumplido. Todo trae cita; lo no demostrable va a UNKNOWN |
 | No inferir `materialId`/`sectionId` por floats | Intacto. D-12 lo nombra como la fortaleza que la unificación no puede tocar |
@@ -757,7 +757,7 @@ Ninguno de los dos scripts requiere `npm install` ni construir la app: no leen n
 ## Pendientes declarados
 
 - **U-01, U-02, U-07, U-11, U-12, U-13, U-14, U-15** siguen abiertos, cada uno con la medición concreta que lo cerraría (§16).
-- **U-14 es el riesgo que CRI-11 debe atacar primero**: si Aula pierde el bucle Resolver→leer, D-03 necesita su repliegue.
+- **U-14 es un unknown de compatibilidad, no una tarea de CRI-11.** Aula sigue fuera de alcance y estacionada; la arquitectura sostiene la vía de repliegue conceptual (§16), y su validación específica queda diferida hasta que se reabra la dirección de producto de Aula.
 - **F-11 sigue esperando decisión del propietario.** CRI-10 no puede empezar la identidad sin ella.
 - **G-01 y G-02 quedan con disposición decidida y sin implementar**, como pedía el encargo.
 - Los pendientes de CRI-7 y CRI-8 que no tocaba esta fase siguen abiertos.

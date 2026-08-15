@@ -63,7 +63,10 @@ export const DECISIONS = [
     evidence: 'ResultsPanel.tsx:40,339,514-520; CRI-8 §5.4; CRI-7 §2; RFEM 6 Navigator; ETABS Table Options.',
     impact: 'Devuelve 22–25 puntos de viewport en Expanded y 6.4 en Compact, y hace que el estado y la fiabilidad ganen permanencia real.',
     cri10: 'P-03 (fiabilidad con forma además de color), P-15 (tarjeta de procedencia legible), estado vacío con siguiente paso.',
-    risk: 'Aula depende de ver resultados de inmediato. CRI-11 debe prototipar el bucle Resolver→leer con la audiencia de Aula antes de dar esto por bueno.',
+    risk:
+      'U-14 (unknown de compatibilidad, no de implementación): la arquitectura debe preservar una vía para que Aula recupere una presentación '
+      + 'más inmediata de resultados si su dirección de producto lo exige más adelante. Aula sigue fuera de alcance de CRI-9 y su validación '
+      + 'específica queda diferida hasta que se reabra esa dirección; no se asigna a CRI-11.',
   },
   {
     id: 'D-04',
