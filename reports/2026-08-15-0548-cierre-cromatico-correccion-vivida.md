@@ -211,9 +211,48 @@ los valores.
 
 - CRI-10 diseña sobre esta paleta; no se tocó layout, navegación, Inspector,
   Results ni ToolRail.
-- El Component Lab sigue ofreciendo sólo direcciones supersedidas en su
-  selector de "Dirección cromática". No se tocó ese componente porque está
-  fuera del alcance de un cierre cromático (`componentLab.css`/`.tsx` no son
-  tokens, son un arnés de comparación), pero conviene que un cierre de
-  producto futuro lo retire o lo actualice para no confundir a quien lo abra
-  buscando la paleta viva.
+
+## Adenda — corrección del Component Lab (commit posterior a `f60eae5`)
+
+Con la paleta de `f60eae5` ya aprobada, se detectó que el pendiente anotado
+arriba ("el Component Lab sigue ofreciendo sólo direcciones supersedidas")
+era más grave de lo documentado: el selector "Dirección cromática" abría por
+defecto en `mineral`, una de las tres exploraciones anteriores al cierre
+cromático — así que visitar `/__components` sin tocar nada mostraba una
+paleta que **no** es la oficial. Se corrigió sin tocar ningún HEX, el
+Brandbook ni ningún ratio de contraste:
+
+- `FoundationPalette` gana un cuarto valor, `'official'`, y es ahora el
+  `useState` por defecto. `data-foundation="official"` no tiene bloque
+  correspondiente en `componentLab.css` a propósito: al no matchear ningún
+  selector, cada `--sc-color-*` cae directo a `:root` de `tokens.css` — la
+  paleta viva, sin copiarla.
+- El `<select>` ahora lista "Oficial · Brandbook" como primera opción, y las
+  tres direcciones antiguas quedan agrupadas bajo un `<optgroup>` con la
+  etiqueta "Históricas · supersedidas", separadas visualmente de la opción
+  vigente. Sus resúmenes de texto ahora empiezan con "Supersedida —" para que
+  quede claro en el propio Lab, no sólo en un comentario de código.
+- `componentLab.css` gana una nota explícita: no añadir un bloque
+  `[data-foundation='official']`, porque eso duplicaría la paleta en vez de
+  heredarla.
+- Corrección adicional pedida en revisión: el swatch "Advertencia" del mapa
+  semántico (`ComponentLab.tsx`, sección 00) usaba
+  `--sc-color-state-warning` (`#d9720a`, el ámbar vivo reservado a trazos e
+  íconos — mecanismo, borde de campo inválido) en vez de
+  `--sc-color-canario` (`#f4d75e`, el amarillo pastel con el que la
+  advertencia se ve realmente en badges, banners y toasts). Se corrigió el
+  mapeo de esa única regla CSS (`componentLab.css`, `.is-warning`) a
+  `--sc-color-canario` — ningún HEX cambió, sólo qué token oficial
+  representa el swatch de demostración.
+
+Verificado con Playwright contra `/__components` recién abierto, sin
+interacción: `data-foundation="official"` y el `<select>` en `official` por
+defecto, en Día y Noche, mostrando exactamente los HEX de `f60eae5`
+(incluido el swatch de advertencia ya en amarillo canario). Capturas en
+`reports/evidence/2026-08-15-palette-closure-v2/lab-default-{light,dark}.png`
+y `lab-warning-fix-{light,dark}.png`.
+
+Archivos tocados en esta corrección: `src/design-system/lab/ComponentLab.tsx`,
+`src/design-system/lab/componentLab.css`. Sin cambios en
+`tokens.css`, `brand/brandbook-clay.html`, `brand/manifest.json` ni ningún
+otro archivo de producto.

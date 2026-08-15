@@ -39,20 +39,22 @@ import './componentLab.css';
 
 type Theme = 'light' | 'dark';
 type Locale = 'es' | 'en';
-type FoundationPalette = 'continuity' | 'mineral' | 'analytical';
+type FoundationPalette = 'official' | 'continuity' | 'mineral' | 'analytical';
 
 const copy = {
   es: {
     language: 'Idioma', theme: 'Tema', light: 'Claro', dark: 'Oscuro',
-    foundationSelector: 'Dirección cromática', continuity: 'Continuidad calibrada', mineral: 'Mineral + Pino', analytical: 'Contraste analítico',
+    foundationSelector: 'Dirección cromática', official: 'Oficial · Brandbook', foundationSupersededGroup: 'Históricas · supersedidas', continuity: 'Continuidad calibrada', mineral: 'Mineral + Pino', analytical: 'Contraste analítico',
     eyebrow: 'Biblioteca visual · Fase 5', title: 'Component Lab',
     intro: 'Primitivos y patrones del editor probados de forma aislada. Esta ruta solo existe en desarrollo y no conecta con el motor de cálculo.',
     ready: 'Biblioteca lista para inspección', readyDetail: 'Estados, temas, teclado y vista móvil disponibles en una sola superficie.',
     foundations: 'Fundamentos cromáticos', foundationsNote: 'Roles semánticos aplicados a los mismos componentes, datos y estados en Día y Noche.',
     foundationRoles: 'Mapa semántico', foundationLegend: 'Datos visuales de demostración. No corresponden a un análisis estructural.',
-    foundationCurrent: 'Dirección activa', foundationContinuitySummary: 'Conserva la neutralidad actual y aumenta ligeramente la separación entre superficies.',
-    foundationMineralSummary: 'Combina superficies minerales claras con un laboratorio pino profundo y señales técnicas precisas.',
-    foundationAnalyticalSummary: 'Prioriza separación, contraste y lectura rápida para sesiones de análisis densas.',
+    foundationCurrent: 'Dirección activa',
+    foundationOfficialSummary: 'La paleta oficial: los tokens vivos de tokens.css y su autoridad, brand/brandbook-clay.html. Sin overrides locales.',
+    foundationContinuitySummary: 'Supersedida — exploración previa al cierre cromático. Conserva la neutralidad anterior y aumenta ligeramente la separación entre superficies.',
+    foundationMineralSummary: 'Supersedida — exploración previa al cierre cromático. Combina superficies minerales claras con un laboratorio pino profundo y señales técnicas precisas.',
+    foundationAnalyticalSummary: 'Supersedida — exploración previa al cierre cromático. Prioriza separación, contraste y lectura rápida para sesiones de análisis densas.',
     roleApp: 'Fondo de aplicación', roleCanvas: 'Canvas', roleSurface: 'Superficie', roleAction: 'Acción', roleSelection: 'Selección', roleLoad: 'Carga', roleAxial: 'Axial N', roleShear: 'Cortante V', roleMoment: 'Momento M', roleWarning: 'Advertencia', roleError: 'Error', roleAula: 'Mentor Aula',
     controls: 'Controles', controlsNote: 'Acciones, captura de datos y selección compacta.',
     overlays: 'Capas y divulgación', overlaysNote: 'Contenido contextual con cierre por Escape y retorno de foco.',
@@ -92,15 +94,17 @@ const copy = {
   },
   en: {
     language: 'Language', theme: 'Theme', light: 'Light', dark: 'Dark',
-    foundationSelector: 'Color direction', continuity: 'Calibrated continuity', mineral: 'Mineral + Pine', analytical: 'Analytical contrast',
+    foundationSelector: 'Color direction', official: 'Official · Brandbook', foundationSupersededGroup: 'Historical · superseded', continuity: 'Calibrated continuity', mineral: 'Mineral + Pine', analytical: 'Analytical contrast',
     eyebrow: 'Visual library · Phase 5', title: 'Component Lab',
     intro: 'Primitives and editor patterns tested in isolation. This route only exists in development and never connects to the calculation engine.',
     ready: 'Library ready for inspection', readyDetail: 'States, themes, keyboard behavior, and mobile layouts are available in one surface.',
     foundations: 'Color foundations', foundationsNote: 'Semantic roles applied to the same components, data, and states in Day and Night.',
     foundationRoles: 'Semantic map', foundationLegend: 'Visual demonstration data. It does not correspond to a structural analysis.',
-    foundationCurrent: 'Active direction', foundationContinuitySummary: 'Keeps the current neutrality while slightly increasing separation between surfaces.',
-    foundationMineralSummary: 'Combines light mineral surfaces with a deep pine laboratory and precise technical signals.',
-    foundationAnalyticalSummary: 'Prioritizes separation, contrast, and fast reading for dense analysis sessions.',
+    foundationCurrent: 'Active direction',
+    foundationOfficialSummary: 'The official palette: the live tokens in tokens.css and their authority, brand/brandbook-clay.html. No local overrides.',
+    foundationContinuitySummary: 'Superseded — an exploration that predates the chromatic closure. Keeps the previous neutrality while slightly increasing separation between surfaces.',
+    foundationMineralSummary: 'Superseded — an exploration that predates the chromatic closure. Combines light mineral surfaces with a deep pine laboratory and precise technical signals.',
+    foundationAnalyticalSummary: 'Superseded — an exploration that predates the chromatic closure. Prioritizes separation, contrast, and fast reading for dense analysis sessions.',
     roleApp: 'Application background', roleCanvas: 'Canvas', roleSurface: 'Surface', roleAction: 'Action', roleSelection: 'Selection', roleLoad: 'Load', roleAxial: 'Axial N', roleShear: 'Shear V', roleMoment: 'Moment M', roleWarning: 'Warning', roleError: 'Error', roleAula: 'Classroom mentor',
     controls: 'Controls', controlsNote: 'Actions, data entry, and compact selection.',
     overlays: 'Layers and disclosure', overlaysNote: 'Contextual content with Escape dismissal and focus restoration.',
@@ -188,7 +192,7 @@ const DemoBlock = ({ title, wide = false, children }: DemoBlockProps) => (
 export function ComponentLab() {
   const [theme, setTheme] = useState<Theme>('light');
   const [locale, setLocale] = useState<Locale>('es');
-  const [foundation, setFoundation] = useState<FoundationPalette>('mineral');
+  const [foundation, setFoundation] = useState<FoundationPalette>('official');
   const [eventMessage, setEventMessage] = useState('');
   const [mode, setMode] = useState('select');
   const [material, setMaterial] = useState('steel');
@@ -226,11 +230,13 @@ export function ComponentLab() {
     record(`${t.eventTool}: ${label}`);
   };
 
-  const foundationSummary = foundation === 'continuity'
-    ? t.foundationContinuitySummary
-    : foundation === 'mineral'
-      ? t.foundationMineralSummary
-      : t.foundationAnalyticalSummary;
+  const foundationSummary = foundation === 'official'
+    ? t.foundationOfficialSummary
+    : foundation === 'continuity'
+      ? t.foundationContinuitySummary
+      : foundation === 'mineral'
+        ? t.foundationMineralSummary
+        : t.foundationAnalyticalSummary;
 
   return <div className="component-lab" data-foundation={foundation}>
     <a className="component-lab__skip" href="#component-lab-main">{t.skip}</a>
@@ -248,9 +254,12 @@ export function ComponentLab() {
             setFoundation(value);
             record(`${t.eventFoundation}: ${event.target.selectedOptions[0]?.text ?? value}`);
           }}>
-            <option value="continuity">{t.continuity}</option>
-            <option value="mineral">{t.mineral}</option>
-            <option value="analytical">{t.analytical}</option>
+            <option value="official">{t.official}</option>
+            <optgroup label={t.foundationSupersededGroup}>
+              <option value="continuity">{t.continuity}</option>
+              <option value="mineral">{t.mineral}</option>
+              <option value="analytical">{t.analytical}</option>
+            </optgroup>
           </select>
         </label>
         <SegmentedControl

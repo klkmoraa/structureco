@@ -28,7 +28,14 @@ body:has(.component-lab),
    BEFORE the palette closure; the official identity is now the lime family and
    its single authority is `brand/brandbook-clay.html`. They stay as a harness
    for comparing materials, not as options still on the table — do not promote
-   a value out of this file into the product. */
+   a value out of this file into the product.
+
+   `ComponentLab` defaults to `data-foundation="official"`, which deliberately
+   has NO block here: with no selector to match, every `--sc-color-*` custom
+   property falls straight through to `:root` in `tokens.css`, so the lab's
+   default view is always the live, canonical palette — not a copy of it.
+   Do not add a `[data-foundation='official']` rule; that would duplicate the
+   palette instead of inheriting it. */
 .component-lab[data-foundation='continuity'] {
   --sc-color-bg-app: #f1f4f2;
   --sc-color-bg-canvas: #fafbfa;
@@ -508,7 +515,7 @@ body:has(.component-lab),
 .component-lab__swatch-color.is-axial { background: var(--sc-color-technical-axial); }
 .component-lab__swatch-color.is-shear { background: var(--sc-color-technical-shear); }
 .component-lab__swatch-color.is-moment { background: var(--sc-color-technical-moment); }
-.component-lab__swatch-color.is-warning { background: var(--sc-color-state-warning); }
+.component-lab__swatch-color.is-warning { background: var(--sc-color-canario); }
 .component-lab__swatch-color.is-error { background: var(--sc-color-state-error); }
 .component-lab__swatch-color.is-aula { background: var(--sc-color-aula); }
 .component-lab__field-grid { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: var(--sc-space-5); }
