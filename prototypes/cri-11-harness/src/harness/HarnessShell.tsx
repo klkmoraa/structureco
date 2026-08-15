@@ -75,6 +75,7 @@ export const HarnessShell = ({ children }: { children: ReactNode }) => {
   const [events, setEvents] = useState(0);
   const [fit, setFit] = useState(true);
   const [available, setAvailable] = useState({ width: 1200, height: 800 });
+  const [stageBox, setStageBox] = useState<HTMLElement | null>(null);
   const { verdict, viewport } = derived;
 
   useEffect(() => subscribe(() => setEvents(snapshot().length)), []);
@@ -87,12 +88,27 @@ export const HarnessShell = ({ children }: { children: ReactNode }) => {
     document.documentElement.lang = state.axes.locale === 'es-MX' ? 'es' : 'en';
   }, [state.axes.locale]);
 
+  /**
+   * El espacio disponible para el marco simulado se MIDE del propio
+   * `.lab-stage`, no se calcula restando el ancho del panel lateral. Restar un
+   * 340px fijo asumía el layout de escritorio: por debajo de 900px el panel se
+   * apila arriba (`harness.css`, `@media (max-width: 900px)`) y deja de robar
+   * ancho, así que restarlo igualmente encogía el marco a unos pocos píxeles
+   * en un navegador móvil real — el propio harness quedaba inutilizable en el
+   * dispositivo que se supone que debe simular. Medir el contenedor real
+   * respeta cualquier punto de quiebre sin tener que duplicarlo aquí.
+   */
   useEffect(() => {
-    const update = () => setAvailable({ width: window.innerWidth - 372, height: window.innerHeight - 96 });
+    if (!stageBox) return;
+    const update = () => {
+      const box = stageBox.getBoundingClientRect();
+      setAvailable({ width: Math.max(160, box.width - 48), height: Math.max(160, box.height - 64) });
+    };
     update();
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
-  }, []);
+    const observer = new ResizeObserver(update);
+    observer.observe(stageBox);
+    return () => observer.disconnect();
+  }, [stageBox]);
 
   const set = (patch: Partial<HarnessAxes>) => dispatch({ type: 'axis/set', patch });
   const frameSize = presetViewport(state.axes);
@@ -351,7 +367,7 @@ export const HarnessShell = ({ children }: { children: ReactNode }) => {
         </div>
       </aside>
 
-      <main className="lab-stage">
+      <main className="lab-stage" ref={setStageBox}>
         {state.axes.realWindow ? (
           <div className="lab-frame lab-frame--window" ref={setFrame} data-theme-scope>
             <div className="lab-frame__viewport" data-input={state.axes.input} data-motion={state.axes.motion}>

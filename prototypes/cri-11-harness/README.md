@@ -29,6 +29,30 @@ npm --prefix prototypes/cri-11-harness run build
 npm --prefix prototypes/cri-11-harness run smoke           # recorrido real en Chromium
 ```
 
+## Preview público temporal
+
+`vite.artifact.config.ts` produce un único `index.html` autocontenido (JS y CSS
+inlineados, cero llamadas de red) para publicarlo como preview aislado fuera de
+este repositorio — útil cuando alguien necesita probarlo sin clonar nada.
+
+```bash
+npm --prefix prototypes/cri-11-harness run build:artifact    # dist-artifact/index.html
+npm --prefix prototypes/cri-11-harness run verify:artifact   # desktop + móvil, viewport EXTERNO real
+```
+
+`verify:artifact` es distinto de `smoke`: `smoke` fija el navegador externo en
+1600×1000 y sólo cambia el marco *simulado* dentro del laboratorio; éste abre
+el bundle con el viewport externo en tamaño de escritorio y en tamaño de móvil
+real, porque es justo lo que cambia al compartir un enlace. Así se detectó y
+corrigió un bug real: el cálculo de "espacio disponible" del panel asumía el
+layout de escritorio (340px fijo) y encogía el marco a un puñado de píxeles en
+un navegador móvil real, aunque el propio prototipo simulado sí soportaba
+Compact — el bug estaba en el chrome del laboratorio, no en el producto bajo
+prueba. `HarnessShell.tsx` mide ahora el contenedor real con `ResizeObserver`.
+
+No genera un dominio propio: el build es un archivo, para publicarlo con
+cualquier hosting que sirva HTML estático o con el flujo de Artifact.
+
 `smoke` necesita un `build` previo; deja capturas y un resumen en
 `reports/evidence/2026-08-15-cri-11-fase-a/` y sale con código 1 si hay un solo
 error de consola o una aserción incumplida.

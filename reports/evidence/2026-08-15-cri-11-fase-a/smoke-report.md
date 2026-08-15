@@ -1,6 +1,6 @@
 # CRI-11 Fase A · recorrido ejecutado
 
-Ejecutado el 2026-08-15T22:20:58.593Z sobre Chromium (Playwright), build de `prototypes/cri-11-harness`.
+Ejecutado el 2026-08-15T22:35:26.577Z sobre Chromium (Playwright), build de `prototypes/cri-11-harness`.
 
 ## Comprobaciones superadas
 
@@ -28,7 +28,7 @@ Ejecutado el 2026-08-15T22:20:58.593Z sobre Chromium (Playwright), build de `pro
 - El eje de estado alcanza failed.
 - offline se muestra sin convertirse en una fase de análisis.
 - La causa gobernante vive en un botón, no en un `title` (D-14).
-- Fixture grande: 1292 filas pintadas sin virtualización en 14 ms hasta la primera fila.
+- Fixture grande: 1292 filas pintadas sin virtualización en 13 ms hasta la primera fila.
 - Esencial baja de 8 a 5 columnas conservando 1292 filas y sus rutas.
 
 ## Fallos
