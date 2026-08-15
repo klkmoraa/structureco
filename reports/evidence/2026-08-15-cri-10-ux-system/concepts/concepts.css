@@ -781,33 +781,170 @@ body {
 .dk.is-active { background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); color: var(--sc-color-action-ink); }
 
 /* --------------------------------------------------------------------- */
-/* WELCOME                                                                */
+/* WELCOME · reconstrucción — entrada de trabajo, no portada.             */
+/* Recupera, verificado contra `src/features/welcome/WelcomeScreen.tsx` y  */
+/* `src/styles.css` (sección «IDENTIDAD OFICIAL CLAY»): el pórtico 3D real, */
+/* los cuatro lanzadores, el hub de proyectos (recientes + recuperación),  */
+/* la vitrina de plantillas con filtros y los tres pasos. Mismo criterio   */
+/* clay que ya ganó la cascada en producción: superficie sólida, SIN el    */
+/* halo ambiental de marca que `.welcome-hero-figure::before` tenía antes  */
+/* de esa reconciliación (`display:none` ya la retiró) y SIN el texto con  */
+/* degradado que `.welcome-title-accent` tenía antes de la misma pasada.   */
 /* --------------------------------------------------------------------- */
 
-.wel { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: var(--sc-space-8); padding: var(--sc-space-7) var(--sc-space-8); overflow: hidden; }
-.wel__l { display: grid; gap: var(--sc-space-5); align-content: start; }
-.wel__eyebrow { display: inline-flex; align-items: center; gap: 6px; width: max-content; padding: 5px var(--sc-space-3); border: 1px solid var(--sc-color-border); border-radius: 999px; background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-xs); color: var(--sc-color-text-secondary); font-family: var(--sc-font-mono); font-size: var(--sc10-font-size-caption); }
-.wel h1 { margin: 0; font-size: 40px; line-height: 1.06; letter-spacing: var(--sc-tracking-display); font-weight: 720; }
-.wel h1 em { font-style: normal; background: var(--sc-gradient-display); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.wel__sub { margin: 0; color: var(--sc-color-text-secondary); font-size: 15px; max-width: 40ch; }
-/* La continuación va PRIMERO y es la acción primaria: quien vuelve a trabajar
-   no debería cruzar una portada para llegar a su proyecto. */
-.cont { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--sc-space-4); padding: var(--sc-space-4); border: 1px solid var(--sc-color-action-edge); border-radius: var(--sc10-radius-xl); background: color-mix(in srgb, var(--sc-color-action-primary) 9%, var(--sc-color-surface-1)); box-shadow: var(--sc-shadow-clay-sm); }
-.cont__thumb { width: 88px; height: 64px; border: 1px solid var(--sc-color-border-soft); border-radius: var(--sc10-radius-md); background: var(--sc-color-bg-canvas); position: relative; overflow: hidden; }
-.cont__thumb svg { position: absolute; top: 0; left: 0; }
-.cont__c { min-width: 0; display: grid; gap: 3px; }
-.cont__c strong { font-size: 16px; }
-.cont__c span { color: var(--sc-color-text-secondary); font-size: var(--sc10-font-size-caption); }
-.cont__meta { display: flex; gap: var(--sc-space-2); margin-top: 3px; }
-.wel__cards { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sc-space-3); }
-.wcard { display: grid; gap: 6px; padding: var(--sc-space-4); border: 1px solid var(--sc-color-border); border-radius: var(--sc10-radius-lg); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-xs); }
-.wcard__i { width: 36px; height: 36px; display: grid; place-items: center; border-radius: var(--sc10-radius-md); background: var(--sc-color-accent-blue-soft); color: var(--sc-color-text-link); }
-.wcard--aula .wcard__i { background: color-mix(in srgb, var(--sc-color-aula) 14%, var(--sc-color-surface-1)); color: var(--sc-color-aula); }
-.wcard__i svg { width: 20px; height: 20px; }
-.wcard strong { font-size: var(--sc10-font-size-value); }
-.wcard span { color: var(--sc-color-text-secondary); font-size: var(--sc10-font-size-caption); line-height: 1.4; }
-.wel__r { position: relative; display: grid; align-content: center; gap: var(--sc-space-4); }
-.wel__recent { display: grid; gap: var(--sc-space-2); }
+/* Mesa de dibujo: la rejilla técnica de fondo de toda la pantalla, igual
+   mecanismo que `.welcome-screen` en `styles.css` (dos rejillas superpuestas,
+   fina y mayor, ambas del token de borde, nunca del acento). */
+.ws {
+  flex: 1 1 auto; min-height: 0; overflow: hidden;
+  --ws-grid-fine: color-mix(in srgb, var(--sc-color-border) 30%, transparent);
+  --ws-grid-major: color-mix(in srgb, var(--sc-color-border) 56%, transparent);
+  background-image:
+    linear-gradient(var(--ws-grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ws-grid-major) 1px, transparent 1px),
+    linear-gradient(var(--ws-grid-fine) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ws-grid-fine) 1px, transparent 1px);
+  background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px;
+}
+.ws__pad { padding: var(--sc-space-6) var(--sc-space-7); }
+.ws__frame { border: var(--sc-clay-edge); border-radius: var(--sc-radius-hero); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-md); padding: clamp(28px, 4vw, 44px); display: grid; gap: clamp(32px, 5vh, 52px); }
+
+/* Velocidad de uso — misma hipótesis Esencial/Completa que el resto de CRI-10,
+   aplicada aquí a CUÁNTO se muestra bajo el pliegue, no a otra app. */
+.ws__speed { display: flex; align-items: center; gap: var(--sc-space-2); }
+
+/* -- Hero: copy + pórtico 3D ------------------------------------------- */
+.hero2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.86fr); align-items: center; gap: clamp(24px, 4vw, 56px); }
+.hero2__copy { min-width: 0; display: grid; gap: 4px; align-content: start; }
+.badge2 { display: inline-flex; align-items: center; gap: 8px; width: max-content; margin-bottom: 14px; padding: 6px 14px 6px 11px; border-radius: 999px; background: var(--sc-color-surface-2); box-shadow: var(--sc-shadow-clay-xs); color: var(--sc-color-text-secondary); font-family: var(--sc-font-mono); font-size: 11px; font-weight: 650; letter-spacing: 0.03em; }
+.badge2 svg { width: 14px; height: 14px; color: var(--sc-color-action-ink); }
+.title2 { margin: 0; font-family: var(--sc-font-display); font-size: clamp(2.1rem, 1.5rem + 2.4vw, 3.1rem); line-height: 1.05; letter-spacing: var(--sc-tracking-display); font-weight: 720; }
+/* El énfasis es tinta plana de marca, NUNCA degradado — esta es la corrección
+   que `src/styles.css` ya hizo (`.welcome-title-accent{background:none}`
+   gana la cascada sobre la declaración con gradiente que la precede). Un
+   concepto que reintrodujera el clip de texto estaría contradiciendo lo que
+   el propio producto ya corrigió. */
+.title2 em { font-style: normal; color: var(--sc-color-action-ink); }
+.sub2 { margin: 16px 0 0; color: var(--sc-color-text-secondary); font-size: 16px; line-height: 1.55; max-width: 42ch; }
+.hl2 { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 0; padding: 0; }
+.hl2__i { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 999px; background: var(--sc-color-surface-2); box-shadow: var(--sc-shadow-clay-xs); color: var(--sc-color-text-secondary); font-size: 12px; font-weight: 650; }
+.hl2__i svg { width: 15px; height: 15px; color: var(--sc-color-state-success); flex: 0 0 auto; }
+
+/* -- Pórtico 3D: pieza física, no luz flotante -------------------------- */
+.hero2__fig { position: relative; display: grid; place-items: center; min-width: 0; }
+.portico3d { display: block; width: 100%; max-width: 420px; height: auto; overflow: visible; }
+/* Sombreado por cara: mismo mecanismo y misma calibración que `.portal-hero__face`
+   en producción (recta ajustada a los tres shades reales de DEFAULT_PORTAL —
+   0.584/0.703/0.835 — no al rango [0,1] teórico, o las tres caras se aplanan). */
+.portico3d__face { filter: brightness(calc(1.72 * var(--face-shade, 1) - 0.283)); stroke: none; }
+.portico3d__ground line { stroke: var(--sc-color-border-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
+/* Sombra de CONTACTO, neutra (color de borde, no de marca) y muy localizada
+   bajo cada zapata — es lo que ancla el objeto a la mesa. No es el halo
+   ambiental de marca que este mismo hero tenía antes (`radial-gradient` +
+   `blur(26px)`, retirado en producción con `display:none` sobre
+   `.welcome-hero-figure::before`): esa pieza NO se reintroduce aquí. */
+.portico3d__contact { fill: var(--sc-color-border-strong); opacity: 0.16; filter: blur(6px); }
+
+/* -- Cuatro lanzadores: mismo peso visual, acento por dominio ----------- */
+.launchers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sc-space-3); }
+.launcher { --lc: var(--sc-color-action-ink); position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: var(--sc-space-3); padding: var(--sc-space-4); border: var(--sc-clay-edge); border-radius: var(--sc10-radius-lg); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-sm); text-align: left; }
+.launcher:hover { border-color: var(--sc-color-border-strong); box-shadow: var(--sc-shadow-clay-lg); transform: translateY(-2px); }
+.launcher:active { box-shadow: var(--sc-shadow-clay-pressed); transform: translateY(1px); }
+.launcher__i { width: 46px; height: 46px; flex: 0 0 auto; display: grid; place-items: center; border-radius: var(--sc10-radius-md); border: var(--sc-clay-edge); box-shadow: var(--sc-shadow-clay-xs); background: var(--sc-color-action-subtle); color: var(--lc); }
+.launcher__i svg { width: 22px; height: 22px; }
+.launcher--aula { --lc: var(--sc-color-aula); }
+.launcher--aula .launcher__i { background: var(--sc-color-accent-violet-soft); }
+.launcher--recent { --lc: var(--sc-color-text-link); }
+.launcher--recent .launcher__i { background: var(--sc-color-accent-blue-soft); }
+.launcher--3d { --lc: var(--sc-color-brand-secondary); }
+.launcher--3d .launcher__i { background: color-mix(in srgb, var(--sc-color-brand-secondary) 16%, var(--sc-color-surface-1)); }
+.launcher__body { min-width: 0; display: grid; gap: 4px; align-content: start; }
+.launcher__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.launcher__head strong { font-size: 15px; font-weight: 750; letter-spacing: var(--sc-tracking-tight); }
+.launcher__head small { color: var(--sc-color-text-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
+.launcher__body > span { color: var(--sc-color-text-secondary); font-size: 12px; line-height: 1.4; }
+.launcher__pill { font-size: 10px; font-weight: 750; padding: 3px 9px; border-radius: 999px; background: color-mix(in srgb, var(--lc) 16%, transparent); color: var(--lc); white-space: nowrap; }
+.launcher__arrow { grid-column: 3; align-self: center; color: var(--sc-color-text-muted); flex: 0 0 auto; }
+.launcher:hover .launcher__arrow { color: var(--lc); }
+
+/* -- Hub de proyectos: recientes + recuperación ------------------------- */
+.hub { display: grid; gap: var(--sc-space-3); padding: var(--sc-space-4); border: var(--sc-clay-edge); border-radius: var(--sc10-radius-xl); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-sm); }
+.hub__head { display: flex; align-items: center; justify-content: space-between; gap: var(--sc-space-3); }
+.hub__head h2 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 750; }
+.hub__head h2 svg { width: 17px; height: 17px; color: var(--sc-color-text-secondary); }
+.hub__head span { color: var(--sc-color-text-muted); font-family: var(--sc-font-mono); font-size: 10px; font-weight: 650; letter-spacing: 0.05em; text-transform: uppercase; }
+.hub__rows { display: grid; gap: 2px; }
+.hrow { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--sc-space-3); padding: var(--sc-space-2) var(--sc-space-2); border-radius: var(--sc10-radius-md); }
+.hrow:hover { background: var(--sc-color-surface-2); }
+.hrow__id { min-width: 0; display: grid; gap: 1px; }
+.hrow__id strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 650; }
+.hrow__id small { color: var(--sc-color-text-secondary); font-size: 11px; font-family: var(--sc-font-mono); }
+.hrow__actions { display: flex; gap: 4px; }
+.hrow__actions .ib { width: 32px; height: 32px; }
+.hub__recovery { border-top: 1px solid var(--sc-color-border-soft); padding-top: var(--sc-space-3); margin-top: 2px; }
+.hub__recovery summary { display: flex; align-items: center; gap: 8px; list-style: none; cursor: pointer; color: var(--sc-color-state-warning-foreground); font-size: 12px; font-weight: 700; }
+.hub__recovery summary::marker, .hub__recovery summary::-webkit-details-marker { display: none; }
+.hub__recovery summary svg { width: 15px; height: 15px; }
+.hub__recoveryrow { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: var(--sc-space-2); padding: var(--sc-space-2) var(--sc-space-3); border: 1px solid color-mix(in srgb, var(--sc-color-state-warning) 34%, var(--sc-color-border)); border-radius: var(--sc10-radius-md); background: color-mix(in srgb, var(--sc-color-state-warning) 7%, var(--sc-color-surface-1)); color: var(--sc-color-text-primary); font-size: 12px; font-weight: 650; text-align: left; }
+.hub__recoveryrow svg { width: 15px; height: 15px; color: var(--sc-color-state-warning-foreground); flex: 0 0 auto; }
+.hub__empty { padding: var(--sc-space-4); border: 1px dashed var(--sc-color-border); border-radius: var(--sc10-radius-md); color: var(--sc-color-text-secondary); font-size: 12px; text-align: center; }
+
+/* -- Vitrina: filtros + importar + plantillas --------------------------- */
+.showcase2 { display: grid; gap: var(--sc-space-4); }
+.showcase2__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--sc-space-3); }
+.showcase2__head h2 { margin: 0; font-family: var(--sc-font-display); font-size: 19px; font-weight: 750; letter-spacing: var(--sc-tracking-tight); }
+.showcase2__head p { margin: 3px 0 0; color: var(--sc-color-text-secondary); font-size: 12.5px; }
+.ftabs { display: inline-flex; gap: 3px; padding: 3px; border-radius: var(--sc10-radius-lg); background: var(--sc-color-surface-2); box-shadow: var(--sc-shadow-clay-pressed); }
+.ftabs button { height: 30px; padding: 0 13px; border: 0; border-radius: var(--sc10-radius-md); background: transparent; color: var(--sc-color-text-secondary); font-size: 12px; font-weight: 650; }
+.ftabs button.is-active { background: var(--sc-color-surface-1); color: var(--sc-color-action-ink); box-shadow: var(--sc-shadow-clay-xs); }
+.importcard { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sc-space-3); padding: var(--sc-space-3) var(--sc-space-4); border: 1.5px dashed color-mix(in srgb, var(--sc-color-action-ink) 40%, var(--sc-color-border)); border-radius: var(--sc10-radius-lg); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-sm); text-align: left; }
+.importcard:hover { border-color: var(--sc-color-action-ink); box-shadow: var(--sc-shadow-clay-md); }
+.importcard__i { width: 38px; height: 38px; flex: 0 0 auto; display: grid; place-items: center; border-radius: var(--sc10-radius-md); background: var(--sc-color-action-subtle); color: var(--sc-color-action-ink); }
+.importcard__i svg { width: 19px; height: 19px; }
+.importcard strong { font-size: 13.5px; font-weight: 750; }
+.importcard small { display: block; margin-top: 1px; color: var(--sc-color-text-secondary); font-size: 11.5px; }
+.tplgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--sc-space-3); }
+.tplcard { display: grid; gap: var(--sc-space-3); padding: var(--sc-space-3); border: var(--sc-clay-edge); border-radius: var(--sc10-radius-lg); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-sm); text-align: left; }
+.tplcard:hover { border-color: var(--sc-color-border-strong); box-shadow: var(--sc-shadow-clay-md); }
+.tplcard__top { display: flex; align-items: center; justify-content: space-between; }
+.tplcard__badge { font-size: 9.5px; font-weight: 750; padding: 3px 8px; border-radius: var(--sc10-radius-xs); text-transform: uppercase; letter-spacing: 0.06em; }
+.tplcard__badge--academic { background: color-mix(in srgb, var(--sc-color-state-warning) 15%, transparent); color: var(--sc-color-state-warning-foreground); }
+.tplcard__badge--truss { background: color-mix(in srgb, var(--sc-color-state-info) 15%, transparent); color: var(--sc-color-state-info); }
+.tplcard__badge--beam { background: color-mix(in srgb, var(--sc-color-technical-shear) 15%, transparent); color: var(--sc-color-technical-shear); }
+.tplcard__badge--frame { background: color-mix(in srgb, var(--sc-color-action-ink) 15%, transparent); color: var(--sc-color-action-ink); }
+.tplcard__top svg { width: 17px; height: 17px; color: var(--sc-color-text-muted); }
+.tplcard strong { display: block; font-size: 13px; font-weight: 750; }
+.tplcard span { display: block; margin-top: 3px; color: var(--sc-color-text-secondary); font-size: 11px; line-height: 1.4; }
+.tplcard__foot { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px solid var(--sc-color-border-soft); color: var(--sc-color-text-muted); font-size: 11px; font-weight: 650; }
+.tplcard__foot svg { width: 13px; height: 13px; }
+
+/* -- Tres pasos ----------------------------------------------------------*/
+.wf { padding: var(--sc-space-5); border: var(--sc-clay-edge); border-radius: var(--sc10-radius-2xl, var(--sc10-radius-xl)); background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-sm); }
+.wf__head { display: flex; align-items: center; gap: 9px; margin-bottom: var(--sc-space-4); color: var(--sc-color-action-ink); }
+.wf__head svg { width: 17px; height: 17px; }
+.wf__head h2 { margin: 0; font-size: 14px; font-weight: 750; color: var(--sc-color-text-primary); }
+.wfsteps { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sc-space-5); margin: 0; padding: 0; }
+.wfstep { display: grid; gap: 8px; }
+.wfstep__n { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 999px; background: var(--sc-color-surface-1); border: var(--sc-clay-edge); box-shadow: var(--sc-shadow-clay-xs); color: var(--sc-color-action-ink); font-weight: 800; font-size: 12px; }
+.wfstep strong { display: block; font-size: 13px; font-weight: 750; }
+.wfstep p { margin: 2px 0 0; color: var(--sc-color-text-secondary); font-size: 11.5px; line-height: 1.5; }
+
+.ws__foot { display: flex; align-items: center; justify-content: center; gap: 7px; padding: var(--sc-space-4) 0 0; color: var(--sc-color-text-muted); font-size: 11px; text-align: center; }
+.ws__foot svg { width: 13px; height: 13px; color: var(--sc-color-action-ink); }
+
+/* -- Compact (K0): todo apila a una columna ------------------------------*/
+.frame[data-class='K0'] .hero2 { grid-template-columns: 1fr; }
+.frame[data-class='K0'] .hero2__fig { order: -1; }
+.frame[data-class='K0'] .portico3d { max-width: 260px; }
+.frame[data-class='K0'] .launchers { grid-template-columns: 1fr; }
+.frame[data-class='K0'] .wfsteps { grid-template-columns: 1fr; gap: var(--sc-space-4); }
+.frame[data-class='K0'] .tplgrid { grid-template-columns: 1fr 1fr; }
+.frame[data-class='K0'] .ws__frame { padding: var(--sc-space-4); border-radius: var(--sc10-radius-xl); }
+
+/* Fila de versión comparada — la usa el drawer de conflicto de revisión
+   (`21-recuperacion-conflicto`), no Welcome (que ahora usa `.hrow`). Se quedó
+   aquí, con nombre corto, porque nació para esa lámina antes de que Welcome
+   la tomara prestada; la reconstrucción de Welcome le devuelve su único uso. */
 .rec { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: var(--sc-space-3); padding: var(--sc-space-2) var(--sc-space-3); border: 1px solid var(--sc-color-border-soft); border-radius: var(--sc10-radius-md); background: var(--sc-color-surface-1); }
 .rec__t { width: 44px; height: 34px; border: 1px solid var(--sc-color-border-soft); border-radius: var(--sc10-radius-xs); background: var(--sc-color-bg-canvas); position: relative; overflow: hidden; }
 .rec__t svg { position: absolute; top: 0; left: 0; }

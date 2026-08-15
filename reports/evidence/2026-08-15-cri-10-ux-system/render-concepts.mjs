@@ -32,6 +32,11 @@ fs.mkdirSync(outDir, { recursive: true });
 // es justo lo que hace que estos conceptos usen los tokens reales.
 const MIME = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.woff2': 'font/woff2', '.woff': 'font/woff' };
 const server = http.createServer((request, response) => {
+  // Chromium pide `/favicon.ico` en todo `goto()`, sin relación con la página.
+  // Sin esta rama el servidor la 404ea y el detector de errores de consola de
+  // más abajo la confunde con un fallo real de la propia página — de forma
+  // no determinista, según si la petición llega antes o después de `load`.
+  if (request.url === '/favicon.ico') { response.writeHead(204).end(); return; }
   const relative = decodeURIComponent(new URL(request.url, 'http://localhost').pathname).replace(/^\/+/, '');
   // `fonts.css` pide `/fonts/*.woff2`, que en la app sirve Vite desde `public/`.
   // Sin este mapeo las láminas se renderizarían con la tipografía de reserva del

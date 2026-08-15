@@ -52,6 +52,25 @@ export const ICON = {
   get sliders() { return this._('<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/>'); },
   get cloud() { return this._('<path d="M7 18.5a4.3 4.3 0 01-.6-8.56 5.5 5.5 0 0110.6-1.8A4.2 4.2 0 0117.5 18.5z"/>'); },
   get cloudCheck() { return this._('<path d="M7 17.5a4.3 4.3 0 01-.6-8.56 5.5 5.5 0 0110.6-1.8A4.2 4.2 0 0117.5 17.5z"/>', '<path d="M9.3 13.3l1.9 1.9 3.5-3.9"/>'); },
+
+  /* Welcome — trazados con la geometría real de lucide-react (única fuente
+     de iconos del proyecto, ya en package.json), redibujados a mano a
+     stroke-width 1.8 para casar con el resto de esta hoja (Brandbook §11).
+     Origen exacto de cada `d`, coordenada por coordenada:
+     node_modules/lucide-react/dist/esm/icons/{compass,folder-open,upload,
+     cpu,move-3d,rotate-ccw,pencil,folder-clock,triangle,
+     git-commit-horizontal,sparkles}.mjs — MIT License, Lucide contributors. */
+  get compass() { return this._('<circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"/>'); },
+  get folderOpen() { return this._('<path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>'); },
+  get upload() { return this._('<path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'); },
+  get cpu() { return this._('<path d="M12 20v2M12 2v2M17 20v2M17 2v2M2 12h2M2 17h2M2 7h2M20 12h2M20 17h2M20 7h2M7 20v2M7 2v2"/><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="8" y="8" width="8" height="8" rx="1"/>'); },
+  get cube3d() { return this._('<path d="M5 3v16h16"/><path d="m5 19 6-6"/><path d="m2 6 3-3 3 3"/><path d="m18 16 3 3-3 3"/>'); },
+  get restore() { return this._('<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>'); },
+  get pencil() { return this._('<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>'); },
+  get folderClock() { return this._('<path d="M16 14v2.2l1.6 1"/><path d="M7 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H20a2 2 0 0 1 2 2"/><circle cx="16" cy="16" r="6"/>'); },
+  get triangleShape() { return this._('<path d="M13.73 4a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>'); },
+  get commitH() { return this._('<circle cx="12" cy="12" r="3"/><path d="M3 12h6M15 12h6"/>'); },
+  get sparkles() { return this._('<path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4M22 4h-4"/><circle cx="4" cy="20" r="2"/>'); },
 };
 
 /**

@@ -3,6 +3,7 @@
  * pantalla existe para enseñar estilo.
  */
 import { ICON, cinta, estadoChip, riel, flotantes, portico, mini, zocalo, prow, fieldNum, fieldSel, fieldMix, metric, docMenu, denseLinks, estadoQuickLinks, viewPanel, contextLine, resultTabs, diagramCurve, maxMinCard, densityToggle, persistChip, ATTENTION_RING } from './parts.js';
+import { porticoHero } from './portico3d.js';
 
 const F = [];
 /** @param spec {name,w,h,caption,theme,cls,rail,input,body} */
@@ -16,52 +17,134 @@ const CAPA = {
 };
 
 /* ------------------------------------------------------------------ */
-/* 01 · WELCOME — continuar es la acción primaria, no la portada        */
+/* 01 · WELCOME — entrada de trabajo, no portada.                       */
+/*                                                                      */
+/* Reconstruida verificando `src/features/welcome/WelcomeScreen.tsx` y  */
+/* la sección «IDENTIDAD OFICIAL CLAY» de `src/styles.css` línea a       */
+/* línea, no de memoria — la Welcome anterior de CRI-10 había perdido    */
+/* el pórtico 3D, los cuatro lanzadores, el hub de recientes/recuperación */
+/* y la vitrina de plantillas que el producto real YA tiene. Se recupera */
+/* todo eso, con la Cinta compartida (no la cabecera propia de hoy) por  */
+/* coherencia con «riel es memoria muscular»: la misma banda persiste    */
+/* aquí y dentro del workspace, en vez de fragmentar el chrome en dos.   */
 /* ------------------------------------------------------------------ */
-const welcome = () => `
-${cinta({ estado: null, name: 'structureCo' })}
-<div class="wel">
-  <div class="wel__l">
-    <span class="wel__eyebrow">${ICON.grad} Análisis estructural 2D · Aula y Completo</span>
-    <h1>Analiza estructuras<br>con <em>claridad</em></h1>
-    <p class="wel__sub">Modelo, matrices, reacciones y diagramas — todo local, sin backend, y con la procedencia de cada número a la vista.</p>
-    <div class="cont">
-      <div class="cont__thumb">${portico({ w: 88, h: 64, labels: 'none' })}</div>
-      <div class="cont__c">
-        <strong>Pórtico de ejemplo</strong>
-        <span>Editado hace 12 minutos · 4 nudos · 3 barras</span>
-        <div class="cont__meta">${estadoChip('limitado')}</div>
-      </div>
-      <button class="btn btn--primary">Continuar ${ICON.chev}</button>
-    </div>
-    <div class="wel__cards">
-      <div class="wcard"><span class="wcard__i">${ICON.canvasIcon}</span><strong>Proyecto nuevo</strong><span>Lienzo libre: pórticos, vigas y armaduras.</span></div>
-      <div class="wcard wcard--aula"><span class="wcard__i">${ICON.grad}</span><strong>Nuevo ejercicio</strong><span>Modo Aula, guiado, con el mismo motor.</span></div>
-    </div>
-  </div>
-  <div class="wel__r">
-    <div class="wel__recent">
-      <h4 style="margin:0 0 2px;color:var(--sc-color-text-muted);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase">Recientes</h4>
-      ${[['Nave industrial · pórtico tipo', 'ayer · 18 nudos', 'resuelto'],
-         ['Viga continua 3 vanos', 'hace 3 días · 4 nudos', 'obsoleto'],
-         ['Celosía Pratt L=12 m', 'hace 6 días · 21 nudos', 'sin']].map(([t, s]) => `
-        <div class="rec">
-          <div class="rec__t">${portico({ w: 44, h: 34, labels: 'none' })}</div>
-          <div class="rec__c"><strong>${t}</strong><small>${s}</small></div>
-          ${ICON.chev}
-        </div>`).join('')}
-    </div>
-    <div class="wcard" style="border-style:dashed">
-      <span class="wcard__i">${ICON.table}</span>
-      <strong>Importar</strong>
-      <span>DXF, o un expediente PDF de structureCo con su checksum SHA-256.</span>
-    </div>
-  </div>
-</div>`;
 
-frame({ name: '01-welcome', w: 1440, h: 900, cls: 'X2', rail: 'labels', theme: 'light',
-  caption: 'Welcome · quien vuelve a trabajar no cruza una portada: «Continuar» es la acción primaria y trae el estado del proyecto consigo.',
-  body: welcome() });
+const RECIENTES = [
+  { t: 'Nave industrial · pórtico tipo', rev: 'rev. 14', s: 'ayer · 18 nudos' },
+  { t: 'Viga continua 3 vanos', rev: 'rev. 6', s: 'hace 3 días · 4 nudos' },
+  { t: 'Celosía Pratt L=12 m', rev: 'rev. 2', s: 'hace 6 días · 21 nudos' },
+];
+
+const PLANTILLAS = [
+  { n: 'Pórtico de ejemplo', d: 'Dos crujías, apoyos fijos — el modelo de referencia de todas las láminas.', cat: 'Pórticos', badge: 'frame', icon: 'layers' },
+  { n: 'Viga simplemente apoyada', d: 'Carga puntual centrada — diagramas N/V/M en su forma más simple.', cat: 'Vigas 2D', badge: 'beam', icon: 'commitH' },
+  { n: 'Armadura triangular', d: 'Barras biarticuladas, sólo axial — compresión y tracción por barra.', cat: 'Armaduras', badge: 'truss', icon: 'triangleShape' },
+  { n: 'Hibbeler · carga tributaria Fig. 2–11', d: 'Práctica guiada, verificada contra la solución del libro.', cat: 'Académico', badge: 'academic', icon: 'commitH' },
+  { n: 'Práctica tipo Hibbeler · diagramas', d: 'Trazado de N/V/M paso a paso, con comprobación instantánea.', cat: 'Académico', badge: 'academic', icon: 'commitH' },
+  { n: 'Práctica tipo Hibbeler · armadura', d: 'Método de nudos guiado sobre una armadura triangular.', cat: 'Académico', badge: 'academic', icon: 'triangleShape' },
+];
+
+/**
+ * @param speed 'completa' muestra hub + vitrina + tres pasos; 'esencial' sólo
+ *   hero + los cuatro lanzadores + un hub corto — la misma hipótesis
+ *   Esencial/Completa de todo CRI-10, aplicada a CUÁNTO se ve bajo el
+ *   pliegue, no a otra aplicación: mismos componentes, mismos tokens.
+ */
+const welcome = ({ speed = 'completa', compact = false } = {}) => `
+${cinta({ estado: null, name: 'structureCo', compact })}
+<div class="ws"><div class="ws__pad"><div class="ws__frame">
+  <div class="ws__speed">${densityToggle(speed === 'completa' ? 'Completa' : 'Esencial')}</div>
+
+  <section class="hero2">
+    <div class="hero2__copy">
+      <span class="badge2">${ICON.sparkles} Análisis estructural 2D · Aula y Completo</span>
+      <h1 class="title2">Analiza estructuras con <em>claridad</em></h1>
+      <p class="sub2">Modela, aplica cargas y resuelve — todo local, con la procedencia de cada número a la vista.</p>
+      <ul class="hl2">
+        <li class="hl2__i">${ICON.check}<span>Método de rigidez directa</span></li>
+        <li class="hl2__i">${ICON.check}<span>Verificado contra FTool y Hibbeler</span></li>
+        <li class="hl2__i">${ICON.check}<span>Exportación de expediente PDF</span></li>
+      </ul>
+    </div>
+    <div class="hero2__fig">${porticoHero()}</div>
+  </section>
+
+  <div class="launchers">
+    <button class="launcher"><span class="launcher__i">${ICON.compass}</span>
+      <span class="launcher__body"><span class="launcher__head"><strong>Proyecto completo</strong><span class="launcher__pill">Lienzo libre</span></span>
+        <span>Pórticos, vigas o armaduras — apoyos y cargas sin restricción.</span></span>${ICON.chev}</button>
+    <button class="launcher launcher--aula"><span class="launcher__i">${ICON.grad}</span>
+      <span class="launcher__body"><span class="launcher__head"><strong>Nuevo ejercicio</strong><span class="launcher__pill">Modo Aula</span></span>
+        <span>Guiado, con comprobación instantánea de reacciones y diagramas.</span></span>${ICON.chev}</button>
+    <button class="launcher launcher--recent"><span class="launcher__i">${ICON.folderOpen}</span>
+      <span class="launcher__body"><span class="launcher__head"><small>Continuar proyecto</small><span class="launcher__pill">18 nudos · 22 barras</span></span>
+        <strong>Nave industrial · pórtico tipo</strong></span>${ICON.chev}</button>
+    <button class="launcher launcher--3d"><span class="launcher__i">${ICON.cube3d}</span>
+      <span class="launcher__body"><span class="launcher__head"><strong>Explorar en 3D</strong><span class="launcher__pill">Experimental</span></span>
+        <span>Marco espacial, seis grados de libertad por nudo — aparte del editor 2D.</span></span>${ICON.chev}</button>
+  </div>
+
+  <div class="hub">
+    <div class="hub__head"><h2>${ICON.folderClock} Tus proyectos</h2><span>Local-first</span></div>
+    <div class="hub__rows">
+      ${RECIENTES.map((r) => `
+      <div class="hrow">
+        <div class="hrow__id"><strong>${r.t}</strong><small>${r.rev} · ${r.s}</small></div>
+        <div class="hrow__actions">
+          <button class="ib" aria-label="Abrir ${r.t}">${ICON.folderOpen}</button>
+          <button class="ib" aria-label="Renombrar ${r.t}">${ICON.pencil}</button>
+          <button class="ib" aria-label="Duplicar ${r.t}">${ICON.copy}</button>
+        </div>
+      </div>`).join('')}
+    </div>
+    ${speed === 'completa' ? `
+    <details class="hub__recovery" open>
+      <summary>${ICON.bang} 1 recuperación disponible</summary>
+      <button class="hub__recoveryrow">${ICON.restore} Restaurar «Celosía Pratt L=12 m» — guardado automático hace 2 minutos, sesión cerrada sin guardar</button>
+    </details>` : ''}
+  </div>
+
+  ${speed === 'completa' ? `
+  <section class="showcase2">
+    <div class="showcase2__head">
+      <div><h2>Archivos y ejemplos</h2><p>Empieza desde una plantilla de referencia o importa un archivo.</p></div>
+      <div class="ftabs" role="tablist"><button class="is-active">Todos</button><button>Académicos</button><button>Modelos</button></div>
+    </div>
+    <button class="importcard"><span class="importcard__i">${ICON.upload}</span>
+      <span><strong>Importar archivo</strong><small>JSON, PDF o expediente .structureco · geometría DXF experimental</small></span>${ICON.chev}</button>
+    <div class="tplgrid">
+      ${PLANTILLAS.map((p) => `
+      <button class="tplcard">
+        <div class="tplcard__top"><span class="tplcard__badge tplcard__badge--${p.badge}">${p.cat}</span>${ICON[p.icon]}</div>
+        <div><strong>${p.n}</strong><span>${p.d}</span></div>
+        <div class="tplcard__foot"><span>Cargar modelo</span>${ICON.chev}</div>
+      </button>`).join('')}
+    </div>
+  </section>
+
+  <section class="wf">
+    <div class="wf__head">${ICON.cpu}<h2>Empieza en tres pasos</h2></div>
+    <ol class="wfsteps">
+      <li class="wfstep"><span class="wfstep__n">1</span><strong>Modela</strong><p>Define nudos, barras y apoyos.</p></li>
+      <li class="wfstep"><span class="wfstep__n">2</span><strong>Carga</strong><p>Aplica acciones y combinaciones.</p></li>
+      <li class="wfstep"><span class="wfstep__n">3</span><strong>Analiza</strong><p>Revisa esfuerzos y deformadas.</p></li>
+    </ol>
+  </section>` : ''}
+
+  <div class="ws__foot">${ICON.play} Herramienta educativa: verifica datos, unidades y resultados antes de tomar decisiones.</div>
+</div></div></div>`;
+
+frame({ name: '01-welcome', w: 1440, h: 2115, cls: 'X2', rail: 'labels', theme: 'light',
+  caption: 'Welcome, Completa · pórtico 3D recuperado (mismo álgebra que `isometricPortal.ts`, sin el halo de marca que ya se retiró en producción), cuatro lanzadores, hub de recientes + recuperación, vitrina con filtros y tres pasos.',
+  body: welcome({ speed: 'completa' }) });
+
+frame({ name: '01b-welcome-esencial', w: 1440, h: 1300, cls: 'X2', rail: 'labels', theme: 'light',
+  caption: 'Welcome, Esencial · misma app, mismo Clay, mismo pórtico — sólo se pliega la vitrina y los tres pasos. Quien vuelve a trabajar no cruza nada de eso: hero, cuatro lanzadores y sus proyectos ya son la pantalla completa.',
+  body: welcome({ speed: 'esencial' }) });
+
+frame({ name: '01d-welcome-compact', w: 390, h: 2000, cls: 'K0', rail: 'none', theme: 'light', input: 'touch',
+  caption: 'Welcome, Compact (Esencial) · una columna, pórtico primero, lanzadores apilados a ancho completo. La vitrina y los tres pasos siguen existiendo — un scroll más abajo, como en el producto real — y no se muestran aquí para no fingir una lámina que no es Compact.',
+  body: welcome({ speed: 'esencial', compact: true }) });
 
 /* ------------------------------------------------------------------ */
 /* 02 · WORKSPACE SIN SELECCIÓN — no hay Inspector porque no hay nada   */
@@ -1156,6 +1239,7 @@ nightOf('02-workspace-sin-seleccion', 'Noche · workspace sin selección. Los ro
 nightOf('06-results-enfocado', 'Noche · Results enfocado. La rampa de demanda es la única excepción técnica que cambia por tema, y a propósito: es una escala secuencial y tiene que crecer alejándose del fondo.');
 nightOf('12-compact-retrato', 'Noche · Compact retrato. En Noche la sombra pierde trabajo y el canto lo gana: sin borde visible los paneles se funden con el fondo.');
 nightOf('15-estados', 'Noche · estados. La forma del glifo es lo que sobrevive intacto entre temas; el color acompaña, no carga solo el significado.');
+nightOf('01-welcome', 'Noche · Welcome, Completa. El pórtico usa el mismo `--sc-color-clay-lime` que en Día — es relleno de marca, no trazo, y la marca no tiene dos versiones — sólo cambian el marfil y su sombreado. Sin bloom detrás de la figura ni en ningún lanzador.');
 
 /* ------------------------------------------------------------------ */
 /* Montaje                                                              */
