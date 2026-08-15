@@ -22,7 +22,13 @@ body:has(.component-lab),
 }
 
 /* Local-only color directions. These override semantic roles inside the
-   development lab and never redefine the product theme source of truth. */
+   development lab and never redefine the product theme source of truth.
+
+   SUPERSEDED as candidates. These are the teal/emerald explorations that ran
+   BEFORE the palette closure; the official identity is now the lime family and
+   its single authority is `brand/brandbook-clay.html`. They stay as a harness
+   for comparing materials, not as options still on the table — do not promote
+   a value out of this file into the product. */
 .component-lab[data-foundation='continuity'] {
   --sc-color-bg-app: #f1f4f2;
   --sc-color-bg-canvas: #fafbfa;

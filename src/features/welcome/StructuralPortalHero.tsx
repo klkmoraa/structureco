@@ -12,8 +12,9 @@ import { formatFixed } from '../../utils/numberFormat';
  * hay nada que pueda fallar, y por eso tampoco hay fallback que mantener.
  *
  * El color sale de tokens, nunca de literales: los mismos `<path>` dan marfil
- * y verde menta en Día, y gris cálido y verde luminoso en Noche, sin una sola
- * rama condicional.
+ * y lima en Día, y gris cálido y la misma lima en Noche, sin una sola rama
+ * condicional. La lima del pórtico es idéntica en ambos temas —es el relleno
+ * de marca, no un trazo— y sólo cambian el marfil y su sombreado.
  *
  * Decorativo a efectos de accesibilidad. Todo lo que comunica está en el texto
  * del hero y en los tres chips de confianza.
@@ -28,8 +29,8 @@ import { formatFixed } from '../../utils/numberFormat';
 /** Token base de cada material. El sombreado modula su luminosidad en CSS. */
 const MATERIAL_TOKEN: Record<MaterialId, string> = {
   column: 'var(--sc-color-clay-ivory)',
-  beam: 'var(--sc-color-clay-mint)',
-  base: 'var(--sc-color-clay-mint-deep)',
+  beam: 'var(--sc-color-clay-lime)',
+  base: 'var(--sc-color-clay-lime-deep)',
   capital: 'var(--sc-color-clay-ivory-deep)',
 };
 

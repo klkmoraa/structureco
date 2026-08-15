@@ -180,7 +180,7 @@
 }
 
 .bulk-field__current-state[aria-checked='true'] {
-  border-color: var(--sc-color-action-primary);
+  border-color: var(--sc-color-action-edge);
   background: var(--sc-color-action-primary);
 }
 

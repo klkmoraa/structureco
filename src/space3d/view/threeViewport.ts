@@ -89,24 +89,31 @@ export interface Space3DViewport {
 }
 
 /**
- * Paleta técnica. Los valores por defecto son los tokens del sistema en tema
- * Día; en el navegador se sobreescriben con el valor calculado, así que el tema
- * Noche llega a la escena sin duplicar la definición.
+ * Paleta técnica. Los valores por defecto son los tokens del sistema; en el
+ * navegador se sobreescriben con el valor calculado.
+ *
+ * Los roles técnicos y de selección ya no tienen "valor de Día": desde el
+ * cierre cromático son el mismo HEX en ambos temas, así que el respaldo es el
+ * valor real y no una aproximación clara. Sólo los neutros (miembro, nodo,
+ * rejilla, etiqueta) siguen siendo los de Día.
+ *
+ * `axisY` usa el TRAZO de marca, no el relleno: el relleno lima mide 1,8:1
+ * contra el lienzo claro y un eje pintado con él desaparecería.
  */
 const TOKEN_COLORS = {
   member: ['--sc-color-canvas-member', '#23312c'],
-  memberSelected: ['--sc-color-selection-stroke', '#345fd6'],
+  memberSelected: ['--sc-color-selection-stroke', '#7d81f8'],
   node: ['--sc-color-text-primary', '#23312c'],
-  nodeSelected: ['--sc-color-selection-stroke', '#345fd6'],
-  support: ['--sc-color-technical-reaction', '#367db7'],
-  load: ['--sc-color-technical-load', '#c94f3f'],
-  moment: ['--sc-color-technical-moment', '#c94f3f'],
-  deformed: ['--sc-color-technical-deformed', '#7d63c9'],
+  nodeSelected: ['--sc-color-selection-stroke', '#7d81f8'],
+  support: ['--sc-color-technical-reaction', '#2c6cda'],
+  load: ['--sc-color-technical-load', '#ed4b46'],
+  moment: ['--sc-color-technical-moment', '#ed4b46'],
+  deformed: ['--sc-color-technical-deformed', '#9153e1'],
   grid: ['--sc-color-canvas-grid', '#e8e1d7'],
   gridStrong: ['--sc-color-canvas-grid-strong', '#d9d0c4'],
-  axisX: ['--sc-color-technical-axis', '#8b5e35'],
-  axisY: ['--sc-color-action-primary', '#087e5c'],
-  axisZ: ['--sc-color-brand-secondary', '#1f88b8'],
+  axisX: ['--sc-color-technical-axis', '#ad5e18'],
+  axisY: ['--sc-color-action-ink', '#468c09'],
+  axisZ: ['--sc-color-brand-secondary', '#1092d9'],
   label: ['--sc-color-text-secondary', '#607068'],
 } as const;
 

@@ -114,9 +114,12 @@
 .sc-button__icon svg { width: 100%; height: 100%; }
 .sc-button__label { min-width: 0; }
 
-/* Acción primaria: la única pieza rellena de marca, con la arcilla teñida. */
+/* Acción primaria: la única pieza rellena de marca, con la arcilla teñida.
+   El canto no es decorativo. El relleno lima mide 1,8:1 contra el marfil, así
+   que es `--sc-color-action-edge` (3,84:1) quien cumple el suelo no textual de
+   3:1 y define la silueta del control. No lo devuelvas a `transparent`. */
 .sc-button--primary {
-  border-color: transparent;
+  border-color: var(--sc-color-action-edge);
   background: var(--sc-gradient-clay-action);
   color: var(--sc-color-action-foreground);
   box-shadow: var(--sc-shadow-clay-action);
@@ -129,15 +132,18 @@
 .sc-button--primary:not(:disabled):active { box-shadow: var(--sc-shadow-clay-action-pressed); transform: var(--sc-clay-press-transform); }
 
 .sc-button--secondary { background: var(--sc-color-surface-1); color: var(--sc-color-text-primary); border-color: var(--sc-color-border); box-shadow: var(--sc-shadow-clay-xs); }
-.sc-button--secondary:not(:disabled):hover { background: var(--sc-color-surface-elevated); border-color: var(--sc-color-action-primary); box-shadow: var(--sc-shadow-clay-sm); transform: translateY(-1px); }
+.sc-button--secondary:not(:disabled):hover { background: var(--sc-color-surface-elevated); border-color: var(--sc-color-action-edge); box-shadow: var(--sc-shadow-clay-sm); transform: translateY(-1px); }
 .sc-button--secondary:not(:disabled):active { background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); transform: var(--sc-clay-press-transform); }
 /* `ghost` es la excepción por definición: en reposo no hay objeto que elevar.
    Gana materia al tocarlo y la pierde al soltarlo, como el resto. */
 .sc-button--ghost { background: transparent; color: var(--sc-color-text-secondary); border-color: transparent; }
 .sc-button--ghost:not(:disabled):hover { background: var(--sc-color-surface-1); color: var(--sc-color-text-primary); box-shadow: var(--sc-shadow-clay-xs); }
 .sc-button--ghost:not(:disabled):active { background: var(--sc-color-surface-inset); box-shadow: var(--sc-shadow-clay-pressed); transform: var(--sc-clay-press-transform); }
-.sc-button--danger { background: var(--sc-color-state-error); color: var(--sc-color-action-foreground); border-color: transparent; box-shadow: var(--sc-shadow-clay-xs); }
-.sc-button--danger:not(:disabled):hover { background: color-mix(in srgb, var(--sc-color-state-error) 84%, var(--sc-color-text-primary)); box-shadow: var(--sc-shadow-clay-sm); transform: translateY(-1px); }
+/* Relleno y tinta medidos como pareja (#c93028 con blanco = 5,33:1). Antes
+   heredaba la tinta de la acción primaria; ahora esa tinta es oscura y sobre el
+   rojo habría caído por debajo del suelo. */
+.sc-button--danger { background: var(--sc-color-error-solid); color: var(--sc-color-error-on-solid); border-color: transparent; box-shadow: var(--sc-shadow-clay-xs); }
+.sc-button--danger:not(:disabled):hover { background: color-mix(in srgb, var(--sc-color-error-solid) 84%, var(--sc-color-text-primary)); box-shadow: var(--sc-shadow-clay-sm); transform: translateY(-1px); }
 .sc-button--danger:not(:disabled):active { box-shadow: var(--sc-shadow-clay-pressed); transform: var(--sc-clay-press-transform); }
 
 .sc-icon-button {
@@ -162,11 +168,11 @@
 .sc-icon-button[aria-expanded='true']:not(:disabled),
 .sc-icon-button[aria-expanded='true']:not(:disabled):hover {
   background: var(--sc-color-surface-inset);
-  color: var(--sc-color-action-primary);
+  color: var(--sc-color-action-ink);
   box-shadow: var(--sc-shadow-clay-pressed);
   transform: var(--sc-clay-press-transform);
 }
-.sc-icon-button--primary { border-color: transparent; background: var(--sc-gradient-clay-action); color: var(--sc-color-action-foreground); box-shadow: var(--sc-shadow-clay-action); }
+.sc-icon-button--primary { border-color: var(--sc-color-action-edge); background: var(--sc-gradient-clay-action); color: var(--sc-color-action-foreground); box-shadow: var(--sc-shadow-clay-action); }
 .sc-icon-button--primary:not(:disabled):hover { background: var(--sc-gradient-clay-action); color: var(--sc-color-action-foreground); box-shadow: var(--sc-shadow-clay-action-hover); }
 .sc-icon-button--primary:not(:disabled):active { background: var(--sc-gradient-clay-action); box-shadow: var(--sc-shadow-clay-action-pressed); }
 
@@ -436,7 +442,7 @@
   color: var(--sc-color-action-primary);
   box-shadow: var(--sc-shadow-clay-pressed);
 }
-.sc-tabs__list button[aria-selected='true']::after { background: var(--sc-color-action-primary); }
+.sc-tabs__list button[aria-selected='true']::after { background: var(--sc-color-action-ink); }
 .sc-tabs__panel { padding: var(--sc-space-4) 0; outline: none; }
 .sc-tabs--vertical { display: grid; grid-template-columns: minmax(140px, 0.34fr) minmax(0, 1fr); gap: var(--sc-space-4); }
 .sc-tabs--vertical .sc-tabs__list { flex-direction: column; border-right: var(--sc-border-width) solid var(--sc-color-border); border-bottom: 0; }
@@ -654,7 +660,7 @@
 .sc-layer-toggle__copy small { color: var(--sc-color-text-secondary); font-size: var(--sc-font-size-caption); line-height: var(--sc-line-height-compact); }
 .sc-layer-toggle__switch { width: 34px; height: 20px; position: relative; border-radius: 999px; background: var(--sc-color-border); transition: background-color var(--sc-motion-fast) var(--sc-ease-standard); }
 .sc-layer-toggle__switch i { width: 16px; height: 16px; position: absolute; top: 2px; left: 2px; border-radius: 50%; background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-xs); transition: transform var(--sc-motion-fast) var(--sc-ease-standard); }
-.sc-layer-toggle.is-checked .sc-layer-toggle__switch { background: var(--sc-color-action-primary); }
+.sc-layer-toggle.is-checked .sc-layer-toggle__switch { background: var(--sc-color-action-ink); }
 .sc-layer-toggle.is-checked .sc-layer-toggle__switch i { transform: translateX(14px); }
 
 .sc-numeric-value { display: inline-flex; align-items: baseline; gap: var(--sc-space-1); color: var(--sc-color-text-primary); font-family: var(--sc-font-mono); font-size: inherit; font-variant-numeric: var(--sc-numeric-variant); white-space: nowrap; }

@@ -237,7 +237,7 @@
 
 .space3d-button--primary {
   background: var(--sc-color-action-primary);
-  border-color: transparent;
+  border-color: var(--sc-color-action-edge);
   color: var(--sc-color-action-foreground);
   box-shadow: var(--sc-shadow-contact);
 }

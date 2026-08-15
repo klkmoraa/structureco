@@ -101,6 +101,9 @@ describe('Phase 4 design-token contract', () => {
   });
 
   it('defines Dark as an explicit visual theme rather than an inversion', () => {
+    // Sólo los roles que Noche tiene DERECHO a mover: suelo, superficies, tinta
+    // de texto, bordes y materia. Los colores semánticos ya no están aquí — los
+    // cubre el contrato de invariancia de más abajo.
     const explicitDarkRoles = [
       '--sc-color-bg-app',
       '--sc-color-bg-canvas',
@@ -109,18 +112,130 @@ describe('Phase 4 design-token contract', () => {
       '--sc-color-text-primary',
       '--sc-color-text-secondary',
       '--sc-color-border',
-      '--sc-color-focus',
-      '--sc-color-selection-stroke',
       '--sc-color-canvas-grid',
       '--sc-color-canvas-member',
       '--sc-color-overlay-strong',
-      '--sc-color-technical-load',
-      '--sc-color-technical-moment',
       '--sc-shadow-modal',
     ];
 
     for (const token of explicitDarkRoles) expect(darkTokens.declarations.has(token), token).toBe(true);
     expect(darkBlock).not.toMatch(/invert\(|filter\s*:/);
+  });
+
+  /**
+   * El cierre cromático previo a CRI-10: una sola paleta, no dos.
+   *
+   * Cada color semántico usa el mismo HEX en Día y en Noche. La prueba no
+   * compara valores resueltos —eso pasaría aunque alguien duplicase el hex en
+   * los dos bloques y luego cambiase uno— sino que exige que el rol NO se
+   * redeclare en el bloque oscuro. Un solo sitio donde editarlo, ninguna
+   * posibilidad de deriva.
+   */
+  it('keeps every semantic colour identical in Day and Night', () => {
+    const invariant = [
+      '--sc-color-action-primary',
+      '--sc-color-action-hover',
+      '--sc-color-action-pressed',
+      '--sc-color-action-foreground',
+      '--sc-color-action-edge',
+      '--sc-color-action-ink',
+      '--sc-color-brand-secondary',
+      '--sc-color-focus',
+      '--sc-color-selection-stroke',
+      '--sc-color-technical-load',
+      '--sc-color-technical-axial',
+      '--sc-color-technical-shear',
+      '--sc-color-technical-moment',
+      '--sc-color-technical-deformed',
+      '--sc-color-technical-reaction',
+      '--sc-color-technical-dimension',
+      '--sc-color-technical-axis',
+      '--sc-color-state-success',
+      '--sc-color-state-warning',
+      '--sc-color-state-error',
+      '--sc-color-state-critical',
+      '--sc-color-state-info',
+      '--sc-color-success-solid',
+      '--sc-color-success-on-solid',
+      '--sc-color-error-solid',
+      '--sc-color-error-on-solid',
+      '--sc-color-aula',
+      '--sc-color-aula-solid',
+      '--sc-color-aula-foreground',
+      '--sc-color-canario',
+      '--sc-color-canario-ink',
+    ];
+
+    const redeclared = invariant.filter((token) => darkTokens.declarations.has(token));
+    expect(redeclared, 'Noche no puede redefinir un color semántico').toEqual([]);
+    for (const token of invariant) {
+      expect(rootTokens.declarations.has(token), `${token} debe declararse en :root`).toBe(true);
+      expect(resolveHex(token, lightTheme), token).toBe(resolveHex(token, darkTheme));
+    }
+  });
+
+  /**
+   * La contrapartida del contrato anterior. Un mismo HEX tiene que sobrevivir a
+   * los CUATRO fondos, no sólo al lienzo: en Noche la superficie (#15232b) es
+   * más clara que el lienzo (#0d161b), así que es ella la que manda. La paleta
+   * anterior sólo se medía contra el lienzo y por eso sus valores nocturnos
+   * caían a 1,39-2,56:1 sobre las superficies.
+   */
+  it.each([
+    ['Light', lightTheme, '--sc-color-surface-1'],
+    ['Dark', darkTheme, '--sc-color-surface-1'],
+  ] as const)('%s keeps every signal colour legible on the surface too, not just the canvas', (_label, theme, surface) => {
+    const signals = [
+      '--sc-color-action-ink',
+      '--sc-color-action-edge',
+      '--sc-color-technical-load',
+      '--sc-color-technical-axial',
+      '--sc-color-technical-shear',
+      '--sc-color-technical-moment',
+      '--sc-color-technical-deformed',
+      '--sc-color-technical-reaction',
+      '--sc-color-technical-dimension',
+      '--sc-color-technical-axis',
+      '--sc-color-state-success',
+      '--sc-color-state-warning',
+      '--sc-color-state-error',
+      '--sc-color-selection-stroke',
+      '--sc-color-aula',
+      '--sc-color-envelope',
+      '--sc-color-axial-compression',
+      '--sc-color-critical-point',
+    ];
+    for (const role of signals) {
+      expect(contrast(role, surface, theme), `${role} sobre ${surface}`).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  /**
+   * El CTA es lima clara: su relleno mide 1,8:1 contra el marfil, así que la
+   * silueta la sostiene el canto. Si alguien devuelve el canto a `transparent`
+   * el control deja de cumplir 1.4.11 sin que ninguna otra prueba lo note.
+   */
+  it('gives the light brand fill a measured edge and a dark ink in every state', () => {
+    for (const state of ['--sc-color-action-primary', '--sc-color-action-hover', '--sc-color-action-pressed']) {
+      expect(contrast('--sc-color-action-foreground', state, lightTheme), `tinta sobre ${state}`)
+        .toBeGreaterThanOrEqual(4.5);
+    }
+    for (const theme of [lightTheme, darkTheme]) {
+      expect(contrast('--sc-color-action-edge', '--sc-color-surface-1', theme)).toBeGreaterThanOrEqual(3);
+    }
+    expect(uiCss).toMatch(/\.sc-button--primary \{[^}]*border-color: var\(--sc-color-action-edge\)/);
+    expect(uiCss).toMatch(/\.sc-icon-button--primary \{[^}]*border-color: var\(--sc-color-action-edge\)/);
+  });
+
+  /**
+   * El relleno de marca no puede llevar texto blanco: mediría 1,8:1. Ni el
+   * canario puede ser trazo suelto: 1,39:1 sobre marfil. Las dos son reglas del
+   * brandbook, y las dos son fáciles de romper por descuido.
+   */
+  it('never puts white ink on the light brand fill', () => {
+    expect(contrast('--sc-white', '--sc-color-action-primary', lightTheme)).toBeLessThan(4.5);
+    expect(rootTokens.declarations.get('--sc-color-action-foreground')).not.toBe('var(--sc-white)');
+    expect(componentCss).not.toMatch(/background:\s*var\(--accent\)/);
   });
 
   it('keeps compatibility aliases attached to semantic roles', () => {
