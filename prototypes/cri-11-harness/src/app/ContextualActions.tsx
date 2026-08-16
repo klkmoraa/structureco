@@ -8,41 +8,67 @@
  * Presentación `inset` en las tres clases: anclada al borde del lienzo, sin
  * scrim y sin recomponerlo. Cuenta como chrome flotante (CB-3), y por eso no
  * existe en reposo: sin selección no ocupa nada.
+ *
+ * Fase B: la selección es un ARRAY. Con un solo miembro, la barra ofrece
+ * Cambiar sección directo (ruta rápida); con selección múltiple u
+ * homogénea/heterogénea, ofrece las acciones que sí tienen sentido en bloque
+ * — Eliminar siempre las tiene.
  */
 
-import { commandById } from '../core/commands';
 import { useActions, usePrototype } from '../state/PrototypeStore';
 
 export const ContextualActions = () => {
   const { state, derived } = usePrototype();
-  const { select, openSurface, invoke, dispatch } = useActions();
-  const { t, composition } = derived;
-  if (!state.selection) return null;
-
-  const member = state.selection.kind === 'member'
-    ? derived.fixture.members.find((item) => item.id === state.selection?.id)
-    : undefined;
+  const { selectOne, openSurface, invoke, dispatch, deleteSelected } = useActions();
+  const { t, composition, model } = derived;
+  if (state.selection.length === 0) return null;
 
   const compact = composition === 'K0';
+  const memberRefs = state.selection.filter((ref) => ref.kind === 'member');
+  const singleMember = state.selection.length === 1 && memberRefs.length === 1
+    ? model.members.find((item) => item.id === memberRefs[0].id)
+    : undefined;
+  const primary = state.selection[state.selection.length - 1];
+
+  const openSectionDraft = (targetIds: string[]) => {
+    invoke('member.changeSection', 'contextual');
+    const original: Record<string, string> = {};
+    for (const id of targetIds) {
+      const member = model.members.find((item) => item.id === id);
+      if (member) original[id] = state.edits.sectionOverrides[id] ?? member.sectionId;
+    }
+    const value = Object.values(original)[0] ?? '';
+    dispatch({ type: 'draft/open', draft: { kind: 'section', targetIds, value, original } });
+    openSurface('detail', 'contextual-actions');
+  };
 
   return (
-    <div className="pt-contextual" data-composition={composition} role="toolbar" aria-label={`${t('contextual.title')} ${state.selection.id}`}>
+    <div
+      className="pt-contextual"
+      data-composition={composition}
+      role="toolbar"
+      aria-label={`${t('contextual.title')} ${primary.id}`}
+    >
       <span className="pt-contextual__subject">
-        <strong>{state.selection.id}</strong>
-        {member?.label ? <span className="pt-contextual__meta">{member.label}</span> : null}
+        {state.selection.length === 1 ? (
+          <>
+            <strong>{primary.id}</strong>
+            {singleMember?.label ? <span className="pt-contextual__meta">{singleMember.label}</span> : null}
+          </>
+        ) : (
+          <strong>
+            {state.selection.length} {t('contextual.selectedCount')}
+          </strong>
+        )}
       </span>
 
-      {member ? (
-        <button
-          type="button"
-          className="pt-contextual__action"
-          onClick={() => {
-            invoke('member.changeSection', 'contextual');
-            dispatch({ type: 'draft/open', memberId: member.id, sectionId: state.sectionOverrides[member.id] ?? member.sectionId });
-            openSurface('detail', 'contextual-actions');
-          }}
-        >
-          {t(commandById('member.changeSection').labelKey)}
+      {singleMember ? (
+        <button type="button" className="pt-contextual__action" onClick={() => openSectionDraft([singleMember.id])}>
+          {t('command.changeSection')}
+        </button>
+      ) : memberRefs.length > 1 ? (
+        <button type="button" className="pt-contextual__action" onClick={() => openSectionDraft(memberRefs.map((ref) => ref.id))}>
+          {t('command.changeSection')}
         </button>
       ) : null}
 
@@ -72,10 +98,21 @@ export const ContextualActions = () => {
 
       <button
         type="button"
+        className="pt-contextual__action pt-contextual__action--danger"
+        onClick={() => {
+          invoke('selection.delete', 'contextual');
+          deleteSelected();
+        }}
+      >
+        {t('command.delete')}
+      </button>
+
+      <button
+        type="button"
         className="pt-contextual__action pt-contextual__action--quiet"
         onClick={() => {
           invoke('selection.clear', 'contextual');
-          select(null);
+          selectOne(null);
         }}
       >
         {t('command.clearSelection')}

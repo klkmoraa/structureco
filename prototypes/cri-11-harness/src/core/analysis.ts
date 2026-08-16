@@ -22,7 +22,8 @@
  *    ni sólo en hover (D-14).
  */
 
-import { sectionById, type Fixture, type FixtureMember } from './fixtures';
+import { sectionById, type FixtureMember } from './fixtures';
+import type { EffectiveModel } from './model';
 
 export type ReliabilityLevel = 'reliable' | 'limited' | 'unreliable' | 'failed';
 export type Evidence = 'none' | 'N' | 'V' | 'M' | 'deformed';
@@ -73,6 +74,22 @@ export interface MemberResult {
   samples: Record<Exclude<Evidence, 'none'>, number[]>;
 }
 
+/**
+ * Reacción de apoyo. Se deriva del cortante ya fabricado en los extremos de
+ * los miembros incidentes — no de una fórmula nueva — para que responda a los
+ * mismos cambios (sección, geometría) que el resto de la evidencia, en vez de
+ * ser un número aislado sin relación con lo demás.
+ */
+export interface NodeReaction {
+  nodeId: string;
+  /** kN */
+  rx: number;
+  /** kN */
+  ry: number;
+  /** kN·m — sólo distinto de cero en un apoyo `fixed`. */
+  mz: number;
+}
+
 export interface FixtureAnalysis {
   /** Marca obligatoria: nada de esto viene del solver. */
   fixture: true;
@@ -82,6 +99,7 @@ export interface FixtureAnalysis {
   governing?: ReliabilityCheck;
   checks: ReliabilityCheck[];
   members: Record<string, MemberResult>;
+  reactions: NodeReaction[];
   /** Sello del modelo que produjo estos números; si cambia, quedan obsoletos. */
   modelStamp: string;
   computedAt: number;
@@ -166,35 +184,32 @@ const scaleFor = (member: FixtureMember) => {
 
 const round = (value: number, decimals = 2) => Number(value.toFixed(decimals));
 
-const memberLength = (fixture: Fixture, member: FixtureMember) => {
-  const i = fixture.nodes.find((node) => node.id === member.i);
-  const j = fixture.nodes.find((node) => node.id === member.j);
+const memberLength = (model: EffectiveModel, member: FixtureMember) => {
+  const i = model.nodes.find((node) => node.id === member.i);
+  const j = model.nodes.find((node) => node.id === member.j);
   if (!i || !j) return 1;
   return Math.hypot(j.x - i.x, j.y - i.y) || 1;
 };
 
-/** Sello del modelo: si cambia una sección, cambia el sello y el resultado caduca. */
-export const modelStamp = (fixture: Fixture, overrides: Record<string, string>): string =>
-  [fixture.id, ...fixture.members.map((member) => `${member.id}:${overrides[member.id] ?? member.sectionId}`)].join('|');
-
 export interface FixtureAnalysisOptions {
   /** Fuerza el veredicto de fiabilidad; es un eje del harness, no un cálculo. */
   level?: ReliabilityLevel;
-  sectionOverrides?: Record<string, string>;
 }
 
-/** Construye la evidencia fabricada. Síncrono: el tiempo lo pone quien llama. */
-export const buildFixtureAnalysis = (fixture: Fixture, options: FixtureAnalysisOptions = {}): FixtureAnalysis => {
-  const overrides = options.sectionOverrides ?? {};
+/**
+ * Construye la evidencia fabricada a partir del modelo EFECTIVO (fixture +
+ * ediciones ya combinadas por `deriveModel`). Síncrono: el tiempo lo pone
+ * quien llama.
+ */
+export const buildFixtureAnalysis = (model: EffectiveModel, modelStamp: string, options: FixtureAnalysisOptions = {}): FixtureAnalysis => {
   const level = options.level ?? 'reliable';
   const members: Record<string, MemberResult> = {};
 
-  for (const member of fixture.members) {
-    const resolved: FixtureMember = { ...member, sectionId: overrides[member.id] ?? member.sectionId };
-    const scale = scaleFor(resolved);
-    const length = memberLength(fixture, resolved);
+  for (const member of model.members) {
+    const scale = scaleFor(member);
+    const length = memberLength(model, member);
     const base = 18.5 * length * length * 0.08;
-    const isBeam = Math.abs((fixture.nodes.find((n) => n.id === member.i)?.y ?? 0) - (fixture.nodes.find((n) => n.id === member.j)?.y ?? 0)) < 0.01;
+    const isBeam = Math.abs((model.nodes.find((n) => n.id === member.i)?.y ?? 0) - (model.nodes.find((n) => n.id === member.j)?.y ?? 0)) < 0.01;
     const factor = isBeam ? 1 : 0.55;
 
     members[member.id] = {
@@ -219,6 +234,23 @@ export const buildFixtureAnalysis = (fixture: Fixture, options: FixtureAnalysisO
       samples: { N: samplesFor('N'), V: samplesFor('V'), M: samplesFor('M'), deformed: samplesFor('deformed') },
     };
   }
+
+  const reactions: NodeReaction[] = model.nodes
+    .filter((node) => node.support !== 'none')
+    .map((node) => {
+      const incident = model.members.filter((member) => member.i === node.id || member.j === node.id);
+      const ry = incident.reduce((sum, member) => {
+        const result = members[member.id];
+        if (!result) return sum;
+        return sum + Math.abs(member.i === node.id ? result.shear.i : result.shear.j);
+      }, 0);
+      return {
+        nodeId: node.id,
+        ry: round(ry),
+        rx: round(ry * 0.18),
+        mz: node.support === 'fixed' ? round(ry * 0.35) : 0,
+      };
+    });
 
   const checks: ReliabilityCheck[] = [
     {
@@ -253,7 +285,8 @@ export const buildFixtureAnalysis = (fixture: Fixture, options: FixtureAnalysisO
     governing,
     checks,
     members,
-    modelStamp: modelStamp(fixture, overrides),
+    reactions,
+    modelStamp,
     computedAt: Date.now(),
   };
 };

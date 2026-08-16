@@ -11,6 +11,11 @@
  *   · `stale` no se escribe: se deriva de haber destruido el resultado.
  *   · El broker decide qué le pasa a lo que ya estaba abierto; las superficies
  *     no piden su propia presentación.
+ *
+ * Fase B añade el «modelo» de verdad: `ModelEdits` + `deriveModel` (crear,
+ * mover, borrar, cambiar apoyo), undo/redo sobre esas ediciones, selección
+ * MÚLTIPLE (homogénea y heterogénea), cámara de lienzo (pan/zoom) y los
+ * hallazgos de Model Doctor derivados del modelo efectivo.
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
@@ -19,7 +24,6 @@ import {
   canPaintEvidence,
   deriveAnalysisPhase,
   initialAnalysisState,
-  modelStamp,
   type AnalysisPhase,
   type AnalysisState,
   type Evidence,
@@ -35,17 +39,23 @@ import {
   restoreFromPeek,
   type BrokerState,
 } from '../core/broker';
+import { deriveFindings, type Finding, type FindingSeverity } from '../core/doctor';
 import { orientationOf, useDeviceCapabilities, useObservedSize, useWindowSize } from '../core/environment';
-import { loadFixture, type Fixture, type ScenarioId } from '../core/fixtures';
+import { loadFixture, type Fixture, type FixtureLoad, type FixtureMember, type FixtureNode, type ScenarioId, type SupportKind } from '../core/fixtures';
 import { translatorFor, VOICE_COPY, type Locale, type Translate, type VoiceId } from '../core/i18n';
+import { deriveModel, emptyEdits, modelEditsStamp, type EffectiveModel, type ModelEdits } from '../core/model';
 import { resolveWithHysteresis, safeRect, VIEWPORT_PRESETS, type CompositionId, type Verdict, type Viewport } from '../core/resolver';
 import type { SurfaceId } from '../core/surfaces';
 import { observeLongTasks, record, setTelemetryContext } from '../core/telemetry';
+import type { CommandContext } from '../core/commands';
 
 export type InputAxis = 'mouse' | 'touch' | 'mixed';
 export type ThemeAxis = 'light' | 'dark';
 export type ModeAxis = 'essential' | 'complete';
 export type MotionAxis = 'normal' | 'reduced';
+export type ToolId = 'select' | 'node' | 'member' | 'support' | 'load';
+export type EntityTab = 'node' | 'member' | 'load';
+export type SelectionFilter = 'all' | 'node' | 'member';
 
 export interface HarnessAxes {
   scenario: ScenarioId;
@@ -70,25 +80,47 @@ export interface SelectionRef {
   id: string;
 }
 
+/** Un solo mecanismo de preview→commit/cancel para sección y apoyo, individual o en bloque. */
 export interface DraftState {
-  memberId: string;
-  sectionId: string;
+  kind: 'section' | 'support';
+  targetIds: string[];
+  value: string;
+  /** Valor original por objeto — para mostrar «mixto» cuando la selección difiere. */
+  original: Record<string, string>;
 }
+
+export interface CameraState {
+  /** 1 = ajuste base. El pan se aplica FUERA del zoom: arrastrar N px siempre mueve N px. */
+  zoom: number;
+  panX: number;
+  panY: number;
+}
+
+const sameRef = (a: SelectionRef, b: SelectionRef) => a.kind === b.kind && a.id === b.id;
+const withoutRef = (list: SelectionRef[], ref: SelectionRef) => list.filter((item) => !sameRef(item, ref));
 
 export interface PrototypeState {
   axes: HarnessAxes;
   screen: 'welcome' | 'workspace';
-  selection: SelectionRef | null;
+  selection: SelectionRef[];
+  selectionFilter: SelectionFilter;
   broker: BrokerState;
   evidence: Evidence;
   layers: { grid: boolean; loads: boolean; supports: boolean; labels: boolean };
   draft: DraftState | null;
-  /** Cambios aplicados sobre el fixture. Es el «modelo» del prototipo. */
-  sectionOverrides: Record<string, string>;
+  /** El «modelo» del prototipo: fixture base + parche inmutable. */
+  edits: ModelEdits;
+  history: { past: ModelEdits[]; future: ModelEdits[] };
   analysis: AnalysisState;
-  dense: { query: string; onlySelection: boolean };
+  dense: { query: string; onlySelection: boolean; entity: EntityTab; sortKey: string | null; sortDir: 'asc' | 'desc'; tab: 'model' | 'summary' };
   lastComposition: CompositionId | null;
   showAllProperties: boolean;
+  activeTool: ToolId;
+  /** Primer nudo elegido al crear un miembro (flujo de dos clics). */
+  pendingMemberStart: string | null;
+  camera: CameraState;
+  doctorAcknowledged: Record<string, true>;
+  doctorFilter: FindingSeverity | 'all';
 }
 
 const initialAxes: HarnessAxes = {
@@ -106,34 +138,46 @@ const initialAxes: HarnessAxes = {
   hysteresisPx: 24,
 };
 
+const initialCamera: CameraState = { zoom: 1, panX: 0, panY: 0 };
+
 const initialState: PrototypeState = {
   axes: initialAxes,
   screen: 'welcome',
-  selection: null,
+  selection: [],
+  selectionFilter: 'all',
   broker: initialBrokerState,
   evidence: 'none',
   layers: { grid: true, loads: true, supports: true, labels: true },
   draft: null,
-  sectionOverrides: {},
+  edits: emptyEdits(),
+  history: { past: [], future: [] },
   analysis: initialAnalysisState,
-  dense: { query: '', onlySelection: false },
+  dense: { query: '', onlySelection: false, entity: 'member', sortKey: null, sortDir: 'asc', tab: 'model' },
   lastComposition: null,
   showAllProperties: false,
+  activeTool: 'select',
+  pendingMemberStart: null,
+  camera: initialCamera,
+  doctorAcknowledged: {},
+  doctorFilter: 'all',
 };
 
 type Action =
   | { type: 'axis/set'; patch: Partial<HarnessAxes> }
   | { type: 'screen/continue' }
   | { type: 'screen/welcome' }
-  | { type: 'selection/set'; selection: SelectionRef | null }
+  | { type: 'selection/set'; refs: SelectionRef[] }
+  | { type: 'selection/toggle'; ref: SelectionRef }
+  | { type: 'selection/merge'; refs: SelectionRef[] }
+  | { type: 'selectionFilter/set'; filter: SelectionFilter }
   | { type: 'surface/open'; surface: SurfaceId; composition: CompositionId; invoker?: string }
   | { type: 'surface/close'; surface: SurfaceId }
   | { type: 'surface/peek'; surface: SurfaceId }
   | { type: 'surface/restore'; composition: CompositionId }
   | { type: 'evidence/set'; evidence: Evidence }
   | { type: 'layer/toggle'; layer: keyof PrototypeState['layers'] }
-  | { type: 'draft/open'; memberId: string; sectionId: string }
-  | { type: 'draft/preview'; sectionId: string }
+  | { type: 'draft/open'; draft: DraftState }
+  | { type: 'draft/preview'; value: string }
   | { type: 'draft/commit' }
   | { type: 'draft/cancel' }
   | { type: 'analysis/start' }
@@ -141,10 +185,21 @@ type Action =
   | { type: 'composition/changed'; composition: CompositionId }
   | { type: 'dense/filter'; patch: Partial<PrototypeState['dense']> }
   | { type: 'properties/toggle' }
-  | { type: 'harnessState/apply'; state: HarnessStateId };
-
-/** Fixture + overrides = el «modelo» del prototipo. */
-const stampOf = (state: PrototypeState) => modelStamp(loadFixture(state.axes.scenario), state.sectionOverrides);
+  | { type: 'harnessState/apply'; state: HarnessStateId }
+  | { type: 'tool/set'; tool: ToolId }
+  | { type: 'model/pendingMemberStart'; nodeId: string | null }
+  | { type: 'model/addNode'; node: FixtureNode }
+  | { type: 'model/addMember'; member: FixtureMember }
+  | { type: 'model/addLoad'; load: FixtureLoad }
+  | { type: 'model/moveNode'; id: string; x: number; y: number }
+  | { type: 'model/deleteSelected' }
+  | { type: 'history/undo' }
+  | { type: 'history/redo' }
+  | { type: 'camera/set'; patch: Partial<CameraState> }
+  | { type: 'camera/zoomBy'; factor: number; anchor?: { x: number; y: number } }
+  | { type: 'camera/reset' }
+  | { type: 'doctor/acknowledge'; id: string }
+  | { type: 'doctor/filter'; severity: FindingSeverity | 'all' };
 
 /**
  * Fail-closed: invalidar NO marca el resultado, lo destruye. `stale` se deriva.
@@ -157,10 +212,23 @@ const invalidate = (analysis: AnalysisState): AnalysisState => ({
   isAnalyzing: false,
 });
 
+const HISTORY_LIMIT = 50;
+
+/** Cualquier mutación del modelo pasa por aquí: empuja undo, invalida el resultado, limpia redo. */
+const applyEdits = (state: PrototypeState, edits: ModelEdits): PrototypeState => ({
+  ...state,
+  edits,
+  history: { past: [...state.history.past.slice(-(HISTORY_LIMIT - 1)), state.edits], future: [] },
+  analysis: invalidate(state.analysis),
+  evidence: 'none',
+  axes: { ...state.axes, state: state.analysis.hadAnalysis || state.analysis.result ? 'stale' : state.axes.state },
+});
+
 const applyHarnessState = (state: PrototypeState, id: HarnessStateId): PrototypeState => {
   const fixture = loadFixture(state.axes.scenario);
-  const build = (level: ReliabilityLevel) =>
-    buildFixtureAnalysis(fixture, { level, sectionOverrides: state.sectionOverrides });
+  const model = deriveModel(fixture, state.edits);
+  const stamp = modelEditsStamp(fixture.id, state.edits);
+  const build = (level: ReliabilityLevel) => buildFixtureAnalysis(model, stamp, { level });
 
   switch (id) {
     case 'current':
@@ -182,22 +250,20 @@ const applyHarnessState = (state: PrototypeState, id: HarnessStateId): Prototype
   }
 };
 
+const clampZoom = (value: number) => Math.min(4, Math.max(0.4, value));
+
 const reducer = (state: PrototypeState, action: Action): PrototypeState => {
   switch (action.type) {
     case 'axis/set': {
       const axes = { ...state.axes, ...action.patch };
-      // Cambiar de escenario cambia de modelo: los resultados anteriores no le
-      // corresponden. Se destruyen, no se conservan «por comodidad».
+      // Cambiar de escenario cambia de modelo: nada del anterior le corresponde.
       if (action.patch.scenario && action.patch.scenario !== state.axes.scenario) {
         return {
-          ...state,
+          ...initialState,
           axes,
-          selection: null,
-          draft: null,
-          sectionOverrides: {},
-          evidence: 'none',
-          analysis: { ...initialAnalysisState, connectivity: state.analysis.connectivity, persistence: state.analysis.persistence },
-          dense: { query: '', onlySelection: false },
+          screen: state.screen,
+          broker: initialBrokerState,
+          lastComposition: state.lastComposition,
         };
       }
       if (action.patch.state && action.patch.state !== state.axes.state) {
@@ -213,7 +279,22 @@ const reducer = (state: PrototypeState, action: Action): PrototypeState => {
       return { ...state, screen: 'welcome' };
 
     case 'selection/set':
-      return { ...state, selection: action.selection, draft: action.selection ? state.draft : null };
+      return { ...state, selection: action.refs, draft: action.refs.length > 0 ? state.draft : null };
+
+    case 'selection/toggle': {
+      const exists = state.selection.some((item) => sameRef(item, action.ref));
+      const selection = exists ? withoutRef(state.selection, action.ref) : [...state.selection, action.ref];
+      return { ...state, selection, draft: selection.length > 0 ? state.draft : null };
+    }
+
+    case 'selection/merge': {
+      const merged = [...state.selection];
+      for (const ref of action.refs) if (!merged.some((item) => sameRef(item, ref))) merged.push(ref);
+      return { ...state, selection: merged };
+    }
+
+    case 'selectionFilter/set':
+      return { ...state, selectionFilter: action.filter };
 
     case 'surface/open':
       return {
@@ -241,23 +322,19 @@ const reducer = (state: PrototypeState, action: Action): PrototypeState => {
       return { ...state, layers: { ...state.layers, [action.layer]: !state.layers[action.layer] } };
 
     case 'draft/open':
-      return { ...state, draft: { memberId: action.memberId, sectionId: action.sectionId } };
+      return { ...state, draft: action.draft };
 
     case 'draft/preview':
-      return state.draft ? { ...state, draft: { ...state.draft, sectionId: action.sectionId } } : state;
+      return state.draft ? { ...state, draft: { ...state.draft, value: action.value } } : state;
 
     case 'draft/commit': {
       if (!state.draft) return state;
-      const sectionOverrides = { ...state.sectionOverrides, [state.draft.memberId]: state.draft.sectionId };
-      return {
-        ...state,
-        sectionOverrides,
-        draft: null,
-        // El modelo cambió → el resultado anterior deja de existir.
-        analysis: invalidate(state.analysis),
-        evidence: 'none',
-        axes: { ...state.axes, state: state.analysis.hadAnalysis || state.analysis.result ? 'stale' : state.axes.state },
-      };
+      const { kind, targetIds, value } = state.draft;
+      const edits =
+        kind === 'section'
+          ? { ...state.edits, sectionOverrides: { ...state.edits.sectionOverrides, ...Object.fromEntries(targetIds.map((id) => [id, value])) } }
+          : { ...state.edits, supportOverrides: { ...state.edits.supportOverrides, ...Object.fromEntries(targetIds.map((id) => [id, value as SupportKind])) } };
+      return { ...applyEdits(state, edits), draft: null };
     }
 
     case 'draft/cancel':
@@ -268,7 +345,9 @@ const reducer = (state: PrototypeState, action: Action): PrototypeState => {
 
     case 'analysis/finish': {
       const fixture = loadFixture(state.axes.scenario);
-      const result = buildFixtureAnalysis(fixture, { level: action.level, sectionOverrides: state.sectionOverrides });
+      const model = deriveModel(fixture, state.edits);
+      const stamp = modelEditsStamp(fixture.id, state.edits);
+      const result = buildFixtureAnalysis(model, stamp, { level: action.level });
       const harnessState: HarnessStateId =
         action.level === 'reliable' ? 'current' : action.level === 'failed' ? 'failed' : action.level;
       return {
@@ -294,6 +373,70 @@ const reducer = (state: PrototypeState, action: Action): PrototypeState => {
     case 'harnessState/apply':
       return applyHarnessState(state, action.state);
 
+    case 'tool/set':
+      return { ...state, activeTool: action.tool, pendingMemberStart: null };
+
+    case 'model/pendingMemberStart':
+      return { ...state, pendingMemberStart: action.nodeId };
+
+    case 'model/addNode':
+      return applyEdits(state, { ...state.edits, addedNodes: [...state.edits.addedNodes, action.node] });
+
+    case 'model/addMember':
+      return { ...applyEdits(state, { ...state.edits, addedMembers: [...state.edits.addedMembers, action.member] }), pendingMemberStart: null };
+
+    case 'model/addLoad':
+      return applyEdits(state, { ...state.edits, addedLoads: [...state.edits.addedLoads, action.load] });
+
+    case 'model/moveNode':
+      return applyEdits(state, { ...state.edits, positionOverrides: { ...state.edits.positionOverrides, [action.id]: { x: action.x, y: action.y } } });
+
+    case 'model/deleteSelected': {
+      if (state.selection.length === 0) return state;
+      const deletedIds = { ...state.edits.deletedIds };
+      for (const ref of state.selection) deletedIds[ref.id] = true;
+      return { ...applyEdits(state, { ...state.edits, deletedIds }), selection: [] };
+    }
+
+    case 'history/undo': {
+      const last = state.history.past[state.history.past.length - 1];
+      if (!last) return state;
+      return {
+        ...state,
+        edits: last,
+        history: { past: state.history.past.slice(0, -1), future: [state.edits, ...state.history.future] },
+        analysis: invalidate(state.analysis),
+        evidence: 'none',
+      };
+    }
+
+    case 'history/redo': {
+      const next = state.history.future[0];
+      if (!next) return state;
+      return {
+        ...state,
+        edits: next,
+        history: { past: [...state.history.past, state.edits], future: state.history.future.slice(1) },
+        analysis: invalidate(state.analysis),
+        evidence: 'none',
+      };
+    }
+
+    case 'camera/set':
+      return { ...state, camera: { ...state.camera, ...action.patch } };
+
+    case 'camera/zoomBy':
+      return { ...state, camera: { ...state.camera, zoom: clampZoom(state.camera.zoom * action.factor) } };
+
+    case 'camera/reset':
+      return { ...state, camera: initialCamera };
+
+    case 'doctor/acknowledge':
+      return { ...state, doctorAcknowledged: { ...state.doctorAcknowledged, [action.id]: true } };
+
+    case 'doctor/filter':
+      return { ...state, doctorFilter: action.severity };
+
     default:
       return state;
   }
@@ -301,6 +444,7 @@ const reducer = (state: PrototypeState, action: Action): PrototypeState => {
 
 export interface PrototypeDerived {
   fixture: Fixture;
+  model: EffectiveModel;
   viewport: Viewport;
   verdict: Verdict;
   composition: CompositionId;
@@ -308,6 +452,7 @@ export interface PrototypeDerived {
   phase: AnalysisPhase;
   paintsEvidence: boolean;
   detailPresent: boolean;
+  primarySelection: SelectionRef | null;
   t: Translate;
   voice: { hero: string; sub: string };
   reducedMotion: boolean;
@@ -315,6 +460,10 @@ export interface PrototypeDerived {
   orientation: 'portrait' | 'landscape';
   /** Sello del modelo actual; si el resultado no lo lleva, ya no le corresponde. */
   stamp: string;
+  findings: Finding[];
+  canUndo: boolean;
+  canRedo: boolean;
+  commandContext: CommandContext;
 }
 
 interface StoreValue {
@@ -347,13 +496,16 @@ export const PrototypeProvider = ({ children }: { children: ReactNode }) => {
     [viewport, state.axes.hysteresisPx],
   );
 
-  const detailPresent = state.selection !== null && (state.broker.open.includes('detail') || verdict.composition !== 'K0');
+  const detailPresent = state.selection.length > 0 && (state.broker.open.includes('detail') || verdict.composition !== 'K0');
 
   const derived = useMemo<PrototypeDerived>(() => {
     const fixture = loadFixture(state.axes.scenario);
+    const model = deriveModel(fixture, state.edits);
     const phase = deriveAnalysisPhase(state.analysis);
+    const primarySelection = state.selection.length > 0 ? state.selection[state.selection.length - 1] : null;
     return {
       fixture,
+      model,
       viewport,
       verdict,
       composition: verdict.composition,
@@ -361,12 +513,21 @@ export const PrototypeProvider = ({ children }: { children: ReactNode }) => {
       phase,
       paintsEvidence: canPaintEvidence(phase) && state.evidence !== 'none',
       detailPresent,
+      primarySelection,
       t: translatorFor(state.axes.locale),
       voice: VOICE_COPY[state.axes.voice][state.axes.locale],
       reducedMotion: state.axes.motion === 'reduced' || capabilities.prefersReducedMotion,
       pointerCoarse: state.axes.input === 'touch' || (state.axes.input === 'mixed' && capabilities.pointer !== 'fine'),
       orientation: orientationOf(viewport),
-      stamp: stampOf(state),
+      stamp: modelEditsStamp(fixture.id, state.edits),
+      findings: deriveFindings(model),
+      canUndo: state.history.past.length > 0,
+      canRedo: state.history.future.length > 0,
+      commandContext: {
+        hasSelection: state.selection.length > 0,
+        hasMemberSelection: state.selection.some((ref) => ref.kind === 'member'),
+        hasLiveResult: state.analysis.result !== null,
+      },
     };
   }, [state, viewport, verdict, detailPresent, capabilities]);
 
@@ -382,7 +543,7 @@ export const PrototypeProvider = ({ children }: { children: ReactNode }) => {
       mode: state.axes.mode,
       motion: state.axes.motion,
       phase: derived.phase,
-      selection: state.selection ? `${state.selection.kind}:${state.selection.id}` : null,
+      selectionCount: state.selection.length,
     }));
   }, [state.axes, verdict.composition, viewport, derived.phase, state.selection]);
 
@@ -414,13 +575,30 @@ export const usePrototype = (): StoreValue => {
 export const useActions = () => {
   const { dispatch, derived, state } = usePrototype();
 
-  const select = useCallback(
-    (selection: SelectionRef | null) => {
-      dispatch({ type: 'selection/set', selection });
-      record(selection ? 'selection_committed' : 'selection_cleared', {
-        entityType: selection?.kind ?? null,
-        entityId: selection?.id ?? null,
-      });
+  const selectOne = useCallback(
+    (ref: SelectionRef | null) => {
+      dispatch({ type: 'selection/set', refs: ref ? [ref] : [] });
+      record(ref ? 'selection_committed' : 'selection_cleared', { entityType: ref?.kind ?? null, entityId: ref?.id ?? null });
+    },
+    [dispatch],
+  );
+
+  const toggleSelect = useCallback(
+    (ref: SelectionRef) => {
+      dispatch({ type: 'selection/toggle', ref });
+      record('selection_committed', { entityType: ref.kind, entityId: ref.id, mode: 'toggle' });
+    },
+    [dispatch],
+  );
+
+  const selectMany = useCallback(
+    (refs: SelectionRef[], merge: boolean) => {
+      if (refs.length === 0 && !merge) {
+        dispatch({ type: 'selection/set', refs: [] });
+        return;
+      }
+      dispatch(merge ? { type: 'selection/merge', refs } : { type: 'selection/set', refs });
+      record('selection_committed', { mode: merge ? 'marquee-merge' : 'marquee', count: refs.length });
     },
     [dispatch],
   );
@@ -453,12 +631,9 @@ export const useActions = () => {
     dispatch({ type: 'surface/restore', composition: derived.composition });
   }, [dispatch, derived.composition]);
 
-  const invoke = useCallback(
-    (commandId: string, route: string) => {
-      record('command_invoked', { commandId, route });
-    },
-    [],
-  );
+  const invoke = useCallback((commandId: string, route: string) => {
+    record('command_invoked', { commandId, route });
+  }, []);
 
   const solve = useCallback(() => {
     record('command_invoked', { commandId: 'analysis.solve', route: 'visible' });
@@ -474,9 +649,45 @@ export const useActions = () => {
     [dispatch],
   );
 
+  /** Localizar: selecciona, resetea la cámara al encuadre base (visibilidad garantizada) y anuncia. */
+  const locate = useCallback(
+    (ref: SelectionRef) => {
+      dispatch({ type: 'selection/set', refs: [ref] });
+      dispatch({ type: 'camera/reset' });
+      record('command_invoked', { commandId: 'selection.locate', route: 'row' });
+    },
+    [dispatch],
+  );
+
+  const undo = useCallback(() => {
+    dispatch({ type: 'history/undo' });
+    record('command_invoked', { commandId: 'history.undo', route: 'visible' });
+  }, [dispatch]);
+
+  const redo = useCallback(() => {
+    dispatch({ type: 'history/redo' });
+    record('command_invoked', { commandId: 'history.redo', route: 'visible' });
+  }, [dispatch]);
+
+  const deleteSelected = useCallback(() => {
+    if (state.selection.length === 0) return;
+    dispatch({ type: 'model/deleteSelected' });
+    record('command_invoked', { commandId: 'selection.delete', route: 'visible', count: state.selection.length });
+  }, [dispatch, state.selection.length]);
+
+  const setTool = useCallback(
+    (tool: ToolId) => {
+      dispatch({ type: 'tool/set', tool });
+      record('command_invoked', { commandId: `tool.${tool}`, route: 'visible' });
+    },
+    [dispatch],
+  );
+
   return {
     dispatch,
-    select,
+    selectOne,
+    toggleSelect,
+    selectMany,
     openSurface: openSurfaceAction,
     closeSurface: closeSurfaceAction,
     peekSurface,
@@ -484,6 +695,11 @@ export const useActions = () => {
     invoke,
     solve,
     finishSolve,
+    locate,
+    undo,
+    redo,
+    deleteSelected,
+    setTool,
     state,
     derived,
   };

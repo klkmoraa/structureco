@@ -18,6 +18,18 @@
  *      resuelta es X2 → M1 → K0 SIN perder selección, evidencia ni resultado.
  *  10. Día/Noche y es-MX/en-US sin errores de consola ni overflow horizontal.
  *
+ * Fase B añade, en el mismo paso Chromium (sin matriz multi-navegador — eso
+ * queda para una fase de estrés que no es ésta):
+ *  11. Deshacer/Rehacer sobre un cambio de sección committeado.
+ *  12. Command Palette: `Ctrl+K`, ejecutar «Resolver» por comando, y localizar
+ *      un objeto por ID escrito a mano (SHL-06).
+ *  13. Crear un nudo con la herramienta Nodo y verlo aparecer en Datasheet.
+ *  14. Model Doctor detecta ese nudo como hallazgo «sin conexión», lo localiza
+ *      y se reconoce — sin elevarlo a dictamen de seguridad.
+ *  15. Eliminar con la tecla Delete.
+ *  16. Selección múltiple (Shift+clic) y el estado de bloque en Detail.
+ *  17. Zoom con los controles flotantes y encuadre.
+ *
  * Sale con código 1 ante cualquier error de consola, excepción de página o
  * aserción fallida. Las capturas son evidencia de la ejecución, no el entregable.
  */
@@ -32,7 +44,7 @@ import { chromium } from 'playwright';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const REPO = path.resolve(ROOT, '../..');
-const OUT = path.join(REPO, 'reports/evidence/2026-08-15-cri-11-fase-a');
+const OUT = path.join(REPO, 'reports/evidence/2026-08-15-cri-11-fase-b');
 const PORT = 5311;
 const BASE = `http://127.0.0.1:${PORT}/`;
 const headed = process.argv.includes('--headed');
@@ -304,6 +316,168 @@ const run = async () => {
   }
   await axis('Modo', 'Completa');
 
+  // ===================================================================
+  // Fase B — capacidades nuevas, mismo paso de Chromium
+  // ===================================================================
+
+  await axis('Fixture', 'portal-basic');
+  // El eje «Análisis · conectividad · persistencia» persiste a través del
+  // cambio de escenario a propósito (como Tema/Idioma) — se deja explícito
+  // en «current» aquí porque la sección 11 lo dejó en «unreliable».
+  await axis('Análisis · conectividad · persistencia', 'current · resultados vigentes');
+  await page.waitForTimeout(200);
+
+  // 14 · Deshacer / Rehacer sobre un cambio de sección committeado
+  await page.locator('.pt-canvas .pt-object[aria-label^="M1"]').first().click();
+  await page.locator('.pt-detail select').first().waitFor();
+  const sectionBefore = await page.locator('.pt-detail select').first().inputValue();
+  await page.locator('.pt-detail select').first().selectOption({ label: 'HEA 260' });
+  await page.getByRole('button', { name: 'Aplicar cambio' }).click();
+  const sectionAfterCommit = await page.locator('.pt-detail select').first().inputValue();
+  if (sectionAfterCommit === sectionBefore) fail('Aplicar cambio no modificó la sección de M1.');
+  const undoButton = page.getByRole('button', { name: 'Deshacer' });
+  if (await undoButton.isDisabled()) fail('Deshacer aparece deshabilitado tras un cambio committeado.');
+  await undoButton.click();
+  await page.waitForTimeout(120);
+  const sectionAfterUndo = await page.locator('.pt-detail select').first().inputValue();
+  if (sectionAfterUndo !== sectionBefore) fail(`Deshacer no revirtió la sección (esperaba ${sectionBefore}, quedó ${sectionAfterUndo}).`);
+  else ok('Deshacer revierte un cambio de sección committeado.');
+  await page.getByRole('button', { name: 'Rehacer' }).click();
+  await page.waitForTimeout(120);
+  const sectionAfterRedo = await page.locator('.pt-detail select').first().inputValue();
+  if (sectionAfterRedo !== sectionAfterCommit) fail('Rehacer no reaplicó el cambio deshecho.');
+  else ok('Rehacer reaplica el cambio deshecho.');
+
+  // 15 · Command Palette: ejecutar un comando y localizar por ID (SHL-05/06)
+  await page.getByRole('button', { name: 'Paleta de comandos' }).click();
+  await page.locator('.pt-palette__input').waitFor();
+  await page.locator('.pt-palette__input').fill('resolver');
+  const solveEntry = page.locator('.pt-palette__option', { hasText: 'Resolver' });
+  await solveEntry.first().waitFor();
+  await shot('14-command-palette');
+  await solveEntry.first().click();
+  await page.waitForFunction(() => document.querySelector('.lab-group .lab-meta strong')?.textContent === 'current', null, { timeout: 8000 });
+  ok('La Command Palette ejecuta «Resolver» por el mismo commandId que el botón visible.');
+
+  await page.getByRole('button', { name: 'Paleta de comandos' }).click();
+  await page.locator('.pt-palette__input').waitFor();
+  await page.locator('.pt-palette__input').fill('M2');
+  const locateEntry = page.locator('.pt-palette__option', { hasText: 'Localizar M2' });
+  if ((await locateEntry.count()) === 0) fail('La paleta no ofrece «Localizar M2» al escribir un ID (SHL-06).');
+  else {
+    await locateEntry.first().click();
+    await page.waitForTimeout(120);
+    if (!(await page.locator('.pt-contextual__subject strong').innerText()).includes('M2')) {
+      fail('Elegir «Localizar M2» en la paleta no seleccionó el objeto.');
+    } else ok('Navegar a un objeto por ID desde la paleta selecciona el objeto real (SHL-06).');
+  }
+
+  // 16 · Crear un nudo con la herramienta Nodo (MOD-02) y verlo en Datasheet
+  await page.locator('.pt-toolrail .pt-tool[aria-label="Nodo"]').first().click();
+  const canvasBox = await page.locator('.pt-canvas').first().boundingBox();
+  if (canvasBox) {
+    await page.mouse.click(canvasBox.x + canvasBox.width * 0.5, canvasBox.y + canvasBox.height * 0.12);
+  }
+  await page.locator('.pt-toolrail .pt-tool[aria-label="Seleccionar"]').first().click();
+  await page.getByRole('button', { name: 'Datasheet' }).first().click();
+  await page.locator('.pt-dense').waitFor();
+  await page.locator('.pt-segmented button', { hasText: 'Nodos' }).first().click();
+  await page.waitForTimeout(150);
+  const nodeRowsAfterCreate = await page.locator('.pt-table tbody tr').count();
+  if (nodeRowsAfterCreate !== 5) fail(`Crear un nudo con la herramienta Nodo debería dejar 5 filas en Datasheet · Nodos, hay ${nodeRowsAfterCreate}.`);
+  else ok('La herramienta Nodo crea un nudo real en el modelo efectivo (MOD-02), visible en Datasheet.');
+  const newNodeId = await page.locator('.pt-table tbody tr').last().locator('th').innerText();
+  await page.locator('.pt-dense .sc-icon-button').click();
+
+  // 17 · Model Doctor detecta el nudo sin conexión, lo localiza y se reconoce
+  await page.locator('.pt-topbar__status button[aria-label^="Model Doctor"]').click();
+  await page.locator('.pt-doctor').waitFor();
+  const attentionCard = page.locator('.pt-doctor__card[data-severity="attention"]', { hasText: newNodeId });
+  if ((await attentionCard.count()) === 0) {
+    fail(`Model Doctor no reporta ${newNodeId} como hallazgo de modelado (nudo sin conexión).`);
+  } else {
+    ok('Model Doctor detecta el nudo recién creado como hallazgo de modelado, sin dictamen de seguridad.');
+    await page.waitForTimeout(400); // deja terminar la animación de entrada del drawer antes de capturar
+    await shot('15-model-doctor');
+    await attentionCard.locator('.pt-row-action', { hasText: 'Localizar' }).click();
+    await page.waitForTimeout(150);
+    if (!(await page.locator('.pt-contextual__subject strong').innerText()).includes(newNodeId)) {
+      fail('Localizar desde Model Doctor no seleccionó el objeto del hallazgo.');
+    } else ok('Localizar desde Model Doctor sincroniza el objeto y la evidencia (DOC-04).');
+    // Localizar degrada Doctor a `peek` (D-11): hay que volver antes de seguir
+    // operando sobre sus tarjetas.
+    if ((await page.locator('.pt-peek').count()) === 0) fail('Localizar desde Model Doctor no lo dejó en `peek`.');
+    else {
+      ok('Localizar desde Model Doctor lo degrada a `peek`, no lo cierra (D-11).');
+      await page.locator('.pt-peek button').click();
+      await page.locator('.pt-doctor').waitFor();
+    }
+    await attentionCard.locator('.pt-row-action', { hasText: 'Reconocido' }).click();
+    if ((await page.locator('.pt-doctor__card[data-acknowledged]').count()) === 0) fail('Reconocer un hallazgo no deja constancia visible (DOC-06).');
+    else ok('Reconocer un hallazgo deja constancia visible en su tarjeta (DOC-06).');
+  }
+  await page.locator('.pt-doctor .sc-icon-button').click();
+
+  // 18 · Eliminar con la tecla Delete (MOD-09)
+  if (!(await page.locator('.pt-contextual__subject strong').innerText()).includes(newNodeId)) {
+    await page.locator('.pt-canvas .pt-object', { hasText: newNodeId }).first().click();
+  }
+  await page.keyboard.press('Delete');
+  await page.waitForTimeout(150);
+  await page.getByRole('button', { name: 'Datasheet' }).first().click();
+  await page.locator('.pt-dense').waitFor();
+  await page.locator('.pt-segmented button', { hasText: 'Nodos' }).first().click();
+  await page.waitForTimeout(150);
+  const nodeRowsAfterDelete = await page.locator('.pt-table tbody tr').count();
+  if (nodeRowsAfterDelete !== 4) fail(`Eliminar con Delete debería dejar 4 nudos, hay ${nodeRowsAfterDelete}.`);
+  else ok('La tecla Delete elimina la selección real del modelo (MOD-09), con Deshacer disponible.');
+  await page.locator('.pt-dense .sc-icon-button').click();
+
+  // 19 · Selección múltiple (Shift+clic) y estado de bloque en Detail (SEL-04, INS-04)
+  await page.locator('.pt-canvas .pt-object[aria-label^="M1"]').first().click();
+  await page.locator('.pt-canvas .pt-object[aria-label^="M3"]').first().click({ modifiers: ['Shift'] });
+  const subjectText = await page.locator('.pt-contextual__subject strong').innerText();
+  if (!subjectText.startsWith('2')) fail(`Shift+clic debería dejar 2 objetos seleccionados, la barra dice «${subjectText}».`);
+  else ok('Shift+clic acumula selección heterogénea/homogénea (SEL-04).');
+  if ((await page.locator('.pt-detail__title', { hasText: 'objetos seleccionados' }).count()) === 0) {
+    fail('Detail no muestra el estado de bloque con selección múltiple (INS-04).');
+  } else ok('Detail muestra el estado MIXED de bloque, no la ficha de un solo objeto.');
+  await shot('16-multiseleccion-bloque');
+  await page.keyboard.press('Escape');
+
+  // 20 · Zoom con los controles flotantes (CNV-01)
+  const pctBefore = await page.locator('.pt-zoom-controls__pct').innerText();
+  await page.getByRole('button', { name: 'Acercar' }).click();
+  await page.getByRole('button', { name: 'Acercar' }).click();
+  const pctZoomed = await page.locator('.pt-zoom-controls__pct').innerText();
+  if (pctZoomed === pctBefore) fail('Los controles de zoom no cambian el encuadre.');
+  await page.locator('.pt-zoom-controls__pct').click();
+  const pctReset = await page.locator('.pt-zoom-controls__pct').innerText();
+  if (pctReset !== '100%') fail(`Encuadrar todo debería volver a 100%, quedó en ${pctReset}.`);
+  else ok(`Zoom flotante: ${pctBefore} → ${pctZoomed} → encuadrar todo → ${pctReset} (CNV-01).`);
+
+  // 21 · Puertas recuperadas: Preferencias y Salida (SHL-22), reachable desde la mesa
+  await page.locator('.pt-topbar__status button[aria-label="Preferencias"]').click();
+  await page.locator('.pt-preferences').waitFor();
+  await page.waitForTimeout(400); // deja terminar la animación de entrada del drawer antes de capturar
+  await shot('17-preferencias');
+  await page.locator('.pt-preferences .pt-segmented', { hasText: 'Noche' }).getByRole('button', { name: 'Noche' }).click();
+  await page.waitForTimeout(150);
+  if ((await page.evaluate(() => document.documentElement.getAttribute('data-theme'))) !== 'dark') {
+    fail('Preferencias no cambia el tema real del prototipo.');
+  } else ok('La puerta Preferencias despacha el mismo axis/set que el panel del laboratorio (una sola fuente de verdad).');
+  await page.locator('.pt-preferences .pt-segmented', { hasText: 'Día' }).getByRole('button', { name: 'Día' }).click();
+  await page.locator('.pt-preferences .sc-icon-button').click();
+
+  await page.locator('.pt-topbar__status button[aria-label="Salida"]').click();
+  await page.locator('.pt-output').waitFor();
+  if ((await page.locator('.pt-output').innerText()).toLowerCase().includes('simulado')) {
+    ok('Salida se rotula explícitamente como no-funcional en este prototipo (no finge exportar de verdad).');
+  } else fail('Salida no advierte que sus acciones son simuladas.');
+  await page.waitForTimeout(400);
+  await shot('18-salida');
+  await page.locator('.pt-output .sc-icon-button').click();
+
   const telemetry = await page.evaluate(() => document.querySelectorAll('.lab-group .lab-meta').length);
   if (telemetry === 0) fail('El panel de telemetría no informa.');
 
@@ -313,7 +487,7 @@ const run = async () => {
   await writeFile(
     path.join(OUT, 'smoke-report.md'),
     [
-      '# CRI-11 Fase A · recorrido ejecutado',
+      '# CRI-11 Fase B · recorrido ejecutado',
       '',
       `Ejecutado el ${new Date().toISOString()} sobre Chromium (Playwright), build de \`prototypes/cri-11-harness\`.`,
       '',

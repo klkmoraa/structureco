@@ -35,9 +35,9 @@ const LAYERS: { id: 'grid' | 'loads' | 'supports' | 'labels'; labelKey: Translat
 export const ViewSurface = () => {
   const { state, derived } = usePrototype();
   const { dispatch, invoke, closeSurface } = useActions();
-  const { t, composition, phase } = derived;
+  const { t, composition, phase, model } = derived;
   const evidenceAvailable = canPaintEvidence(phase);
-  const labelsSuppressed = derived.fixture.members.length > 200;
+  const labelsSuppressed = model.members.length > 200;
 
   return (
     <section className="pt-view" data-composition={composition} aria-label={t('view.title')}>
@@ -94,6 +94,24 @@ export const ViewSurface = () => {
               : 'Labels degrade above 200 members. A declared degradation, not a silent one (CB-3).'}
           </p>
         ) : null}
+      </div>
+
+      <div className="pt-group">
+        <h3 className="pt-group__title">{t('view.filter')}</h3>
+        <div className="pt-segmented" role="group" aria-label={t('view.filter')}>
+          {(['all', 'node', 'member'] as const).map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              className="pt-segmented__option"
+              data-active={state.selectionFilter === filter || undefined}
+              aria-pressed={state.selectionFilter === filter}
+              onClick={() => dispatch({ type: 'selectionFilter/set', filter })}
+            >
+              {filter === 'all' ? t('view.filterAll') : filter === 'node' ? t('toolrail.node') : t('toolrail.member')}
+            </button>
+          ))}
+        </div>
       </div>
     </section>
   );

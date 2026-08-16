@@ -210,10 +210,13 @@ export const SURFACES: SurfaceSpec[] = [
     name: { es: 'Salida · exportación e impresión', en: 'Output · export and print' },
     owner: 'dominio (lectura) · análisis (lectura)',
     presentation: { X2: 'drawer', M1: 'drawer', K0: 'sheet' },
-    capability: 'VERIFIED_EXISTING',
-    phase: 'C',
+    capability: 'PROPOSED_INTERACTION',
+    phase: 'B',
     exclusiveInCompact: true,
-    note: { es: 'Fuera del recorrido mínimo.', en: 'Outside the minimal walkthrough.' },
+    note: {
+      es: 'La puerta existe y es alcanzable (SHL-22); las acciones están rotuladas como no-funcionales en este prototipo — exportar de verdad requeriría rasterizar el lienzo, fuera de alcance de CRI-11.',
+      en: 'The door exists and is reachable (SHL-22); actions are labelled non-functional in this prototype — real export would need canvas rasterization, out of CRI-11 scope.',
+    },
   },
   {
     id: 'classroom',

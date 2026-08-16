@@ -6,9 +6,17 @@
  * persistentes y la afirmación más crítica del producto (D-03). Y la causa de
  * la fiabilidad es un BOTÓN, no un `title`: D-14 existe porque hoy esa
  * explicación sólo alcanza a quien usa ratón.
+ *
+ * Fase B recupera puertas que Fase A dejó fuera del todo: Deshacer/Rehacer
+ * (SHL-03/04, global persistente), el lanzador de Model Doctor con recuento
+ * de severidad (SHL-14, hoy oculto bajo 1024px en producción — aquí NO se
+ * oculta), la Command Palette (SHL-05/06) y Salida (SHL-22, que CRI-8 ya
+ * confirma con icono propio en TopBar hoy). El chip de recuperación deja de
+ * ser un adorno: abre la superficie `recovery` (D-08).
  */
 
 import { useState } from 'react';
+import { severityCount } from '../core/doctor';
 import { useActions, usePrototype } from '../state/PrototypeStore';
 import type { TranslationKey } from '../core/i18n';
 
@@ -33,13 +41,14 @@ const PHASE_DETAIL: Record<string, TranslationKey> = {
 };
 
 export const TopBar = () => {
-  const { state, derived } = usePrototype();
-  const { solve, dispatch } = useActions();
-  const { t, phase, composition } = derived;
+  const { state, derived, dispatch } = usePrototype();
+  const { solve, undo, redo, openSurface, invoke } = useActions();
+  const { t, phase, composition, findings, canUndo, canRedo } = derived;
   const [causeOpen, setCauseOpen] = useState(false);
   const compact = composition === 'K0';
   const spanish = state.axes.locale === 'es-MX';
   const governing = state.analysis.result?.governing;
+  const attentionCount = severityCount(findings, 'attention') + severityCount(findings, 'notice');
 
   return (
     <header className="pt-topbar" data-composition={composition}>
@@ -58,38 +67,105 @@ export const TopBar = () => {
         </span>
       </div>
 
+      {!compact ? (
+        <div className="pt-topbar__history">
+          <button type="button" className="sc-icon-button sc-icon-button--ghost sc-icon-button--sm" aria-label={t('command.undo')} disabled={!canUndo} onClick={undo}>
+            ↶
+          </button>
+          <button type="button" className="sc-icon-button sc-icon-button--ghost sc-icon-button--sm" aria-label={t('command.redo')} disabled={!canRedo} onClick={redo}>
+            ↷
+          </button>
+        </div>
+      ) : null}
+
       <div className="pt-topbar__action">
-        <button
-          type="button"
-          className="sc-button sc-button--primary sc-button--sm"
-          onClick={solve}
-          disabled={state.analysis.isAnalyzing}
-        >
+        <button type="button" className="sc-button sc-button--primary sc-button--sm" onClick={solve} disabled={state.analysis.isAnalyzing}>
           <span className="sc-button__label">{state.analysis.isAnalyzing ? t('state.calculating') : t('topbar.solve')}</span>
         </button>
       </div>
 
       <div className="pt-topbar__status">
-        {state.analysis.connectivity === 'offline' ? (
-          <span className="pt-chip pt-chip--offline">{t('state.offline')}</span>
-        ) : null}
+        {/*
+         * Orden deliberado, no alfabético: en Compact el cluster puede
+         * desbordar y sólo se degrada por scroll horizontal declarado
+         * (overflow-x:auto en CSS), nunca oculto sin aviso. Lo primero en el
+         * DOM es lo que se ve sin desplazar — así que el chip de estado
+         * (D-14, "la afirmación más crítica") va primero, y la paleta va al
+         * final porque conserva una ruta que no depende de ser visible: el
+         * atajo de teclado sigue funcionando esté o no el icono en pantalla.
+         */}
+        {state.analysis.connectivity === 'offline' ? <span className="pt-chip pt-chip--offline">{t('state.offline')}</span> : null}
         {state.analysis.persistence === 'conflict' ? (
-          <button type="button" className="pt-chip pt-chip--recovery" onClick={() => setCauseOpen(false)}>
+          <button
+            type="button"
+            className="pt-chip pt-chip--recovery"
+            onClick={() => {
+              invoke('surface.recovery.toggle', 'visible');
+              openSurface('recovery');
+            }}
+          >
             {t('state.recovery')}
           </button>
         ) : (
           !compact && <span className="pt-chip pt-chip--quiet">{t('topbar.saved')}</span>
         )}
 
-        <button
-          type="button"
-          className="pt-chip pt-chip--state"
-          data-phase={phase}
-          aria-expanded={causeOpen}
-          onClick={() => setCauseOpen((open) => !open)}
-        >
+        <button type="button" className="pt-chip pt-chip--state" data-phase={phase} aria-expanded={causeOpen} onClick={() => setCauseOpen((open) => !open)}>
           <span className="pt-chip__dot" aria-hidden="true" />
           {t(PHASE_KEY[phase])}
+        </button>
+
+        <button
+          type="button"
+          className="sc-icon-button sc-icon-button--ghost sc-icon-button--sm pt-topbar__icon"
+          aria-label={`${t('surface.doctor')} (${findings.length})`}
+          data-count={attentionCount > 0 || undefined}
+          onClick={() => {
+            invoke('surface.doctor.toggle', 'visible');
+            openSurface('doctor');
+          }}
+        >
+          ⚕
+          {attentionCount > 0 ? <span className="pt-topbar__badge">{attentionCount}</span> : null}
+        </button>
+
+        {!compact ? (
+          <>
+            <button
+              type="button"
+              className="sc-icon-button sc-icon-button--ghost sc-icon-button--sm pt-topbar__icon"
+              aria-label={t('surface.output')}
+              onClick={() => {
+                invoke('surface.output.toggle', 'visible');
+                openSurface('output');
+              }}
+            >
+              ⇩
+            </button>
+            <button
+              type="button"
+              className="sc-icon-button sc-icon-button--ghost sc-icon-button--sm pt-topbar__icon"
+              aria-label={t('surface.preferences')}
+              onClick={() => {
+                invoke('surface.preferences.toggle', 'visible');
+                openSurface('preferences');
+              }}
+            >
+              ⚙
+            </button>
+          </>
+        ) : null}
+
+        <button
+          type="button"
+          className="sc-icon-button sc-icon-button--ghost sc-icon-button--sm pt-topbar__icon"
+          aria-label={t('command.palette')}
+          onClick={() => {
+            invoke('surface.palette.toggle', 'visible');
+            openSurface('palette');
+          }}
+        >
+          ⌘K
         </button>
 
         {causeOpen ? (
@@ -110,9 +186,7 @@ export const TopBar = () => {
                 <span className="sc-button__label">{t('state.staleAction')}</span>
               </button>
             ) : null}
-            {state.analysis.persistence === 'conflict' ? (
-              <p className="pt-cause__note">{t('state.recovery.detail')}</p>
-            ) : null}
+            {state.analysis.persistence === 'conflict' ? <p className="pt-cause__note">{t('state.recovery.detail')}</p> : null}
           </div>
         ) : null}
       </div>
