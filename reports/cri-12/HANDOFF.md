@@ -4,6 +4,21 @@
 
 Este documento cierra CRI-12A: congela el baseline, no decide UX ni visuales. Lista las preguntas que sí requieren elección humana, con contexto suficiente para decidir sin releer todo lo anterior.
 
+## Actualización — CRI-12C cerrado (dirección visual)
+
+Las preguntas **12, 13, 14 y 15** de la sección "Preguntas para CRI-12C" de abajo están **cerradas**, decididas por el propietario del producto en conversación directa (bloques de ≤3 preguntas, opciones + recomendación explícita), sobre HEAD `066eaa1ee8dc11ad8b787ddb43ef6d6a5e5a1744` de esta rama. Baseline de `main` reverificado: `7fb927fb6d118925e63365d1a2bb2813f8795385`, **sin drift**.
+
+Cuatro documentos nuevos:
+
+- `03-visual-direction-record.md` — narrativa de cierre: V-01…V-14 (carácter visual, regla Clay/plano, gramática de superficies, intensidad Clay, radios, tipografía, identidad cromática, colores técnicos, Día/Noche, Results, Welcome, iconografía, motion, accesibilidad visual), gobierno board-por-board del PDF de referencias, invariantes protegidos confirmados y frontera con CRI-12D.
+- `03-surface-grammar.md` — `BASE`/`INSET`/`RAISED`/`FLOATING`/`SHEET`/`MODAL`, su correspondencia con el vocabulario de presentación de CRI-9/12B (**son ejes distintos**, con tres nombres que colisionan), reglas transversales, radios y motion por nivel, y estado de implementación en `material.css`.
+- `03-color-decision.md` — menta/esmeralda vs lima decidido, reasignación de cortante y línea de influencia, gate de medición obligatorio, Día/Noche, y las 7 desviaciones futuras del Brandbook.
+- `03-do-dont.md` — siete pares con casos concretos: Clay vs neumorfismo, shell elevado vs dato plano, pressed vs glow, color semántico vs decorativo, card útil vs cardification, densidad vs saturación, coherencia Día/Noche.
+
+**Decisión de identidad cromática (pregunta 12): gana menta/esmeralda.** Manda identidad y acción primaria. La lima no se retira del sistema: por decisión explícita del propietario pasa a ser el color técnico de **cortante (V)**, y la **línea de influencia** pasa a un rosa/fucsia pastel con canto medido y trazo siempre discontinuo. Todo es **desviación futura**: `brand/**` y `tokens.css` no se tocaron, y nada entra en implementación sin el gate de medición de `03-color-decision.md` §4.
+
+**Qué NO se cerró en 12C, a propósito:** la decisión de tipografía serif quedó **abierta sin acotar** (es una pregunta futura registrada, no una decisión); LEDGER-05 y ABIERTA-6 siguen siendo gates abiertos; y llevar tarjetas al Datasheet y a las tablas densas quedó registrado como **petición hacia CRI-12D**, no como decisión, porque reabre arquitectura cerrada (D-11, D-03).
+
 ## Actualización — CRI-12B cerrado
 
 Las 11 preguntas de la sección "Preguntas para CRI-12B" de abajo están **cerradas**, decididas por el propietario del producto en conversación directa (bloques de 3–5, opciones A/B/C + recomendación), sobre HEAD `05f250ec443af7c35e5890ccaceee8da4fa16993` de esta rama. Detalle completo:
@@ -22,7 +37,17 @@ Cada pregunta 1–11 de abajo se marca `[CERRADA → 02-ux-decision-matrix.md #N
 - Brechas de paridad táctil D-07 (SEL-02, SEL-03, MOD-13, DAT-06, MOD-12) — prioridad/secuencia fijada (`02-ux-decision-matrix.md` #10).
 - Evaluación de impacto de sacar `settings.show*` del schema (ABIERTA-8/U-12) — pendiente técnico prioritario asignado (`02-ux-decision-matrix.md` #9).
 
-**CRI-12C puede empezar sin depender de ninguno de estos tres** — son trabajo de implementación/evaluación en paralelo, no bloqueantes de la dirección visual (color, Clay, tratamiento del portal de Welcome). Ninguno estaba genuinamente "hecho en 12B"; el fraseo original de este documento y de los tres reportes de cierre lo decía así por error de encargo y se corrigió en el mismo commit que añadió esta nota.
+**CRI-12C puede empezar sin depender de ninguno de estos tres** — son trabajo de implementación/evaluación en paralelo, no bloqueantes de la dirección visual (color, Clay, tratamiento del portal de Welcome). Ninguno estaba genuinamente "hecho en 12B"; el fraseo original de este documento y de los tres reportes de cierre lo decía así por error de encargo y se corrigió en el mismo commit que añadió esta nota. **Confirmado a posteriori:** CRI-12C se ejecutó y cerró sin que ninguno de los tres estuviera resuelto.
+
+### Qué le añade CRI-12C al encargo de CRI-12D
+
+CRI-12D puede crear tareas de implementación visual a partir de `03-visual-direction-record.md` **sin reinterpretar el diseño**. Se suma a los tres ítems de arriba:
+
+- **Gate de medición cromática** (`03-color-decision.md` §4) — condición de entrada de cualquier tarea de color: suelos sobre los cuatro fondos, separaciones obligatorias de los tríos nuevos (marca/cortante/éxito y influencia/Aula/momento) verificadas también en escala de grises y con deficiencia de color, invariancia Día/Noche intacta y `tokens.test.ts` sin relajar. Su salida son los HEX; CRI-12C deliberadamente no fija ninguno.
+- **Formalizar `SHEET` y `MODAL`** como niveles de `data-level` en `material.css`, y ampliar la lista de selectores de `BASE` a las zonas técnicas densas que hoy no lo declaran (`03-surface-grammar.md` §7). Es formalización, no decisión.
+- **Alinear radios a la escala del Brandbook** según el reparto por rol de V-05 — sigue siendo LEDGER-01, sin desviación nueva.
+
+Y lo que CRI-12D **no** puede hacer sin volver a preguntar: aplicar un HEX nuevo sin el gate; decidir el serif (abierta, no decidida); convertir Datasheet o tablas densas en tarjetas (petición registrada, reabre D-11/D-03); mover un color técnico distinto de los dos que 12C nombra.
 
 ## Nota sobre el corte 12B/12C asumido en este documento
 
@@ -49,10 +74,12 @@ Si esta distinción no es la prevista por quien secuenció CRI-12, reclasificar 
 
 ## Preguntas para CRI-12C (cierre de dirección visual)
 
-12. **Lima vs menta/esmeralda histórica (tema 19 de la matriz de evidencia)**: `main`, el Brandbook y `tokens.css` usan hoy, de forma verificada, la paleta lima única cerrada por los commits `74dfc76`/`f60eae5` (que descartaron en bloque los tres verdes en conflicto — `#159a72`, `#00795f`, `#157A55` — a favor de `#89d448`). Eso es un hecho del estado vigente, no una decisión que CRI-12A pueda dejar fuera de revisión. CRI-12C debe comparar **explícitamente** mantener lima vigente vs recuperar **exclusivamente** la familia menta/esmeralda histórica de identidad (la familia teal/esmeralda que existía antes de ese cierre, no una paleta nueva). Si gana menta/esmeralda, es una decisión de producto **futura**: no implica que ya esté implementada, y no autoriza por sí sola tocar los colores técnicos de dominio (N/axial, V/cortante, M/momento, deformada, warning, error, selección, foco, reacción) — esos permanecen separados de la identidad de marca en `tokens.css` y su eventual revisión seguiría su propio proceso.
-13. **Tratamiento visual del portal de Welcome**: el "material clay" vía filtros SVG (grano feTurbulence, caída por cara, oclusión ambiental, luz de borde) propuesto en la 3ª pasada de CRI-10 — explícitamente rechaza un motor 3D real. ¿Se aprueba esta dirección visual, se ajusta, o se descarta?
-14. **Remedición de contraste del pórtico en modo Noche (LEDGER-05)**: documentado pero no cambiado sin remedir — ejecutar la medición y decidir si requiere ajuste.
-15. **Placa técnica ilustrativa "IPE-240 · A992" en Welcome**: CRI-10 ya fija la regla — si en implementación pasa a leer datos reales, tiene que leerlos de verdad o no mostrarse. No es una decisión nueva, es una restricción a respetar si se implementa el Welcome propuesto.
+Las cuatro están **cerradas**. Igual que con las preguntas 1–11, el texto original se conserva sin editar por fidelidad histórica de este documento de CRI-12A; el marcador `[CERRADA → …]` al final de cada una lleva a su registro.
+
+12. **Lima vs menta/esmeralda histórica (tema 19 de la matriz de evidencia)**: `main`, el Brandbook y `tokens.css` usan hoy, de forma verificada, la paleta lima única cerrada por los commits `74dfc76`/`f60eae5` (que descartaron en bloque los tres verdes en conflicto — `#159a72`, `#00795f`, `#157A55` — a favor de `#89d448`). Eso es un hecho del estado vigente, no una decisión que CRI-12A pueda dejar fuera de revisión. CRI-12C debe comparar **explícitamente** mantener lima vigente vs recuperar **exclusivamente** la familia menta/esmeralda histórica de identidad (la familia teal/esmeralda que existía antes de ese cierre, no una paleta nueva). Si gana menta/esmeralda, es una decisión de producto **futura**: no implica que ya esté implementada, y no autoriza por sí sola tocar los colores técnicos de dominio (N/axial, V/cortante, M/momento, deformada, warning, error, selección, foco, reacción) — esos permanecen separados de la identidad de marca en `tokens.css` y su eventual revisión seguiría su propio proceso. `[CERRADA → 03-color-decision.md — gana MENTA/ESMERALDA. El propietario decidió además reasignar la lima a cortante (V) y la línea de influencia a rosa/fucsia pastel; ambas son desviaciones futuras con gate de medición, no implementación]`
+13. **Tratamiento visual del portal de Welcome**: el "material clay" vía filtros SVG (grano feTurbulence, caída por cara, oclusión ambiental, luz de borde) propuesto en la 3ª pasada de CRI-10 — explícitamente rechaza un motor 3D real. ¿Se aprueba esta dirección visual, se ajusta, o se descarta? `[CERRADA → 03-visual-direction-record.md V-11 — aprobado con alcance recortado: sólo la pieza ilustrativa, nunca superficies de interfaz, no es motor 3D, y degrada a relleno plano sin filtros o bajo reduced-motion/reduced-transparency. Derivada de la decisión de Welcome (marca presente, proyectos primero), no preguntada por separado]`
+14. **Remedición de contraste del pórtico en modo Noche (LEDGER-05)**: documentado pero no cambiado sin remedir — ejecutar la medición y decidir si requiere ajuste. `[SIGUE ABIERTA → 03-color-decision.md §5 — CRI-12C no ejecutó la medición. Se añade una condición de orden: debe medirse DESPUÉS de fijar los HEX nuevos, porque la menta cambia el fondo contra el que se mide el pórtico]`
+15. **Placa técnica ilustrativa "IPE-240 · A992" en Welcome**: CRI-10 ya fija la regla — si en implementación pasa a leer datos reales, tiene que leerlos de verdad o no mostrarse. No es una decisión nueva, es una restricción a respetar si se implementa el Welcome propuesto. `[CONFIRMADA sin cambio → 03-visual-direction-record.md V-11]`
 
 ## Corrección de gobierno de datos recomendada (no es una decisión de producto)
 
@@ -68,6 +95,8 @@ Si esta distinción no es la prevista por quien secuenció CRI-12, reclasificar 
 
 La identidad de color de marca (lima vs menta/esmeralda) **no** es un invariante protegido en este listado: es `VERIFIED_CURRENT` (estado vigente) y `MUST_DECIDE_IN_12C` (pregunta 12, arriba) — CRI-12A verifica que hoy es lima, sin cerrarlo a revisión.
 
+> **Actualización tras CRI-12C:** la pregunta 12 está cerrada a favor de **menta/esmeralda**. Eso no altera ningún invariante de la lista de arriba: el Brandbook sigue siendo la autoridad visual **como mecanismo** (`brand/**` no se modificó en 12C), los colores técnicos siguen separados de la identidad de marca, y los dos roles técnicos que sí se reasignan — cortante (V) a la familia lima, línea de influencia a rosa/fucsia pastel — lo hacen por decisión explícita del propietario, con gate de medición obligatorio y sin implementación. `success ≠ reliable ≠ safe` sale reforzado, no tocado: `03-visual-direction-record.md` V-02/V-10 y `03-do-dont.md` §5 prohíben explícitamente que la profundidad, el color verde o una tarjeta elevada afirmen seguridad o cumplimiento.
+
 ## Confirmación de alcance de CRI-12A
 
 - Único directorio creado o modificado: `reports/cri-12/**` (`00-input-manifest.md`, `01-evidence-matrix.md`, `01b-inherited-decisions.md`, `HANDOFF.md`).
@@ -76,3 +105,14 @@ La identidad de color de marca (lima vs menta/esmeralda) **no** es un invariante
 - No hubo merge a `main`, no hubo publicación en GitHub Pages.
 - No se decidió menta/lima ni ningún otro color en CRI-12A — se verificó que lima es el estado vigente de `main` (`VERIFIED_CURRENT`) y se dejó explícitamente como `MUST_DECIDE_IN_12C` la comparación con la familia menta/esmeralda histórica (§D de `01b-inherited-decisions.md`, pregunta 12 arriba).
 - No se prototipó ni se diseñó nada nuevo — todo lo citado como `PROTOTYPE_VALIDATED` proviene de `d2a4dbfa20c08f1e22206619ee4291794555546a`, ya congelado, no ampliado aquí.
+
+## Confirmación de alcance de CRI-12C
+
+- Único directorio creado o modificado: `reports/cri-12/**` (`03-visual-direction-record.md`, `03-surface-grammar.md`, `03-color-decision.md`, `03-do-dont.md`, actualización de este `HANDOFF.md`).
+- Cero cambios en `src/**`, `brand/**`, `src/design-system/tokens.css`. El Brandbook y los tokens se leyeron íntegros; no se escribió en ellos.
+- No se ejecutó ningún gate (`verify:*`, `npm test`) ni suite de pruebas; todo lo citado de `src/**` y del Brandbook se verificó por lectura directa.
+- No hubo prototipo nuevo, no hubo merge a `main`, no hubo publicación en GitHub Pages.
+- Baseline de `main` reverificado al abrir la fase: `origin/main` = `7fb927fb6d118925e63365d1a2bb2813f8795385`, **drift ninguno**.
+- Las decisiones de propietario se tomaron en conversación directa, en bloques de ≤3 preguntas con opciones y recomendación explícita: identidad cromática, intensidad Clay, tipografía, reasignación de cortante y de la línea de influencia, Día/Noche, Results y Welcome. Ninguna se infirió. Las marcadas `DERIVADA` en `03-visual-direction-record.md` (radios, iconografía, motion, accesibilidad visual, tratamiento del portal) se dedujeron del Brandbook + CRI-12B + esas decisiones, y se señalan como tales.
+- El PDF `StructureCo_CRI12C_referencias_visuales.pdf` se trató estrictamente como `REFERENCE`. `03-visual-direction-record.md` §1 registra board por board qué se transformó en principio y qué se descartó, incluidas sus dos contradicciones internas (tipografía y cortante = verde de marca), resueltas a favor del canon.
+- No se implementó ningún color. Todos los cambios cromáticos son `FUTURE_DEVIATION` con gate de medición; ningún HEX nuevo se fija en esta fase.
