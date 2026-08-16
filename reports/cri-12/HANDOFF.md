@@ -4,6 +4,29 @@
 
 Este documento cierra CRI-12A: congela el baseline, no decide UX ni visuales. Lista las preguntas que sí requieren elección humana, con contexto suficiente para decidir sin releer todo lo anterior.
 
+## Actualización — CRI-12D cerrado (backlog de implementación)
+
+CRI-12D (CRI-86) convierte las decisiones de 12B y 12C en un **backlog de producción real en Linear**, ejecutable issue por issue en chats nuevos. Ejecutado sobre HEAD `6c4370cab9c7e6077f2eb3a2b585cba8005e270a` de esta rama. Baseline de `main` reverificado al abrir la fase: `origin/main` = `7fb927fb6d118925e63365d1a2bb2813f8795385`, **sin drift**.
+
+Cuatro documentos nuevos:
+
+- `04-implementation-roadmap.md` — qué se verificó en `main` antes de ordenar nada, la estructura del backlog, el orden por capas con sus **cuatro desviaciones justificadas** respecto al orden tentativo de CRI-86, la cobertura del encargo, el detalle de la issue del Brandbook, y qué **no** se creó (con su fuente de decisión).
+- `04-dependency-map.md` — dependencias `HARD` / `SOFT` / `PARALLEL` con razón y riesgo de ejecutar fuera de orden, grafo, qué corre en paralelo, camino crítico y puntos de contención de archivo.
+- `04-migration-strategy.md` — sustitución incremental sin big-bang, qué migra junto, coexistencia acotada, inventario completo de las siete claves persistidas + IndexedDB con su destino, continuidad de undo/selección/borradores/foco, cómo se evita la divergencia Compact/Expanded, rollback por slice y política de gates focales.
+- `04-implementation-risk-register.md` — 32 riesgos con probabilidad, impacto, **detección**, mitigación e issue dueña.
+
+**Backlog creado: 19 issues reales en Linear.** Épico **CRI-88** (hijo de CRI-6, no de CRI-12: la implementación no cuelga de los registros de investigación) + **18 slices**, CRI-89…CRI-106, cada uno con objetivo visible, baseline a revalidar, alcance/fuera de alcance, contratos protegidos, dependencias, archivos orientativos, riesgos, criterios observables, QA Expanded/Medium/Compact + mouse/teclado/touch + Día/Noche + ES/EN + focus/reduced-motion, gates focales, rollout, rollback y evidencia exigida. CRI-86 bloquea CRI-88; CRI-88 bloquea CRI-87.
+
+**Primera issue READY del camino crítico: CRI-89** (resolutor de composición X2/M1/K0). Arrancan también sin bloqueo, en paralelo: CRI-90 (materia `SHEET`/`MODAL`), **CRI-91 (Brandbook renovado)**, CRI-92 y CRI-93 (spikes).
+
+**La issue del Brandbook (CRI-91) se adelantó al arranque**, frente al puesto 13 del orden tentativo de CRI-86. Razón: `brand/**` + `tokens.css` + Component Lab son disjuntos de `src/features/**`, así que no bloquea la fundación; y dejarla al final obligaría a someter cada slice de UI dos veces al QA de Día/Noche y contraste — una sobre lima y otra sobre menta. Actualiza el **Brandbook canónico en su sitio**: no crea un "Brandbook v2" ni un sistema visual paralelo.
+
+**Corrección de hecho descubierta al verificar `main`:** §6.9 de `02-ux-direction-record.md` marca como `VERIFIED` que la Command Palette *"ejecuta comandos del mismo `CommandRegistry` que los botones visibles"*. **No existe ningún `CommandRegistry` en `src/**`**: `CommandPalette.tsx` construye su propia lista en línea; lo compartido es `TOOL_REGISTRY` (sólo herramientas) y el bus tipado `workspaceCommands.ts` (sin etiqueta, atajo ni estado de habilitado). La coherencia de hoy es por convención, no por construcción. CRI-103 **crea** el registro; no lo cablea. Queda registrado en la propia issue y en §0 del roadmap.
+
+**Hecho del repositorio que gobierna una dependencia:** `scripts/protected-baseline.sha256` cubre `src/store/ProjectContext.tsx` y `src/types.ts`. Como los ocho campos `settings.show*` viven en `ProjectSettings` dentro de `src/types.ts`, la superficie `view` de D-10 no se puede especificar sin el veredicto de la evaluación — por eso **CRI-92 bloquea de forma dura a CRI-99**. Es el único bloqueo del backlog que nace de un gate del repositorio y no de una decisión de diseño.
+
+**No apareció ninguna decisión de producto no cerrada que impidiera crear una issue correcta**, así que no hubo nada que preguntar al propietario. Cada ítem abierto tenía disposición explícita: `settings.show*` → issue de evaluación, no de migración; serif → excluido explícitamente; LEDGER-05 → orden ya fijado, asignado a CRI-106; ABIERTA-1/4/6/7 y U-11 → gates o valores provisionales marcados como tales. La duda sobre Welcome vs ProjectHub se resolvió **verificando código**: el hub vive dentro de Welcome, no compite con él. La única elección genuina de esta fase era el **orden**, y CRI-86 §A la delega explícitamente en CRI-12D.
+
 ## Actualización — CRI-12C cerrado (dirección visual)
 
 Las preguntas **12, 13, 14 y 15** de la sección "Preguntas para CRI-12C" de abajo están **cerradas**, decididas por el propietario del producto en conversación directa (bloques de ≤3 preguntas, opciones + recomendación explícita), sobre HEAD `066eaa1ee8dc11ad8b787ddb43ef6d6a5e5a1744` de esta rama. Baseline de `main` reverificado: `7fb927fb6d118925e63365d1a2bb2813f8795385`, **sin drift**.
@@ -105,6 +128,16 @@ La identidad de color de marca (lima vs menta/esmeralda) **no** es un invariante
 - No hubo merge a `main`, no hubo publicación en GitHub Pages.
 - No se decidió menta/lima ni ningún otro color en CRI-12A — se verificó que lima es el estado vigente de `main` (`VERIFIED_CURRENT`) y se dejó explícitamente como `MUST_DECIDE_IN_12C` la comparación con la familia menta/esmeralda histórica (§D de `01b-inherited-decisions.md`, pregunta 12 arriba).
 - No se prototipó ni se diseñó nada nuevo — todo lo citado como `PROTOTYPE_VALIDATED` proviene de `d2a4dbfa20c08f1e22206619ee4291794555546a`, ya congelado, no ampliado aquí.
+
+## Confirmación de alcance de CRI-12D
+
+- Único directorio creado o modificado: `reports/cri-12/**` (`04-implementation-roadmap.md`, `04-dependency-map.md`, `04-migration-strategy.md`, `04-implementation-risk-register.md`, actualización de este `HANDOFF.md`).
+- Cero cambios en `src/**`, `brand/**`, `src/design-system/tokens.css` y Component Lab. Todo lo citado del código se verificó **por lectura directa** sobre `origin/main` = `7fb927fb`, no por corrida.
+- No se ejecutó ningún gate (`verify:*`, `npm test`) ni suite de pruebas.
+- No se implementó **ninguna** issue del backlog. No hubo prototipo, no hubo merge a `main`, no hubo publicación en GitHub Pages.
+- Se crearon 19 issues reales en Linear (CRI-88 + CRI-89…CRI-106), con prioridad razonada, padre correcto, `blockedBy`/`blocks` explícitos, labels y descripción autocontenida.
+- Ninguna issue reabre UX ni dirección visual: 12B y 12C siguen cerrados. Lo rechazado sigue rechazado (Esencial/Completa **no** tiene issue), lo diferido sigue diferido (marco de selección direccional), y las peticiones abiertas siguen sin ejecutarse (tarjetas en Datasheet/tablas densas, serif editorial).
+- Los P0 del *Backlog maestro* se verificaron **Done** en Linear (CRI-13, CRI-20, CRI-33, CRI-34, CRI-54) antes de ordenar trabajo, según exige el START de CRI-86.
 
 ## Confirmación de alcance de CRI-12C
 
