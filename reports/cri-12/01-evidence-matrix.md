@@ -4,6 +4,8 @@
 
 Clasificación por tema según la jerarquía de `docs/README.md` y las etiquetas del encargo: `VERIFIED`, `PRODUCT_DECISION_ALREADY_CLOSED`, `PROTOTYPE_VALIDATED`, `EXPERIMENTAL`, `UNKNOWN`, `MUST_DECIDE_IN_12B`, `MUST_DECIDE_IN_12C`. Un tema puede llevar más de una etiqueta cuando arquitectura, implementación y validación de prototipo están en estados distintos — eso es información, no ambigüedad. Los ítems `MUST_DECIDE_*` se listan en detalle, con la pregunta exacta, en `HANDOFF.md`.
 
+Nota de corrección: `VERIFIED_CURRENT` marca un hecho verificable del estado vigente de `main` (qué está implementado hoy) sin que eso implique que la decisión de producto detrás quede cerrada para siempre — se usa específicamente para identidad de color, donde CRI-12A verifica el estado actual pero no puede convertirlo en algo que CRI-12C no pueda revisar.
+
 ---
 
 ### 1. Adaptive shell (Expanded/Medium/Compact)
@@ -90,7 +92,7 @@ Clasificación por tema según la jerarquía de `docs/README.md` y las etiquetas
 ### 15. Día/Noche
 
 - **VERIFIED** — `ThemeMode = 'light' | 'dark'` (`src/types.ts:1`), `WorkspaceUIContext.tsx:17-18` expone `theme`/`setTheme`.
-- **PRODUCT_DECISION_ALREADY_CLOSED** — paleta lima única para ambos temas (ver tema 19); protegido, no reabrir.
+- **VERIFIED_CURRENT** — paleta lima única para ambos temas es el estado vigente de `main` (ver tema 19 para el detalle y la comparación pendiente para CRI-12C — no está protegida frente a revisión).
 - **Gap de disposición ya cerrada, no ejecutada** — LEDGER-04 (CRI-10): el Brandbook prescribe patrón de tres estados (claro explícito/oscuro explícito/sistema vía `@media (prefers-color-scheme: dark)`); producción sólo implementa dos (`:root` y `[data-theme='dark']`), sin bloque `@media`. Disposición ya decidida ("Media — añadir el bloque `@media` y el tercer estado en la UI"); pendiente de ejecución, no de decisión.
 - **UNKNOWN** — LEDGER-05 (contraste del pórtico en Noche): documentado, explícitamente no cambiado sin remedir.
 
@@ -112,7 +114,11 @@ Clasificación por tema según la jerarquía de `docs/README.md` y las etiquetas
 
 ### 19. Color/identidad
 
-- **PRODUCT_DECISION_ALREADY_CLOSED — NO REABRIR.** Paleta lima única para Día y Noche: *"cada rol semántico usa ahora un solo HEX, declarado una vez en `:root` y prohibido en el bloque `[data-theme='dark']`"* (commit `74dfc76`). Los tres verdes en conflicto del Brandbook (`#159a72`, `#00795f`, `#157A55`) fueron descartados en bloque a favor de `#89d448`; F-11 (la única "decisión de propietario" que CRI-7/8/9 dejaron abierta) queda así **resuelta** — no queda pendiente para CRI-12. Regla de paleta única en `tokens.css:32-41`, verificada por `tokens.test.ts`.
+- **VERIFIED_CURRENT** — `main`, `brand/brandbook-clay.html` y `src/design-system/tokens.css` usan hoy, de forma verificable, la paleta lima única para Día y Noche: *"cada rol semántico usa ahora un solo HEX, declarado una vez en `:root` y prohibido en el bloque `[data-theme='dark']`"* (commit `74dfc76`). Regla de paleta única en `tokens.css:32-41`, verificada por `tokens.test.ts`.
+- La decisión histórica que llevó a lima — descartar en bloque los tres verdes en conflicto del Brandbook (`#159a72`, `#00795f`, `#157A55`) a favor de `#89d448` — **está implementada hoy** en el estado vigente de `main`. Eso es lo que CRI-12A verifica: un hecho del estado actual, no una decisión que quede fuera del alcance de revisión de CRI-12.
+- **MUST_DECIDE_IN_12C** — CRI-12C debe comparar explícitamente **mantener lima** vs **recuperar exclusivamente la familia menta/esmeralda histórica de identidad** (la familia teal/esmeralda de marca que existía antes del cierre cromático de `74dfc76`, no una paleta nueva). Pregunta completa en `HANDOFF.md`.
+- Si en esa comparación gana menta/esmeralda, será una **decisión futura de producto**: no significa que ya esté implementada, y no autoriza por sí sola revertir los colores técnicos de dominio (punto siguiente) sin que eso pase por su propio proceso de decisión.
+- Los colores técnicos de dominio — N/axial, V/cortante, M/momento, deformada, warning, error, selección, foco, reacción — **siguen separados de la identidad de marca** en `tokens.css` (capas "Roles semánticos"/marca vs "Roles técnicos del dominio", `tokens.css:21-30`). Una eventual revisión lima↔menta en 12C afecta el rol de marca, no estos tokens técnicos.
 
 ### 20. Space3D experimental
 
@@ -130,10 +136,11 @@ Clasificación por tema según la jerarquía de `docs/README.md` y las etiquetas
 
 | Etiqueta | Temas |
 |---|---|
-| `VERIFIED` | 2, 3(base), 5, 6, 7, 8, 9, 10, 12, 13(base), 14(base), 15, 16, 17, 18, 20, 21 |
-| `PRODUCT_DECISION_ALREADY_CLOSED` | 1, 2, 3, 4, 5, 6, 7, 9, 12, 13, 15(paleta), 19, 20, 21 |
+| `VERIFIED` | 2, 3(base), 5, 6, 7, 8, 9, 10, 12, 13(base), 14(base), 16, 17, 18, 20, 21 |
+| `VERIFIED_CURRENT` | 15(paleta), 19 — estado vigente de `main`, no cerrado a revisión |
+| `PRODUCT_DECISION_ALREADY_CLOSED` | 1, 2, 3, 4, 5, 6, 7, 9, 12, 13, 20, 21 |
 | `PROTOTYPE_VALIDATED` | 3, 8, 9, 12(stale), 13 |
 | `EXPERIMENTAL` | 7(rendimiento), 10(rediseño Welcome) |
 | `UNKNOWN` | 6(U-14, no bloqueante), 7(rendimiento), 11, 14(ABIERTA-6), 15(LEDGER-05), 17(rendimiento) |
 | `MUST_DECIDE_IN_12B` | 10 (flujo Welcome), 11 (Esencial/Completa) — lista completa con preguntas en `HANDOFF.md` |
-| `MUST_DECIDE_IN_12C` | 10 (tratamiento visual Welcome) — lista completa con preguntas en `HANDOFF.md` |
+| `MUST_DECIDE_IN_12C` | 10 (tratamiento visual Welcome), 19 (lima vs menta/esmeralda histórica) — lista completa con preguntas en `HANDOFF.md` |

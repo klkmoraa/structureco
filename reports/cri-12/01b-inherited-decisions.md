@@ -27,9 +27,9 @@ Fuente: `reports/2026-08-15-0400-cri-9-arquitectura-interaccion-adaptativa.md` +
 | D-15 | Space 3D permanece separado y experimental; NO adopta el sistema de composición; sólo dos contratos neutrales (resolución de tema única, mínimos de entrada de proyecto). | **DEFERRED — congelado, no decidir en CRI-12** |
 | G-01 | Ctrl+Z/Ctrl+Y anunciados sin handler: no se retira la promesa, se acota a no disparar en campos de texto/grilla/modal con historial propio. | DECIDED — implementar más adelante |
 | G-02 | `resultTab:'issues'` se elimina del tipo; un análisis fallido es estado+ruta a Model Doctor, no una pestaña. | DECIDED — quitar del tipo |
-| F-11 | Cuál de los tres verdes de marca gana — era la única decisión de propietario pendiente. | **RESUELTA por el cierre cromático posterior** (ver §D) — ya no está abierta para CRI-12. |
+| F-11 | Cuál de los tres verdes de marca gana — era la única decisión de propietario pendiente. | **Implementada como lima por el cierre cromático posterior** (ver §D) — es el estado vigente de `main`, no una decisión cerrada a revisión. CRI-12C debe comparar explícitamente mantener lima vs recuperar la familia menta/esmeralda histórica; ver `HANDOFF.md`. |
 
-Ninguna de D-01…D-14, G-01, G-02 se re-decide en CRI-12A/B/C. Lo que falta es **ejecución** (implementarlas en `src/**`), no elección.
+Ninguna de D-01…D-14, G-01, G-02 se re-decide en CRI-12A/B/C. Lo que falta es **ejecución** (implementarlas en `src/**`), no elección. F-11 es la excepción: su implementación actual (lima) es un hecho verificado, pero la elección de identidad de color en sí queda explícitamente abierta a CRI-12C (ver §D).
 
 ## B. Disposiciones cerradas del ledger — LEDGER-01…09 (CRI-10)
 
@@ -69,12 +69,12 @@ Estas nueve son correcciones de implementación con dirección ya fijada — can
 | .canvas-layer-switch | CRI-10 (reconciliación Clay) | Inconsistencia `styles.css:2161` vs `:3677`, único cambio de `src/**` que CRI-10 recomienda y deliberadamente no ejecutó. | `HANDOFF.md` (corrección técnica de bajo riesgo, no decisión de diseño) |
 | Multi-browser | CRI-11 | Sólo Chromium probado en las tres fases; Firefox/WebKit no instalados en el entorno del prototipo. | `HANDOFF.md` → 12B (verificación técnica) |
 
-## D. Cierre cromático — ya ejecutado, protegido (no es "abierto")
+## D. Cierre cromático — ejecutado, es el estado vigente, pero no cerrado a revisión de CRI-12C
 
 - Commit `74dfc76`: *"Sustituye la familia teal/esmeralda por una lima viva y elimina la segunda paleta nocturna: cada rol semántico usa ahora un solo HEX… El brandbook queda como autoridad única de color y cierra su nota abierta sobre los tres verdes candidatos."*
 - Commit `f60eae5`: sube el croma manteniendo la misma franja de luminancia y el mismo mecanismo de invariancia Día/Noche.
 - Commit `7fb927f`: Component Lab pasa a abrir por defecto en la paleta oficial; paletas previas (continuity/mineral/analytical) quedan agrupadas como "Históricas · supersedidas".
-- Esto resuelve F-11 (§A) y cierra el tema 19 de la matriz de evidencia. **No es una pregunta para CRI-12.**
+- Esto es lo que CRI-12A verifica como **hecho del estado actual** (`VERIFIED_CURRENT`, tema 19 de la matriz de evidencia): lima es la paleta implementada hoy en `main`, Brandbook y `tokens.css`. No es lo mismo que decir que la elección de identidad quede fuera del alcance de CRI-12. **CRI-12C debe comparar explícitamente mantener lima vs recuperar exclusivamente la familia menta/esmeralda histórica** — pregunta completa en `HANDOFF.md`. Si esa comparación mantiene lima, no cambia nada; si resulta en menta/esmeralda, es una decisión de producto nueva de 12C, no una que ya esté implementada, y no autoriza por sí sola tocar los colores técnicos de dominio (§E).
 
 ## E. Fronteras protegidas que CRI-12 no toca
 
@@ -89,4 +89,4 @@ Extraídas literalmente de los reportes fuente — se repiten aquí porque son l
 - **Mismo analysis, no segundo solver**: *"un solo solver / análisis 2D — intacto, nada de lo decidido lo toca"* (CRI-9, verificación de restricciones). Space3D tiene su propio solver por diseño para el dominio 3D — no es un segundo solver sobre datos 2D; el puente `src/space3d/data/bridge2d.ts` es de sólo lectura, unidireccional 2D→3D.
 - **materialId/sectionId explícitos, nunca inferidos por floats**: *"la unificación no puede tocar esta fortaleza"* (D-12); test dedicado `identityMetadata.test.ts`.
 - **Colores técnicos por significado**: regla de paleta única de `tokens.css:32-41`, mapeo de severidad vía `reliabilityCopy.ts`, no hex ad hoc.
-- **Brandbook vigente como autoridad visual**: *"la autoridad de color es `brand/brandbook-clay.html`… este archivo no decide identidad: la implementa"* (`tokens.css:32-41`); confirmado sin modificar en todo CRI-10 (*"ningún HEX ni token de tokens.css se modificó en todo CRI-10"*).
+- **Brandbook vigente como autoridad visual**: *"la autoridad de color es `brand/brandbook-clay.html`… este archivo no decide identidad: la implementa"* (`tokens.css:32-41`); confirmado sin modificar en todo CRI-10 (*"ningún HEX ni token de tokens.css se modificó en todo CRI-10"*). Esto protege el mecanismo — que el Brandbook, no cada implementación suelta, es la fuente única de color — no un HEX concreto: la identidad de color en sí (lima vs menta/esmeralda) es explícitamente `MUST_DECIDE_IN_12C` (tema 19), y esa fase, si decide una modificación, es la que actualizaría el propio Brandbook de forma explícita.
