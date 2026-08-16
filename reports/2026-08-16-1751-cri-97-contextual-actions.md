@@ -33,7 +33,7 @@ CRI-97 requiere paridad táctil sin redefinir mutaciones, una única capa contex
 - `npm.cmd run qa:structural-edits` — Chromium PASS.
 - `npm.cmd run qa:structural-edits:webkit` — WebKit PASS.
 - `npm.cmd run build` — PASS.
-- `npm.cmd run lint` se ejecutó literalmente; agotó 184 s sin diagnóstico debido al árbol local no versionado. El suplemento `npx.cmd oxlint src scripts qa.mjs qa-webkit.mjs` no reportó errores nuevos; conserva dos advertencias preexistentes de Fast Refresh por exports compartidos de `ContextualActions.tsx`.
+- `npm.cmd run lint` se ejecutó literalmente; agotó 184 s sin diagnóstico, con árboles locales no versionados presentes. El suplemento `npx.cmd oxlint src scripts qa.mjs qa-webkit.mjs` no reportó errores nuevos; emitió dos advertencias no bloqueantes de Fast Refresh por exports compartidos de `ContextualActions.tsx`.
 
 Los artefactos reproducibles no versionados están en `qa-artifacts/structural-edits-{chromium,webkit}.json` y `qa-artifacts/cri-97-*.png`. Ambos navegadores reportaron `readText` presente pero bloqueado con `NotAllowedError`; Pegar usó la copia interna y mantuvo `materialId: steel-a36` y `sectionId: w310x39`. El paisaje ES Compact registró `scrollWidth: 844` para viewport 844.
 
