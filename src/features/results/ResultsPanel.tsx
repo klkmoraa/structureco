@@ -18,6 +18,7 @@ import { formatResultNumber } from './resultFormatting';
 import { buildStiffnessSubstitution } from './stiffnessSubstitution';
 import { formatFixed, formatScientific, formatSignificant } from '../../utils/numberFormat';
 import { emitWorkspaceCommand, onWorkspaceCommand } from '../workspace/workspaceCommands';
+import { useShellComposition } from '../workspace/useShellComposition';
 import { ProvenanceCard } from './ProvenanceCard';
 import type { ResultRef } from './provenance';
 import { ClassroomPedagogyLevels } from '../classroom/ClassroomPedagogyLevels';
@@ -80,10 +81,8 @@ const readResultsMode = (): ResultsPanelMode => {
   return stored === 'compact' || stored === 'expanded' ? stored : 'expanded';
 };
 
-const MOBILE_RESULTS_QUERY = '(max-width: 1023px)';
-const PHONE_RESULTS_QUERY = '(max-width: 700px)';
-const isMobileResultsViewport = () => typeof window !== 'undefined' && Boolean(window.matchMedia?.(MOBILE_RESULTS_QUERY).matches);
-const isPhoneResultsViewport = () => typeof window !== 'undefined' && Boolean(window.matchMedia?.(PHONE_RESULTS_QUERY).matches);
+// Results ya no consulta el ancho: `K0` es su modo móvil y `phone` su
+// sub-umbral, ambos resueltos una sola vez por el resolutor del shell (R-3).
 
 // WorkspaceShell already tracks window.visualViewport (keyboard-aware, unlike
 // window.innerHeight) and publishes it as --sc-visual-viewport-height on the
@@ -102,11 +101,14 @@ const getViewportHeightPx = (referenceElement: HTMLElement | null): number => {
 export const ResultsPanel = () => {
   const { project, analysis, resultTab, setResultTab, analyze, selection, isAnalyzing, selectedCombinationId, resultCursor, setInfluenceCanvasState } = useProject();
   const { t } = useI18n();
-  const [height, setHeight] = useState(() => isMobileResultsViewport() ? Math.min(330, window.innerHeight * 0.4) : 285);
+  // La clase no se copia a estado local: se lee. Duplicarla es exactamente el
+  // antipatrón que CRI-89 elimina — dos componentes podrían discrepar de clase.
+  const { shellClass, phone: isPhone } = useShellComposition();
+  const isMobile = shellClass === 'K0';
+  const [height, setHeight] = useState(() => isMobile ? Math.min(330, window.innerHeight * 0.4) : 285);
   const [drag, setDrag] = useState<{ y: number; height: number } | null>(null);
-  const [isMobile, setIsMobile] = useState(isMobileResultsViewport);
-  const [isPhone, setIsPhone] = useState(isPhoneResultsViewport);
-  const [mobileExpanded, setMobileExpanded] = useState(() => !isMobileResultsViewport());
+  const [mobileExpanded, setMobileExpanded] = useState(() => !isMobile);
+  const previousIsMobileRef = useRef(isMobile);
   const [panelMode, setPanelMode] = useState<ResultsPanelMode>(readResultsMode);
   const previousAnalysisRef = useRef(analysis);
   const resizeFrameRef = useRef<number | null>(null);
@@ -288,26 +290,18 @@ export const ResultsPanel = () => {
       mobileFitTimerRef.current = window.setTimeout(finish, Math.max(800, transitionTime + 200));
     });
   }, [cancelScheduledPhoneFit]);
+  // Entrar o salir de Compact reencuadra el panel. Sólo se dispara en el CAMBIO
+  // de clase, igual que el `change` de la media query que sustituye: montar el
+  // panel no reencuadra nada, y una recomposición no cierra Results — lo
+  // colapsa a su banda, que es donde vivía en esa clase (T-INV-2).
   useEffect(() => {
-    const query = window.matchMedia?.(MOBILE_RESULTS_QUERY);
-    if (!query) return undefined;
-    const update = (event: MediaQueryListEvent) => {
-      setIsMobile(event.matches);
-      if (event.matches) {
-        setHeight(Math.min(330, getViewportHeightPx(panelRef.current) * 0.4));
-        setMobileExpanded(false);
-      } else setMobileExpanded(true);
-    };
-    query.addEventListener('change', update);
-    return () => query.removeEventListener('change', update);
-  }, []);
-  useEffect(() => {
-    const query = window.matchMedia?.(PHONE_RESULTS_QUERY);
-    if (!query) return undefined;
-    const update = (event: MediaQueryListEvent) => setIsPhone(event.matches);
-    query.addEventListener('change', update);
-    return () => query.removeEventListener('change', update);
-  }, []);
+    if (previousIsMobileRef.current === isMobile) return;
+    previousIsMobileRef.current = isMobile;
+    if (isMobile) {
+      setHeight(Math.min(330, getViewportHeightPx(panelRef.current) * 0.4));
+      setMobileExpanded(false);
+    } else setMobileExpanded(true);
+  }, [isMobile]);
   useEffect(() => {
     if (isMobile && analysis && analysis !== previousAnalysisRef.current) {
       rememberMobileLauncher(document.activeElement);

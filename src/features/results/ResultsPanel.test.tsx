@@ -13,10 +13,20 @@ import { ResultsPanel } from './ResultsPanel';
 
 const RESULTS_MODE_STORAGE_KEY = 'structureCo.results.mode.v1';
 
-const mockMatchMedia = (viewport: boolean | 'phone' = false) => vi.fn().mockImplementation((query: string) => ({
-  matches: query === '(max-width: 1023px)'
-    ? viewport === true || viewport === 'phone'
-    : query === '(max-width: 700px)' && viewport === 'phone',
+/**
+ * Results ya no consulta `matchMedia`: su modo lo decide la clase que resuelve
+ * el shell a partir del viewport (CRI-89). Fijar el viewport es ahora la única
+ * forma de elegir composición desde una prueba — y la misma que usa producción.
+ */
+const setViewport = (viewport: 'desktop' | 'tablet' | 'phone' = 'desktop') => {
+  const [width, height] = viewport === 'phone' ? [390, 844] : viewport === 'tablet' ? [900, 1000] : [1440, 900];
+  Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
+  Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: height });
+};
+
+/** Sigue haciendo falta para `prefers-color-scheme`, que jsdom no implementa. */
+const stubMatchMedia = () => vi.fn().mockImplementation((query: string) => ({
+  matches: false,
   media: query,
   onchange: null,
   addEventListener: vi.fn(),
@@ -61,7 +71,7 @@ beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
     writable: true,
-    value: mockMatchMedia(),
+    value: stubMatchMedia(),
   });
   window.requestAnimationFrame = (callback: FrameRequestCallback) => window.setTimeout(() => callback(performance.now()), 0);
   window.cancelAnimationFrame = (handle: number) => window.clearTimeout(handle);
@@ -69,7 +79,8 @@ beforeAll(() => {
 
 beforeEach(() => {
   localStorage.clear();
-  window.matchMedia = mockMatchMedia();
+  window.matchMedia = stubMatchMedia();
+  setViewport('desktop');
 });
 afterEach(() => {
   cleanup();
@@ -195,7 +206,7 @@ describe('Results analytical center', () => {
 
   it('lets an unpinned chart Escape close the mobile results sheet', async () => {
     const user = userEvent.setup();
-    window.matchMedia = mockMatchMedia(true);
+    setViewport('tablet');
     renderResults();
 
     const toggle = screen.getByRole('button', { name: 'Resultados' });
@@ -338,7 +349,7 @@ describe('Results analytical center', () => {
 
   it('uses a modal tablet sheet with focus trap, Escape return, and safe focused-mode normalization', async () => {
     const user = userEvent.setup();
-    window.matchMedia = mockMatchMedia(true);
+    setViewport('tablet');
     localStorage.setItem(RESULTS_MODE_STORAGE_KEY, 'focused');
     renderResults();
 
@@ -364,7 +375,7 @@ describe('Results analytical center', () => {
 
   it('keeps the phone results sheet modeless so the canvas remains reachable', async () => {
     const user = userEvent.setup();
-    window.matchMedia = mockMatchMedia('phone');
+    setViewport('phone');
     const { container } = renderResults();
     const canvasHost = document.createElement('div');
     canvasHost.className = 'canvas-host';
@@ -390,7 +401,7 @@ describe('Results analytical center', () => {
 
   it('uses phone focus mode temporarily and reopens as the canvas-preserving panel', async () => {
     const user = userEvent.setup();
-    window.matchMedia = mockMatchMedia('phone');
+    setViewport('phone');
     renderResults();
 
     const toggle = screen.getByRole('button', { name: 'Resultados' });
@@ -411,7 +422,7 @@ describe('Results analytical center', () => {
 
   it('leaves Escape to a visible modal above the modeless phone results', async () => {
     const user = userEvent.setup();
-    window.matchMedia = mockMatchMedia('phone');
+    setViewport('phone');
     renderResults();
     await user.click(screen.getByRole('button', { name: 'Resultados' }));
     const sheet = await screen.findByRole('region', { name: /Resultados del an/ });
@@ -435,7 +446,7 @@ describe('Results analytical center', () => {
 
   it('requests a fresh phone canvas fit when a new analysis expands the results', async () => {
     const user = userEvent.setup();
-    window.matchMedia = mockMatchMedia('phone');
+    setViewport('phone');
     const onFitCanvas = vi.fn();
     window.addEventListener('structureco:fit-canvas', onFitCanvas);
 
@@ -451,7 +462,7 @@ describe('Results analytical center', () => {
 
   it('keeps native learning summaries inside the mobile focus loop', async () => {
     const user = userEvent.setup();
-    window.matchMedia = mockMatchMedia(true);
+    setViewport('tablet');
     renderResults();
 
     await user.click(screen.getByRole('button', { name: 'Resultados' }));
@@ -468,7 +479,7 @@ describe('Results analytical center', () => {
 
   it('falls back to the results launcher when the remembered Inspector control becomes hidden', async () => {
     const user = userEvent.setup();
-    window.matchMedia = mockMatchMedia(true);
+    setViewport('tablet');
     renderResults();
     const hiddenInspector = document.createElement('aside');
     hiddenInspector.className = 'inspector-panel mobile-open';

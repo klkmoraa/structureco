@@ -11,6 +11,9 @@ import { useI18n } from '../../i18n/useI18n';
 import { useProject } from '../../store/ProjectContext';
 import { createPersistedEditorLayerState, editorLayerReducer, persistEditorLayerState } from '../canvas/editorLayers';
 import { AppShellLayout } from './AppShellLayout';
+import { isToolRailCompact } from './shellComposition';
+import { ShellCompositionProvider } from './ShellCompositionProvider';
+import { useShellComposition } from './useShellComposition';
 import { normalizeInspectorDetent, useWorkspaceLayoutPreferences } from './useWorkspaceLayoutPreferences';
 import '../../design-system/components/ui.css';
 import './phase1.css';
@@ -23,7 +26,7 @@ const LazyModelDoctor = lazy(() => import('../model-doctor/ModelDoctor').then((m
 /** La hoja de datos sólo se descarga cuando alguien la abre. */
 const LazyDatasheet = lazy(() => import('../datasheet/DatasheetPanel').then((module) => ({ default: module.DatasheetPanel })));
 
-export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string }) => {
+const WorkspaceSurface = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string }) => {
   const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [modelDoctorOpen, setModelDoctorOpen] = useState(false);
@@ -39,6 +42,8 @@ export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpe
   const { t } = useI18n();
   const { project, analysis, setActiveTool, analyze } = useProject();
   const { preferences: layout, setPreference, togglePreference } = useWorkspaceLayoutPreferences();
+  const { shellClass } = useShellComposition();
+  const previousShellClassRef = useRef(shellClass);
 
   useEffect(() => persistEditorLayerState(editorLayers), [editorLayers]);
 
@@ -62,15 +67,15 @@ export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpe
     setMobileInspectorOpen(true);
   }, []);
 
+  // Salir de Compact devuelve el Inspector a su dock: la hoja modal deja de
+  // existir como presentación. Sólo actúa en el CAMBIO de clase —igual que el
+  // evento `change` de la media query que sustituye—, así que recomponer no
+  // puede cerrar por su cuenta una superficie que ya estaba abierta (T-INV-2).
   useEffect(() => {
-    const desktop = window.matchMedia?.('(min-width: 1024px)');
-    if (!desktop) return undefined;
-    const syncBreakpoint = () => {
-      if (desktop.matches) setMobileInspectorOpen(false);
-    };
-    desktop.addEventListener?.('change', syncBreakpoint);
-    return () => desktop.removeEventListener?.('change', syncBreakpoint);
-  }, []);
+    if (previousShellClassRef.current === shellClass) return;
+    previousShellClassRef.current = shellClass;
+    if (shellClass !== 'K0') setMobileInspectorOpen(false);
+  }, [shellClass]);
 
   useEffect(() => {
     const normalizeDetent = () => {
@@ -123,12 +128,12 @@ export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpe
       }
       setMobileInspectorOpen(false);
       setPaletteOpen(false);
-      if (window.matchMedia?.('(max-width: 1023px)').matches) {
+      if (shellClass === 'K0') {
         emitWorkspaceCommand('collapse-mobile-results');
       }
     }
     setModelDoctorOpen(open);
-  }, [setDoctorBackgroundState]);
+  }, [setDoctorBackgroundState, shellClass]);
 
   const doctorSurfaceReady = useCallback(() => {
     if (!modelDoctorOpen) return;
@@ -232,17 +237,16 @@ export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpe
     ref={shellRef}
     projectId={projectId}
     skipLabel={t('shell.skipToCanvas')}
+    shellClass={shellClass}
     inspectorCollapsed={layout.inspectorCollapsed}
     inspectorWidth={layout.inspectorWidth}
     fullCanvas={layout.fullCanvas}
-    toolRailCompact={layout.toolRailCompact}
     topBar={<TopBar
       onOpenHome={onOpenHome}
       onOpenSpace3D={onOpenSpace3D}
       layoutActions={{
         inspectorCollapsed: layout.inspectorCollapsed,
         fullCanvas: layout.fullCanvas,
-        toolRailCompact: layout.toolRailCompact,
         onToggleInspector: () => {
           setMobileInspectorOpen(false);
           if (layout.fullCanvas) {
@@ -256,14 +260,13 @@ export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpe
           setMobileInspectorOpen(false);
           togglePreference('fullCanvas');
         },
-        onToggleToolRail: () => togglePreference('toolRailCompact'),
       }}
     />}
-    toolRail={<ToolRail compact={layout.toolRailCompact} />}
+    toolRail={<ToolRail compact={isToolRailCompact(shellClass)} />}
     workspace={<>
         {project.settings.calculationMode === 'classroom' ? <ClassroomGuide className="classroom-workspace-journey" project={project} analysis={analysis} onChooseTool={setActiveTool} onAnalyze={analyze} /> : null}
         <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => {
-          if (window.matchMedia('(max-width: 1023px)').matches) openMobileInspector();
+          if (shellClass === 'K0') openMobileInspector();
         }} />
         <ResultsPanel />
         <ToastNotification />
@@ -309,5 +312,14 @@ export const WorkspaceShell = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpe
     footer={<div className="professional-note">{t('app.professionalNote')}</div>}
   />;
 };
+
+/**
+ * El proveedor de composición envuelve la mesa entera y nada más: la clase debe
+ * estar disponible para el riel, Results y Model Doctor —que cuelgan de aquí—
+ * sin viajar por `WorkspaceUIContext`, donde cada emisión arrastraría también a
+ * la selección y al tema.
+ */
+export const WorkspaceShell = (props: { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string }) =>
+  <ShellCompositionProvider><WorkspaceSurface {...props} /></ShellCompositionProvider>;
 
 export default WorkspaceShell;

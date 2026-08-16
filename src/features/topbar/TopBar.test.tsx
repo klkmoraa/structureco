@@ -307,14 +307,11 @@ describe('TopBar information architecture', () => {
     const user = userEvent.setup();
     const onToggleInspector = vi.fn();
     const onToggleFullCanvas = vi.fn();
-    const onToggleToolRail = vi.fn();
     render(<TopBarHarness><TopBar layoutActions={{
       inspectorCollapsed: false,
       fullCanvas: false,
-      toolRailCompact: false,
       onToggleInspector,
       onToggleFullCanvas,
-      onToggleToolRail,
     }} /></TopBarHarness>);
 
     await user.click(screen.getByRole('button', { name: 'Más acciones' }));
@@ -325,8 +322,9 @@ describe('TopBar information architecture', () => {
     await user.click(screen.getByRole('button', { name: 'Mesa de trabajo completa' }));
     expect(onToggleFullCanvas).toHaveBeenCalledOnce();
 
+    // La compacidad del riel dejó de ser una intención del usuario (CRI-89): la
+    // decide la clase de composición, así que su conmutador ya no existe.
     await user.click(screen.getByRole('button', { name: 'Más acciones' }));
-    await user.click(screen.getByRole('button', { name: 'Contraer herramientas' }));
-    expect(onToggleToolRail).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('button', { name: 'Contraer herramientas' })).toBeNull();
   });
 });

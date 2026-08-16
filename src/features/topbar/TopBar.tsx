@@ -15,8 +15,6 @@ import {
   Minimize2,
   Moon,
   MoreHorizontal,
-  PanelLeftClose,
-  PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
   Play,
@@ -46,13 +44,17 @@ import type { PDeltaConfig } from '../../types';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
 
+/**
+ * La compacidad del riel salió de aquí en CRI-89: la decide la clase de
+ * composición, no el usuario, así que su conmutador dejó de tener un estado que
+ * conmutar. El resto de acciones de vista —inspector y lienzo completo— siguen
+ * siendo intenciones del usuario y no cambian.
+ */
 export interface TopBarLayoutActions {
   inspectorCollapsed: boolean;
   fullCanvas: boolean;
-  toolRailCompact: boolean;
   onToggleInspector: () => void;
   onToggleFullCanvas: () => void;
-  onToggleToolRail: () => void;
 }
 
 export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHome?: () => void; onOpenSpace3D?: () => void; layoutActions?: TopBarLayoutActions }) => {
@@ -508,10 +510,6 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
                   <button onClick={() => { layoutActions.onToggleFullCanvas(); setShowMobileMenu(false); }}>
                     {layoutActions.fullCanvas ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
                     {layoutActions.fullCanvas ? t('shell.exitFullCanvas') : t('shell.fullCanvas')}
-                  </button>
-                  <button className="overflow-toolrail-action" onClick={() => { layoutActions.onToggleToolRail(); setShowMobileMenu(false); }}>
-                    {layoutActions.toolRailCompact ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
-                    {layoutActions.toolRailCompact ? t('shell.expandToolRail') : t('shell.compactToolRail')}
                   </button>
                 </div> : null}
 

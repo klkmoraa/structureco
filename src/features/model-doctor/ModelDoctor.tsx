@@ -16,6 +16,7 @@ import { Drawer } from '../../design-system/components/overlays';
 import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
+import { useShellComposition } from '../workspace/useShellComposition';
 import { buildModelDoctorReport, type ModelDoctorFinding, type ModelDoctorSeverity } from './modelDoctorDiagnostics';
 import { getModelDoctorCopy } from './modelDoctorCopy';
 import { presentModelDoctorFinding } from './modelDoctorPresentation';
@@ -39,20 +40,6 @@ const SEVERITY_ICONS = {
   critical: ShieldAlert,
   warning: CircleAlert,
   suggestion: Lightbulb,
-};
-
-const useCompactDoctor = (): boolean => {
-  const query = '(max-width: 700px)';
-  const [compact, setCompact] = useState(() => typeof window !== 'undefined' && Boolean(window.matchMedia?.(query).matches));
-  useEffect(() => {
-    const media = window.matchMedia?.(query);
-    if (!media) return undefined;
-    const sync = () => setCompact(media.matches);
-    sync();
-    media.addEventListener?.('change', sync);
-    return () => media.removeEventListener?.('change', sync);
-  }, []);
-  return compact;
 };
 
 const technicalValue = (value: unknown): string => {
@@ -254,7 +241,9 @@ export const ModelDoctor = ({
   const appliedStatusRef = useRef<HTMLParagraphElement>(null);
   const idScope = useId().replace(/[^A-Za-z0-9_-]/g, '');
   const acknowledged = acknowledgedIds ?? localAcknowledged;
-  const compact = useCompactDoctor();
+  // El lado por el que entra el cajón lo decide la composición, no una media
+  // query propia del Doctor: R-3, ninguna superficie pide su presentación.
+  const { phone: compact } = useShellComposition();
 
   useEffect(() => {
     if (open) onSurfaceReady?.();

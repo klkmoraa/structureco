@@ -33,6 +33,7 @@ import {
   toolsInGroup,
 } from './toolRegistry';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
+import { useShellComposition } from '../workspace/useShellComposition';
 
 const toolIcons: Record<Tool, LucideIcon> = {
   select: MousePointer2,
@@ -184,6 +185,8 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
   const loadMenuButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuButtonRef = useRef<HTMLButtonElement>(null);
   const paletteRef = useRef<HTMLElement>(null);
+  const { shellClass } = useShellComposition();
+  const previousShellClassRef = useRef(shellClass);
   const { t } = useI18n();
   const classroom = project.settings.calculationMode === 'classroom';
   const activeDefinition = TOOL_REGISTRY.find((tool) => tool.id === activeTool);
@@ -273,15 +276,15 @@ export const ToolBar = ({ compact = false }: ToolBarProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mobileMenu]);
 
+  // Las hojas de herramientas sólo existen como presentación en Compact: al
+  // salir de `K0` dejan de tener destino. Igual que el `change` de la media
+  // query que sustituye, sólo reacciona al CAMBIO de clase — montar la barra ya
+  // fuera de Compact no puede cerrar una hoja que el usuario acaba de abrir.
   useEffect(() => {
-    const query = window.matchMedia?.('(max-width: 1023px)');
-    if (!query) return undefined;
-    const onChange = (event: MediaQueryListEvent) => {
-      if (!event.matches) setMobileMenu(null);
-    };
-    query.addEventListener('change', onChange);
-    return () => query.removeEventListener('change', onChange);
-  }, []);
+    if (previousShellClassRef.current === shellClass) return;
+    previousShellClassRef.current = shellClass;
+    if (shellClass !== 'K0') setMobileMenu(null);
+  }, [shellClass]);
 
   const paletteTitle = mobileMenu === 'loads' ? t('toolbar.addLoad') : t('toolbar.moreSheetTitle');
   const paletteDescription = mobileMenu === 'loads' ? t('toolbar.loadSheetDescription') : t('toolbar.moreSheetDescription');

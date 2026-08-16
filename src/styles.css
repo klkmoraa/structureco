@@ -861,6 +861,11 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .table-wrap { padding: 14px 18px; overflow: auto; }
 .results-table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: var(--sc-font-size-technical); font-variant-numeric: tabular-nums; }
 .results-table th { color: var(--muted); font-weight: 550; text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--border); }.results-table th:first-child,.results-table td:first-child{text-align:left}.results-table td{text-align:right;padding:8px 10px;border-bottom:1px solid var(--border-soft)}
+/* Densidad de fila por clase de composición (CRI-89). `height` en una celda de
+   tabla se comporta como mínimo, así que en Expanded el token (30px) queda por
+   debajo del alto natural de la fila y no cambia nada de lo que hay hoy; en
+   Medium y en Compact la fila crece hasta la densidad que su clase paga. */
+.results-table th, .results-table td { height: var(--sc-density-row); }
 .diagram-result-layout { display:grid; grid-template-columns: 310px minmax(0,1fr); min-height:100%; }
 .results-metric-cards { grid-column:1/-1; display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:7px; margin:12px 18px 0; }
 .results-metric-cards > div,

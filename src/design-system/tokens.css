@@ -558,6 +558,10 @@
   --sc-density-row-compact: 30px;
   --sc-density-row-comfortable: 36px;
   --sc-density-row-touch: 44px;
+  /* Densidad efectiva de fila. Su valor lo conmuta la clase de composición
+     (CRI-89) y nadie más; este es sólo el defecto para superficies que se
+     renderizan fuera del shell (Inicio, Component Lab). */
+  --sc-density-row: var(--sc-density-row-comfortable);
 
   /* ------------------------------------------------------------------ */
   /* 8 · MOTION Y APILAMIENTO                                            */
@@ -821,3 +825,18 @@
     --sc-clay-press-transform: none;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* DENSIDAD POR CLASE DE COMPOSICIÓN — CRI-89                          */
+/* ------------------------------------------------------------------ */
+/* Los tres tokens de densidad existían desde el principio y nadie los
+   conmutaba: la clase de composición es lo que faltaba. `data-shell-class` lo
+   publica el shell con la salida del resolutor, y es la ÚNICA condición que
+   elige densidad — ninguna media query de ancho vuelve a hacerlo.
+
+   Expanded es trabajo de puntero fino sobre pantalla ancha y paga la fila
+   profesional; Medium respira; Compact llega al objetivo táctil de 44px que
+   LEDGER-07 ya exigía. */
+.app-shell[data-shell-class='X2'] { --sc-density-row: var(--sc-density-row-compact); }
+.app-shell[data-shell-class='M1'] { --sc-density-row: var(--sc-density-row-comfortable); }
+.app-shell[data-shell-class='K0'] { --sc-density-row: var(--sc-density-row-touch); }
