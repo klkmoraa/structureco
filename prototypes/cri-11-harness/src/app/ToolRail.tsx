@@ -23,14 +23,16 @@ interface Tool {
   labelKey: TranslationKey;
   hintKey: TranslationKey;
   glyph: string;
+  /** Atajo auditado (CRI-9 G-01, `core/commands.ts`) — sólo activo con foco en el lienzo. */
+  shortcut: string;
 }
 
 const TOOLS: Tool[] = [
-  { id: 'select', labelKey: 'toolrail.select', hintKey: 'toolrail.hintSelect', glyph: '⌖' },
-  { id: 'node', labelKey: 'toolrail.node', hintKey: 'toolrail.hintNode', glyph: '●' },
-  { id: 'member', labelKey: 'toolrail.member', hintKey: 'toolrail.hintMemberStart', glyph: '╱' },
-  { id: 'support', labelKey: 'toolrail.support', hintKey: 'toolrail.hintSupport', glyph: '▲' },
-  { id: 'load', labelKey: 'toolrail.load', hintKey: 'toolrail.hintLoad', glyph: '↓' },
+  { id: 'select', labelKey: 'toolrail.select', hintKey: 'toolrail.hintSelect', glyph: '⌖', shortcut: 'V' },
+  { id: 'node', labelKey: 'toolrail.node', hintKey: 'toolrail.hintNode', glyph: '●', shortcut: 'N' },
+  { id: 'member', labelKey: 'toolrail.member', hintKey: 'toolrail.hintMemberStart', glyph: '╱', shortcut: 'M' },
+  { id: 'support', labelKey: 'toolrail.support', hintKey: 'toolrail.hintSupport', glyph: '▲', shortcut: 'S' },
+  { id: 'load', labelKey: 'toolrail.load', hintKey: 'toolrail.hintLoad', glyph: '↓', shortcut: 'L' },
 ];
 
 export const ToolRail = () => {
@@ -59,6 +61,8 @@ export const ToolRail = () => {
             data-active={state.activeTool === tool.id || undefined}
             aria-pressed={state.activeTool === tool.id}
             aria-label={t(tool.labelKey)}
+            aria-keyshortcuts={tool.shortcut}
+            title={`${t(tool.labelKey)} (${tool.shortcut})`}
             onClick={() => setTool(tool.id)}
           >
             <span className="pt-tool__glyph" aria-hidden="true">

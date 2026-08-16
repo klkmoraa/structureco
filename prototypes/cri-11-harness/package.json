@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "test:resolver": "node --test src/core/resolver.test.mjs",
     "smoke": "node scripts/smoke.mjs",
+    "validate": "node scripts/validate.mjs",
     "build:artifact": "tsc -b && vite build --config vite.artifact.config.ts",
     "verify:artifact": "node scripts/verify-artifact.mjs"
   },

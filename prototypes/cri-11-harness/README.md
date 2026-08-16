@@ -26,8 +26,18 @@ Otros comandos:
 ```bash
 npm --prefix prototypes/cri-11-harness run test:resolver   # 18 pruebas, sin navegador
 npm --prefix prototypes/cri-11-harness run build
-npm --prefix prototypes/cri-11-harness run smoke           # recorrido real en Chromium
+npm --prefix prototypes/cri-11-harness run smoke           # recorrido de Fase A/B en Chromium
+npm --prefix prototypes/cri-11-harness run validate        # Fase C: validación, estrés e INP/U-13
 ```
+
+`validate` es distinto de `smoke`: `smoke` recorre el flujo principal de
+extremo a extremo (Welcome → … → Salida); `validate` es el gate de cierre de
+Fase C — matriz de los siete estados, táctil real vía CDP, teclado del
+Candidate Picker, auditoría de atajos, continuidad portrait/landscape con
+encuadre de cámara, estrés con el fixture de 2 000+ entidades y las
+mediciones de INP y U-13 (histéresis). Evidencia en
+`reports/evidence/2026-08-16-cri-11-fase-c/`, incluido un `metrics.json` con
+los números crudos.
 
 ## Preview público temporal
 

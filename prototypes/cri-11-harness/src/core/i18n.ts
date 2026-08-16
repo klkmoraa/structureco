@@ -276,7 +276,7 @@ const es = {
   'precision.hint': 'Mueve el dedo para afinar sin taparlo; suelta sobre el candidato resaltado.',
   'precision.cancelHint': 'Suelta fuera para cancelar sin cambiar la selección.',
   'picker.title': 'Varios candidatos',
-  'picker.hint': 'Hay varios elementos en esta zona. Elige cuál.',
+  'picker.hint': 'Hay varios elementos en esta zona. Flechas para recorrer, Enter para elegir.',
 
   'preferences.theme': 'Tema',
   'preferences.themeLight': 'Día',
@@ -307,7 +307,7 @@ const es = {
   'analysisSetup.order': 'Orden de análisis',
   'analysisSetup.orderFirst': 'Primer orden',
   'analysisSetup.orderPDelta': 'P-Delta',
-
+  'analysisSetup.pdeltaBadge': 'P-Δ',
   'detail.support': 'Apoyo',
   'detail.support.none': 'Sin apoyo',
   'detail.support.pin': 'Articulado',
@@ -530,7 +530,7 @@ const en: Record<TranslationKey, string> = {
   'precision.hint': 'Move your finger to refine without covering it; release over the highlighted candidate.',
   'precision.cancelHint': 'Release outside to cancel without changing the selection.',
   'picker.title': 'Multiple candidates',
-  'picker.hint': 'There are several elements in this area. Choose one.',
+  'picker.hint': 'There are several elements in this area. Arrow keys to cycle, Enter to choose.',
 
   'preferences.theme': 'Theme',
   'preferences.themeLight': 'Day',
@@ -561,6 +561,7 @@ const en: Record<TranslationKey, string> = {
   'analysisSetup.order': 'Analysis order',
   'analysisSetup.orderFirst': 'First order',
   'analysisSetup.orderPDelta': 'P-Delta',
+  'analysisSetup.pdeltaBadge': 'P-Δ',
 
   'detail.support': 'Support',
   'detail.support.none': 'No support',

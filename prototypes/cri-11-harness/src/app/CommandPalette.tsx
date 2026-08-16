@@ -19,6 +19,7 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { Evidence } from '../core/analysis';
 import { COMMANDS, isCommandAvailable, type CommandId, type CommandSpec } from '../core/commands';
+import { measureInteraction } from '../core/telemetry';
 import { useActions, usePrototype } from '../state/PrototypeStore';
 
 const EVIDENCE_COMMAND: Partial<Record<CommandId, Evidence>> = {
@@ -205,8 +206,11 @@ export const CommandPalette = () => {
           placeholder={t('palette.placeholder')}
           value={query}
           onChange={(event) => {
-            setQuery(event.target.value);
-            setActiveIndex(0);
+            const value = event.target.value;
+            measureInteraction('palette.search', () => {
+              setQuery(value);
+              setActiveIndex(0);
+            });
           }}
           onKeyDown={onKeyDown}
           aria-activedescendant={entries[activeIndex] ? `palette-${entries[activeIndex].key}` : undefined}

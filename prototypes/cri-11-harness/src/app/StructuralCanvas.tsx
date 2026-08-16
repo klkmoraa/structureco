@@ -25,7 +25,7 @@ import type { Evidence } from '../core/analysis';
 import type { Fixture } from '../core/fixtures';
 import { hitTest, withinBox, type Candidate } from '../core/hitTest';
 import { nextId } from '../core/model';
-import { useActions, usePrototype, type SelectionRef } from '../state/PrototypeStore';
+import { useActions, usePrototype, type SelectionRef, type ToolId } from '../state/PrototypeStore';
 import { CandidatePicker } from './CandidatePicker';
 import { PrecisionCrosshair } from './PrecisionCrosshair';
 
@@ -91,9 +91,20 @@ const DEFAULT_SECTION = 'sec-ipe-240';
 const DEFAULT_MATERIAL = 'mat-s275';
 const SUPPORT_CYCLE: Record<string, 'none' | 'pin' | 'roller' | 'fixed'> = { none: 'pin', pin: 'roller', roller: 'fixed', fixed: 'none' };
 
+/**
+ * Atajos de herramienta · CRI-9 G-01, auditoría en `core/commands.ts`.
+ *
+ * Deliberadamente NO en `window` (Workspace.tsx): letras sueltas a nivel de
+ * página rompen la navegación rápida de lectores de pantalla (H/B/F…). Este
+ * `onKeyDown` vive en el propio `<svg>`, que ya declara `role="application"`
+ * — sólo se dispara con el foco dentro del lienzo, así que fuera de él el
+ * comportamiento de accesibilidad del resto de la página no cambia.
+ */
+const TOOL_SHORTCUT: Record<string, ToolId> = { v: 'select', n: 'node', m: 'member', s: 'support', l: 'load' };
+
 export const StructuralCanvas = ({ width, height, insets }: CanvasProps) => {
   const { state, derived, dispatch } = usePrototype();
-  const { selectOne, toggleSelect, selectMany, invoke } = useActions();
+  const { selectOne, toggleSelect, selectMany, invoke, setTool } = useActions();
   const { model, fixture, paintsEvidence, pointerCoarse, t } = derived;
   const { camera } = state;
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -228,9 +239,24 @@ export const StructuralCanvas = ({ width, height, insets }: CanvasProps) => {
     [dispatch, fixture.cases, invoke],
   );
 
-  const armLongPress = (screenX: number, screenY: number) => {
+  /**
+   * `emptyArea` distingue dos gestos que comparten el mismo dedo:
+   *   · sobre un candidato: arma el crosshair de precisión (ya existía).
+   *   · sobre vacío: arma selección por marco (marquee) — antes de esta
+   *     Fase C, un long-press sobre vacío abría un crosshair sin candidato,
+   *     un callejón sin salida (no seleccionaba nada al soltar). Un arrastre
+   *     corto SIEMPRE sigue siendo pan; sólo un dedo quieto ~480ms cambia de
+   *     gesto, así que pan no se rompe (Fase B, problema #2 pendiente).
+   */
+  const armLongPress = (screenX: number, screenY: number, emptyArea: boolean) => {
     clearLongPress();
     longPressTimer.current = window.setTimeout(() => {
+      if (emptyArea) {
+        dragRef.current = { mode: 'marquee' };
+        setMarqueeBox({ x1: screenX, y1: screenY, x2: screenX, y2: screenY });
+        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(8);
+        return;
+      }
       const local = toLocal(screenX, screenY);
       const hits = runHitTest(local.x, local.y);
       setPrecision({ x: screenX, y: screenY, candidate: hits[0] ?? null });
@@ -279,17 +305,17 @@ export const StructuralCanvas = ({ width, height, insets }: CanvasProps) => {
     const hits = runHitTest(local.x, local.y);
     if (hits.length > 0 && hits[0].kind === 'node' && hits[0].distance < 30) {
       dragRef.current = { mode: 'pending-node', startX: container.x, startY: container.y, nodeId: hits[0].id, hits };
-      if (isTouch) armLongPress(container.x, container.y);
+      if (isTouch) armLongPress(container.x, container.y, false);
       return;
     }
     if (hits.length > 0) {
       dragRef.current = { mode: 'pending-click', startX: container.x, startY: container.y, hits };
-      if (isTouch) armLongPress(container.x, container.y);
+      if (isTouch) armLongPress(container.x, container.y, false);
       return;
     }
     if (isTouch) {
       dragRef.current = { mode: 'pending-empty', startX: container.x, startY: container.y, startPanX: camera.panX, startPanY: camera.panY };
-      armLongPress(container.x, container.y);
+      armLongPress(container.x, container.y, true);
     } else {
       dragRef.current = { mode: 'pending-click', startX: container.x, startY: container.y, hits: [] };
       setMarqueeBox({ x1: container.x, y1: container.y, x2: container.x, y2: container.y });
@@ -443,6 +469,16 @@ export const StructuralCanvas = ({ width, height, insets }: CanvasProps) => {
     dispatch({ type: 'camera/zoomBy', factor });
   };
 
+  const onCanvasKeyDown = (event: React.KeyboardEvent<SVGSVGElement>) => {
+    if (event.ctrlKey || event.metaKey || event.altKey || event.nativeEvent.isComposing) return;
+    const target = event.target as HTMLElement;
+    if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
+    const tool = TOOL_SHORTCUT[event.key.toLowerCase()];
+    if (!tool || state.draft) return;
+    event.preventDefault();
+    setTool(tool, 'shortcut');
+  };
+
   // Escape en captura: cancela un gesto local ANTES que el manejador global de Workspace.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -476,11 +512,13 @@ export const StructuralCanvas = ({ width, height, insets }: CanvasProps) => {
         role="application"
         aria-label={t('canvas.selectHint')}
         data-tool={state.activeTool}
+        tabIndex={0}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endGesture}
         onPointerCancel={endGesture}
         onWheel={onWheel}
+        onKeyDown={onCanvasKeyDown}
       >
         <g transform={cameraTransform}>
           {state.layers.grid ? (

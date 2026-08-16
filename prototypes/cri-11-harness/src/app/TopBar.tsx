@@ -13,6 +13,13 @@
  * oculta), la Command Palette (SHL-05/06) y Salida (SHL-22, que CRI-8 ya
  * confirma con icono propio en TopBar hoy). El chip de recuperación deja de
  * ser un adorno: abre la superficie `recovery` (D-08).
+ *
+ * Fase C añade una línea de una sola fila bajo Resolver: cuántos casos de
+ * carga están activos y si el orden es P-Δ (D-09 completo — antes sólo quien
+ * abría el Contexto de análisis lo sabía). Es deliberadamente texto, no un
+ * bloque nuevo: cabe en la altura ya reservada para Resolver y desaparece
+ * primero que cualquier otra cosa en Compact, donde ya existe la vía de
+ * escape del chip "Contexto de análisis" en el chrome del lienzo.
  */
 
 import { useState } from 'react';
@@ -42,13 +49,16 @@ const PHASE_DETAIL: Record<string, TranslationKey> = {
 
 export const TopBar = () => {
   const { state, derived, dispatch } = usePrototype();
-  const { solve, undo, redo, openSurface, invoke } = useActions();
+  const { solve, undo, redo, openSurface, closeSurface, invoke } = useActions();
   const { t, phase, composition, findings, canUndo, canRedo } = derived;
   const [causeOpen, setCauseOpen] = useState(false);
   const compact = composition === 'K0';
   const spanish = state.axes.locale === 'es-MX';
   const governing = state.analysis.result?.governing;
   const attentionCount = severityCount(findings, 'attention') + severityCount(findings, 'notice');
+  const cases = derived.fixture.cases;
+  const activeCaseCount = cases.filter((item) => state.analysisSetup.activeCases[item.id] ?? true).length;
+  const analysisSetupOpen = state.broker.open.includes('analysis-setup');
 
   return (
     <header className="pt-topbar" data-composition={composition}>
@@ -82,6 +92,21 @@ export const TopBar = () => {
         <button type="button" className="sc-button sc-button--primary sc-button--sm" onClick={solve} disabled={state.analysis.isAnalyzing}>
           <span className="sc-button__label">{state.analysis.isAnalyzing ? t('state.calculating') : t('topbar.solve')}</span>
         </button>
+        {!compact ? (
+          <button
+            type="button"
+            className="pt-topbar__context"
+            aria-expanded={analysisSetupOpen}
+            title={t('surface.analysisSetup')}
+            onClick={() => {
+              invoke('surface.analysisSetup.toggle', 'visible');
+              analysisSetupOpen ? closeSurface('analysis-setup') : openSurface('analysis-setup');
+            }}
+          >
+            {activeCaseCount}/{cases.length} {t('analysisSetup.cases')}
+            {state.analysisSetup.order === 'pdelta' ? ` · ${t('analysisSetup.pdeltaBadge')}` : ''}
+          </button>
+        ) : null}
       </div>
 
       <div className="pt-topbar__status">

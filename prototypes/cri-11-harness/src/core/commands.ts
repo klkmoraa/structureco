@@ -11,11 +11,32 @@
  * ruta y ésa fuese `palette`, incumpliría el contrato de paridad.
  * `commandsViolatingParity` lo verifica; `smoke.mjs` lo ejercita en Chromium.
  *
- * Fase B no asigna un atajo de una sola letra a ninguna herramienta de
- * creación: CRI-9 G-01 deja pendiente la auditoría de colisiones con el
- * navegador, y asignar atajos sin esa auditoría es exactamente el riesgo que
- * el propio informe pide evitar. Las herramientas viven en `visible` +
- * `palette`, no en `shortcut`.
+ * AUDITORÍA DE COLISIONES (CRI-9 G-01, Fase C — cierra el pendiente de Fase B)
+ * ---------------------------------------------------------------------------
+ * Se comprobó, tecla por tecla, contra tres fuentes reales de colisión antes
+ * de fijar cualquier atajo de una sola letra:
+ *
+ *  1. Chrome/Firefox/Safari no reservan letras SUELTAS (sin Ctrl/⌘/Alt) a
+ *     nivel de navegador — sólo combinaciones con modificador (Ctrl+N, Ctrl+S,
+ *     Ctrl+W…) y ninguna de las que ya usa este registro (Ctrl/⌘+K, Ctrl/⌘+Z,
+ *     Ctrl/⌘+Shift+Z, Delete, Escape, Enter) coincide con una letra suelta.
+ *  2. El registro interno (esta tabla): V·N·M·S·L no se repiten entre sí ni
+ *     con ningún `shortcut` ya asignado arriba.
+ *  3. Colisión real encontrada — lectores de pantalla en modo de exploración
+ *     (NVDA/JAWS/VoiceOver) interceptan letras sueltas para su navegación
+ *     rápida (H = encabezado, B = botón, F = campo…). Asignar una letra suelta
+ *     a nivel de `window` rompería esa navegación en cualquier parte de la
+ *     página. La resolución NO es evitar las teclas: es acotar dónde escuchan.
+ *     `StructuralCanvas` ya declara `role="application"` — el contrato ARIA
+ *     que le dice al lector de pantalla que entregue las teclas a la app en
+ *     vez de interceptarlas — así que el atajo se registra con
+ *     `onKeyDown` en el propio lienzo (foco dentro de él), nunca en `window`.
+ *     Fuera del lienzo (paleta, campos, Datasheet) esas letras no hacen nada:
+ *     el contrato de accesibilidad del resto de la página queda intacto.
+ *
+ * Con la auditoría hecha, las cinco herramientas SÍ declaran `shortcut` — para
+ * que la Paleta las muestre — pero su ruta física vive en el lienzo, acotada
+ * por foco, no en el manejador global de `Workspace.tsx`.
  */
 
 import type { TranslationKey } from './i18n';
@@ -124,11 +145,13 @@ export const COMMANDS: CommandSpec[] = [
   { id: 'mode.toggle', labelKey: 'command.modeToggle', routes: ['visible', 'palette'] },
   { id: 'theme.toggle', labelKey: 'command.themeToggle', routes: ['visible', 'palette'] },
   { id: 'locale.toggle', labelKey: 'command.localeToggle', routes: ['visible', 'palette'] },
-  { id: 'tool.select', labelKey: 'toolrail.select', routes: ['visible', 'palette'] },
-  { id: 'tool.node', labelKey: 'toolrail.node', routes: ['visible', 'palette'] },
-  { id: 'tool.member', labelKey: 'toolrail.member', routes: ['visible', 'palette'] },
-  { id: 'tool.support', labelKey: 'toolrail.support', routes: ['visible', 'palette'], requiresSelection: false },
-  { id: 'tool.load', labelKey: 'toolrail.load', routes: ['visible', 'palette'] },
+  // Atajos de una letra, acotados al foco del lienzo (ver auditoría arriba) —
+  // no van en `Workspace.tsx`, van en `StructuralCanvas.tsx`.
+  { id: 'tool.select', labelKey: 'toolrail.select', routes: ['visible', 'palette', 'shortcut'], shortcut: 'V' },
+  { id: 'tool.node', labelKey: 'toolrail.node', routes: ['visible', 'palette', 'shortcut'], shortcut: 'N' },
+  { id: 'tool.member', labelKey: 'toolrail.member', routes: ['visible', 'palette', 'shortcut'], shortcut: 'M' },
+  { id: 'tool.support', labelKey: 'toolrail.support', routes: ['visible', 'palette', 'shortcut'], shortcut: 'S', requiresSelection: false },
+  { id: 'tool.load', labelKey: 'toolrail.load', routes: ['visible', 'palette', 'shortcut'], shortcut: 'L' },
   { id: 'canvas.zoomIn', labelKey: 'command.zoomIn', routes: ['visible', 'palette'] },
   { id: 'canvas.zoomOut', labelKey: 'command.zoomOut', routes: ['visible', 'palette'] },
   { id: 'canvas.resetView', labelKey: 'command.resetView', routes: ['visible', 'palette'] },

@@ -8,17 +8,22 @@
  * Los casos y su categoría son datos reales del fixture (`fixture.cases`);
  * activarlos/desactivarlos aquí es sólo UI — no hay un solver que combine
  * casos detrás.
+ *
+ * Fase C mueve `active`/`order` de `useState` local a `PrototypeStore`: eran
+ * estado de componente y se perdían al cruzar Compact, donde el árbol de
+ * slots remonta esta puerta en un padre distinto (`pt-sheet` en vez de
+ * `pt-inset`). Vivir en el store es también lo que permite que la TopBar
+ * resuma cuántos casos están activos sin que nadie abra la puerta (D-09
+ * completo, no sólo "alcanzable").
  */
 
-import { useState } from 'react';
 import { useActions, usePrototype } from '../state/PrototypeStore';
 
 export const AnalysisSetup = () => {
-  const { derived } = usePrototype();
+  const { state, derived, dispatch } = usePrototype();
   const { closeSurface } = useActions();
   const { t, composition, fixture } = derived;
-  const [active, setActive] = useState<Record<string, boolean>>(() => Object.fromEntries(fixture.cases.map((item) => [item.id, true])));
-  const [order, setOrder] = useState<'first' | 'pdelta'>('first');
+  const { activeCases, order } = state.analysisSetup;
 
   return (
     <section className="pt-analysis-setup" data-composition={composition} aria-label={t('surface.analysisSetup')}>
@@ -35,7 +40,11 @@ export const AnalysisSetup = () => {
           {fixture.cases.map((item) => (
             <li key={item.id}>
               <label className="pt-case">
-                <input type="checkbox" checked={active[item.id] ?? true} onChange={() => setActive((prev) => ({ ...prev, [item.id]: !prev[item.id] }))} />
+                <input
+                  type="checkbox"
+                  checked={activeCases[item.id] ?? true}
+                  onChange={() => dispatch({ type: 'analysisSetup/toggleCase', caseId: item.id })}
+                />
                 <span>{item.name}</span>
               </label>
             </li>
@@ -46,10 +55,10 @@ export const AnalysisSetup = () => {
       <div className="pt-group">
         <h3 className="pt-group__title">{t('analysisSetup.order')}</h3>
         <div className="pt-segmented" role="group" aria-label={t('analysisSetup.order')}>
-          <button type="button" data-active={order === 'first' || undefined} aria-pressed={order === 'first'} onClick={() => setOrder('first')}>
+          <button type="button" data-active={order === 'first' || undefined} aria-pressed={order === 'first'} onClick={() => dispatch({ type: 'analysisSetup/setOrder', order: 'first' })}>
             {t('analysisSetup.orderFirst')}
           </button>
-          <button type="button" data-active={order === 'pdelta' || undefined} aria-pressed={order === 'pdelta'} onClick={() => setOrder('pdelta')}>
+          <button type="button" data-active={order === 'pdelta' || undefined} aria-pressed={order === 'pdelta'} onClick={() => dispatch({ type: 'analysisSetup/setOrder', order: 'pdelta' })}>
             {t('analysisSetup.orderPDelta')}
           </button>
         </div>

@@ -266,6 +266,29 @@
 .pt-topbar__action {
   margin-left: auto;
   flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+
+.pt-topbar__context {
+  border: 0;
+  background: transparent;
+  padding: 0 var(--sc-space-1);
+  color: var(--sc-color-text-muted);
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-caption);
+  font-variant-numeric: var(--sc-numeric-variant);
+  text-align: center;
+  cursor: pointer;
+  border-radius: var(--sc-radius-xs);
+  white-space: nowrap;
+}
+
+.pt-topbar__context:hover {
+  background: var(--sc-color-surface-2);
+  color: var(--sc-color-text);
 }
 
 .pt-topbar__status {
@@ -429,6 +452,15 @@
 
 .pt-canvas {
   display: block;
+  /*
+   * Fase C: sin esto, el navegador puede interpretar un arrastre táctil
+   * sostenido (long-press → mover) como un intento de scroll/gesto nativo y
+   * cancelar la secuencia de Pointer Events a mitad de camino — justo el
+   * fallo intermitente que rompía tanto el pan como el nuevo marquee táctil.
+   * El lienzo maneja pan/zoom/marquee él mismo; no hay nada que delegarle al
+   * gesto nativo del navegador.
+   */
+  touch-action: none;
 }
 
 /* El dibujo es plano: sin sombras, sin gradientes, sin efectos. */

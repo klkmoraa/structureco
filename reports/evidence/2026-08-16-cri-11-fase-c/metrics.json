@@ -1,0 +1,47 @@
+{
+  "interactions": {
+    "dense.search": [
+      58.8
+    ],
+    "longTaskCount": 0
+  },
+  "hysteresis": [
+    {
+      "hysteresisPx": 0,
+      "recompositions": 3,
+      "elapsedMs": 939,
+      "perSecond": 3.19
+    },
+    {
+      "hysteresisPx": 24,
+      "recompositions": 3,
+      "elapsedMs": 831,
+      "perSecond": 3.61
+    },
+    {
+      "hysteresisPx": 60,
+      "recompositions": 3,
+      "elapsedMs": 719,
+      "perSecond": 4.17
+    },
+    {
+      "hysteresisPx": 120,
+      "recompositions": 3,
+      "elapsedMs": 854,
+      "perSecond": 3.51
+    }
+  ],
+  "stress": {
+    "datasheetOpenMs": 1162,
+    "datasheetRows": 1292,
+    "paletteOpenMs": 123,
+    "paletteSearchMs": [
+      27.4,
+      29.8
+    ],
+    "panMs": 269,
+    "zoomMs": 716,
+    "resizeToM1Ms": 244,
+    "resizeToX2Ms": 263
+  }
+}

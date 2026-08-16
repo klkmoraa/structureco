@@ -121,6 +121,15 @@ export interface PrototypeState {
   camera: CameraState;
   doctorAcknowledged: Record<string, true>;
   doctorFilter: FindingSeverity | 'all';
+  /**
+   * Contexto de análisis (D-09) — vivía como `useState` local dentro de
+   * `AnalysisSetup.tsx`. Al cruzar Compact (K0) el árbol de slots monta la
+   * puerta en un padre distinto (`pt-sheet` en vez de `pt-inset`) y React la
+   * remonta: el estado local se perdía en la propia frontera que Fase C tiene
+   * que probar que no pierde nada. Vive aquí para sobrevivir a eso, y de paso
+   * es lo que permite que la TopBar la resuma sin abrirla.
+   */
+  analysisSetup: { activeCases: Record<string, boolean>; order: 'first' | 'pdelta' };
 }
 
 const initialAxes: HarnessAxes = {
@@ -160,6 +169,7 @@ const initialState: PrototypeState = {
   camera: initialCamera,
   doctorAcknowledged: {},
   doctorFilter: 'all',
+  analysisSetup: { activeCases: {}, order: 'first' },
 };
 
 type Action =
@@ -199,7 +209,9 @@ type Action =
   | { type: 'camera/zoomBy'; factor: number; anchor?: { x: number; y: number } }
   | { type: 'camera/reset' }
   | { type: 'doctor/acknowledge'; id: string }
-  | { type: 'doctor/filter'; severity: FindingSeverity | 'all' };
+  | { type: 'doctor/filter'; severity: FindingSeverity | 'all' }
+  | { type: 'analysisSetup/toggleCase'; caseId: string }
+  | { type: 'analysisSetup/setOrder'; order: 'first' | 'pdelta' };
 
 /**
  * Fail-closed: invalidar NO marca el resultado, lo destruye. `stale` se deriva.
@@ -436,6 +448,14 @@ const reducer = (state: PrototypeState, action: Action): PrototypeState => {
 
     case 'doctor/filter':
       return { ...state, doctorFilter: action.severity };
+
+    case 'analysisSetup/toggleCase': {
+      const wasActive = state.analysisSetup.activeCases[action.caseId] ?? true;
+      return { ...state, analysisSetup: { ...state.analysisSetup, activeCases: { ...state.analysisSetup.activeCases, [action.caseId]: !wasActive } } };
+    }
+
+    case 'analysisSetup/setOrder':
+      return { ...state, analysisSetup: { ...state.analysisSetup, order: action.order } };
 
     default:
       return state;
@@ -676,9 +696,9 @@ export const useActions = () => {
   }, [dispatch, state.selection.length]);
 
   const setTool = useCallback(
-    (tool: ToolId) => {
+    (tool: ToolId, route: string = 'visible') => {
       dispatch({ type: 'tool/set', tool });
-      record('command_invoked', { commandId: `tool.${tool}`, route: 'visible' });
+      record('command_invoked', { commandId: `tool.${tool}`, route });
     },
     [dispatch],
   );

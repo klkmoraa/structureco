@@ -8,6 +8,13 @@
  * En Expanded/Medium es un popover cerca del punto de toque; en Compact es
  * una hoja baja — la misma lista, otra presentación, igual que el resto del
  * catálogo de superficies.
+ *
+ * Fase C completa la quinta fase que Fase B dejó pendiente: ciclar con
+ * flechas antes de elegir. Foco itinerante (`roving tabindex`) sobre los
+ * botones de la lista — ArrowDown/ArrowUp mueven el foco, Home/End saltan a
+ * los extremos, Enter/Espacio comprometen por el `onClick` nativo del botón
+ * enfocado. No hay estado de "candidato resaltado" aparte del foco del DOM:
+ * es la misma fuente de verdad que ya usa `CommandPalette` para su lista.
  */
 
 import { useEffect, useRef } from 'react';
@@ -38,7 +45,20 @@ export const CandidatePicker = ({ anchor, candidates, containerWidth, containerH
       if (event.key === 'Escape') {
         event.stopPropagation();
         onCancel();
+        return;
       }
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Home' && event.key !== 'End') return;
+      const options = listRef.current ? Array.from(listRef.current.querySelectorAll<HTMLButtonElement>('button')) : [];
+      if (options.length === 0) return;
+      const current = options.indexOf(document.activeElement as HTMLButtonElement);
+      event.preventDefault();
+      event.stopPropagation();
+      let next = current;
+      if (event.key === 'ArrowDown') next = current < 0 ? 0 : (current + 1) % options.length;
+      else if (event.key === 'ArrowUp') next = current < 0 ? options.length - 1 : (current - 1 + options.length) % options.length;
+      else if (event.key === 'Home') next = 0;
+      else next = options.length - 1;
+      options[next]?.focus();
     };
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
