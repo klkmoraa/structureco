@@ -1,4 +1,4 @@
-# CRI-12A · Handoff a CRI-12B/12C
+# CRI-12 · HANDOFF de ejecución
 
 **Clasificación:** `AUDIT/TEMPORARY`
 
@@ -49,14 +49,14 @@ CRI-12D puede crear tareas de implementación visual a partir de `03-visual-dire
 
 Y lo que CRI-12D **no** puede hacer sin volver a preguntar: aplicar un HEX nuevo sin el gate; decidir el serif (abierta, no decidida); convertir Datasheet o tablas densas en tarjetas (petición registrada, reabre D-11/D-03); mover un color técnico distinto de los dos que 12C nombra.
 
-## Nota sobre el corte 12B/12C asumido en este documento
+## Frontera 12B/12C — confirmada por CRI-84/CRI-85
 
-Ningún reporte consultado define explícitamente qué separa 12B de 12C. Dado el encargo de CRI-12A ("no decidas menta/lima, no prototipo, no diseñes"), se asume operativamente:
+CRI-84 define formalmente 12B como el cierre de arquitectura UX/interacción; CRI-85 define 12C como el cierre de dirección visual/Clay/identidad. La frontera no es una lectura operativa de este documento: es la definición formal del programa.
 
-- **12B** = decisiones de arquitectura funcional/UX no visuales: navegación, ubicación de funciones, gobierno de discoverability, validación de hipótesis de producto (Esencial/Completa), verificaciones técnicas pendientes (rendimiento, accesibilidad, multi-navegador).
-- **12C** = la fase que cierra la dirección visual: no se limita a ejecutar dentro del Brandbook vigente sin tocarlo — incluye comparar explícitamente mantener la paleta lima vigente vs recuperar la familia menta/esmeralda histórica de identidad, decidir el tratamiento del portal de Welcome, la remedición de contraste y la aplicación concreta de Clay, y puede decidir una modificación futura explícita del propio Brandbook si el resultado de esa comparación lo requiere.
+- **12B (CRI-84)** = decisiones de arquitectura funcional/UX no visuales: navegación, ubicación de funciones, gobierno de discoverability, validación de hipótesis de producto (Esencial/Completa), verificaciones técnicas pendientes (rendimiento, accesibilidad, multi-navegador).
+- **12C (CRI-85)** = el cierre de dirección visual: no se limita a ejecutar dentro del Brandbook vigente sin tocarlo — incluye comparar explícitamente mantener la paleta lima vigente vs recuperar la familia menta/esmeralda histórica de identidad, decidir el tratamiento del portal de Welcome, la remedición de contraste y la aplicación concreta de Clay, y puede decidir una modificación futura explícita del propio Brandbook si el resultado de esa comparación lo requiere.
 
-Si esta distinción no es la prevista por quien secuenció CRI-12, reclasificar los ítems de abajo en consecuencia — la separación VERIFIED/DECIDED/UNKNOWN de `01-evidence-matrix.md` no depende de este corte y sigue siendo válida.
+La separación VERIFIED/DECIDED/UNKNOWN de `01-evidence-matrix.md` no depende de este corte y sigue siendo válida.
 
 ## Preguntas para CRI-12B (funcional / no visual)
 
