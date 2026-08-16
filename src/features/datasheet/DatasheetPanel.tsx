@@ -6,6 +6,7 @@ import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { Selection } from '../../types';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
+import type { SurfacePresentation } from '../workspace/surfacePresentation';
 import type { DatasheetCellEditorProps } from './DatasheetCellEditor';
 import { DatasheetEditorPanel } from './DatasheetEditorPanel';
 import { DatasheetGrid } from './DatasheetGrid';
@@ -102,9 +103,17 @@ export interface DatasheetPanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   returnFocusTo?: HTMLElement | null;
+  presentation?: Extract<SurfacePresentation, 'drawer' | 'fullscreen'>;
+  onSurfaceReady?: (ready: boolean) => void;
 }
 
-export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetPanelProps) => {
+export const DatasheetPanel = ({
+  open,
+  onOpenChange,
+  returnFocusTo,
+  presentation = 'drawer',
+  onSurfaceReady,
+}: DatasheetPanelProps) => {
   const { language, t } = useI18n();
   const { project, updateProject } = useProjectModel();
   const { selection, setSelection } = useWorkspaceUI();
@@ -373,11 +382,15 @@ export const DatasheetPanel = ({ open, onOpenChange, returnFocusTo }: DatasheetP
     open={open}
     onOpenChange={onOpenChange}
     side="bottom"
+    presentation={presentation}
     title={t('datasheet.title')}
     description={t('datasheet.description')}
     closeLabel={t('datasheet.close')}
     className="datasheet-surface"
     returnFocusTo={returnFocusTo}
+    restoreFocus={!onSurfaceReady}
+    surfaceId="datasheet"
+    onSurfaceReady={onSurfaceReady}
   >
     <div className="datasheet-layout">
       <div className="datasheet-main">

@@ -55,6 +55,43 @@ const enterWorkspace = async (example = false, reload = true) => {
   await page.getByRole('button', { name: /^analizar$/i }).waitFor({ state: 'visible' });
 };
 
+const waitForSurfaceSettled = async (doctor) => {
+  let previous = null;
+  let stableSamples = 0;
+  let current = null;
+  for (let sample = 0; sample < 100; sample += 1) {
+    current = await doctor.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        width: rect.width,
+        fullscreen: element.parentElement?.dataset.surfacePresentation === 'fullscreen',
+        viewportWidth: window.innerWidth,
+      };
+    });
+    const aligned = Math.abs(current.right - current.viewportWidth) <= 1
+      && (!current.fullscreen || (
+        Math.abs(current.left) <= 1
+        && Math.abs(current.top) <= 1
+        && Math.abs(current.width - current.viewportWidth) <= 1
+      ));
+    const stable = previous !== null
+      && Math.max(
+        Math.abs(current.left - previous.left),
+        Math.abs(current.right - previous.right),
+        Math.abs(current.top - previous.top),
+        Math.abs(current.width - previous.width),
+      ) <= 0.25;
+    stableSamples = aligned && stable ? stableSamples + 1 : 0;
+    if (stableSamples >= 3) return current;
+    previous = current;
+    await page.waitForTimeout(50);
+  }
+  throw new Error(`Model Doctor surface did not settle: ${JSON.stringify(current)}`);
+};
+
 const openDoctor = async () => {
   const desktopLauncher = page.locator('.model-doctor-launcher');
   if (await desktopLauncher.isVisible()) {
@@ -66,6 +103,7 @@ const openDoctor = async () => {
   }
   const doctor = page.getByRole('dialog', { name: 'Model Doctor' });
   await doctor.waitFor({ state: 'visible' });
+  await waitForSurfaceSettled(doctor);
   return doctor;
 };
 
@@ -82,13 +120,9 @@ const assertGeometry = async (viewport, expectedSide) => {
   await page.setViewportSize(viewport);
   await loadProject((project) => { project.members[0].E = 0; });
   const doctor = await openDoctor();
-  // `visible` is reached at the start of the spring. Measure only after the
-  // surface itself reaches its final viewport edge; a fixed delay flakes on a
-  // busy machine and can sample a healthy drawer mid-animation.
-  await page.waitForFunction((element) => {
-    const rect = element.getBoundingClientRect();
-    return Math.abs(rect.right - window.innerWidth) <= 1;
-  }, await doctor.elementHandle(), { timeout: 5000 });
+  // `visible` is reached at the start of the spring. Require three stable
+  // aligned samples so an overshoot crossing the viewport edge cannot pass.
+  await waitForSurfaceSettled(doctor);
   const geometry = await doctor.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     const body = element.querySelector('.sc-modal-surface__body');
@@ -108,8 +142,8 @@ const assertGeometry = async (viewport, expectedSide) => {
   if (expectedSide === 'right' && (geometry.top > 1 || geometry.bottom < viewport.height - 1 || geometry.width > 641)) {
     throw new Error(`Expected right drawer geometry at ${viewport.width}px: ${JSON.stringify(geometry)}`);
   }
-  if (expectedSide === 'bottom' && (geometry.left > 1 || geometry.bottom < viewport.height - 1 || geometry.width < viewport.width - 1 || geometry.height > viewport.height * 0.89)) {
-    throw new Error(`Expected bottom sheet geometry at ${viewport.width}px: ${JSON.stringify(geometry)}`);
+  if (expectedSide === 'fullscreen' && (geometry.left > 1 || geometry.top > 1 || geometry.bottom < viewport.height - 1 || geometry.width < viewport.width - 1)) {
+    throw new Error(`Expected fullscreen geometry at ${viewport.width}px: ${JSON.stringify(geometry)}`);
   }
   await page.keyboard.press('Escape');
   await doctor.waitFor({ state: 'hidden' });
@@ -120,13 +154,21 @@ try {
   await enterWorkspace(true, false);
   baselineProject = await page.evaluate(() => JSON.parse(localStorage.getItem('structureCo.project')));
 
-  // First lazy load on phone while Results is expanded must still return to More.
+  // First lazy load on Compact suspends (but retains) Results and still returns to More.
   await page.setViewportSize({ width: 390, height: 844 });
-  const resultsToggle = page.getByRole('button', { name: /^resultados$/i });
-  await resultsToggle.click();
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('structureco:open-results')));
+  const retainedResults = page.locator('.results-panel');
+  await retainedResults.waitFor({ state: 'visible' });
   const firstMore = page.getByRole('button', { name: /m.s acciones/i });
   const firstPhoneDoctor = await openDoctor();
-  if (!(await page.locator('.results-panel').evaluate((panel) => panel.classList.contains('mobile-collapsed')))) throw new Error('Expanded mobile Results did not collapse before first Doctor load');
+  const suspendedResults = await retainedResults.evaluate((panel) => ({
+    status: panel.getAttribute('data-surface-status'),
+    hidden: panel.hidden,
+    connected: panel.isConnected,
+  }));
+  if (suspendedResults.status !== 'suspended' || !suspendedResults.hidden || !suspendedResults.connected) {
+    throw new Error(`Compact Results was not retained and suspended before first Doctor load: ${JSON.stringify(suspendedResults)}`);
+  }
   await page.keyboard.press('Escape');
   await firstPhoneDoctor.waitFor({ state: 'hidden' });
   await page.waitForFunction((element) => document.activeElement === element, await firstMore.elementHandle());
@@ -142,7 +184,7 @@ try {
   if (await page.getByRole('dialog', { name: /paleta de comandos/i }).count()) throw new Error('Command Palette opened over Model Doctor');
   await page.keyboard.press('Escape');
   await healthy.waitFor({ state: 'hidden' });
-  if (!(await doctorLauncher.evaluate((element) => element === document.activeElement))) throw new Error('Focus did not return to the Model Doctor launcher');
+  await page.waitForFunction((element) => document.activeElement === element, await doctorLauncher.elementHandle());
 
   // INVALID PROPERTY: critical, explanation and no invalid auto-repair action.
   await loadProject((project) => { project.members[0].E = 0; });
@@ -231,12 +273,12 @@ try {
 
   // Responsive geometry at desktop, tablet and phone, including the 700px boundary.
   await assertGeometry({ width: 1440, height: 900 }, 'right');
-  await assertGeometry({ width: 900, height: 800 }, 'right');
-  await assertGeometry({ width: 701, height: 760 }, 'right');
-  await assertGeometry({ width: 700, height: 760 }, 'bottom');
-  await assertGeometry({ width: 390, height: 844 }, 'bottom');
+  await assertGeometry({ width: 900, height: 800 }, 'fullscreen');
+  await assertGeometry({ width: 701, height: 760 }, 'fullscreen');
+  await assertGeometry({ width: 700, height: 760 }, 'fullscreen');
+  await assertGeometry({ width: 390, height: 844 }, 'fullscreen');
   // Equivalent CSS viewport at 200% browser zoom on an 800x600 display.
-  await assertGeometry({ width: 400, height: 300 }, 'bottom');
+  await assertGeometry({ width: 400, height: 300 }, 'fullscreen');
 
   // Long content scrolls inside the phone sheet and every interactive target is touch-sized.
   await page.setViewportSize({ width: 390, height: 844 });

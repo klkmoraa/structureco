@@ -26,10 +26,8 @@ export interface WorkspaceCommands {
   'focus-object': FocusableSelection;
   /** Fit the whole model into the visible canvas. */
   'fit-canvas': void;
-  /** Raise the results sheet on small viewports. */
-  'expand-mobile-results': void;
-  /** Lower the results sheet on small viewports. */
-  'collapse-mobile-results': void;
+  /** Request the Results surface; the presentation broker chooses its placement. */
+  'open-results': void;
   /** Export the structural canvas as a standalone SVG file. */
   'export-svg': void;
   /** Export the structural canvas as a raster image. */

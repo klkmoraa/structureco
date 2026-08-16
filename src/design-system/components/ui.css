@@ -373,7 +373,8 @@
   animation: sc-fade-in var(--sc-motion-standard) var(--sc-ease-enter) both;
 }
 .sc-overlay--dialog { place-items: center; }
-.sc-overlay--drawer { padding: 0; }
+.sc-overlay--drawer,
+.sc-overlay--fullscreen { padding: 0; }
 .sc-modal-surface {
   min-width: 0;
   min-height: 0;
@@ -391,6 +392,7 @@
   border-radius: var(--sc-radius-lg);
 }
 .sc-modal-surface--drawer { position: absolute; }
+.sc-modal-surface--fullscreen { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0; }
 .sc-modal-surface--right { inset: 0 0 0 auto; width: min(420px, 100vw); border-radius: var(--sc-radius-sheet) 0 0 var(--sc-radius-sheet); }
 .sc-modal-surface--left { inset: 0 auto 0 0; width: min(420px, 100vw); border-radius: 0 var(--sc-radius-sheet) var(--sc-radius-sheet) 0; }
 .sc-modal-surface--bottom { inset: auto 0 0; width: 100%; max-height: min(76dvh, 720px); border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }

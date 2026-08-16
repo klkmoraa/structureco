@@ -109,7 +109,7 @@ const InspectorHarness = ({ modal = false, onClose, onDesktopWidthChange, deskto
       <output aria-label="M1 sección ID">{String((memberM1 as unknown as Record<string, unknown>)?.sectionId ?? '')}</output>
       <output aria-label="M1 origen sección">{String((memberM1 as unknown as Record<string, unknown>)?.sectionOrigin ?? '')}</output>
       <output aria-label="Issues de análisis">{analysis?.issues.map((issue) => issue.id).join(',') ?? ''}</output>
-      <Inspector desktopWidth={desktopWidth} modal={modal} onClose={onClose} onDesktopWidthChange={onDesktopWidthChange} mobileDetent={mobileDetent} onMobileDetentChange={onMobileDetentChange} />
+      <Inspector desktopWidth={desktopWidth} presentation={modal ? 'sheet' : 'dock'} onClose={onClose} onDesktopWidthChange={onDesktopWidthChange} mobileDetent={mobileDetent} onMobileDetentChange={onMobileDetentChange} />
     </div>
   </ClassroomSessionProvider>;
 };
@@ -739,20 +739,16 @@ describe('Inspector advanced, locked, and validation states', () => {
     expect(screen.getByLabelText('Puede deshacer').textContent).toBe('false');
   });
 
-  it('uses dialog semantics, traps keyboard focus, and closes safely with Escape in modal mode', async () => {
+  it('uses non-modal sheet semantics, lets focus leave, and closes safely with Escape', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     renderInspector(createInspectorProject(), { modal: true, onClose });
 
-    expect(screen.getByRole('dialog', { name: 'Inspector' }).getAttribute('aria-modal')).toBe('true');
-    const first = screen.getByRole('tab', { name: 'Inspector' });
+    expect(screen.getByRole('dialog', { name: 'Inspector' }).hasAttribute('aria-modal')).toBe(false);
     const last = screen.getByRole('button', { name: 'Cerrar inspector' });
-    await waitFor(() => expect(document.activeElement).toBe(first));
-
-    await user.keyboard('{Shift>}{Tab}{/Shift}');
-    expect(document.activeElement).toBe(last);
+    last.focus();
     await user.tab();
-    expect(document.activeElement).toBe(first);
+    expect(document.activeElement).toBe(document.body);
     await user.keyboard('{Escape}');
     expect(onClose).toHaveBeenCalledOnce();
   });
@@ -772,49 +768,17 @@ describe('Inspector advanced, locked, and validation states', () => {
     expect(screen.getByLabelText('Puede deshacer').textContent).toBe('false');
   });
 
-  it('traps focus against the active tab and ignores controls inside closed details', async () => {
+  it('keeps native tab order through closed details because a sheet is not a focus trap', async () => {
     const user = userEvent.setup();
     renderInspector(createInspectorProject(), { modal: true, onClose: vi.fn() });
 
     const inspectorTab = screen.getByRole('tab', { name: 'Inspector' });
-    await waitFor(() => expect(document.activeElement).toBe(inspectorTab));
+    inspectorTab.focus();
     await user.keyboard('{ArrowRight}');
 
     const loadsTab = screen.getByRole('tab', { name: 'Cargas' });
-    await waitFor(() => expect(document.activeElement).toBe(loadsTab));
     expect(loadsTab.getAttribute('aria-selected')).toBe('true');
-    const closedDetails = [...document.querySelectorAll<HTMLDetailsElement>('details:not([open])')];
-    expect(closedDetails.length).toBeGreaterThan(0);
-    const lastSummary = closedDetails.at(-1)?.querySelector('summary');
-    expect(lastSummary).toBeTruthy();
-
     await user.keyboard('{Shift>}{Tab}{/Shift}');
-    expect(document.activeElement).toBe(lastSummary);
-    await user.tab();
-    expect(document.activeElement).toBe(loadsTab);
-  });
-
-  it('includes controls inside an open details element in the modal focus loop', async () => {
-    const user = userEvent.setup();
-    renderInspector(createInspectorProject(), { modal: true, onClose: vi.fn() });
-
-    const inspectorTab = screen.getByRole('tab', { name: 'Inspector' });
-    await waitFor(() => expect(document.activeElement).toBe(inspectorTab));
-    await user.keyboard('{ArrowRight}');
-    const loadsTab = screen.getByRole('tab', { name: 'Cargas' });
-    const details = [...document.querySelectorAll<HTMLDetailsElement>('details')].at(-1);
-    const summary = details?.querySelector<HTMLElement>('summary');
-    expect(details).toBeTruthy();
-    expect(summary).toBeTruthy();
-    await user.click(summary as HTMLElement);
-    expect(details?.open).toBe(true);
-    const lastInput = [...(details?.querySelectorAll<HTMLElement>('input:not([disabled])') ?? [])].at(-1);
-    expect(lastInput).toBeTruthy();
-
-    loadsTab.focus();
-    await user.keyboard('{Shift>}{Tab}{/Shift}');
-    expect(document.activeElement).toBe(lastInput);
-    await user.tab();
-    expect(document.activeElement).toBe(loadsTab);
+    expect(document.activeElement).not.toBe(loadsTab);
   });
 });

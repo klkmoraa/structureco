@@ -20,12 +20,14 @@ import { useProject, type ResultTab } from '../../store/ProjectContext';
 import { exportProjectJson } from '../../utils/export';
 import { TOOL_REGISTRY } from '../canvas/toolRegistry';
 import type { EditorLayerAction, EditorLayerPresetId } from '../canvas/editorLayers';
+import type { SurfacePresentation } from './surfacePresentation';
 import { emitWorkspaceCommand } from './workspaceCommands';
 
 export interface CommandPaletteProps {
   open: boolean;
   onClose: () => void;
   dispatchLayers: Dispatch<EditorLayerAction>;
+  presentation?: Extract<SurfacePresentation, 'overlay' | 'sheet'>;
 }
 
 type CommandGroupId = 'tools' | 'view' | 'results' | 'analysis' | 'navigate' | 'export';
@@ -86,7 +88,7 @@ const normalize = (value: string) => value
  * alcanzarlas con el teclado sin recordar dónde vive cada control, y en poder
  * saltar a un nudo o una barra por su identificador.
  */
-export const CommandPalette = ({ open, onClose, dispatchLayers }: CommandPaletteProps) => {
+export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = 'overlay' }: CommandPaletteProps) => {
   const {
     project, analysis, theme, canUndo, canRedo, isAnalyzing, selection,
     setActiveTool, setSelection, setResultTab, setTheme, updateProjectView, analyze, undo, redo,
@@ -96,17 +98,10 @@ export const CommandPalette = ({ open, onClose, dispatchLayers }: CommandPalette
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const returnFocusRef = useRef<HTMLElement | null>(null);
   const listId = useId();
   const titleId = useId();
 
-  const close = useCallback(() => {
-    onClose();
-    window.requestAnimationFrame(() => {
-      const target = returnFocusRef.current;
-      if (target?.isConnected) target.focus({ preventScroll: true });
-    });
-  }, [onClose]);
+  const close = useCallback(() => onClose(), [onClose]);
 
   const commands = useMemo<PaletteCommand[]>(() => {
     const run = (action: () => void) => () => { action(); close(); };
@@ -227,7 +222,7 @@ export const CommandPalette = ({ open, onClose, dispatchLayers }: CommandPalette
         disabled: !analysis,
         run: run(() => {
           setResultTab(tab.id);
-          emitWorkspaceCommand('expand-mobile-results');
+          emitWorkspaceCommand('open-results');
         }),
       });
     }
@@ -298,8 +293,6 @@ export const CommandPalette = ({ open, onClose, dispatchLayers }: CommandPalette
 
   useEffect(() => {
     if (!open) return;
-    const active = document.activeElement;
-    returnFocusRef.current = active instanceof HTMLElement && active !== document.body ? active : null;
     window.requestAnimationFrame(() => inputRef.current?.focus());
   }, [open]);
 
@@ -336,15 +329,20 @@ export const CommandPalette = ({ open, onClose, dispatchLayers }: CommandPalette
 
   const activeCommandId = enabled[activeIndex]?.id;
 
-  return <div className="command-palette-backdrop" role="presentation" onPointerDown={(event) => {
+  return <div
+    className={`command-palette-backdrop command-palette-backdrop--${presentation}`}
+    data-surface-presentation={presentation}
+    role="presentation"
+    onPointerDown={(event) => {
     if (event.target === event.currentTarget) close();
   }}>
-    <div className="command-palette" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+    <div className="command-palette" data-workspace-surface="palette" role="dialog" aria-labelledby={titleId}>
       <h2 id={titleId} className="command-palette-title">{t('palette.title')}</h2>
       <div className="command-palette-search">
         <Search size={17} aria-hidden="true" />
         <input
           ref={inputRef}
+          data-surface-focus-key="command-query"
           type="text"
           role="combobox"
           aria-expanded="true"

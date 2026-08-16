@@ -1,0 +1,199 @@
+import type { ShellClass } from './shellComposition';
+
+export const SURFACE_PRESENTATIONS = [
+  'band',
+  'dock',
+  'inset',
+  'sheet',
+  'drawer',
+  'fullscreen',
+  'overlay',
+  'floating',
+] as const;
+
+export type SurfacePresentation = (typeof SURFACE_PRESENTATIONS)[number];
+
+export const BROKER_SURFACE_IDS = [
+  'inspector',
+  'results',
+  'datasheet',
+  'doctor',
+  'palette',
+] as const;
+
+export type SurfaceId = (typeof BROKER_SURFACE_IDS)[number];
+export type SurfaceExtent = 'default' | 'peek';
+export type SurfaceStatus = 'closed' | 'active' | 'suspended';
+
+export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Record<SurfaceId, SurfacePresentation>>>> = {
+  X2: {
+    inspector: 'dock',
+    results: 'dock',
+    datasheet: 'drawer',
+    doctor: 'drawer',
+    palette: 'overlay',
+  },
+  M1: {
+    inspector: 'inset',
+    results: 'inset',
+    datasheet: 'drawer',
+    doctor: 'drawer',
+    palette: 'overlay',
+  },
+  K0: {
+    inspector: 'sheet',
+    results: 'sheet',
+    datasheet: 'fullscreen',
+    doctor: 'fullscreen',
+    palette: 'sheet',
+  },
+};
+
+export interface SurfaceIntent {
+  open: boolean;
+  extent: SurfaceExtent;
+  activation: number;
+  requestVersion: number;
+}
+
+export interface SurfaceBrokerState {
+  sequence: number;
+  surfaces: Record<SurfaceId, SurfaceIntent>;
+}
+
+export interface SurfaceActivity extends SurfaceIntent {
+  presentation: SurfacePresentation;
+  status: SurfaceStatus;
+}
+
+export type SurfaceActivityMap = Record<SurfaceId, SurfaceActivity>;
+
+const emptyIntent = (): SurfaceIntent => ({
+  open: false,
+  extent: 'default',
+  activation: 0,
+  requestVersion: 0,
+});
+
+export const createSurfaceBrokerState = (initialOpen: readonly SurfaceId[] = []): SurfaceBrokerState => {
+  const surfaces = Object.fromEntries(BROKER_SURFACE_IDS.map((surface) => [surface, emptyIntent()])) as Record<SurfaceId, SurfaceIntent>;
+  initialOpen.forEach((surface, index) => {
+    surfaces[surface] = { ...surfaces[surface], open: true, activation: index + 1 };
+  });
+  return { sequence: initialOpen.length, surfaces };
+};
+
+export const openSurfaceIntent = (state: SurfaceBrokerState, surface: SurfaceId): SurfaceBrokerState => {
+  const sequence = state.sequence + 1;
+  const current = state.surfaces[surface];
+  return {
+    sequence,
+    surfaces: {
+      ...state.surfaces,
+      [surface]: {
+        ...current,
+        open: true,
+        activation: sequence,
+        requestVersion: current.requestVersion + 1,
+      },
+    },
+  };
+};
+
+export const activateSurfaceIntent = (state: SurfaceBrokerState, surface: SurfaceId): SurfaceBrokerState => {
+  if (!state.surfaces[surface].open) return state;
+  const sequence = state.sequence + 1;
+  return {
+    sequence,
+    surfaces: {
+      ...state.surfaces,
+      [surface]: {
+        ...state.surfaces[surface],
+        activation: sequence,
+      },
+    },
+  };
+};
+
+export const closeSurfaceIntent = (state: SurfaceBrokerState, surface: SurfaceId): SurfaceBrokerState => ({
+  ...state,
+  surfaces: {
+    ...state.surfaces,
+    [surface]: {
+      ...state.surfaces[surface],
+      open: false,
+      extent: 'default',
+    },
+  },
+});
+
+export const resolveSurfacePresentation = (
+  shellClass: ShellClass,
+  surface: SurfaceId,
+): SurfacePresentation => SURFACE_PRESENTATION_TABLE[shellClass][surface];
+
+export const isModalPresentation = (presentation: SurfacePresentation): boolean => (
+  presentation === 'drawer' || presentation === 'fullscreen'
+);
+
+const latest = (surfaces: readonly SurfaceId[], state: SurfaceBrokerState): SurfaceId | undefined => (
+  [...surfaces].sort((left, right) => state.surfaces[left].activation - state.surfaces[right].activation).at(-1)
+);
+
+export const resolveSurfaceActivity = (
+  shellClass: ShellClass,
+  state: SurfaceBrokerState,
+): SurfaceActivityMap => {
+  const open = BROKER_SURFACE_IDS.filter((surface) => state.surfaces[surface].open);
+  const compactWinner = shellClass === 'K0' ? latest(open, state) : undefined;
+  const modalWinner = latest(open.filter((surface) => (
+    isModalPresentation(resolveSurfacePresentation(shellClass, surface))
+  )), state);
+
+  return Object.fromEntries(BROKER_SURFACE_IDS.map((surface) => {
+    const intent = state.surfaces[surface];
+    const presentation = resolveSurfacePresentation(shellClass, surface);
+    let status: SurfaceStatus = 'active';
+    if (!intent.open) status = 'closed';
+    else if (compactWinner && compactWinner !== surface) status = 'suspended';
+    else if (isModalPresentation(presentation) && modalWinner !== surface) status = 'suspended';
+    return [surface, { ...intent, presentation, status }];
+  })) as SurfaceActivityMap;
+};
+
+export const setSurfaceExtent = (
+  state: SurfaceBrokerState,
+  shellClass: ShellClass,
+  surface: SurfaceId,
+  extent: SurfaceExtent,
+): SurfaceBrokerState => {
+  const presentation = resolveSurfacePresentation(shellClass, surface);
+  if (extent === 'peek' && !isModalPresentation(presentation)) {
+    throw new Error('peek sólo es válido para una superficie drawer o fullscreen.');
+  }
+  return {
+    ...state,
+    surfaces: {
+      ...state.surfaces,
+      [surface]: { ...state.surfaces[surface], extent },
+    },
+  };
+};
+
+export const validateSurfaceCombination = (
+  shellClass: ShellClass,
+  activity: SurfaceActivityMap,
+): string[] => {
+  const errors: string[] = [];
+  const active = BROKER_SURFACE_IDS.filter((surface) => activity[surface].status === 'active');
+  if (shellClass === 'K0' && active.length > 1) errors.push('Compact admite una sola capa contextual activa.');
+  const modal = active.filter((surface) => isModalPresentation(activity[surface].presentation));
+  if (modal.length > 1) errors.push('drawer y fullscreen son mutuamente exclusivos.');
+  for (const surface of BROKER_SURFACE_IDS) {
+    const current = activity[surface];
+    if (current.extent === 'peek' && !isModalPresentation(current.presentation)) {
+      errors.push(`${surface}: peek requiere drawer o fullscreen.`);
+    }
+  }
+  return errors;
+};

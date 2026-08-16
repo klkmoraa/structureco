@@ -16,7 +16,7 @@ import { Drawer } from '../../design-system/components/overlays';
 import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
-import { useShellComposition } from '../workspace/useShellComposition';
+import type { SurfacePresentation } from '../workspace/surfacePresentation';
 import { buildModelDoctorReport, type ModelDoctorFinding, type ModelDoctorSeverity } from './modelDoctorDiagnostics';
 import { getModelDoctorCopy } from './modelDoctorCopy';
 import { presentModelDoctorFinding } from './modelDoctorPresentation';
@@ -26,12 +26,13 @@ import './modelDoctor.css';
 export interface ModelDoctorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSurfaceReady?: () => void;
+  onSurfaceReady?: (ready: boolean) => void;
   acknowledgedIds?: ReadonlySet<string>;
   onAcknowledgedIdsChange?: (ids: Set<string>) => void;
   /** Test seam for proving the lazy surface does not diagnose while unmounted. */
   buildReport?: typeof buildModelDoctorReport;
   returnFocusTo?: HTMLElement | null;
+  presentation?: Extract<SurfacePresentation, 'drawer' | 'fullscreen'>;
 }
 
 type FindingFilter = 'all' | ModelDoctorSeverity;
@@ -225,6 +226,7 @@ export const ModelDoctor = ({
   onAcknowledgedIdsChange,
   buildReport = buildModelDoctorReport,
   returnFocusTo,
+  presentation = 'drawer',
 }: ModelDoctorProps) => {
   const { project, executePreparedTopologyRepair } = useProjectModel();
   const { setActiveTool, setSelection } = useWorkspaceUI();
@@ -241,14 +243,6 @@ export const ModelDoctor = ({
   const appliedStatusRef = useRef<HTMLParagraphElement>(null);
   const idScope = useId().replace(/[^A-Za-z0-9_-]/g, '');
   const acknowledged = acknowledgedIds ?? localAcknowledged;
-  // El lado por el que entra el cajón lo decide la composición, no una media
-  // query propia del Doctor: R-3, ninguna superficie pide su presentación.
-  const { phone: compact } = useShellComposition();
-
-  useEffect(() => {
-    if (open) onSurfaceReady?.();
-  }, [onSurfaceReady, open]);
-
   useEffect(() => {
     const current = new Set(report.findings.map((finding) => finding.id));
     setExpanded((previous) => new Set([...previous].filter((id) => current.has(id))));
@@ -345,9 +339,13 @@ export const ModelDoctor = ({
     title="Model Doctor"
     description={copy.description}
     closeLabel={copy.close}
-    side={compact ? 'bottom' : 'right'}
+    side="right"
+    presentation={presentation}
     className="model-doctor-surface"
     returnFocusTo={returnFocusTo}
+    restoreFocus={!onSurfaceReady}
+    surfaceId="doctor"
+    onSurfaceReady={onSurfaceReady}
   >
     {preview ? <RepairPreview
       preview={preview}

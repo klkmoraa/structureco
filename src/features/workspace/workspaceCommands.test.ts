@@ -35,21 +35,21 @@ describe('bus de comandos del workspace', () => {
 
   it('deja de entregar tras darse de baja, sin dejar el listener colgado', () => {
     const handler = vi.fn();
-    onWorkspaceCommand('expand-mobile-results', handler)();
-    emitWorkspaceCommand('expand-mobile-results');
+    onWorkspaceCommand('open-results', handler)();
+    emitWorkspaceCommand('open-results');
     expect(handler).not.toHaveBeenCalled();
   });
 
   it('no mezcla comandos distintos', () => {
-    const expand = vi.fn();
-    const collapse = vi.fn();
+    const results = vi.fn();
+    const datasheet = vi.fn();
     const off = [
-      onWorkspaceCommand('expand-mobile-results', expand),
-      onWorkspaceCommand('collapse-mobile-results', collapse),
+      onWorkspaceCommand('open-results', results),
+      onWorkspaceCommand('open-datasheet', datasheet),
     ];
-    emitWorkspaceCommand('collapse-mobile-results');
-    expect(collapse).toHaveBeenCalledTimes(1);
-    expect(expand).not.toHaveBeenCalled();
+    emitWorkspaceCommand('open-datasheet');
+    expect(datasheet).toHaveBeenCalledTimes(1);
+    expect(results).not.toHaveBeenCalled();
     for (const unsubscribe of off) unsubscribe();
   });
 

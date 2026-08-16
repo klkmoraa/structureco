@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState, type RefObject } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import { Inspector } from '../inspector/Inspector';
 import { ResultsPanel } from '../results/ResultsPanel';
@@ -13,69 +13,48 @@ import { createPersistedEditorLayerState, editorLayerReducer, persistEditorLayer
 import { AppShellLayout } from './AppShellLayout';
 import { isToolRailCompact } from './shellComposition';
 import { ShellCompositionProvider } from './ShellCompositionProvider';
+import { SurfacePresentationProvider } from './SurfacePresentationProvider';
 import { useShellComposition } from './useShellComposition';
+import { useSurfacePresentation } from './useSurfacePresentation';
 import { normalizeInspectorDetent, useWorkspaceLayoutPreferences } from './useWorkspaceLayoutPreferences';
+import type { SurfaceId } from './surfacePresentation';
 import '../../design-system/components/ui.css';
 import './phase1.css';
 import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
 
-/** La paleta sólo pesa cuando se abre: nadie paga su código por arrancar el editor. */
 const LazyCommandPalette = lazy(() => import('./CommandPalette').then((module) => ({ default: module.CommandPalette })));
-/** Model Doctor y su adaptador de diagnósticos no entran al bundle inicial del editor. */
 const LazyModelDoctor = lazy(() => import('../model-doctor/ModelDoctor').then((module) => ({ default: module.ModelDoctor })));
-/** La hoja de datos sólo se descarga cuando alguien la abre. */
 const LazyDatasheet = lazy(() => import('../datasheet/DatasheetPanel').then((module) => ({ default: module.DatasheetPanel })));
 
-const WorkspaceSurface = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string }) => {
-  const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const [modelDoctorOpen, setModelDoctorOpen] = useState(false);
-  const [datasheetOpen, setDatasheetOpen] = useState(false);
-  const datasheetReturnFocusRef = useRef<HTMLElement | null>(null);
+type WorkspaceShellProps = { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string };
+type LayoutController = ReturnType<typeof useWorkspaceLayoutPreferences>;
+
+const WorkspaceBrokerContent = ({
+  onOpenHome,
+  onOpenSpace3D,
+  projectId,
+  shellRef,
+  layoutController,
+}: WorkspaceShellProps & {
+  shellRef: RefObject<HTMLDivElement | null>;
+  layoutController: LayoutController;
+}) => {
   const [modelDoctorAcknowledgedIds, setModelDoctorAcknowledgedIds] = useState<Set<string>>(() => new Set());
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
-  const inspectorToggleRef = useRef<HTMLButtonElement>(null);
-  const inspectorReturnFocusRef = useRef<HTMLElement | null>(null);
-  const doctorReturnFocusRef = useRef<HTMLElement | null>(null);
   const modelDoctorToastRef = useRef<{ projectId: string; signature: string }>({ projectId, signature: '' });
-  const shellRef = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
   const { project, analysis, setActiveTool, analyze } = useProject();
-  const { preferences: layout, setPreference, togglePreference } = useWorkspaceLayoutPreferences();
+  const { preferences: layout, setPreference, togglePreference } = layoutController;
   const { shellClass } = useShellComposition();
-  const previousShellClassRef = useRef(shellClass);
+  const broker = useSurfacePresentation();
+  const { openSurface, closeSurface, toggleSurface, markSurfaceReady } = broker;
+  const inspector = broker.stateFor('inspector');
+  const results = broker.stateFor('results');
+  const datasheet = broker.stateFor('datasheet');
+  const doctor = broker.stateFor('doctor');
+  const palette = broker.stateFor('palette');
 
   useEffect(() => persistEditorLayerState(editorLayers), [editorLayers]);
-
-  const closeMobileInspector = useCallback(() => {
-    setMobileInspectorOpen(false);
-    window.requestAnimationFrame(() => {
-      const remembered = inspectorReturnFocusRef.current;
-      const returnTarget = remembered?.isConnected ? remembered : inspectorToggleRef.current;
-      returnTarget?.focus({ preventScroll: true });
-    });
-  }, []);
-
-  const openMobileInspector = useCallback(() => {
-    const activeElement = document.activeElement;
-    inspectorReturnFocusRef.current = activeElement instanceof HTMLElement
-      && activeElement !== document.body
-      && activeElement !== document.documentElement
-      ? activeElement
-      : inspectorToggleRef.current;
-    emitWorkspaceCommand('collapse-mobile-results');
-    setMobileInspectorOpen(true);
-  }, []);
-
-  // Salir de Compact devuelve el Inspector a su dock: la hoja modal deja de
-  // existir como presentación. Sólo actúa en el CAMBIO de clase —igual que el
-  // evento `change` de la media query que sustituye—, así que recomponer no
-  // puede cerrar por su cuenta una superficie que ya estaba abierta (T-INV-2).
-  useEffect(() => {
-    if (previousShellClassRef.current === shellClass) return;
-    previousShellClassRef.current = shellClass;
-    if (shellClass !== 'K0') setMobileInspectorOpen(false);
-  }, [shellClass]);
 
   useEffect(() => {
     const normalizeDetent = () => {
@@ -97,68 +76,20 @@ const WorkspaceSurface = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpenHome
   }, [layout.inspectorDetent, setPreference]);
 
   useEffect(() => {
-    return onWorkspaceCommand('expand-mobile-results', () => setMobileInspectorOpen(false));
-  }, []);
-
-  useEffect(() => onWorkspaceCommand('open-command-palette', () => setPaletteOpen(true)), []);
-
-  const setDoctorBackgroundState = useCallback((modal: boolean) => {
-    const shell = shellRef.current;
-    if (shell) {
-      shell.inert = modal;
-      if (modal) shell.setAttribute('aria-hidden', 'true');
-      else shell.removeAttribute('aria-hidden');
-    }
-  }, []);
+    const subscriptions = [
+      onWorkspaceCommand('open-command-palette', () => openSurface('palette')),
+      onWorkspaceCommand('open-model-doctor', () => openSurface('doctor')),
+      onWorkspaceCommand('open-datasheet', () => openSurface('datasheet')),
+      onWorkspaceCommand('open-results', () => openSurface('results')),
+    ];
+    return () => subscriptions.forEach((unsubscribe) => unsubscribe());
+  }, [openSurface]);
 
   useEffect(() => {
     setModelDoctorAcknowledgedIds(new Set());
-    setDoctorBackgroundState(false);
-    setModelDoctorOpen(false);
-  }, [projectId, setDoctorBackgroundState]);
-
-  const setDoctorOpen = useCallback((open: boolean) => {
-    // El chunk puede tardar en su primera apertura: la mesa sigue operable
-    // hasta que el Drawer portado confirme que ya existe una superficie modal.
-    if (!open) setDoctorBackgroundState(false);
-    if (open) {
-      const activeElement = document.activeElement;
-      if (activeElement instanceof HTMLElement && activeElement !== document.body && activeElement !== document.documentElement) {
-        doctorReturnFocusRef.current = activeElement;
-      }
-      setMobileInspectorOpen(false);
-      setPaletteOpen(false);
-      if (shellClass === 'K0') {
-        emitWorkspaceCommand('collapse-mobile-results');
-      }
-    }
-    setModelDoctorOpen(open);
-  }, [setDoctorBackgroundState, shellClass]);
-
-  const doctorSurfaceReady = useCallback(() => {
-    if (!modelDoctorOpen) return;
-    setDoctorBackgroundState(true);
-  }, [modelDoctorOpen, setDoctorBackgroundState]);
-
-  useEffect(() => onWorkspaceCommand('open-model-doctor', () => setDoctorOpen(true)), [setDoctorOpen]);
-
-  useEffect(() => onWorkspaceCommand('open-datasheet', () => {
-    // Se recuerda el lanzador antes de abrir: el Drawer devuelve el foco al
-    // cerrar, y sin esto volvería al `body` cuando lo abre la paleta, que ya se
-    // ha desmontado para entonces.
-    const activeElement = document.activeElement;
-    datasheetReturnFocusRef.current = activeElement instanceof HTMLElement
-      && activeElement !== document.body
-      && activeElement !== document.documentElement
-      ? activeElement
-      : null;
-    setMobileInspectorOpen(false);
-    setPaletteOpen(false);
-    setDatasheetOpen(true);
-  }), []);
-
-  // Abrir otro proyecto invalida lo que la hoja estaba mostrando.
-  useEffect(() => { setDatasheetOpen(false); }, [projectId]);
+    (['datasheet', 'doctor', 'palette'] as const).forEach((surface) => closeSurface(surface));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
   useEffect(() => {
     let current = true;
@@ -186,33 +117,16 @@ const WorkspaceSurface = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpenHome
     return () => { current = false; };
   }, [project, t]);
 
-  useEffect(() => () => {
-    setDoctorBackgroundState(false);
-  }, [setDoctorBackgroundState]);
-
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() !== 'k' || !(event.ctrlKey || event.metaKey) || event.altKey) return;
+      if (datasheet.status === 'active' || doctor.status === 'active') return;
       event.preventDefault();
-      if (modelDoctorOpen) return;
-      setPaletteOpen((open) => !open);
+      toggleSurface('palette', document.activeElement instanceof HTMLElement ? document.activeElement : null);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [modelDoctorOpen]);
-
-  useEffect(() => {
-    if (!mobileInspectorOpen) return undefined;
-    const background = shellRef.current?.querySelectorAll<HTMLElement>('.topbar, .toolbar, .center-stage');
-    background?.forEach((element) => {
-      element.inert = true;
-      element.setAttribute('aria-hidden', 'true');
-    });
-    return () => background?.forEach((element) => {
-      element.inert = false;
-      element.removeAttribute('aria-hidden');
-    });
-  }, [mobileInspectorOpen]);
+  }, [datasheet.status, doctor.status, toggleSurface]);
 
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -231,95 +145,132 @@ const WorkspaceSurface = ({ onOpenHome, onOpenSpace3D, projectId }: { onOpenHome
       viewport.removeEventListener('resize', syncViewport);
       viewport.removeEventListener('scroll', syncViewport);
     };
-  }, []);
+  }, [shellRef]);
+
+  const setResultsOpen = useCallback((open: boolean, trigger?: HTMLElement | null) => {
+    if (open) openSurface('results', trigger);
+    else closeSurface('results');
+  }, [closeSurface, openSurface]);
+  const setDatasheetOpen = useCallback((open: boolean) => {
+    if (open) openSurface('datasheet');
+    else closeSurface('datasheet');
+  }, [closeSurface, openSurface]);
+  const setDoctorOpen = useCallback((open: boolean) => {
+    if (open) openSurface('doctor');
+    else closeSurface('doctor');
+  }, [closeSurface, openSurface]);
+  const markDatasheetReady = useCallback((ready: boolean) => markSurfaceReady('datasheet', ready), [markSurfaceReady]);
+  const markDoctorReady = useCallback((ready: boolean) => markSurfaceReady('doctor', ready), [markSurfaceReady]);
 
   return <AppShellLayout
     ref={shellRef}
     projectId={projectId}
     skipLabel={t('shell.skipToCanvas')}
     shellClass={shellClass}
-    inspectorCollapsed={layout.inspectorCollapsed}
+    inspectorCollapsed={!inspector.open}
     inspectorWidth={layout.inspectorWidth}
     fullCanvas={layout.fullCanvas}
     topBar={<TopBar
       onOpenHome={onOpenHome}
       onOpenSpace3D={onOpenSpace3D}
       layoutActions={{
-        inspectorCollapsed: layout.inspectorCollapsed,
+        inspectorCollapsed: !inspector.open,
         fullCanvas: layout.fullCanvas,
         onToggleInspector: () => {
-          setMobileInspectorOpen(false);
-          if (layout.fullCanvas) {
-            setPreference('fullCanvas', false);
+          if (layout.fullCanvas) setPreference('fullCanvas', false);
+          if (inspector.open) {
+            closeSurface('inspector');
+            setPreference('inspectorCollapsed', true);
+          } else {
+            openSurface('inspector');
             setPreference('inspectorCollapsed', false);
-            return;
           }
-          togglePreference('inspectorCollapsed');
         },
         onToggleFullCanvas: () => {
-          setMobileInspectorOpen(false);
+          if (!layout.fullCanvas) {
+            closeSurface('inspector');
+            closeSurface('results');
+          } else {
+            openSurface('results');
+            if (!layout.inspectorCollapsed) openSurface('inspector');
+          }
           togglePreference('fullCanvas');
         },
       }}
     />}
     toolRail={<ToolRail compact={isToolRailCompact(shellClass)} />}
     workspace={<>
-        {project.settings.calculationMode === 'classroom' ? <ClassroomGuide className="classroom-workspace-journey" project={project} analysis={analysis} onChooseTool={setActiveTool} onAnalyze={analyze} /> : null}
-        <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => {
-          if (shellClass === 'K0') openMobileInspector();
-        }} />
-        <ResultsPanel />
-        <ToastNotification />
-        {paletteOpen ? <Suspense fallback={null}><LazyCommandPalette
-          open
-          onClose={() => setPaletteOpen(false)}
-          dispatchLayers={dispatchEditorLayers}
-        /></Suspense> : null}
-        {datasheetOpen ? <Suspense fallback={null}><LazyDatasheet
-          open
-          onOpenChange={setDatasheetOpen}
-          returnFocusTo={datasheetReturnFocusRef.current}
-        /></Suspense> : null}
-        {modelDoctorOpen ? <Suspense fallback={<span className="sr-only" role="status">{t('modelDoctor.loading')}</span>}><LazyModelDoctor
-          open
-          onOpenChange={setDoctorOpen}
-          onSurfaceReady={doctorSurfaceReady}
-          acknowledgedIds={modelDoctorAcknowledgedIds}
-          onAcknowledgedIdsChange={setModelDoctorAcknowledgedIds}
-          returnFocusTo={doctorReturnFocusRef.current}
-        /></Suspense> : null}
-      </>}
-    backdrop={mobileInspectorOpen ? <button className="mobile-inspector-backdrop" aria-hidden="true" tabIndex={-1} onClick={closeMobileInspector} /> : null}
-    inspector={<Inspector
-      className={mobileInspectorOpen ? 'mobile-open' : ''}
+      {project.settings.calculationMode === 'classroom' ? <ClassroomGuide className="classroom-workspace-journey" project={project} analysis={analysis} onChooseTool={setActiveTool} onAnalyze={analyze} /> : null}
+      <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => openSurface('inspector')} />
+      {broker.isRetained('results') ? <ResultsPanel
+        presentation={results.presentation as 'dock' | 'inset' | 'sheet'}
+        status={results.status}
+        onOpenChange={setResultsOpen}
+      /> : null}
+      <ToastNotification />
+      {broker.isRetained('palette') ? <Suspense fallback={null}><LazyCommandPalette
+        open={palette.status === 'active'}
+        onClose={() => closeSurface('palette')}
+        dispatchLayers={dispatchEditorLayers}
+        presentation={palette.presentation as 'overlay' | 'sheet'}
+      /></Suspense> : null}
+      {broker.isRetained('datasheet') ? <Suspense fallback={null}><LazyDatasheet
+        open={datasheet.status === 'active'}
+        onOpenChange={setDatasheetOpen}
+        presentation={datasheet.presentation as 'drawer' | 'fullscreen'}
+        onSurfaceReady={markDatasheetReady}
+      /></Suspense> : null}
+      {broker.isRetained('doctor') ? <Suspense fallback={<span className="sr-only" role="status">{t('modelDoctor.loading')}</span>}><LazyModelDoctor
+        open={doctor.status === 'active'}
+        onOpenChange={setDoctorOpen}
+        onSurfaceReady={markDoctorReady}
+        presentation={doctor.presentation as 'drawer' | 'fullscreen'}
+        acknowledgedIds={modelDoctorAcknowledgedIds}
+        onAcknowledgedIdsChange={setModelDoctorAcknowledgedIds}
+      /></Suspense> : null}
+    </>}
+    inspector={broker.isRetained('inspector') ? <Inspector
+      className={inspector.presentation === 'sheet' && inspector.status === 'active' ? 'mobile-open' : ''}
       desktopWidth={layout.inspectorWidth}
-      modal={mobileInspectorOpen}
-      onClose={closeMobileInspector}
+      presentation={inspector.presentation as 'dock' | 'inset' | 'sheet'}
+      status={inspector.status}
+      onClose={() => closeSurface('inspector')}
       onDesktopWidthChange={(width) => setPreference('inspectorWidth', width)}
       mobileDetent={layout.inspectorDetent}
       onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)}
-    />}
-    floatingActions={!mobileInspectorOpen ? <button
-        ref={inspectorToggleRef}
-        className="mobile-inspector-toggle"
-        onClick={openMobileInspector}
-        aria-label={t('inspector.open')}
-        aria-expanded={mobileInspectorOpen}
-        aria-controls="workspace-inspector"
-      >
-        <SlidersHorizontal size={20} />
-      </button> : null}
+    /> : null}
+    floatingActions={inspector.status !== 'active' ? <button
+      className="mobile-inspector-toggle"
+      onClick={(event) => openSurface('inspector', event.currentTarget)}
+      aria-label={t('inspector.open')}
+      aria-expanded={false}
+      aria-controls="workspace-inspector"
+    >
+      <SlidersHorizontal size={20} />
+    </button> : null}
     footer={<div className="professional-note">{t('app.professionalNote')}</div>}
   />;
 };
 
-/**
- * El proveedor de composición envuelve la mesa entera y nada más: la clase debe
- * estar disponible para el riel, Results y Model Doctor —que cuelgan de aquí—
- * sin viajar por `WorkspaceUIContext`, donde cada emisión arrastraría también a
- * la selección y al tema.
- */
-export const WorkspaceShell = (props: { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string }) =>
-  <ShellCompositionProvider><WorkspaceSurface {...props} /></ShellCompositionProvider>;
+const WorkspaceSurface = (props: WorkspaceShellProps) => {
+  const shellRef = useRef<HTMLDivElement>(null);
+  const layoutController = useWorkspaceLayoutPreferences();
+  const { shellClass } = useShellComposition();
+  const initialOpen = useMemo<SurfaceId[]>(() => {
+    if (layoutController.preferences.fullCanvas) return [];
+    const surfaces: SurfaceId[] = ['results'];
+    if (!layoutController.preferences.inspectorCollapsed) surfaces.push('inspector');
+    return surfaces;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return <SurfacePresentationProvider shellClass={shellClass} initialOpen={initialOpen} backgroundRef={shellRef}>
+    <WorkspaceBrokerContent {...props} shellRef={shellRef} layoutController={layoutController} />
+  </SurfacePresentationProvider>;
+};
+
+export const WorkspaceShell = (props: WorkspaceShellProps) => (
+  <ShellCompositionProvider><WorkspaceSurface {...props} /></ShellCompositionProvider>
+);
 
 export default WorkspaceShell;

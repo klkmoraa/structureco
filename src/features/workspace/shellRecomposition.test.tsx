@@ -29,12 +29,14 @@ const resizeTo = (width: number, height: number) => {
 
 /** Superficie de prueba: dominio real de `ProjectProvider`, clase real del shell. */
 const Surface = () => {
-  const { selection, setSelection } = useProject();
+  const { selection, setSelection, resultTab, setResultTab } = useProject();
   const { shellClass } = useShellComposition();
   return <>
     <output data-testid="shell-class">{shellClass}</output>
     <output data-testid="selection">{selection?.kind === 'node' || selection?.kind === 'member' ? `${selection.kind}:${selection.id}` : 'none'}</output>
+    <output data-testid="evidence">{resultTab}</output>
     <button onClick={() => setSelection({ kind: 'node', id: 'N1' })}>seleccionar</button>
+    <button onClick={() => setResultTab('shear')}>evidence shear</button>
     <input aria-label="borrador" defaultValue="" />
     {/* La superficie no se desmonta al recomponer: migra de presentación. */}
     <div role="dialog" aria-label="hoja">hoja</div>
@@ -64,10 +66,12 @@ describe('recomposición del shell', () => {
 
     // Estado vivo antes de recomponer.
     act(() => { screen.getByRole('button', { name: 'seleccionar' }).click(); });
+    act(() => { screen.getByRole('button', { name: 'evidence shear' }).click(); });
     const draft = screen.getByLabelText('borrador') as HTMLInputElement;
     draft.value = 'sin aplicar';
     draft.focus();
     expect(screen.getByTestId('selection').textContent).toBe('node:N1');
+    expect(screen.getByTestId('evidence').textContent).toBe('shear');
     expect(document.activeElement).toBe(draft);
     expect(screen.getByRole('dialog', { name: 'hoja' })).toBeTruthy();
 
@@ -82,6 +86,8 @@ describe('recomposición del shell', () => {
       expect(`${width}:${screen.getByTestId('shell-class').textContent}`).toBe(`${width}:${expected}`);
       // T-INV-1 · la selección no cambia.
       expect(screen.getByTestId('selection').textContent).toBe('node:N1');
+      // T-INV-1 · la capa/evidencia activa tampoco cambia.
+      expect(screen.getByTestId('evidence').textContent).toBe('shear');
       // T-INV-1 · el borrador sin aplicar sigue sin aplicarse y sin perderse.
       expect((screen.getByLabelText('borrador') as HTMLInputElement).value).toBe('sin aplicar');
       // T-INV-3 · el foco sigue en el mismo elemento, no en el `body`.

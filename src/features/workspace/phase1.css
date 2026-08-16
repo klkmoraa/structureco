@@ -38,6 +38,19 @@
 .results-mobile-focus { display:none; min-height:36px; padding:0 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); color:var(--accent); font-size:10px; font-weight:700; }
 .results-mobile-commandbar { display:none; flex:0 0 auto; justify-content:flex-end; padding:4px 10px; border-bottom:1px solid var(--border-soft); background:var(--surface); }
 
+/* CRI-94: placement comes only from the broker's presentation attribute. */
+[data-workspace-surface][hidden] { display:none!important; }
+.app-shell:has(.inspector-panel[data-surface-presentation='inset']) .workspace,
+.app-shell:has(.inspector-panel[data-surface-presentation='sheet']) .workspace { grid-template-columns:var(--toolbar-w) minmax(0,1fr); }
+.inspector-panel[data-surface-presentation='dock'] { position:relative; display:flex; inset:auto; width:auto; height:auto; max-height:none; clip-path:none; border-radius:0; }
+.inspector-panel[data-surface-presentation='inset'] { position:absolute; z-index:31; inset:8px 8px 8px auto; display:flex; width:min(420px,calc(100% - 16px)); height:auto; max-height:none; clip-path:none; border-radius:var(--sc-radius-lg); }
+.inspector-panel[data-surface-presentation='sheet'] { position:fixed; z-index:31; inset:auto 0 var(--sc-visual-viewport-bottom,0px); display:flex; width:100%; height:min(58dvh,540px); max-height:calc(var(--sc-visual-viewport-height,100dvh) - 8px); clip-path:none; border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
+.results-panel[data-surface-presentation='dock'] { position:relative; inset:auto; width:auto; }
+.results-panel[data-surface-presentation='inset'] { position:absolute; z-index:8; inset:auto 8px 8px; width:auto; height:min(42dvh,320px)!important; border-radius:var(--sc-radius-lg); }
+.results-panel[data-surface-presentation='sheet'] { position:absolute; z-index:8; inset:auto 0 0; width:100%; height:min(46dvh,420px)!important; border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
+.command-palette-backdrop--sheet { align-items:end; padding:0; background:transparent; pointer-events:none; }
+.command-palette-backdrop--sheet .command-palette { width:100%; max-height:min(88dvh,720px); border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; pointer-events:auto; }
+
 @media (max-width:1023px) {
   .inspector-panel[data-mobile-detent='compact'] { height:min(34dvh,320px); }
   .inspector-panel[data-mobile-detent='medium'] { height:min(58dvh,540px); }

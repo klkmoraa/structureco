@@ -9,6 +9,7 @@ import type { Selection } from '../../types';
 import { workspaceCommandEventName } from '../workspace/workspaceCommands';
 import { DatasheetPanel } from './DatasheetPanel';
 import { createDatasheetProject } from './datasheetFixtures';
+import { useState } from 'react';
 
 afterEach(cleanup);
 beforeEach(() => localStorage.clear());
@@ -54,6 +55,36 @@ const renderDatasheet = async () => {
 const rowFor = (id: string) => screen.getByRole('rowheader', { name: id }).closest('tr') as HTMLElement;
 
 describe('datasheet panel', () => {
+  it('retains a real unapplied draft while the broker suspends and resumes the surface', async () => {
+    const user = setup();
+    const ContinuityHarness = () => {
+      const { project, replaceProject } = useProjectModel();
+      const [open, setOpen] = useState(true);
+      if (project.id !== 'datasheet-fixture') {
+        return <button type="button" onClick={() => replaceProject(createDatasheetProject())}>sembrar</button>;
+      }
+      return <>
+        <button type="button" onClick={() => setOpen(false)}>suspender</button>
+        <button type="button" onClick={() => setOpen(true)}>reanudar</button>
+        <output aria-label="X N1 almacenada">{project.nodes.find((node) => node.id === 'N1')?.x}</output>
+        <DatasheetPanel open={open} onOpenChange={setOpen} presentation="drawer" />
+      </>;
+    };
+    render(<ProjectProvider><ContinuityHarness /></ProjectProvider>);
+    await user.click(screen.getByRole('button', { name: 'sembrar' }));
+    const xField = await screen.findByLabelText(/^X \(m\)/);
+    await user.clear(xField);
+    await user.type(xField, '12.75');
+    expect(screen.getByLabelText('X N1 almacenada').textContent).toBe('0');
+
+    await user.click(screen.getByRole('button', { name: 'suspender' }));
+    expect(screen.queryByRole('dialog', { name: /Hoja de datos/ })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'reanudar' }));
+
+    expect((await screen.findByLabelText(/^X \(m\)/) as HTMLInputElement).value).toBe('12.75');
+    expect(screen.getByLabelText('X N1 almacenada').textContent).toBe('0');
+  });
+
   it('projects the model without holding a copy of it', async () => {
     await renderDatasheet();
     const grid = screen.getByRole('grid');

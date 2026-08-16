@@ -6,6 +6,8 @@ export interface ModalFocusOptions<T extends HTMLElement> {
   onEscape: () => void;
   initialFocus?: (container: T) => HTMLElement | null;
   lockBodyScroll?: boolean;
+  restoreFocus?: boolean;
+  returnFocusTo?: HTMLElement | null;
 }
 
 const focusableSelector = [
@@ -14,12 +16,19 @@ const focusableSelector = [
   'select:not([disabled]):not([tabindex="-1"])',
   'textarea:not([disabled]):not([tabindex="-1"])',
   'a[href]:not([tabindex="-1"])',
+  'summary',
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
 const getFocusable = (container: HTMLElement | null) => [
   ...(container?.querySelectorAll<HTMLElement>(focusableSelector) ?? []),
-].filter((element) => !element.closest('[hidden], [aria-hidden="true"], [inert]'));
+].filter((element) => {
+  if (element.closest('[hidden], [aria-hidden="true"], [inert]')) return false;
+  const closedDetails = element.closest('details:not([open])');
+  if (closedDetails && element.tagName !== 'SUMMARY') return false;
+  const style = window.getComputedStyle(element);
+  return style.display !== 'none' && style.visibility !== 'hidden' && style.visibility !== 'collapse';
+});
 
 export const useModalFocus = <T extends HTMLElement>({
   open,
@@ -27,6 +36,8 @@ export const useModalFocus = <T extends HTMLElement>({
   onEscape,
   initialFocus,
   lockBodyScroll = true,
+  restoreFocus = true,
+  returnFocusTo,
 }: ModalFocusOptions<T>) => {
   const onEscapeRef = useRef(onEscape);
   const initialFocusRef = useRef(initialFocus);
@@ -78,7 +89,9 @@ export const useModalFocus = <T extends HTMLElement>({
       window.cancelAnimationFrame(focusHandle);
       document.removeEventListener('keydown', onKeyDown);
       if (lockBodyScroll) document.body.style.overflow = previousOverflow;
-      if (previousFocus?.isConnected) window.requestAnimationFrame(() => previousFocus.focus());
+      if (!restoreFocus) return;
+      const returnTarget = returnFocusTo?.isConnected ? returnFocusTo : previousFocus;
+      if (returnTarget?.isConnected) window.requestAnimationFrame(() => returnTarget.focus({ preventScroll: true }));
     };
-  }, [containerRef, lockBodyScroll, open]);
+  }, [containerRef, lockBodyScroll, open, restoreFocus, returnFocusTo]);
 };

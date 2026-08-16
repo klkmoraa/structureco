@@ -9,6 +9,7 @@ import type { Tool } from '../../types';
 import { InspectorNumericField } from './InspectorNumericField';
 import { InspectorProperties } from './InspectorProperties';
 import { MAX_INSPECTOR_WIDTH, MIN_INSPECTOR_WIDTH, clampInspectorWidth, type InspectorDetent } from '../workspace/useWorkspaceLayoutPreferences';
+import type { SurfacePresentation, SurfaceStatus } from '../workspace/surfacePresentation';
 
 const NumberField = ({
   label,
@@ -48,28 +49,11 @@ const Segmented = ({ value, options, onChange }: { value: string; options: Array
   </div>
 );
 
-const focusableSelector = [
-  'button:not([disabled]):not([tabindex="-1"])',
-  'input:not([disabled]):not([tabindex="-1"])',
-  'select:not([disabled]):not([tabindex="-1"])',
-  'textarea:not([disabled]):not([tabindex="-1"])',
-  'a[href]:not([tabindex="-1"])',
-  'summary',
-  '[tabindex]:not([tabindex="-1"])',
-].join(',');
-
-const getFocusableElements = (panel: HTMLElement | null) => [
-  ...(panel?.querySelectorAll<HTMLElement>(focusableSelector) ?? []),
-].filter((element) => {
-  if (element.closest('[hidden], [aria-hidden="true"], [inert]')) return false;
-  const closedDetails = element.closest('details:not([open])');
-  return !closedDetails || element.tagName === 'SUMMARY';
-});
-
 export const Inspector = ({
   className = '',
   desktopWidth = 320,
-  modal = false,
+  presentation = 'dock',
+  status = 'active',
   onClose,
   onDesktopWidthChange,
   mobileDetent = 'medium',
@@ -77,7 +61,8 @@ export const Inspector = ({
 }: {
   className?: string;
   desktopWidth?: number;
-  modal?: boolean;
+  presentation?: Extract<SurfacePresentation, 'dock' | 'inset' | 'sheet'>;
+  status?: SurfaceStatus;
   onClose?: () => void;
   onDesktopWidthChange?: (width: number) => void;
   mobileDetent?: InspectorDetent;
@@ -88,6 +73,7 @@ export const Inspector = ({
   const { t } = useI18n();
   const [tab, setTab] = useState<'inspector' | 'loads' | 'display'>('inspector');
   const panelRef = useRef<HTMLElement>(null);
+  const sheet = presentation === 'sheet';
   const [resizeOrigin, setResizeOrigin] = useState<{ clientX: number; width: number } | null>(null);
 
   useEffect(() => {
@@ -95,42 +81,15 @@ export const Inspector = ({
   }, [selection]);
 
   useEffect(() => {
-    if (!modal) return undefined;
-    const panel = panelRef.current;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const focusFrame = window.requestAnimationFrame(() => getFocusableElements(panel)[0]?.focus());
+    if (!sheet || status !== 'active') return undefined;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented) return;
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose?.();
-        return;
-      }
-      if (event.key !== 'Tab') return;
-      const focusable = getFocusableElements(panel);
-      if (focusable.length === 0) {
-        event.preventDefault();
-        panel?.focus();
-        return;
-      }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && (document.activeElement === first || !panel?.contains(document.activeElement))) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && (document.activeElement === last || !panel?.contains(document.activeElement))) {
-        event.preventDefault();
-        first.focus();
-      }
+      if (event.defaultPrevented || event.key !== 'Escape') return;
+      event.preventDefault();
+      onClose?.();
     };
     document.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.cancelAnimationFrame(focusFrame);
-      document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [modal, onClose]);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onClose, sheet, status]);
 
   const chooseLoadTool = (tool: Extract<Tool, 'pointLoad' | 'distributedLoad' | 'moment'>) => {
     setActiveTool(tool);
@@ -178,13 +137,16 @@ export const Inspector = ({
       ref={panelRef}
       id="workspace-inspector"
       className={`inspector-panel ${className}`.trim()}
-      role={modal ? 'dialog' : 'complementary'}
-      aria-modal={modal || undefined}
+      role={sheet ? 'dialog' : 'complementary'}
       aria-label={t('inspector.tab')}
-      tabIndex={modal ? -1 : undefined}
-      data-mobile-detent={modal ? mobileDetent : undefined}
+      tabIndex={sheet ? -1 : undefined}
+      data-workspace-surface="inspector"
+      data-surface-presentation={presentation}
+      data-surface-status={status}
+      hidden={status !== 'active'}
+      data-mobile-detent={sheet ? mobileDetent : undefined}
     >
-      {!modal && onDesktopWidthChange ? <button
+      {presentation === 'dock' && onDesktopWidthChange ? <button
         type="button"
         className="inspector-resize-handle"
         role="separator"
@@ -202,7 +164,7 @@ export const Inspector = ({
         onPointerUp={() => setResizeOrigin(null)}
         onPointerCancel={() => setResizeOrigin(null)}
       /> : null}
-      {modal && onMobileDetentChange ? <div className="inspector-detent-control" role="group" aria-label={t('inspector.detentGroup')}>
+      {sheet && onMobileDetentChange ? <div className="inspector-detent-control" role="group" aria-label={t('inspector.detentGroup')}>
         {(['compact', 'medium', 'large'] as const).map((detent) => <button
           key={detent}
           type="button"

@@ -51,7 +51,7 @@ export const ClassroomGuide = ({
       session.markAnalysisRequested();
       onAnalyze?.();
     } else if (step.action.kind === 'compare') {
-      emitWorkspaceCommand('expand-mobile-results');
+      emitWorkspaceCommand('open-results');
     } else {
       window.requestAnimationFrame(() => document.getElementById(conclusionId)?.focus());
     }

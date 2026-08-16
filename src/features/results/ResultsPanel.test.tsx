@@ -10,6 +10,7 @@ import { formatSignificant } from '../../utils/numberFormat';
 import { ProjectProvider, useProject } from '../../store/ProjectContext';
 import type { ProjectModel } from '../../types';
 import { ResultsPanel } from './ResultsPanel';
+import { useState } from 'react';
 
 const RESULTS_MODE_STORAGE_KEY = 'structureCo.results.mode.v1';
 
@@ -38,6 +39,8 @@ const stubMatchMedia = () => vi.fn().mockImplementation((query: string) => ({
 
 const ResultsHarness = () => {
   const { project, analysis, resultTab, selection, resultCursor } = useProject();
+  const [open, setOpen] = useState(true);
+  const presentation = window.innerWidth < 1024 ? 'sheet' : 'dock';
   const selectionLabel = selection?.kind === 'member' || selection?.kind === 'node'
     ? `${selection.kind}:${selection.id}`
     : selection?.kind ?? 'none';
@@ -46,7 +49,7 @@ const ResultsHarness = () => {
     <output aria-label="Selección actual">{selectionLabel}</output>
     <output aria-label="Cursor de resultados">{resultCursor ? `${resultCursor.memberId}:${resultCursor.x}:${resultCursor.pinned}` : 'none'}</output>
     <ClassroomDiagnostics />
-    <ResultsPanel />
+    <ResultsPanel presentation={presentation} status={open ? 'active' : 'closed'} onOpenChange={setOpen} />
   </ClassroomSessionProvider>;
 };
 
@@ -209,19 +212,16 @@ describe('Results analytical center', () => {
     setViewport('tablet');
     renderResults();
 
-    const toggle = screen.getByRole('button', { name: 'Resultados' });
-    await user.click(toggle);
     await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
     const chart = await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
     const graph = within(chart).getByRole('img', { name: /diagrama .* del miembro/i });
-    expect(screen.getByRole('dialog', { name: /Resultados del an/ })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: /Resultados del an/ }).getAttribute('aria-modal')).toBeNull();
     expect(screen.getByLabelText('Cursor de resultados').textContent).toBe('none');
 
     graph.focus();
     await user.keyboard('{Escape}');
 
     await waitFor(() => expect(screen.queryByRole('dialog', { name: /Resultados del an/ })).toBeNull());
-    expect(document.activeElement).toBe(toggle);
   }, 10_000);
 
   it('links reaction rows back to the selected model node', async () => {
@@ -347,30 +347,20 @@ describe('Results analytical center', () => {
     expect(await screen.findByRole('region', { name: 'Global results summary' })).toBeTruthy();
   }, 10_000);
 
-  it('uses a modal tablet sheet with focus trap, Escape return, and safe focused-mode normalization', async () => {
+  it('uses a non-modal tablet sheet and normalizes the stored focused content mode', async () => {
     const user = userEvent.setup();
     setViewport('tablet');
     localStorage.setItem(RESULTS_MODE_STORAGE_KEY, 'focused');
     renderResults();
 
-    const toggle = screen.getByRole('button', { name: 'Resultados' });
     const panel = document.querySelector<HTMLElement>('.results-panel') as HTMLElement;
     expect(panel).toBeTruthy();
     await waitFor(() => expect(panel.getAttribute('data-results-mode')).toBe('expanded'));
-    await user.click(toggle);
     const sheet = await screen.findByRole('dialog', { name: 'Resultados del análisis' });
-    expect(sheet.getAttribute('aria-modal')).toBe('true');
-    await waitFor(() => expect(document.activeElement).toBe(toggle));
-
-    sheet.focus();
-    await user.tab();
-    expect(document.activeElement).toBe(toggle);
-    sheet.focus();
-    await user.keyboard('{Shift>}{Tab}{/Shift}');
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Analizar estructura' }));
+    expect(sheet.getAttribute('aria-modal')).toBeNull();
+    expect(document.querySelector('.results-sheet-backdrop')).toBeNull();
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Resultados del análisis' })).toBeNull());
-    expect(document.activeElement).toBe(toggle);
   });
 
   it('keeps the phone results sheet modeless so the canvas remains reachable', async () => {
@@ -382,21 +372,16 @@ describe('Results analytical center', () => {
     canvasHost.tabIndex = 0;
     container.prepend(canvasHost);
 
-    const toggle = screen.getByRole('button', { name: 'Resultados' });
-    await user.click(toggle);
-
-    const sheet = await screen.findByRole('region', { name: /Resultados del an/ });
-    expect(screen.queryByRole('dialog', { name: /Resultados del an/ })).toBeNull();
+    const sheet = await screen.findByRole('dialog', { name: /Resultados del an/ });
     expect(sheet.getAttribute('aria-modal')).toBeNull();
-    expect(sheet.getAttribute('data-canvas-interactive')).toBe('true');
+    expect(sheet.getAttribute('data-canvas-interactive')).toBeNull();
     expect(canvasHost.inert).not.toBe(true);
     expect(canvasHost.getAttribute('aria-hidden')).toBeNull();
     expect(document.querySelector('.results-sheet-backdrop')).toBeNull();
 
     canvasHost.focus();
     await user.keyboard('{Escape}');
-    await waitFor(() => expect(sheet.classList.contains('mobile-collapsed')).toBe(true));
-    expect(document.activeElement).toBe(toggle);
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Resultados del an/ })).toBeNull());
   });
 
   it('uses phone focus mode temporarily and reopens as the canvas-preserving panel', async () => {
@@ -404,9 +389,7 @@ describe('Results analytical center', () => {
     setViewport('phone');
     renderResults();
 
-    const toggle = screen.getByRole('button', { name: 'Resultados' });
-    await user.click(toggle);
-    const panel = screen.getByRole('region', { name: /Resultados del an/ });
+    const panel = screen.getByRole('dialog', { name: /Resultados del an/ });
     await user.click(screen.getByRole('button', { name: 'Enfocar resultados en pantalla completa' }));
 
     expect(panel.getAttribute('data-results-mode')).toBe('focused');
@@ -414,18 +397,15 @@ describe('Results analytical center', () => {
     await user.keyboard('{Escape}');
     expect(panel.getAttribute('data-results-mode')).toBe('expanded');
 
-    await user.click(toggle);
-    await user.click(toggle);
     expect(panel.getAttribute('data-results-mode')).toBe('expanded');
-    expect(panel.getAttribute('data-canvas-interactive')).toBe('true');
+    expect(panel.getAttribute('aria-modal')).toBeNull();
   });
 
   it('leaves Escape to a visible modal above the modeless phone results', async () => {
     const user = userEvent.setup();
     setViewport('phone');
     renderResults();
-    await user.click(screen.getByRole('button', { name: 'Resultados' }));
-    const sheet = await screen.findByRole('region', { name: /Resultados del an/ });
+    const sheet = await screen.findByRole('dialog', { name: /Resultados del an/ });
     const modalEscape = vi.fn();
     const modal = document.createElement('div');
     modal.setAttribute('role', 'dialog');
@@ -444,7 +424,7 @@ describe('Results analytical center', () => {
     }
   });
 
-  it('requests a fresh phone canvas fit when a new analysis expands the results', async () => {
+  it('does not alter the camera by fitting the canvas when analysis updates a sheet', async () => {
     const user = userEvent.setup();
     setViewport('phone');
     const onFitCanvas = vi.fn();
@@ -454,7 +434,8 @@ describe('Results analytical center', () => {
       renderResults();
       await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
       await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
-      await waitFor(() => expect(onFitCanvas).toHaveBeenCalledOnce());
+      await waitFor(() => expect(screen.getByTestId('diagram-chart')).toBeTruthy());
+      expect(onFitCanvas).not.toHaveBeenCalled();
     } finally {
       window.removeEventListener('structureco:fit-canvas', onFitCanvas);
     }
@@ -465,7 +446,6 @@ describe('Results analytical center', () => {
     setViewport('tablet');
     renderResults();
 
-    await user.click(screen.getByRole('button', { name: 'Resultados' }));
     await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
     await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
     await user.click(screen.getByRole('tab', { name: 'Aprender' }));
@@ -474,30 +454,8 @@ describe('Results analytical center', () => {
     expect(summaries.length).toBeGreaterThan(0);
     summaries[summaries.length - 1].focus();
     await user.tab();
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: /Aprender ·/ }));
+    expect(document.activeElement).not.toBe(screen.getByRole('button', { name: /Aprender ·/ }));
   }, 10_000);
-
-  it('falls back to the results launcher when the remembered Inspector control becomes hidden', async () => {
-    const user = userEvent.setup();
-    setViewport('tablet');
-    renderResults();
-    const hiddenInspector = document.createElement('aside');
-    hiddenInspector.className = 'inspector-panel mobile-open';
-    const inspectorControl = document.createElement('button');
-    inspectorControl.textContent = 'Control del Inspector';
-    hiddenInspector.append(inspectorControl);
-    document.body.append(hiddenInspector);
-    inspectorControl.focus();
-
-    window.dispatchEvent(new CustomEvent('structureco:expand-mobile-results'));
-    await screen.findByRole('dialog', { name: /Resultados del an/ });
-    hiddenInspector.classList.remove('mobile-open');
-    await user.keyboard('{Escape}');
-
-    const launcher = screen.getByRole('button', { name: 'Resultados' });
-    await waitFor(() => expect(document.activeElement).toBe(launcher));
-    hiddenInspector.remove();
-  });
 
   it.skip('legacy prediction gate retired by Aula vNext', async () => {
     const user = userEvent.setup();

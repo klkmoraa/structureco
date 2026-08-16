@@ -56,6 +56,8 @@ código + pruebas + gates ejecutables
 | [Diseño del datasheet como editor · CRI-82](superpowers/specs/2026-08-14-datasheet-editor-cri-82-design.md) | [Datasheet estructural](architecture/structureco-datasheet.md) |
 | [Plan del datasheet como editor · CRI-82](superpowers/plans/2026-08-14-datasheet-editor-cri-82.md) | [Datasheet estructural](architecture/structureco-datasheet.md) |
 | [Plan de edición estructural avanzada 2D](superpowers/plans/2026-08-12-advanced-2d-structural-editing.md) | Código, pruebas y gates actuales |
+| [Diseño del broker de presentación · CRI-94](superpowers/specs/2026-08-16-cri-94-surface-presentation-broker-design.md) | Código, pruebas y gates actuales |
+| [Plan del broker de presentación · CRI-94](superpowers/plans/2026-08-16-cri-94-surface-presentation-broker.md) | Código, pruebas y gates actuales |
 
 ## Evidencia de auditoría y handoff
 

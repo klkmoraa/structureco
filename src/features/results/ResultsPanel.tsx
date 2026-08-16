@@ -17,8 +17,8 @@ import { deriveClassroomProgress, type ClassroomProgressStepId } from '../../edu
 import { formatResultNumber } from './resultFormatting';
 import { buildStiffnessSubstitution } from './stiffnessSubstitution';
 import { formatFixed, formatScientific, formatSignificant } from '../../utils/numberFormat';
-import { emitWorkspaceCommand, onWorkspaceCommand } from '../workspace/workspaceCommands';
-import { useShellComposition } from '../workspace/useShellComposition';
+import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
+import type { SurfacePresentation, SurfaceStatus } from '../workspace/surfacePresentation';
 import { ProvenanceCard } from './ProvenanceCard';
 import type { ResultRef } from './provenance';
 import { ClassroomPedagogyLevels } from '../classroom/ClassroomPedagogyLevels';
@@ -56,24 +56,6 @@ const classroomProgressCopy: Record<ClassroomProgressStepId, { title: Translatio
   analysis: { title: 'classroom.analyzeTitle', description: 'classroom.analyzeBody', action: 'classroom.analyzeAction' },
 };
 
-const resultsFocusableSelector = [
-  'button:not([disabled]):not([tabindex="-1"])',
-  'input:not([disabled]):not([tabindex="-1"])',
-  'select:not([disabled]):not([tabindex="-1"])',
-  'textarea:not([disabled]):not([tabindex="-1"])',
-  'a[href]:not([tabindex="-1"])',
-  'summary',
-  '[tabindex]:not([tabindex="-1"])',
-].join(',');
-
-const getResultsFocusable = (panel: HTMLElement | null) => [
-  ...(panel?.querySelectorAll<HTMLElement>(resultsFocusableSelector) ?? []),
-].filter((element) => {
-  if (element.closest('[hidden], [aria-hidden="true"], [inert]')) return false;
-  const closedDetails = element.closest('details:not([open])');
-  return !closedDetails || element.tagName === 'SUMMARY';
-});
-
 const readResultsMode = (): ResultsPanelMode => {
   if (typeof window === 'undefined') return 'expanded';
   const stored = window.localStorage.getItem(RESULTS_MODE_STORAGE_KEY);
@@ -98,31 +80,28 @@ const getViewportHeightPx = (referenceElement: HTMLElement | null): number => {
   return window.innerHeight;
 };
 
-export const ResultsPanel = () => {
+export interface ResultsPanelProps {
+  presentation?: Extract<SurfacePresentation, 'dock' | 'inset' | 'sheet'>;
+  status?: SurfaceStatus;
+  onOpenChange?: (open: boolean, trigger?: HTMLElement | null) => void;
+}
+
+export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenChange }: ResultsPanelProps) => {
   const { project, analysis, resultTab, setResultTab, analyze, selection, isAnalyzing, selectedCombinationId, resultCursor, setInfluenceCanvasState } = useProject();
   const { t } = useI18n();
-  // La clase no se copia a estado local: se lee. Duplicarla es exactamente el
-  // antipatrón que CRI-89 elimina — dos componentes podrían discrepar de clase.
-  const { shellClass, phone: isPhone } = useShellComposition();
-  const isMobile = shellClass === 'K0';
+  const isMobile = presentation === 'sheet';
   const [height, setHeight] = useState(() => isMobile ? Math.min(330, window.innerHeight * 0.4) : 285);
   const [drag, setDrag] = useState<{ y: number; height: number } | null>(null);
-  const [mobileExpanded, setMobileExpanded] = useState(() => !isMobile);
-  const previousIsMobileRef = useRef(isMobile);
+  const mobileExpanded = status === 'active';
   const [panelMode, setPanelMode] = useState<ResultsPanelMode>(readResultsMode);
   const previousAnalysisRef = useRef(analysis);
   const resizeFrameRef = useRef<number | null>(null);
-  const mobileFitFrameRef = useRef<number | null>(null);
-  const mobileFitTimerRef = useRef<number | null>(null);
-  const mobileFitTransitionCleanupRef = useRef<(() => void) | null>(null);
   const pendingHeightRef = useRef<number | null>(null);
   const panelRef = useRef<HTMLElement>(null);
   const focusedLauncherRef = useRef<HTMLButtonElement | null>(null);
   const previousPanelModeRef = useRef<ResultsPanelMode>('expanded');
   const mobileToggleRef = useRef<HTMLButtonElement>(null);
-  const mobileReturnFocusRef = useRef<HTMLElement | null>(null);
-  const phoneCanvasInteractive = isPhone && mobileExpanded && panelMode !== 'focused';
-  const mobileResultsModal = isMobile && mobileExpanded && (!isPhone || panelMode === 'focused');
+  const phoneCanvasInteractive = false;
   const resultContext = useMemo(() => {
     if (selection?.kind === 'member') return { memberId: selection.id, label: t('results.contextMember', { id: selection.id }) };
     if (selection?.kind === 'multi') {
@@ -200,133 +179,19 @@ export const ResultsPanel = () => {
   const mobileResultLabel = analysis
     ? `${t(activeTab.labelKey)} · ${resultContext.label}`
     : t('results.outputs');
-  const rememberMobileLauncher = useCallback((candidate: EventTarget | null) => {
-    mobileReturnFocusRef.current = candidate instanceof HTMLElement
-      && candidate !== document.body
-      && candidate !== document.documentElement
-      ? candidate
-      : mobileToggleRef.current;
-  }, []);
-  const cancelScheduledPhoneFit = useCallback(() => {
-    if (mobileFitFrameRef.current !== null) {
-      window.cancelAnimationFrame(mobileFitFrameRef.current);
-      mobileFitFrameRef.current = null;
-    }
-    if (mobileFitTimerRef.current !== null) {
-      window.clearTimeout(mobileFitTimerRef.current);
-      mobileFitTimerRef.current = null;
-    }
-    mobileFitTransitionCleanupRef.current?.();
-    mobileFitTransitionCleanupRef.current = null;
-    panelRef.current?.removeAttribute('data-canvas-fit-settled');
-  }, []);
-  const closeMobileResults = useCallback(() => {
-    cancelScheduledPhoneFit();
-    setMobileExpanded(false);
-    window.requestAnimationFrame(() => {
-      const remembered = mobileReturnFocusRef.current;
-      const rememberedUnavailable = !remembered?.isConnected
-        || Boolean(remembered.closest('.inspector-panel:not(.mobile-open), [inert], [aria-hidden="true"]'));
-      const returnTarget = rememberedUnavailable ? mobileToggleRef.current : remembered;
-      returnTarget?.focus({ preventScroll: true });
-    });
-  }, [cancelScheduledPhoneFit]);
-  const schedulePhoneCanvasFit = useCallback(() => {
-    cancelScheduledPhoneFit();
-    mobileFitFrameRef.current = window.requestAnimationFrame(() => {
-      mobileFitFrameRef.current = null;
-      const panel = panelRef.current;
-      if (!panel) return;
-
-      let completed = false;
-      const cleanupTransition = () => {
-        panel.removeEventListener('transitionend', onTransitionEnd);
-        if (mobileFitTimerRef.current !== null) {
-          window.clearTimeout(mobileFitTimerRef.current);
-          mobileFitTimerRef.current = null;
-        }
-        if (mobileFitTransitionCleanupRef.current === cleanupTransition) {
-          mobileFitTransitionCleanupRef.current = null;
-        }
-      };
-      const finish = () => {
-        if (completed) return;
-        completed = true;
-        cleanupTransition();
-        mobileFitFrameRef.current = window.requestAnimationFrame(() => {
-          mobileFitFrameRef.current = window.requestAnimationFrame(() => {
-            emitWorkspaceCommand('fit-canvas');
-            mobileFitFrameRef.current = window.requestAnimationFrame(() => {
-              mobileFitFrameRef.current = null;
-              panelRef.current?.setAttribute('data-canvas-fit-settled', 'true');
-            });
-          });
-        });
-      };
-      function onTransitionEnd(event: TransitionEvent) {
-        if (event.target === panel && ['height', 'min-height', 'max-height'].includes(event.propertyName)) finish();
-      }
-
-      const parseTime = (value: string) => {
-        const normalized = value.trim();
-        if (normalized.endsWith('ms')) return Number.parseFloat(normalized);
-        if (normalized.endsWith('s')) return Number.parseFloat(normalized) * 1_000;
-        return 0;
-      };
-      const style = window.getComputedStyle(panel);
-      const durations = style.transitionDuration.split(',').map(parseTime);
-      const delays = style.transitionDelay.split(',').map(parseTime);
-      const transitionTime = durations.reduce((maximum, duration, index) => (
-        Math.max(maximum, duration + (delays[index % Math.max(delays.length, 1)] ?? 0))
-      ), 0);
-
-      if (transitionTime <= 0) {
-        finish();
-        return;
-      }
-
-      panel.addEventListener('transitionend', onTransitionEnd);
-      mobileFitTransitionCleanupRef.current = cleanupTransition;
-      mobileFitTimerRef.current = window.setTimeout(finish, Math.max(800, transitionTime + 200));
-    });
-  }, [cancelScheduledPhoneFit]);
-  // Entrar o salir de Compact reencuadra el panel. Sólo se dispara en el CAMBIO
-  // de clase, igual que el `change` de la media query que sustituye: montar el
-  // panel no reencuadra nada, y una recomposición no cierra Results — lo
-  // colapsa a su banda, que es donde vivía en esa clase (T-INV-2).
+  const closeMobileResults = useCallback(() => onOpenChange?.(false), [onOpenChange]);
   useEffect(() => {
-    if (previousIsMobileRef.current === isMobile) return;
-    previousIsMobileRef.current = isMobile;
-    if (isMobile) {
-      setHeight(Math.min(330, getViewportHeightPx(panelRef.current) * 0.4));
-      setMobileExpanded(false);
-    } else setMobileExpanded(true);
+    if (isMobile) setHeight((current) => Math.min(current, Math.min(330, getViewportHeightPx(panelRef.current) * 0.4)));
   }, [isMobile]);
   useEffect(() => {
     if (isMobile && analysis && analysis !== previousAnalysisRef.current) {
-      rememberMobileLauncher(document.activeElement);
-      setMobileExpanded(true);
-      if (isPhone) schedulePhoneCanvasFit();
+      onOpenChange?.(true, document.activeElement instanceof HTMLElement ? document.activeElement : null);
     }
     previousAnalysisRef.current = analysis;
-  }, [analysis, isMobile, isPhone, rememberMobileLauncher, schedulePhoneCanvasFit]);
-  useEffect(() => {
-    const collapse = () => closeMobileResults();
-    const expand = () => {
-      rememberMobileLauncher(document.activeElement);
-      setMobileExpanded(true);
-      window.requestAnimationFrame(() => panelRef.current?.focus({ preventScroll: true }));
-    };
-    const unsubscribes = [
-      onWorkspaceCommand('collapse-mobile-results', collapse),
-      onWorkspaceCommand('expand-mobile-results', expand),
-    ];
-    return () => { for (const unsubscribe of unsubscribes) unsubscribe(); };
-  }, [closeMobileResults, rememberMobileLauncher]);
+  }, [analysis, isMobile, onOpenChange]);
   useEffect(() => () => {
     if (resizeFrameRef.current !== null) window.cancelAnimationFrame(resizeFrameRef.current);
-    cancelScheduledPhoneFit();
-  }, [cancelScheduledPhoneFit]);
+  }, []);
   useEffect(() => {
     if (panelMode !== 'focused') window.localStorage.setItem(RESULTS_MODE_STORAGE_KEY, panelMode);
     if (isMobile) return;
@@ -335,79 +200,23 @@ export const ResultsPanel = () => {
     else setHeight(getViewportHeightPx(panelRef.current) * 0.72);
   }, [isMobile, panelMode]);
   useEffect(() => {
-    if (!mobileResultsModal) return undefined;
-    const panel = panelRef.current;
-    const previousOverflow = document.body.style.overflow;
-    const inactive = document.querySelectorAll<HTMLElement>('.app-shell-skip-link, .topbar, .toolbar, .inspector-panel, .mobile-inspector-toggle, .canvas-host, .classroom-workspace-journey');
-    inactive.forEach((element) => {
-      element.inert = true;
-      element.setAttribute('aria-hidden', 'true');
-    });
-    document.body.style.overflow = 'hidden';
-    const focusFrame = window.requestAnimationFrame(() => {
-      if (!panel?.contains(document.activeElement)) mobileToggleRef.current?.focus({ preventScroll: true });
-    });
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented) return;
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        if (panelMode === 'focused') {
-          setPanelMode(previousPanelModeRef.current === 'focused' ? 'expanded' : previousPanelModeRef.current);
-          window.requestAnimationFrame(() => focusedLauncherRef.current?.focus());
-        } else closeMobileResults();
-        return;
-      }
-      if (event.key !== 'Tab') return;
-      const focusable = getResultsFocusable(panel);
-      if (focusable.length === 0) {
-        event.preventDefault();
-        panel?.focus();
-        return;
-      }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && (document.activeElement === first || document.activeElement === panel || !panel?.contains(document.activeElement))) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === panel || !panel?.contains(document.activeElement))) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.cancelAnimationFrame(focusFrame);
-      document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previousOverflow;
-      inactive.forEach((element) => {
-        element.inert = false;
-        element.removeAttribute('aria-hidden');
-      });
-    };
-  }, [closeMobileResults, mobileResultsModal, panelMode]);
-  useEffect(() => {
-    if (!phoneCanvasInteractive) return undefined;
-    const onPhoneEscape = (event: KeyboardEvent) => {
+    if (!isMobile || status !== 'active') return undefined;
+    const onSheetEscape = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.key !== 'Escape') return;
       const visibleModalAbove = [...document.querySelectorAll<HTMLElement>('[aria-modal="true"]')]
         .some((element) => {
           if (element === panelRef.current || panelRef.current?.contains(element)) return false;
           const style = window.getComputedStyle(element);
-          return !element.hidden
-            && element.inert !== true
-            && element.getAttribute('aria-hidden') !== 'true'
-            && style.display !== 'none'
-            && style.visibility !== 'hidden';
+          return !element.hidden && !element.inert && element.getAttribute('aria-hidden') !== 'true'
+            && style.display !== 'none' && style.visibility !== 'hidden';
         });
       if (visibleModalAbove) return;
       event.preventDefault();
-      event.stopImmediatePropagation();
       closeMobileResults();
     };
-    document.addEventListener('keydown', onPhoneEscape, true);
-    return () => document.removeEventListener('keydown', onPhoneEscape, true);
-  }, [closeMobileResults, phoneCanvasInteractive]);
-
+    document.addEventListener('keydown', onSheetEscape);
+    return () => document.removeEventListener('keydown', onSheetEscape);
+  }, [closeMobileResults, isMobile, status]);
   const scheduleHeight = (next: number) => {
     pendingHeightRef.current = next;
     if (resizeFrameRef.current !== null) return;
@@ -439,13 +248,15 @@ export const ResultsPanel = () => {
   };
 
   return <>
-    {mobileResultsModal ? <button className="results-sheet-backdrop" type="button" aria-hidden="true" tabIndex={-1} onClick={closeMobileResults} /> : null}
     <section
       ref={panelRef}
       className={`results-panel results-mode-${panelMode}${isMobile && !mobileExpanded ? ' mobile-collapsed' : ''}`}
       aria-label={t('results.panel')}
-      role={mobileResultsModal ? 'dialog' : undefined}
-      aria-modal={mobileResultsModal ? true : undefined}
+      role={isMobile ? 'dialog' : undefined}
+      data-workspace-surface="results"
+      data-surface-presentation={presentation}
+      data-surface-status={status}
+      hidden={status !== 'active'}
       data-results-mode={panelMode}
       data-canvas-interactive={phoneCanvasInteractive ? 'true' : undefined}
       tabIndex={-1}
@@ -466,8 +277,7 @@ export const ResultsPanel = () => {
           closeMobileResults();
         }
         else {
-          rememberMobileLauncher(event.currentTarget);
-          setMobileExpanded(true);
+          onOpenChange?.(true, event.currentTarget);
         }
       }}>
         <i className={activeTab.color ?? ''} aria-hidden="true" />
