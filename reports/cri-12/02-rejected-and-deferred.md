@@ -10,7 +10,7 @@ Complementa `02-ux-decision-matrix.md` y `02-ux-direction-record.md`. Este docum
 |---|---|---|
 | Esencial/Completa | Se descarta la hipótesis de densidad de presentación (`densidad: 'esencial' \| 'completa'`) propuesta en CRI-10 | 0 referencias en `src/**`; no conectada a preferencia persistente; el propio cierre de CRI-10 la califica de *"hipótesis, no funcionalidad aprobada de producción"*. No hay estudio real que la sustente. |
 
-No hay más rechazos en esta sesión — el resto de temas abiertos se resolvió como adopción, diferimiento o programación de evaluación, no como descarte.
+No hay más rechazos en esta sesión — el resto de temas abiertos se resolvió como adopción, diferimiento o asignación de prioridad/pendiente técnico a CRI-12D, no como descarte.
 
 ## Diferido (`DEFERRED`)
 
@@ -18,13 +18,22 @@ No hay más rechazos en esta sesión — el resto de temas abiertos se resolvió
 |---|---|---|
 | Marco de selección direccional (ABIERTA-3) | Si se incorpora al contrato D-06 de selección (5 fases) o se descarta | Requiere test de discoverability, no ejecutado. Mientras tanto D-06 sigue vigente sin esta variante. |
 
-## Programado, no decidido (`SCHEDULED`)
+## Pendiente técnico asignado a CRI-12D (`PENDING_FOR_12D`)
 
-Distinto de diferido: aquí sí se decidió algo (hacer la evaluación), pero la decisión de fondo sigue pendiente del resultado de esa evaluación.
+Distinto de diferido: aquí sí se decidió algo (que es prioritario y a quién se asigna), pero ni la evaluación ni la decisión de fondo se ejecutan en CRI-12B — CRI-12B no implementa producción ni ejecuta evaluaciones de impacto, sólo fija dirección y prioridad.
 
-| Tema | Qué se decidió | Qué sigue sin decidirse |
+| Tema | Qué se decidió en 12B | Qué queda para CRI-12D | Qué sigue sin decidirse |
+|---|---|---|---|
+| `settings.show*` fuera del schema de `ProjectSettings` (ABIERTA-8/U-12) | Es un pendiente técnico prioritario, no descartable | Asignar y ejecutar la evaluación de impacto | Si se migra o no — depende del resultado de esa evaluación, marcada por CRI-9 como *"el mayor riesgo adyacente a schema de todo CRI-9"*. |
+
+## Priorizado para CRI-12D (`PRIORITIZED_FOR_12D`) — arquitectura ya cerrada, sólo prioridad de backlog
+
+Ninguno de estos reabre arquitectura (D-01/D-04/D-05/D-07 ya `DECIDED`). CRI-12B fija cuál va primero; CRI-12D es quien convierte esto en tareas de implementación real — CRI-12B no toca `src/**`.
+
+| Tema | Prioridad fijada en 12B | Qué debe hacer CRI-12D |
 |---|---|---|
-| `settings.show*` fuera del schema de `ProjectSettings` (ABIERTA-8/U-12) | Encargar la evaluación de impacto en 12B | Si se migra o no — depende del resultado de esa evaluación, marcada por CRI-9 como *"el mayor riesgo adyacente a schema de todo CRI-9"*. |
+| Shell adaptativo (X2/M1/K0) | Va antes que otras piezas de implementación que dependen de las tres clases funcionando de verdad | Construir la máquina de estados resolver-driven (`matchMedia` + tokens de densidad por tier ya existentes en `tokens.css:556-560`), sustituyendo el booleano `toolRailCompact` actual |
+| Brechas de paridad táctil D-07 (SEL-02, SEL-03, MOD-13, DAT-06, MOD-12) | Va en el mismo backlog que el shell adaptativo, del que depende | Implementar la superficie `contextual-actions` + sub-modo de marco de selección + affordance de pegar |
 
 ## Adoptado con valor provisional — no confundir con "medido"
 

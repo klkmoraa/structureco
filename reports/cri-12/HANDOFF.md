@@ -9,10 +9,20 @@ Este documento cierra CRI-12A: congela el baseline, no decide UX ni visuales. Li
 Las 11 preguntas de la sección "Preguntas para CRI-12B" de abajo están **cerradas**, decididas por el propietario del producto en conversación directa (bloques de 3–5, opciones A/B/C + recomendación), sobre HEAD `05f250ec443af7c35e5890ccaceee8da4fa16993` de esta rama. Detalle completo:
 
 - `02-ux-decision-matrix.md` — las 11 decisiones, fila por fila, con evidencia y riesgo de revisión.
-- `02-ux-direction-record.md` — narrativa de cierre, invariantes protegidos confirmados intactos, frontera con CRI-12C.
-- `02-rejected-and-deferred.md` — qué se rechazó (Esencial/Completa), qué se difirió (marco de selección direccional), qué quedó programado sin decidir (evaluación de impacto de `settings.show*`) y los unknowns que persisten aunque la política ya esté cerrada (riel Medium, histéresis del resolver, zócalo Compact, discoverability, verificaciones técnicas).
+- `02-ux-direction-record.md` — narrativa de cierre, invariantes protegidos confirmados intactos, §6 con el resumen autocontenido de contratos finales exigidos por CRI-84 (Expanded/Medium/Compact, surface ownership, rutas visible/contextual/experto, continuity, selección + Candidate Picker, Results, Datasheet, Model Doctor, Command Palette, panel/inset/sheet/fullscreen, accesibilidad, motion), frontera con CRI-12C.
+- `02-rejected-and-deferred.md` — qué se rechazó (Esencial/Completa), qué se difirió (marco de selección direccional), qué quedó asignado como pendiente técnico prioritario a **CRI-12D** (evaluación de impacto de `settings.show*`), qué prioridad de implementación se fijó para **CRI-12D** (shell adaptativo, brechas táctiles D-07) y los unknowns que persisten aunque la política ya esté cerrada (riel Medium, histéresis del resolver, zócalo Compact, discoverability, verificaciones técnicas).
 
 Cada pregunta 1–11 de abajo se marca `[CERRADA → 02-ux-decision-matrix.md #N]` para navegar directo a su fila. El texto original de las preguntas se conserva sin editar, por fidelidad histórica de este documento de CRI-12A.
+
+## Qué es CRI-12D (introducido en el fixup de cierre de 12B)
+
+**CRI-12B no implementa producción, no ejecuta evaluaciones de impacto y no secuencia trabajo de ingeniería** — sólo fija dirección de producto y, en tres temas, **prioridad**. Esa prioridad necesita una fase que la convierta en backlog real: **CRI-12D** es esa fase de implementación/evaluación técnica, distinta de CRI-12C (que cierra identidad visual). Tres ítems de la matriz quedan explícitamente asignados a CRI-12D, no a 12B:
+
+- Shell adaptativo (X2/M1/K0) — prioridad de implementación fijada (`02-ux-decision-matrix.md` #3).
+- Brechas de paridad táctil D-07 (SEL-02, SEL-03, MOD-13, DAT-06, MOD-12) — prioridad/secuencia fijada (`02-ux-decision-matrix.md` #10).
+- Evaluación de impacto de sacar `settings.show*` del schema (ABIERTA-8/U-12) — pendiente técnico prioritario asignado (`02-ux-decision-matrix.md` #9).
+
+**CRI-12C puede empezar sin depender de ninguno de estos tres** — son trabajo de implementación/evaluación en paralelo, no bloqueantes de la dirección visual (color, Clay, tratamiento del portal de Welcome). Ninguno estaba genuinamente "hecho en 12B"; el fraseo original de este documento y de los tres reportes de cierre lo decía así por error de encargo y se corrigió en el mismo commit que añadió esta nota.
 
 ## Nota sobre el corte 12B/12C asumido en este documento
 
@@ -27,15 +37,15 @@ Si esta distinción no es la prevista por quien secuenció CRI-12, reclasificar 
 
 1. **Esencial/Completa**: ¿se valida la hipótesis (con estudio real, conectada a preferencia persistente) y se implementa, o se descarta por falta de sustento? Hoy no existe en `src/**`; CRI-10 mismo la marca como hipótesis no aprobada. `[CERRADA → 02-ux-decision-matrix.md #1 — Descartar]`
 2. **Flujo de Welcome**: ¿se adopta el flujo de hoja tipo iOS (Bienvenida→Cómo trabajas→Por dónde→Mesa, con salto directo a la Mesa para usuarios que regresan) propuesto por CRI-10, se itera, o se descarta? Las transiciones están descritas, no animadas ni implementadas; nada de esto está aprobado. `[CERRADA → 02-ux-decision-matrix.md #2 — Adoptar estructura de 4 pasos]`
-3. **Implementación del adaptive shell**: la arquitectura X2/M1/K0 (CB-1..6, D-01/D-04/D-05) ya está decidida y cerrada; producción hoy sólo tiene un booleano de riel compacto. ¿Se prioriza su implementación en 12B, o queda para después de otras decisiones? `[CERRADA → 02-ux-decision-matrix.md #3 — Priorizar ahora]`
+3. **Implementación del adaptive shell**: la arquitectura X2/M1/K0 (CB-1..6, D-01/D-04/D-05) ya está decidida y cerrada; producción hoy sólo tiene un booleano de riel compacto. ¿Se prioriza su implementación, o queda para después de otras decisiones? `[CERRADA → 02-ux-decision-matrix.md #3 — Prioridad fijada para CRI-12D]`
 4. **Riel sólo-icono en Medium (ABIERTA-1)**: ¿perjudica discoverability? Requiere tarea cronometrada, riel etiquetado vs icono, antes de dar por bueno el M1 actual. `[CERRADA → 02-ux-decision-matrix.md #5 — Mantener icon-only, provisional]`
 5. **Marco de selección direccional (ABIERTA-3)**: adición propuesta, no decidida. ¿Se incorpora al contrato D-06, se descarta? `[CERRADA → 02-ux-decision-matrix.md #4 — Diferir]`
 6. **Presupuesto de verbos en zócalo Compact apaisado (ABIERTA-4)** y **presupuesto de 6 controles con contenido real (GAP-1)**: pendientes de medir sobre 7 tipos de selección × 2 idiomas antes de fijar el diseño del zócalo Compact. `[CERRADA → 02-ux-decision-matrix.md #7 — Piso conservador fijado, provisional]`
 7. **8 escenarios de discoverability**: diseñados, no ejecutados. Sin esto no hay dato de abandono/tiempo que respalde ninguna decisión de descubribilidad. `[CERRADA → 02-ux-decision-matrix.md #8 — Aceptar riesgo y avanzar]`
 8. **Umbral de histéresis del resolver (ABIERTA-2/U-13)**: CRI-11 midió 3 recomposiciones estables en el rango probado, pero su propio reporte dice que la medición no discrimina si el bandPx importa. ¿Se necesita otra medición, o se fija un valor y se avanza? `[CERRADA → 02-ux-decision-matrix.md #6 — bandPx = 24]`
-9. **Costo de sacar `settings.show*` del schema (ABIERTA-8/U-12)**: marcado como el mayor riesgo adyacente a schema de todo CRI-9. Necesita evaluación de impacto antes de decidir si se migra. `[CERRADA → 02-ux-decision-matrix.md #9 — Evaluar impacto en 12B, migración aún sin decidir]`
+9. **Costo de sacar `settings.show*` del schema (ABIERTA-8/U-12)**: marcado como el mayor riesgo adyacente a schema de todo CRI-9. Necesita evaluación de impacto antes de decidir si se migra. `[CERRADA → 02-ux-decision-matrix.md #9 — Pendiente técnico prioritario asignado a CRI-12D, migración aún sin decidir]`
 10. **Verificaciones técnicas pendientes, sin decisión de producto pero bloqueantes para cerrar sus temas**: contraste medido a nivel de píxel + lectores de pantalla reales (ABIERTA-6); rendimiento de Datasheet/paleta con ~2000 entidades en dispositivo real, no sólo en el harness aislado (ABIERTA-7); disponibilidad de `navigator.clipboard.readText()` en la matriz real de navegadores (U-11); matriz multi-navegador completa (sólo Chromium se probó en CRI-11). `[CERRADA → 02-ux-decision-matrix.md #11 — Gate paralelo, no bloqueante]`
-11. **Brechas de implementación de D-07 (paridad táctil)**: `SEL-02`, `SEL-03`, `MOD-13`, `DAT-06`, `MOD-12` tienen arquitectura de cierre decidida (superficie `contextual-actions` + submodo de marco de selección + affordance de pegar) pero cero implementación. ¿Se secuencian en 12B? `[CERRADA → 02-ux-decision-matrix.md #10 — Secuenciar en 12B]`
+11. **Brechas de implementación de D-07 (paridad táctil)**: `SEL-02`, `SEL-03`, `MOD-13`, `DAT-06`, `MOD-12` tienen arquitectura de cierre decidida (superficie `contextual-actions` + submodo de marco de selección + affordance de pegar) pero cero implementación. ¿Se secuencian? `[CERRADA → 02-ux-decision-matrix.md #10 — Prioridad/secuencia fijada para CRI-12D]`
 
 ## Preguntas para CRI-12C (cierre de dirección visual)
 
