@@ -40,17 +40,26 @@ dock + detalle superpuesto sin reflow), y si ninguna paga, `K0`.
 
 ### Histéresis (T-INV-5, `bandPx = 24` — decisión CRI-12B #6)
 
-El commit evalúa la banda entera: se resuelve el viewport en los dos extremos (±12 px).
+**La banda se aplica únicamente a la frontera calculada `X2↔M1`.** El commit resuelve el viewport
+en los dos extremos (±12 px) y la clase sólo cambia si los dos coinciden con el valor crudo;
+dentro de la banda se conserva la anterior. El extremo inferior se recorta al primer ancho
+no-Compact para que el puente con el CSS no contamine esta decisión. Resultado: 24 px exactos de
+zona muerta alrededor de una frontera que se mueve con la altura, sin depender de la dirección.
 
-- Si los tres coinciden, el tamaño está limpiamente fuera de cualquier frontera → se commitea.
-- Si no coinciden, estamos sobre una frontera → se conserva lo anterior, **pero sólo si sigue
-  siendo alcanzable dentro de la banda**. Un valor anterior que ya no aparece en ningún extremo
-  no es histéresis, es un salto que dejó atrás esa frontera (redimensionar 1440→1024 de una vez,
-  o rotar): retenerlo dejaría el shell en una clase imposible. Este caso lo detectó el harness de
-  navegador, no las pruebas unitarias — se corrigió y se añadió su prueba.
+**`M1↔K0` y el sub-umbral de teléfono se cruzan EXACTOS, sin banda.** No son fronteras del
+presupuesto sino puentes de compatibilidad con los `@media` que todavía son los dueños de la
+composición Compact. Una banda sobre un puente lo rompe: el CSS conmuta exactamente en 1023/1024
+y la clase se quedaría hasta 24 px por detrás, así que dentro de esa banda una superficie se
+renderizaría en una composición y se comportaría en otra — justo la doble fuente de verdad que
+este slice elimina. Mientras el techo exista, cruzarlo es exacto en los dos sentidos.
 
-Resultado: 24 px exactos de zona muerta alrededor de cada frontera, independientes de la
-dirección y de dónde esté la frontera, cosa que importa porque la frontera se mueve con la altura.
+Dos casos que las pruebas cubren explícitamente porque no son obvios:
+
+- Un **salto** (1440→1024 de una vez, o una rotación) no puede retener una clase que en el ancho
+  de destino ya no existe. Retener `X2` a 1024 px sería exactamente el acantilado que este slice
+  viene a eliminar.
+- No existe **ningún ancho entre 1000 y 1050 px** —a ninguna altura y viniendo de cualquier clase
+  previa— donde `width <= 1023` y `shellClass === 'K0'` discrepen.
 
 ### Commit sobre tamaño estable
 
@@ -73,6 +82,9 @@ de esa composición, JS y CSS discreparían y una superficie se renderizaría en
 se comportaría en otra. Levantar el techo es migrar esos bloques a selectores por clase — trabajo
 del broker de presentación (CRI-94/CRI-95), no de este slice. `canvasBudgetClass()` se exporta
 aparte, con su prueba, para que el modelo se pueda auditar sin el puente.
+
+Por la misma razón el techo **no lleva histéresis**: mientras sea un puente, tiene que conmutar
+en el mismo píxel que el CSS, en los dos sentidos. La banda queda reservada a `X2↔M1`.
 
 ### `toolRailCompact`
 
@@ -152,9 +164,12 @@ grep -rn "matchMedia" src/ --include=*.ts --include=*.tsx | grep -v "\.test\."
 | 768×1024 (tablet) | `K0` | 44px | sí | 0 px |
 
 - **Barrido 900→1300→900** (paso de 4 px, con la ventana de quietud en cada paso):
-  `K0→M1@1036`, `M1→X2@1132`, `X2→M1@1104`, `M1→K0@1008`. Cuatro recomposiciones, ninguna
+  `K0→M1@1024`, `M1→X2@1132`, `X2→M1@1104`, `M1→K0@1020`. Cuatro recomposiciones, ninguna
   repetida, y el barrido termina en la misma clase en la que empezó. La prueba unitaria repite el
-  barrido con paso de 1 px y da los umbrales exactos: 1036 / 1129 subiendo, 1104 / 1011 bajando.
+  barrido con paso de 1 px y da los umbrales exactos: **1024 / 1129 subiendo, 1104 / 1023
+  bajando** — el techo de Compact sin banda, la frontera calculada con sus 24 px.
+- **Techo de Compact exacto**: 1024 → `M1`, 1023 → `K0`, 1024 → `M1`, 1023 → `K0`. Comprobado
+  aparte del barrido porque un paso de 4 px no aterriza en 1023.
 - **Teclado virtual en Compact**: al encoger `visualViewport` a 508 px la app **sí** lo ve
   (`--sc-visual-viewport-height: 508px`) y la clase **no** se mueve — sigue `K0` (T-INV-4).
 - **Recomposición X2→M1**: el foco sigue en el mismo elemento (`cri89-focus-probe`), la
@@ -172,8 +187,10 @@ grep -rn "matchMedia" src/ --include=*.ts --include=*.tsx | grep -v "\.test\."
    explícitamente fuera de alcance. Queda como cableado listo para cuando CRI-100/CRI-101
    descompongan Results.
 2. **La frontera M1↔K0 sigue siendo un techo declarado** (`COMPACT_CEILING_PX = 1023`), no
-   calculada. Es una decisión consciente y documentada: ver arriba. Se levanta cuando el broker
-   migre los bloques `@media (max-width:1023px)` a selectores por clase.
+   calculada, y se cruza sin histéresis para que conmute en el mismo píxel que el CSS. Es una
+   decisión consciente y documentada: ver arriba. Cuando el broker migre los bloques
+   `@media (max-width:1023px)` a selectores por clase, esa frontera pasará a salir del
+   presupuesto y podrá llevar banda como la de Medium — hasta entonces, no.
 3. **`normalizeInspectorDetent` conserva su propio listener** de `resize`/`orientationchange`/
    `visualViewport`. No es un `matchMedia` de ancho y no entraba en la lista de migración; se
    deja intacto a propósito porque cambiar sus entradas cambiaría el comportamiento del detent
@@ -188,6 +205,27 @@ grep -rn "matchMedia" src/ --include=*.ts --include=*.tsx | grep -v "\.test\."
    de `ProjectProvider`; el harness sólo confirma que el estado del Inspector no cambia.
 6. **Sin tocar**: solver, modelo, schema (`verify:protected` verde, 38 archivos), ToolRail,
    Results, Inspector, Cinta, colores, Clay y Brandbook.
+
+## Fixup posterior — histéresis sólo en la frontera calculada
+
+Revisión del propietario sobre el primer commit del slice (`faf6090`): la banda de 24 px se
+estaba aplicando también al techo de Compact, así que la clase entraba en `M1` a 1036 px y volvía
+a `K0` a 1011 px mientras `styles.css` conmutaba exactamente en 1023/1024. Eso abría una banda de
+anchos donde el CSS decía Compact y la clase decía Medium — precisamente la discrepancia que el
+techo existía para evitar.
+
+Corregido sin tocar CSS de presentación, broker ni ninguna otra superficie: `commitShellComposition`
+commitea sin banda cualquier lado del puente con el CSS (entrar en Compact, salir de Compact y el
+sub-umbral de teléfono) y reserva la banda para `X2↔M1`, recortando además el extremo inferior de
+la sonda al primer ancho no-Compact para que el puente no contamine esa decisión. Con eso
+desaparece también la regla de «valor anterior alcanzable»: dentro de la banda calculada la clase
+previa siempre es una de las dos que la banda abarca.
+
+Pruebas añadidas: cruce exacto en 1023/1024 desde cualquier clase previa (y a través de la
+máquina de estados, no sólo de la función pura), barrido de 1000 a 1050 px en cuatro alturas y
+cinco clases previas comprobando que `width <= 1023` y `shellClass === 'K0'` nunca discrepan, y
+un salto que aterriza dentro de la banda calculada. La banda de `X2↔M1` sigue intacta, igual que
+el salto 1440→1024 y la rotación.
 
 ## Pendiente / siguiente paso
 

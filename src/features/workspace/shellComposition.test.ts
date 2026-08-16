@@ -79,6 +79,38 @@ describe('resolutor de composición · histéresis (T-INV-5)', () => {
   const at = (previous: ShellComposition | null, width: number, height = 768) =>
     commitShellComposition(previous, { width, height });
 
+  it('cruza el techo de Compact EXACTO en 1023/1024, sin banda', () => {
+    // El techo es un puente con `@media (max-width:1023px)`, no una frontera
+    // calculada. Una banda encima lo rompería: el CSS conmuta en 1023/1024 y la
+    // clase se quedaría hasta 24 px por detrás.
+    for (const previous of [null, { shellClass: 'K0', phone: true }, { shellClass: 'K0', phone: false }, { shellClass: 'M1', phone: false }, { shellClass: 'X2', phone: false }] as const) {
+      expect(at(previous, 1024).shellClass).toBe('M1');
+      expect(at(previous, 1023).shellClass).toBe('K0');
+    }
+  });
+
+  it('no deja ningún ancho de 1000–1050 donde el CSS y la clase puedan discrepar', () => {
+    // `styles.css` es Compact si y sólo si `width <= 1023`. La clase tiene que
+    // decir exactamente lo mismo, venga de donde venga y en cualquier altura.
+    const previousStates = [
+      null,
+      { shellClass: 'K0', phone: true },
+      { shellClass: 'K0', phone: false },
+      { shellClass: 'M1', phone: false },
+      { shellClass: 'X2', phone: false },
+    ] as const;
+    for (let width = 1000; width <= 1050; width += 1) {
+      for (const height of [390, 768, 900, 1366]) {
+        for (const previous of previousStates) {
+          const cssExpectsCompact = width <= 1023;
+          const shellClass = commitShellComposition(previous, { width, height }).shellClass;
+          expect(`${width}x${height}/${previous?.shellClass ?? 'none'}:${shellClass === 'K0'}`)
+            .toBe(`${width}x${height}/${previous?.shellClass ?? 'none'}:${cssExpectsCompact}`);
+        }
+      }
+    }
+  });
+
   it('no cambia de clase dentro de la banda de 24 px', () => {
     const boundary = expandedBoundaryWidth(768) as number;
     const half = SHELL_HYSTERESIS_BAND_PX / 2;
@@ -114,11 +146,15 @@ describe('resolutor de composición · histéresis (T-INV-5)', () => {
     // Cuatro recomposiciones y ninguna repetida: subida K0→M1→X2 y bajada
     // X2→M1→K0. Una oscilación aparecería como el mismo par de clases yendo y
     // viniendo varias veces dentro del mismo tramo.
+    //
+    // El techo de Compact se cruza exacto (1024 subiendo, 1023 bajando) y sólo
+    // la frontera calculada lleva banda: 1129 subiendo contra 1104 bajando, que
+    // son los 24 px de zona muerta alrededor de los 1117 px de X2 a esta altura.
     expect(transitions).toEqual([
-      'K0→M1@1036',
+      'K0→M1@1024',
       'M1→X2@1129',
       'X2→M1@1104',
-      'M1→K0@1011',
+      'M1→K0@1023',
     ]);
     expect(composition.shellClass).toBe('K0');
   });
@@ -132,15 +168,16 @@ describe('resolutor de composición · histéresis (T-INV-5)', () => {
   });
 
   it('no retiene una clase que la banda ya no alcanza (salto, no arrastre)', () => {
-    // 1440→1024 de una vez: el ancho cae en la banda de la frontera K0↔M1, pero
-    // la clase anterior era X2, que ya no aparece en ningún extremo. Retenerla
-    // dejaría el shell en Expanded a 1024 px, que es justo el acantilado que
-    // este slice viene a eliminar.
+    // 1440→1024 de una vez. Retener X2 dejaría el shell en Expanded a 1024 px,
+    // que es justo el acantilado que este slice viene a eliminar.
     const expanded: ShellComposition = { shellClass: 'X2', phone: false };
     expect(at(expanded, 1024).shellClass).toBe('M1');
     // Y el caso simétrico: un salto desde Compact hasta muy dentro de Expanded.
     const compact: ShellComposition = { shellClass: 'K0', phone: true };
     expect(at(compact, 1600, 900).shellClass).toBe('X2');
+    // Un salto que aterriza dentro de la banda calculada tampoco puede retener
+    // una clase que allí ya no existe: a 1128 px la banda es X2/M1, no K0.
+    expect(at(compact, 1128, 768).shellClass).toBe('X2');
   });
 
   it('commitea de inmediato cuando el cambio está lejos de la frontera (rotación)', () => {

@@ -191,6 +191,26 @@ if (baselineOnly) {
   const unique = new Set(pairs);
   check('barrido 900→1300→900 · recomposiciones estables', transitions.length === 4 && unique.size === 4, transitions);
   check('barrido termina donde empezó', previous === 'K0', { endClass: previous });
+
+  // El techo de Compact es un puente con el CSS: se cruza EXACTO, sin banda. El
+  // barrido de paso 4 no aterriza en 1023, así que se comprueba aparte.
+  const classAt = async (width) => {
+    await page.setViewportSize({ width, height: 768 });
+    await page.waitForTimeout(220);
+    return page.evaluate(() => document.querySelector('.app-shell')?.dataset.shellClass ?? null);
+  };
+  const bridge = {
+    from1024: await classAt(1024),
+    down1023: await classAt(1023),
+    up1024: await classAt(1024),
+    down1023again: await classAt(1023),
+  };
+  report.compactBridge = bridge;
+  check(
+    'techo de Compact exacto en 1023/1024, sin banda',
+    bridge.from1024 === 'M1' && bridge.down1023 === 'K0' && bridge.up1024 === 'M1' && bridge.down1023again === 'K0',
+    bridge,
+  );
   await page.close();
 }
 

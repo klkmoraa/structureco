@@ -137,17 +137,25 @@ const wideCompositionFits = (composition: WideComposition, viewport: ShellViewpo
  *
  * La frontera que CRI-89 exige calculada es la de Medium (X2↔M1), y ésa sí sale
  * entera de CB: ver `expandedBoundaryWidth`.
+ *
+ * Por ser un puente y no una frontera calculada, cruzarlo es EXACTO: no lleva
+ * histéresis en ningún sentido. Ver `commitShellComposition`.
  */
 export const COMPACT_CEILING_PX = 1023;
 
 /**
  * Sub-umbral de teléfono dentro de Compact, propiedad de los mismos bloques
  * `@media (max-width:700px)` de `src/styles.css`. Se declara aquí para que sea
- * el resolutor —y no cuatro componentes -- quien lo lea.
+ * el resolutor —y no cuatro componentes— quien lo lea. Como el techo de
+ * Compact, es un puente con el CSS y se cruza exacto, sin banda.
  */
 export const PHONE_CEILING_PX = 700;
 
-/** Banda de histéresis TOTAL, centrada en la frontera. Decisión CRI-12B #6. */
+/**
+ * Banda de histéresis TOTAL, centrada en la frontera. Decisión CRI-12B #6.
+ * Se aplica ÚNICAMENTE a la frontera calculada `X2↔M1`; los puentes con el CSS
+ * (`COMPACT_CEILING_PX`, `PHONE_CEILING_PX`) se cruzan sin banda.
+ */
 export const SHELL_HYSTERESIS_BAND_PX = 24;
 
 /**
@@ -200,29 +208,31 @@ const sameComposition = (first: ShellComposition, second: ShellComposition) =>
   first.shellClass === second.shellClass && first.phone === second.phone;
 
 /**
- * Elige el valor de un campo evaluando la banda ENTERA.
+ * Commitea la composición: la frontera CALCULADA lleva banda, el puente con el
+ * CSS no.
  *
- * Se resuelve el viewport en los dos extremos de la banda (±`bandPx / 2`):
+ * **`M1↔K0` y el sub-umbral de teléfono no llevan histéresis.** No son
+ * fronteras del presupuesto: son `COMPACT_CEILING_PX` y `PHONE_CEILING_PX`, dos
+ * puentes de compatibilidad con los `@media` que hoy siguen siendo los dueños
+ * de la composición Compact. Una banda sobre un puente lo rompe — el CSS conmuta
+ * exactamente en 1023/1024 y la clase se quedaría hasta 24 px por detrás, así
+ * que dentro de esa banda una superficie se renderizaría en una composición y
+ * se comportaría en otra: justo la doble fuente de verdad que este slice
+ * elimina. Mientras el techo exista, cruzarlo es exacto en los dos sentidos.
  *
- * - Si los tres coinciden, el tamaño está limpiamente fuera de cualquier
- *   frontera y el valor crudo se commitea.
- * - Si no coinciden estamos SOBRE una frontera. Ahí se conserva el valor
- *   anterior — pero sólo si sigue siendo alcanzable dentro de la banda. Un
- *   valor anterior que ya no aparece en ningún extremo no es histéresis: es un
- *   salto que dejó atrás esa frontera (redimensionar 1440→1024 de una vez, o
- *   rotar), y retenerlo dejaría el shell en una clase imposible.
+ * **`X2↔M1` sí lleva la banda de `bandPx`** (T-INV-5, decisión CRI-12B #6),
+ * porque ésa sí es la frontera que sale de CB-1..CB-4 y la que un arrastre
+ * continuo puede hacer parpadear. Se resuelve el viewport en los dos extremos
+ * de la banda (±`bandPx / 2`) y la clase sólo cambia si los dos coinciden con
+ * el valor crudo; dentro de la banda se conserva la anterior. El extremo
+ * inferior se recorta al primer ancho no-Compact para que el puente exacto
+ * nunca contamine esta decisión.
  *
- * El resultado es una zona muerta de exactamente `bandPx` alrededor de cada
- * frontera: hay que superarla por media banda para cruzar y caer por media
- * banda para volver. Es independiente de la dirección y de dónde esté la
- * frontera, cosa que importa porque la frontera depende de la altura y se mueve
- * al rotar.
+ * Resultado: zona muerta de exactamente `bandPx` alrededor de la frontera
+ * calculada, independiente de la dirección y de dónde esté esa frontera —cosa
+ * que importa porque depende de la altura y se mueve al rotar— y cero zona
+ * muerta sobre el techo de Compact.
  */
-const commitField = <Value,>(previous: Value, lower: Value, raw: Value, upper: Value): Value => {
-  if (lower === raw && upper === raw) return raw;
-  return previous === lower || previous === raw || previous === upper ? previous : raw;
-};
-
 export const commitShellComposition = (
   previous: ShellComposition | null,
   viewport: ShellViewport,
@@ -232,14 +242,20 @@ export const commitShellComposition = (
   if (!previous) return raw;
   if (sameComposition(previous, raw)) return previous;
 
-  const half = bandPx / 2;
-  const lower = resolveShellComposition({ width: viewport.width - half, height: viewport.height });
-  const upper = resolveShellComposition({ width: viewport.width + half, height: viewport.height });
+  // Cualquier lado del puente con el CSS se commitea tal cual, sin banda. Eso
+  // cubre entrar en Compact, salir de Compact y cruzar el umbral de teléfono.
+  if (raw.shellClass === 'K0' || previous.shellClass === 'K0') return raw;
 
-  const next: ShellComposition = {
-    shellClass: commitField(previous.shellClass, lower.shellClass, raw.shellClass, upper.shellClass),
-    phone: commitField(previous.phone, lower.phone, raw.phone, upper.phone),
-  };
+  // A partir de aquí `previous` y `raw` son ambos anchos (`X2` o `M1`), y
+  // `phone` es falso en los dos: sólo queda la frontera calculada.
+  const half = bandPx / 2;
+  const lower = resolveShellClass({
+    width: Math.max(viewport.width - half, COMPACT_CEILING_PX + 1),
+    height: viewport.height,
+  });
+  const upper = resolveShellClass({ width: viewport.width + half, height: viewport.height });
+  const shellClass = lower === raw.shellClass && upper === raw.shellClass ? raw.shellClass : previous.shellClass;
+
   // Identidad estable: sin cambio no hay emisión, y el contexto no re-renderiza.
-  return sameComposition(previous, next) ? previous : next;
+  return shellClass === previous.shellClass ? previous : { shellClass, phone: false };
 };

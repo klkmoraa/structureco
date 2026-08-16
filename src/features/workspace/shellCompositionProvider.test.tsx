@@ -98,6 +98,21 @@ describe('ShellCompositionProvider', () => {
     expect(readClass()).toBe('X2');
   });
 
+  it('cruza el techo de Compact exacto, también a través de la máquina de estados', () => {
+    setViewport(1024, 768);
+    render(<ShellCompositionProvider><Probe /></ShellCompositionProvider>);
+    expect(readClass()).toBe('M1');
+
+    // 1024 → 1023 → 1024: el CSS conmuta en ese píxel y la clase también. Con
+    // banda, la vuelta a M1 no habría llegado hasta 1036.
+    resizeTo(1023, 768);
+    expect(readClass()).toBe('K0');
+    resizeTo(1024, 768);
+    expect(readClass()).toBe('M1');
+    resizeTo(1023, 768);
+    expect(readClass()).toBe('K0');
+  });
+
   it('T-INV-4 · el teclado virtual no recompone', () => {
     setViewport(390, 844);
     render(<ShellCompositionProvider><Probe /></ShellCompositionProvider>);

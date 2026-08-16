@@ -136,10 +136,10 @@
   ],
   "sweep": {
     "transitions": [
-      "K0→M1@1036",
+      "K0→M1@1024",
       "M1→X2@1132",
       "X2→M1@1104",
-      "M1→K0@1008"
+      "M1→K0@1020"
     ],
     "endClass": "K0"
   },
@@ -186,5 +186,11 @@
       "overflowPx": 0
     }
   ],
-  "failures": []
+  "failures": [],
+  "compactBridge": {
+    "from1024": "M1",
+    "down1023": "K0",
+    "up1024": "M1",
+    "down1023again": "K0"
+  }
 }
