@@ -123,6 +123,9 @@ describe('StructuralCanvas advanced editing integration', () => {
     const canvas = screen.getByRole('application', { name: /área de trabajo estructural/i });
 
     fireEvent.pointerDown(canvas, { pointerId: 71, pointerType: 'touch', isPrimary: true, button: 0, buttons: 1, clientX: 260, clientY: 500 });
+    // SEL-02 reserves a stationary 480 ms press for marquee; a real pan moves
+    // beyond the 3 px long-press jitter before that deadline.
+    fireEvent.pointerMove(canvas, { pointerId: 71, pointerType: 'touch', isPrimary: true, button: 0, buttons: 1, clientX: 274, clientY: 500 });
     await waitFor(() => expect(canvas.getAttribute('data-interaction')).toBe('pan'));
 
     // A separate touch sequence starts with fresh browser pointer bookkeeping.

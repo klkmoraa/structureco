@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { lazy, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type Ref } from 'react';
 import { X } from 'lucide-react';
 import { useProject } from '../../store/ProjectContext';
 import type { DiagramPoint, DiagramQuantity, MemberModel, NodeModel, Selection, Tool } from '../../types';
@@ -25,6 +25,8 @@ import {
   cameraForViewportResize,
   cameraForPinch,
   canvasPointerProfile,
+  LONG_PRESS_MS,
+  LONG_PRESS_JITTER_PX,
   midpoint,
   movedPastThreshold,
   panCameraFrom,
@@ -32,6 +34,7 @@ import {
   pointDistance,
   screenToModelPoint,
   shouldArmLongPress,
+  shouldTriggerLongPress,
   zoomCameraAt,
   type CanvasCamera,
   type ModelPoint,
@@ -58,6 +61,16 @@ import { CanvasResultLayer, diagramPixelScaleFor, reactionClearanceFor } from '.
 import { CanvasInteractionLayer } from './CanvasInteractionLayer';
 import { CanvasMiniMap } from './CanvasMiniMap';
 import { CanvasTouchLoupe } from './CanvasTouchLoupe';
+import { CandidatePicker } from './CanvasCandidatePicker';
+import {
+  activeCandidate,
+  candidateToSelection,
+  createCandidatePickerState,
+  cycleCandidatePicker,
+  type CandidatePickerState,
+  type CandidateTarget,
+} from './candidatePicker';
+import { SurfacePresentationContext } from '../workspace/SurfacePresentationContext';
 import { ELASTIC_SATURATION_RATIO, elasticDemandGate, elasticDemandView, elasticIndexPaint, sectionElasticIndex } from '../results/elasticDemand';
 import { parseQuickEntryPair } from './quickEntry';
 import { resolveRepeatRecipe, type RepeatRecipe } from './repeatAction';
@@ -150,6 +163,8 @@ type CanvasInteraction =
     pointerType: string;
     start: ScreenPoint;
     target: StructuralTarget;
+    candidates: CandidateTarget[];
+    anchor: ScreenPoint;
     tool: Tool;
     shiftKey: boolean;
   }
@@ -240,6 +255,9 @@ export const StructuralCanvas = ({
   } = useProject();
   const { language, t } = useI18n();
   const { t: phase2T } = usePhase2I18n(language);
+  /** The broker owns Compact contextual-layer exclusivity; candidate identity stays local below. */
+  const surfaceBroker = useContext(SurfacePresentationContext);
+  const candidatePickerSurface = surfaceBroker?.stateFor('candidatePicker');
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const coordinateReadoutRef = useRef<HTMLOutputElement>(null);
@@ -254,8 +272,7 @@ export const StructuralCanvas = ({
   const [quickEntry, setQuickEntry] = useState({ first: '', second: '' });
   const [quickEntryMode, setQuickEntryMode] = useState<'delta' | 'polar'>('delta');
   const [quickEntryError, setQuickEntryError] = useState('');
-  const [cycleIndicator, setCycleIndicator] = useState<{ x: number; y: number; index: number; total: number } | null>(null);
-  const [overlapPicker, setOverlapPicker] = useState<{ x: number; y: number; candidates: Array<Exclude<StructuralTarget, { kind: 'background' }>> } | null>(null);
+  const [candidatePicker, setCandidatePicker] = useState<CandidatePickerState | null>(null);
   const [repeatRecipe, setRepeatRecipe] = useState<RepeatRecipe | null>(null);
   const [duplicateDraft, setDuplicateDraft] = useState<{ selection: Selection; x: string; y: string } | null>(null);
   const [structuralEditDraft, setStructuralEditDraft] = useState<StructuralEditDraft | null>(null);
@@ -290,13 +307,13 @@ export const StructuralCanvas = ({
   const pendingStructuralEditDraftRef = useRef<StructuralEditDraft | null>(null);
   const structuralEditLiveDraftRef = useRef<StructuralEditDraft | null>(null);
   const structuralEditApplyingRef = useRef(false);
-  const selectionCycleRef = useRef<{ x: number; y: number; at: number; key: string; index: number } | null>(null);
-  const cycleTimerRef = useRef<number | null>(null);
+  const longPressMotionRef = useRef<{ pointerId: number; start: ScreenPoint; current: ScreenPoint } | null>(null);
   const previousSizeRef = useRef<Size | null>(null);
   const fittedProjectRef = useRef<string | null>(null);
   const feedbackTimerRef = useRef<number | null>(null);
   const [canvasFeedback, setCanvasFeedback] = useState('');
   const selectionBox = interaction.kind === 'selection-box' ? interaction : null;
+  const candidatePreview = candidatePicker ? activeCandidate(candidatePicker) : null;
   const repeatCandidate = useMemo(() => resolveRepeatRecipe(project, selection), [project, selection]);
   const editCapabilities = useMemo(() => structuralEditCapabilities(project, selection), [project, selection]);
   const structuralEditPreview = useMemo((): { prepared: PreparedStructuralEdit | null; error: string } => {
@@ -595,7 +612,6 @@ export const StructuralCanvas = ({
     if (interactionFrameRef.current !== null) window.cancelAnimationFrame(interactionFrameRef.current);
     if (nodeMoveFrameRef.current !== null) window.cancelAnimationFrame(nodeMoveFrameRef.current);
     if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
-    if (cycleTimerRef.current !== null) window.clearTimeout(cycleTimerRef.current);
     if (feedbackTimerRef.current !== null) window.clearTimeout(feedbackTimerRef.current);
     cameraFrameRef.current = null;
     interactionFrameRef.current = null;
@@ -603,7 +619,6 @@ export const StructuralCanvas = ({
     structuralEditFrameRef.current = null;
     pendingStructuralEditDraftRef.current = null;
     structuralEditLiveDraftRef.current = null;
-    cycleTimerRef.current = null;
     feedbackTimerRef.current = null;
   }, []);
 
@@ -612,6 +627,7 @@ export const StructuralCanvas = ({
       window.clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+    longPressMotionRef.current = null;
   }, []);
 
   const toScreen = useCallback((x: number, y: number) => ({ x: camera.x + x * camera.scale, y: camera.y - y * camera.scale }), [camera]);
@@ -865,6 +881,76 @@ export const StructuralCanvas = ({
     else setSelection({ kind: target.kind, id: target.id });
   }, [setSelection]);
 
+  const candidateTargetsAtPoint = useCallback((
+    clientX: number,
+    clientY: number,
+    fallback: StructuralTarget,
+  ): CandidateTarget[] => {
+    const candidates: CandidateTarget[] = [];
+    const seen = new Set<string>();
+    const elements = document.elementsFromPoint?.(clientX, clientY) ?? [];
+    const append = (kind: string | undefined, id: string | undefined) => {
+      if (!id || !kind || !['node', 'member', 'nodalLoad', 'memberLoad'].includes(kind)) return;
+      if (kind === 'node' && !selectionFilter.nodes) return;
+      if (kind === 'member' && !selectionFilter.members) return;
+      if ((kind === 'nodalLoad' || kind === 'memberLoad') && !selectionFilter.loads) return;
+      const key = `${kind}:${id}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      candidates.push({ kind: kind as CandidateTarget['kind'], id });
+    };
+    for (const element of elements) {
+      const object = element.closest<SVGElement>('[data-structure-kind][data-structure-id]');
+      append(object?.dataset.structureKind, object?.dataset.structureId);
+    }
+    if (fallback.kind !== 'background') append(fallback.kind, fallback.id);
+    // SVG hit-testing does not consistently report a member exactly at one of
+    // its endpoint nodes. The model already owns that exact incidence through
+    // IDs, so complete the node stack from topology rather than tolerances or
+    // coordinate comparisons. A shared node can therefore offer its node,
+    // attached members, and its nodal loads as one precise candidate set.
+    if (fallback.kind === 'node') {
+      for (const member of project.members) {
+        if (member.i === fallback.id || member.j === fallback.id) append('member', member.id);
+      }
+      for (const load of project.nodalLoads) {
+        if (load.nodeId === fallback.id) append('nodalLoad', load.id);
+      }
+    }
+    return candidates;
+  }, [project.members, project.nodalLoads, selectionFilter.loads, selectionFilter.members, selectionFilter.nodes]);
+
+  const closeCandidatePicker = useCallback(() => {
+    setCandidatePicker(null);
+    surfaceBroker?.closeSurface('candidatePicker');
+    window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
+  }, [surfaceBroker]);
+
+  const openCandidatePicker = useCallback((candidates: CandidateTarget[], anchor: ScreenPoint): boolean => {
+    const picker = createCandidatePickerState(candidates, selection, {
+      x: clamp(anchor.x + 12, 8, Math.max(8, size.width - 260)),
+      y: clamp(anchor.y + 12, 8, Math.max(8, size.height - 260)),
+    });
+    if (!picker) return false;
+    setCandidatePicker(picker);
+    surfaceBroker?.openSurface('candidatePicker');
+    return true;
+  }, [selection, size.height, size.width, surfaceBroker]);
+
+  const confirmCandidatePicker = useCallback(() => {
+    if (!candidatePicker) return;
+    setSelection(candidateToSelection(activeCandidate(candidatePicker)));
+    closeCandidatePicker();
+  }, [candidatePicker, closeCandidatePicker, setSelection]);
+
+  const setCandidatePickerIndex = useCallback((index: number) => {
+    setCandidatePicker((current) => {
+      if (!current) return null;
+      const activeIndex = clamp(index, 0, current.candidates.length - 1);
+      return activeIndex === current.activeIndex ? current : { ...current, activeIndex };
+    });
+  }, []);
+
   const startPan = useCallback((
     pointerId: number,
     pointerType: string,
@@ -951,31 +1037,49 @@ export const StructuralCanvas = ({
     generatorOriginPickingRef.current = false;
   }, []);
 
-  const startPending = useCallback((event: ReactPointerEvent, target: StructuralTarget) => {
+  const startPending = useCallback((event: ReactPointerEvent, target: StructuralTarget, candidates: CandidateTarget[] = []) => {
+    const anchor = localScreenPoint(event.clientX, event.clientY);
     const pending: CanvasInteraction = {
       kind: 'pending',
       pointerId: event.pointerId,
       pointerType: event.pointerType,
       start: { x: event.clientX, y: event.clientY },
       target,
+      candidates,
+      anchor,
       tool: activeTool,
       shiftKey: event.shiftKey,
     };
     capturePointer(event.pointerId);
     transitionInteraction(pending);
     clearLongPressTimer();
+    longPressMotionRef.current = { pointerId: event.pointerId, start: pending.start, current: pending.start };
     if (shouldArmLongPress(event.pointerType, activeTool, target.kind)) {
       longPressTimerRef.current = window.setTimeout(() => {
         const current = interactionRef.current;
         if (current.kind !== 'pending' || current.pointerId !== event.pointerId) return;
-        selectStructuralTarget(target);
+        const motion = longPressMotionRef.current;
+        const movedPx = motion?.pointerId === event.pointerId ? pointDistance(motion.start, motion.current) : 0;
+        if (!shouldTriggerLongPress(event.pointerType, current.tool, current.target.kind, LONG_PRESS_MS, movedPx)) return;
+        longPressTimerRef.current = null;
+        longPressMotionRef.current = null;
+        if (current.target.kind === 'background') {
+          const start = screenToModelPoint(current.anchor, cameraRef.current);
+          transitionInteraction({ kind: 'selection-box', pointerId: event.pointerId, start, current: start, additive: current.shiftKey });
+          return;
+        }
+        if (openCandidatePicker(current.candidates, current.anchor)) {
+          transitionInteraction({ kind: 'long-press', pointerId: event.pointerId, target: current.target });
+          return;
+        }
+        selectStructuralTarget(current.target);
         setActiveTool('select');
         onRequestInspector?.();
-        transitionInteraction({ kind: 'long-press', pointerId: event.pointerId, target });
+        transitionInteraction({ kind: 'long-press', pointerId: event.pointerId, target: current.target });
         longPressTimerRef.current = null;
-      }, 480);
+      }, LONG_PRESS_MS);
     }
-  }, [activeTool, capturePointer, clearLongPressTimer, onRequestInspector, selectStructuralTarget, setActiveTool, transitionInteraction]);
+  }, [activeTool, capturePointer, clearLongPressTimer, localScreenPoint, onRequestInspector, openCandidatePicker, selectStructuralTarget, setActiveTool, transitionInteraction]);
 
   const completeLoadPlacement = (label: string) => {
     setActiveTool('select');
@@ -1205,7 +1309,7 @@ export const StructuralCanvas = ({
 
   const handleObjectPointerDown = useStableCanvasEvent((event: ReactPointerEvent, target: StructuralTarget) => {
     event.stopPropagation();
-    setOverlapPicker(null);
+    if (candidatePicker) return;
     if (interactionRef.current.kind === 'pinch') return;
     if (shouldStartPan(event)) {
       event.preventDefault();
@@ -1234,56 +1338,21 @@ export const StructuralCanvas = ({
             ? selectionFilter.loads
             : true;
       if (!selectable) return;
-      // A one-finger touch on selectable geometry is a pending pan/long-press
-      // gesture. Resolve that intent before the desktop overlap picker: at
-      // connected nodes `elementsFromPoint()` also sees their members and would
-      // otherwise consume the gesture before pending touch intent can run.
-      if (event.pointerType === 'touch') {
-        startPending(event, resolvedTarget);
+      const candidates = candidateTargetsAtPoint(event.clientX, event.clientY, resolvedTarget);
+      if (candidates.length > 1) {
+        if (event.pointerType === 'touch') startPending(event, resolvedTarget, candidates);
+        else openCandidatePicker(candidates, localScreenPoint(event.clientX, event.clientY));
         return;
       }
-      {
-        const candidates: StructuralTarget[] = [];
-        const seen = new Set<string>();
-        const hitElements = document.elementsFromPoint?.(event.clientX, event.clientY) ?? [event.target as Element];
-        for (const element of hitElements) {
-          const object = element.closest<SVGElement>('[data-structure-kind][data-structure-id]');
-          const kind = object?.dataset.structureKind;
-          const id = object?.dataset.structureId;
-          if (!kind || !id || !['node', 'member', 'nodalLoad', 'memberLoad'].includes(kind)) continue;
-          if (kind === 'node' && !selectionFilter.nodes) continue;
-          if (kind === 'member' && !selectionFilter.members) continue;
-          if ((kind === 'nodalLoad' || kind === 'memberLoad') && !selectionFilter.loads) continue;
-          const candidateKey = `${kind}:${id}`;
-          if (seen.has(candidateKey)) continue;
-          seen.add(candidateKey);
-          candidates.push({ kind: kind as 'node' | 'member' | 'nodalLoad' | 'memberLoad', id });
-        }
-        if (candidates.length > 1) {
-          const key = candidates.map((candidate) => `${candidate.kind}:${'id' in candidate ? candidate.id : ''}`).join('|');
-          const previous = selectionCycleRef.current;
-          const sameSpot = previous && Math.hypot(previous.x - event.clientX, previous.y - event.clientY) <= 6 && performance.now() - previous.at <= 900 && previous.key === key;
-          const initialIndex = 'id' in target
-            ? candidates.findIndex((candidate) => 'id' in candidate && candidate.kind === target.kind && candidate.id === target.id)
-            : 0;
-          const index = sameSpot || event.altKey ? ((previous?.index ?? -1) + 1) % candidates.length : Math.max(0, initialIndex);
-          resolvedTarget = candidates[index];
-          selectionCycleRef.current = { x: event.clientX, y: event.clientY, at: performance.now(), key, index };
-          const rect = hostRef.current?.getBoundingClientRect();
-          setCycleIndicator({ x: event.clientX - (rect?.left ?? 0), y: event.clientY - (rect?.top ?? 0), index: index + 1, total: candidates.length });
-          setOverlapPicker({
-            x: clamp(event.clientX - (rect?.left ?? 0) + 12, 8, Math.max(8, size.width - 230)),
-            y: clamp(event.clientY - (rect?.top ?? 0) + 12, 8, Math.max(8, size.height - 220)),
-            candidates: candidates as Array<Exclude<StructuralTarget, { kind: 'background' }>>,
-          });
-          if (cycleTimerRef.current !== null) window.clearTimeout(cycleTimerRef.current);
-          cycleTimerRef.current = window.setTimeout(() => { setCycleIndicator(null); cycleTimerRef.current = null; }, 1100);
-          return;
-        } else selectionCycleRef.current = null;
+      // A one-finger touch remains pending until time plus displacement resolves
+      // it as a true long press, marquee, or pan.
+      if (event.pointerType === 'touch') {
+        startPending(event, resolvedTarget, candidates);
+        return;
       }
     }
     if (event.pointerType === 'touch' || activeTool === 'pointLoad' || activeTool === 'distributedLoad' || activeTool === 'moment') {
-      startPending(event, resolvedTarget);
+        startPending(event, resolvedTarget);
       return;
     }
     if (resolvedTarget.kind === 'node' && activeTool === 'select' && !event.shiftKey) {
@@ -1295,6 +1364,7 @@ export const StructuralCanvas = ({
   });
 
   const handleBackgroundPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (candidatePicker) return;
     if (event.target !== event.currentTarget && (event.target as Element).closest('[data-structure-object]')) return;
     if (interactionRef.current.kind === 'pinch') return;
     if (shouldStartPan(event)) {
@@ -1305,9 +1375,9 @@ export const StructuralCanvas = ({
     if (startStructuralEditPointer(event)) return;
     if (event.button !== 0) return;
     if (event.pointerType === 'touch') {
-      if (activeTool === 'select' || activeTool === 'pan') {
-        startPan(event.pointerId, event.pointerType, { x: event.clientX, y: event.clientY }, activeTool === 'select');
-      } else startPending(event, { kind: 'background' });
+      if (activeTool === 'select') startPending(event, { kind: 'background' });
+      else if (activeTool === 'pan') startPan(event.pointerId, event.pointerType, { x: event.clientX, y: event.clientY }, false);
+      else startPending(event, { kind: 'background' });
       return;
     }
     if (activeTool === 'pointLoad' || activeTool === 'distributedLoad' || activeTool === 'moment') {
@@ -1328,6 +1398,10 @@ export const StructuralCanvas = ({
   };
 
   const handlePointerDownCapture = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (candidatePicker) {
+      event.stopPropagation();
+      return;
+    }
     // En captura, para que elegir el origen sobre un nudo existente entregue el
     // punto y no lo seleccione además: el manejador del objeto está por debajo
     // y nunca llega a verlo.
@@ -1434,6 +1508,11 @@ export const StructuralCanvas = ({
       return;
     }
     if (current.kind === 'pending' && current.pointerId === event.pointerId) {
+      const movedPx = pointDistance(current.start, client);
+      if (current.pointerType === 'touch') {
+        longPressMotionRef.current = { pointerId: current.pointerId, start: current.start, current: client };
+        if (movedPx > LONG_PRESS_JITTER_PX) clearLongPressTimer();
+      }
       if (!movedPastThreshold(current.start, client, current.pointerType)) return;
       clearLongPressTimer();
       if (current.target.kind === 'node' && pendingDragIntent(current.pointerType, current.tool, current.target.kind) === 'node-drag') {
@@ -1580,7 +1659,7 @@ export const StructuralCanvas = ({
     setRepeatRecipe(null);
     setMemberStart(null);
     setCut(null);
-    setOverlapPicker(null);
+    closeCandidatePicker();
     setActiveTool('select');
     setStructuralEditPointerArmed(false);
     structuralEditLiveDraftRef.current = null;
@@ -1591,7 +1670,7 @@ export const StructuralCanvas = ({
     } catch (error) {
       showCanvasFeedback(error instanceof Error ? error.message : t('canvas.twoValidNumbers'));
     }
-  }, [cancelActiveInteraction, editCapabilities.structural, project, selection, setActiveTool, showCanvasFeedback, t]);
+  }, [cancelActiveInteraction, closeCandidatePicker, editCapabilities.structural, project, selection, setActiveTool, showCanvasFeedback, t]);
 
   useEffect(() => onWorkspaceCommand('open-structural-edit', () => startStructuralEdit('move')), [startStructuralEdit]);
   useEffect(() => onWorkspaceCommand('open-structure-generator', () => setGeneratorOpen(true)), []);
@@ -1643,6 +1722,12 @@ export const StructuralCanvas = ({
       const target = event.target instanceof HTMLElement ? event.target : null;
       const modalOpen = document.querySelector<HTMLElement>('[aria-modal="true"]');
       const interactive = target?.closest('input, select, textarea, button, [contenteditable="true"], [role="dialog"], [role="menu"], [role="listbox"], [role="tablist"]');
+      if (event.key === 'Escape' && candidatePicker) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        closeCandidatePicker();
+        return;
+      }
       if ((modalOpen && !target?.closest('[aria-modal="true"]')) || interactive) return;
       if (event.code === 'Space') {
         event.preventDefault();
@@ -1704,7 +1789,6 @@ export const StructuralCanvas = ({
         setMemberStart(null);
         setQuickEntry({ first: '', second: '' });
         setQuickEntryError('');
-        setOverlapPicker(null);
         setRepeatRecipe(null);
         setSelection(null);
         setCut(null);
@@ -1731,7 +1815,7 @@ export const StructuralCanvas = ({
       window.removeEventListener('blur', cancelActiveInteraction);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [activateRepeat, cancelActiveInteraction, cancelStructuralEdit, deleteSelection, duplicateDraft, project, repeatCandidate, replaceProject, selection, setActiveTool, setSelection, structuralEditDraft]);
+  }, [activateRepeat, cancelActiveInteraction, cancelStructuralEdit, candidatePicker, closeCandidatePicker, deleteSelection, duplicateDraft, project, repeatCandidate, replaceProject, selection, setActiveTool, setSelection, structuralEditDraft]);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -1794,11 +1878,15 @@ export const StructuralCanvas = ({
     return <g className="grid-lines">{lines}</g>;
   }, [camera, project.settings.gridSize, project.settings.showGrid, size]);
 
-  const handleLoadKeyDown = useStableCanvasEvent((event: ReactKeyboardEvent<SVGGElement>, target: Selection) => {
+  const handleObjectKeyDown = useStableCanvasEvent((event: ReactKeyboardEvent<SVGGElement>, target: Exclude<StructuralTarget, { kind: 'background' }>) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
-    setSelection(target);
-    onRequestInspector?.();
+    const rect = event.currentTarget.getBoundingClientRect();
+    const client = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    const candidates = candidateTargetsAtPoint(client.x, client.y, target);
+    if (openCandidatePicker(candidates, localScreenPoint(client.x, client.y))) return;
+    performTargetAction(target, 'select', client);
+    if (target.kind === 'nodalLoad' || target.kind === 'memberLoad') onRequestInspector?.();
   });
 
   const onCutLeave = useCallback(() => setCut((current) => current?.pinned ? current : null), []);
@@ -2086,7 +2174,7 @@ export const StructuralCanvas = ({
         role="application"
         aria-label={t('canvas.workspace')}
         aria-describedby="canvas-interaction-description"
-        aria-keyshortcuts="V H N M S P D O C X B R Delete Backspace Escape"
+        aria-keyshortcuts="V H N M S P D O C X B R ArrowUp ArrowDown Home End Enter Delete Backspace Escape"
         data-pointer-support="mouse touch pen"
         tabIndex={0}
         onPointerDownCapture={handlePointerDownCapture}
@@ -2200,6 +2288,7 @@ export const StructuralCanvas = ({
           toScreen={toScreen}
           camera={camera}
           selectionVisualState={selectionVisualState}
+          candidatePreview={candidatePreview}
           learningFocus={learningFocus}
           memberStartId={memberStart}
           layers={layers}
@@ -2213,8 +2302,7 @@ export const StructuralCanvas = ({
           distributedLabel={distributedLabel}
           t={t}
           onObjectPointerDown={handleObjectPointerDown}
-          onSelect={setSelection}
-          onLoadKeyDown={handleLoadKeyDown}
+          onObjectKeyDown={handleObjectKeyDown}
           onShowCut={showCut}
           onCutLeave={onCutLeave}
         />
@@ -2254,6 +2342,7 @@ export const StructuralCanvas = ({
           toScreen={toScreen}
           camera={camera}
           selectionVisualState={selectionVisualState}
+          candidatePreview={candidatePreview}
           learningFocus={learningFocus}
           memberStartId={memberStart}
           layers={layers}
@@ -2267,8 +2356,7 @@ export const StructuralCanvas = ({
           distributedLabel={distributedLabel}
           t={t}
           onObjectPointerDown={handleObjectPointerDown}
-          onSelect={setSelection}
-          onLoadKeyDown={handleLoadKeyDown}
+          onObjectKeyDown={handleObjectKeyDown}
           onShowCut={showCut}
           onCutLeave={onCutLeave}
         />
@@ -2427,17 +2515,24 @@ export const StructuralCanvas = ({
         <button type="button" className="quick-entry-cancel" onClick={cancelQuickEntry}>{t('canvas.cancelPlacement')}</button>
         {quickEntryError ? <span className="quick-entry-error" role="alert">{quickEntryError}</span> : null}
       </form> : null}
-      {cycleIndicator ? <div className="selection-cycle-indicator" style={{ left: cycleIndicator.x + 12, top: cycleIndicator.y + 12 }} role="status">{t('canvas.selectionCycle', { index: cycleIndicator.index, total: cycleIndicator.total })}</div> : null}
-      {overlapPicker ? <div className="overlap-picker" style={{ left: overlapPicker.x, top: overlapPicker.y }} role="listbox" aria-label={t('canvas.overlapPicker')}>
-        <strong>{t('canvas.overlapPicker')}</strong>
-        {overlapPicker.candidates.map((candidate) => <button
-          type="button"
-          role="option"
-          aria-selected={selection?.kind === candidate.kind && selection.id === candidate.id}
-          key={`${candidate.kind}:${candidate.id}`}
-          onClick={() => { setSelection({ kind: candidate.kind, id: candidate.id }); setOverlapPicker(null); svgRef.current?.focus(); }}
-        >{candidate.kind === 'node' ? t('inspector.node') : candidate.kind === 'member' ? t('inspector.member') : candidate.kind === 'nodalLoad' ? t('canvas.overlapNodalLoad') : t('inspector.memberLoad')} {candidate.id}</button>)}
-        <button type="button" onClick={() => { setOverlapPicker(null); svgRef.current?.focus(); }}>{t('canvas.cancelPlacement')}</button>
+      {candidatePicker && (!surfaceBroker || candidatePickerSurface?.status === 'active') ? <div
+        data-workspace-surface={surfaceBroker ? 'candidatePicker' : undefined}
+        ref={surfaceBroker?.surfaceRootRef('candidatePicker') as Ref<HTMLDivElement> | undefined}
+      >
+        <CandidatePicker
+          state={candidatePicker}
+          presentation={candidatePickerSurface?.presentation === 'sheet' ? 'sheet' : 'floating'}
+          onCycle={(direction) => setCandidatePicker((current) => current ? cycleCandidatePicker(current, direction) : null)}
+          onSetActive={setCandidatePickerIndex}
+          onConfirm={confirmCandidatePicker}
+          onCancel={closeCandidatePicker}
+          labels={{
+            title: t('canvas.overlapPicker'),
+            cancel: t('canvas.cancelPlacement'),
+            confirm: t('canvas.confirmSelection'),
+          }}
+          labelForCandidate={(candidate) => `${candidate.kind === 'node' ? t('inspector.node') : candidate.kind === 'member' ? t('inspector.member') : candidate.kind === 'nodalLoad' ? t('canvas.overlapNodalLoad') : t('inspector.memberLoad')} ${candidate.id}`}
+        />
       </div> : null}
       {cut?.point ? (
         <div className="cut-tooltip" style={{ left: clamp(cut.clientX - (hostRef.current?.getBoundingClientRect().left ?? 0) + 14, 10, Math.max(10, size.width - 350)), top: clamp(cut.clientY - (hostRef.current?.getBoundingClientRect().top ?? 0) + 14, 10, Math.max(10, size.height - 390)) }}>

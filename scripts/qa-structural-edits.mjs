@@ -9,6 +9,8 @@ const engine = process.argv.includes('--webkit') ? 'webkit' : 'chromium';
 const port = engine === 'webkit' ? 4182 : 4181;
 const baseURL = `http://127.0.0.1:${port}/`;
 const artifactsDir = path.join(root, 'qa-artifacts');
+const QA_BOOT_QUERY = '__structurecoQaProject';
+const QA_CLEAR_STORAGE = '__clear__';
 fs.mkdirSync(artifactsDir, { recursive: true });
 
 const previewServer = await preview({
@@ -47,12 +49,19 @@ const waitForStored = async (page, predicate, argument) => {
   return storedProject(page);
 };
 
+const bootWithStoredProject = async (page, serializedProject = QA_CLEAR_STORAGE) => {
+  // Seed storage before the application entry point runs. WebKit treats a
+  // reload that interrupts a Vite CSS preload as a rejected dynamic import;
+  // a one-pass boot avoids that navigation race while keeping each scenario
+  // completely isolated.
+  const url = new URL(baseURL);
+  url.searchParams.set(QA_BOOT_QUERY, serializedProject);
+  await page.goto(url.toString(), { waitUntil: 'networkidle' });
+  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
+};
+
 const resetToExample = async (page) => {
-  await page.goto(baseURL, { waitUntil: 'networkidle' });
-  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
-  await page.evaluate(() => localStorage.clear());
-  await page.reload({ waitUntil: 'networkidle' });
-  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
+  await bootWithStoredProject(page);
   // Project-hub actions use the same project name. Scope this to the welcome
   // template card so the smoke path always opens the structural example.
   await page.locator('.welcome-template-card').filter({ hasText: /P.rtico de ejemplo/i }).click();
@@ -65,9 +74,7 @@ const seedExample = async (page, mutate) => {
   await resetToExample(page);
   const project = await storedProject(page);
   mutate(project);
-  await page.evaluate((next) => localStorage.setItem('structureCo.project', JSON.stringify(next)), project);
-  await page.reload({ waitUntil: 'networkidle' });
-  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
+  await bootWithStoredProject(page, JSON.stringify(project));
   await page.getByRole('button', { name: /continuar proyecto/i }).click();
   await page.locator('.app-shell').waitFor({ state: 'visible' });
   await sleep(page);
@@ -111,11 +118,40 @@ const availableCanvasTouchPoint = (page) => page.evaluate(() => {
   throw new Error('No unobscured touch point was found inside the structural canvas.');
 });
 
+const closeCompactSurfaceStack = async (page) => {
+  const closeInspector = page.getByRole('button', { name: /cerrar inspector/i });
+  if (await closeInspector.isVisible().catch(() => false)) await closeInspector.click();
+  const results = page.getByRole('dialog', { name: /resultados/i });
+  if (await results.isVisible().catch(() => false)) {
+    await results.focus();
+    await page.keyboard.press('Escape');
+    await results.waitFor({ state: 'hidden' });
+  }
+};
+
 const selectSingle = async (page, kind, id) => {
   const item = target(page, kind, id);
   await item.focus();
   await page.keyboard.press('Enter');
+  // CRI-96 keeps ambiguous hits read-only until an explicit confirmation. The
+  // structural-edit oracle asks for one exact ID, so it now selects that
+  // option and confirms it instead of assuming the click-through path.
+  const picker = page.locator('[data-candidate-picker]');
+  if (await picker.isVisible().catch(() => false)) {
+    await picker.locator(`#candidate-option-${kind}-${id}`).click();
+    await picker.getByRole('listbox').press('Enter');
+    await picker.waitFor({ state: 'hidden' });
+  }
   await page.waitForFunction((selector) => document.querySelector(selector)?.getAttribute('aria-pressed') === 'true', `[data-structure-kind="${kind}"][data-structure-id="${id}"]`);
+};
+
+const openCandidatePickerFromKeyboard = async (page, kind, id) => {
+  const item = target(page, kind, id);
+  await item.focus();
+  await page.keyboard.press('Enter');
+  const picker = page.locator('[data-candidate-picker]');
+  await picker.waitFor({ state: 'visible' });
+  return picker;
 };
 
 const selectNodes = async (page, ids) => {
@@ -125,10 +161,18 @@ const selectNodes = async (page, ids) => {
   }
 };
 
-const openEdit = async (page) => {
+const openEdit = async (page, activation = 'pointer') => {
   const launcher = page.locator('[data-structural-edit-launcher]');
   await launcher.waitFor({ state: 'visible' });
-  await launcher.click();
+  if (activation === 'keyboard') {
+    // M1 intentionally presents the Inspector as an inset over the canvas;
+    // this responsive geometry assertion uses the same reachable keyboard
+    // command instead of asking Playwright to click through that layer.
+    await launcher.focus();
+    await page.keyboard.press('Enter');
+  } else {
+    await launcher.click();
+  }
   const surface = page.locator('[data-structural-edit-surface]');
   await surface.waitFor({ state: 'visible' });
   return surface;
@@ -295,16 +339,21 @@ const runContextualToolbarAndResponsive = async (page) => {
 
   await page.setViewportSize({ width: 1024, height: 768 });
   await selectSingle(page, 'node', 'N1');
-  const tabletSurface = await openEdit(page);
+  const tabletSurface = await openEdit(page, 'keyboard');
   const tabletGeometry = await tabletSurface.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, viewport: window.innerWidth, scroll: document.documentElement.scrollWidth };
   });
   check('tabletSurfaceFitsWithoutHorizontalOverflow', tabletGeometry.left >= 0 && tabletGeometry.right <= tabletGeometry.viewport + 1 && tabletGeometry.scroll <= tabletGeometry.viewport + 1, JSON.stringify(tabletGeometry));
-  await tabletSurface.getByRole('button', { name: /^cancelar$/i }).last().click();
+  const tabletCancel = tabletSurface.getByRole('button', { name: /^cancelar$/i }).last();
+  await tabletCancel.press('Enter');
+  await tabletSurface.waitFor({ state: 'hidden' });
 
   await page.setViewportSize({ width: 390, height: 844 });
   await resetToExample(page);
+  // Compact permits one contextual layer. Clear the initial Inspector/Results
+  // stack through its own controls before reaching the canvas tool tray.
+  await closeCompactSurfaceStack(page);
   await selectSingle(page, 'node', 'N1');
   await page.getByRole('button', { name: /más herramientas/i }).click();
   const more = page.getByRole('dialog', { name: /más herramientas/i });
@@ -337,6 +386,7 @@ const runChromiumTouch = async (page) => {
   if (engine !== 'chromium') return;
   await page.setViewportSize({ width: 390, height: 844 });
   await resetToExample(page);
+  await closeCompactSurfaceStack(page);
   await selectSingle(page, 'node', 'N1');
   const surface = await openEdit(page);
   const start = await availableCanvasTouchPoint(page);
@@ -362,7 +412,75 @@ const runChromiumTouch = async (page) => {
   await surface.getByRole('button', { name: /^cancelar$/i }).last().click();
 };
 
+const runCandidatePicker = async (page) => {
+  await page.setViewportSize({ width: 1536, height: 960 });
+  await seedExample(page, (project) => {
+    // N3 then has exactly node N3 + member M1 + nodal load NL1 at one point.
+    project.members = project.members.filter((member) => member.id !== 'M2');
+    project.memberLoads = project.memberLoads.filter((load) => load.memberId !== 'M2');
+    project.nodalLoads = project.nodalLoads.filter((load) => load.id === 'NL1');
+  });
+  await selectSingle(page, 'node', 'N1');
+  const dotRadiusBefore = await target(page, 'node', 'N3').locator('.node-dot').getAttribute('r');
+  const picker = await openCandidatePickerFromKeyboard(page, 'node', 'N3');
+  const options = picker.getByRole('option');
+  check('candidatePickerShowsThreeExplicitCandidates', await options.count() === 3, String(await options.count()));
+  check('candidatePickerPreservesPriorSelectionUntilConfirmation', await target(page, 'node', 'N1').getAttribute('aria-pressed') === 'true');
+  const initialActive = await picker.locator('[data-candidate-active="true"]').getAttribute('id');
+  check('candidatePickerPreviewsActiveExplicitId', Boolean(initialActive));
+  await picker.getByRole('listbox').press('ArrowDown');
+  const cycledActive = await picker.locator('[data-candidate-active="true"]').getAttribute('id');
+  check('candidatePickerKeyboardCyclesPreview', Boolean(cycledActive && cycledActive !== initialActive), `${initialActive} -> ${cycledActive}`);
+
+  await page.evaluate(() => document.documentElement.style.filter = 'grayscale(1)');
+  await page.screenshot({ path: path.join(artifactsDir, `cri-96-candidate-picker-grayscale-${engine}.png`), fullPage: true });
+  await page.evaluate(() => document.documentElement.style.removeProperty('filter'));
+
+  await picker.getByRole('listbox').press('Escape');
+  await picker.waitFor({ state: 'hidden' });
+  check('candidatePickerEscapePreservesPriorSelection', await target(page, 'node', 'N1').getAttribute('aria-pressed') === 'true');
+
+  const confirmPicker = await openCandidatePickerFromKeyboard(page, 'node', 'N3');
+  await confirmPicker.locator('#candidate-option-member-M1').click();
+  await confirmPicker.getByRole('listbox').press('Enter');
+  await confirmPicker.waitFor({ state: 'hidden' });
+  check('candidatePickerEnterConfirmsOnlyActiveCandidate', await target(page, 'member', 'M1').getAttribute('aria-pressed') === 'true');
+  const dotRadiusAfter = await target(page, 'node', 'N3').locator('.node-dot').getAttribute('r');
+  check('candidatePickerDoesNotChangeTechnicalNodeGeometry', dotRadiusBefore === '7' && dotRadiusAfter === '7', `${dotRadiusBefore} -> ${dotRadiusAfter}`);
+
+  if (engine !== 'chromium') return;
+  const cdp = await page.context().newCDPSession(page);
+  const point = await nodeCenter(page, 'N3');
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...point, id: 96 }] });
+  await page.waitForTimeout(480);
+  await page.locator('[data-candidate-picker]').waitFor({ state: 'visible' });
+  check('candidatePickerTouchLongPressUses480msContract', true);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await page.keyboard.press('Escape');
+
+  const background = await availableCanvasTouchPoint(page);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...background, id: 97 }] });
+  await page.waitForTimeout(160);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ ...background, x: background.x + 4, id: 97 }] });
+  await page.waitForTimeout(360);
+  check('candidatePickerSlowPanDoesNotArmPickerOrMarquee',
+    await page.locator('[data-candidate-picker]').count() === 0
+      && await page.locator('.structural-canvas').getAttribute('data-interaction') !== 'selection-box');
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...background, id: 98 }] });
+  await page.waitForTimeout(480);
+  check('candidatePickerTouchLongPressArmsBackgroundMarquee', await page.locator('.structural-canvas').getAttribute('data-interaction') === 'selection-box');
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+};
+
 const context = await browser.newContext({ viewport: { width: 1536, height: 960 }, locale: 'es-MX' });
+await context.addInitScript(({ marker, clearStorage }) => {
+  const serialized = new URL(window.location.href).searchParams.get(marker);
+  if (serialized === null) return;
+  if (serialized === clearStorage) window.localStorage.clear();
+  else window.localStorage.setItem('structureCo.project', serialized);
+}, { marker: QA_BOOT_QUERY, clearStorage: QA_CLEAR_STORAGE });
 const page = await context.newPage();
 page.on('console', (message) => {
   if (message.type() === 'error') results.console.push(message.text());
@@ -380,6 +498,7 @@ try {
   await runStep('Align and Distribute', () => runAlignAndDistribute(page));
   await runStep('Desktop, tablet and mobile responsive UI', () => runContextualToolbarAndResponsive(page));
   await runStep('Chromium touch', () => runChromiumTouch(page));
+  await runStep('CRI-96 Candidate Picker', () => runCandidatePicker(page));
   await page.screenshot({ path: path.join(artifactsDir, `structural-edits-${engine}.png`), fullPage: true });
   check('noConsoleErrors', results.console.length === 0, JSON.stringify(results.console));
   check('noPageErrors', results.pageErrors.length === 0, JSON.stringify(results.pageErrors));

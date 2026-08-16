@@ -58,6 +58,7 @@ código + pruebas + gates ejecutables
 | [Plan de edición estructural avanzada 2D](superpowers/plans/2026-08-12-advanced-2d-structural-editing.md) | Código, pruebas y gates actuales |
 | [Diseño del broker de presentación · CRI-94](superpowers/specs/2026-08-16-cri-94-surface-presentation-broker-design.md) | Código, pruebas y gates actuales |
 | [Plan del broker de presentación · CRI-94](superpowers/plans/2026-08-16-cri-94-surface-presentation-broker.md) | Código, pruebas y gates actuales |
+| [Plan de selección precisa · CRI-96](superpowers/plans/2026-08-16-cri-96-selection-candidate-picker.md) | Código, pruebas y gates actuales |
 
 ## Evidencia de auditoría y handoff
 

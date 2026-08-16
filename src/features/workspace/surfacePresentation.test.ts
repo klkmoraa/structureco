@@ -14,14 +14,14 @@ import {
 } from './surfacePresentation';
 
 const expectedTable: Record<'X2' | 'M1' | 'K0', Record<SurfaceId, SurfacePresentation>> = {
-  X2: { inspector: 'dock', results: 'dock', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay' },
-  M1: { inspector: 'inset', results: 'inset', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay' },
-  K0: { inspector: 'sheet', results: 'sheet', datasheet: 'fullscreen', doctor: 'fullscreen', palette: 'sheet' },
+  X2: { inspector: 'dock', results: 'dock', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating' },
+  M1: { inspector: 'inset', results: 'inset', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating' },
+  K0: { inspector: 'sheet', results: 'sheet', datasheet: 'fullscreen', doctor: 'fullscreen', palette: 'sheet', candidatePicker: 'sheet' },
 };
 
 describe('surface presentation table', () => {
   it('is the literal X2/M1/K0 matrix for every broker-owned surface', () => {
-    expect(BROKER_SURFACE_IDS).toEqual(['inspector', 'results', 'datasheet', 'doctor', 'palette']);
+    expect(BROKER_SURFACE_IDS).toEqual(['inspector', 'results', 'datasheet', 'doctor', 'palette', 'candidatePicker']);
     expect(SURFACE_PRESENTATION_TABLE).toEqual(expectedTable);
 
     for (const shellClass of ['X2', 'M1', 'K0'] as const) {
@@ -87,6 +87,15 @@ describe('surface exclusivity', () => {
 
     state = closeSurfaceIntent(state, 'doctor');
     expect(resolveSurfaceActivity('X2', state).datasheet.status).toBe('active');
+  });
+
+  it('treats the candidate picker as one contextual Compact layer and migrates it without a selection-side effect', () => {
+    let state = openSurfaceIntent(createSurfaceBrokerState(['inspector']), 'candidatePicker');
+
+    expect(resolveSurfaceActivity('K0', state).candidatePicker).toMatchObject({ status: 'active', presentation: 'sheet' });
+    expect(resolveSurfaceActivity('K0', state).inspector.status).toBe('suspended');
+    expect(resolveSurfaceActivity('X2', state).candidatePicker).toMatchObject({ status: 'active', presentation: 'floating' });
+    expect(resolveSurfaceActivity('K0', state).candidatePicker.status).toBe('active');
   });
 });
 
