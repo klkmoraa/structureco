@@ -54,7 +54,7 @@ const renderCanvas = () => render(<ProjectProvider><Harness /></ProjectProvider>
 const model = () => JSON.parse(screen.getByLabelText('project-model').textContent ?? '{}') as ReturnType<typeof createDefaultProject>;
 const openStructuralEdit = async (user: ReturnType<typeof userEvent.setup>, selectionButton: string) => {
   await user.click(screen.getByText(selectionButton));
-  await user.click(screen.getByRole('button', { name: /editar selección/i }));
+  await user.click(screen.getByRole('button', { name: /abrir editor estructural/i }));
   return screen.getByRole('region', { name: /edición estructural/i });
 };
 const chooseOperation = async (user: ReturnType<typeof userEvent.setup>, surface: HTMLElement, name: RegExp) => {

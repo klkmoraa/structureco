@@ -25,7 +25,7 @@ const browser = await (engine === 'webkit' ? webkit : chromium).launch({
     executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH,
   } : {}),
 });
-const results = { engine, url: baseURL, checks: {}, console: [], pageErrors: [] };
+const results = { engine, url: baseURL, checks: {}, clipboardReadText: null, console: [], pageErrors: [] };
 
 const check = (name, condition, detail = '') => {
   results.checks[name] = { pass: Boolean(condition), detail };
@@ -67,6 +67,12 @@ const resetToExample = async (page) => {
   await page.locator('.welcome-template-card').filter({ hasText: /P.rtico de ejemplo/i }).click();
   await page.locator('.app-shell').waitFor({ state: 'visible' });
   await page.locator('[data-structure-kind="node"][data-structure-id="N1"]').waitFor({ state: 'visible' });
+  // Vite loads the workspace CSS after the shell's lazy chunk. Do not navigate
+  // to the next isolated scenario until that stylesheet is committed: WebKit
+  // otherwise reports a real rejected CSS preload while the old document dies.
+  await page.waitForLoadState('networkidle');
+  await page.waitForFunction(() => Array.from(document.styleSheets)
+    .some((sheet) => sheet.href.includes('WorkspaceShell')));
   await sleep(page);
 };
 
@@ -154,6 +160,48 @@ const openCandidatePickerFromKeyboard = async (page, kind, id) => {
   return picker;
 };
 
+const contextualActions = (page) => page.locator('[data-contextual-actions]');
+
+const openContextualOverflow = async (page) => {
+  const toolbar = contextualActions(page);
+  await toolbar.waitFor({ state: 'visible' });
+  await touchActivate(page, toolbar.getByRole('button', { name: /más acciones/i }));
+  const menu = toolbar.getByRole('menu', { name: /más acciones/i });
+  await menu.waitFor({ state: 'visible' });
+  return menu;
+};
+
+const clipboardReadTextStatus = (page) => page.evaluate(async () => {
+  const clipboard = navigator.clipboard;
+  if (!clipboard || typeof clipboard.readText !== 'function') return { state: 'unavailable' };
+  try {
+    await clipboard.readText();
+    return { state: 'available' };
+  } catch (error) {
+    return { state: 'blocked', name: error instanceof DOMException ? error.name : String(error) };
+  }
+});
+
+const touchActivate = async (page, locator) => {
+  await locator.tap();
+};
+
+const setViewportAndWaitForShell = async (page, width, height, expectedShell) => {
+  await page.setViewportSize({ width, height });
+  // Headless WebKit can update innerWidth before it delivers the matching
+  // resize notification. Frame-align the application input, then wait for
+  // the broker's observed commit instead of guessing at a delay.
+  await page.evaluate(async () => {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    window.dispatchEvent(new Event('resize'));
+    window.dispatchEvent(new Event('orientationchange'));
+  });
+  await page.waitForFunction((expected) => (
+    document.querySelector('[data-contextual-actions]')?.getAttribute('data-shell-class') === expected
+  ), expectedShell, { timeout: 2_000 });
+};
+
 const selectNodes = async (page, ids) => {
   for (const [index, id] of ids.entries()) {
     await target(page, 'node', id).click(index === 0 ? {} : { modifiers: ['Shift'] });
@@ -162,16 +210,16 @@ const selectNodes = async (page, ids) => {
 };
 
 const openEdit = async (page, activation = 'pointer') => {
-  const launcher = page.locator('[data-structural-edit-launcher]');
-  await launcher.waitFor({ state: 'visible' });
+  const primaryAction = contextualActions(page)
+    .getByRole('button', { name: /abrir editor estructural/i });
+  await primaryAction.waitFor({ state: 'visible' });
   if (activation === 'keyboard') {
-    // M1 intentionally presents the Inspector as an inset over the canvas;
-    // this responsive geometry assertion uses the same reachable keyboard
-    // command instead of asking Playwright to click through that layer.
-    await launcher.focus();
+    // The broker owns this inset presentation; use its reachable contextual
+    // primary action instead of bypassing the Compact interaction floor.
+    await primaryAction.focus();
     await page.keyboard.press('Enter');
   } else {
-    await launcher.click();
+    await primaryAction.click();
   }
   const surface = page.locator('[data-structural-edit-surface]');
   await surface.waitFor({ state: 'visible' });
@@ -467,6 +515,7 @@ const runCandidatePicker = async (page) => {
     await page.locator('[data-candidate-picker]').count() === 0
       && await page.locator('.structural-canvas').getAttribute('data-interaction') !== 'selection-box');
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await page.waitForFunction(() => document.querySelector('.structural-canvas')?.getAttribute('data-interaction') === 'idle');
 
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...background, id: 98 }] });
   await page.waitForTimeout(480);
@@ -474,7 +523,115 @@ const runCandidatePicker = async (page) => {
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 };
 
-const context = await browser.newContext({ viewport: { width: 1536, height: 960 }, locale: 'es-MX' });
+const runCri97ContextualActions = async (page) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await seedExample(page, (project) => {
+    const member = project.members.find((candidate) => candidate.id === 'M1');
+    if (!member) throw new Error('Expected member M1 in the example project.');
+    Object.assign(member, {
+      materialId: 'steel-a36', materialOrigin: 'catalog',
+      sectionId: 'w310x39', sectionOrigin: 'catalog',
+    });
+  });
+  await closeCompactSurfaceStack(page);
+  await selectSingle(page, 'member', 'M1');
+  const toolbar = contextualActions(page);
+  await toolbar.waitFor({ state: 'visible' });
+  const visibleButtons = await toolbar.getByRole('button').allTextContents();
+  check('cri97CompactFloorIsPrimaryDeleteAndOverflowOnly', visibleButtons.length === 3
+    && visibleButtons[0].includes('Editar selección')
+    && visibleButtons[1].includes('Borrar')
+    && visibleButtons[2].includes('⋯'), JSON.stringify(visibleButtons));
+  await page.screenshot({ path: path.join(artifactsDir, `cri-97-compact-floor-${engine}.png`), fullPage: true });
+
+  let menu = await openContextualOverflow(page);
+  const overflowText = await menu.innerText();
+  check('cri97OverflowShowsNamesAndShortcuts', ['Copiar', 'Pegar', 'Duplicar', 'Repetir', 'Abrir hoja de datos']
+    .every((label) => overflowText.includes(label))
+    && ['Ctrl/Cmd+C', 'Ctrl/Cmd+V', 'Ctrl/Cmd+D', 'R'].every((shortcut) => overflowText.includes(shortcut)), overflowText);
+  await page.screenshot({ path: path.join(artifactsDir, `cri-97-overflow-${engine}.png`), fullPage: true });
+  await touchActivate(page, menu.getByRole('menuitem', { name: /copiar/i }));
+  await page.locator('.canvas-feedback').waitFor({ state: 'visible' });
+  check('cri97CopyRunsByTouch', (await page.locator('.canvas-feedback').innerText()).includes('Copia estructural lista'));
+
+  results.clipboardReadText = await clipboardReadTextStatus(page);
+  const membersBeforePaste = (await storedProject(page)).members.length;
+  menu = await openContextualOverflow(page);
+  await touchActivate(page, menu.getByRole('menuitem', { name: /pegar/i }));
+  const pastedProject = await waitForStored(page, (project, count) => project.members.length === count + 1, membersBeforePaste);
+  const pastedMember = pastedProject.members.at(-1);
+  check('cri97PasteRunsByTouchAndKeepsCatalogIdentity', pastedMember?.materialId === 'steel-a36'
+    && pastedMember?.sectionId === 'w310x39'
+    && pastedMember?.materialOrigin === 'catalog'
+    && pastedMember?.sectionOrigin === 'catalog', JSON.stringify(pastedMember));
+  await page.screenshot({ path: path.join(artifactsDir, `cri-97-paste-identity-${engine}.png`), fullPage: true });
+
+  const membersBeforeDuplicate = pastedProject.members.length;
+  await selectSingle(page, 'member', 'M1');
+  menu = await openContextualOverflow(page);
+  await touchActivate(page, menu.getByRole('menuitem', { name: /duplicar/i }));
+  await touchActivate(page, page.getByRole('button', { name: /confirmar duplicado/i }));
+  await waitForStored(page, (project, count) => project.members.length === count + 1, membersBeforeDuplicate);
+  check('cri97DuplicateRunsByTouch', true);
+
+  await selectSingle(page, 'member', 'M1');
+  menu = await openContextualOverflow(page);
+  await touchActivate(page, menu.getByRole('menuitem', { name: /repetir/i }));
+  await page.locator('.repeat-preview[data-repeat-affordance="active"]').waitFor({ state: 'visible' });
+  check('cri97RepeatRunsByTouch', true);
+  await touchActivate(page, page.getByRole('button', { name: /cancelar colocación/i }));
+
+  menu = await openContextualOverflow(page);
+  await touchActivate(page, menu.getByRole('menuitem', { name: /abrir hoja de datos/i }));
+  const datasheet = page.locator('[data-workspace-surface="datasheet"]');
+  await datasheet.waitFor({ state: 'visible' });
+  check('cri97DatasheetRunsByTouch', await datasheet.isVisible());
+  await touchActivate(page, page.getByRole('button', { name: /cerrar hoja de datos/i }));
+  await datasheet.waitFor({ state: 'hidden' });
+
+  await contextualActions(page).waitFor({ state: 'visible' });
+  const picker = await openCandidatePickerFromKeyboard(page, 'node', 'N3');
+  check('cri97PickerAndContextualActionsDoNotCoexistInCompact', await picker.isVisible()
+    && await contextualActions(page).count() === 0);
+  await picker.getByRole('listbox').press('Escape');
+  await picker.waitFor({ state: 'hidden' });
+  await contextualActions(page).waitFor({ state: 'visible' });
+  check('cri97ContextualActionsResumeAfterPickerWithoutChangingSelection',
+    await target(page, 'member', 'M1').getAttribute('aria-pressed') === 'true');
+
+  for (const [width, expectedShell] of [[1536, 'X2'], [1024, 'M1'], [390, 'K0']]) {
+    await setViewportAndWaitForShell(page, width, 844, expectedShell);
+    await contextualActions(page).waitFor({ state: 'visible' });
+    const brokerGeometry = await contextualActions(page).evaluate((element) => ({
+      shellClass: element.getAttribute('data-shell-class'),
+      presentation: element.getAttribute('data-presentation'),
+      innerWidth: window.innerWidth,
+      innerHeight: window.innerHeight,
+    }));
+    check(`cri97BrokerPresentation${expectedShell}`,
+      brokerGeometry.shellClass === expectedShell && brokerGeometry.presentation === 'inset', JSON.stringify(brokerGeometry));
+  }
+
+  await setViewportAndWaitForShell(page, 844, 390, 'K0');
+  await contextualActions(page).waitFor({ state: 'visible' });
+  const landscape = await toolbar.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const viewport = window.innerWidth;
+    return {
+      text: element.textContent,
+      left: rect.left,
+      right: rect.right,
+      viewport,
+      scrollWidth: document.documentElement.scrollWidth,
+    };
+  });
+  check('cri97CompactLandscapeEsHasNoHorizontalOverflow', landscape.text?.includes('Editar selección')
+    && landscape.left >= 0 && landscape.right <= landscape.viewport + 1
+    && landscape.scrollWidth <= landscape.viewport + 1, JSON.stringify(landscape));
+  await page.screenshot({ path: path.join(artifactsDir, `cri-97-compact-landscape-es-${engine}.png`), fullPage: true });
+};
+
+const context = await browser.newContext({ viewport: { width: 1536, height: 960 }, locale: 'es-MX', hasTouch: true });
 await context.addInitScript(({ marker, clearStorage }) => {
   const serialized = new URL(window.location.href).searchParams.get(marker);
   if (serialized === null) return;
@@ -499,12 +656,13 @@ try {
   await runStep('Desktop, tablet and mobile responsive UI', () => runContextualToolbarAndResponsive(page));
   await runStep('Chromium touch', () => runChromiumTouch(page));
   await runStep('CRI-96 Candidate Picker', () => runCandidatePicker(page));
+  await runStep('CRI-97 contextual actions and touch parity', () => runCri97ContextualActions(page));
   await page.screenshot({ path: path.join(artifactsDir, `structural-edits-${engine}.png`), fullPage: true });
   check('noConsoleErrors', results.console.length === 0, JSON.stringify(results.console));
   check('noPageErrors', results.pageErrors.length === 0, JSON.stringify(results.pageErrors));
   console.log(engine === 'chromium'
     ? 'Structural editing browser QA passed in chromium: Move pointer/numeric/cancel, Rotate, Mirror, Linear Array, Align, Distribute, undo/redo, invalidation, responsive and touch.'
-    : 'Structural editing browser QA passed in webkit: Move pointer/numeric/cancel, Rotate, Mirror, Linear Array, Align, Distribute, undo/redo, invalidation and responsive UI. Touch gesture is covered by Chromium CDP.');
+    : 'Structural editing browser QA passed in webkit: Move pointer/numeric/cancel, Rotate, Mirror, Linear Array, Align, Distribute, undo/redo, invalidation, responsive UI and CRI-97 contextual touch routes. Canvas gesture movement is covered by Chromium CDP.');
 } finally {
   fs.writeFileSync(path.join(artifactsDir, `structural-edits-${engine}.json`), JSON.stringify(results, null, 2));
   await context.close();

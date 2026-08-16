@@ -46,7 +46,7 @@ import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { CanvasChrome } from './CanvasChrome';
 import { layoutSmartLabels, smartLabelDetailForScale, type SmartLabelCandidate } from './labelLayout';
 import { buildCanvasSelectionVisualState, selectionEnvelopeForPoints } from './selectionVisuals';
-import { onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
+import { emitWorkspaceCommand, onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
 import { CanvasGeometryLayer, type StructuralTarget } from './CanvasGeometryLayer';
 import {
   flexibleRatioFromGross,
@@ -76,6 +76,13 @@ import { parseQuickEntryPair } from './quickEntry';
 import { resolveRepeatRecipe, type RepeatRecipe } from './repeatAction';
 import { RepeatActionOverlay } from './RepeatActionOverlay';
 import { prepareDuplicatePreview } from './duplicatePreview';
+import { ContextualActions, type ContextualActionAvailability, type ContextualActionId } from './ContextualActions';
+import {
+  decodeStructuralClipboard,
+  encodeStructuralClipboard,
+  readClipboardText,
+  supportsClipboardReadText,
+} from './structuralClipboard';
 import {
   createStructuralEditGeometryPreview,
   prepareStructuralEdit,
@@ -213,6 +220,16 @@ const toolLabelKeys: Record<Tool, TranslationKey> = {
   delete: 'toolbar.delete',
 };
 
+const contextualActionLabelKeys: Record<ContextualActionId, TranslationKey> = {
+  copy: 'contextualActions.copy',
+  paste: 'contextualActions.paste',
+  duplicate: 'contextualActions.duplicate',
+  repeat: 'contextualActions.repeat',
+  delete: 'contextualActions.delete',
+  datasheet: 'contextualActions.datasheet',
+  structuralEdit: 'contextualActions.structuralEdit',
+};
+
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 const nextId = (prefix: string, ids: string[]) => {
@@ -258,6 +275,10 @@ export const StructuralCanvas = ({
   /** The broker owns Compact contextual-layer exclusivity; candidate identity stays local below. */
   const surfaceBroker = useContext(SurfacePresentationContext);
   const candidatePickerSurface = surfaceBroker?.stateFor('candidatePicker');
+  const contextualActionsSurface = surfaceBroker?.stateFor('contextualActions');
+  const openContextualActionsSurface = surfaceBroker?.openSurface;
+  const closeContextualActionsSurface = surfaceBroker?.closeSurface;
+  const activateCandidatePickerSurface = surfaceBroker?.activateSurface;
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const coordinateReadoutRef = useRef<HTMLOutputElement>(null);
@@ -312,10 +333,41 @@ export const StructuralCanvas = ({
   const fittedProjectRef = useRef<string | null>(null);
   const feedbackTimerRef = useRef<number | null>(null);
   const [canvasFeedback, setCanvasFeedback] = useState('');
+  // This carries no clipboard availability or selection data. It only asks
+  // React to re-read the existing in-app clipboard ref after Copy succeeds.
+  const [, refreshClipboardAvailability] = useState(0);
+
+  // This intent is wholly derived from the canonical workspace selection. The
+  // broker stores only its presentation lifecycle, never a copied selection.
+  useEffect(() => {
+    if (!openContextualActionsSurface || !closeContextualActionsSurface) return;
+    if (selection) openContextualActionsSurface('contextualActions');
+    else closeContextualActionsSurface('contextualActions');
+  }, [closeContextualActionsSurface, openContextualActionsSurface, selection]);
+
+  // A pending picker remains the current Compact contextual layer even if the
+  // selection-derived zócalo was scheduled in the same React commit or the
+  // shell recomposes while the picker is open.
+  useEffect(() => {
+    if (candidatePicker && surfaceBroker?.shellClass === 'K0') activateCandidatePickerSurface?.('candidatePicker');
+  }, [activateCandidatePickerSurface, candidatePicker, surfaceBroker?.shellClass]);
+
   const selectionBox = interaction.kind === 'selection-box' ? interaction : null;
   const candidatePreview = candidatePicker ? activeCandidate(candidatePicker) : null;
   const repeatCandidate = useMemo(() => resolveRepeatRecipe(project, selection), [project, selection]);
   const editCapabilities = useMemo(() => structuralEditCapabilities(project, selection), [project, selection]);
+  const hasInAppClipboard = Boolean(clipboardRef.current);
+  const contextualActionAvailability = useMemo<ContextualActionAvailability>(() => {
+    const browserClipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
+    return {
+      copy: Boolean(copyModelSelection(project, selection)),
+      paste: hasInAppClipboard || supportsClipboardReadText(browserClipboard),
+      duplicate: Boolean(selection && ['node', 'member', 'multi'].includes(selection.kind)),
+      repeat: Boolean(repeatCandidate),
+      datasheet: Boolean(selection),
+      structuralEdit: editCapabilities.structural,
+    };
+  }, [editCapabilities.structural, hasInAppClipboard, project, repeatCandidate, selection]);
   const structuralEditPreview = useMemo((): { prepared: PreparedStructuralEdit | null; error: string } => {
     if (!structuralEditDraft) return { prepared: null, error: '' };
     if (structuralEditDraft.sourceSnapshot !== structuralEditSnapshot(project)) {
@@ -865,6 +917,49 @@ export const StructuralCanvas = ({
     showCanvasFeedback(t('canvas.repeatWaiting', { tool: t(toolLabelKeys[recipe.tool]) }));
     window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
   }, [project, selection, setActiveTool, showCanvasFeedback, t]);
+
+  const copyStructuralSelection = useCallback(async () => {
+    const copied = copyModelSelection(project, selection);
+    if (!copied) return;
+    clipboardRef.current = copied;
+    pasteCountRef.current = 1;
+    refreshClipboardAvailability((revision) => revision + 1);
+    const browserClipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
+    if (typeof browserClipboard?.writeText === 'function') {
+      try {
+        await browserClipboard.writeText(encodeStructuralClipboard(copied));
+      } catch {
+        // The existing in-app clipboard remains a valid touch fallback.
+      }
+    }
+    showCanvasFeedback(t('contextualActions.copyReady'));
+  }, [project, selection, showCanvasFeedback, t]);
+
+  const pasteStructuralSelection = useCallback(async () => {
+    const read = await readClipboardText();
+    const systemClipboard = read.status === 'read' ? decodeStructuralClipboard(read.text) : null;
+    const clipboard = systemClipboard ?? clipboardRef.current;
+    if (!clipboard) {
+      showCanvasFeedback(t('contextualActions.pasteUnavailable'));
+      return;
+    }
+    clipboardRef.current = clipboard;
+    const step = Math.max(project.settings.gridSize || 1, 0.25) * pasteCountRef.current;
+    const next = structuredClone(project);
+    const pasted = pasteModelClipboard(next, clipboard, { x: step, y: step });
+    replaceProject(next);
+    pasteCountRef.current += 1;
+    setSelection(pasted);
+    showCanvasFeedback(systemClipboard
+      ? t('contextualActions.pasteReady')
+      : t('contextualActions.pasteFallback'));
+  }, [project, replaceProject, setSelection, showCanvasFeedback, t]);
+
+  const startDuplicate = useCallback(() => {
+    if (!selection || !['node', 'member', 'multi'].includes(selection.kind)) return;
+    const step = Math.max(project.settings.gridSize || 1, 0.25);
+    setDuplicateDraft({ selection: structuredClone(selection), x: String(step), y: String(step) });
+  }, [project.settings.gridSize, selection]);
 
   const capturePointer = useCallback((pointerId: number) => {
     try { svgRef.current?.setPointerCapture(pointerId); } catch { /* Pointer may already be cancelled. */ }
@@ -1672,6 +1767,32 @@ export const StructuralCanvas = ({
     }
   }, [cancelActiveInteraction, closeCandidatePicker, editCapabilities.structural, project, selection, setActiveTool, showCanvasFeedback, t]);
 
+  const invokeContextualAction = useCallback((action: ContextualActionId) => {
+    switch (action) {
+      case 'copy':
+        void copyStructuralSelection();
+        return;
+      case 'paste':
+        void pasteStructuralSelection();
+        return;
+      case 'duplicate':
+        startDuplicate();
+        return;
+      case 'repeat':
+        activateRepeat();
+        return;
+      case 'delete':
+        deleteSelection();
+        return;
+      case 'datasheet':
+        emitWorkspaceCommand('open-datasheet');
+        return;
+      case 'structuralEdit':
+        emitWorkspaceCommand('open-structural-edit');
+        return;
+    }
+  }, [activateRepeat, copyStructuralSelection, deleteSelection, pasteStructuralSelection, startDuplicate]);
+
   useEffect(() => onWorkspaceCommand('open-structural-edit', () => startStructuralEdit('move')), [startStructuralEdit]);
   useEffect(() => onWorkspaceCommand('open-structure-generator', () => setGeneratorOpen(true)), []);
 
@@ -1753,26 +1874,17 @@ export const StructuralCanvas = ({
       }
       if (command && key === 'c') {
         event.preventDefault();
-        clipboardRef.current = copyModelSelection(project, selection);
-        pasteCountRef.current = 1;
+        void copyStructuralSelection();
         return;
       }
       if (command && key === 'v') {
-        if (!clipboardRef.current) return;
         event.preventDefault();
-        const step = Math.max(project.settings.gridSize || 1, 0.25) * pasteCountRef.current;
-        const next = structuredClone(project);
-        const pasted = pasteModelClipboard(next, clipboardRef.current, { x: step, y: step });
-        replaceProject(next);
-        pasteCountRef.current += 1;
-        setSelection(pasted);
+        void pasteStructuralSelection();
         return;
       }
       if (command && key === 'd') {
-        if (!selection || !['node', 'member', 'multi'].includes(selection.kind)) return;
         event.preventDefault();
-        const step = Math.max(project.settings.gridSize || 1, 0.25);
-        setDuplicateDraft({ selection: structuredClone(selection), x: String(step), y: String(step) });
+        startDuplicate();
         return;
       }
       const shortcutTool = toolFromShortcut(key);
@@ -1815,7 +1927,7 @@ export const StructuralCanvas = ({
       window.removeEventListener('blur', cancelActiveInteraction);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [activateRepeat, cancelActiveInteraction, cancelStructuralEdit, candidatePicker, closeCandidatePicker, deleteSelection, duplicateDraft, project, repeatCandidate, replaceProject, selection, setActiveTool, setSelection, structuralEditDraft]);
+  }, [activateRepeat, cancelActiveInteraction, cancelStructuralEdit, candidatePicker, closeCandidatePicker, copyStructuralSelection, deleteSelection, duplicateDraft, pasteStructuralSelection, repeatCandidate, selection, setActiveTool, setSelection, startDuplicate, structuralEditDraft]);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -2426,10 +2538,12 @@ export const StructuralCanvas = ({
       /></Suspense> : null}
 
       <StructuralEditOverlay
-        // Duplicate and Repeat own an in-progress intention. Do not leave the
-        // Edit launcher visually covered but still keyboard-focusable beneath it.
-        // Generating owns the whole canvas surface for the same reason.
-        available={editCapabilities.structural && !duplicateDraft && !repeatRecipe && !generatorOpen}
+        // Contextual-actions owns the selection entry point. Once a structural
+        // draft starts, this overlay continues to own that in-progress intent.
+        // Never leave the legacy launcher visible or focusable beside the
+        // Compact floor (primary verb + Delete + overflow).
+        available={Boolean(structuralEditDraft) || (editCapabilities.structural
+          && !selection && !duplicateDraft && !repeatRecipe && !generatorOpen)}
         repeatAvailable={Boolean(repeatCandidate) && !structuralEditDraft}
         draft={structuralEditDraft}
         capabilities={editCapabilities}
@@ -2478,6 +2592,25 @@ export const StructuralCanvas = ({
         canvasHeight={size.height}
       /> : null}
       {canvasFeedback ? <div className="canvas-feedback" role="alert">{canvasFeedback}</div> : null}
+      {selection && (!surfaceBroker || contextualActionsSurface?.status === 'active') ? <div
+        data-workspace-surface={surfaceBroker ? 'contextualActions' : undefined}
+        ref={surfaceBroker?.surfaceRootRef('contextualActions') as Ref<HTMLDivElement> | undefined}
+      >
+        <ContextualActions
+          selection={selection}
+          availability={contextualActionAvailability}
+          active
+          presentation={contextualActionsSurface?.presentation ?? 'inset'}
+          shellClass={surfaceBroker?.shellClass ?? 'K0'}
+          ariaLabel={t('contextualActions.title')}
+          labelForAction={(action) => t(contextualActionLabelKeys[action])}
+          accessibleLabelForAction={(action) => action === 'structuralEdit'
+            ? t('contextualActions.structuralEditAccessible')
+            : t(contextualActionLabelKeys[action])}
+          overflowLabel={t('contextualActions.more')}
+          onInvoke={invokeContextualAction}
+        />
+      </div> : null}
       <RepeatActionOverlay
         available={Boolean(repeatCandidate) && !structuralEditDraft}
         active={Boolean(repeatRecipe)}

@@ -20,6 +20,7 @@ export const BROKER_SURFACE_IDS = [
   'doctor',
   'palette',
   'candidatePicker',
+  'contextualActions',
 ] as const;
 
 export type SurfaceId = (typeof BROKER_SURFACE_IDS)[number];
@@ -34,6 +35,7 @@ export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Re
     doctor: 'drawer',
     palette: 'overlay',
     candidatePicker: 'floating',
+    contextualActions: 'inset',
   },
   M1: {
     inspector: 'inset',
@@ -42,6 +44,7 @@ export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Re
     doctor: 'drawer',
     palette: 'overlay',
     candidatePicker: 'floating',
+    contextualActions: 'inset',
   },
   K0: {
     inspector: 'sheet',
@@ -50,6 +53,7 @@ export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Re
     doctor: 'fullscreen',
     palette: 'sheet',
     candidatePicker: 'sheet',
+    contextualActions: 'inset',
   },
 };
 

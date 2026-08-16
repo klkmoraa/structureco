@@ -14,14 +14,14 @@ import {
 } from './surfacePresentation';
 
 const expectedTable: Record<'X2' | 'M1' | 'K0', Record<SurfaceId, SurfacePresentation>> = {
-  X2: { inspector: 'dock', results: 'dock', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating' },
-  M1: { inspector: 'inset', results: 'inset', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating' },
-  K0: { inspector: 'sheet', results: 'sheet', datasheet: 'fullscreen', doctor: 'fullscreen', palette: 'sheet', candidatePicker: 'sheet' },
+  X2: { inspector: 'dock', results: 'dock', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
+  M1: { inspector: 'inset', results: 'inset', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
+  K0: { inspector: 'sheet', results: 'sheet', datasheet: 'fullscreen', doctor: 'fullscreen', palette: 'sheet', candidatePicker: 'sheet', contextualActions: 'inset' },
 };
 
 describe('surface presentation table', () => {
   it('is the literal X2/M1/K0 matrix for every broker-owned surface', () => {
-    expect(BROKER_SURFACE_IDS).toEqual(['inspector', 'results', 'datasheet', 'doctor', 'palette', 'candidatePicker']);
+    expect(BROKER_SURFACE_IDS).toEqual(['inspector', 'results', 'datasheet', 'doctor', 'palette', 'candidatePicker', 'contextualActions']);
     expect(SURFACE_PRESENTATION_TABLE).toEqual(expectedTable);
 
     for (const shellClass of ['X2', 'M1', 'K0'] as const) {
@@ -96,6 +96,18 @@ describe('surface exclusivity', () => {
     expect(resolveSurfaceActivity('K0', state).inspector.status).toBe('suspended');
     expect(resolveSurfaceActivity('X2', state).candidatePicker).toMatchObject({ status: 'active', presentation: 'floating' });
     expect(resolveSurfaceActivity('K0', state).candidatePicker.status).toBe('active');
+  });
+
+  it('gives the Candidate Picker precedence over contextual-actions in Compact and resumes the derived surface without changing its intent', () => {
+    let state = openSurfaceIntent(createSurfaceBrokerState(), 'contextualActions');
+    state = openSurfaceIntent(state, 'candidatePicker');
+
+    const compact = resolveSurfaceActivity('K0', state);
+    expect(compact.candidatePicker).toMatchObject({ status: 'active', presentation: 'sheet' });
+    expect(compact.contextualActions).toMatchObject({ status: 'suspended', presentation: 'inset' });
+
+    state = closeSurfaceIntent(state, 'candidatePicker');
+    expect(resolveSurfaceActivity('K0', state).contextualActions).toMatchObject({ status: 'active', presentation: 'inset' });
   });
 });
 
