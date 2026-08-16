@@ -4,6 +4,30 @@
 
 Este documento cierra CRI-12A: congela el baseline, no decide UX ni visuales. Lista las preguntas que sí requieren elección humana, con contexto suficiente para decidir sin releer todo lo anterior.
 
+## Actualización final — CRI-12E cerrado (gate de cierre del programa)
+
+CRI-12E (CRI-87) ejecuta el gate independiente de cierre exigido para que CRI-12 pueda pasar a `Done`. Ejecutado sobre HEAD `7f789824529c24e38543731c8ec3b7ecd7805d65` de esta rama (cierre de CRI-12D). Baseline de `main` reverificado al abrir la fase: `origin/main` = `7fb927fb6d118925e63365d1a2bb2813f8795385`, **sin drift** — idéntico al baseline congelado por CRI-12A y reconfirmado en las cuatro fases anteriores.
+
+Se leyeron íntegros: CRI-12 padre, CRI-87 completa, el protocolo de ejecución atómica, este `HANDOFF.md`, los diez entregables 00→04, el épico CRI-88 y las 18 issues CRI-89…CRI-106 (no por resumen — cada una completa), y el documento *StructureCo — Backlog maestro y prioridad real*.
+
+**Los 10 gates de CRI-87 pasan.** Detalle gate por gate, con evidencia y spot-checks contra `main`, en `05-closure-gate.md`. Resumen de los spot-checks que sostienen el veredicto: `tokens.css` confirma la paleta lima intacta (`--sc-lime-400:#89d448` sin cambios); `grep -rn CommandRegistry src/` confirma cero coincidencias, validando la corrección que CRI-12D ya había registrado; `scripts/protected-baseline.sha256` confirma cobertura exacta de `src/store/ProjectContext.tsx` y `src/types.ts`; `git diff origin/main..origin/research/cri-12-direction --stat` confirma 15 archivos / 2263 inserciones / 0 eliminaciones, el 100% dentro de `reports/cri-12/**`, sin commits de merge.
+
+**Un fixup real, mínimo y localizado, aplicado en este mismo cierre**: CRI-87 exige verificar específicamente que el gap "Artifact download sandbox" de CRI-11 no quedó "mágicamente declarado resuelto". CRI-11 fase C (`reports/2026-08-16-cri-11-fase-c-validacion.md:310-314`) ya lo documentaba correctamente como *no* un bug de producto (el sandbox del visor de Artifact bloquea descargas iniciadas por la página; funciona clonando o sirviendo fuera del visor) — pero ninguna fase de CRI-12A/B/C/D lo mencionaba, ni resuelto ni diferido: estaba en silencio. Se añadió una fila a `01b-inherited-decisions.md` §C (owner correcto: CRI-12A, que es donde vive el inventario de gaps heredados de CRI-11) registrando su disposición explícita. No reabre ninguna decisión de producto ni toca ningún otro archivo.
+
+**Índice de decisiones finales, sin duplicar contenido**: `05-final-decision-index.md`. **Backlog final ordenado, con clasificación READY/BLOCKED/PARALLEL_SAFE/DEFERRED y la primera issue ejecutable**: `05-ready-backlog.md`.
+
+**Primera issue READY del programa: CRI-89** (resolutor de composición X2/M1/K0), sin `blockedBy`, raíz del camino crítico. Arrancan en paralelo, sin bloqueo formal entre sí: CRI-90 (materia SHEET/MODAL), CRI-91 (Brandbook renovado), CRI-92 (spike `settings.show*`) y CRI-93 (spike de rendimiento).
+
+**Decisión menta/esmeralda**: sigue siendo `FUTURE_DEVIATION` aprobada por el propietario en CRI-12C — no implementación. Confirmado por spot-check de este gate: `brand/brandbook-clay.html` y `src/design-system/tokens.css` no cambiaron, la paleta vigente sigue siendo lima.
+
+### Confirmación de alcance de CRI-12E
+
+- Único directorio modificado: `reports/cri-12/**` — se crearon `05-closure-gate.md`, `05-final-decision-index.md`, `05-ready-backlog.md`, se aplicó el fixup en `01b-inherited-decisions.md` §C, y se actualizó este `HANDOFF.md` por última vez.
+- **Cero cambios** en `src/**`, `brand/**`, `src/design-system/tokens.css`. Todo lo citado del código se verificó por lectura directa y con comandos de sólo lectura (`grep`, `git diff --stat`, `git log --merges`, `cat` sobre `protected-baseline.sha256`) — ningún gate (`verify:*`, `npm test`) se ejecutó, porque CRI-87 no lo exige y el mandato es auditar documentación y dependencias, no producto.
+- No hubo prototipo nuevo, no hubo merge a `main`, no hubo publicación en GitHub Pages, no se refrescó `protected-baseline.sha256`.
+- **No se cerraron issues en Linear.** Por instrucción explícita del propietario, el cierre en Linear (CRI-12A/B/C/D/E a `Done`, CRI-12 padre a `Done`, comentario final con SHA/decisiones/primera issue READY) queda pendiente de revisión independiente antes de ejecutarse.
+- Instrucción de arranque para quien retome después de este cierre: si el propietario confirma el resultado de este gate, la siguiente acción es el cierre en Linear descrito en el criterio de cierre de CRI-87 — no una subtask nueva de CRI-12.
+
 ## Actualización — CRI-12D cerrado (backlog de implementación)
 
 CRI-12D (CRI-86) convierte las decisiones de 12B y 12C en un **backlog de producción real en Linear**, ejecutable issue por issue en chats nuevos. Ejecutado sobre HEAD `6c4370cab9c7e6077f2eb3a2b585cba8005e270a` de esta rama. Baseline de `main` reverificado al abrir la fase: `origin/main` = `7fb927fb6d118925e63365d1a2bb2813f8795385`, **sin drift**.
