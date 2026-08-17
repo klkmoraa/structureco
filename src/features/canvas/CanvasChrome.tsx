@@ -2,6 +2,7 @@ import { Crosshair, LocateFixed, Minus, Plus, X } from 'lucide-react';
 import { useEffect, type Dispatch, type RefObject } from 'react';
 import { useI18n } from '../../i18n/useI18n';
 import { IconButton } from '../../design-system/components/controls';
+import type { ResultTab } from '../../store/ProjectContext';
 import { CanvasLayers } from './CanvasLayers';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { formatFixed } from '../../utils/numberFormat';
@@ -13,6 +14,8 @@ export interface CanvasChromeProps {
   showHelp: boolean;
   layers: EditorLayerState;
   dispatchLayers: Dispatch<EditorLayerAction>;
+  resultTab: ResultTab;
+  setResultTab: (tab: ResultTab) => void;
   snapEnabled: boolean;
   gridEnabled: boolean;
   coordinateReadoutRef: RefObject<HTMLOutputElement | null>;
@@ -31,6 +34,8 @@ export const CanvasChrome = ({
   showHelp,
   layers,
   dispatchLayers,
+  resultTab,
+  setResultTab,
   snapEnabled,
   gridEnabled,
   coordinateReadoutRef,
@@ -56,7 +61,7 @@ export const CanvasChrome = ({
       </> : null}
       {placementInstruction ? <IconButton size="sm" label={t('canvas.cancelPlacement')} onClick={onCancelPlacement}><X size={14} /></IconButton> : null}
     </div>
-    <CanvasLayers layers={layers} dispatch={dispatchLayers} />
+    <CanvasLayers layers={layers} dispatch={dispatchLayers} resultTab={resultTab} setResultTab={setResultTab} />
     <div className="canvas-view-chips" role="status" aria-label={t('canvas.viewStatus')} data-canvas-chrome="view-status">
       <span className={snapEnabled ? 'active' : ''}>{snapEnabled ? t('canvas.snapOn') : t('canvas.snapOff')}</span>
       <span className={gridEnabled ? 'active' : ''}>{gridEnabled ? t('canvas.gridOn') : t('canvas.gridOff')}</span>

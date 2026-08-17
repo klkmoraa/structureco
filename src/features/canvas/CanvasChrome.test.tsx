@@ -25,6 +25,8 @@ describe('CanvasChrome', () => {
       showHelp
       layers={createEditorLayerState()}
       dispatchLayers={dispatchLayers}
+      resultTab="moment"
+      setResultTab={vi.fn()}
       snapEnabled
       gridEnabled={false}
       coordinateReadoutRef={coordinateReadoutRef}

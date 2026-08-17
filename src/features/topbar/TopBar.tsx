@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import {
   Check,
@@ -28,7 +28,8 @@ import {
 import { createBlankProject, exampleProjects } from '../../data/defaultProject';
 import { useI18n } from '../../i18n/useI18n';
 import { usePhase2I18n } from '../../i18n/usePhase2I18n';
-import { useProject } from '../../store/ProjectContext';
+import { useProjectAnalysis, useProjectModel } from '../../store/ProjectContext';
+import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import { exportProjectJson } from '../../utils/export';
 import { normalizeProject } from '../../data/migrate';
 import { AnalysisStatus } from './AnalysisStatus';
@@ -58,27 +59,35 @@ export interface TopBarLayoutActions {
 }
 
 export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHome?: () => void; onOpenSpace3D?: () => void; layoutActions?: TopBarLayoutActions }) => {
+  // Split across the three focused contexts (CRI-100): `project`/`analysis` come
+  // from the model/analysis contexts, and only `theme` is read off the UI context
+  // here — `resultTab` and the diagram cursor live in that same context too but
+  // are never destructured. `AnalysisStatus` below is additionally memoized with
+  // stable props, so even the pointer-driven changes this component *does* still
+  // receive (selection, the diagram cursor) never reach its state/reliability
+  // subtree.
   const {
     project,
-    analysis,
-    theme,
     canUndo,
     canRedo,
-    selectedCombinationId,
-    isAnalyzing,
     storageIssue,
     storageMessage,
     renameProject,
     updateProjectView,
     updateProjectAnalysisSettings,
     replaceProject,
-    setTheme,
     undo,
     redo,
-    analyze,
+  } = useProjectModel();
+  const {
+    analysis,
+    isAnalyzing,
+    selectedCombinationId,
     setSelectedCombinationId,
+    analyze,
     ensureEducationTrace,
-  } = useProject();
+  } = useProjectAnalysis();
+  const { theme, setTheme } = useWorkspaceUI();
   const { language, t } = useI18n();
   const { t: phase2T } = usePhase2I18n(language);
   const classroomSession = useClassroomSession();
@@ -175,9 +184,11 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     setShowExportMenu(false);
   };
 
-  const openModelDoctor = () => {
+  // Stable reference so the memoized `AnalysisStatus` below doesn't re-render
+  // just because the TopBar itself re-rendered for an unrelated reason.
+  const openModelDoctor = useCallback(() => {
     emitWorkspaceCommand('open-model-doctor');
-  };
+  }, []);
   const openModelDoctorFromMobileMenu = () => {
     // El launcher del menú desaparece al cerrarlo. Dejamos el foco en su
     // disparador persistente antes de abrir el drawer para que pueda volver allí.
@@ -563,9 +574,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           projectId={project.id}
           analysis={analysis}
           isAnalyzing={isAnalyzing}
-          onOpenModelDoctor={() => {
-            emitWorkspaceCommand('open-model-doctor');
-          }}
+          onOpenModelDoctor={openModelDoctor}
         />
       </div>
       {exportError && showExportMenu ? <div className="portable-export-error desktop" role="alert">{exportError}</div> : null}
@@ -593,7 +602,7 @@ const PDELTA_FIELDS: Array<{ key: keyof PDeltaConfig; labelKey: TranslationKey; 
 ];
 
 const PDeltaAdvancedConfig = () => {
-  const { project, updateProjectAnalysisSettings } = useProject();
+  const { project, updateProjectAnalysisSettings } = useProjectModel();
   const { t } = useI18n();
   const config = { ...DEFAULT_PDELTA_CONFIG, ...project.settings.pDeltaConfig };
   const setField = (key: keyof PDeltaConfig, value: number) => {

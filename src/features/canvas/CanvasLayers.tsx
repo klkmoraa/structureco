@@ -15,7 +15,9 @@ import { useEffect, useId, useRef, useState, type Dispatch } from 'react';
 import type { TranslationKey } from '../../i18n/catalogs';
 import { useI18n } from '../../i18n/useI18n';
 import { LayerToggle } from '../../design-system/components/editor';
+import type { ResultTab } from '../../store/ProjectContext';
 import { activeEditorLayerPreset, type EditorLayerAction, type EditorLayerId, type EditorLayerPresetId, type EditorLayerState } from './editorLayers';
+import { applyEvidenceLayerChoice, isEvidenceLayerActive, EVIDENCE_LAYERS } from './evidenceLayers';
 
 interface LayerDefinition {
   id: EditorLayerId;
@@ -47,9 +49,13 @@ const presetDefinitions: ReadonlyArray<{ id: EditorLayerPresetId; labelKey: Tran
 export const CanvasLayers = ({
   layers,
   dispatch,
+  resultTab,
+  setResultTab,
 }: {
   layers: EditorLayerState;
   dispatch: Dispatch<EditorLayerAction>;
+  resultTab: ResultTab;
+  setResultTab: (tab: ResultTab) => void;
 }) => {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -116,6 +122,22 @@ export const CanvasLayers = ({
           data-layer-preset={id}
           onClick={() => dispatch({ type: 'preset', preset: id })}
         >{t(labelKey)}</button>)}
+      </div>
+      {/* N / V / M / deformada / mapa se eligen aquí como capa (CRI-100): elegir
+          una enciende el escalón sobre el dibujo, nunca abre una pestaña ni un
+          panel de resultados. */}
+      <div className="canvas-evidence-layers" role="group" aria-label={t('canvas.evidenceLayers')}>
+        <span className="canvas-evidence-layers__label">{t('canvas.evidenceLayers')}</span>
+        <div className="canvas-evidence-layers__options">
+          {EVIDENCE_LAYERS.map(({ id, labelKey }) => <button
+            key={id}
+            type="button"
+            className={`canvas-evidence-layer canvas-evidence-layer--${id}`}
+            aria-pressed={isEvidenceLayerActive(id, resultTab, layers)}
+            data-evidence-layer={id}
+            onClick={() => applyEvidenceLayerChoice(id, { resultTab, layers }, { setResultTab, dispatchLayers: dispatch })}
+          >{t(labelKey)}</button>)}
+        </div>
       </div>
       <div className="canvas-layer-list">
         {layerDefinitions.map(({ id, labelKey, detailKey, icon: Icon }) => {

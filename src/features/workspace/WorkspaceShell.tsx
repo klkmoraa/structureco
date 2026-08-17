@@ -196,9 +196,10 @@ const WorkspaceBrokerContent = ({
             closeSurface('analysisSetup');
             closeSurface('view');
             closeSurface('results');
-          } else {
-            openSurface('results');
-            if (!layout.inspectorCollapsed) openSurface('detail');
+          } else if (!layout.inspectorCollapsed) {
+            // Results stays non-resident even leaving full-canvas (CRI-100);
+            // only the inspector, which the user had open, comes back.
+            openSurface('detail');
           }
           togglePreference('fullCanvas');
         },
@@ -244,6 +245,11 @@ const WorkspaceBrokerContent = ({
       <button className="mobile-inspector-toggle" onClick={(event) => openSurface('detail', event.currentTarget)} aria-label={t('inspector.open')} aria-expanded={detail.status === 'active'} aria-controls="workspace-detail"><SlidersHorizontal size={20} /></button>
       <button type="button" onClick={(event) => openSurface('analysisSetup', event.currentTarget)} aria-label={t('inspector.loadsTab')}>{t('inspector.loadsTab')}</button>
       <button type="button" onClick={(event) => openSurface('view', event.currentTarget)} aria-label={t('inspector.viewTab')}>{t('inspector.viewTab')}</button>
+      {/* Results ya no es residente en ninguna clase (CRI-100): estado y
+          fiabilidad viven siempre en el TopBar, N/V/M/deformada/mapa como capas
+          del lienzo; este lanzador abre el panel sólo para lo que sigue siendo
+          denso (resumen, reacciones, influencia, aprender). */}
+      <button type="button" onClick={(event) => openSurface('results', event.currentTarget)} aria-label={t('results.outputs')}>{t('results.outputs')}</button>
     </div>}
     footer={<div className="professional-note">{t('app.professionalNote')}</div>}
   />;
@@ -253,9 +259,12 @@ const WorkspaceSurface = (props: WorkspaceShellProps) => {
   const shellRef = useRef<HTMLDivElement>(null);
   const layoutController = useWorkspaceLayoutPreferences();
   const { shellClass } = useShellComposition();
+  // Results is never resident, in any class (CRI-100): state and reliability
+  // already live in the TopBar and evidence is a canvas layer, so the panel only
+  // opens on request now — it no longer starts open by default.
   const initialOpen = useMemo<SurfaceId[]>(() => {
     if (layoutController.preferences.fullCanvas) return [];
-    const surfaces: SurfaceId[] = ['results'];
+    const surfaces: SurfaceId[] = [];
     if (!layoutController.preferences.inspectorCollapsed) surfaces.push('detail');
     return surfaces;
     // eslint-disable-next-line react-hooks/exhaustive-deps

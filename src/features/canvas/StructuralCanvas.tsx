@@ -256,6 +256,7 @@ export const StructuralCanvas = ({
     activeTool,
     selection,
     resultTab,
+    setResultTab,
     selectedCombinationId,
     setSelection,
     setActiveTool,
@@ -2576,6 +2577,8 @@ export const StructuralCanvas = ({
         showHelp={layers.help}
         layers={layers}
         dispatchLayers={dispatchLayers}
+        resultTab={resultTab}
+        setResultTab={setResultTab}
         snapEnabled={view.snap}
         gridEnabled={view.showGrid}
         coordinateReadoutRef={coordinateReadoutRef}

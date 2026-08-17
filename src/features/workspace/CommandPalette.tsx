@@ -20,6 +20,7 @@ import { useProject, type ResultTab } from '../../store/ProjectContext';
 import { exportProjectJson } from '../../utils/export';
 import { TOOL_REGISTRY } from '../canvas/toolRegistry';
 import type { EditorLayerAction, EditorLayerPresetId } from '../canvas/editorLayers';
+import { activateEvidenceLayer, EVIDENCE_LAYERS } from '../canvas/evidenceLayers';
 import type { SurfacePresentation } from './surfacePresentation';
 import { emitWorkspaceCommand } from './workspaceCommands';
 import { readCanvasViewSettings, withCanvasViewSettings } from '../view/canvasViewSettings';
@@ -55,13 +56,13 @@ const GROUP_LABEL_KEYS: Record<CommandGroupId, TranslationKey> = {
 
 const GROUP_ORDER: readonly CommandGroupId[] = ['analysis', 'tools', 'navigate', 'results', 'view', 'export'];
 
-const RESULT_TABS: ReadonlyArray<{ id: ResultTab; labelKey: TranslationKey }> = [
+/**
+ * Only the dense/second-half surfaces still open the Results panel (CRI-100):
+ * summary, reactions, influence and "learn" have no canvas-layer equivalent yet.
+ */
+const PANEL_RESULT_TABS: ReadonlyArray<{ id: ResultTab; labelKey: TranslationKey }> = [
   { id: 'summary', labelKey: 'results.summary' },
   { id: 'reactions', labelKey: 'results.reactions' },
-  { id: 'axial', labelKey: 'results.axial' },
-  { id: 'shear', labelKey: 'results.shear' },
-  { id: 'moment', labelKey: 'results.moment' },
-  { id: 'deformed', labelKey: 'results.deformed' },
   { id: 'influence', labelKey: 'results.influence' },
   { id: 'learn', labelKey: 'results.learn' },
 ];
@@ -214,7 +215,7 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
       run: run(() => setTheme(theme === 'light' ? 'dark' : 'light')),
     });
 
-    for (const tab of RESULT_TABS) {
+    for (const tab of PANEL_RESULT_TABS) {
       items.push({
         id: `results:${tab.id}`,
         group: 'results',
@@ -225,6 +226,19 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
           setResultTab(tab.id);
           emitWorkspaceCommand('open-results');
         }),
+      });
+    }
+
+    // N / V / M / deformada / mapa are canvas evidence layers (CRI-100): the
+    // palette lights the layer on the drawing, it never opens the Results panel.
+    for (const evidence of EVIDENCE_LAYERS) {
+      items.push({
+        id: `evidence:${evidence.id}`,
+        group: 'results',
+        label: t('palette.toggleEvidenceLayer', { layer: t(evidence.labelKey) }),
+        icon: ChartNoAxesCombined,
+        disabled: !analysis,
+        run: run(() => activateEvidenceLayer(evidence.id, { setResultTab, dispatchLayers })),
       });
     }
 

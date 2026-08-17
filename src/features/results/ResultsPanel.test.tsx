@@ -8,27 +8,11 @@ import { createSimpleBeamExercise } from '../../education/exerciseTemplates';
 import { ClassroomSessionProvider, useClassroomSession } from '../../store/ClassroomSessionContext';
 import { formatSignificant } from '../../utils/numberFormat';
 import { ProjectProvider, useProject } from '../../store/ProjectContext';
-import type { ProjectModel, ResultReliability } from '../../types';
+import type { ProjectModel } from '../../types';
 import { ResultsPanel } from './ResultsPanel';
 import { useState } from 'react';
 
 const RESULTS_MODE_STORAGE_KEY = 'structureCo.results.mode.v1';
-
-/**
- * D-14 (CRI-95): la causa gobernante de fiabilidad se prueba inyectando un
- * `ResultReliability` sintético, no forzando al solver a un mal
- * condicionamiento real — el solver es ajeno a este slice. `resolveReliability`
- * sigue siendo la autoridad real salvo cuando la prueba pide lo contrario.
- */
-const reliabilityOverride = vi.hoisted(() => ({ current: null as ResultReliability | null }));
-vi.mock('../../engine/reliability', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../engine/reliability')>();
-  return {
-    ...actual,
-    resolveReliability: (result: Parameters<typeof actual.resolveReliability>[0]) =>
-      reliabilityOverride.current ?? actual.resolveReliability(result),
-  };
-});
 
 /**
  * Results ya no consulta `matchMedia`: su modo lo decide la clase que resuelve
@@ -104,7 +88,6 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
-  reliabilityOverride.current = null;
 });
 
 describe('Results analytical center', () => {
@@ -292,7 +275,8 @@ describe('Results analytical center', () => {
     expect(screen.queryByRole('tab', { name: 'Issues' })).toBeNull();
     expect(screen.getByRole('group', { name: 'Results panel size' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Compact' })).toBeTruthy();
-    expect(screen.getByText('Ready to analyze').getAttribute('role')).toBe('status');
+    // State and reliability moved to the TopBar's AnalysisStatus in CRI-100;
+    // this panel no longer renders its own "Ready to analyze" status text.
     await user.click(screen.getByRole('button', { name: 'Analyze structure' }));
     const chart = await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
     const graph = within(chart).getByRole('img', { name: /bending moment diagram/i });
@@ -641,63 +625,6 @@ describe('Results analytical center', () => {
   }, 15_000);
 });
 
-describe('Governing reliability cause (D-14 · CRI-95)', () => {
-  const governingCheck = {
-    id: 'condition' as const,
-    label: 'Condición κ₁ del sistema equilibrado',
-    value: 5e11,
-    limitedAbove: 1e10,
-    unreliableAbove: 1e12,
-    level: 'limited' as const,
-    message: 'Condición κ₁ del sistema equilibrado: 5.000e+11 supera 1e+10.',
-  };
-
-  it('never relies on a title as the only source of the governing cause', async () => {
-    const user = userEvent.setup();
-    reliabilityOverride.current = {
-      completed: true,
-      usable: true,
-      level: 'limited',
-      checks: [governingCheck],
-      governing: governingCheck,
-      reasons: [governingCheck.message],
-    };
-    renderResults();
-
-    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
-    await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
-
-    const state = document.querySelector('.results-commandbar__context small')!;
-    expect(state.getAttribute('title')).toBeNull();
-
-    // Alcanzable con Tab, no sólo con mouse/hover.
-    const trigger = screen.getByRole('button', { name: 'Ver causa de fiabilidad' });
-    trigger.focus();
-    expect(document.activeElement).toBe(trigger);
-
-    await user.click(trigger);
-    const cause = await screen.findByRole('dialog', { name: 'Ver causa de fiabilidad' });
-    expect(within(cause).getByText('Qué pasa')).toBeTruthy();
-    expect(within(cause).getByText('Por qué')).toBeTruthy();
-    expect(within(cause).getByText(/Condición numérica del sistema.*supera/)).toBeTruthy();
-    expect(within(cause).getByText('Qué hacer')).toBeTruthy();
-    expect(within(cause).getByText(/Model Doctor/)).toBeTruthy();
-
-    // El `<small>` de estado sigue siendo la única región `aria-live` de esta
-    // fila; la causa gobernante vive en un `dialog` normal, sin `aria-live`
-    // propio, para no duplicar el anuncio (riesgo declarado en el issue).
-    expect(state.getAttribute('aria-live')).toBe('polite');
-    expect(cause.getAttribute('aria-live')).toBeNull();
-    expect(cause.querySelector('[aria-live]')).toBeNull();
-  }, 10_000);
-
-  it('renders no governing-cause trigger when every check is reliable', async () => {
-    const user = userEvent.setup();
-    renderResults();
-
-    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
-    await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
-
-    expect(screen.queryByRole('button', { name: 'Ver causa de fiabilidad' })).toBeNull();
-  }, 10_000);
-});
+// The governing reliability cause (D-14 · CRI-95) moved to the TopBar's
+// `AnalysisStatus` in CRI-100 — state and reliability are chrome-owned now, not
+// a Results surface. See `src/features/topbar/AnalysisStatus.test.tsx`.

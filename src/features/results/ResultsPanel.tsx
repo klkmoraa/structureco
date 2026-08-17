@@ -5,14 +5,11 @@ import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from 
 import { evaluateEducationalAssertions, type EducationalAssertionEvaluation } from '../../engine/educationalAssertions';
 import { buildDiagramEnvelope, evaluateEnvelopeAt } from '../../engine/envelope';
 import { analysisSignature } from '../../engine/projectSignature';
-import { resolveReliability } from '../../engine/reliability';
 import { useScenarioAnalysis } from '../../engine/useScenarioAnalysis';
 import type { DiagramQuantity, DiagramSegment, EducationalAssertionTarget, MatrixTrace, MemberModel, MemberResult } from '../../types';
 import { toDisplay, unitLabel } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import type { TranslationKey } from '../../i18n/catalogs';
-import { Popover } from '../../design-system/components/overlays';
-import { describeReliabilityCheck } from './reliabilityCopy';
 import { ResultSummary } from './ResultSummary';
 import { NumericQualityCard } from './NumericQualityCard';
 import { deriveClassroomProgress, type ClassroomProgressStepId } from '../../education/classroomProgress';
@@ -96,7 +93,6 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
   const [drag, setDrag] = useState<{ y: number; height: number } | null>(null);
   const mobileExpanded = status === 'active';
   const [panelMode, setPanelMode] = useState<ResultsPanelMode>(readResultsMode);
-  const [governingCauseOpen, setGoverningCauseOpen] = useState(false);
   const previousAnalysisRef = useRef(analysis);
   const resizeFrameRef = useRef<number | null>(null);
   const pendingHeightRef = useRef<number | null>(null);
@@ -165,20 +161,6 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
     ...family,
     tabs: family.tabs.map((id) => availableTabs.find((tab) => tab.id === id)).filter((tab): tab is (typeof tabs)[number] => Boolean(tab)),
   })).filter((family) => family.tabs.length > 0);
-  // success only means no error-severity issue was raised; it says nothing about
-  // whether the numbers can be trusted. reliability.level is the answer to that.
-  const reliability = analysis ? resolveReliability(analysis) : null;
-  const analysisState = isAnalyzing
-    ? t('results.stateAnalyzing')
-    : !analysis
-      ? t('results.stateReady')
-      : analysis.success
-        ? reliability?.level === 'limited'
-          ? t('results.stateResolvedLimited')
-          : reliability?.level === 'unreliable'
-            ? t('results.stateResolvedUnreliable')
-            : t('results.stateResolved')
-        : t('results.stateReview');
   const mobileResultLabel = analysis
     ? `${t(activeTab.labelKey)} · ${resultContext.label}`
     : t('results.outputs');
@@ -314,29 +296,12 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
       ><GripHorizontal size={22} /></button>
       <header className="results-commandbar">
         <div className="results-commandbar__context">
+          {/* Estado del análisis y fiabilidad viven en el TopBar desde CRI-100:
+              son la afirmación más crítica del producto y deben verse sin abrir
+              este panel. Este encabezado sólo conserva el contexto (qué objeto
+              están describiendo los resultados de abajo). */}
           <span>{t('results.center')}</span>
           <strong>{resultContext.label}</strong>
-          <small role="status" aria-live="polite" aria-atomic="true" className={analysis?.success ? (reliability && reliability.level !== 'reliable' ? 'is-warning' : 'is-resolved') : analysis && !analysis.success ? 'is-warning' : ''}>{analysisState}</small>
-          {/* D-14 (CRI-95): la causa gobernante de fiabilidad vivía sólo en un
-              `title`, inalcanzable por teclado y por touch. Aquí pasa a un
-              elemento enfocable con la estructura qué/por qué/qué hacer, y no
-              duplica el `aria-live` del `<small>` de al lado. */}
-          {reliability?.governing ? (
-            <Popover
-              label={t('reliability.governingCauseLabel')}
-              trigger={<AlertCircle size={14} aria-hidden="true" />}
-              open={governingCauseOpen}
-              onOpenChange={setGoverningCauseOpen}
-              align="start"
-              className="reliability-governing-cause"
-            >
-              <dl className="reliability-governing-cause__body">
-                <div><dt>{t('reliability.causeWhatHeading')}</dt><dd>{analysisState}</dd></div>
-                <div><dt>{t('reliability.causeWhyHeading')}</dt><dd>{describeReliabilityCheck(reliability.governing, t)}</dd></div>
-                <div><dt>{t('reliability.causeNextHeading')}</dt><dd>{t(reliability.level === 'unreliable' ? 'reliability.nextStepsUnreliable' : 'reliability.nextStepsLimited')}</dd></div>
-              </dl>
-            </Popover>
-          ) : null}
         </div>
         <div className="results-mode-control" role="group" aria-label={t('results.modeGroup')}>
           {(['compact', 'expanded', 'focused'] as const).map((mode) => <button

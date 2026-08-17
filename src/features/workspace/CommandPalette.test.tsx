@@ -98,6 +98,23 @@ describe('CommandPalette', () => {
     expect(screen.queryByRole('option', { name: /Avisos/i })).toBeNull();
   });
 
+  it('offers N/V/M/deformed/map as evidence layers, not as Results tabs (CRI-100)', () => {
+    renderPalette();
+
+    const axial = screen.getByRole('option', { name: 'Evidencia: Axial' });
+    const heatmap = screen.getByRole('option', { name: 'Evidencia: Mapa de demanda' });
+    // No analysis yet: picking evidence would have nothing to light up.
+    expect(axial.hasAttribute('disabled')).toBe(true);
+    expect(heatmap.hasAttribute('disabled')).toBe(true);
+
+    // The old tab-opening entries for these four are gone — evidence never
+    // opens the Results panel again, it only lights a canvas layer.
+    expect(screen.queryByRole('option', { name: 'Resultados: Axial' })).toBeNull();
+    expect(screen.queryByRole('option', { name: 'Resultados: Deformada' })).toBeNull();
+    // Reactions/summary/influence/learn are still dense Results-panel surfaces.
+    expect(screen.getByRole('option', { name: 'Resultados: Resumen' })).toBeTruthy();
+  });
+
   it('filters ignoring accents and case, over labels and hints alike', async () => {
     const user = userEvent.setup();
     renderPalette();
