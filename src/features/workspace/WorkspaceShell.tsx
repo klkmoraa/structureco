@@ -12,7 +12,6 @@ import { useProject } from '../../store/ProjectContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import { createPersistedEditorLayerState, editorLayerReducer, persistEditorLayerState } from '../canvas/editorLayers';
 import { AppShellLayout } from './AppShellLayout';
-import { isToolRailCompact } from './shellComposition';
 import { ShellCompositionProvider } from './ShellCompositionProvider';
 import { SurfacePresentationProvider } from './SurfacePresentationProvider';
 import { useShellComposition } from './useShellComposition';
@@ -220,7 +219,7 @@ const WorkspaceBrokerContent = ({
         },
       }}
     />}
-    toolRail={<ToolRail compact={isToolRailCompact(shellClass)} />}
+    toolRail={<ToolRail />}
     workspace={<>
       {project.settings.calculationMode === 'classroom' ? <ClassroomGuide className="classroom-workspace-journey" project={project} analysis={analysis} onChooseTool={setActiveTool} onAnalyze={analyze} /> : null}
       <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => openSurface('detail')} />

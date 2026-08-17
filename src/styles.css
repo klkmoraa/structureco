@@ -1371,11 +1371,9 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 .tool-button svg { color:var(--tool-color); }
 .tool-button span { font-size:13px; font-weight:520; }
 .tool-button kbd { font-size:var(--sc-font-size-label); }
-.tool-button:hover { background:color-mix(in srgb,var(--tool-color) 7%,var(--surface)); }
-.tool-button.active {
-  color:var(--tool-color);
-  background:color-mix(in srgb,var(--tool-color) 11%,var(--surface));
-}
+/* El reposo/hover/activo del volumen los define `.sc-tool-button` en
+   `design-system/components/ui.css` (CRI-98): reposo `RAISED`, activo
+   `INSET` sin sombra exterior. Aquí sólo queda el tinte por herramienta. */
 :root[data-theme='dark'] .tool-button.active { color:var(--tool-color); }
 .tool-pointLoad { --tool-color:var(--force); }
 .tool-distributedLoad { --tool-color:var(--shear); }
@@ -1786,7 +1784,8 @@ button:not(:disabled):active,.selection-card:active {
 .results-panel { transition:height var(--motion-slow) var(--ease-native),min-height var(--motion-slow) var(--ease-native),max-height var(--motion-slow) var(--ease-native),background-color var(--motion-standard) ease,border-color var(--motion-standard) ease; }
 .results-toggle-chevron { transition:transform var(--motion-standard) var(--ease-native); }
 .results-toggle-chevron.expanded { transform:rotate(180deg); }
-.mobile-tool-dock .tool-button.active svg { transform:translateY(-1px); transition:transform var(--motion-standard) var(--ease-native); }
+/* El icono se asienta en la cavidad (baja), nunca despega de ella. */
+.mobile-tool-dock .tool-button.active svg { transform:translateY(1px); transition:transform var(--motion-standard) var(--ease-native); }
 .new-exercise-input-wrap { transition:border-color var(--motion-fast) var(--ease-native),box-shadow var(--motion-fast) var(--ease-native); }
 .new-exercise-input-wrap:focus-within { border-color:var(--accent)!important; box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent); }
 .new-exercise-input:focus-visible { outline:0; }
@@ -1924,13 +1923,7 @@ button:not(:disabled):active,.selection-card:active {
   padding-inline:9px;
 }
 .tool-button svg { color:var(--tool-color); }
-.tool-button:hover:not(:disabled) { background:color-mix(in srgb,var(--tool-color) 7%,var(--surface)); }
-.tool-button.active {
-  color:var(--accent);
-  background:var(--accent-soft);
-  box-shadow:inset 3px 0 0 var(--accent),inset 0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent);
-}
-.tool-button.destructive.active { color:var(--accent); }
+/* Reposo/hover/activo: gramática `.sc-tool-button` de `ui.css` (CRI-98). */
 :is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-select,
 :is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-pan { --tool-color:var(--sc-color-tool-navigation); }
 :is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-node,
@@ -1945,10 +1938,7 @@ button:not(:disabled):active,.selection-card:active {
 :is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-delete { --tool-color:var(--sc-color-tool-destructive); }
 :is(.tool-button,.mobile-palette-tool,.load-tool-grid button):disabled svg,
 :is(.tool-button,.mobile-palette-tool,.load-tool-grid button):disabled .mobile-palette-icon { color:var(--tool-color); }
-.tool-node,.tool-pointLoad,.tool-dimension { margin-top:0; box-shadow:none; }
-.tool-node.active,.tool-pointLoad.active,.tool-dimension.active {
-  box-shadow:inset 3px 0 0 var(--accent),inset 0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent);
-}
+.tool-node,.tool-pointLoad,.tool-dimension { margin-top:0; }
 .desktop-advanced-toggle { margin-top:2px; }
 .selection-tip { padding:8px 9px; }
 
@@ -2372,6 +2362,26 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 /* Phase 7: canvas-first rail and component-library adapters ------------- */
+/* Ancla del tooltip por herramienta (CRI-98): ocupa la celda del grid igual
+   que el botón que envuelve, sin alterar su tamaño o su foco. */
+.tool-rail .tool-group-actions .tool-rail-tooltip-anchor { display:block; width:100%; }
+/* La burbuja se porta a `document.body`: nunca la recorta el scroll del
+   riel. Visible por foco y por hover — nunca sólo por hover (LEDGER §4.4). */
+.tool-rail-tooltip {
+  position:fixed;
+  z-index:var(--sc-z-popover);
+  transform:translateY(-50%);
+  width:max-content;
+  max-width:220px;
+  padding:6px 9px;
+  border-radius:var(--sc-radius-sm);
+  background:var(--sc-color-text-primary);
+  color:var(--sc-color-bg-app);
+  box-shadow:var(--sc-shadow-clay-md);
+  font-size:var(--sc-font-size-caption);
+  line-height:1.3;
+  pointer-events:none;
+}
 .tool-rail .sc-tool-button__icon svg { color:var(--tool-color,var(--accent)); }
 .tool-rail .sc-tool-button__copy strong { color:var(--text); font-size:13px; font-weight:520; }
 .tool-rail:not(.is-compact) .sc-tool-button__copy strong {
@@ -3793,6 +3803,7 @@ button:not(:disabled):active,.selection-card:active {
   .welcome-template-card,
   .welcome-template-footer svg,
   .tool-button,
+  .mobile-tool-dock .tool-button.active svg,
   .toggle-row input[type='checkbox'],
   .compact-toggle-grid input[type='checkbox'],
   .toggle-row input[type='checkbox']::after,
@@ -3814,9 +3825,10 @@ button:not(:disabled):active,.selection-card:active {
 /* Rail compacto: el estado contraído conserva la geometría de la referencia
    (iconos centrados y grupos respirados), pero usa las recetas físicas del
    brandbook. Sólo el color semántico del icono comunica la herramienta; la
-   superficie activa se eleva con highlight y sombra corta, nunca con glow. */
+   bandeja es `INSET` (heredada de `.toolbar` en `material.css`), cada
+   herramienta se apoya `RAISED` encima, y la activa baja a la misma cavidad
+   de la bandeja — nunca sube, nunca gana sombra exterior (CRI-98). */
 .tool-rail.is-compact {
-  background:var(--sc-color-bg-app);
   border-right:1px solid var(--sc-color-border-soft);
   padding:8px 7px;
   gap:3px;
@@ -3862,11 +3874,11 @@ button:not(:disabled):active,.selection-card:active {
   grid-template-columns:1fr;
   justify-items:center;
   align-content:center;
-  border:1px solid transparent;
+  border:1px solid color-mix(in srgb,var(--sc-color-border) 58%,var(--sc-color-surface-elevated));
   border-radius:var(--sc-radius-md);
-  background:transparent;
+  background:var(--sc-color-surface-1);
   color:var(--tool-color,var(--sc-color-text-muted));
-  box-shadow:none;
+  box-shadow:var(--sc-shadow-clay-xs);
   transform:none;
 }
 .tool-rail.is-compact .tool-button .sc-tool-button__icon {
@@ -3891,26 +3903,23 @@ button:not(:disabled):active,.selection-card:active {
   white-space:nowrap;
 }
 .tool-rail.is-compact .tool-button:hover:not(:disabled) {
-  background:var(--sc-color-surface-2);
+  background:var(--sc-color-surface-elevated);
   border-color:var(--sc-color-border-soft);
   color:var(--tool-color,var(--sc-color-text-primary));
-  box-shadow:var(--sc-shadow-clay-xs);
-  transform:translateY(-1px);
-}
-.tool-rail.is-compact .tool-button.active,
-.tool-rail.is-compact .tool-button.is-active {
-  background:var(--sc-color-surface-elevated);
-  border-color:var(--sc-color-border);
-  color:var(--tool-color,var(--accent));
-  box-shadow:var(--sc-shadow-clay-xs);
-  transform:none;
-}
-.tool-rail.is-compact .tool-button.active:hover:not(:disabled),
-.tool-rail.is-compact .tool-button.is-active:hover:not(:disabled) {
-  background:var(--sc-color-surface-elevated);
-  color:var(--tool-color,var(--accent));
   box-shadow:var(--sc-shadow-clay-sm);
   transform:translateY(-1px);
+}
+/* Elegida = hundida en la misma cavidad que la bandeja, nunca rellena de
+   color ni elevada — ni en reposo ni al pasar el cursor por encima. */
+.tool-rail.is-compact .tool-button.active,
+.tool-rail.is-compact .tool-button.is-active,
+.tool-rail.is-compact .tool-button.active:hover:not(:disabled),
+.tool-rail.is-compact .tool-button.is-active:hover:not(:disabled) {
+  background:var(--sc-color-surface-inset);
+  border-color:color-mix(in srgb,var(--tool-color,var(--accent)) 26%,var(--sc-color-border));
+  color:var(--tool-color,var(--accent));
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
 }
 .tool-rail.is-compact .tool-button:active:not(:disabled) {
   background:var(--sc-color-surface-pressed);

@@ -4,7 +4,9 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectProvider, useProject } from '../../store/ProjectContext';
 import { onWorkspaceCommand } from '../workspace/workspaceCommands';
-import { ToolBar } from './ToolBar';
+import { ShellCompositionContext } from '../workspace/useShellComposition';
+import type { ShellClass } from '../workspace/shellComposition';
+import { ToolRail } from './ToolRail';
 
 const ActiveToolStatus = () => {
   const { activeTool } = useProject();
@@ -16,11 +18,15 @@ const SelectionSetter = () => {
   return <button type="button" onClick={() => setSelection({ kind: 'node', id: 'N1' })}>seleccionar nodo</button>;
 };
 
-const renderToolBar = () => render(
-  <ProjectProvider>
-    <ToolBar />
-    <ActiveToolStatus />
-  </ProjectProvider>,
+/** La forma del riel la decide `shellClass` (CRI-98): se fija explícito por
+ * prueba en vez de depender del viewport por defecto de jsdom. */
+const renderToolRail = (shellClass: ShellClass = 'X2') => render(
+  <ShellCompositionContext.Provider value={{ shellClass, phone: shellClass === 'K0' }}>
+    <ProjectProvider>
+      <ToolRail />
+      <ActiveToolStatus />
+    </ProjectProvider>
+  </ShellCompositionContext.Provider>,
 );
 
 beforeAll(() => {
@@ -33,14 +39,9 @@ beforeAll(() => {
 beforeEach(() => localStorage.clear());
 afterEach(() => cleanup());
 
-describe('ToolBar mobile action sheets', () => {
+describe('ToolRail mobile action sheets', () => {
   it('offers an explicit compact desktop rail without changing tool identity', () => {
-    const { container } = render(
-      <ProjectProvider>
-        <ToolBar compact />
-        <ActiveToolStatus />
-      </ProjectProvider>,
-    );
+    const { container } = renderToolRail('M1');
     expect(container.querySelector('[data-tool-rail="compact"]')).toBeTruthy();
     // Trece herramientas del registro más «Generar estructura», que no es una
     // herramienta de lienzo pero sí una acción de creación con su mismo botón.
@@ -50,7 +51,7 @@ describe('ToolBar mobile action sheets', () => {
   });
 
   it('groups every desktop tool by intention without losing actions', () => {
-    renderToolBar();
+    renderToolRail();
 
     expect(within(screen.getByRole('group', { name: /navegar/i })).getAllByRole('button')).toHaveLength(3);
     // Nudo, barra y apoyo, más el generador de estructuras.
@@ -65,7 +66,7 @@ describe('ToolBar mobile action sheets', () => {
     const user = userEvent.setup();
     const openPalette = vi.fn();
     const unsubscribe = onWorkspaceCommand('open-command-palette', openPalette);
-    renderToolBar();
+    renderToolRail();
 
     const navigate = screen.getByRole('group', { name: /navegar/i });
     const commandSearch = within(navigate).getByRole('button', { name: /abrir la paleta de comandos/i });
@@ -81,10 +82,12 @@ describe('ToolBar mobile action sheets', () => {
     const openEditor = vi.fn();
     const unsubscribe = onWorkspaceCommand('open-structural-edit', openEditor);
     render(
-      <ProjectProvider>
-        <ToolBar />
-        <SelectionSetter />
-      </ProjectProvider>,
+      <ShellCompositionContext.Provider value={{ shellClass: 'X2', phone: false }}>
+        <ProjectProvider>
+          <ToolRail />
+          <SelectionSetter />
+        </ProjectProvider>
+      </ShellCompositionContext.Provider>,
     );
 
     expect(screen.queryByRole('button', { name: /editar selección/i })).toBeNull();
@@ -99,7 +102,7 @@ describe('ToolBar mobile action sheets', () => {
     const user = userEvent.setup();
     const openGenerator = vi.fn();
     const unsubscribe = onWorkspaceCommand('open-structure-generator', openGenerator);
-    renderToolBar();
+    renderToolRail();
 
     // Generar crea geometría en vez de transformar la que hay: no puede
     // depender de que algo esté seleccionado.
@@ -115,9 +118,11 @@ describe('ToolBar mobile action sheets', () => {
     const openGenerator = vi.fn();
     const unsubscribe = onWorkspaceCommand('open-structure-generator', openGenerator);
     render(
-      <ProjectProvider>
-        <div className="app-shell"><ToolBar /></div>
-      </ProjectProvider>,
+      <ShellCompositionContext.Provider value={{ shellClass: 'X2', phone: false }}>
+        <ProjectProvider>
+          <div className="app-shell"><ToolRail /></div>
+        </ProjectProvider>
+      </ShellCompositionContext.Provider>,
     );
     const moreButton = [...document.querySelectorAll<HTMLButtonElement>('.mobile-tool-group')].at(-1);
     await user.click(moreButton!);
@@ -126,7 +131,7 @@ describe('ToolBar mobile action sheets', () => {
     expect(command).toBeTruthy();
     await user.click(command!);
 
-    // La hoja móvil difiere el comando un frame a propósito (`ToolBar.tsx`:
+    // La hoja móvil difiere el comando un frame a propósito (`ToolRail.tsx`:
     // `openStructureGeneratorFromMobile`), para cerrarse y devolver la
     // inertness antes de que el generador tome el foco. Sin esperar ese frame
     // la aserción gana o pierde según lo cargado que venga el entorno.
@@ -138,7 +143,7 @@ describe('ToolBar mobile action sheets', () => {
 
   it('opens the portaled load sheet and selects a point load', async () => {
     const user = userEvent.setup();
-    const { container } = renderToolBar();
+    const { container } = renderToolRail();
     const loadButton = screen.getByRole('button', { name: /herramientas de carga/i });
 
     await user.click(loadButton);
@@ -159,7 +164,7 @@ describe('ToolBar mobile action sheets', () => {
 
   it('returns focus when the touch sheet closes through its backdrop', async () => {
     const user = userEvent.setup();
-    renderToolBar();
+    renderToolRail();
     const moreButton = [...document.querySelectorAll<HTMLButtonElement>('.mobile-tool-group')].at(-1) as HTMLButtonElement;
     await user.click(moreButton);
     expect(screen.getByRole('dialog', { name: /herramientas/i })).toBeTruthy();
@@ -174,7 +179,7 @@ describe('ToolBar mobile action sheets', () => {
 
   it('shows every additional tool and returns focus to Más after Escape', async () => {
     const user = userEvent.setup();
-    renderToolBar();
+    renderToolRail();
     const moreButton = screen.getByRole('button', { name: /más herramientas/i });
 
     await user.click(moreButton);
@@ -210,7 +215,7 @@ describe('ToolBar mobile action sheets', () => {
     const user = userEvent.setup();
     const openPalette = vi.fn();
     const unsubscribe = onWorkspaceCommand('open-command-palette', openPalette);
-    renderToolBar();
+    renderToolRail();
     const moreButton = screen.getByRole('button', { name: /más herramientas/i });
     await user.click(moreButton);
 
@@ -229,9 +234,11 @@ describe('ToolBar mobile action sheets', () => {
     const openEditor = vi.fn();
     const unsubscribe = onWorkspaceCommand('open-structural-edit', openEditor);
     render(
-      <ProjectProvider>
-        <div className="app-shell"><ToolBar /><SelectionSetter /></div>
-      </ProjectProvider>,
+      <ShellCompositionContext.Provider value={{ shellClass: 'X2', phone: false }}>
+        <ProjectProvider>
+          <div className="app-shell"><ToolRail /><SelectionSetter /></div>
+        </ProjectProvider>
+      </ShellCompositionContext.Provider>,
     );
     await user.click(screen.getByRole('button', { name: /seleccionar nodo/i }));
     const moreButton = [...document.querySelectorAll<HTMLButtonElement>('.mobile-tool-group')].at(-1);

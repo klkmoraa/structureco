@@ -43,19 +43,24 @@
 }
 
 /* inset: una cavidad de interacción. Es una profundidad distinta de BASE,
-   nunca una tarjeta anidada. */
+   nunca una tarjeta anidada.
+   `.toolbar` (la bandeja del riel) vive aquí a propósito: CRI-98 la hunde para
+   que las herramientas `RAISED` que se apoyan encima lean como piezas sobre
+   una mesa, en vez de un panel plano más. */
 .sc-surface[data-level='inset'],
-[data-level='inset'] {
+[data-level='inset'],
+.toolbar {
   background: var(--sc-color-surface-inset);
   border: 1px solid var(--sc-color-border-soft);
   box-shadow: var(--sc-shadow-clay-pressed);
 }
 
+.toolbar { border-width: var(--toolbar-clay-border-width, 1px); }
+
 /* raised: la superficie normal — paneles, barras, tarjetas. */
 .sc-surface[data-level='raised'],
 [data-level='raised'],
 .topbar,
-.toolbar,
 .inspector-panel,
 .inspector-summary,
 .results-panel {
@@ -64,7 +69,6 @@
   box-shadow: var(--sc-shadow-clay-md);
 }
 
-.toolbar { border-width: var(--toolbar-clay-border-width, 1px); }
 .inspector-panel { border-width: var(--inspector-clay-border-width, 1px); }
 .results-panel { border-width: var(--results-clay-border-width, 1px 0 0); }
 
