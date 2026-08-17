@@ -7,6 +7,7 @@ import { toDisplay, unitLabel } from '../../engine/units';
 import { memberAxis } from '../../graphics/structureGeometry';
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
 import type { TranslationKey } from '../../i18n/catalogs';
+import { readCanvasViewSettings } from '../view/canvasViewSettings';
 
 type MemberResult = AnalysisResult['memberResults'][number];
 type NodeResult = AnalysisResult['nodeResults'][number];
@@ -52,13 +53,14 @@ export const reactionClearanceFor = (type: NodeModel['support']['type']): { bott
 /** Pixel scale for a diagram ordinate: shared global scale, or per-member when `diagramScaleMode` is `individual`. */
 // oxlint-disable-next-line react/only-export-components
 export const diagramPixelScaleFor = (project: ProjectModel, resultTab: ResultTab, globalDiagramMax: number, result: MemberResult) => {
-  if (project.settings.diagramScaleMode !== 'individual') return (68 * project.settings.diagramScale) / globalDiagramMax;
+  const view = readCanvasViewSettings(project);
+  if (view.diagramScaleMode !== 'individual') return (68 * view.diagramScale) / globalDiagramMax;
   const key = resultTab === 'axial' ? 'axial' : resultTab === 'shear' ? 'shear' : 'moment';
   let maximum = 1e-9;
   for (const point of result.criticalPoints) {
     if (point.quantity === key) maximum = Math.max(maximum, Math.abs(point.value));
   }
-  return (68 * project.settings.diagramScale) / maximum;
+  return (68 * view.diagramScale) / maximum;
 };
 
 /**
@@ -95,15 +97,16 @@ const CanvasResultLayerImpl = ({
   nodeMap, memberMap, resultMap, nodeResultMap, mechanismMap, mechanismPixelScale, globalDiagramMax,
   units, lengthLabel, forceLabel, momentLabel, showResults, showDiagnostics, size, t,
 }: CanvasResultLayerProps) => {
+  const view = readCanvasViewSettings(project);
   const scaleFor = (result: MemberResult) => diagramPixelScaleFor(project, resultTab, globalDiagramMax, result);
 
   const diagramPath = (member: MemberModel) => {
     const result = resultMap.get(member.id);
     const ni = nodeMap.get(member.i); const nj = nodeMap.get(member.j);
-    if (!resultsAllowed || !project.settings.showResultOverlay || !result || !ni || !nj || !['axial', 'shear', 'moment'].includes(resultTab) || !result.diagramSegments.length) return null;
+    if (!resultsAllowed || !view.showResultOverlay || !result || !ni || !nj || !['axial', 'shear', 'moment'].includes(resultTab) || !result.diagramSegments.length) return null;
     const axis = memberAxis(member, ni, nj);
     const tx = axis.c; const ty = axis.s;
-    const side = project.settings.diagramSide === 'negative' ? -1 : 1;
+    const side = view.diagramSide === 'negative' ? -1 : 1;
     const nx = axis.normal.x * side; const ny = axis.normal.y * side;
     const key = resultTab as DiagramQuantity;
     const diagramPixelScale = scaleFor(result);
@@ -158,7 +161,7 @@ const CanvasResultLayerImpl = ({
     const ni = nodeMap.get(member.i); const nj = nodeMap.get(member.j);
     if (!result || !ni || !nj || member.type === 'rigid' || !result.deformation.length) return '';
     const { c, s } = memberAxis(member, ni, nj);
-    const scale = project.settings.deformedScale;
+    const scale = view.deformedScale;
     const curved = result.deformation.map((point) => {
       const grossX = (result.startOffset ?? 0) + point.x;
       const gx = ni.x + c * grossX + scale * (c * point.u - s * point.v);
@@ -192,7 +195,7 @@ const CanvasResultLayerImpl = ({
     if (['axial', 'shear', 'moment'].includes(resultTab)) {
       const quantity = resultTab as DiagramQuantity;
       const value = evaluateDiagramAt(result.diagramSegments, result.diagramJumps, x, 'right')?.[quantity] ?? 0;
-      const side = project.settings.diagramSide === 'negative' ? -1 : 1;
+      const side = view.diagramSide === 'negative' ? -1 : 1;
       const nx = axis.normal.x * side;
       const ny = axis.normal.y * side;
       const offsetModel = value * scaleFor(result) / camera.scale;
@@ -202,7 +205,7 @@ const CanvasResultLayerImpl = ({
     } else if (resultTab === 'deformed' && result.deformationSegments.length) {
       const response = evaluateDeformationAt(result.deformationSegments, x);
       if (response) {
-        const scale = project.settings.deformedScale;
+        const scale = view.deformedScale;
         screen = toScreen(base.x + scale * (c * response.u - s * response.v), base.y + scale * (s * response.u + c * response.v));
         label = `v ${formatScientific(toDisplay(response.v, units, 'length'), 2)} ${lengthLabel}`;
       }
@@ -220,14 +223,14 @@ const CanvasResultLayerImpl = ({
    * tabla; ahora está donde ocurre.
    */
   const renderCriticalPoints = () => {
-    if (!resultsAllowed || !analysis?.success || !project.settings.showResultOverlay) return null;
+    if (!resultsAllowed || !analysis?.success || !view.showResultOverlay) return null;
     if (resultTab !== 'shear' && resultTab !== 'moment') return null;
     const key = resultTab as DiagramQuantity;
     const symbol = key === 'shear' ? 'V' : 'M';
     const displayQuantity = key === 'moment' ? 'moment' as const : 'force' as const;
     const valueUnit = key === 'moment' ? momentLabel : forceLabel;
     const floor = Math.max(globalDiagramMax * CRITICAL_MARKER_MIN_SHARE, 1e-9);
-    const side = project.settings.diagramSide === 'negative' ? -1 : 1;
+    const side = view.diagramSide === 'negative' ? -1 : 1;
 
     const stamps = project.members.flatMap((member) => {
       const result = resultMap.get(member.id);

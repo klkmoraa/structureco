@@ -34,6 +34,7 @@ import type {
 import { InspectorNarrativeCard } from './InspectorNarrativeCard';
 import { InspectorNumericField } from './InspectorNumericField';
 import { InspectorSelectionPreview } from './InspectorSelectionPreview';
+import { readExpandedSectionsForSurface, writeExpandedSectionsForSurface } from './inspectorPreferences';
 import { MaterialPresetSelector } from './MaterialPresetSelector';
 import { formatInspectorValue } from './numericFormatting';
 import { SectionPresetSelector } from './SectionPresetSelector';
@@ -48,27 +49,11 @@ import {
   type InspectorSummaryMetric,
 } from './InspectorPrimitives';
 
-const ACCORDION_STORAGE_KEY = 'structureCo.inspector.expanded.v1';
-
-const readExpandedSections = (): string[] => {
-  if (typeof window === 'undefined') return [];
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(ACCORDION_STORAGE_KEY) ?? '[]');
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
-  } catch {
-    return [];
-  }
-};
-
 const usePersistentInspectorSections = () => {
-  const [expanded, setExpanded] = useState<string[]>(readExpandedSections);
+  const [expanded, setExpanded] = useState<string[]>(() => readExpandedSectionsForSurface('detail'));
   const updateExpanded = useCallback((next: string[]) => {
     setExpanded(next);
-    try {
-      window.localStorage.setItem(ACCORDION_STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // UI preference persistence must never block property editing.
-    }
+    writeExpandedSectionsForSurface('detail', next);
   }, []);
   return [expanded, updateExpanded] as const;
 };

@@ -164,15 +164,47 @@ const openInspectorIfCollapsed = async () => {
 };
 
 /**
+ * An already-open K0 detail surface is a genuine sheet above the canvas.
+ * Dismiss it through the same Escape contract a user has before selecting on
+ * the canvas; the test opens it again after the selection is made.
+ */
+const dismissCompactSheetsForCanvas = async () => {
+  // Closing detail can reveal the retained Results sheet below it. Both are
+  // modeless K0 surfaces with an Escape close contract, so resolve the active
+  // stack one surface at a time before touching the canvas.
+  for (const surface of ['detail', 'results']) {
+    const sheet = page.locator(`[data-workspace-surface="${surface}"][data-surface-presentation="sheet"][data-surface-status="active"]`);
+    if (!(await sheet.isVisible().catch(() => false))) continue;
+    await page.keyboard.press('Escape');
+    await sheet.waitFor({ state: 'hidden' });
+  }
+};
+
+/**
  * Encaja el modelo en la vista. Al estrechar el lienzo, parte de la estructura
  * queda fuera de la ventana visible, así que antes de pinchar nada se usa la
  * misma acción de encaje que tiene la aplicación.
  */
 const fitModel = async () => {
+  await dismissCompactSheetsForCanvas();
   const fit = page.getByRole('button', { name: /ajustar modelo a la vista/i });
   if (await fit.count() === 0) return;
   await fit.first().click();
   await sleep(page, 260);
+};
+
+/**
+ * A node with a seeded nodal load has genuinely overlapping semantic targets.
+ * Resolve that picker explicitly so the QA exercises the real ambiguity
+ * contract instead of assuming the DOM node is the only selectable object.
+ */
+const confirmNodeCandidateIfNeeded = async (id) => {
+  const picker = page.locator('[data-candidate-picker]');
+  if (!(await picker.isVisible().catch(() => false))) return;
+  const nodeOption = picker.getByRole('option', { name: new RegExp(`^Nodo ${id}$`, 'i') });
+  await nodeOption.click();
+  await picker.getByRole('button', { name: /confirmar selección/i }).click();
+  await picker.waitFor({ state: 'hidden' });
 };
 
 const selectMany = async (project, items) => {
@@ -182,6 +214,7 @@ const selectMany = async (project, items) => {
     if (kind === 'node') {
       // Un nudo tiene una zona sensible propia y se pincha por su elemento.
       await target('node', id).click(modifiers);
+      await confirmNodeCandidateIfNeeded(id);
     } else {
       // Un miembro no: hay que ir a un punto concreto de su trazo.
       const point = await memberPoint(project, id);

@@ -112,8 +112,8 @@ describe('SurfacePresentationProvider', () => {
   it('moves focus to the semantic equivalent when presentation replaces the physical element', async () => {
     const MigratingSurface = () => {
       const { presentationFor } = useSurfacePresentation();
-      const presentation = presentationFor('inspector');
-      return <section data-workspace-surface="inspector">
+      const presentation = presentationFor('detail');
+      return <section data-workspace-surface="detail">
         <input
           key={presentation}
           data-surface-focus-key="member-length"
@@ -124,7 +124,7 @@ describe('SurfacePresentationProvider', () => {
     };
     const Wrapper = ({ shellClass }: { shellClass: ShellClass }) => {
       const backgroundRef = useRef<HTMLDivElement>(null);
-      return <SurfacePresentationProvider shellClass={shellClass} initialOpen={['inspector']} backgroundRef={backgroundRef}>
+      return <SurfacePresentationProvider shellClass={shellClass} initialOpen={['detail']} backgroundRef={backgroundRef}>
         <div ref={backgroundRef}>background</div>
         <MigratingSurface />
       </SurfacePresentationProvider>;

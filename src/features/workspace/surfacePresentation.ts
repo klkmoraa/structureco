@@ -14,7 +14,9 @@ export const SURFACE_PRESENTATIONS = [
 export type SurfacePresentation = (typeof SURFACE_PRESENTATIONS)[number];
 
 export const BROKER_SURFACE_IDS = [
-  'inspector',
+  'detail',
+  'analysisSetup',
+  'view',
   'results',
   'datasheet',
   'doctor',
@@ -29,7 +31,9 @@ export type SurfaceStatus = 'closed' | 'active' | 'suspended';
 
 export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Record<SurfaceId, SurfacePresentation>>>> = {
   X2: {
-    inspector: 'dock',
+    detail: 'dock',
+    analysisSetup: 'dock',
+    view: 'dock',
     results: 'dock',
     datasheet: 'drawer',
     doctor: 'drawer',
@@ -38,7 +42,9 @@ export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Re
     contextualActions: 'inset',
   },
   M1: {
-    inspector: 'inset',
+    detail: 'inset',
+    analysisSetup: 'inset',
+    view: 'inset',
     results: 'inset',
     datasheet: 'drawer',
     doctor: 'drawer',
@@ -47,7 +53,9 @@ export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Re
     contextualActions: 'inset',
   },
   K0: {
-    inspector: 'sheet',
+    detail: 'sheet',
+    analysisSetup: 'sheet',
+    view: 'sheet',
     results: 'sheet',
     datasheet: 'fullscreen',
     doctor: 'fullscreen',

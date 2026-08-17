@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultProject } from '../../data/defaultProject';
 import { PROJECT_STORAGE_KEY } from '../../data/projectStorage';
@@ -124,6 +125,39 @@ const renderInspector = (
 
 const storedNumber = (label: string) => Number(screen.getByLabelText(label).textContent);
 
+const SplitSurfaceHarness = ({ surface }: { surface: 'detail' | 'analysisSetup' | 'view' }) => {
+  const [presentation, setPresentation] = useState<'dock' | 'inset' | 'sheet'>('dock');
+  const { selection, setSelection, activeTool, setActiveTool } = useWorkspaceUI();
+  const { project } = useProjectModel();
+  const member = project.members.find((item) => item.id === 'M1');
+  const migrate = (next: 'dock' | 'inset' | 'sheet') => (event: ReactMouseEvent<HTMLButtonElement>) => {
+    // A shell recomposition does not move focus to a launcher. Preserve that
+    // browser behavior in this focused draft regression.
+    event.preventDefault();
+    setPresentation(next);
+  };
+  return <ClassroomSessionProvider projectId={project.id}>
+    <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => setSelection({ kind: 'member', id: 'M1' })}>seleccionar miembro dividido</button>
+    <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => setSelection({ kind: 'node', id: 'N3' })}>seleccionar nodo dividido</button>
+    <button type="button" onMouseDown={migrate('inset')} onClick={migrate('inset')}>migrar M1</button>
+    <button type="button" onMouseDown={migrate('sheet')} onClick={migrate('sheet')}>migrar K0</button>
+    <button type="button" onMouseDown={migrate('dock')} onClick={migrate('dock')}>migrar X2</button>
+    <output aria-label="selección dividida">{selection?.kind ?? 'none'}</output>
+    <output aria-label="E dividida almacenada">{String(member?.E)}</output>
+    <Inspector
+      surface={surface}
+      presentation={presentation}
+      activeTool={activeTool}
+      onActiveToolChange={setActiveTool}
+    />
+  </ClassroomSessionProvider>;
+};
+
+const renderSplitSurface = (surface: 'detail' | 'analysisSetup' | 'view', project = createInspectorProject()) => {
+  localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+  return render(<ProjectProvider><SplitSurfaceHarness surface={surface} /></ProjectProvider>);
+};
+
 const expectDescribedUnit = (input: HTMLElement, expectedUnit: string) => {
   const describedBy = input.getAttribute('aria-describedby')?.split(/\s+/).filter(Boolean) ?? [];
   expect(describedBy.some((id) => document.getElementById(id)?.textContent === expectedUnit)).toBe(true);
@@ -186,9 +220,12 @@ describe('Inspector selection variants', () => {
     const loadCaseName = screen.getByRole('textbox', { name: `Load case name ${firstLoadCase.id}` }) as HTMLInputElement;
     expect(loadCaseName.value).toBe(firstLoadCase.name);
 
-    await user.click(screen.getByRole('tab', { name: 'View' }));
+    await user.click(screen.getByRole('tab', { name: 'Loads' }));
     expect(screen.getByRole('heading', { name: 'Calculation experience' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Complete' })).toBeTruthy();
+
+    await user.click(screen.getByRole('tab', { name: 'View' }));
+    expect(screen.queryByRole('heading', { name: 'Calculation experience' })).toBeNull();
     expect(screen.getByRole('heading', { name: 'CAD precision' })).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Selection filters' })).toBeTruthy();
     const spacing = screen.getByRole('textbox', { name: 'Spacing' });
@@ -383,6 +420,51 @@ describe('Inspector selection variants', () => {
     // Sin nada preparado no se puede ni abrir la revisión, así que tampoco
     // llegar a la confirmación.
     expect((screen.getByRole('button', { name: 'Revisar cambios' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+describe('split Inspector surfaces', () => {
+  it('keeps a focused numeric detail draft through X2, M1, K0, and back without publishing it', async () => {
+    const user = userEvent.setup();
+    renderSplitSurface('detail');
+    await user.click(screen.getByRole('button', { name: 'seleccionar miembro dividido' }));
+    const field = screen.getByRole('textbox', { name: 'E' }) as HTMLInputElement;
+    const original = screen.getByLabelText('E dividida almacenada').textContent;
+    field.focus();
+    await user.clear(field);
+    await user.type(field, '123456');
+
+    await user.click(screen.getByRole('button', { name: 'migrar M1' }));
+    expect(field.value).toBe('123456');
+    expect(screen.getByLabelText('E dividida almacenada').textContent).toBe(original);
+    expect(document.activeElement).toBe(field);
+
+    await user.click(screen.getByRole('button', { name: 'migrar K0' }));
+    expect(screen.getByRole('dialog', { name: 'Inspector' })).toBeTruthy();
+    expect(field.value).toBe('123456');
+    expect(screen.getByLabelText('E dividida almacenada').textContent).toBe(original);
+
+    await user.click(screen.getByRole('button', { name: 'migrar X2' }));
+    expect(field.value).toBe('123456');
+    expect(screen.getByLabelText('E dividida almacenada').textContent).toBe(original);
+  });
+
+  it('keeps detail open while its selection authority changes, while analysis setup remains selection-independent', async () => {
+    const user = userEvent.setup();
+    renderSplitSurface('detail');
+    await user.click(screen.getByRole('button', { name: 'seleccionar miembro dividido' }));
+    await user.click(screen.getByRole('button', { name: 'migrar K0' }));
+    await user.click(screen.getByRole('button', { name: 'seleccionar nodo dividido' }));
+    expect(screen.getByLabelText('selección dividida').textContent).toBe('node');
+    expect(screen.getByRole('dialog', { name: 'Inspector' }).getAttribute('data-workspace-surface')).toBe('detail');
+
+    cleanup();
+    renderSplitSurface('analysisSetup');
+    const loadCase = screen.getByRole('textbox', { name: 'Nombre del caso LC1' }) as HTMLInputElement;
+    const before = loadCase.value;
+    await user.click(screen.getByRole('button', { name: 'seleccionar miembro dividido' }));
+    expect(screen.getByRole('complementary', { name: 'Cargas' }).getAttribute('data-workspace-surface')).toBe('analysisSetup');
+    expect((screen.getByRole('textbox', { name: 'Nombre del caso LC1' }) as HTMLInputElement).value).toBe(before);
   });
 });
 

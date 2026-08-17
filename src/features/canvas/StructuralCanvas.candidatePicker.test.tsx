@@ -157,6 +157,28 @@ describe('StructuralCanvas candidate picker', () => {
     expect(selectionModel()).toContain('M1');
   });
 
+  it('keeps an additive pointer selection when an explicit candidate is confirmed', async () => {
+    const user = userEvent.setup();
+    renderCanvas();
+    await user.click(screen.getByRole('button', { name: 'previous-N3' }));
+    setCandidatesAtPoint(target('node', 'N1'), target('member', 'M1'));
+
+    fireEvent.pointerDown(target('node', 'N1'), {
+      pointerId: 9,
+      pointerType: 'mouse',
+      isPrimary: true,
+      button: 0,
+      buttons: 1,
+      shiftKey: true,
+      clientX: 260,
+      clientY: 500,
+    });
+    await user.keyboard('{Enter}');
+
+    expect(selectionModel()).toContain('N3');
+    expect(selectionModel()).toContain('N1');
+  });
+
   it('keeps the picker transactional when an outside canvas pointer arrives', async () => {
     const user = userEvent.setup();
     renderCanvas();

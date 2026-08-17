@@ -71,6 +71,7 @@ import {
   type CandidateTarget,
 } from './candidatePicker';
 import { SurfacePresentationContext } from '../workspace/SurfacePresentationContext';
+import { readCanvasViewSettings } from '../view/canvasViewSettings';
 import { ELASTIC_SATURATION_RATIO, elasticDemandGate, elasticDemandView, elasticIndexPaint, sectionElasticIndex } from '../results/elasticDemand';
 import { parseQuickEntryPair } from './quickEntry';
 import { resolveRepeatRecipe, type RepeatRecipe } from './repeatAction';
@@ -270,6 +271,7 @@ export const StructuralCanvas = ({
     resultCursor,
     influenceCanvasState,
   } = useProject();
+  const view = readCanvasViewSettings(project);
   const { language, t } = useI18n();
   const { t: phase2T } = usePhase2I18n(language);
   /** The broker owns Compact contextual-layer exclusivity; candidate identity stays local below. */
@@ -451,10 +453,10 @@ export const StructuralCanvas = ({
   }), [nodeMap, project.members]);
   const baseSnapCandidates = useMemo<SnapCandidate[]>(() => {
     const candidates: SnapCandidate[] = [];
-    if (project.settings.snapTargets?.nodes ?? true) {
+    if (view.snapTargets.nodes) {
       for (const node of project.nodes) candidates.push({ x: node.x, y: node.y, kind: 'node', sourceIds: [node.id] });
     }
-    if (project.settings.snapTargets?.midpoints ?? true) {
+    if (view.snapTargets.midpoints) {
       for (const segment of snapSegments) candidates.push({
         x: (segment.start.x + segment.end.x) / 2,
         y: (segment.start.y + segment.end.y) / 2,
@@ -462,24 +464,24 @@ export const StructuralCanvas = ({
         sourceIds: [segment.id],
       });
     }
-    if ((project.settings.snapTargets?.intersections ?? true) && snapSegments.length <= 500) {
+    if (view.snapTargets.intersections && snapSegments.length <= 500) {
       candidates.push(...buildIntersectionSnapCandidates(snapSegments));
     }
     return candidates;
-  }, [project.nodes, project.settings.snapTargets, snapSegments]);
+  }, [project.nodes, snapSegments, view.snapTargets]);
   const drawingOrigin = useMemo(() => (memberStart ? nodeMap.get(memberStart) ?? null : null), [memberStart, nodeMap]);
   // Perpendicular feet only depend on the drawing origin and the geometry, never
   // on the pointer, so they are built per model revision instead of per frame.
   const perpendicularSnapCandidates = useMemo<SnapCandidate[]>(() => (
-    drawingOrigin && (project.settings.snapTargets?.perpendicular ?? true)
+    drawingOrigin && view.snapTargets.perpendicular
       ? buildPerpendicularSnapCandidates(drawingOrigin, snapSegments)
       : EMPTY_SNAP_CANDIDATES
-  ), [drawingOrigin, project.settings.snapTargets, snapSegments]);
+  ), [drawingOrigin, snapSegments, view.snapTargets.perpendicular]);
   const resultMap = useMemo(() => new Map((analysis?.memberResults ?? []).map((result) => [result.memberId, result])), [analysis]);
   const nodeResultMap = useMemo(() => new Map((analysis?.nodeResults ?? []).map((result) => [result.nodeId, result])), [analysis]);
   const mechanismMap = useMemo(() => new Map((analysis?.mechanism?.nodes ?? []).map((node) => [node.nodeId, node])), [analysis?.mechanism]);
   const units = project.settings.units;
-  const selectionFilter = useMemo(() => project.settings.selectionFilter ?? { nodes: true, members: true, loads: true }, [project.settings.selectionFilter]);
+  const selectionFilter = view.selectionFilter;
   const resultsAllowed = true;
   const lengthLabel = unitLabel(units, 'length');
   const forceLabel = unitLabel(units, 'force');
@@ -794,22 +796,22 @@ export const StructuralCanvas = ({
       ? merged.filter((candidate) => !(candidate.kind === 'node' && candidate.sourceIds?.some((id) => excluded.has(id))))
       : merged;
     const result = resolveSnap(point, {
-      enabled: project.settings.snap,
-      gridSize: project.settings.gridSize,
+      enabled: view.snap,
+      gridSize: view.gridSize,
       pixelsPerUnit: camera.scale,
       candidates,
       modes: {
-        grid: project.settings.snapTargets?.grid ?? true,
-        node: project.settings.snapTargets?.nodes ?? true,
-        midpoint: project.settings.snapTargets?.midpoints ?? true,
-        intersection: project.settings.snapTargets?.intersections ?? true,
-        perpendicular: Boolean(drawingOrigin) && (project.settings.snapTargets?.perpendicular ?? true),
+        grid: view.snapTargets.grid,
+        node: view.snapTargets.nodes,
+        midpoint: view.snapTargets.midpoints,
+        intersection: view.snapTargets.intersections,
+        perpendicular: Boolean(drawingOrigin) && view.snapTargets.perpendicular,
       },
     });
     const nextPreview = result.kind === 'none' ? null : { ...result.point, kind: result.kind };
     setSnapPreview((current) => current?.kind === nextPreview?.kind && current?.x === nextPreview?.x && current?.y === nextPreview?.y ? current : nextPreview);
     return result.point;
-  }, [baseSnapCandidates, camera.scale, drawingOrigin, perpendicularSnapCandidates, project.settings.gridSize, project.settings.snap, project.settings.snapTargets]);
+  }, [baseSnapCandidates, camera.scale, drawingOrigin, perpendicularSnapCandidates, view]);
 
   const modelPointFromClient = useCallback((clientX: number, clientY: number, excludedNodeIds?: string | ReadonlySet<string>) => {
     const local = localScreenPoint(clientX, clientY);
@@ -1021,11 +1023,11 @@ export const StructuralCanvas = ({
     window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
   }, [surfaceBroker]);
 
-  const openCandidatePicker = useCallback((candidates: CandidateTarget[], anchor: ScreenPoint): boolean => {
+  const openCandidatePicker = useCallback((candidates: CandidateTarget[], anchor: ScreenPoint, additive = false): boolean => {
     const picker = createCandidatePickerState(candidates, selection, {
       x: clamp(anchor.x + 12, 8, Math.max(8, size.width - 260)),
       y: clamp(anchor.y + 12, 8, Math.max(8, size.height - 260)),
-    });
+    }, 0, additive);
     if (!picker) return false;
     setCandidatePicker(picker);
     surfaceBroker?.openSurface('candidatePicker');
@@ -1034,7 +1036,12 @@ export const StructuralCanvas = ({
 
   const confirmCandidatePicker = useCallback(() => {
     if (!candidatePicker) return;
-    setSelection(candidateToSelection(activeCandidate(candidatePicker)));
+    const candidate = activeCandidate(candidatePicker);
+    if (candidatePicker.additive && (candidate.kind === 'node' || candidate.kind === 'member')) {
+      setSelection(toggleStructuralSelection(candidatePicker.previousSelection, { kind: candidate.kind, id: candidate.id }));
+    } else {
+      setSelection(candidateToSelection(candidate));
+    }
     closeCandidatePicker();
   }, [candidatePicker, closeCandidatePicker, setSelection]);
 
@@ -1436,7 +1443,7 @@ export const StructuralCanvas = ({
       const candidates = candidateTargetsAtPoint(event.clientX, event.clientY, resolvedTarget);
       if (candidates.length > 1) {
         if (event.pointerType === 'touch') startPending(event, resolvedTarget, candidates);
-        else openCandidatePicker(candidates, localScreenPoint(event.clientX, event.clientY));
+        else openCandidatePicker(candidates, localScreenPoint(event.clientX, event.clientY), event.shiftKey);
         return;
       }
       // A one-finger touch remains pending until time plus displacement resolves
@@ -1979,8 +1986,8 @@ export const StructuralCanvas = ({
     return maximum > 1e-14 ? 72 / maximum : 0;
   }, [mechanismMap]);
   const grid = useMemo(() => {
-    if (!project.settings.showGrid) return null;
-    const step = project.settings.gridSize * camera.scale;
+    if (!view.showGrid) return null;
+    const step = view.gridSize * camera.scale;
     if (step < 8) return null;
     const lines = [];
     const startX = ((camera.x % step) + step) % step;
@@ -1988,7 +1995,7 @@ export const StructuralCanvas = ({
     for (let x = startX; x < size.width; x += step) lines.push(<line key={`gx-${x}`} x1={x} y1={0} x2={x} y2={size.height} />);
     for (let y = startY; y < size.height; y += step) lines.push(<line key={`gy-${y}`} x1={0} y1={y} x2={size.width} y2={y} />);
     return <g className="grid-lines">{lines}</g>;
-  }, [camera, project.settings.gridSize, project.settings.showGrid, size]);
+  }, [camera, size, view.gridSize, view.showGrid]);
 
   const handleObjectKeyDown = useStableCanvasEvent((event: ReactKeyboardEvent<SVGGElement>, target: Exclude<StructuralTarget, { kind: 'background' }>) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -1996,7 +2003,7 @@ export const StructuralCanvas = ({
     const rect = event.currentTarget.getBoundingClientRect();
     const client = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     const candidates = candidateTargetsAtPoint(client.x, client.y, target);
-    if (openCandidatePicker(candidates, localScreenPoint(client.x, client.y))) return;
+    if (openCandidatePicker(candidates, localScreenPoint(client.x, client.y), event.shiftKey)) return;
     performTargetAction(target, 'select', client);
     if (target.kind === 'nodalLoad' || target.kind === 'memberLoad') onRequestInspector?.();
   });
@@ -2010,7 +2017,7 @@ export const StructuralCanvas = ({
 
   for (const node of project.nodes) {
     const selected = selectedNodeIds.includes(node.id);
-    if (!selected && !(layers.labels && layers.ids && project.settings.showNodeLabels)) continue;
+    if (!selected && !(layers.labels && layers.ids && view.showNodeLabels)) continue;
     const anchor = toScreen(node.x, node.y);
     smartLabelCandidates.push({
       id: `node:${node.id}`,
@@ -2031,7 +2038,7 @@ export const StructuralCanvas = ({
     const b = toScreen(nj.x, nj.y);
     const anchor = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     const selected = selectedMemberIds.includes(member.id);
-    if (selected || (layers.labels && layers.ids && project.settings.showMemberLabels)) {
+    if (selected || (layers.labels && layers.ids && view.showMemberLabels)) {
       smartLabelCandidates.push({
         id: `member:${member.id}`,
         text: member.id,
@@ -2043,7 +2050,7 @@ export const StructuralCanvas = ({
       });
     }
     const dimensionToolActive = activeTool === 'dimension';
-    if (dimensionToolActive || (layers.labels && layers.dimensions && (project.settings.showLocalAxes || project.settings.showDimensions))) {
+    if (dimensionToolActive || (layers.labels && layers.dimensions && (view.showLocalAxes || view.showDimensions))) {
       smartLabelCandidates.push({
         id: `dimension:${member.id}`,
         text: `${formatFixed(toDisplay(Math.hypot(nj.x - ni.x, nj.y - ni.y), units, 'length'), 3)} ${lengthLabel}`,
@@ -2056,7 +2063,7 @@ export const StructuralCanvas = ({
     }
   }
 
-  if (loadsLayerVisible && project.settings.showLoads && resultTab !== 'influence') {
+  if (loadsLayerVisible && view.showLoads && resultTab !== 'influence') {
     for (const load of project.nodalLoads) {
       const node = nodeMap.get(load.nodeId);
       if (!node) continue;
@@ -2159,7 +2166,7 @@ export const StructuralCanvas = ({
     }
   }
 
-  if (layers.results && layers.labels && resultsAllowed && project.settings.showResultValues && analysis?.success) {
+  if (layers.results && layers.labels && resultsAllowed && view.showResultValues && analysis?.success) {
     for (const node of project.nodes) {
       const result = nodeResultMap.get(node.id);
       if (!result) continue;
@@ -2177,9 +2184,9 @@ export const StructuralCanvas = ({
       }
     }
 
-    if (['axial', 'shear', 'moment'].includes(resultTab) && project.settings.showResultOverlay) {
+    if (['axial', 'shear', 'moment'].includes(resultTab) && view.showResultOverlay) {
       const quantity = resultTab as DiagramQuantity;
-      const side = project.settings.diagramSide === 'negative' ? -1 : 1;
+      const side = view.diagramSide === 'negative' ? -1 : 1;
       for (const member of project.members) {
         const result = resultMap.get(member.id);
         const ni = nodeMap.get(member.i);
@@ -2246,6 +2253,7 @@ export const StructuralCanvas = ({
     size,
     toScreen,
     units,
+    view,
   ]);
   const smartLabelLayer = useMemo(() => <g className="smart-label-layer" data-label-detail={smartLabelDetailForScale(camera.scale)} aria-hidden="true">
     {placedSmartLabels.map((label) => {
@@ -2568,8 +2576,8 @@ export const StructuralCanvas = ({
         showHelp={layers.help}
         layers={layers}
         dispatchLayers={dispatchLayers}
-        snapEnabled={project.settings.snap}
-        gridEnabled={project.settings.showGrid}
+        snapEnabled={view.snap}
+        gridEnabled={view.showGrid}
         coordinateReadoutRef={coordinateReadoutRef}
         lengthLabel={lengthLabel}
         scale={camera.scale}
@@ -2621,7 +2629,7 @@ export const StructuralCanvas = ({
         onActivate={activateRepeat}
         onCancel={() => { setRepeatRecipe(null); setMemberStart(null); setActiveTool('select'); }}
       />
-      {layers.results && layers.labels && resultsAllowed && analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <div className={`canvas-result-legend ${resultTab}`} aria-label={t('canvas.diagramConvention')} data-canvas-chrome="result-legend"><strong>{resultTab === 'axial' ? `N · ${t('results.axial')}` : resultTab === 'shear' ? `V · ${t('results.shear')}` : `M · ${t('results.moment')}`}</strong><span><i /> {t('canvas.exactCurveScale', { scale: t(project.settings.diagramScaleMode === 'individual' ? 'canvas.scaleByMember' : 'canvas.scaleCommon') })}</span><small>{t('canvas.diagramSideDescription', { side: project.settings.diagramSide === 'positive' ? '+y' : '−y' })}</small></div> : null}
+      {layers.results && layers.labels && resultsAllowed && analysis?.success && ['axial', 'shear', 'moment'].includes(resultTab) ? <div className={`canvas-result-legend ${resultTab}`} aria-label={t('canvas.diagramConvention')} data-canvas-chrome="result-legend"><strong>{resultTab === 'axial' ? `N · ${t('results.axial')}` : resultTab === 'shear' ? `V · ${t('results.shear')}` : `M · ${t('results.moment')}`}</strong><span><i /> {t('canvas.exactCurveScale', { scale: t(view.diagramScaleMode === 'individual' ? 'canvas.scaleByMember' : 'canvas.scaleCommon') })}</span><small>{t('canvas.diagramSideDescription', { side: view.diagramSide === 'positive' ? '+y' : '−y' })}</small></div> : null}
       {demandLegend ? <div className="canvas-demand-legend" aria-label={t('canvas.demandLegendTitle')} data-canvas-chrome="demand-legend" data-testid="canvas-demand-legend">
         <strong>{t('canvas.demandLegendTitle')}</strong>
         {/* La rampa se declara con sus dos extremos y la referencia: sin esto el

@@ -40,6 +40,8 @@
 
 /* CRI-94: placement comes only from the broker's presentation attribute. */
 [data-workspace-surface][hidden] { display:none!important; }
+.workspace-surfaces { display:contents; }
+.workspace-surface-launcher { position:absolute; z-index:32; right:16px; bottom:16px; display:flex; gap:8px; align-items:center; }
 .app-shell:has(.inspector-panel[data-surface-presentation='inset']) .workspace,
 .app-shell:has(.inspector-panel[data-surface-presentation='sheet']) .workspace { grid-template-columns:var(--toolbar-w) minmax(0,1fr); }
 .inspector-panel[data-surface-presentation='dock'] { position:relative; display:flex; inset:auto; width:auto; height:auto; max-height:none; clip-path:none; border-radius:0; }

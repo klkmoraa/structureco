@@ -22,6 +22,7 @@ import { TOOL_REGISTRY } from '../canvas/toolRegistry';
 import type { EditorLayerAction, EditorLayerPresetId } from '../canvas/editorLayers';
 import type { SurfacePresentation } from './surfacePresentation';
 import { emitWorkspaceCommand } from './workspaceCommands';
+import { readCanvasViewSettings, withCanvasViewSettings } from '../view/canvasViewSettings';
 
 export interface CommandPaletteProps {
   open: boolean;
@@ -194,16 +195,16 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
     items.push({
       id: 'view:grid',
       group: 'view',
-      label: t(project.settings.showGrid ? 'canvas.gridOff' : 'canvas.gridOn'),
+      label: t(readCanvasViewSettings(project).showGrid ? 'canvas.gridOff' : 'canvas.gridOn'),
       icon: Layers3,
-      run: run(() => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, showGrid: !draft.settings.showGrid } }))),
+      run: run(() => updateProjectView((draft) => withCanvasViewSettings(draft, { showGrid: !readCanvasViewSettings(draft).showGrid }))),
     });
     items.push({
       id: 'view:snap',
       group: 'view',
-      label: t(project.settings.snap ? 'canvas.snapOff' : 'canvas.snapOn'),
+      label: t(readCanvasViewSettings(project).snap ? 'canvas.snapOff' : 'canvas.snapOn'),
       icon: Layers3,
-      run: run(() => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, snap: !draft.settings.snap } }))),
+      run: run(() => updateProjectView((draft) => withCanvasViewSettings(draft, { snap: !readCanvasViewSettings(draft).snap }))),
     });
     items.push({
       id: 'view:theme',

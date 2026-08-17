@@ -14,14 +14,14 @@ import {
 } from './surfacePresentation';
 
 const expectedTable: Record<'X2' | 'M1' | 'K0', Record<SurfaceId, SurfacePresentation>> = {
-  X2: { inspector: 'dock', results: 'dock', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
-  M1: { inspector: 'inset', results: 'inset', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
-  K0: { inspector: 'sheet', results: 'sheet', datasheet: 'fullscreen', doctor: 'fullscreen', palette: 'sheet', candidatePicker: 'sheet', contextualActions: 'inset' },
+  X2: { detail: 'dock', analysisSetup: 'dock', view: 'dock', results: 'dock', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
+  M1: { detail: 'inset', analysisSetup: 'inset', view: 'inset', results: 'inset', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
+  K0: { detail: 'sheet', analysisSetup: 'sheet', view: 'sheet', results: 'sheet', datasheet: 'fullscreen', doctor: 'fullscreen', palette: 'sheet', candidatePicker: 'sheet', contextualActions: 'inset' },
 };
 
 describe('surface presentation table', () => {
   it('is the literal X2/M1/K0 matrix for every broker-owned surface', () => {
-    expect(BROKER_SURFACE_IDS).toEqual(['inspector', 'results', 'datasheet', 'doctor', 'palette', 'candidatePicker', 'contextualActions']);
+    expect(BROKER_SURFACE_IDS).toEqual(['detail', 'analysisSetup', 'view', 'results', 'datasheet', 'doctor', 'palette', 'candidatePicker', 'contextualActions']);
     expect(SURFACE_PRESENTATION_TABLE).toEqual(expectedTable);
 
     for (const shellClass of ['X2', 'M1', 'K0'] as const) {
@@ -31,33 +31,33 @@ describe('surface presentation table', () => {
     }
   });
 
-  it('migrates an open Inspector without changing its logical intent', () => {
-    const state = openSurfaceIntent(createSurfaceBrokerState(), 'inspector');
+  it('migrates an open detail surface without changing its logical intent', () => {
+    const state = openSurfaceIntent(createSurfaceBrokerState(), 'detail');
 
-    expect(resolveSurfaceActivity('X2', state).inspector).toMatchObject({ status: 'active', presentation: 'dock' });
-    expect(resolveSurfaceActivity('M1', state).inspector).toMatchObject({ status: 'active', presentation: 'inset' });
-    expect(resolveSurfaceActivity('K0', state).inspector).toMatchObject({ status: 'active', presentation: 'sheet' });
-    expect(resolveSurfaceActivity('X2', state).inspector).toMatchObject({ status: 'active', presentation: 'dock' });
-    expect(state.surfaces.inspector.open).toBe(true);
+    expect(resolveSurfaceActivity('X2', state).detail).toMatchObject({ status: 'active', presentation: 'dock' });
+    expect(resolveSurfaceActivity('M1', state).detail).toMatchObject({ status: 'active', presentation: 'inset' });
+    expect(resolveSurfaceActivity('K0', state).detail).toMatchObject({ status: 'active', presentation: 'sheet' });
+    expect(resolveSurfaceActivity('X2', state).detail).toMatchObject({ status: 'active', presentation: 'dock' });
+    expect(state.surfaces.detail.open).toBe(true);
   });
 });
 
 describe('surface exclusivity', () => {
   it('keeps only the latest contextual layer active in Compact and resumes the prior layer after close', () => {
     let state = createSurfaceBrokerState(['results']);
-    state = openSurfaceIntent(state, 'inspector');
+    state = openSurfaceIntent(state, 'detail');
     state = openSurfaceIntent(state, 'datasheet');
 
     const compact = resolveSurfaceActivity('K0', state);
     expect(compact.datasheet.status).toBe('active');
-    expect(compact.inspector.status).toBe('suspended');
+    expect(compact.detail.status).toBe('suspended');
     expect(compact.results.status).toBe('suspended');
 
     state = closeSurfaceIntent(state, 'datasheet');
     const resumed = resolveSurfaceActivity('K0', state);
-    expect(resumed.inspector.status).toBe('active');
+    expect(resumed.detail.status).toBe('active');
     expect(resumed.results.status).toBe('suspended');
-    expect(state.surfaces.inspector.open).toBe(true);
+    expect(state.surfaces.detail.open).toBe(true);
   });
 
   it('never activates two drawer/fullscreen presentations in any class', () => {
@@ -90,10 +90,10 @@ describe('surface exclusivity', () => {
   });
 
   it('treats the candidate picker as one contextual Compact layer and migrates it without a selection-side effect', () => {
-    let state = openSurfaceIntent(createSurfaceBrokerState(['inspector']), 'candidatePicker');
+    let state = openSurfaceIntent(createSurfaceBrokerState(['detail']), 'candidatePicker');
 
     expect(resolveSurfaceActivity('K0', state).candidatePicker).toMatchObject({ status: 'active', presentation: 'sheet' });
-    expect(resolveSurfaceActivity('K0', state).inspector.status).toBe('suspended');
+    expect(resolveSurfaceActivity('K0', state).detail.status).toBe('suspended');
     expect(resolveSurfaceActivity('X2', state).candidatePicker).toMatchObject({ status: 'active', presentation: 'floating' });
     expect(resolveSurfaceActivity('K0', state).candidatePicker.status).toBe('active');
   });
@@ -118,7 +118,7 @@ describe('peek state', () => {
     expect(resolveSurfaceActivity('X2', state).datasheet.extent).toBe('peek');
     expect(resolveSurfaceActivity('K0', state).datasheet).toMatchObject({ presentation: 'fullscreen', extent: 'peek' });
 
-    const inspector = openSurfaceIntent(createSurfaceBrokerState(), 'inspector');
-    expect(() => setSurfaceExtent(inspector, 'K0', 'inspector', 'peek')).toThrow(/drawer|fullscreen/i);
+    const detail = openSurfaceIntent(createSurfaceBrokerState(), 'detail');
+    expect(() => setSurfaceExtent(detail, 'K0', 'detail', 'peek')).toThrow(/drawer|fullscreen/i);
   });
 });

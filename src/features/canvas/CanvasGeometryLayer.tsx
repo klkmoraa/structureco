@@ -15,6 +15,7 @@ import { formatFixed } from '../../utils/numberFormat';
 import { elasticIndexPaint } from '../results/elasticDemand';
 import type { TranslationKey } from '../../i18n/catalogs';
 import type { CandidateTarget } from './candidatePicker';
+import { readCanvasViewSettings } from '../view/canvasViewSettings';
 
 export type StructuralTarget =
   | { kind: 'background' }
@@ -69,6 +70,7 @@ const CanvasGeometryLayerImpl = ({
   layers, loadsLayerVisible, heatmapRatios, demandMapActive, resultTab, units, forceLabel, momentLabel, distributedLabel, t,
   onObjectPointerDown, onObjectKeyDown, onShowCut, onCutLeave,
 }: CanvasGeometryLayerProps) => {
+  const view = readCanvasViewSettings(project);
   const selectedNodeIds = selectionVisualState.nodeIds;
   const selectedMemberIds = selectionVisualState.memberIds;
 
@@ -288,7 +290,7 @@ const CanvasGeometryLayerImpl = ({
                 const faceJ = toScreen(nj.x - (nj.x - ni.x) * tj, nj.y - (nj.y - ni.y) * tj);
                 return <g className="rigid-zone-layer"><line x1={a.x} y1={a.y} x2={faceI.x} y2={faceI.y} /><line x1={faceJ.x} y1={faceJ.y} x2={b.x} y2={b.y} /><circle cx={faceI.x} cy={faceI.y} r="3" /><circle cx={faceJ.x} cy={faceJ.y} r="3" /></g>;
               })() : null}
-              {layers.dimensions && project.settings.showLocalAxes ? (() => {
+              {layers.dimensions && view.showLocalAxes ? (() => {
                 const mx = (a.x + b.x) / 2; const my = (a.y + b.y) / 2;
                 const length = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y));
                 const ux = (b.x - a.x) / length; const uy = (b.y - a.y) / length;
@@ -304,7 +306,7 @@ const CanvasGeometryLayerImpl = ({
 
   return <>
     <g className="support-layer">{project.nodes.map(renderSupport)}</g>
-    {loadsLayerVisible && project.settings.showLoads && resultTab !== 'influence' ? <g className="load-layer">{project.memberLoads.map(renderMemberLoad)}{project.nodalLoads.map(renderNodalLoad)}</g> : null}
+    {loadsLayerVisible && view.showLoads && resultTab !== 'influence' ? <g className="load-layer">{project.memberLoads.map(renderMemberLoad)}{project.nodalLoads.map(renderNodalLoad)}</g> : null}
     <g className="node-layer">
       {project.nodes.map((node) => {
         const p = toScreen(node.x, node.y);

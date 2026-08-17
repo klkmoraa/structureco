@@ -10,6 +10,8 @@ export interface CandidatePickerState {
   candidates: readonly CandidateTarget[];
   activeIndex: number;
   previousSelection: Selection;
+  /** The original selection gesture asked to extend the selection. */
+  additive: boolean;
   anchor: { x: number; y: number };
 }
 
@@ -22,12 +24,14 @@ export const createCandidatePickerState = (
   previousSelection: Selection,
   anchor: { x: number; y: number },
   activeIndex = 0,
+  additive = false,
 ): CandidatePickerState | null => {
   if (!shouldOpenCandidatePicker(candidates.length)) return null;
   return {
     candidates: [...candidates],
     activeIndex: Math.min(Math.max(0, activeIndex), candidates.length - 1),
     previousSelection,
+    additive,
     anchor,
   };
 };

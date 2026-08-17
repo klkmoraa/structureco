@@ -9,6 +9,7 @@ import { ClassroomGuide } from '../classroom/ClassroomGuide';
 import { ToastNotification } from './ToastNotification';
 import { useI18n } from '../../i18n/useI18n';
 import { useProject } from '../../store/ProjectContext';
+import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import { createPersistedEditorLayerState, editorLayerReducer, persistEditorLayerState } from '../canvas/editorLayers';
 import { AppShellLayout } from './AppShellLayout';
 import { isToolRailCompact } from './shellComposition';
@@ -44,11 +45,14 @@ const WorkspaceBrokerContent = ({
   const modelDoctorToastRef = useRef<{ projectId: string; signature: string }>({ projectId, signature: '' });
   const { t } = useI18n();
   const { project, analysis, setActiveTool, analyze } = useProject();
+  const { activeTool } = useWorkspaceUI();
   const { preferences: layout, setPreference, togglePreference } = layoutController;
   const { shellClass } = useShellComposition();
   const broker = useSurfacePresentation();
   const { openSurface, closeSurface, toggleSurface, markSurfaceReady } = broker;
-  const inspector = broker.stateFor('inspector');
+  const detail = broker.stateFor('detail');
+  const analysisSetup = broker.stateFor('analysisSetup');
+  const view = broker.stateFor('view');
   const results = broker.stateFor('results');
   const datasheet = broker.stateFor('datasheet');
   const doctor = broker.stateFor('doctor');
@@ -167,32 +171,34 @@ const WorkspaceBrokerContent = ({
     projectId={projectId}
     skipLabel={t('shell.skipToCanvas')}
     shellClass={shellClass}
-    inspectorCollapsed={!inspector.open}
+    inspectorCollapsed={!detail.open}
     inspectorWidth={layout.inspectorWidth}
     fullCanvas={layout.fullCanvas}
     topBar={<TopBar
       onOpenHome={onOpenHome}
       onOpenSpace3D={onOpenSpace3D}
       layoutActions={{
-        inspectorCollapsed: !inspector.open,
+        inspectorCollapsed: !detail.open,
         fullCanvas: layout.fullCanvas,
         onToggleInspector: () => {
           if (layout.fullCanvas) setPreference('fullCanvas', false);
-          if (inspector.open) {
-            closeSurface('inspector');
+          if (detail.open) {
+            closeSurface('detail');
             setPreference('inspectorCollapsed', true);
           } else {
-            openSurface('inspector');
+            openSurface('detail');
             setPreference('inspectorCollapsed', false);
           }
         },
         onToggleFullCanvas: () => {
           if (!layout.fullCanvas) {
-            closeSurface('inspector');
+            closeSurface('detail');
+            closeSurface('analysisSetup');
+            closeSurface('view');
             closeSurface('results');
           } else {
             openSurface('results');
-            if (!layout.inspectorCollapsed) openSurface('inspector');
+            if (!layout.inspectorCollapsed) openSurface('detail');
           }
           togglePreference('fullCanvas');
         },
@@ -201,7 +207,7 @@ const WorkspaceBrokerContent = ({
     toolRail={<ToolRail compact={isToolRailCompact(shellClass)} />}
     workspace={<>
       {project.settings.calculationMode === 'classroom' ? <ClassroomGuide className="classroom-workspace-journey" project={project} analysis={analysis} onChooseTool={setActiveTool} onAnalyze={analyze} /> : null}
-      <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => openSurface('inspector')} />
+      <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => openSurface('detail')} />
       {broker.isRetained('results') ? <ResultsPanel
         presentation={results.presentation as 'dock' | 'inset' | 'sheet'}
         status={results.status}
@@ -229,25 +235,16 @@ const WorkspaceBrokerContent = ({
         onAcknowledgedIdsChange={setModelDoctorAcknowledgedIds}
       /></Suspense> : null}
     </>}
-    inspector={broker.isRetained('inspector') ? <Inspector
-      className={inspector.presentation === 'sheet' && inspector.status === 'active' ? 'mobile-open' : ''}
-      desktopWidth={layout.inspectorWidth}
-      presentation={inspector.presentation as 'dock' | 'inset' | 'sheet'}
-      status={inspector.status}
-      onClose={() => closeSurface('inspector')}
-      onDesktopWidthChange={(width) => setPreference('inspectorWidth', width)}
-      mobileDetent={layout.inspectorDetent}
-      onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)}
-    /> : null}
-    floatingActions={inspector.status !== 'active' ? <button
-      className="mobile-inspector-toggle"
-      onClick={(event) => openSurface('inspector', event.currentTarget)}
-      aria-label={t('inspector.open')}
-      aria-expanded={false}
-      aria-controls="workspace-inspector"
-    >
-      <SlidersHorizontal size={20} />
-    </button> : null}
+    inspector={<div className="workspace-surfaces">
+      {broker.isRetained('detail') ? <Inspector surface="detail" className={detail.presentation === 'sheet' && detail.status === 'active' ? 'mobile-open' : ''} desktopWidth={layout.inspectorWidth} presentation={detail.presentation as 'dock' | 'inset' | 'sheet'} status={detail.status} onClose={() => closeSurface('detail')} onDesktopWidthChange={(width) => setPreference('inspectorWidth', width)} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} /> : null}
+      {broker.isRetained('analysisSetup') ? <Inspector surface="analysisSetup" className={analysisSetup.presentation === 'sheet' && analysisSetup.status === 'active' ? 'mobile-open' : ''} presentation={analysisSetup.presentation as 'dock' | 'inset' | 'sheet'} status={analysisSetup.status} onClose={() => closeSurface('analysisSetup')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} activeTool={activeTool} onActiveToolChange={setActiveTool} /> : null}
+      {broker.isRetained('view') ? <Inspector surface="view" className={view.presentation === 'sheet' && view.status === 'active' ? 'mobile-open' : ''} presentation={view.presentation as 'dock' | 'inset' | 'sheet'} status={view.status} onClose={() => closeSurface('view')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} /> : null}
+    </div>}
+    floatingActions={<div className="workspace-surface-launcher">
+      <button className="mobile-inspector-toggle" onClick={(event) => openSurface('detail', event.currentTarget)} aria-label={t('inspector.open')} aria-expanded={detail.status === 'active'} aria-controls="workspace-detail"><SlidersHorizontal size={20} /></button>
+      <button type="button" onClick={(event) => openSurface('analysisSetup', event.currentTarget)} aria-label={t('inspector.loadsTab')}>{t('inspector.loadsTab')}</button>
+      <button type="button" onClick={(event) => openSurface('view', event.currentTarget)} aria-label={t('inspector.viewTab')}>{t('inspector.viewTab')}</button>
+    </div>}
     footer={<div className="professional-note">{t('app.professionalNote')}</div>}
   />;
 };
@@ -259,7 +256,7 @@ const WorkspaceSurface = (props: WorkspaceShellProps) => {
   const initialOpen = useMemo<SurfaceId[]>(() => {
     if (layoutController.preferences.fullCanvas) return [];
     const surfaces: SurfaceId[] = ['results'];
-    if (!layoutController.preferences.inspectorCollapsed) surfaces.push('inspector');
+    if (!layoutController.preferences.inspectorCollapsed) surfaces.push('detail');
     return surfaces;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
