@@ -25,8 +25,12 @@ export const NumericQualityCard = ({ analysis }: { analysis: AnalysisResult }) =
     ? analysis.linearSolver.backend === 'sparse-ldlt' ? 'Sparse LDLT' : 'Dense LU'
     : unavailable;
 
+  /* Materia fija: `raised` para cualquier estado. La calidad numérica se lee
+     en su texto y en su etiqueta, nunca en el color de la tarjeta — así un
+     análisis estable y uno limitado tienen exactamente la misma materia. */
   return <section
     className="numeric-quality-card"
+    data-level="raised"
     data-state={state}
     aria-label={t('results.qualityTitle')}
   >

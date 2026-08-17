@@ -12,7 +12,7 @@ import {
 import { useI18n } from '../../i18n/useI18n';
 import type { AnalysisResult } from '../../types';
 import { Popover } from '../../design-system/components/overlays';
-import { describeReliabilityCheck } from '../results/reliabilityCopy';
+import { describeReliabilityCheck, reliabilityLevelLabelKey } from '../results/reliabilityCopy';
 import { deriveAnalysisStatus, deriveReliabilityPresentation, type AnalysisVisualStatus } from './analysisStatusModel';
 
 interface AnalysisStatusProps {
@@ -39,13 +39,6 @@ const statusPresentation: Record<AnalysisVisualStatus, {
   warning: { icon: TriangleAlert, labelKey: 'analysis.statusWarning' },
   error: { icon: CircleX, labelKey: 'analysis.statusError' },
 };
-
-const reliabilityLevelLabelKey = {
-  reliable: 'reliability.levelReliable',
-  limited: 'reliability.levelLimited',
-  unreliable: 'reliability.levelUnreliable',
-  failed: 'reliability.levelUnavailable',
-} as const;
 
 /**
  * Memoized so a diagram-cursor step or an evidence-layer switch — neither of

@@ -12,6 +12,7 @@
  * listening keeps working — but the name and the payload now have one definition each.
  */
 import type { Selection } from '../../types';
+import type { DenseResultView } from '../results/denseResults';
 
 /** A selection that names exactly one object; `multi` and `null` cannot be focused. */
 export type FocusableSelection = Extract<NonNullable<Selection>, { id: string }>;
@@ -28,6 +29,12 @@ export interface WorkspaceCommands {
   'fit-canvas': void;
   /** Request the Results surface; the presentation broker chooses its placement. */
   'open-results': void;
+  /**
+   * Invoke the dense results surface (reactions, influence, "Entender") on a
+   * given view. It is never resident, so the launcher travels with the element
+   * that asked for it: the broker returns focus there when the surface closes.
+   */
+  'open-dense-results': { view: DenseResultView; trigger?: HTMLElement | null };
   /** Export the structural canvas as a standalone SVG file. */
   'export-svg': void;
   /** Export the structural canvas as a raster image. */

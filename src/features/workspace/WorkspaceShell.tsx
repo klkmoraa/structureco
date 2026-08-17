@@ -18,6 +18,7 @@ import { SurfacePresentationProvider } from './SurfacePresentationProvider';
 import { useShellComposition } from './useShellComposition';
 import { useSurfacePresentation } from './useSurfacePresentation';
 import { normalizeInspectorDetent, useWorkspaceLayoutPreferences } from './useWorkspaceLayoutPreferences';
+import { preloadDenseResultsSurface, type DenseResultView } from '../results/denseResults';
 import type { SurfaceId } from './surfacePresentation';
 import '../../design-system/components/ui.css';
 import './phase1.css';
@@ -26,6 +27,7 @@ import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
 const LazyCommandPalette = lazy(() => import('./CommandPalette').then((module) => ({ default: module.CommandPalette })));
 const LazyModelDoctor = lazy(() => import('../model-doctor/ModelDoctor').then((module) => ({ default: module.ModelDoctor })));
 const LazyDatasheet = lazy(() => import('../datasheet/DatasheetPanel').then((module) => ({ default: module.DatasheetPanel })));
+const LazyDenseResults = lazy(() => preloadDenseResultsSurface());
 
 type WorkspaceShellProps = { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string };
 type LayoutController = ReturnType<typeof useWorkspaceLayoutPreferences>;
@@ -54,6 +56,8 @@ const WorkspaceBrokerContent = ({
   const analysisSetup = broker.stateFor('analysisSetup');
   const view = broker.stateFor('view');
   const results = broker.stateFor('results');
+  const dense = broker.stateFor('dense');
+  const [denseView, setDenseView] = useState<DenseResultView>('reactions');
   const datasheet = broker.stateFor('datasheet');
   const doctor = broker.stateFor('doctor');
   const palette = broker.stateFor('palette');
@@ -85,13 +89,19 @@ const WorkspaceBrokerContent = ({
       onWorkspaceCommand('open-model-doctor', () => openSurface('doctor')),
       onWorkspaceCommand('open-datasheet', () => openSurface('datasheet')),
       onWorkspaceCommand('open-results', () => openSurface('results')),
+      /* `dense` es invocada: el lanzador viaja en el propio comando para que el
+         broker sepa a dónde devolver el foco al cerrar. */
+      onWorkspaceCommand('open-dense-results', ({ view: requestedView, trigger }) => {
+        setDenseView(requestedView);
+        openSurface('dense', trigger);
+      }),
     ];
     return () => subscriptions.forEach((unsubscribe) => unsubscribe());
   }, [openSurface]);
 
   useEffect(() => {
     setModelDoctorAcknowledgedIds(new Set());
-    (['datasheet', 'doctor', 'palette'] as const).forEach((surface) => closeSurface(surface));
+    (['dense', 'datasheet', 'doctor', 'palette'] as const).forEach((surface) => closeSurface(surface));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
@@ -163,6 +173,11 @@ const WorkspaceBrokerContent = ({
     if (open) openSurface('doctor');
     else closeSurface('doctor');
   }, [closeSurface, openSurface]);
+  const setDenseOpen = useCallback((open: boolean) => {
+    if (open) openSurface('dense');
+    else closeSurface('dense');
+  }, [closeSurface, openSurface]);
+  const markDenseReady = useCallback((ready: boolean) => markSurfaceReady('dense', ready), [markSurfaceReady]);
   const markDatasheetReady = useCallback((ready: boolean) => markSurfaceReady('datasheet', ready), [markSurfaceReady]);
   const markDoctorReady = useCallback((ready: boolean) => markSurfaceReady('doctor', ready), [markSurfaceReady]);
 
@@ -220,6 +235,16 @@ const WorkspaceBrokerContent = ({
         onClose={() => closeSurface('palette')}
         dispatchLayers={dispatchEditorLayers}
         presentation={palette.presentation as 'overlay' | 'sheet'}
+      /></Suspense> : null}
+      {/* Invocada, nunca residente: sólo existe en el árbol mientras el broker
+          la retiene, y desaparece al cerrarse (CRI-101). */}
+      {broker.isRetained('dense') ? <Suspense fallback={<span className="sr-only" role="status">{t('results.denseLoading')}</span>}><LazyDenseResults
+        open={dense.status === 'active'}
+        view={denseView}
+        onViewChange={setDenseView}
+        onOpenChange={setDenseOpen}
+        presentation={dense.presentation as 'drawer' | 'fullscreen'}
+        onSurfaceReady={markDenseReady}
       /></Suspense> : null}
       {broker.isRetained('datasheet') ? <Suspense fallback={null}><LazyDatasheet
         open={datasheet.status === 'active'}

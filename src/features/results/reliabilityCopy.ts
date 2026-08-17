@@ -12,10 +12,23 @@
  * se midió y si pasó; esta capa sólo decide cómo se dice.
  */
 import type { TranslationKey } from '../../i18n/catalogs';
-import type { ReliabilityCheck, ReliabilityCheckId } from '../../types';
+import type { ReliabilityCheck, ReliabilityCheckId, ReliabilityLevel } from '../../types';
 import { formatScientific } from '../../utils/numberFormat';
 
 export type Translate = (key: TranslationKey, variables?: Record<string, string | number>) => string;
+
+/**
+ * Las cuatro palabras con las que el producto nombra la fiabilidad. Viven aquí
+ * —y no en cada superficie— para que el TopBar (CRI-100) y las tarjetas de
+ * resultado (CRI-101) digan literalmente lo mismo: la fiabilidad es una línea
+ * de texto, y una sola redacción evita que dos zonas discrepen.
+ */
+export const reliabilityLevelLabelKey: Record<ReliabilityLevel, TranslationKey> = {
+  reliable: 'reliability.levelReliable',
+  limited: 'reliability.levelLimited',
+  unreliable: 'reliability.levelUnreliable',
+  failed: 'reliability.levelUnavailable',
+};
 
 export const reliabilityCheckLabelKey: Record<ReliabilityCheckId, TranslationKey> = {
   condition: 'reliability.checkCondition',

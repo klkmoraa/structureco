@@ -18,6 +18,14 @@ export const BROKER_SURFACE_IDS = [
   'analysisSetup',
   'view',
   'results',
+  /**
+   * `dense` es la superficie invocada de los datos densos de Results
+   * —reacciones, influencia y «Entender» (CRI-101)—. No es residente en
+   * ninguna clase: se abre a petición y se cierra devolviendo el foco, por eso
+   * su presentación es siempre modal (`drawer` en X2/M1, `fullscreen` en K0) y
+   * admite `peek`.
+   */
+  'dense',
   'datasheet',
   'doctor',
   'palette',
@@ -35,6 +43,7 @@ export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Re
     analysisSetup: 'dock',
     view: 'dock',
     results: 'dock',
+    dense: 'drawer',
     datasheet: 'drawer',
     doctor: 'drawer',
     palette: 'overlay',
@@ -46,6 +55,7 @@ export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Re
     analysisSetup: 'inset',
     view: 'inset',
     results: 'inset',
+    dense: 'drawer',
     datasheet: 'drawer',
     doctor: 'drawer',
     palette: 'overlay',
@@ -57,6 +67,7 @@ export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Re
     analysisSetup: 'sheet',
     view: 'sheet',
     results: 'sheet',
+    dense: 'fullscreen',
     datasheet: 'fullscreen',
     doctor: 'fullscreen',
     palette: 'sheet',

@@ -117,9 +117,14 @@ const measureDenseRow = async (page) => {
   const analyze = page.getByRole('button', { name: /analizar/i }).first();
   if (!await analyze.count()) return null;
   await analyze.click({ timeout: 8_000 }).catch(() => undefined);
-  const reactions = page.getByRole('tab', { name: 'Reacciones' }).first();
+  /* Reacciones dejó de ser pestaña residente en CRI-101: la tabla densa vive en
+     la superficie invocada `dense`, que se abre desde su lanzador. */
+  const reactions = page.locator('[data-dense-launcher="reactions"]').first();
   await reactions.waitFor({ state: 'visible', timeout: 20_000 }).catch(() => undefined);
-  await reactions.click({ timeout: 8_000 }).catch(() => undefined);
+  if (await reactions.count()) {
+    await reactions.focus().catch(() => undefined);
+    await page.keyboard.press('Enter').catch(() => undefined);
+  }
   await page.locator('.results-table tbody td').first().waitFor({ state: 'attached', timeout: 15_000 }).catch(() => undefined);
   await page.waitForTimeout(400);
   return page.evaluate(() => {

@@ -73,6 +73,7 @@ export const ElasticDemandCard = () => {
       : view.blocker === 'unreliable' ? 'elastic.blockedUnreliable' : 'elastic.blockedNoMember';
     const firstGap = view.gaps[0];
     return <section
+      data-level="raised"
       className="elastic-demand"
       data-status="unavailable"
       data-coverage="unavailable"
@@ -120,6 +121,7 @@ export const ElasticDemandCard = () => {
   const axialShare = Math.round(highest.axialShare * 100);
 
   return <section
+    data-level="raised"
     className="elastic-demand"
     data-status="available"
     data-coverage={view.coverage}

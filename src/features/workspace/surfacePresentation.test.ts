@@ -14,14 +14,14 @@ import {
 } from './surfacePresentation';
 
 const expectedTable: Record<'X2' | 'M1' | 'K0', Record<SurfaceId, SurfacePresentation>> = {
-  X2: { detail: 'dock', analysisSetup: 'dock', view: 'dock', results: 'dock', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
-  M1: { detail: 'inset', analysisSetup: 'inset', view: 'inset', results: 'inset', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
-  K0: { detail: 'sheet', analysisSetup: 'sheet', view: 'sheet', results: 'sheet', datasheet: 'fullscreen', doctor: 'fullscreen', palette: 'sheet', candidatePicker: 'sheet', contextualActions: 'inset' },
+  X2: { detail: 'dock', analysisSetup: 'dock', view: 'dock', results: 'dock', dense: 'drawer', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
+  M1: { detail: 'inset', analysisSetup: 'inset', view: 'inset', results: 'inset', dense: 'drawer', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
+  K0: { detail: 'sheet', analysisSetup: 'sheet', view: 'sheet', results: 'sheet', dense: 'fullscreen', datasheet: 'fullscreen', doctor: 'fullscreen', palette: 'sheet', candidatePicker: 'sheet', contextualActions: 'inset' },
 };
 
 describe('surface presentation table', () => {
   it('is the literal X2/M1/K0 matrix for every broker-owned surface', () => {
-    expect(BROKER_SURFACE_IDS).toEqual(['detail', 'analysisSetup', 'view', 'results', 'datasheet', 'doctor', 'palette', 'candidatePicker', 'contextualActions']);
+    expect(BROKER_SURFACE_IDS).toEqual(['detail', 'analysisSetup', 'view', 'results', 'dense', 'datasheet', 'doctor', 'palette', 'candidatePicker', 'contextualActions']);
     expect(SURFACE_PRESENTATION_TABLE).toEqual(expectedTable);
 
     for (const shellClass of ['X2', 'M1', 'K0'] as const) {
@@ -112,6 +112,25 @@ describe('surface exclusivity', () => {
 });
 
 describe('peek state', () => {
+  it('admite `peek` sobre la superficie densa en las tres clases, porque es modal en todas', () => {
+    // `dense` es invocada, nunca residente: en X2/M1 llega como `drawer` y en
+    // K0 como `fullscreen`, así que `peek` es válido en las tres (CRI-101).
+    for (const shellClass of ['X2', 'M1', 'K0'] as const) {
+      const opened = openSurfaceIntent(createSurfaceBrokerState(), 'dense');
+      const peeking = setSurfaceExtent(opened, shellClass, 'dense', 'peek');
+      const activity = resolveSurfaceActivity(shellClass, peeking);
+      expect(activity.dense).toMatchObject({
+        presentation: shellClass === 'K0' ? 'fullscreen' : 'drawer',
+        extent: 'peek',
+        status: 'active',
+      });
+      expect(validateSurfaceCombination(shellClass, activity)).toEqual([]);
+      // Y no queda abierta al cerrarla: no hay residencia que recordar.
+      const closed = resolveSurfaceActivity(shellClass, closeSurfaceIntent(peeking, 'dense'));
+      expect(closed.dense).toMatchObject({ status: 'closed', extent: 'default' });
+    }
+  });
+
   it('allows peek only as state of a drawer/fullscreen presentation', () => {
     let state = openSurfaceIntent(createSurfaceBrokerState(), 'datasheet');
     state = setSurfaceExtent(state, 'X2', 'datasheet', 'peek');

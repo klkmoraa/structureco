@@ -137,6 +137,28 @@
   box-shadow: none;
 }
 
+/* Una tabla dentro de una tarjeta va PLANA: la tarjeta ya es el marco (V-10).
+   Sin sombra, sin canto de volumen, sin celdas redondeadas y sin un segundo
+   borde alrededor del scroll. Comparar cuarenta posiciones sigue siendo
+   posible porque la rejilla no se convierte en fichas. */
+[data-level='raised'] > .table-wrap,
+[data-level='raised'] > .summary-table-wrap {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+[data-level='raised'] .results-table,
+[data-level='raised'] .results-table caption,
+[data-level='raised'] .results-table thead th,
+[data-level='raised'] .results-table tbody th,
+[data-level='raised'] .results-table tbody td {
+  background-image: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .datasheet-grid tbody th,
 .datasheet-grid tbody td,
 .datasheet-cell-editor { border-radius: 0; }
