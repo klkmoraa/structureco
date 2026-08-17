@@ -1,0 +1,26 @@
+{
+  "name": "structureco-video",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Motion graphics claymorphism de structureCo (Remotion). Proyecto aislado: no toca las dependencias de la app.",
+  "scripts": {
+    "studio": "remotion studio",
+    "render:manifiesto": "remotion render Manifiesto out/structureco-manifiesto.mp4",
+    "render:analisis": "remotion render Analisis2D out/structureco-analisis-2d.mp4",
+    "render:aula": "remotion render Aula out/structureco-aula.mp4",
+    "render:space3d": "remotion render Space3D out/structureco-space3d.mp4",
+    "render:all": "node scripts/render-all.mjs",
+    "still:all": "node scripts/stills.mjs"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.512",
+    "@remotion/fonts": "4.0.512",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.512"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "typescript": "5.9.3"
+  }
+}
