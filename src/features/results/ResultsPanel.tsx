@@ -11,6 +11,8 @@ import type { DiagramQuantity, DiagramSegment, EducationalAssertionTarget, Matri
 import { toDisplay, unitLabel } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import type { TranslationKey } from '../../i18n/catalogs';
+import { Popover } from '../../design-system/components/overlays';
+import { describeReliabilityCheck } from './reliabilityCopy';
 import { ResultSummary } from './ResultSummary';
 import { NumericQualityCard } from './NumericQualityCard';
 import { deriveClassroomProgress, type ClassroomProgressStepId } from '../../education/classroomProgress';
@@ -94,6 +96,7 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
   const [drag, setDrag] = useState<{ y: number; height: number } | null>(null);
   const mobileExpanded = status === 'active';
   const [panelMode, setPanelMode] = useState<ResultsPanelMode>(readResultsMode);
+  const [governingCauseOpen, setGoverningCauseOpen] = useState(false);
   const previousAnalysisRef = useRef(analysis);
   const resizeFrameRef = useRef<number | null>(null);
   const pendingHeightRef = useRef<number | null>(null);
@@ -313,7 +316,27 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
         <div className="results-commandbar__context">
           <span>{t('results.center')}</span>
           <strong>{resultContext.label}</strong>
-          <small role="status" aria-live="polite" aria-atomic="true" title={reliability?.governing?.message} className={analysis?.success ? (reliability && reliability.level !== 'reliable' ? 'is-warning' : 'is-resolved') : analysis && !analysis.success ? 'is-warning' : ''}>{analysisState}</small>
+          <small role="status" aria-live="polite" aria-atomic="true" className={analysis?.success ? (reliability && reliability.level !== 'reliable' ? 'is-warning' : 'is-resolved') : analysis && !analysis.success ? 'is-warning' : ''}>{analysisState}</small>
+          {/* D-14 (CRI-95): la causa gobernante de fiabilidad vivía sólo en un
+              `title`, inalcanzable por teclado y por touch. Aquí pasa a un
+              elemento enfocable con la estructura qué/por qué/qué hacer, y no
+              duplica el `aria-live` del `<small>` de al lado. */}
+          {reliability?.governing ? (
+            <Popover
+              label={t('reliability.governingCauseLabel')}
+              trigger={<AlertCircle size={14} aria-hidden="true" />}
+              open={governingCauseOpen}
+              onOpenChange={setGoverningCauseOpen}
+              align="start"
+              className="reliability-governing-cause"
+            >
+              <dl className="reliability-governing-cause__body">
+                <div><dt>{t('reliability.causeWhatHeading')}</dt><dd>{analysisState}</dd></div>
+                <div><dt>{t('reliability.causeWhyHeading')}</dt><dd>{describeReliabilityCheck(reliability.governing, t)}</dd></div>
+                <div><dt>{t('reliability.causeNextHeading')}</dt><dd>{t(reliability.level === 'unreliable' ? 'reliability.nextStepsUnreliable' : 'reliability.nextStepsLimited')}</dd></div>
+              </dl>
+            </Popover>
+          ) : null}
         </div>
         <div className="results-mode-control" role="group" aria-label={t('results.modeGroup')}>
           {(['compact', 'expanded', 'focused'] as const).map((mode) => <button

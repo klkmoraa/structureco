@@ -361,75 +361,63 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
         </AnimatePresence>
       </div>
 
-      <div className="topbar-zone topbar-context-zone" data-topbar-zone="context" data-topbar-cluster="context" aria-label={t('analysis.caseOrCombination')}>
-        <label className="topbar-context-control topbar-context-control--scenario" data-context-control="scenario">
-          <span>{t('analysis.caseOrCombination')}</span>
-          <select
-            className="compact-select combination-select"
-            aria-label={t('analysis.caseOrCombination')}
-            value={selectedCombinationId}
-            onChange={(event) => setSelectedCombinationId(event.target.value)}
-          >
-            <option value="">{t('analysis.activeCases')}</option>
-            {project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}
-          </select>
-        </label>
-        <label className="topbar-context-control" data-context-control="mode">
-          <span>{t('analysis.mode')}</span>
-          <select
-            className="compact-select mode-select"
-            aria-label={t('analysis.mode')}
-            value={project.settings.calculationMode ?? 'complete'}
-            onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } }))}
-          >
-            <option value="classroom">{t('analysis.modeClassroom')}</option>
-            <option value="complete">{t('analysis.modeComplete')}</option>
-          </select>
-        </label>
-        <label className="topbar-context-control" data-context-control="order">
-          <span>{t('analysis.order')}</span>
-          <select
-            className="compact-select analysis-order-select"
-            aria-label={t('analysis.order')}
-            value={project.settings.analysisMode ?? 'first-order'}
-            onChange={(event) => updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: event.target.value as 'first-order' | 'p-delta' }))}
-          >
-            <option value="first-order">{t('analysis.orderFirst')}</option>
-            <option value="p-delta">{t('analysis.orderPDelta')}</option>
-          </select>
-        </label>
-        <label className="topbar-context-control topbar-context-control--units" data-context-control="units">
-          <span>{t('units.label')}</span>
-          <select
-            className="compact-select units-select"
-            aria-label={t('units.label')}
-            value={project.settings.units}
-            onChange={(event) => updateProjectView((draft) => ({
-              ...draft,
-              settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units },
-            }))}
-          >
-            <option value="kN-m">kN · m</option>
-            <option value="N-mm">N · mm</option>
-            <option value="kgf-m">kgf · m</option>
-            <option value="kip-ft">kip · ft</option>
-          </select>
-        </label>
-      </div>
-
-      <div className="top-actions topbar-zone topbar-actions-zone" data-topbar-zone="actions" data-topbar-cluster="actions">
-        {/* En pantallas anchas el botón lleva texto; por debajo de 1536px
-            colapsa a icono en CSS y libera el ancho que la zona necesita. */}
-        <button
-          type="button"
-          className="topbar-command-button model-doctor-launcher"
-          onClick={openModelDoctor}
-          aria-label="Model Doctor"
-          title={t('modelDoctor.description')}
-        >
-          <Wrench size={17} aria-hidden="true" />
-          <span>Model Doctor</span>
-        </button>
+      <div className="top-actions topbar-zone topbar-actions-zone" data-topbar-zone="actions">
+        <div className="topbar-context-zone" data-topbar-cluster="context" aria-label={t('analysis.caseOrCombination')}>
+          <label className="topbar-context-control topbar-context-control--scenario" data-context-control="scenario">
+            <span>{t('analysis.caseOrCombination')}</span>
+            <select
+              className="compact-select combination-select"
+              aria-label={t('analysis.caseOrCombination')}
+              value={selectedCombinationId}
+              onChange={(event) => setSelectedCombinationId(event.target.value)}
+            >
+              <option value="">{t('analysis.activeCases')}</option>
+              {project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}
+            </select>
+          </label>
+          <label className="topbar-context-control" data-context-control="mode">
+            <span>{t('analysis.mode')}</span>
+            <select
+              className="compact-select mode-select"
+              aria-label={t('analysis.mode')}
+              value={project.settings.calculationMode ?? 'complete'}
+              onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } }))}
+            >
+              <option value="classroom">{t('analysis.modeClassroom')}</option>
+              <option value="complete">{t('analysis.modeComplete')}</option>
+            </select>
+          </label>
+          <label className="topbar-context-control" data-context-control="order">
+            <span>{t('analysis.order')}</span>
+            <select
+              className="compact-select analysis-order-select"
+              aria-label={t('analysis.order')}
+              value={project.settings.analysisMode ?? 'first-order'}
+              onChange={(event) => updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: event.target.value as 'first-order' | 'p-delta' }))}
+            >
+              <option value="first-order">{t('analysis.orderFirst')}</option>
+              <option value="p-delta">{t('analysis.orderPDelta')}</option>
+            </select>
+          </label>
+          <label className="topbar-context-control topbar-context-control--units" data-context-control="units">
+            <span>{t('units.label')}</span>
+            <select
+              className="compact-select units-select"
+              aria-label={t('units.label')}
+              value={project.settings.units}
+              onChange={(event) => updateProjectView((draft) => ({
+                ...draft,
+                settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units },
+              }))}
+            >
+              <option value="kN-m">kN · m</option>
+              <option value="N-mm">N · mm</option>
+              <option value="kgf-m">kgf · m</option>
+              <option value="kip-ft">kip · ft</option>
+            </select>
+          </label>
+        </div>
+        <div className="topbar-command-cluster" data-topbar-cluster="actions">
         <IconButton
           variant="secondary"
           className="icon-button datasheet-launcher"
@@ -448,14 +436,6 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           <IconButton variant="secondary" className="icon-button" label={t('history.undo')} onClick={undo} disabled={!canUndo} title={t('history.undo')}><Undo2 size={19} /></IconButton>
           <IconButton variant="secondary" className="icon-button" label={t('history.redo')} onClick={redo} disabled={!canRedo} title={t('history.redo')}><Redo2 size={19} /></IconButton>
         </div>
-        <AnalysisStatus
-          projectId={project.id}
-          analysis={analysis}
-          isAnalyzing={isAnalyzing}
-          onOpenModelDoctor={() => {
-            emitWorkspaceCommand('open-model-doctor');
-          }}
-        />
         <div className="export-wrap">
           <IconButton variant="secondary" ref={exportMenuButtonRef} className="icon-button" label={t('export.label')} title={t('export.label')} aria-expanded={showExportMenu} aria-haspopup="menu" onClick={toggleExportMenu}><Download size={19} /></IconButton>
           <AnimatePresence>
@@ -485,6 +465,9 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
                 <div className="menu-section">
                   <div className="menu-section-title">{t('menu.sectionAnalysis')}</div>
                   <button onClick={openModelDoctorFromMobileMenu}><Wrench size={17} /> Model Doctor</button>
+                  {/* Datasheet degrada a icono-only y luego a este desbordamiento antes
+                      de tocar Estado/Doctor (orden de degradación · CRI-95). */}
+                  <button className="overflow-datasheet" onClick={() => { emitWorkspaceCommand('open-datasheet'); setShowMobileMenu(false); }}><Sheet size={17} /> {t('datasheet.open')}</button>
                   <label className="mobile-menu-field overflow-case"><span>{t('analysis.caseOrCombination')}</span><select value={selectedCombinationId} onChange={(event) => setSelectedCombinationId(event.target.value)}><option value="">{t('analysis.activeCases')}</option>{project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}</select></label>
                   <label className="mobile-menu-field overflow-mode"><span>{t('analysis.mode')}</span><select value={project.settings.calculationMode ?? 'complete'} onChange={(event) => { updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } })); setShowMobileMenu(false); }}><option value="classroom">{t('analysis.modeClassroom')}</option><option value="complete">{t('analysis.modeComplete')}</option></select></label>
                   <label className="mobile-menu-field overflow-analysis-order"><span>{t('analysis.order')}</span><select value={project.settings.analysisMode ?? 'first-order'} onChange={(event) => { updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: event.target.value as 'first-order' | 'p-delta' })); setShowMobileMenu(false); }}><option value="first-order">{t('analysis.orderFirst')}</option><option value="p-delta">{t('analysis.orderPDelta')}</option></select></label>
@@ -524,7 +507,10 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
                   <button onClick={() => { window.print(); setShowMobileMenu(false); }}>{t('export.print')}</button>
                 </div>
 
-                <div className={`mobile-storage-state ${storageHasError || storageState === 'offline' ? 'error' : ''}`} data-storage-state={storageState} role="status" aria-live="polite" aria-atomic="true">{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}<span><strong>{storageLabel}</strong><small>{storageDescription}</small></span></div>
+                {/* El chip de persistencia de la Cinta (zona `status`) ya es la
+                    única región `aria-live` de este estado; este es su duplicado
+                    visible del desbordamiento y no vuelve a anunciarse solo. */}
+                <div className={`mobile-storage-state ${storageHasError || storageState === 'offline' ? 'error' : ''}`} data-storage-state={storageState}>{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}<span><strong>{storageLabel}</strong><small>{storageDescription}</small></span></div>
                 {exportError ? <div className="portable-export-error" role="alert">{exportError}</div> : null}
               </m.div>
             ) : null}
@@ -540,6 +526,47 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           leadingIcon={<Play size={17} fill="currentColor" />}
           aria-label={isAnalyzing ? t('analysis.runningLabel') : t('analysis.run')}
         >{isAnalyzing ? t('analysis.running') : t('analysis.run')}</Button>
+        </div>
+      </div>
+
+      <div className="topbar-zone topbar-status-zone" data-topbar-zone="status" data-topbar-cluster="status">
+        <div
+          className={`autosave-state${storageHasError || storageState === 'offline' ? ' has-issue' : ''} topbar-persistence`}
+          data-storage-state={storageState}
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}
+          <span className="autosave-state__label">{storageLabel}</span>
+          {/* La descripción sobrevive al icono-only del piso Compact: no es un
+              `span` genérico, así que la regla que oculta la etiqueta corta no
+              se la lleva por delante (GAP-1 · CRI-95). */}
+          <span className="sr-only">{storageDescription}</span>
+        </div>
+        {/* En pantallas anchas el botón lleva texto; por debajo de 1536px
+            colapsa a icono en CSS y libera el ancho que la zona necesita. Estado
+            y Doctor son la afirmación más crítica del producto (D-14 · CRI-95):
+            nunca desaparecen ni pierden su etiqueta accesible, sea cual sea la
+            clase de composición. */}
+        <button
+          type="button"
+          className="topbar-command-button model-doctor-launcher"
+          onClick={openModelDoctor}
+          aria-label="Model Doctor"
+          title={t('modelDoctor.description')}
+        >
+          <Wrench size={17} aria-hidden="true" />
+          <span>Model Doctor</span>
+        </button>
+        <AnalysisStatus
+          projectId={project.id}
+          analysis={analysis}
+          isAnalyzing={isAnalyzing}
+          onOpenModelDoctor={() => {
+            emitWorkspaceCommand('open-model-doctor');
+          }}
+        />
       </div>
       {exportError && showExportMenu ? <div className="portable-export-error desktop" role="alert">{exportError}</div> : null}
       {importCenterOpen ? <Suspense fallback={null}><PortableImportCenter
