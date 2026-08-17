@@ -6,10 +6,11 @@ import { createElement, type ComponentPropsWithoutRef, type ElementType, type Re
  * `flat` no aplica volumen y es el nivel de las zonas técnicas densas —tablas
  * de resultados, filas del inspector, el lienzo—: darles relieve a cada una
  * convierte una rejilla de datos en un montón de fichas y se lee peor.
- * `raised` es la tarjeta normal. `floating` es la elevación de lo que se
- * despega del plano: popovers, hojas, menús.
+ * `inset` recibe controles y bandejas. `raised` es la tarjeta normal.
+ * `floating` es la elevación de lo que se despega del plano: popovers y
+ * menús. `sheet` nace de un borde y `modal` interrumpe el plano con velo.
  */
-export type SurfaceLevel = 'flat' | 'raised' | 'floating';
+export type SurfaceLevel = 'flat' | 'inset' | 'raised' | 'floating' | 'sheet' | 'modal';
 
 export type SurfaceTag = 'div' | 'section' | 'article' | 'aside' | 'button' | 'header' | 'nav';
 

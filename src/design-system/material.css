@@ -9,7 +9,7 @@
  * chunk de entrada (nunca sufre el retraso del chunk lazy de `ui.css`) y
  * gana la cascada a todo `styles.css` sin necesitar `!important`.
  *
- * Un elemento sólo tiene un valor de `data-level` a la vez, así que los tres
+ * Un elemento sólo tiene un valor de `data-level` a la vez, así que los seis
  * grupos de nivel no compiten entre sí. `[data-pressed='true']` sí puede
  * coexistir con un nivel, y por eso va al final: gana la cascada por orden de
  * aparición cuando ambos atributos están presentes en el mismo elemento.
@@ -40,6 +40,15 @@
   background: var(--sc-color-surface-1);
   border: 1px solid var(--sc-color-border-soft);
   box-shadow: none;
+}
+
+/* inset: una cavidad de interacción. Es una profundidad distinta de BASE,
+   nunca una tarjeta anidada. */
+.sc-surface[data-level='inset'],
+[data-level='inset'] {
+  background: var(--sc-color-surface-inset);
+  border: 1px solid var(--sc-color-border-soft);
+  box-shadow: var(--sc-shadow-clay-pressed);
 }
 
 /* raised: la superficie normal — paneles, barras, tarjetas. */
@@ -81,6 +90,66 @@
 .sc-toast-card--info { border-color: color-mix(in srgb, var(--sc-color-info) 40%, var(--sc-color-border-soft)); }
 .sc-toast-card--warning { border-color: color-mix(in srgb, var(--sc-color-state-warning) 40%, var(--sc-color-border-soft)); }
 .sc-toast-card--error { border-color: color-mix(in srgb, var(--sc-color-state-error) 40%, var(--sc-color-border-soft)); }
+
+/* sheet: un plano que nace de un borde. La sombra del token sube, porque la
+   fuente de luz sigue arriba-izquierda. El radio sólo queda del lado de
+   entrada; el borde que toca el viewport permanece recto. */
+.sc-surface[data-level='sheet'],
+[data-level='sheet'],
+.sc-modal-surface.sc-modal-surface--drawer {
+  background: var(--sc-color-surface-1);
+  border: var(--sc-clay-edge);
+  box-shadow: var(--sc-shadow-sheet);
+}
+
+.sc-surface[data-level='sheet'] {
+  border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0;
+}
+
+.sc-modal-surface--bottom { border-bottom-width: 0; }
+.sc-modal-surface--right { border-right-width: 0; }
+.sc-modal-surface--left { border-left-width: 0; }
+
+/* modal: sólo este nivel usa el velo que separa el contexto interrumpido del
+   espacio de trabajo. El token cambia por tema; no hay rgba local. */
+.sc-surface[data-level='modal'],
+[data-level='modal'],
+.sc-modal-surface.sc-modal-surface--dialog,
+.sc-modal-surface.sc-modal-surface--fullscreen {
+  background: var(--sc-color-surface-1);
+  border: var(--sc-clay-edge);
+  box-shadow: var(--sc-shadow-modal);
+}
+
+.sc-overlay { background: var(--sc-color-overlay-strong); }
+
+/* BASE técnico: el borde suave sólo separa datos; no hay canto, gradiente ni
+   elevación. Cada selector se revisa en Día y Noche junto con su superficie. */
+.datasheet-grid-scroll,
+.datasheet-grid tbody th,
+.datasheet-grid tbody td,
+.datasheet-cell-editor,
+.inspector-numeric-field__control,
+.inspector-derived-list > div,
+.matrix-view table,
+.results-table tbody tr {
+  background-image: none;
+  box-shadow: none;
+}
+
+.datasheet-grid tbody th,
+.datasheet-grid tbody td,
+.datasheet-cell-editor { border-radius: 0; }
+
+/* Un nivel no se repite dentro de sí mismo: el contenido vuelve a BASE para
+   que la jerarquía física no invente una elevación adicional. */
+[data-level='raised'] [data-level='raised'],
+[data-level='floating'] [data-level='floating'],
+[data-level='modal'] [data-level='modal'] {
+  background: var(--sc-color-surface-1);
+  border: 1px solid var(--sc-color-border-soft);
+  box-shadow: none;
+}
 
 /* pressed: invierte la iluminación. Coexiste con cualquier nivel — por eso
    va al final y sólo toca lo que un estado pulsado necesita cambiar. */

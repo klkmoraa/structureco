@@ -33,6 +33,7 @@ import {
 } from '../components/editor';
 import { Badge, Banner, Divider, EmptyState, Spinner } from '../components/feedback';
 import { Dialog, Drawer, Popover, Tooltip } from '../components/overlays';
+import { Surface, type SurfaceLevel } from '../components/surface';
 import { TopBarConceptLab } from './TopBarLab';
 import '../components/ui.css';
 import './componentLab.css';
@@ -50,6 +51,7 @@ const copy = {
     foundations: 'Fundamentos cromáticos', foundationsNote: 'Roles semánticos aplicados a los mismos componentes, datos y estados en Día y Noche.',
     foundationRoles: 'Mapa semántico', foundationLegend: 'Datos visuales de demostración. No corresponden a un análisis estructural.',
     foundationCurrent: 'Autoridad activa',
+    materialLevels: 'Materia · 6 niveles', materialLevelsNote: 'BASE mantiene el dato técnico plano; INSET, RAISED, FLOATING, SHEET y MODAL declaran una relación física distinta.', materialBase: 'Datos técnicos', materialSheet: 'Entra por borde', materialModal: 'Interrupción', materialSurface: 'Materia',
     foundationOfficialSummary: 'La paleta oficial: los tokens vivos de tokens.css y su autoridad, brand/brandbook-clay.html. Sin overrides locales.',
     roleApp: 'Fondo de aplicación', roleCanvas: 'Canvas', roleSurface: 'Superficie', roleBrandFill: 'Brand fill', roleBrandStroke: 'Brand stroke', roleBrandInk: 'Brand ink', roleSelection: 'Selección', roleFocus: 'Foco', roleLoad: 'Carga puntual', roleAxial: 'Axial N', roleShear: 'Cortante V · stroke', roleShearArea: 'Cortante V · tint', roleInfluence: 'Influencia · edge', roleInfluenceArea: 'Influencia · area', roleMoment: 'Momento M', roleSuccess: 'Success', roleWarning: 'Advertencia', roleError: 'Error', roleAula: 'Mentor Aula',
     authorityDemo: 'Autoridad CRI-12C', brandAnatomy: 'Brand fill · stroke · ink', engineeringAnatomy: 'Ingeniería: V · influencia · deformada', interactionAnatomy: 'Focus + selection', themeAnatomy: 'Materia del tema activo', influenceLabel: 'Influencia · siempre dashed', deformedLabel: 'Deformada · siempre continuous',
@@ -98,6 +100,7 @@ const copy = {
     foundations: 'Color foundations', foundationsNote: 'Semantic roles applied to the same components, data, and states in Day and Night.',
     foundationRoles: 'Semantic map', foundationLegend: 'Visual demonstration data. It does not correspond to a structural analysis.',
     foundationCurrent: 'Active authority',
+    materialLevels: 'Material · 6 levels', materialLevelsNote: 'BASE keeps technical data flat; INSET, RAISED, FLOATING, SHEET, and MODAL declare distinct physical relationships.', materialBase: 'Technical data', materialSheet: 'Enters from edge', materialModal: 'Interruption', materialSurface: 'Material',
     foundationOfficialSummary: 'The official palette: the live tokens in tokens.css and their authority, brand/brandbook-clay.html. No local overrides.',
     roleApp: 'Application background', roleCanvas: 'Canvas', roleSurface: 'Surface', roleBrandFill: 'Brand fill', roleBrandStroke: 'Brand stroke', roleBrandInk: 'Brand ink', roleSelection: 'Selection', roleFocus: 'Focus', roleLoad: 'Point load', roleAxial: 'Axial N', roleShear: 'Shear V · stroke', roleShearArea: 'Shear V · tint', roleInfluence: 'Influence · edge', roleInfluenceArea: 'Influence · area', roleMoment: 'Moment M', roleSuccess: 'Success', roleWarning: 'Warning', roleError: 'Error', roleAula: 'Classroom mentor',
     authorityDemo: 'CRI-12C authority', brandAnatomy: 'Brand fill · stroke · ink', engineeringAnatomy: 'Engineering: V · influence · deformed', interactionAnatomy: 'Focus + selection', themeAnatomy: 'Active theme material', influenceLabel: 'Influence · always dashed', deformedLabel: 'Deformed · always continuous',
@@ -160,6 +163,8 @@ const FOUNDATION_ROLES = [
   { id: 'error', labelKey: 'roleError' },
   { id: 'aula', labelKey: 'roleAula' },
 ] as const;
+
+const MATERIAL_LEVELS: SurfaceLevel[] = ['flat', 'inset', 'raised', 'floating', 'sheet', 'modal'];
 
 interface LabSectionProps {
   id: string;
@@ -342,6 +347,18 @@ export function ComponentLab() {
                 <span className="is-raised">Raised</span>
               </div>
             </article>
+          </div>
+        </DemoBlock>
+
+        <DemoBlock title={t.materialLevels} wide>
+          <p className="component-lab__material-note">{t.materialLevelsNote}</p>
+          <div className="component-lab__material-levels" aria-label={t.materialLevels}>
+            {MATERIAL_LEVELS.map((level) => (
+              <Surface key={level} level={level} className={`component-lab__material-level component-lab__material-level--${level}`}>
+                <strong>{level.toUpperCase()}</strong>
+                <span>{level === 'flat' ? t.materialBase : level === 'sheet' ? t.materialSheet : level === 'modal' ? t.materialModal : t.materialSurface}</span>
+              </Surface>
+            ))}
           </div>
         </DemoBlock>
       </LabSection>

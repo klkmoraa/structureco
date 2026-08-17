@@ -207,6 +207,7 @@ const ModalSurface = ({
             ref={surfaceRef}
             {...surfaceMotionProps}
             className={`sc-modal-surface sc-modal-surface--${kind}${kind === 'drawer' ? ` sc-modal-surface--${side}` : ''}${className ? ` ${className}` : ''}`}
+            data-level={kind === 'drawer' ? 'sheet' : 'modal'}
             data-workspace-surface={surfaceId}
             role="dialog"
             aria-modal="true"

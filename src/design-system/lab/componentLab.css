@@ -376,6 +376,12 @@ body:has(.component-lab),
 .component-lab__theme-levels .is-canvas { background: var(--sc-color-bg-canvas); }
 .component-lab__theme-levels .is-surface { background: var(--sc-color-surface-1); }
 .component-lab__theme-levels .is-raised { background: var(--sc-color-surface-elevated); box-shadow: var(--sc-shadow-clay-xs); }
+.component-lab__material-note { margin: 0; color: var(--sc-color-text-secondary); }
+.component-lab__material-levels { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: end; gap: var(--sc-space-3); }
+.component-lab__material-level { min-height: 120px; display: grid; align-content: end; gap: var(--sc-space-2); padding: var(--sc-space-3); color: var(--sc-color-text-primary); font-family: var(--sc-font-mono); }
+.component-lab__material-level strong { font-size: var(--sc-font-size-label); }
+.component-lab__material-level span { color: var(--sc-color-text-muted); font-family: var(--sc-font-ui); font-size: var(--sc-font-size-caption); }
+.component-lab__material-level--sheet { min-height: 148px; }
 .component-lab__field-grid { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: var(--sc-space-5); }
 .component-lab__popover-content { min-width: 260px; display: grid; gap: var(--sc-space-3); }
 .component-lab__popover-content > strong,
@@ -454,7 +460,8 @@ body:has(.component-lab),
   .component-lab__status-grid { grid-template-columns: 1fr; }
   .component-lab__swatches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .component-lab__brand-anatomy,
-  .component-lab__theme-levels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .component-lab__theme-levels,
+  .component-lab__material-levels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .component-lab__row > .sc-button { flex: 1 1 auto; }
   .component-lab__tool-rail { max-width: none; }
   .component-lab__event { width: calc(100% - var(--sc-space-4) * 2); bottom: var(--sc-space-3); grid-template-columns: 1fr; gap: 0; }
