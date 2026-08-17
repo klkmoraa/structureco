@@ -39,23 +39,20 @@ import './componentLab.css';
 
 type Theme = 'light' | 'dark';
 type Locale = 'es' | 'en';
-type FoundationPalette = 'official' | 'continuity' | 'mineral' | 'analytical';
 
 const copy = {
   es: {
     language: 'Idioma', theme: 'Tema', light: 'Claro', dark: 'Oscuro',
-    foundationSelector: 'Dirección cromática', official: 'Oficial · Brandbook', foundationSupersededGroup: 'Históricas · supersedidas', continuity: 'Continuidad calibrada', mineral: 'Mineral + Pino', analytical: 'Contraste analítico',
+    official: 'Oficial · Brandbook',
     eyebrow: 'Biblioteca visual · Fase 5', title: 'Component Lab',
     intro: 'Primitivos y patrones del editor probados de forma aislada. Esta ruta solo existe en desarrollo y no conecta con el motor de cálculo.',
     ready: 'Biblioteca lista para inspección', readyDetail: 'Estados, temas, teclado y vista móvil disponibles en una sola superficie.',
     foundations: 'Fundamentos cromáticos', foundationsNote: 'Roles semánticos aplicados a los mismos componentes, datos y estados en Día y Noche.',
     foundationRoles: 'Mapa semántico', foundationLegend: 'Datos visuales de demostración. No corresponden a un análisis estructural.',
-    foundationCurrent: 'Dirección activa',
+    foundationCurrent: 'Autoridad activa',
     foundationOfficialSummary: 'La paleta oficial: los tokens vivos de tokens.css y su autoridad, brand/brandbook-clay.html. Sin overrides locales.',
-    foundationContinuitySummary: 'Supersedida — exploración previa al cierre cromático. Conserva la neutralidad anterior y aumenta ligeramente la separación entre superficies.',
-    foundationMineralSummary: 'Supersedida — exploración previa al cierre cromático. Combina superficies minerales claras con un laboratorio pino profundo y señales técnicas precisas.',
-    foundationAnalyticalSummary: 'Supersedida — exploración previa al cierre cromático. Prioriza separación, contraste y lectura rápida para sesiones de análisis densas.',
-    roleApp: 'Fondo de aplicación', roleCanvas: 'Canvas', roleSurface: 'Superficie', roleAction: 'Acción', roleSelection: 'Selección', roleLoad: 'Carga', roleAxial: 'Axial N', roleShear: 'Cortante V', roleMoment: 'Momento M', roleWarning: 'Advertencia', roleError: 'Error', roleAula: 'Mentor Aula',
+    roleApp: 'Fondo de aplicación', roleCanvas: 'Canvas', roleSurface: 'Superficie', roleBrandFill: 'Brand fill', roleBrandStroke: 'Brand stroke', roleBrandInk: 'Brand ink', roleSelection: 'Selección', roleFocus: 'Foco', roleLoad: 'Carga puntual', roleAxial: 'Axial N', roleShear: 'Cortante V · stroke', roleShearArea: 'Cortante V · tint', roleInfluence: 'Influencia · edge', roleInfluenceArea: 'Influencia · area', roleMoment: 'Momento M', roleSuccess: 'Success', roleWarning: 'Advertencia', roleError: 'Error', roleAula: 'Mentor Aula',
+    authorityDemo: 'Autoridad CRI-12C', brandAnatomy: 'Brand fill · stroke · ink', engineeringAnatomy: 'Ingeniería: V · influencia · deformada', interactionAnatomy: 'Focus + selection', themeAnatomy: 'Materia del tema activo', influenceLabel: 'Influencia · siempre dashed', deformedLabel: 'Deformada · siempre continuous',
     controls: 'Controles', controlsNote: 'Acciones, captura de datos y selección compacta.',
     overlays: 'Capas y divulgación', overlaysNote: 'Contenido contextual con cierre por Escape y retorno de foco.',
     feedback: 'Retroalimentación', feedbackNote: 'Estados comprensibles por color, texto e iconografía.',
@@ -89,23 +86,21 @@ const copy = {
     metrics: 'Métricas de resultado', axial: 'Axial máximo', shear: 'Cortante máximo', momentMetric: 'Momento máximo', displacement: 'Desplazamiento',
     updated: 'Análisis actualizado', stale: 'Cambios sin analizar', calculating: 'Calculando combinaciones', failed: 'El análisis requiere atención',
     event: 'Última interacción', noEvent: 'Interactúa con cualquier control para verificar su callback.',
-    eventSaved: 'Cambios guardados', eventTheme: 'Tema cambiado', eventFoundation: 'Dirección cromática', eventLanguage: 'Idioma cambiado', eventTool: 'Herramienta activa', eventLayer: 'Visibilidad de capa actualizada', eventValue: 'Valor de longitud actualizado', eventConfirmed: 'Actualización confirmada',
+    eventSaved: 'Cambios guardados', eventTheme: 'Tema cambiado', eventLanguage: 'Idioma cambiado', eventTool: 'Herramienta activa', eventLayer: 'Visibilidad de capa actualizada', eventValue: 'Valor de longitud actualizado', eventConfirmed: 'Actualización confirmada',
     devOnly: 'Solo desarrollo', close: 'Cerrar', menu: 'Más opciones', skip: 'Saltar al contenido', sectionNav: 'Secciones de componentes', on: 'visible', off: 'oculta', nodeCode: 'Nodo N-06',
   },
   en: {
     language: 'Language', theme: 'Theme', light: 'Light', dark: 'Dark',
-    foundationSelector: 'Color direction', official: 'Official · Brandbook', foundationSupersededGroup: 'Historical · superseded', continuity: 'Calibrated continuity', mineral: 'Mineral + Pine', analytical: 'Analytical contrast',
+    official: 'Official · Brandbook',
     eyebrow: 'Visual library · Phase 5', title: 'Component Lab',
     intro: 'Primitives and editor patterns tested in isolation. This route only exists in development and never connects to the calculation engine.',
     ready: 'Library ready for inspection', readyDetail: 'States, themes, keyboard behavior, and mobile layouts are available in one surface.',
     foundations: 'Color foundations', foundationsNote: 'Semantic roles applied to the same components, data, and states in Day and Night.',
     foundationRoles: 'Semantic map', foundationLegend: 'Visual demonstration data. It does not correspond to a structural analysis.',
-    foundationCurrent: 'Active direction',
+    foundationCurrent: 'Active authority',
     foundationOfficialSummary: 'The official palette: the live tokens in tokens.css and their authority, brand/brandbook-clay.html. No local overrides.',
-    foundationContinuitySummary: 'Superseded — an exploration that predates the chromatic closure. Keeps the previous neutrality while slightly increasing separation between surfaces.',
-    foundationMineralSummary: 'Superseded — an exploration that predates the chromatic closure. Combines light mineral surfaces with a deep pine laboratory and precise technical signals.',
-    foundationAnalyticalSummary: 'Superseded — an exploration that predates the chromatic closure. Prioritizes separation, contrast, and fast reading for dense analysis sessions.',
-    roleApp: 'Application background', roleCanvas: 'Canvas', roleSurface: 'Surface', roleAction: 'Action', roleSelection: 'Selection', roleLoad: 'Load', roleAxial: 'Axial N', roleShear: 'Shear V', roleMoment: 'Moment M', roleWarning: 'Warning', roleError: 'Error', roleAula: 'Classroom mentor',
+    roleApp: 'Application background', roleCanvas: 'Canvas', roleSurface: 'Surface', roleBrandFill: 'Brand fill', roleBrandStroke: 'Brand stroke', roleBrandInk: 'Brand ink', roleSelection: 'Selection', roleFocus: 'Focus', roleLoad: 'Point load', roleAxial: 'Axial N', roleShear: 'Shear V · stroke', roleShearArea: 'Shear V · tint', roleInfluence: 'Influence · edge', roleInfluenceArea: 'Influence · area', roleMoment: 'Moment M', roleSuccess: 'Success', roleWarning: 'Warning', roleError: 'Error', roleAula: 'Classroom mentor',
+    authorityDemo: 'CRI-12C authority', brandAnatomy: 'Brand fill · stroke · ink', engineeringAnatomy: 'Engineering: V · influence · deformed', interactionAnatomy: 'Focus + selection', themeAnatomy: 'Active theme material', influenceLabel: 'Influence · always dashed', deformedLabel: 'Deformed · always continuous',
     controls: 'Controls', controlsNote: 'Actions, data entry, and compact selection.',
     overlays: 'Layers and disclosure', overlaysNote: 'Contextual content with Escape dismissal and focus restoration.',
     feedback: 'Feedback', feedbackNote: 'States communicated through color, text, and iconography.',
@@ -139,7 +134,7 @@ const copy = {
     metrics: 'Result metrics', axial: 'Maximum axial', shear: 'Maximum shear', momentMetric: 'Maximum moment', displacement: 'Displacement',
     updated: 'Analysis updated', stale: 'Unanalyzed changes', calculating: 'Calculating combinations', failed: 'Analysis needs attention',
     event: 'Last interaction', noEvent: 'Use any control to verify its callback.',
-    eventSaved: 'Changes saved', eventTheme: 'Theme changed', eventFoundation: 'Color direction', eventLanguage: 'Language changed', eventTool: 'Active tool', eventLayer: 'Layer visibility updated', eventValue: 'Length value updated', eventConfirmed: 'Update confirmed',
+    eventSaved: 'Changes saved', eventTheme: 'Theme changed', eventLanguage: 'Language changed', eventTool: 'Active tool', eventLayer: 'Layer visibility updated', eventValue: 'Length value updated', eventConfirmed: 'Update confirmed',
     devOnly: 'Development only', close: 'Close', menu: 'More options', skip: 'Skip to content', sectionNav: 'Component sections', on: 'visible', off: 'hidden', nodeCode: 'Node N-06',
   },
 } as const;
@@ -148,12 +143,19 @@ const FOUNDATION_ROLES = [
   { id: 'app', labelKey: 'roleApp' },
   { id: 'canvas', labelKey: 'roleCanvas' },
   { id: 'surface', labelKey: 'roleSurface' },
-  { id: 'action', labelKey: 'roleAction' },
+  { id: 'brand-fill', labelKey: 'roleBrandFill' },
+  { id: 'brand-stroke', labelKey: 'roleBrandStroke' },
+  { id: 'brand-ink', labelKey: 'roleBrandInk' },
   { id: 'selection', labelKey: 'roleSelection' },
+  { id: 'focus', labelKey: 'roleFocus' },
   { id: 'load', labelKey: 'roleLoad' },
   { id: 'axial', labelKey: 'roleAxial' },
   { id: 'shear', labelKey: 'roleShear' },
+  { id: 'shear-area', labelKey: 'roleShearArea' },
+  { id: 'influence', labelKey: 'roleInfluence' },
+  { id: 'influence-area', labelKey: 'roleInfluenceArea' },
   { id: 'moment', labelKey: 'roleMoment' },
+  { id: 'success', labelKey: 'roleSuccess' },
   { id: 'warning', labelKey: 'roleWarning' },
   { id: 'error', labelKey: 'roleError' },
   { id: 'aula', labelKey: 'roleAula' },
@@ -192,7 +194,6 @@ const DemoBlock = ({ title, wide = false, children }: DemoBlockProps) => (
 export function ComponentLab() {
   const [theme, setTheme] = useState<Theme>('light');
   const [locale, setLocale] = useState<Locale>('es');
-  const [foundation, setFoundation] = useState<FoundationPalette>('official');
   const [eventMessage, setEventMessage] = useState('');
   const [mode, setMode] = useState('select');
   const [material, setMaterial] = useState('steel');
@@ -230,15 +231,7 @@ export function ComponentLab() {
     record(`${t.eventTool}: ${label}`);
   };
 
-  const foundationSummary = foundation === 'official'
-    ? t.foundationOfficialSummary
-    : foundation === 'continuity'
-      ? t.foundationContinuitySummary
-      : foundation === 'mineral'
-        ? t.foundationMineralSummary
-        : t.foundationAnalyticalSummary;
-
-  return <div className="component-lab" data-foundation={foundation}>
+  return <div className="component-lab">
     <a className="component-lab__skip" href="#component-lab-main">{t.skip}</a>
     <header className="component-lab__topbar">
       <a className="component-lab__brand" href="#component-lab-main" aria-label="structureCo Component Lab">
@@ -247,21 +240,6 @@ export function ComponentLab() {
         <Badge tone="info">{t.devOnly}</Badge>
       </a>
       <div className="component-lab__preferences">
-        <label className="component-lab__foundation-select">
-          <span>{t.foundationSelector}</span>
-          <select value={foundation} onChange={(event) => {
-            const value = event.target.value as FoundationPalette;
-            setFoundation(value);
-            record(`${t.eventFoundation}: ${event.target.selectedOptions[0]?.text ?? value}`);
-          }}>
-            <option value="official">{t.official}</option>
-            <optgroup label={t.foundationSupersededGroup}>
-              <option value="continuity">{t.continuity}</option>
-              <option value="mineral">{t.mineral}</option>
-              <option value="analytical">{t.analytical}</option>
-            </optgroup>
-          </select>
-        </label>
         <SegmentedControl
           label={t.theme}
           size="sm"
@@ -311,14 +289,59 @@ export function ComponentLab() {
           <p className="component-lab__demo-legend">{t.foundationLegend}</p>
           <div className="component-lab__foundation-summary">
             <span>{t.foundationCurrent}</span>
-            <strong>{t[foundation]}</strong>
-            <p>{foundationSummary}</p>
+            <strong>{t.official}</strong>
+            <p>{t.foundationOfficialSummary}</p>
           </div>
           <div className="component-lab__swatches">
             {FOUNDATION_ROLES.map((role) => <div className="component-lab__swatch" key={role.id}>
               <span className={`component-lab__swatch-color is-${role.id}`} aria-hidden="true" />
               <strong>{t[role.labelKey]}</strong>
             </div>)}
+          </div>
+        </DemoBlock>
+
+        <DemoBlock title={t.authorityDemo} wide>
+          <div className="component-lab__authority-grid">
+            <article className="component-lab__authority-card">
+              <h4>{t.brandAnatomy}</h4>
+              <div className="component-lab__brand-anatomy" aria-label={t.brandAnatomy}>
+                <span className="is-fill">Fill <code>#1AA57A</code></span>
+                <span className="is-stroke">Stroke <code>#087E5C</code></span>
+                <span className="is-ink">Ink <code>#02140F</code></span>
+              </div>
+            </article>
+
+            <article className="component-lab__authority-card component-lab__authority-card--engineering">
+              <h4>{t.engineeringAnatomy}</h4>
+              <svg viewBox="0 0 520 260" role="img" aria-label={`${t.shear}; ${t.influenceLabel}; ${t.deformedLabel}`}>
+                <path className="component-lab__beam" d="M40 70H480" />
+                <path className="component-lab__shear-area" d="M48 70L180 18L310 132L472 70Z" />
+                <path className="component-lab__influence-area" d="M48 174C145 105 286 114 472 208L472 174Z" />
+                <path className="component-lab__deformed-line" d="M48 222C170 178 306 250 472 214" />
+                <path className="component-lab__moment-line" d="M48 148C178 82 330 88 472 146" />
+                <text x="52" y="38" className="component-lab__shear-label">V · lime</text>
+                <text x="52" y="168" className="component-lab__influence-label">IL · dashed</text>
+                <text x="328" y="244" className="component-lab__deformed-label">δ · continuous</text>
+              </svg>
+            </article>
+
+            <article className="component-lab__authority-card">
+              <h4>{t.interactionAnatomy}</h4>
+              <button type="button" className="component-lab__focus-evidence">:focus-visible</button>
+              <div className="component-lab__selection-evidence" aria-label={t.roleSelection}>
+                <span>{t.roleSelection}</span>
+              </div>
+            </article>
+
+            <article className="component-lab__authority-card">
+              <h4>{t.themeAnatomy} · {theme === 'dark' ? t.dark : t.light}</h4>
+              <div className="component-lab__theme-levels" aria-label={t.themeAnatomy}>
+                <span className="is-app">App</span>
+                <span className="is-canvas">Canvas</span>
+                <span className="is-surface">Surface</span>
+                <span className="is-raised">Raised</span>
+              </div>
+            </article>
           </div>
         </DemoBlock>
       </LabSection>

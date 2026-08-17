@@ -10,10 +10,9 @@
  *   · Suelo de grafito, no de menta. Los neutros son una familia fría de bajo
  *     croma para que el blanco de una superficie sea un escalón real de
  *     elevación y no un matiz.
- *   · Dos tonos de marca. La lima (`--sc-lime-*`) manda la acción; el cian de
- *     trazo (`--sc-cyan-*`) es la segunda dimensión, reservada al dibujo
- *     técnico y a los gradientes de identidad. Nunca compiten por el mismo
- *     trabajo.
+ *   · La menta/esmeralda (--sc-mint-*) identifica y acciona. La lima
+ *     (--sc-lime-*) deja de ser marca y queda reservada al cortante V y a la
+ *     carga distribuida. El cian conserva su trabajo técnico en N/axial.
  *   · La materia es token. Vidrio, anillos, halos y gradientes viven aquí
  *     (§5) y no como literales por componente, porque cada uno se mide
  *     distinto en Día y en Noche.
@@ -41,13 +40,11 @@
  * fondos, superficies, bordes, tintas de texto y materia clay. `tokens.test.ts`
  * lo comprueba: si un rol semántico reaparece en el bloque oscuro, falla.
  *
- * Eso fija cada uno de esos colores a una franja de luminancia relativa
- * [0,146 … 0,293], la única en la que un mismo HEX llega a 3:1 sobre el lienzo
- * y la superficie de LOS DOS temas. Por eso ningún rol semántico puede ser
- * pastel: el pastel vive fuera de la franja. Lo pastel-vivo de la dirección
- * aprobada vive donde sí cabe — en el relleno del CTA (`--sc-lime-300/400/500`),
- * que no es trazo sino superficie, y que por eso lleva tinta oscura y canto
- * medido en vez de texto blanco.
+ * Eso fija cada trazo, canto, control y señal a una franja de luminancia
+ * relativa [0,146 … 0,293], la única en la que un mismo HEX llega a 3:1 sobre
+ * el lienzo y la superficie de LOS DOS temas. Los pasteles viven como áreas,
+ * nunca como el canto que comunica la anatomía. La acción menta sí cabe en la
+ * franja y además lleva tinta oscura medida.
  *
  * Tres excepciones deliberadas, todas justificadas por medición:
  *   · Las tintas de texto sobre superficie (`--sc-color-state-*-foreground`,
@@ -64,19 +61,13 @@
  * fondo contra el que se midió todo. No alteres un color semántico sin volver
  * a medirlo sobre los cuatro fondos (lienzo y superficie × Día y Noche).
  *
- * CORRECCIÓN SOBRE 74dfc76 — misma franja, más croma
+ * CIERRE CRI-91 — menta de marca y anatomía técnica
  * ---------------------------------------------------------------------------
- * El primer paso de este cierre resolvió el suelo de contraste apagando el
- * color: `V/cortante` cayó en un teal oscuro (`#08816d`) que leía corporativo,
- * no técnico. La franja de luminancia [0,146 … 0,293] no cambia — sigue siendo
- * la única en la que un HEX único llega a 3:1 en los cuatro fondos — pero
- * dentro de ella el croma sí es un grado de libertad, y la primera pasada no
- * lo usó. Este paso sube la saturación de cada rol técnico y de estado hasta
- * el borde de esa franja en vez de hundirse en ella, sin tocar el mecanismo
- * de invariancia ni añadir tokens nuevos por rol. La única excepción real es
- * `warning` vs `cota`: compartían `--sc-amber-500` (mismo HEX, dos roles) y
- * ahora tienen primitivas separadas — no por contraste, sino porque el
- * brandbook exige que se puedan distinguir cuando conviven.
+ * Marca = menta/esmeralda. Cortante V y carga distribuida = lima profunda +
+ * área pastel. Influencia = fucsia frío + área pastel + patrón discontinuo.
+ * Success se mueve para conservar separación perceptual; Aula, momento, error,
+ * foco y selección no cambian. El Brandbook canónico documenta la tabla WCAG
+ * completa y la simulación color/grayscale/deuteranopia/protanopia.
  */
 
 :root {
@@ -91,16 +82,19 @@
      chunk de entrada sin pagar su sitio. Los valores intermedios de la familia
      están resumidos en README.md. */
 
-  /* Identidad lima clay. Sustituye a la familia esmeralda/teal anterior: la
-     dirección aprobada es un verde vivo, casi chillón, con temple pastel.
-     El escalón 400 es exactamente #89d448, el punto de partida del prototipo.
+  /* Identidad menta/esmeralda CRI-12C. Los tres rellenos de acción y el canto
+     superan 3:1 sobre canvas/surface × Día/Noche. La tinta se mide contra los
+     rellenos: normal 6,04:1, hover 5,31:1, pressed 4,65:1. */
+  --sc-mint-500: #1aa57a;
+  --sc-mint-600: #159a72;
+  --sc-mint-650: #148f69;
+  --sc-mint-700: #087e5c;
+  --sc-mint-ink: #02140f;
 
-     Los escalones 200-500 son RELLENO, nunca trazo ni texto: el 400 mide 1,8:1
-     contra el marfil, así que un CTA lima no se identifica por el relleno sino
-     por su canto (--sc-lime-700, 3,84:1) y su tinta oscura (--sc-lime-ink,
-     8,87:1). Texto blanco encima está prohibido — mediría 1,8:1.
-     El 700 es el único escalón que aguanta como trazo o canto sobre lienzo y
-     superficie en los dos temas a la vez. */
+  /* Familia lima técnica. Ya no identifica la marca: el escalón 700 es el
+     trazo profundo de cortante V/carga distribuida (3,84:1 peor caso) y el 100
+     es su área pastel. El resto de la rampa se conserva para tintes técnicos
+     existentes; ninguna primitiva se consume directamente. */
   --sc-lime-50: #f2f7ed;
   --sc-lime-100: #daefc8;
   --sc-lime-200: #bde798;
@@ -111,15 +105,8 @@
   --sc-lime-700: #468c09;
   --sc-lime-800: #376d08;
   --sc-lime-900: #294f08;
-  /* Tinta del relleno lima. Se mide contra el escalón más oscuro que carga
-     texto (el 500 pulsado, 6,76:1), no contra el 400, o el pulsado quedaría
-     por debajo del suelo. */
-  --sc-lime-ink: #16250d;
 
-  /* Cian de trazo: la segunda dimensión de marca. Vive en el dibujo
-     técnico y en los gradientes de identidad, nunca en controles. Es
-     también el HEX de N/axial — el brandbook reutiliza a propósito el
-     trazo de marca como color técnico, así que los dos se mueven juntos. */
+  /* Cian técnico de N/axial. Ya no forma una segunda dimensión de marca. */
   --sc-cyan-300: #95d0e5;
   --sc-cyan-600: #0f95d1;
 
@@ -133,6 +120,9 @@
   /* Acentos de estado y dominio */
   --sc-violet-500: #8b5cf6;
   --sc-pink-500: #c94a8f;
+  --sc-fuchsia-200: #f2c2e6;
+  --sc-fuchsia-500: #d85ac9;
+  --sc-green-700: #2d7c36;
   --sc-coral-500: #ed4b46;
   --sc-red-500: #ed4b46;
   --sc-red-600: #d92e28;
@@ -180,25 +170,20 @@
   --sc-color-border-canvas-chrome: #82786d;
   --sc-color-divider: #e7e0d6;
 
-  /* Acción primaria — INVARIANTE por tema.
-     La lima es un relleno claro, así que la tinta es oscura: forzar blanco daría
-     1,8:1. Medido con la tinta lima — normal 8,87:1, hover 9,96:1, pulsado
-     6,76:1, y los dos extremos del gradiente clay 10,07:1 y 5,98:1.
-     El relleno por sí solo no separa el control del marfil (1,8:1), así que
-     `--sc-color-action-edge` es obligatorio en cualquier control relleno de
-     marca: es lo que cumple el suelo no-textual de 3:1 (WCAG 1.4.11). */
-  --sc-color-action-primary: var(--sc-lime-400);
-  --sc-color-action-hover: var(--sc-lime-300);
-  --sc-color-action-pressed: var(--sc-lime-500);
-  --sc-color-action-foreground: var(--sc-lime-ink);
-  --sc-color-action-edge: var(--sc-lime-700);
-  /* Trazo de marca sobre el lienzo: el único escalón lima que se ve en los dos
-     temas (3,84:1 en el peor fondo). No es tinta de texto — para texto de marca
-     sobre superficie sigue mandando --sc-color-text-link, que sí cambia por tema. */
-  --sc-color-action-ink: var(--sc-lime-700);
-  /* Relleno suave: es un FONDO, y los fondos cambian de fase por tema. */
-  --sc-color-action-subtle: var(--sc-lime-50);
-  --sc-color-brand-secondary: var(--sc-cyan-600);
+  /* Acción primaria menta — INVARIANTE por tema. Los rellenos, el canto y la
+     tinta fueron fijados por el gate CRI-91: el peor control llega a 3,06:1
+     contra los cuatro fondos y la peor pareja relleno/tinta llega a 4,65:1. */
+  --sc-color-action-primary: var(--sc-mint-500);
+  --sc-color-action-hover: var(--sc-mint-600);
+  --sc-color-action-pressed: var(--sc-mint-650);
+  --sc-color-action-foreground: var(--sc-mint-ink);
+  --sc-color-action-edge: var(--sc-mint-700);
+  /* Trazo de marca: canto, icono sobre superficie, snap y hover técnico. */
+  --sc-color-action-ink: var(--sc-mint-700);
+  /* Fondo suave derivado de la superficie del tema; no crea un HEX semántico
+     alternativo en el bloque Noche. */
+  --sc-color-action-subtle: color-mix(in srgb, var(--sc-color-action-primary) 8%, var(--sc-color-surface-1));
+  --sc-color-brand-secondary: var(--sc-mint-700);
 
   --sc-color-accent-blue-soft: var(--sc-sky-100);
   --sc-color-accent-violet-soft: var(--sc-lilac-100);
@@ -212,13 +197,10 @@
   --sc-color-selection: #dce9ff;
   --sc-color-selection-stroke: var(--sc-blue-500);
 
-  /* Estados — INVARIANTES. El color es la señal; la tinta de texto que va
-     encima de una superficie no puede serlo (ver la cabecera del archivo).
-     El éxito usa un verde de hue distinto al de marca y al de cortante
-     (142° frente a 136° y 163° en OKLab) para que los tres convivan sin
-     confundirse; el error usa un rojo carmín (#d92e28) en vez del coral de
-     carga/momento (#ed4b46) — antes compartían el mismo HEX. */
-  --sc-color-state-success: #2f9a2a;
+  /* Estados — INVARIANTES. Success se mueve porque #2f9a2a colapsaba entre
+     la nueva menta y la lima de cortante. #2d7c36 conserva separación en
+     color, grayscale, deuteranopia y protanopia; peor fondo 3,10:1. */
+  --sc-color-state-success: var(--sc-green-700);
   --sc-color-state-warning: var(--sc-amber-500);
   --sc-color-state-error: var(--sc-red-600);
   --sc-color-state-critical: #c93028;
@@ -229,13 +211,9 @@
   --sc-color-state-warning-foreground: #6f5210;
   --sc-color-state-error-foreground: var(--sc-red-700);
 
-  /* Superficies sólidas: un control relleno necesita un fondo y un primer plano
-     medidos como pareja, y ambos son invariantes porque se miden entre sí.
-     Son un escalón más profundos que la señal del mismo nombre para que el
-     blanco llegue a 4,5:1 sin dejar de leerse como forma sobre la superficie.
-     Medido: #17823a con blanco = 4,89:1 (forma 3,28:1); #c93028 con blanco =
-     5,33:1 (forma 3,01:1). */
-  --sc-color-success-solid: #17823a;
+  /* Superficies sólidas: success usa el mismo HEX semántico; con blanco mide
+     5,19:1. Error conserva su pareja vigente. */
+  --sc-color-success-solid: var(--sc-color-state-success);
   --sc-color-success-on-solid: var(--sc-white);
   --sc-color-error-solid: #c93028;
   --sc-color-error-on-solid: var(--sc-white);
@@ -278,8 +256,10 @@
      y no por contraste. */
   --sc-color-clay-ivory: #f7f4ee;
   --sc-color-clay-ivory-deep: #e8e1d7;
-  --sc-color-clay-lime: var(--sc-lime-400);
-  --sc-color-clay-lime-deep: var(--sc-lime-600);
+  /* Alias históricos consumidos por el pórtico del Welcome. El nombre se
+     conserva para no tocar src/features/**; el significado ya es brand clay. */
+  --sc-color-clay-lime: var(--sc-mint-500);
+  --sc-color-clay-lime-deep: var(--sc-mint-600);
 
   /* ------------------------------------------------------------------ */
   /* 3 · ROLES TÉCNICOS DEL DOMINIO — INVARIANTES POR TEMA               */
@@ -294,7 +274,8 @@
      familia técnica por encima de 3:1 por primera vez. */
   --sc-color-technical-load: var(--sc-coral-500);      /* 3,60:1 */
   --sc-color-technical-axial: var(--sc-cyan-600);      /* 3,29:1 */
-  --sc-color-technical-shear: #059669;                 /* 3,68:1 */
+  --sc-color-technical-shear: var(--sc-lime-700);      /* 3,84:1 */
+  --sc-color-technical-shear-area: var(--sc-lime-100); /* área; el canto carga el gate */
   --sc-color-technical-moment: #ed4b46;                /* 3,60:1 */
   --sc-color-technical-deformed: var(--sc-violet-500); /* 3,79:1 */
   --sc-color-technical-reaction: #3a72e3;              /* 3,59:1 */
@@ -303,6 +284,7 @@
   /* Alias del rol distribuido: la codificación del canvas usa el color de
      cortante para la carga repartida, y la interfaz necesita nombrarlo. */
   --sc-color-technical-distributed: var(--sc-color-technical-shear);
+  --sc-color-technical-distributed-area: var(--sc-color-technical-shear-area);
 
   /* Rampa del índice elástico estimado (CRI-42). Es una escala secuencial de
      una sola familia: comunica *cuánta* demanda hay, no si eso es aceptable.
@@ -342,15 +324,17 @@
   --sc-color-moment-positive: var(--sc-color-technical-moment);
   --sc-color-moment-negative: var(--sc-color-technical-moment);
   --sc-color-deformation: var(--sc-color-technical-deformed);
-  /* Marca DIBUJADA sobre el lienzo: usa el trazo, no el relleno. El relleno
-     lima mide 1,8:1 contra el lienzo de Día — una línea de influencia o un
-     imán de snap pintados con él serían invisibles. */
-  --sc-color-influence-line: var(--sc-color-action-ink);
+  /* Influencia: área pastel + canto fucsia frío medido (3,30:1 peor caso).
+     El consumidor debe mantener stroke-dasharray; el patrón no sustituye el
+     contraste. Deformada conserva trazo continuo en la autoridad visual. */
+  --sc-color-influence-area: var(--sc-fuchsia-200);
+  --sc-color-influence-line: var(--sc-fuchsia-500);
   --sc-color-envelope: #8966db;
   --sc-color-critical-point: var(--sc-amber-500);
   --sc-color-geometry-error: var(--sc-color-state-error);
   --sc-color-stale-result: var(--sc-color-state-warning);
   --sc-color-selection-outline: var(--sc-color-selection-stroke);
+  /* Snap y hover técnico sí siguen a la marca; influencia ya no. */
   --sc-color-snap-target: var(--sc-color-action-ink);
   --sc-color-hover-target: var(--sc-color-action-ink);
 
@@ -622,13 +606,9 @@
   --border: var(--sc-color-border);
   --border-soft: var(--sc-color-border-soft);
   --shadow: var(--sc-shadow-floating);
-  /* OJO al reparto. `--accent` es el alias histórico y, de sus ~158 usos en
-     `styles.css`, unos 136 son tinta, trazo o borde y sólo 15 son relleno. Al
-     pasar la marca a una lima clara, apuntarlo al relleno habría dejado texto
-     y trazos a 1,8:1 en toda la aplicación. Así que `--accent` = TINTA (3,84:1
-     en el peor fondo) y el relleno vive en `--accent-fill`, que es el único que
-     puede ir bajo `--accent-foreground`. Si escribes `background:var(--accent)`
-     con texto encima, el texto no cumple: usa `--accent-fill`. */
+  /* OJO al reparto. --accent es el alias histórico de trazo/tinta y conserva
+     el canto menta medido (3,17:1 peor caso). El relleno vive en --accent-fill
+     y sólo puede llevar --accent-foreground, medido en todos sus estados. */
   --accent: var(--sc-color-action-ink);
   --accent-fill: var(--sc-color-action-primary);
   --accent-hover: var(--sc-color-action-hover);
@@ -716,10 +696,10 @@
   --sc-color-border-canvas-chrome: #58717a;
   --sc-color-divider: #20313a;
 
-  /* Marca, estados, selección, foco y Aula NO se redeclaran aquí: son
-     invariantes y viven una sola vez en `:root`. Lo único que Noche mueve del
-     bloque de acción es el relleno SUAVE, que es un fondo, no una señal. */
-  --sc-color-action-subtle: #1d2f14;
+  /* Marca, estados, trazo de selección, foco y Aula NO se redeclaran aquí:
+     son invariantes y viven una sola vez en :root. Los rellenos suaves de
+     acción y selección son fondos; el primero se deriva y el segundo se
+     calibra abajo contra la materia nocturna. */
 
   --sc-color-accent-blue-soft: #1d2c38;
   --sc-color-accent-violet-soft: #272138;
@@ -744,8 +724,8 @@
   --sc-color-overlay-sheet: rgba(0, 0, 0, 0.46);
   --sc-color-overlay-strong: rgba(0, 0, 0, 0.68);
 
-  /* Sólo el marfil cambia de fase. La lima del pórtico es la misma en ambos
-     temas: es relleno de marca, y la marca ya no tiene dos versiones. */
+  /* Sólo el marfil cambia de fase. La menta del pórtico es la misma en ambos
+     temas: la marca no tiene dos versiones. */
   --sc-color-clay-ivory: #1e313b;
   --sc-color-clay-ivory-deep: #15232b;
 

@@ -1,8 +1,8 @@
 # Activos oficiales de marca
 
-Esta carpeta es la fuente versionada de los activos de identidad Clay entregados para structureCo:
+Esta carpeta es la fuente versionada de los activos de identidad Clay de StructureCo:
 
-- `brandbook-clay.html` — brandbook visual completo.
+- `brandbook-clay.html` — único Brandbook canónico, renovado en CRI-91 con la dirección CRI-12C menta/esmeralda.
 - `logo.svg` — logotipo suministrado, con un nombre descriptivo dentro del repositorio.
 - `manifest.json` — tamaños y hashes SHA-256 para detectar cambios byte a byte.
 
@@ -20,4 +20,4 @@ Desde la raíz del repositorio, compara los hashes registrados con:
 Get-FileHash -Algorithm SHA256 "brand\brandbook-clay.html", "brand\logo.svg"
 ```
 
-Los valores esperados están en `manifest.json`. No se debe editar el contenido del HTML o del SVG para adaptarlo a la aplicación: estos archivos se conservan como referencia oficial.
+Los valores esperados están en `manifest.json`. El Brandbook es la autoridad visual; `src/design-system/tokens.css` implementa sus roles. El SVG conserva su geometría oficial y no se adapta a la aplicación.
