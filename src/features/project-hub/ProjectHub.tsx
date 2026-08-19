@@ -105,7 +105,11 @@ export const ProjectHub = ({
         </div>
       </article>)}
     </div>
-    {recoveries.length ? <details className="project-hub__recoveries">
+    {/* CRI-104 · la recuperación se abre sola cuando hay algo que recuperar.
+        `RecoveryRecord` es seguridad de datos: si existe una copia, verla no
+        puede depender de que alguien despliegue un `<details>` cerrado. Sin
+        copias, el bloque sigue sin renderizarse, igual que antes. */}
+    {recoveries.length ? <details className="project-hub__recoveries" open>
       <summary>{t('hub.recoveries', { count: recoveries.length })}</summary>
       {recoveries.map((recovery) => <button key={recovery.id} type="button" onClick={() => void restore(recovery)}>
         <RotateCcw size={15} /> {t('hub.restore', { name: recovery.project.name })}

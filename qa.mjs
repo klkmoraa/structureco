@@ -44,9 +44,27 @@ async function disablePwaUpdateLifecycle(page) {
   });
 }
 
+/**
+ * CRI-104 · el recorrido de QA parte SIEMPRE de un usuario nuevo.
+ *
+ * Desde CRI-104, quien tiene proyectos guardados en IndexedDB entra directo a
+ * la Mesa. Las páginas de este recorrido comparten el contexto del navegador,
+ * así que el autoguardado de una comprobación anterior convertía a la
+ * siguiente en "usuario recurrente" y la bienvenida ya no se pintaba. Borrar
+ * la biblioteca antes de que arranque la app devuelve a cada página el estado
+ * que sus checks describen. La ruta del usuario recurrente tiene su propia
+ * evidencia en `reports/evidence/2026-08-19-cri-104/capture.mjs`.
+ */
+async function startWithEmptyLibrary(page) {
+  await page.addInitScript(() => {
+    try { indexedDB.deleteDatabase('structureCo.projects'); } catch { /* sin IndexedDB no hay nada que borrar */ }
+  });
+}
+
 async function newQaPage(options) {
   const page = await browser.newPage(options);
   await disablePwaUpdateLifecycle(page);
+  await startWithEmptyLibrary(page);
   return page;
 }
 
@@ -66,10 +84,24 @@ async function activateWelcomeLauncher(page, launcher) {
   }
 }
 
+/**
+ * CRI-104 · la bienvenida es un recorrido de cuatro pasos. Los ejemplos, la
+ * importación portátil, el DXF y Space 3D viven en la tercera etapa
+ * ("Por dónde"); continuar y nuevo proyecto siguen en la primera. Este helper
+ * navega igual que lo haría una persona: pulsando el paso en el carril.
+ */
+async function openWelcomeStep(page, name) {
+  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
+  await page.locator('.welcome-steps').getByRole('button', { name, exact: true }).click();
+  await page.locator(`.welcome-screen[data-welcome-step="${name === 'Por dónde' ? 'where' : 'how'}"]`)
+    .waitFor({ state: 'visible' });
+}
+
 async function enterWorkspace(page, { example = false } = {}) {
+  if (example) await openWelcomeStep(page, 'Por dónde');
   const launcher = example
     ? page.getByRole('button', { name: /pórtico de ejemplo/i }).first()
-    : page.getByRole('button', { name: /continuar proyecto/i }).first();
+    : page.locator('.welcome-resume-card').first();
   await activateWelcomeLauncher(page, launcher);
 }
 
@@ -77,6 +109,15 @@ async function loadCleanApp(page) {
   await page.goto(baseURL, { waitUntil: 'networkidle' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
   await page.evaluate(() => localStorage.clear());
+  // Limpio de verdad: sin borrar también la biblioteca, la recarga entraría
+  // directo a la Mesa como usuario recurrente (CRI-104) y ninguna de las
+  // comprobaciones que siguen encontraría la bienvenida.
+  await page.evaluate(() => new Promise((resolve) => {
+    const request = indexedDB.deleteDatabase('structureCo.projects');
+    request.onsuccess = () => resolve();
+    request.onerror = () => resolve();
+    request.onblocked = () => resolve();
+  }));
   await page.reload({ waitUntil: 'networkidle' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 }
@@ -122,7 +163,10 @@ async function verifyWelcomeMobileScroll(page, cdp, { width, height }) {
   const reachability = await welcome.evaluate((element) => {
     element.scrollTop = element.scrollHeight;
     const footer = element.querySelector('.welcome-footer')?.getBoundingClientRect();
-    const steps = element.querySelector('.welcome-workflow')?.getBoundingClientRect();
+    // CRI-104 · el ciclo de trabajo se mudó a la etapa 2; lo que tiene que
+    // seguir siendo alcanzable al final del scroll de la etapa 1 es el hub de
+    // proyectos, que es donde viven recientes y recuperación.
+    const steps = element.querySelector('.project-hub')?.getBoundingClientRect();
     const fullyVisible = (rect) => Boolean(rect && rect.top >= -1 && rect.bottom <= window.innerHeight + 1);
     return {
       scrollTop: element.scrollTop,
@@ -656,6 +700,10 @@ async function verifyWelcomeClayMaterial(page) {
   // ningún check lo viera.
   out.checks.welcomeFrameHasHeroRadius = frame.borderRadius === '26px';
 
+  // CRI-104 · las tres materias que este check vigila (tarjeta de puerta, zona
+  // de archivo y tarjeta de ejemplo) conviven ahora en la etapa 3.
+  await openWelcomeStep(page, 'Por dónde');
+
   const cardSelectors = {
     launcher: '.welcome-launcher-card >> nth=0',
     import: '.welcome-import-card >> nth=0',
@@ -744,6 +792,9 @@ async function verifyWelcomeClayMaterial(page) {
   // en el mismo recorrido (el orden del DOM es launcher x3 → filtros →
   // import → plantillas) para comprobar las tres, en vez de resetear el foco
   // tres veces.
+  // El recorrido de Tab arranca desde el principio del documento: la etapa 3
+  // ya está abierta por el bloque anterior, así que las tres materias están
+  // todas en el árbol y se alcanzan en el mismo barrido.
   await page.locator('body').evaluate((body) => body.focus());
   const capitalize = (s) => s[0].toUpperCase() + s.slice(1);
   const focusChecks = [
@@ -779,8 +830,11 @@ async function verifyWelcomeReducedMotionActive() {
   const context = await browser.newContext({ reducedMotion: 'reduce' });
   const page = await context.newPage();
   await disablePwaUpdateLifecycle(page);
+  await startWithEmptyLibrary(page);
   await page.goto(baseURL, { waitUntil: 'networkidle' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
+  // CRI-104 · la zona de archivo vive en la etapa 3 del recorrido.
+  await openWelcomeStep(page, 'Por dónde');
 
   const cardSelectors = {
     launcher: '.welcome-launcher-card >> nth=0',

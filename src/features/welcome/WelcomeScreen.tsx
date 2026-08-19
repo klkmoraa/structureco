@@ -1,10 +1,8 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   CheckCircle2,
   Compass,
-  Cpu,
-  FolderOpen,
   GitCommitHorizontal,
   GraduationCap,
   Layers,
@@ -12,7 +10,6 @@ import {
   Moon,
   Move3d,
   Play,
-  Sparkles,
   Sun,
   Triangle,
   Upload,
@@ -27,6 +24,7 @@ import { NewExerciseDialog } from './NewExerciseDialog';
 import { BrandMark } from '../topbar/BrandMark';
 import { StructuralPortalHero } from './StructuralPortalHero';
 import { presentExample } from './examplePresentation';
+import { shouldResumeDirectly, useWelcomeEntry } from './welcomeEntry';
 import { Drawer } from '../../design-system/components/overlays';
 import { Surface } from '../../design-system/components/surface';
 import type { TranslationKey } from '../../i18n/catalogs';
@@ -39,6 +37,16 @@ interface WelcomeScreenProps {
   onOpenWorkspace: () => void;
   onOpenSpace3D?: () => void;
   onPreloadWorkspace?: () => void;
+  /**
+   * `true` sólo en el PRIMER montaje de la sesión. Cuando alguien vuelve a
+   * Inicio desde la Mesa, el shell lo pone en `false` y la bienvenida se queda
+   * donde está: un salto automático en ese momento convertiría el botón de
+   * Inicio en un botón que no lleva a ninguna parte, y eso sí escondería
+   * capacidades reales (ejemplos, Aula, importación, recuperación).
+   */
+  allowDirectResume?: boolean;
+  /** Avisa al shell de que el salto ya se consumió. */
+  onDirectResume?: () => void;
 }
 
 /**
@@ -62,28 +70,51 @@ const ACADEMIC_EXAMPLE_NAMES = new Set(['Hibbeler · carga tributaria Fig. 2–1
 type TemplateFilter = 'all' | 'academic' | 'models';
 
 /**
- * Separa la última palabra del titular para teñirla con el gradiente de marca.
- * Se hace sobre el texto ya traducido —y no con dos claves de i18n— porque el
- * énfasis es una decisión tipográfica, no de contenido: cualquier idioma nuevo
- * lo hereda sin tener que partir la frase en el catálogo. El texto renderizado
- * sigue siendo idéntico al de la clave, así que el nombre accesible no cambia.
+ * Los tres pasos que se recorren DENTRO de la bienvenida. El cuarto —la Mesa—
+ * no es un panel de esta pantalla: es la pantalla siguiente, y por eso el
+ * cuarto elemento del carril la abre en vez de cambiar este estado.
  */
-const splitEmphasis = (title: string) => {
-  const lastSpace = title.trimEnd().lastIndexOf(' ');
-  if (lastSpace <= 0) return { lead: '', emphasis: title };
-  return { lead: title.slice(0, lastSpace), emphasis: title.slice(lastSpace + 1) };
+type WelcomeStep = 'welcome' | 'how' | 'where';
+const STEP_ORDER: readonly WelcomeStep[] = ['welcome', 'how', 'where'];
+
+/** Cómo se trabaja: proyecto libre o ejercicio de Aula. Ordena la etapa 3; no
+ *  retira ninguna puerta — en la etapa 3 están todas, siempre. */
+type WorkTrack = 'project' | 'classroom';
+
+const STEP_LABEL: Record<WelcomeStep, TranslationKey> = {
+  welcome: 'welcome.stepWelcome',
+  how: 'welcome.stepHow',
+  where: 'welcome.stepWhere',
 };
 
-export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspace }: WelcomeScreenProps) => {
+export const WelcomeScreen = ({
+  onOpenWorkspace,
+  onOpenSpace3D,
+  onPreloadWorkspace,
+  allowDirectResume = false,
+  onDirectResume,
+}: WelcomeScreenProps) => {
   const { project, replaceProject, updateProjectView } = useProject();
   const { language, t } = useI18n();
   const { theme, setTheme } = useWorkspaceUI();
   const reducedMotion = useReducedMotion();
+  const [step, setStep] = useState<WelcomeStep>('welcome');
+  const [track, setTrack] = useState<WorkTrack>('project');
   const [exerciseDialogOpen, setExerciseDialogOpen] = useState(false);
   const [importCenterOpen, setImportCenterOpen] = useState(false);
   const [dxfImportOpen, setDxfImportOpen] = useState(false);
   const [templateFilter, setTemplateFilter] = useState<TemplateFilter>('all');
   const [menuOpen, setMenuOpen] = useState(false);
+  const entry = useWelcomeEntry();
+
+  /* Salto directo a la Mesa. La condición sale entera del repositorio real
+     (`welcomeEntry.ts`): hay proyectos guardados y no hay copia de
+     recuperación pendiente. Un usuario sin nada guardado nunca entra aquí. */
+  useEffect(() => {
+    if (!allowDirectResume || !shouldResumeDirectly(entry)) return;
+    onDirectResume?.();
+    onOpenWorkspace();
+  }, [allowDirectResume, entry, onDirectResume, onOpenWorkspace]);
 
   // Un único par de controles reutilizado en dos sitios (cabecera de escritorio
   // y drawer móvil) en vez de duplicar el JSX. Ninguno de los dos lleva `id`
@@ -130,33 +161,67 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
     onOpenWorkspace();
   };
 
-  const filteredExamples = exampleProjects.filter((example) => {
+  const chooseTrack = (next: WorkTrack) => {
+    setTrack(next);
+    setTemplateFilter(next === 'classroom' ? 'academic' : 'models');
+    setStep('where');
+  };
+
+  const filteredExamples = useMemo(() => exampleProjects.filter((example) => {
     if (templateFilter === 'academic') return ACADEMIC_EXAMPLE_NAMES.has(example.name);
     if (templateFilter === 'models') return !ACADEMIC_EXAMPLE_NAMES.has(example.name);
     return true;
-  });
+  }), [templateFilter]);
 
   const nodeCount = project.nodes.length;
   const memberCount = project.members.length;
-  const { lead, emphasis } = splitEmphasis(t('welcome.title'));
+  const overlayOpen = exerciseDialogOpen || importCenterOpen || dxfImportOpen || menuOpen;
 
   const templateMotion = reducedMotion
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.01 } }
     : { initial: { opacity: 0, scale: 0.95 }, animate: { opacity: 1, scale: 1 }, exit: { opacity: 0, scale: 0.95 }, transition: { type: 'spring' as const, stiffness: 380, damping: 28 } };
 
+  /* Las dos puertas de la etapa 3 que dependen del modo de trabajo. Se
+     declaran una vez y sólo cambian de ORDEN: las dos se pintan siempre, en
+     los dos modos, porque reordenar el peso visual no puede retirar una
+     capacidad real. */
+  const blankCanvasGate = (
+    <button type="button" className="welcome-launcher-card" onClick={openBlankProject} key="blank">
+      <span className="welcome-launcher-icon"><Compass size={20} /></span>
+      <span className="welcome-launcher-info">
+        <strong>{t('welcome.blankCanvas')}</strong>
+        <small>{t('welcome.launcherFreeCanvasDescription')}</small>
+      </span>
+      <ArrowRight size={16} className="welcome-launcher-arrow" />
+    </button>
+  );
+
+  const classroomGate = (
+    <button type="button" className="welcome-launcher-card welcome-launcher-card--classroom" onClick={() => setExerciseDialogOpen(true)} key="classroom">
+      <span className="welcome-launcher-icon"><GraduationCap size={20} /></span>
+      <span className="welcome-launcher-info">
+        <strong>{t('welcome.newExercise')}</strong>
+        <small>{t('welcome.launcherClassroomDescription')}</small>
+      </span>
+      <ArrowRight size={16} className="welcome-launcher-arrow" />
+    </button>
+  );
+
   return (
-    <main className="welcome-screen" data-testid="welcome-screen">
-      <div className="welcome-base" inert={exerciseDialogOpen || importCenterOpen || dxfImportOpen || menuOpen} aria-hidden={exerciseDialogOpen || importCenterOpen || dxfImportOpen || menuOpen || undefined}>
+    <main className="welcome-screen" data-testid="welcome-screen" data-welcome-step={step}>
+      <div className="welcome-base" inert={overlayOpen} aria-hidden={overlayOpen || undefined}>
         <header className="welcome-header">
-          <div className="welcome-brand" aria-label="structureCo">
-            <BrandMark size={34} />
-            <strong><span>structure</span>Co</strong>
-            <span className="welcome-version-tag">v{APP_VERSION}</span>
+          {/* Wordmark y UNA línea de marca. Nada más compite arriba: el resto
+              de la cabecera son controles de sesión (idioma, tema, menú). */}
+          <div className="welcome-brand-block">
+            <h1 className="welcome-brand">
+              <BrandMark size={30} />
+              <strong><span>structure</span>Co</strong>
+              <span className="welcome-version-tag">v{APP_VERSION}</span>
+            </h1>
+            <p className="welcome-brand-line">{t('welcome.brandLine')}</p>
           </div>
           <div className="welcome-header-actions">
-            <button className="welcome-continue-link" onClick={onOpenWorkspace}>
-              <span>{t('welcome.continue')}</span> <ArrowRight size={16} />
-            </button>
             <div className="welcome-header-desktop-only">
               {languageControl}
               {themeControl}
@@ -174,178 +239,276 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
 
         <Surface as="div" level="raised" className="welcome-frame">
           <div className="welcome-content">
-            <section className="welcome-hero" aria-labelledby="welcome-title">
-              <div className="welcome-hero-copy">
-                <p className="welcome-badge-pill">
-                  <Sparkles size={14} />
-                  <span>{t('welcome.badgePill')}</span>
-                </p>
+            <div className="welcome-intro">
+              <nav className="welcome-steps" aria-label={t('welcome.stepsNav')}>
+                <ol>
+                  {STEP_ORDER.map((id, index) => (
+                    <li key={id}>
+                      <button
+                        type="button"
+                        className={`welcome-step${step === id ? ' active' : ''}`}
+                        aria-current={step === id ? 'step' : undefined}
+                        onClick={() => setStep(id)}
+                      >
+                        <span className="welcome-step-index" aria-hidden="true">{index + 1}</span>
+                        <span className="welcome-step-label">{t(STEP_LABEL[id])}</span>
+                      </button>
+                    </li>
+                  ))}
+                  <li>
+                    {/* El cuarto paso ES la Mesa: no cambia de panel, abre la
+                        pantalla de trabajo con el proyecto actual. */}
+                    <button
+                      type="button"
+                      className="welcome-step welcome-step--table"
+                      onClick={onOpenWorkspace}
+                      onPointerEnter={onPreloadWorkspace}
+                      onFocus={onPreloadWorkspace}
+                    >
+                      <span className="welcome-step-index" aria-hidden="true">4</span>
+                      <span className="welcome-step-label">{t('welcome.stepTable')}</span>
+                    </button>
+                  </li>
+                </ol>
+              </nav>
 
-                <h1 id="welcome-title">
-                  {lead ? `${lead} ` : null}<em className="welcome-title-accent">{emphasis}</em>
-                </h1>
-                <p className="welcome-hero-subtitle">{t('welcome.subtitle')}</p>
-
-                <ul className="welcome-features-highlights">
-                  <li className="welcome-highlight-item"><CheckCircle2 size={15} /><span>{t('welcome.highlightStiffnessMethod')}</span></li>
-                  <li className="welcome-highlight-item"><CheckCircle2 size={15} /><span>{t('welcome.highlightVerified')}</span></li>
-                  <li className="welcome-highlight-item"><CheckCircle2 size={15} /><span>{t('welcome.highlightPdfExport')}</span></li>
-                </ul>
-              </div>
-
-              <div className="welcome-hero-figure">
+              {/* Pieza ilustrativa, en la esquina del panel. Decorativa: todo
+                  lo que dice está en el texto que la acompaña. */}
+              <div className="welcome-portal">
                 <StructuralPortalHero />
               </div>
-            </section>
-
-            {/* `div`, no `section`: tres botones que se describen solos no necesitan
-                ser una región del documento, y etiquetarla obligaría a inventar un
-                nombre accesible que no aporta nada sobre lo que ya dicen los botones. */}
-            <div className="welcome-hero-launcher" onPointerEnter={onPreloadWorkspace} onFocusCapture={onPreloadWorkspace} onTouchStart={onPreloadWorkspace}>
-              <button type="button" className="welcome-launcher-card" onClick={openBlankProject}>
-                <span className="welcome-launcher-icon"><Compass size={22} /></span>
-                <span className="welcome-launcher-info">
-                  <span className="welcome-launcher-header">
-                    <strong>{t('welcome.fullProject')}</strong>
-                    <span className="welcome-pill-badge">{t('welcome.pillFreeCanvas')}</span>
-                  </span>
-                  <small>{t('welcome.launcherFreeCanvasDescription')}</small>
-                </span>
-                <ArrowRight size={18} className="welcome-launcher-arrow" />
-              </button>
-
-              <button type="button" className="welcome-launcher-card welcome-launcher-card--classroom" onClick={() => setExerciseDialogOpen(true)}>
-                <span className="welcome-launcher-icon"><GraduationCap size={22} /></span>
-                <span className="welcome-launcher-info">
-                  <span className="welcome-launcher-header">
-                    <strong>{t('welcome.newExercise')}</strong>
-                    <span className="welcome-pill-badge welcome-pill-badge--aula">{t('welcome.pillClassroomMode')}</span>
-                  </span>
-                  <small>{t('welcome.launcherClassroomDescription')}</small>
-                </span>
-                <ArrowRight size={18} className="welcome-launcher-arrow" />
-              </button>
-
-              <button type="button" className="welcome-launcher-card welcome-launcher-card--recent" onClick={onOpenWorkspace}>
-                <span className="welcome-launcher-icon"><FolderOpen size={22} /></span>
-                <span className="welcome-launcher-info">
-                  <span className="welcome-launcher-header">
-                    <small>{t('welcome.continueProject')}</small>
-                    <span className="welcome-project-stats">{t('welcome.projectStats', { nodes: nodeCount, members: memberCount })}</span>
-                  </span>
-                  <strong>{project.name}</strong>
-                </span>
-                <ArrowRight size={18} className="welcome-launcher-arrow" />
-              </button>
-
-              {onOpenSpace3D ? <button
-                type="button"
-                className="welcome-launcher-card welcome-launcher-card--space3d"
-                onClick={onOpenSpace3D}
-              >
-                <span className="welcome-launcher-icon"><Move3d size={22} /></span>
-                <span className="welcome-launcher-info">
-                  <span className="welcome-launcher-header">
-                    <strong>{t('space3d.title')}</strong>
-                    <span className="welcome-pill-badge welcome-pill-badge--experimental">{t('space3d.badge')}</span>
-                  </span>
-                  <small>{t('welcome.space3DDescription')}</small>
-                </span>
-                <ArrowRight size={18} className="welcome-launcher-arrow" />
-              </button> : null}
-
             </div>
 
-            <Suspense fallback={<p role="status">{t('hub.loading')}</p>}>
-              <Phase2ProjectHub onOpenWorkspace={onOpenWorkspace} />
-            </Suspense>
-
-            <section className="welcome-showcase" aria-labelledby="welcome-showcase-title">
-              <div className="welcome-showcase-header">
-                <div>
-                  <h2 id="welcome-showcase-title">{t('welcome.otherWays')}</h2>
-                  <p className="welcome-showcase-sub">{t('welcome.showcaseSubtitle')}</p>
+            {step === 'welcome' ? (
+              <section className="welcome-panel welcome-panel--work" aria-labelledby="welcome-work-title">
+                <div className="welcome-panel-head">
+                  <h2 id="welcome-work-title">{t('welcome.workTitle')}</h2>
+                  <p>{t('welcome.workSubtitle')}</p>
                 </div>
-                <div className="welcome-filter-tabs" role="tablist">
-                  <button className={`welcome-filter-tab${templateFilter === 'all' ? ' active' : ''}`} onClick={() => setTemplateFilter('all')} role="tab" aria-selected={templateFilter === 'all'}>{t('welcome.filterAll')}</button>
-                  <button className={`welcome-filter-tab${templateFilter === 'academic' ? ' active' : ''}`} onClick={() => setTemplateFilter('academic')} role="tab" aria-selected={templateFilter === 'academic'}>{t('welcome.filterAcademic')}</button>
-                  <button className={`welcome-filter-tab${templateFilter === 'models' ? ' active' : ''}`} onClick={() => setTemplateFilter('models')} role="tab" aria-selected={templateFilter === 'models'}>{t('welcome.filterModels')}</button>
+
+                <div
+                  className="welcome-hero-launcher welcome-work-actions"
+                  onPointerEnter={onPreloadWorkspace}
+                  onFocusCapture={onPreloadWorkspace}
+                  onTouchStart={onPreloadWorkspace}
+                >
+                  <button type="button" className="welcome-resume-card" onClick={onOpenWorkspace}>
+                    <span className="welcome-resume-eyebrow">{t('welcome.continueProject')}</span>
+                    <strong className="welcome-resume-name">{project.name}</strong>
+                    <span className="welcome-resume-meta">
+                      <span className="welcome-project-stats">{t('welcome.projectStats', { nodes: nodeCount, members: memberCount })}</span>
+                      <span className="welcome-resume-go">{t('welcome.goToTable')} <ArrowRight size={16} /></span>
+                    </span>
+                  </button>
+
+                  <button type="button" className="welcome-launcher-card welcome-new-card" onClick={openBlankProject}>
+                    <span className="welcome-launcher-icon"><Compass size={20} /></span>
+                    <span className="welcome-launcher-info">
+                      <strong>{t('welcome.newProject')}</strong>
+                      <small>{t('welcome.newProjectDescription')}</small>
+                    </span>
+                    <ArrowRight size={16} className="welcome-launcher-arrow" />
+                  </button>
                 </div>
+
+                {/* El hub real, respaldado por IndexedDB: recientes, renombrar,
+                    duplicar y recuperación. Vive aquí, en la primera etapa,
+                    junto a continuar y nuevo proyecto. */}
+                <Suspense fallback={<p role="status">{t('hub.loading')}</p>}>
+                  <Phase2ProjectHub onOpenWorkspace={onOpenWorkspace} />
+                </Suspense>
+              </section>
+            ) : null}
+
+            {step === 'how' ? (
+              <section className="welcome-panel" aria-labelledby="welcome-how-title">
+                <div className="welcome-panel-head">
+                  <h2 id="welcome-how-title">{t('welcome.stepHow')}</h2>
+                  <p>{t('welcome.howSubtitle')}</p>
+                </div>
+
+                <div className="welcome-hero-launcher welcome-track-options">
+                  <button
+                    type="button"
+                    className={`welcome-launcher-card welcome-track-card${track === 'project' ? ' active' : ''}`}
+                    aria-pressed={track === 'project'}
+                    onClick={() => chooseTrack('project')}
+                  >
+                    <span className="welcome-launcher-icon"><Compass size={20} /></span>
+                    <span className="welcome-launcher-info">
+                      <strong>{t('welcome.fullProject')}</strong>
+                      <small>{t('welcome.launcherFreeCanvasDescription')}</small>
+                    </span>
+                    <span className="welcome-pill-badge">{t('welcome.pillFreeCanvas')}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`welcome-launcher-card welcome-track-card welcome-track-card--classroom${track === 'classroom' ? ' active' : ''}`}
+                    aria-pressed={track === 'classroom'}
+                    onClick={() => chooseTrack('classroom')}
+                  >
+                    <span className="welcome-launcher-icon"><GraduationCap size={20} /></span>
+                    <span className="welcome-launcher-info">
+                      <strong>{t('welcome.newExercise')}</strong>
+                      <small>{t('welcome.launcherClassroomDescription')}</small>
+                    </span>
+                    <span className="welcome-pill-badge welcome-pill-badge--aula">{t('welcome.pillClassroomMode')}</span>
+                  </button>
+                </div>
+
+                <div className="welcome-workflow">
+                  <h3>{t('welcome.cycleTitle')}</h3>
+                  <ol className="welcome-workflow-steps">
+                    <li className="welcome-workflow-step">
+                      <span className="welcome-step-num">1</span>
+                      <div className="welcome-step-content"><strong>{t('welcome.model')}</strong><p>{t('welcome.modelDescription')}</p></div>
+                    </li>
+                    <li className="welcome-workflow-step">
+                      <span className="welcome-step-num">2</span>
+                      <div className="welcome-step-content"><strong>{t('welcome.load')}</strong><p>{t('welcome.loadDescription')}</p></div>
+                    </li>
+                    <li className="welcome-workflow-step">
+                      <span className="welcome-step-num">3</span>
+                      <div className="welcome-step-content"><strong>{t('welcome.analyze')}</strong><p>{t('welcome.analyzeDescription')}</p></div>
+                    </li>
+                  </ol>
+                  <ul className="welcome-features-highlights">
+                    <li className="welcome-highlight-item"><CheckCircle2 size={14} /><span>{t('welcome.highlightStiffnessMethod')}</span></li>
+                    <li className="welcome-highlight-item"><CheckCircle2 size={14} /><span>{t('welcome.highlightVerified')}</span></li>
+                    <li className="welcome-highlight-item"><CheckCircle2 size={14} /><span>{t('welcome.highlightPdfExport')}</span></li>
+                  </ul>
+                </div>
+              </section>
+            ) : null}
+
+            {step === 'where' ? (
+              <section className="welcome-panel" aria-labelledby="welcome-where-title">
+                <div className="welcome-panel-head">
+                  <h2 id="welcome-where-title">{t('welcome.startTitle')}</h2>
+                  <p>{t('welcome.startSubtitle')}</p>
+                </div>
+
+                <div
+                  className="welcome-hero-launcher welcome-start-grid"
+                  onPointerEnter={onPreloadWorkspace}
+                  onFocusCapture={onPreloadWorkspace}
+                  onTouchStart={onPreloadWorkspace}
+                >
+                  {track === 'classroom' ? [classroomGate, blankCanvasGate] : [blankCanvasGate, classroomGate]}
+
+                  {/* Importación portátil y DXF comparten el trazo discontinuo:
+                      las dos son zonas de archivo, y ese trazo es lo que lo
+                      dice. `Phase2DxfAction` ya emite exactamente esta materia. */}
+                  <button type="button" className="welcome-import-card" onClick={() => setImportCenterOpen(true)}>
+                    <span className="welcome-import-icon"><Upload size={20} /></span>
+                    <span className="welcome-import-text">
+                      <strong>{t('welcome.import')}</strong>
+                      <small>{t('welcome.importDescription')}</small>
+                    </span>
+                    <ArrowRight size={16} className="welcome-launcher-arrow" />
+                  </button>
+
+                  <Suspense fallback={null}><Phase2DxfAction
+                    open={dxfImportOpen}
+                    onOpenChange={setDxfImportOpen}
+                    onOpenWorkspace={onOpenWorkspace}
+                  /></Suspense>
+
+                  {onOpenSpace3D ? (
+                    <button type="button" className="welcome-launcher-card welcome-launcher-card--space3d" onClick={onOpenSpace3D}>
+                      <span className="welcome-launcher-icon"><Move3d size={20} /></span>
+                      <span className="welcome-launcher-info">
+                        <strong>{t('space3d.title')}</strong>
+                        <small>{t('welcome.space3DDescription')}</small>
+                      </span>
+                      {/* La marca de experimental va fuera del nombre: dentro
+                          del `<strong>` la recorta su propio `text-overflow`,
+                          y una advertencia truncada no advierte de nada. */}
+                      <span className="welcome-pill-badge welcome-pill-badge--experimental">{t('space3d.badge')}</span>
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className="welcome-showcase">
+                  <div className="welcome-showcase-header">
+                    <div>
+                      <h3 id="welcome-showcase-title">{t('welcome.otherWays')}</h3>
+                      <p className="welcome-showcase-sub">{t('welcome.showcaseSubtitle')}</p>
+                    </div>
+                    <div className="welcome-filter-tabs" role="tablist">
+                      <button className={`welcome-filter-tab${templateFilter === 'all' ? ' active' : ''}`} onClick={() => setTemplateFilter('all')} role="tab" aria-selected={templateFilter === 'all'}>{t('welcome.filterAll')}</button>
+                      <button className={`welcome-filter-tab${templateFilter === 'academic' ? ' active' : ''}`} onClick={() => setTemplateFilter('academic')} role="tab" aria-selected={templateFilter === 'academic'}>{t('welcome.filterAcademic')}</button>
+                      <button className={`welcome-filter-tab${templateFilter === 'models' ? ' active' : ''}`} onClick={() => setTemplateFilter('models')} role="tab" aria-selected={templateFilter === 'models'}>{t('welcome.filterModels')}</button>
+                    </div>
+                  </div>
+
+                  <div className="welcome-templates-grid">
+                    {/* `initial={false}`: en el primer montaje las tarjetas aparecen ya en su
+                        estado final. Las capacidades de animación se cargan de forma asíncrona
+                        (ver `motionFeatures.ts`), así que un `initial` con `opacity: 0` en el
+                        montaje deja la vitrina invisible si las capacidades aún no llegaron.
+                        Los cambios de filtro posteriores sí animan con normalidad. */}
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      {filteredExamples.map((example) => {
+                        const meta = EXAMPLE_META[example.name] ?? DEFAULT_EXAMPLE_META;
+                        const Icon = meta.icon;
+                        const copy = presentExample(example.name, example.description, t);
+                        return (
+                          <m.button
+                            key={example.name}
+                            layout
+                            {...templateMotion}
+                            className="welcome-template-card"
+                            onClick={() => openExample(example.build)}
+                          >
+                            <span className="welcome-template-top">
+                              <span className={`welcome-category-badge ${meta.badgeClass}`}>{t(meta.categoryKey)}</span>
+                              <Icon size={18} className="welcome-template-icon" />
+                            </span>
+                            <span className="welcome-template-body">
+                              <strong>{copy.name}</strong>
+                              <small>{copy.description}</small>
+                            </span>
+                            <span className="welcome-template-footer">
+                              <span>{t('welcome.loadModel')}</span>
+                              <ArrowRight size={14} />
+                            </span>
+                          </m.button>
+                        );
+                      })}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              </section>
+            ) : null}
+
+            {step !== 'welcome' ? (
+              <div className="welcome-panel-nav">
+                <button type="button" className="welcome-back-link" onClick={() => setStep(step === 'where' ? 'how' : 'welcome')}>
+                  {t('welcome.back')}
+                </button>
+                <button
+                  type="button"
+                  className="welcome-forward-link"
+                  onClick={() => (step === 'how' ? setStep('where') : onOpenWorkspace())}
+                  onPointerEnter={onPreloadWorkspace}
+                  onFocus={onPreloadWorkspace}
+                >
+                  {step === 'how' ? t('welcome.stepWhere') : t('welcome.goToTable')} <ArrowRight size={16} />
+                </button>
               </div>
-
-              <button type="button" className="welcome-import-card" onClick={() => setImportCenterOpen(true)}>
-                <span className="welcome-import-icon"><Upload size={20} /></span>
-                <span className="welcome-import-text">
-                  <strong>{t('welcome.import')}</strong>
-                  <small>{t('welcome.importDescription')}</small>
-                </span>
-                <ArrowRight size={16} className="welcome-launcher-arrow" />
-              </button>
-
-              <Suspense fallback={null}><Phase2DxfAction
-                open={dxfImportOpen}
-                onOpenChange={setDxfImportOpen}
-                onOpenWorkspace={onOpenWorkspace}
-              /></Suspense>
-
-              <div className="welcome-templates-grid">
-                {/* `initial={false}`: en el primer montaje las tarjetas aparecen ya en su
-                    estado final. Las capacidades de animación se cargan de forma asíncrona
-                    (ver `motionFeatures.ts`), así que un `initial` con `opacity: 0` en el
-                    montaje deja la vitrina invisible si las capacidades aún no llegaron.
-                    Los cambios de filtro posteriores sí animan con normalidad. */}
-                <AnimatePresence mode="popLayout" initial={false}>
-                  {filteredExamples.map((example) => {
-                    const meta = EXAMPLE_META[example.name] ?? DEFAULT_EXAMPLE_META;
-                    const Icon = meta.icon;
-                    const copy = presentExample(example.name, example.description, t);
-                    return (
-                      <m.button
-                        key={example.name}
-                        layout
-                        {...templateMotion}
-                        className="welcome-template-card"
-                        onClick={() => openExample(example.build)}
-                      >
-                        <span className="welcome-template-top">
-                          <span className={`welcome-category-badge ${meta.badgeClass}`}>{t(meta.categoryKey)}</span>
-                          <Icon size={18} className="welcome-template-icon" />
-                        </span>
-                        <span className="welcome-template-body">
-                          <strong>{copy.name}</strong>
-                          <small>{copy.description}</small>
-                        </span>
-                        <span className="welcome-template-footer">
-                          <span>{t('welcome.loadModel')}</span>
-                          <ArrowRight size={14} />
-                        </span>
-                      </m.button>
-                    );
-                  })}
-                </AnimatePresence>
+            ) : (
+              <div className="welcome-panel-nav welcome-panel-nav--forward">
+                <button
+                  type="button"
+                  className="welcome-forward-link"
+                  onClick={() => setStep('how')}
+                >
+                  {t('welcome.exploreOptions')} <ArrowRight size={16} />
+                </button>
               </div>
-            </section>
-
-            <section className="welcome-workflow" aria-labelledby="welcome-workflow-title">
-              <div className="welcome-workflow-header">
-                <Cpu size={18} />
-                <h2 id="welcome-workflow-title">{t('welcome.stepsTitle')}</h2>
-              </div>
-              <ol className="welcome-workflow-steps">
-                <li className="welcome-workflow-step">
-                  <span className="welcome-step-num">1</span>
-                  <div className="welcome-step-content"><strong>{t('welcome.model')}</strong><p>{t('welcome.modelDescription')}</p></div>
-                </li>
-                <li className="welcome-workflow-step">
-                  <span className="welcome-step-num">2</span>
-                  <div className="welcome-step-content"><strong>{t('welcome.load')}</strong><p>{t('welcome.loadDescription')}</p></div>
-                </li>
-                <li className="welcome-workflow-step">
-                  <span className="welcome-step-num">3</span>
-                  <div className="welcome-step-content"><strong>{t('welcome.analyze')}</strong><p>{t('welcome.analyzeDescription')}</p></div>
-                </li>
-              </ol>
-            </section>
+            )}
           </div>
         </Surface>
 

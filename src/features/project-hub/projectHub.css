@@ -139,3 +139,33 @@
   .project-hub__actions button:active,
   .project-hub__recoveries button:active { transform: none; transition: none; }
 }
+
+/* CRI-104 · La recuperación deja de ser una línea gris al pie del hub.
+   Sigue siendo el mismo `<details>` sobre los mismos `RecoveryRecord` —no
+   cambia el almacenamiento ni el comportamiento— pero se abre por defecto y
+   se marca como lo que es: trabajo protegido que hay que poder ver de un
+   vistazo. El aviso no depende sólo del color: lleva su propio canto y el
+   recuento en el resumen. */
+.project-hub__recoveries {
+  margin-top: var(--sc-space-4);
+  padding: var(--sc-space-3);
+  border: 1px solid color-mix(in srgb, var(--sc-color-state-warning) 45%, var(--sc-color-border-soft));
+  border-radius: var(--sc-radius-sm);
+  background: color-mix(in srgb, var(--sc-color-state-warning) 8%, transparent);
+}
+
+.project-hub__recoveries summary {
+  color: var(--sc-color-state-warning-foreground);
+}
+
+/* CRI-104 · El hub vive DENTRO de `.welcome-frame`, que ya es la superficie
+   RAISED. Aquí vuelve a BASE —canto suave, sin elevación— para no repetir el
+   nivel dentro de sí mismo. Las filas de proyecto conservan su relieve: son
+   controles, no un panel anidado. Esta regla va al final del archivo a
+   propósito: la hoja del hub se inyecta con su chunk perezoso, después de
+   `material.css`, así que su materia se decide aquí. */
+.project-hub {
+  margin-top: 0;
+  border: 1px solid var(--sc-color-border-soft);
+  box-shadow: none;
+}

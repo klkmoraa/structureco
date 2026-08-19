@@ -17,7 +17,23 @@ import { formatFixed } from '../../utils/numberFormat';
  * de marca, no un trazo— y sólo cambian el marfil y su sombreado.
  *
  * Decorativo a efectos de accesibilidad. Todo lo que comunica está en el texto
- * del hero y en los tres chips de confianza.
+ * que la acompaña.
+ *
+ * ACABADO CLAY (CRI-104). El grano y la luz de borde son UN filtro SVG, y vive
+ * exclusivamente dentro de este `<svg>`: no se aplica a ninguna superficie de
+ * interfaz, que es lo que hace asumible su coste. Se engancha desde CSS
+ * (`.portal-hero__body { filter: url(#…) }`), no con el atributo `filter`, y
+ * eso da las tres degradaciones que el contrato exige sin una línea de
+ * JavaScript:
+ *
+ * - `prefers-reduced-motion` o `prefers-reduced-transparency` → una media
+ *   query pone `filter: none` y queda el relleno plano por caras.
+ * - Navegador sin filtros SVG vía CSS → la declaración es inválida y se
+ *   descarta, con el mismo resultado plano.
+ *
+ * En los tres casos la figura conserva su caja, su geometría y su sombreado
+ * por cara: no se pierde espacio ni se rompe la composición, porque el filtro
+ * siempre fue aditivo sobre un dibujo que ya estaba completo.
  *
  * `viewBox` y rejilla de suelo: calculados a partir del bounding box real de
  * `buildPortal()`, no copiados de un boceto. `buildPortal()` proyecta con
@@ -106,6 +122,13 @@ const canTilt = () =>
   Boolean(window.matchMedia?.('(hover: hover) and (pointer: fine)').matches) &&
   !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
+/**
+ * Id del filtro. Fijo y con prefijo del sistema: sólo hay una pieza clay en la
+ * bienvenida, así que no hay colisión posible, y el CSS necesita poder
+ * nombrarlo (`filter: url(#sc-portal-clay)`) para poder anularlo.
+ */
+const PORTAL_FILTER_ID = 'sc-portal-clay';
+
 export const StructuralPortalHero = () => {
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -182,6 +205,35 @@ export const StructuralPortalHero = () => {
       focusable="false"
       xmlns="http://www.w3.org/2000/svg"
     >
+      <defs>
+        {/* Un solo filtro, con región acotada al propio dibujo: grano fino
+            recortado a la silueta y una luz de borde de un píxel obtenida del
+            contorno erosionado. `flood-color` sale de un token vía CSS
+            (`.portal-hero__rim`), nunca de un literal. */}
+        <filter
+          id={PORTAL_FILTER_ID}
+          x="-4%"
+          y="-4%"
+          width="108%"
+          height="108%"
+          colorInterpolationFilters="sRGB"
+        >
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="noise" />
+          <feColorMatrix in="noise" type="saturate" values="0" result="noiseFlat" />
+          <feComponentTransfer in="noiseFlat" result="grain">
+            <feFuncA type="table" tableValues="0 0.13" />
+          </feComponentTransfer>
+          <feComposite in="grain" in2="SourceAlpha" operator="in" result="grainInside" />
+          <feBlend in="SourceGraphic" in2="grainInside" mode="overlay" result="grained" />
+
+          <feMorphology in="SourceAlpha" operator="erode" radius="0.9" result="core" />
+          <feComposite in="SourceAlpha" in2="core" operator="out" result="rimMask" />
+          <feFlood className="portal-hero__rim" result="rimInk" />
+          <feComposite in="rimInk" in2="rimMask" operator="in" result="rim" />
+          <feComposite in="rim" in2="grained" operator="over" />
+        </filter>
+      </defs>
+
       {/* Suelo cuadriculado. Una rejilla, no una textura: sitúa el objeto en un
           plano sin competir con él. */}
       <g className="portal-hero__ground">
@@ -207,15 +259,20 @@ export const StructuralPortalHero = () => {
         />
       ))}
 
-      {faces.map((face) => (
-        <path
-          key={face.id}
-          className="portal-hero__face"
-          d={toPath(face)}
-          fill={MATERIAL_TOKEN[face.material]}
-          style={{ '--face-shade': formatFixed(face.shade, 3, 'canvas') } as CSSProperties}
-        />
-      ))}
+      {/* El cuerpo sólido es lo único que recibe el acabado clay. La rejilla y
+          las sombras de contacto quedan fuera del filtro: son el plano, no la
+          pieza, y filtrarlas sólo añadiría coste. */}
+      <g className="portal-hero__body">
+        {faces.map((face) => (
+          <path
+            key={face.id}
+            className="portal-hero__face"
+            d={toPath(face)}
+            fill={MATERIAL_TOKEN[face.material]}
+            style={{ '--face-shade': formatFixed(face.shade, 3, 'canvas') } as CSSProperties}
+          />
+        ))}
+      </g>
     </svg>
   );
 };
