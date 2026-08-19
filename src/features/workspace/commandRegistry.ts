@@ -200,14 +200,20 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     category: 'export',
     icon: Download,
     label: (ctx) => ctx.t('export.imageSvg'),
-    run: () => emitWorkspaceCommand('export-svg'),
+    run: (ctx) => {
+      emitWorkspaceCommand('export-svg');
+      emitWorkspaceCommand('show-toast', { message: ctx.t('export.completed'), tone: 'success' });
+    },
   },
   {
     id: 'export:png',
     category: 'export',
     icon: Download,
     label: (ctx) => ctx.t('export.imagePng'),
-    run: () => emitWorkspaceCommand('export-png'),
+    run: (ctx) => {
+      emitWorkspaceCommand('export-png');
+      emitWorkspaceCommand('show-toast', { message: ctx.t('export.completed'), tone: 'success' });
+    },
   },
   {
     id: 'export:print',
@@ -343,3 +349,53 @@ export const buildCommands = (ctx: CommandContext): CommandListItem[] => [
   ...nodeCommands(ctx),
   ...memberCommands(ctx),
 ];
+
+/**
+ * Static commands that also have a dedicated visible button (TopBar) — the
+ * ones `resolveTopBarCommand` is allowed to look up. Restricted on purpose:
+ * every command in this list has been checked to only read `TopBarCommandContext`
+ * (never canvas tool/selection/results/layer state), which is what lets
+ * `resolveTopBarCommand` stub the rest of `CommandContext` safely instead of
+ * forcing every button call site to fabricate unrelated callbacks.
+ */
+const TOPBAR_COMMAND_IDS = [
+  'analysis:run', 'analysis:undo', 'analysis:redo', 'analysis:model-doctor',
+  'tool:datasheet', 'view:theme',
+  'export:json', 'export:svg', 'export:png', 'export:print',
+] as const;
+
+export type TopBarCommandId = (typeof TOPBAR_COMMAND_IDS)[number];
+
+export type TopBarCommandContext = Pick<CommandContext,
+  't' | 'project' | 'isAnalyzing' | 'canUndo' | 'canRedo' | 'theme' | 'setTheme' | 'analyze' | 'undo' | 'redo'>;
+
+/** Never invoked: every `TopBarCommandId` command is verified to not touch these. */
+const unusedByTopBar = (): never => {
+  throw new Error('commandRegistry: a TopBar command unexpectedly touched canvas/selection/results state.');
+};
+
+const TOPBAR_CONTEXT_STUBS: Pick<CommandContext,
+  'hasAnalysis' | 'classroomMode' | 'setActiveTool' | 'setSelection' | 'setResultTab' | 'updateProjectView' | 'dispatchLayers'> = {
+  hasAnalysis: false,
+  classroomMode: false,
+  setActiveTool: unusedByTopBar,
+  setSelection: unusedByTopBar,
+  setResultTab: unusedByTopBar,
+  updateProjectView: unusedByTopBar,
+  dispatchLayers: unusedByTopBar,
+};
+
+/**
+ * Resolves one command's projected state (label, disabled, run, shortcut)
+ * for a button outside the Palette — TopBar's undo/redo, datasheet, Model
+ * Doctor, analyze, theme and export controls. The button reads `.label`,
+ * `.disabled` and `.run` straight off the result instead of recomputing them,
+ * so the button and the Palette entry for the same `commandId` can never
+ * drift apart.
+ */
+export const resolveTopBarCommand = (id: TopBarCommandId, ctx: TopBarCommandContext): CommandListItem => {
+  const full: CommandContext = { ...TOPBAR_CONTEXT_STUBS, ...ctx };
+  const command = projectStatic(full).find((item) => item.id === id);
+  if (!command) throw new Error(`commandRegistry: unknown TopBar command "${id}"`);
+  return command;
+};

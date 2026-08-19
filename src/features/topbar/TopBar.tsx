@@ -13,7 +13,6 @@ import {
   FolderOpen,
   Maximize2,
   Minimize2,
-  Moon,
   MoreHorizontal,
   PanelRightClose,
   PanelRightOpen,
@@ -21,7 +20,6 @@ import {
   Redo2,
   Save,
   Sheet,
-  Sun,
   Undo2,
   Wrench,
 } from 'lucide-react';
@@ -39,6 +37,7 @@ import { useClassroomSession } from '../../store/ClassroomSessionContext';
 import { presentExample } from '../welcome/examplePresentation';
 import { APP_VERSION } from '../../appVersion';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
+import { resolveTopBarCommand, type TopBarCommandContext } from '../workspace/commandRegistry';
 import { DEFAULT_PDELTA_CONFIG } from '../../engine/pDelta';
 import type { TranslationKey } from '../../i18n/catalogs';
 import type { PDeltaConfig } from '../../types';
@@ -185,17 +184,16 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
   };
 
   // Stable reference so the memoized `AnalysisStatus` below doesn't re-render
-  // just because the TopBar itself re-rendered for an unrelated reason.
+  // just because the TopBar itself re-rendered for an unrelated reason. Its
+  // body is the same `emitWorkspaceCommand('open-model-doctor')` the registry's
+  // `analysis:model-doctor` command runs — kept as its own `useCallback` (rather
+  // than `modelDoctorCommand.run`, a fresh closure every render) only because
+  // `AnalysisStatus` is itself a protected, re-render-sensitive component
+  // (CRI-100); the visible "Model Doctor" buttons below read straight off
+  // `modelDoctorCommand` instead.
   const openModelDoctor = useCallback(() => {
     emitWorkspaceCommand('open-model-doctor');
   }, []);
-  const openModelDoctorFromMobileMenu = () => {
-    // El launcher del menú desaparece al cerrarlo. Dejamos el foco en su
-    // disparador persistente antes de abrir el drawer para que pueda volver allí.
-    mobileMenuButtonRef.current?.focus({ preventScroll: true });
-    setShowMobileMenu(false);
-    openModelDoctor();
-  };
   const closeImportCenter = () => {
     setImportCenterOpen(false);
     window.requestAnimationFrame(() => projectMenuButtonRef.current?.focus());
@@ -266,6 +264,16 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     analyze();
   };
 
+  // Single source for undo/redo, datasheet, Model Doctor, analyze, theme and
+  // the plain-export controls (CRI-103): the button below reads label/disabled/run
+  // straight off `commandRegistry` instead of recomputing them, so it can never
+  // drift from the same command's Palette entry. `analyze` here is
+  // `requestAnalysis` (this button's own classroom-session bookkeeping), not the
+  // raw `analyze` — the registry only fixes *which* command runs and how its
+  // enabled state is computed, not which concrete callback a surface supplies.
+  const topBarCommandContext: TopBarCommandContext = { t, project, isAnalyzing, canUndo, canRedo, theme, setTheme, analyze: requestAnalysis, undo, redo };
+  const command = (id: Parameters<typeof resolveTopBarCommand>[0]) => resolveTopBarCommand(id, topBarCommandContext);
+
   const exportPortable = async (kind: 'pdf' | 'bundle') => {
     setPortableExport(kind);
     setExportError(null);
@@ -315,6 +323,18 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     setShowExportMenu(false);
     setShowMobileMenu(false);
   };
+
+  const analyzeCommand = command('analysis:run');
+  const undoCommand = command('analysis:undo');
+  const redoCommand = command('analysis:redo');
+  const datasheetCommand = command('tool:datasheet');
+  const modelDoctorCommand = command('analysis:model-doctor');
+  const themeCommand = command('view:theme');
+  const ThemeIcon = themeCommand.icon;
+  const exportJsonCommand = command('export:json');
+  const exportSvgCommand = command('export:svg');
+  const exportPngCommand = command('export:png');
+  const exportPrintCommand = command('export:print');
 
   return (
     <header ref={topbarRef} className="topbar">
@@ -432,9 +452,9 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
         <IconButton
           variant="secondary"
           className="icon-button datasheet-launcher"
-          label={t('datasheet.open')}
-          title={t('datasheet.description')}
-          onClick={() => emitWorkspaceCommand('open-datasheet')}
+          label={datasheetCommand.label}
+          title={datasheetCommand.hint}
+          onClick={datasheetCommand.run}
         ><Sheet size={19} /></IconButton>
         {onOpenSpace3D ? <IconButton
           variant="secondary"
@@ -444,21 +464,21 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           onClick={onOpenSpace3D}
         ><Box size={19} /></IconButton> : null}
         <div className="history-controls" aria-label={t('history.label')}>
-          <IconButton variant="secondary" className="icon-button" label={t('history.undo')} onClick={undo} disabled={!canUndo} title={t('history.undo')}><Undo2 size={19} /></IconButton>
-          <IconButton variant="secondary" className="icon-button" label={t('history.redo')} onClick={redo} disabled={!canRedo} title={t('history.redo')}><Redo2 size={19} /></IconButton>
+          <IconButton variant="secondary" className="icon-button" label={undoCommand.label} onClick={undoCommand.run} disabled={undoCommand.disabled} title={undoCommand.label}><Undo2 size={19} /></IconButton>
+          <IconButton variant="secondary" className="icon-button" label={redoCommand.label} onClick={redoCommand.run} disabled={redoCommand.disabled} title={redoCommand.label}><Redo2 size={19} /></IconButton>
         </div>
         <div className="export-wrap">
           <IconButton variant="secondary" ref={exportMenuButtonRef} className="icon-button" label={t('export.label')} title={t('export.label')} aria-expanded={showExportMenu} aria-haspopup="menu" onClick={toggleExportMenu}><Download size={19} /></IconButton>
           <AnimatePresence>
             {showExportMenu ? (
               <m.div {...popoverMotionProps} className="popover export-menu" role="menu" aria-label={t('export.label')} onKeyDown={onMenuKeyDown}>
-                <button role="menuitem" onClick={() => { exportProjectJson(project); emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' }); setShowExportMenu(false); }}><Save size={16} /> {t('export.projectJson')}</button>
+                <button role="menuitem" onClick={() => { exportJsonCommand.run(); setShowExportMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
                 <button role="menuitem" onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
                 <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
                 <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
-                <button role="menuitem" onClick={() => { emitWorkspaceCommand('export-svg'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowExportMenu(false); }}>{t('export.imageSvg')}</button>
-                <button role="menuitem" onClick={() => { emitWorkspaceCommand('export-png'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowExportMenu(false); }}>{t('export.imagePng')}</button>
-                <button role="menuitem" onClick={() => { window.print(); setShowExportMenu(false); }}>{t('export.print')}</button>
+                <button role="menuitem" onClick={() => { exportSvgCommand.run(); setShowExportMenu(false); }}>{exportSvgCommand.label}</button>
+                <button role="menuitem" onClick={() => { exportPngCommand.run(); setShowExportMenu(false); }}>{exportPngCommand.label}</button>
+                <button role="menuitem" onClick={() => { exportPrintCommand.run(); setShowExportMenu(false); }}>{exportPrintCommand.label}</button>
               </m.div>
             ) : null}
           </AnimatePresence>
@@ -469,16 +489,16 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
             {showMobileMenu ? (
               <m.div {...popoverMotionProps} className="popover mobile-actions-menu utility-actions-menu" role="dialog" aria-label={t('actions.more')}>
                 <div className="mobile-history-actions overflow-history" role="group" aria-label={t('history.label')}>
-                  <button onClick={undo} disabled={!canUndo}><Undo2 size={17} /> {t('history.undo')}</button>
-                  <button onClick={redo} disabled={!canRedo}><Redo2 size={17} /> {t('history.redo')}</button>
+                  <button onClick={undoCommand.run} disabled={undoCommand.disabled}><Undo2 size={17} /> {undoCommand.label}</button>
+                  <button onClick={redoCommand.run} disabled={redoCommand.disabled}><Redo2 size={17} /> {redoCommand.label}</button>
                 </div>
 
                 <div className="menu-section">
                   <div className="menu-section-title">{t('menu.sectionAnalysis')}</div>
-                  <button onClick={openModelDoctorFromMobileMenu}><Wrench size={17} /> Model Doctor</button>
+                  <button onClick={() => { mobileMenuButtonRef.current?.focus({ preventScroll: true }); setShowMobileMenu(false); modelDoctorCommand.run(); }}><Wrench size={17} /> {modelDoctorCommand.label}</button>
                   {/* Datasheet degrada a icono-only y luego a este desbordamiento antes
                       de tocar Estado/Doctor (orden de degradación · CRI-95). */}
-                  <button className="overflow-datasheet" onClick={() => { emitWorkspaceCommand('open-datasheet'); setShowMobileMenu(false); }}><Sheet size={17} /> {t('datasheet.open')}</button>
+                  <button className="overflow-datasheet" onClick={() => { datasheetCommand.run(); setShowMobileMenu(false); }}><Sheet size={17} /> {datasheetCommand.label}</button>
                   <label className="mobile-menu-field overflow-case"><span>{t('analysis.caseOrCombination')}</span><select value={selectedCombinationId} onChange={(event) => setSelectedCombinationId(event.target.value)}><option value="">{t('analysis.activeCases')}</option>{project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}</select></label>
                   <label className="mobile-menu-field overflow-mode"><span>{t('analysis.mode')}</span><select value={project.settings.calculationMode ?? 'complete'} onChange={(event) => { updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } })); setShowMobileMenu(false); }}><option value="classroom">{t('analysis.modeClassroom')}</option><option value="complete">{t('analysis.modeComplete')}</option></select></label>
                   <label className="mobile-menu-field overflow-analysis-order"><span>{t('analysis.order')}</span><select value={project.settings.analysisMode ?? 'first-order'} onChange={(event) => { updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: event.target.value as 'first-order' | 'p-delta' })); setShowMobileMenu(false); }}><option value="first-order">{t('analysis.orderFirst')}</option><option value="p-delta">{t('analysis.orderPDelta')}</option></select></label>
@@ -489,7 +509,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
                   <div className="menu-section-title">{t('menu.sectionPreferences')}</div>
                   <label className="mobile-menu-field overflow-units"><span>{t('units.label')}</span><select value={project.settings.units} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units } }))}><option value="kN-m">kN · m</option><option value="N-mm">N · mm</option><option value="kgf-m">kgf · m</option><option value="kip-ft">kip · ft</option></select></label>
                   <label className="mobile-menu-field"><span>{t('language.label')}</span><select value={language} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, language: event.target.value as 'es' | 'en' } }))}><option value="es">{t('language.es')}</option><option value="en">{t('language.en')}</option></select></label>
-                  <button onClick={() => { setTheme(theme === 'light' ? 'dark' : 'light'); setShowMobileMenu(false); }}>{theme === 'light' ? <Moon size={17} /> : <Sun size={17} />} {theme === 'light' ? t('theme.dark') : t('theme.light')}</button>
+                  <button onClick={() => { themeCommand.run(); setShowMobileMenu(false); }}><ThemeIcon size={17} /> {themeCommand.label}</button>
                 </div>
 
                 {layoutActions ? <div className="menu-section overflow-layout-actions" role="group" aria-label={t('shell.viewLayout')}>
@@ -509,13 +529,13 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
 
                 <div className="menu-section">
                   <div className="menu-section-title">{t('menu.sectionExport')}</div>
-                  <button onClick={() => { exportProjectJson(project); emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' }); setShowMobileMenu(false); }}><Save size={16} /> {t('export.json')}</button>
+                  <button onClick={() => { exportJsonCommand.run(); setShowMobileMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
                   <button onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
                   <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
                   <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
-                  <button onClick={() => { emitWorkspaceCommand('export-svg'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowMobileMenu(false); }}><Download size={16} /> {t('export.svg')}</button>
-                  <button onClick={() => { emitWorkspaceCommand('export-png'); emitWorkspaceCommand('show-toast', { message: t('export.completed'), tone: 'success' }); setShowMobileMenu(false); }}><Download size={16} /> {t('export.png')}</button>
-                  <button onClick={() => { window.print(); setShowMobileMenu(false); }}>{t('export.print')}</button>
+                  <button onClick={() => { exportSvgCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportSvgCommand.label}</button>
+                  <button onClick={() => { exportPngCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportPngCommand.label}</button>
+                  <button onClick={() => { exportPrintCommand.run(); setShowMobileMenu(false); }}>{exportPrintCommand.label}</button>
                 </div>
 
                 {/* El chip de persistencia de la Cinta (zona `status`) ya es la
@@ -531,12 +551,12 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           className={`analyze-button${isAnalyzing ? ' analyzing' : ''}`}
           variant="primary"
           size="touch"
-          onClick={requestAnalysis}
+          onClick={analyzeCommand.run}
           loading={isAnalyzing}
           loadingLabel={t('analysis.runningLabel')}
           leadingIcon={<Play size={17} fill="currentColor" />}
-          aria-label={isAnalyzing ? t('analysis.runningLabel') : t('analysis.run')}
-        >{isAnalyzing ? t('analysis.running') : t('analysis.run')}</Button>
+          aria-label={isAnalyzing ? t('analysis.runningLabel') : analyzeCommand.label}
+        >{isAnalyzing ? t('analysis.running') : analyzeCommand.label}</Button>
         </div>
       </div>
 
@@ -563,12 +583,12 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
         <button
           type="button"
           className="topbar-command-button model-doctor-launcher"
-          onClick={openModelDoctor}
-          aria-label="Model Doctor"
+          onClick={modelDoctorCommand.run}
+          aria-label={modelDoctorCommand.label}
           title={t('modelDoctor.description')}
         >
           <Wrench size={17} aria-hidden="true" />
-          <span>Model Doctor</span>
+          <span>{modelDoctorCommand.label}</span>
         </button>
         <AnalysisStatus
           projectId={project.id}
