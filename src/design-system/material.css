@@ -49,6 +49,10 @@
    una mesa, en vez de un panel plano más. */
 .sc-surface[data-level='inset'],
 [data-level='inset'],
+/* CRI-104 · la bandeja de filtros de la vitrina es una cavidad de
+   interacción, no una pieza que flote sobre el panel: las pastillas se apoyan
+   DENTRO de ella. */
+.welcome-filter-tabs,
 .toolbar {
   background: var(--sc-color-surface-inset);
   border: 1px solid var(--sc-color-border-soft);
@@ -61,6 +65,10 @@
 .sc-surface[data-level='raised'],
 [data-level='raised'],
 .topbar,
+/* CRI-104 · la cabecera de la bienvenida es una barra de aplicación, igual que
+   `.topbar`: RAISED. Estaba en `floating`, que es la elevación de lo que se
+   despega del plano (popovers, menús) y no la de una barra fija. */
+.welcome-header,
 .inspector-panel,
 .inspector-summary,
 .results-panel {
@@ -68,6 +76,12 @@
   border: var(--sc-clay-edge);
   box-shadow: var(--sc-shadow-clay-md);
 }
+
+/* CRI-104 · la cabecera va a sangre completa y pegada al borde superior del
+   viewport: sólo lleva el canto que de verdad separa, el de abajo. Vive aquí
+   —y no en `styles.css`— porque este archivo se importa después y su `border`
+   en atajo ganaría a cualquier longhand declarado antes. */
+.welcome-header { border-width: 0 0 1px; }
 
 .inspector-panel { border-width: var(--inspector-clay-border-width, 1px); }
 .results-panel { border-width: var(--results-clay-border-width, 1px 0 0); }
@@ -78,13 +92,7 @@
 .popover,
 .sc-toast-card,
 .import-center-dialog,
-.mobile-tool-palette,
-.welcome-header,
-.welcome-badge-pill,
-.welcome-highlight-item,
-.welcome-filter-tabs,
-.welcome-workflow,
-.welcome-footer {
+.mobile-tool-palette {
   background: var(--sc-color-surface-1);
   border: var(--sc-clay-edge);
   box-shadow: var(--sc-shadow-clay-lg);
@@ -129,6 +137,14 @@
 
 /* BASE técnico: el borde suave sólo separa datos; no hay canto, gradiente ni
    elevación. Cada selector se revisa en Día y Noche junto con su superficie. */
+/* CRI-104 · el contenido de la bienvenida vive DENTRO de `.welcome-frame`,
+   que ya es la superficie RAISED. Sus bloques interiores vuelven a BASE: el
+   ciclo de trabajo, los chips de método y el pie no son siete tarjetas
+   apiladas sobre una tarjeta, y darles materia propia es exactamente el
+   card-inside-card que la gramática prohíbe. */
+.welcome-workflow,
+.welcome-highlight-item,
+.welcome-footer,
 .datasheet-grid-scroll,
 .datasheet-grid tbody th,
 .datasheet-grid tbody td,
