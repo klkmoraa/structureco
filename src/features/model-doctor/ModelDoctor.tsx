@@ -16,7 +16,7 @@ import { Drawer } from '../../design-system/components/overlays';
 import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
-import type { SurfacePresentation } from '../workspace/surfacePresentation';
+import type { SurfaceExtent, SurfacePresentation } from '../workspace/surfacePresentation';
 import { buildModelDoctorReport, type ModelDoctorFinding, type ModelDoctorSeverity } from './modelDoctorDiagnostics';
 import { getModelDoctorCopy } from './modelDoctorCopy';
 import { presentModelDoctorFinding } from './modelDoctorPresentation';
@@ -33,6 +33,12 @@ export interface ModelDoctorProps {
   buildReport?: typeof buildModelDoctorReport;
   returnFocusTo?: HTMLElement | null;
   presentation?: Extract<SurfacePresentation, 'drawer' | 'fullscreen'>;
+  /** `default` | `peek` (CRI-102). The broker owns this; the panel only renders it. */
+  extent?: SurfaceExtent;
+  /** Degrades to `peek` instead of closing — "Localizar" never closes the Doctor. */
+  onPeek?: () => void;
+  /** Restores from `peek` back to `default`. */
+  onRestore?: () => void;
 }
 
 type FindingFilter = 'all' | ModelDoctorSeverity;
@@ -227,6 +233,9 @@ export const ModelDoctor = ({
   buildReport = buildModelDoctorReport,
   returnFocusTo,
   presentation = 'drawer',
+  extent = 'default',
+  onPeek,
+  onRestore,
 }: ModelDoctorProps) => {
   const { project, executePreparedTopologyRepair } = useProjectModel();
   const { setActiveTool, setSelection } = useWorkspaceUI();
@@ -292,10 +301,13 @@ export const ModelDoctor = ({
   };
 
   const locate = (finding: ModelDoctorFinding) => {
-    if (!finding.target) return;
-    setSelection(finding.target);
-    onOpenChange(false);
-    emitWorkspaceCommand('focus-object', finding.target);
+    const target = finding.target;
+    if (!target) return;
+    setSelection(target);
+    // Localizar degrada a `peek`, nunca cierra (CRI-102 / D-11): la lista de
+    // hallazgos y el hallazgo activo siguen montados exactamente como estaban.
+    onPeek?.();
+    window.requestAnimationFrame(() => emitWorkspaceCommand('focus-object', target));
   };
 
   const openRepairPreview = (returnId?: string) => {
@@ -346,6 +358,9 @@ export const ModelDoctor = ({
     restoreFocus={!onSurfaceReady}
     surfaceId="doctor"
     onSurfaceReady={onSurfaceReady}
+    extent={extent}
+    onRestore={onRestore}
+    restoreLabel={copy.restore}
   >
     {preview ? <RepairPreview
       preview={preview}

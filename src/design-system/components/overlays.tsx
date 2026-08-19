@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { Maximize2, X } from 'lucide-react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import { useModalFocus } from './modalFocus';
 
@@ -112,6 +112,8 @@ export const Popover = ({
   </div>;
 };
 
+export type ModalSurfaceExtent = 'default' | 'peek';
+
 interface ModalSurfaceProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -129,6 +131,16 @@ interface ModalSurfaceProps {
   restoreFocus?: boolean;
   surfaceId?: string;
   onSurfaceReady?: (ready: boolean) => void;
+  /**
+   * `peek` shrinks a `drawer`/`fullscreen` surface to a handle without
+   * unmounting it: scroll, drafts and list position stay exactly where they
+   * were. Only `drawer`/`fullscreen` accept it — the broker enforces that.
+   */
+  extent?: ModalSurfaceExtent;
+  /** Restores a `peek`ed surface to `default`. Required when `extent` is passed. */
+  onRestore?: () => void;
+  /** Accessible label for the peek handle, e.g. "Restore Datasheet". */
+  restoreLabel?: string;
 }
 
 const ModalSurface = ({
@@ -146,16 +158,21 @@ const ModalSurface = ({
   restoreFocus = true,
   surfaceId,
   onSurfaceReady,
+  extent = 'default',
+  onRestore,
+  restoreLabel,
 }: ModalSurfaceProps) => {
   const titleId = useId();
   const descriptionId = useId();
   const surfaceRef = useRef<HTMLElement>(null);
+  const peeked = extent === 'peek';
   useModalFocus({
     open,
     containerRef: surfaceRef,
     onEscape: () => onOpenChange(false),
     restoreFocus,
     returnFocusTo,
+    trapFocus: !peeked,
   });
   useLayoutEffect(() => {
     if (!open) return undefined;
@@ -196,33 +213,48 @@ const ModalSurface = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={reducedMotion ? { duration: 0.01 } : { duration: 0.2 }}
-          className={`sc-overlay sc-overlay--${kind}`}
+          className={`sc-overlay sc-overlay--${kind}${peeked ? ' sc-overlay--peek' : ''}`}
           data-ui-overlay={kind}
           data-surface-presentation={kind === 'dialog' ? 'overlay' : kind}
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) onOpenChange(false);
+            if (peeked || event.target !== event.currentTarget) return;
+            onOpenChange(false);
           }}
         >
           <m.section
             ref={surfaceRef}
             {...surfaceMotionProps}
-            className={`sc-modal-surface sc-modal-surface--${kind}${kind === 'drawer' ? ` sc-modal-surface--${side}` : ''}${className ? ` ${className}` : ''}`}
+            className={`sc-modal-surface sc-modal-surface--${kind}${kind === 'drawer' ? ` sc-modal-surface--${side}` : ''}${peeked ? ' sc-modal-surface--peek' : ''}${className ? ` ${className}` : ''}`}
             data-level={kind === 'drawer' ? 'sheet' : 'modal'}
             data-workspace-surface={surfaceId}
+            data-surface-extent={extent}
             role="dialog"
-            aria-modal="true"
-            aria-labelledby={titleId}
-            aria-describedby={description ? descriptionId : undefined}
+            aria-modal={peeked ? undefined : true}
+            aria-label={peeked ? title : undefined}
+            aria-labelledby={peeked ? undefined : titleId}
+            aria-describedby={peeked || !description ? undefined : descriptionId}
             tabIndex={-1}
           >
-            <header className="sc-modal-surface__header">
-              <div>
-                <h2 id={titleId}>{title}</h2>
-                {description ? <p id={descriptionId}>{description}</p> : null}
-              </div>
-              <button type="button" className="sc-modal-surface__close" aria-label={closeLabel} onClick={() => onOpenChange(false)}><X size={18} /></button>
-            </header>
-            <div className="sc-modal-surface__body">{children}</div>
+            {peeked ? (
+              <button
+                type="button"
+                className="sc-modal-surface__peek-handle"
+                aria-label={restoreLabel ? `${restoreLabel}: ${title}` : title}
+                onClick={() => onRestore?.()}
+              >
+                <Maximize2 size={16} aria-hidden="true" />
+                <span>{title}</span>
+              </button>
+            ) : (
+              <header className="sc-modal-surface__header">
+                <div>
+                  <h2 id={titleId}>{title}</h2>
+                  {description ? <p id={descriptionId}>{description}</p> : null}
+                </div>
+                <button type="button" className="sc-modal-surface__close" aria-label={closeLabel} onClick={() => onOpenChange(false)}><X size={18} /></button>
+              </header>
+            )}
+            <div className="sc-modal-surface__body" inert={peeked} aria-hidden={peeked || undefined}>{children}</div>
             {footer ? <footer className="sc-modal-surface__footer">{footer}</footer> : null}
           </m.section>
         </m.div>

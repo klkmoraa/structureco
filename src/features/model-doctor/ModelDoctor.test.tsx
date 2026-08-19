@@ -291,7 +291,7 @@ describe('ModelDoctor surface', () => {
     expect(unresolved.textContent).not.toMatch(/divide M2 en OFFSET/i);
   });
 
-  it('locates a physical target using selection plus focus-object and closes the drawer', async () => {
+  it('locates a physical target using selection plus focus-object and degrades to peek instead of closing (CRI-102)', async () => {
     const user = userEvent.setup();
     const focusObject = vi.fn();
     const unsubscribe = onWorkspaceCommand('focus-object', focusObject);
@@ -301,11 +301,50 @@ describe('ModelDoctor surface', () => {
 
     await user.click(within(finding).getByRole('button', { name: /localizar/i }));
 
-    expect(focusObject).toHaveBeenCalledWith({ kind: 'member', id: 'M1' });
+    await waitFor(() => expect(focusObject).toHaveBeenCalledWith({ kind: 'member', id: 'M1' }));
     expect(screen.getByLabelText('doctor-project-snapshot').textContent).toBe(before);
     expect(screen.getByLabelText('doctor-can-undo').textContent).toBe('false');
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Model Doctor' })).toBeNull());
+    // Localizar degrada a peek: la lista de hallazgos nunca se desmonta (D-11).
+    expect(screen.getByRole('dialog', { name: 'Model Doctor' })).toBeTruthy();
+    expect(await screen.findByRole('article')).toBeTruthy();
     unsubscribe();
+  });
+
+  it('keeps a stale repair preview marked as stale across a peek and restores it unchanged (CRI-102 / T-INV-8)', async () => {
+    const user = userEvent.setup();
+    const project = withRepairableTopology();
+    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+    const PeekHarness = () => {
+      const [extent, setExtent] = useState<'default' | 'peek'>('default');
+      const { updateProject } = useProjectModel();
+      return <>
+        <button type="button" onClick={() => updateProject((draft) => ({ ...draft, name: `${draft.name} editado` }))}>Editar proyecto cerrado</button>
+        <button type="button" onClick={() => setExtent('peek')}>Simular peek</button>
+        <button type="button" onClick={() => setExtent('default')}>Simular restaurar</button>
+        <ModelDoctor open onOpenChange={() => {}} extent={extent} onPeek={() => setExtent('peek')} onRestore={() => setExtent('default')} />
+      </>;
+    };
+    render(<ProjectProvider><PeekHarness /></ProjectProvider>);
+    const repairable = (await screen.findAllByRole('article'))
+      .find((article) => article.textContent?.includes('N-SPLIT'))!;
+    await user.click(within(repairable).getByRole('button', { name: /previsualizar reparaci/i }));
+    await screen.findByRole('heading', { name: /revisi.n de la reparaci.n segura/i });
+
+    await user.click(screen.getByRole('button', { name: 'Editar proyecto cerrado' }));
+    expect((await screen.findByRole('alert')).textContent).toMatch(/preview qued. obsoleto/i);
+
+    // Degradar a peek no la desmonta: el aviso de stale sigue en el DOM.
+    // El Drawer se porta a `document.body`, no al `container` de la prueba.
+    await user.click(screen.getByRole('button', { name: 'Simular peek' }));
+    await waitFor(() => expect(document.body.querySelector('[data-surface-extent="peek"]')).toBeTruthy());
+    const stillMounted = document.body.querySelector('.model-doctor-preview__stale');
+    expect(stillMounted?.textContent).toMatch(/preview qued. obsoleto/i);
+
+    // Restaurar recupera exactamente el mismo estado: sigue stale, no se
+    // aplicó ni se descartó nada de camino.
+    await user.click(screen.getByRole('button', { name: 'Simular restaurar' }));
+    expect((await screen.findByRole('alert')).textContent).toMatch(/preview qued. obsoleto/i);
+    expect((screen.getByRole('button', { name: /aplicar reparaci/i }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('closes with Escape and returns focus to the launcher', async () => {

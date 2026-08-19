@@ -419,6 +419,63 @@
 .sc-modal-surface__body { min-height: 0; padding: var(--sc-space-5); overflow: auto; overscroll-behavior: contain; }
 .sc-modal-surface__footer { justify-content: flex-end; border-top: var(--sc-border-width) solid var(--sc-color-border-soft); background: color-mix(in srgb, var(--sc-color-surface-2) 58%, var(--sc-color-surface-1)); }
 
+/* Peek: a drawer/fullscreen surface shrunk to a handle, never unmounted --- */
+
+/*
+ * `peek` is a state of `drawer`/`fullscreen`, not a new presentation: the
+ * overlay stops dimming and blocking the canvas (D-11, R-4), and the surface
+ * itself collapses to its handle while `.sc-modal-surface__body` stays in the
+ * DOM — `inert`, off-screen for layout, but never removed — so its scroll
+ * position and any unapplied draft survive untouched.
+ */
+.sc-overlay--peek { background: transparent; pointer-events: none; animation: none; }
+.sc-overlay--peek .sc-modal-surface { pointer-events: auto; }
+/*
+ * `!important` here is deliberate: every feature surface (Datasheet, Doctor,
+ * …) carries its own `.sc-modal-surface--bottom`/`--right` sizing override
+ * (own CSS file, own specificity tier), and `peek` has to win over all of
+ * them unconditionally — it is a state layered on top of the presentation,
+ * not one more entry the normal cascade should get to out-specificity.
+ */
+.sc-modal-surface--peek {
+  grid-template-rows: auto !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: min(280px, calc(100vw - (var(--sc-space-5) * 2))) !important;
+  max-height: none !important;
+  border-radius: var(--sc-radius-sheet) !important;
+  transition: inset var(--sc-motion-standard) var(--sc-ease-emphasized, ease);
+}
+.sc-modal-surface--peek.sc-modal-surface--right,
+.sc-modal-surface--peek.sc-modal-surface--left { inset: auto var(--sc-space-4) var(--sc-space-4) auto !important; }
+.sc-modal-surface--peek.sc-modal-surface--bottom { inset: auto var(--sc-space-4) var(--sc-space-4) !important; }
+.sc-modal-surface--peek.sc-modal-surface--fullscreen { inset: auto var(--sc-space-4) var(--sc-space-4) auto !important; }
+.sc-modal-surface--peek .sc-modal-surface__body,
+.sc-modal-surface--peek .sc-modal-surface__footer { display: none !important; }
+.sc-modal-surface__peek-handle {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-3);
+  width: 100%;
+  min-height: var(--sc-control-height-touch);
+  padding: var(--sc-space-3) var(--sc-space-4);
+  border: 0;
+  border-radius: inherit;
+  background: none;
+  color: var(--sc-color-text-primary);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.sc-modal-surface__peek-handle:hover { background: var(--sc-color-surface-2); }
+.sc-modal-surface__peek-handle:active { background: var(--sc-color-surface-inset); }
+.sc-modal-surface__peek-handle span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-modal-surface--peek { transition: none; }
+}
+
 /* Tabs and accordion ----------------------------------------------------- */
 
 .sc-tabs { min-width: 0; }

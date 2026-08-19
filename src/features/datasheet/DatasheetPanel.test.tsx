@@ -156,9 +156,10 @@ describe('datasheet panel', () => {
     expect(rowFor('N1').getAttribute('aria-selected')).toBe('false');
   });
 
-  it('focuses the object on the canvas and closes itself in the same gesture', async () => {
+  it('focuses the object on the canvas and degrades to peek instead of closing (CRI-102)', async () => {
     const user = setup();
     const onOpenChange = vi.fn();
+    const onPeek = vi.fn();
     const focused = vi.fn();
     window.addEventListener(workspaceCommandEventName('focus-object'), focused);
     const Seeded = () => {
@@ -166,7 +167,7 @@ describe('datasheet panel', () => {
       if (project.id !== 'datasheet-fixture') {
         return <button type="button" onClick={() => replaceProject(createDatasheetProject())}>sembrar</button>;
       }
-      return <DatasheetPanel open onOpenChange={onOpenChange} />;
+      return <DatasheetPanel open onOpenChange={onOpenChange} onPeek={onPeek} />;
     };
     render(<ProjectProvider><Seeded /></ProjectProvider>);
     await user.click(screen.getByRole('button', { name: 'sembrar' }));
@@ -177,9 +178,66 @@ describe('datasheet panel', () => {
     await waitFor(() => expect(focused).toHaveBeenCalled());
     const detail = (focused.mock.calls[0][0] as CustomEvent).detail;
     expect(detail).toEqual({ kind: 'node', id: 'N1' });
-    // El datasheet es modal: dejarlo abierto taparía el objeto recién centrado.
-    expect(onOpenChange).toHaveBeenCalledWith(false);
+    // Localizar degrada a peek: nunca cierra la hoja (D-11).
+    expect(onPeek).toHaveBeenCalled();
+    expect(onOpenChange).not.toHaveBeenCalled();
     window.removeEventListener(workspaceCommandEventName('focus-object'), focused);
+  });
+
+  it('survives peek and restore with an unapplied cell draft neither committed nor discarded (CRI-102 / T-INV-8)', async () => {
+    const user = setup();
+    const PeekHarness = () => {
+      const { project, replaceProject } = useProjectModel();
+      const [extent, setExtent] = useState<'default' | 'peek'>('default');
+      if (project.id !== 'datasheet-fixture') {
+        return <button type="button" onClick={() => replaceProject(createDatasheetProject())}>sembrar</button>;
+      }
+      return <>
+        <output aria-label="X N1 almacenada">{project.nodes.find((node) => node.id === 'N1')?.x}</output>
+        <DatasheetPanel
+          open
+          onOpenChange={keepOpen}
+          extent={extent}
+          onPeek={() => setExtent('peek')}
+          onRestore={() => setExtent('default')}
+        />
+      </>;
+    };
+    render(<ProjectProvider><PeekHarness /></ProjectProvider>);
+    await user.click(screen.getByRole('button', { name: 'sembrar' }));
+    const xField = await screen.findByLabelText(/^X \(m\)/);
+    await user.clear(xField);
+    await user.type(xField, '12.75');
+    expect(screen.getByLabelText('X N1 almacenada').textContent).toBe('0');
+
+    await user.click(screen.getByRole('button', { name: 'Enfocar' }));
+    // Degradado a peek: el campo con el borrador sigue montado, sólo inerte.
+    // El Drawer se porta a `document.body`, no al `container` de la prueba.
+    await waitFor(() => expect(document.body.querySelector('[data-surface-extent="peek"]')).toBeTruthy());
+    const peekedField = document.body.querySelector<HTMLInputElement>('input[value="12.75"]');
+    expect(peekedField).toBeTruthy();
+    expect(peekedField?.closest('[inert]')).toBeTruthy();
+    // Ni se aplicó ni se descartó: el modelo real no cambió.
+    expect(screen.getByLabelText('X N1 almacenada').textContent).toBe('0');
+
+    // El asa de peek es el único control de restaurar y es operable por teclado.
+    await user.click(screen.getByRole('button', { name: /Restaurar hoja de datos/i }));
+    expect((await screen.findByLabelText(/^X \(m\)/) as HTMLInputElement).value).toBe('12.75');
+    expect(screen.getByLabelText('X N1 almacenada').textContent).toBe('0');
+  });
+
+  it('filters to the "selection only" facet without touching the canonical entity pipeline (D-11)', async () => {
+    const { user } = await renderDatasheet();
+    await user.click(within(rowFor('N2')).getByRole('rowheader'));
+    await waitFor(() => expect(rowFor('N2').getAttribute('aria-selected')).toBe('true'));
+
+    await user.click(screen.getByRole('button', { name: 'Sólo la selección' }));
+
+    await waitFor(() => expect(screen.queryByRole('rowheader', { name: 'N1' })).toBeNull());
+    expect(screen.getByRole('rowheader', { name: 'N2' })).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Sólo la selección' }));
+    expect(screen.getByRole('rowheader', { name: 'N1' })).toBeTruthy();
   });
 
   it('offers a visual editor for the focused object', async () => {

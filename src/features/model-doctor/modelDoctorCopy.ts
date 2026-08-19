@@ -4,6 +4,7 @@ import type { ModelDoctorCategory, ModelDoctorSeverity } from './modelDoctorDiag
 export interface ModelDoctorCopy {
   description: string;
   close: string;
+  restore: string;
   summary: (critical: number, warning: number, suggestion: number) => string;
   healthLabel: string;
   filtersLabel: string;
@@ -76,6 +77,7 @@ export const getModelDoctorCopy = (requested: Language | undefined): ModelDoctor
   return {
     description: key(language, 'modelDoctor.description'),
     close: key(language, 'modelDoctor.close'),
+    restore: key(language, 'modelDoctor.restore'),
     summary: (critical, warning, suggestion) => `${critical} ${word(critical, 'crítico', 'críticos', 'critical', 'critical')} · ${warning} ${word(warning, 'advertencia', 'advertencias', 'warning', 'warnings')} · ${suggestion} ${word(suggestion, 'sugerencia', 'sugerencias', 'suggestion', 'suggestions')}`,
     healthLabel: key(language, 'modelDoctor.healthLabel'),
     filtersLabel: key(language, 'modelDoctor.filtersLabel'),

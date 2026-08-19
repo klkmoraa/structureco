@@ -50,7 +50,7 @@ const WorkspaceBrokerContent = ({
   const { preferences: layout, setPreference, togglePreference } = layoutController;
   const { shellClass } = useShellComposition();
   const broker = useSurfacePresentation();
-  const { openSurface, closeSurface, toggleSurface, markSurfaceReady } = broker;
+  const { openSurface, closeSurface, toggleSurface, markSurfaceReady, setSurfaceExtent } = broker;
   const detail = broker.stateFor('detail');
   const analysisSetup = broker.stateFor('analysisSetup');
   const view = broker.stateFor('view');
@@ -179,6 +179,12 @@ const WorkspaceBrokerContent = ({
   const markDenseReady = useCallback((ready: boolean) => markSurfaceReady('dense', ready), [markSurfaceReady]);
   const markDatasheetReady = useCallback((ready: boolean) => markSurfaceReady('datasheet', ready), [markSurfaceReady]);
   const markDoctorReady = useCallback((ready: boolean) => markSurfaceReady('doctor', ready), [markSurfaceReady]);
+  // "Localizar" degrada a `peek`, nunca cierra (CRI-102 / D-11): mismo mecanismo
+  // para Datasheet y Doctor, porque es el mismo hueco en las dos superficies.
+  const peekDatasheet = useCallback(() => setSurfaceExtent('datasheet', 'peek'), [setSurfaceExtent]);
+  const restoreDatasheet = useCallback(() => setSurfaceExtent('datasheet', 'default'), [setSurfaceExtent]);
+  const peekDoctor = useCallback(() => setSurfaceExtent('doctor', 'peek'), [setSurfaceExtent]);
+  const restoreDoctor = useCallback(() => setSurfaceExtent('doctor', 'default'), [setSurfaceExtent]);
 
   return <AppShellLayout
     ref={shellRef}
@@ -250,6 +256,9 @@ const WorkspaceBrokerContent = ({
         onOpenChange={setDatasheetOpen}
         presentation={datasheet.presentation as 'drawer' | 'fullscreen'}
         onSurfaceReady={markDatasheetReady}
+        extent={datasheet.extent}
+        onPeek={peekDatasheet}
+        onRestore={restoreDatasheet}
       /></Suspense> : null}
       {broker.isRetained('doctor') ? <Suspense fallback={<span className="sr-only" role="status">{t('modelDoctor.loading')}</span>}><LazyModelDoctor
         open={doctor.status === 'active'}
@@ -258,6 +267,9 @@ const WorkspaceBrokerContent = ({
         presentation={doctor.presentation as 'drawer' | 'fullscreen'}
         acknowledgedIds={modelDoctorAcknowledgedIds}
         onAcknowledgedIdsChange={setModelDoctorAcknowledgedIds}
+        extent={doctor.extent}
+        onPeek={peekDoctor}
+        onRestore={restoreDoctor}
       /></Suspense> : null}
     </>}
     inspector={<div className="workspace-surfaces">

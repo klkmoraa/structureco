@@ -760,6 +760,10 @@ export const StructuralCanvas = ({
       const scale = Math.max(85, cameraRef.current.scale);
       updateCamera({ scale, x: size.width / 2 - point.x * scale, y: size.height / 2 + point.y * scale });
       showCanvasFeedback(t('canvas.objectCentered', { id: detail.id }));
+      // "Localizar" from a peeked Datasheet/Doctor moves DOM focus here: the
+      // background stops being inert the moment the surface degrades, and
+      // leaving focus behind on a now-shrunk handle would strand it (CRI-102).
+      window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
     };
     return onWorkspaceCommand('focus-object', focusObject);
   }, [memberMap, nodeMap, project.memberLoads, project.nodalLoads, showCanvasFeedback, size.height, size.width, t, updateCamera]);

@@ -156,8 +156,13 @@ export const SurfacePresentationProvider = ({
     return () => window.cancelAnimationFrame(handle);
   }, [activity, shellClass]);
 
+  // A `peek`ed surface stays `active` in the broker — it is still open, still
+  // retained, still the one drawer/fullscreen allowed at a time — but it no
+  // longer traps focus, so the background must stop being `inert` the moment
+  // it degrades, not only when it fully closes.
   const activeModal = BROKER_SURFACE_IDS.find((surface) => (
     activity[surface].status === 'active'
+    && activity[surface].extent !== 'peek'
     && isModalPresentation(activity[surface].presentation)
     && readiness[surface]
   ));

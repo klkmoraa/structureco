@@ -5,7 +5,13 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const previewServer = await preview({ root, preview: { host: '127.0.0.1', port: 4183, strictPort: true }, logLevel: 'error' });
-const browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHANNEL ?? 'chrome' });
+// `PLAYWRIGHT_EXECUTABLE_PATH` lets a sandboxed runner point at a pre-installed
+// Chromium build when the system `chrome` channel isn't present; unset, this
+// launches exactly as before (system Chrome via the `chrome` channel).
+const launchOptions = process.env.PLAYWRIGHT_EXECUTABLE_PATH
+  ? { headless: true, executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH }
+  : { headless: true, channel: process.env.PLAYWRIGHT_CHANNEL ?? 'chrome' };
+const browser = await chromium.launch(launchOptions);
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
 const url = 'http://127.0.0.1:4183/';
 let baselineProject;

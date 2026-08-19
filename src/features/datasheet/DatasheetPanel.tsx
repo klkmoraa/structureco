@@ -6,7 +6,7 @@ import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { Selection } from '../../types';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
-import type { SurfacePresentation } from '../workspace/surfacePresentation';
+import type { SurfaceExtent, SurfacePresentation } from '../workspace/surfacePresentation';
 import type { DatasheetCellEditorProps } from './DatasheetCellEditor';
 import { DatasheetEditorPanel } from './DatasheetEditorPanel';
 import { DatasheetGrid } from './DatasheetGrid';
@@ -105,6 +105,12 @@ export interface DatasheetPanelProps {
   returnFocusTo?: HTMLElement | null;
   presentation?: Extract<SurfacePresentation, 'drawer' | 'fullscreen'>;
   onSurfaceReady?: (ready: boolean) => void;
+  /** `default` | `peek` (CRI-102). The broker owns this; the panel only renders it. */
+  extent?: SurfaceExtent;
+  /** Degrades to `peek` instead of closing — "Localizar" never closes the sheet. */
+  onPeek?: () => void;
+  /** Restores from `peek` back to `default`. */
+  onRestore?: () => void;
 }
 
 export const DatasheetPanel = ({
@@ -113,6 +119,9 @@ export const DatasheetPanel = ({
   returnFocusTo,
   presentation = 'drawer',
   onSurfaceReady,
+  extent = 'default',
+  onPeek,
+  onRestore,
 }: DatasheetPanelProps) => {
   const { language, t } = useI18n();
   const { project, updateProject } = useProjectModel();
@@ -156,12 +165,23 @@ export const DatasheetPanel = ({
   );
 
   const facets = useMemo(() => datasheetFacets(allRows, entity), [allRows, entity]);
-  const rows = useMemo(
+  const pipelineRows = useMemo(
     () => applyDatasheetPipeline({ rows: allRows, query, filters, sort, haystack }),
     [allRows, query, filters, sort, haystack],
   );
 
   const selectedIds = useMemo(() => selectionIds(selection, entity), [selection, entity]);
+
+  /**
+   * Faceta "sólo la selección" (D-11). Es una lectura más encima del pipeline
+   * canónico —no dentro de él—, así que el contrato del Datasheet (rejilla
+   * propia, sin historial, escritura vía `updateProject`) no cambia.
+   */
+  const [selectionOnly, setSelectionOnly] = useState(false);
+  const rows = useMemo(
+    () => (selectionOnly ? pipelineRows.filter((row) => selectedIds.has(row.id)) : pipelineRows),
+    [pipelineRows, selectedIds, selectionOnly],
+  );
 
   // Cambiar de entidad invalida orden, filtros, foco y borrador: sus filas y sus
   // columnas son otras, así que un cambio pendiente ya no tendría dónde caer.
@@ -173,6 +193,7 @@ export const DatasheetPanel = ({
     setEditing(null);
     setPaste(null);
     setDraftSource(null);
+    setSelectionOnly(false);
     rangeAnchorRef.current = null;
   }, [entity]);
 
@@ -363,11 +384,12 @@ export const DatasheetPanel = ({
   const onFocusObject = useCallback(() => {
     if (!target) return;
     setSelection({ kind: target.kind, id: target.id });
-    // El datasheet es modal: dejarlo abierto taparía justo el objeto que se
-    // acaba de centrar, así que enfocar es un solo gesto que además lo cierra.
-    onOpenChange(false);
+    // Localizar degrada a `peek`, nunca cierra (CRI-102 / D-11): la hoja sigue
+    // montada con su fila, su desplazamiento y su borrador exactamente donde
+    // estaban, sólo encogida para dejar ver el lienzo.
+    onPeek?.();
     window.requestAnimationFrame(() => emitWorkspaceCommand('focus-object', { kind: target.kind, id: target.id }));
-  }, [onOpenChange, setSelection, target]);
+  }, [onPeek, setSelection, target]);
 
   const toggleFacet = useCallback((columnId: string, token: string) => {
     setFilters((current) => {
@@ -391,6 +413,9 @@ export const DatasheetPanel = ({
     restoreFocus={!onSurfaceReady}
     surfaceId="datasheet"
     onSurfaceReady={onSurfaceReady}
+    extent={extent}
+    onRestore={onRestore}
+    restoreLabel={t('datasheet.restore')}
   >
     <div className="datasheet-layout">
       <div className="datasheet-main">
@@ -426,6 +451,14 @@ export const DatasheetPanel = ({
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
+
+          <button
+            type="button"
+            className={`datasheet-chip datasheet-selection-only${selectionOnly ? ' active' : ''}`}
+            aria-pressed={selectionOnly}
+            disabled={selectedIds.size === 0 && !selectionOnly}
+            onClick={() => setSelectionOnly((current) => !current)}
+          >{t('datasheet.selectionOnly')}</button>
 
           <p className="datasheet-count" role="status">
             {t('datasheet.rowCount', { visible: rows.length, total: allRows.length })}

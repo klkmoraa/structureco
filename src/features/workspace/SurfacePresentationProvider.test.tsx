@@ -14,7 +14,10 @@ const Controls = () => {
     <button onClick={() => broker.closeSurface('datasheet')}>close datasheet</button>
     <button onClick={() => broker.closeSurface('doctor')}>close doctor</button>
     <button onClick={() => broker.markSurfaceReady('datasheet', true)}>datasheet ready</button>
+    <button onClick={() => broker.setSurfaceExtent('datasheet', 'peek')}>peek datasheet</button>
+    <button onClick={() => broker.setSurfaceExtent('datasheet', 'default')}>restore datasheet</button>
     <output data-testid="datasheet-state">{broker.stateFor('datasheet').status}</output>
+    <output data-testid="datasheet-extent">{broker.stateFor('datasheet').extent}</output>
     <output data-testid="doctor-state">{broker.stateFor('doctor').status}</output>
   </>;
 };
@@ -107,6 +110,26 @@ describe('SurfacePresentationProvider', () => {
     fireEvent.click(screen.getByRole('button', { name: 'close datasheet' }));
     expect(Boolean(backgroundRef.current?.inert)).toBe(false);
     expect(backgroundRef.current?.hasAttribute('aria-hidden')).toBe(false);
+  });
+
+  it('clears inert the instant a ready modal surface degrades to peek, and reapplies it on restore (CRI-102)', () => {
+    const backgroundRef = createRef<HTMLDivElement>();
+    render(<ProviderHarness backgroundRef={backgroundRef} />);
+    fireEvent.click(screen.getByRole('button', { name: 'open datasheet' }));
+    fireEvent.click(screen.getByRole('button', { name: 'datasheet ready' }));
+    expect(backgroundRef.current?.inert).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'peek datasheet' }));
+    expect(screen.getByTestId('datasheet-extent').textContent).toBe('peek');
+    // La superficie sigue abierta y retenida — sólo dejó de atrapar el fondo.
+    expect(screen.getByTestId('datasheet-state').textContent).toBe('active');
+    expect(Boolean(backgroundRef.current?.inert)).toBe(false);
+    expect(backgroundRef.current?.hasAttribute('aria-hidden')).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'restore datasheet' }));
+    expect(screen.getByTestId('datasheet-extent').textContent).toBe('default');
+    expect(backgroundRef.current?.inert).toBe(true);
+    expect(backgroundRef.current?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('moves focus to the semantic equivalent when presentation replaces the physical element', async () => {
