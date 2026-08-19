@@ -22,6 +22,7 @@ import type { SurfaceId } from './surfacePresentation';
 import '../../design-system/components/ui.css';
 import './phase1.css';
 import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
+import { isOwnHistoryScope } from './commandRegistry';
 
 const LazyCommandPalette = lazy(() => import('./CommandPalette').then((module) => ({ default: module.CommandPalette })));
 const LazyModelDoctor = lazy(() => import('../model-doctor/ModelDoctor').then((module) => ({ default: module.ModelDoctor })));
@@ -45,7 +46,7 @@ const WorkspaceBrokerContent = ({
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
   const modelDoctorToastRef = useRef<{ projectId: string; signature: string }>({ projectId, signature: '' });
   const { t } = useI18n();
-  const { project, analysis, setActiveTool, analyze } = useProject();
+  const { project, analysis, setActiveTool, analyze, undo, redo, canUndo, canRedo } = useProject();
   const { activeTool } = useWorkspaceUI();
   const { preferences: layout, setPreference, togglePreference } = layoutController;
   const { shellClass } = useShellComposition();
@@ -140,6 +141,32 @@ const WorkspaceBrokerContent = ({
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [datasheet.status, doctor.status, toggleSurface]);
+
+  // Ctrl/Cmd+Z and Ctrl/Cmd+Y drive the same undo/redo the history buttons use
+  // (G-01 · CRI-103) — but never with focus in a text field, the Datasheet
+  // grid, or any modal surface with its own editing history: the worst case is
+  // silently undoing a model operation while the user meant to undo a cell.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
+      const key = event.key.toLowerCase();
+      const isUndo = key === 'z';
+      const isRedo = key === 'y';
+      if (!isUndo && !isRedo) return;
+      if (isOwnHistoryScope(event.target)) return;
+      if (isUndo) {
+        if (!canUndo) return;
+        event.preventDefault();
+        undo();
+      } else {
+        if (!canRedo) return;
+        event.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [canRedo, canUndo, redo, undo]);
 
   useEffect(() => {
     const viewport = window.visualViewport;

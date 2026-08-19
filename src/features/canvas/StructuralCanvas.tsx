@@ -1878,7 +1878,12 @@ export const StructuralCanvas = ({
         return;
       }
       if (structuralEditDraft) return;
-      if (key === 'r' && !command && !event.altKey) {
+      // Letter-only shortcuts (no modifier) are scoped to the canvas element
+      // itself (CRI-103): anywhere else — including plain document/body focus,
+      // which is where a screen reader's quick-nav browse mode intercepts
+      // single letters — they must not fire, or they hijack that navigation.
+      const canvasHasFocus = document.activeElement instanceof Node && Boolean(hostRef.current?.contains(document.activeElement));
+      if (key === 'r' && !command && !event.altKey && canvasHasFocus) {
         if (!repeatCandidate) return;
         event.preventDefault();
         activateRepeat();
@@ -1900,7 +1905,7 @@ export const StructuralCanvas = ({
         return;
       }
       const shortcutTool = toolFromShortcut(key);
-      if (shortcutTool && !command && !event.altKey) {
+      if (shortcutTool && !command && !event.altKey && canvasHasFocus) {
         event.preventDefault();
         setActiveTool(shortcutTool);
       }
