@@ -35,6 +35,31 @@ const ruleFor = (selector: string): string => {
   return withoutComments.slice(open + 1, close);
 };
 
+/** Cuerpo de una `@media`, para poder afirmar sobre la adaptación estrecha. */
+const mediaBlock = (query: string): string => {
+  const index = withoutComments.indexOf(`@media ${query}`);
+  if (index < 0) return '';
+  const open = withoutComments.indexOf('{', index);
+  let depth = 0;
+  for (let cursor = open; cursor < withoutComments.length; cursor += 1) {
+    if (withoutComments[cursor] === '{') depth += 1;
+    if (withoutComments[cursor] === '}') {
+      depth -= 1;
+      if (depth === 0) return withoutComments.slice(open + 1, cursor);
+    }
+  }
+  return '';
+};
+
+/** Pistas de `grid-template-rows` de `.datasheet-layout` dentro de un bloque. */
+const stackedRowTracks = (block: string): readonly string[] => {
+  const rule = block.slice(block.indexOf('.datasheet-layout'));
+  const declaration = /grid-template-rows:\s*([^;]+);/.exec(rule);
+  if (!declaration) return [];
+  // `minmax(0, 1fr) fit-content(25%)` → ['minmax(0, 1fr)', 'fit-content(25%)'].
+  return declaration[1].trim().match(/(?:[a-z-]+\([^)]*\)|[^\s]+)/g) ?? [];
+};
+
 describe('datasheet styles', () => {
   it('resolves every design token it references', () => {
     const missing = [...new Set(referencedTokens)].filter((name) => !declaredTokens.has(name));
@@ -98,6 +123,51 @@ describe('datasheet styles', () => {
 
   it('declares touch targets with the 44 px token on small viewports', () => {
     expect(css).toMatch(/min-height:\s*var\(--sc-control-height-touch\)/);
+  });
+
+  /*
+    Apiladas, la rejilla y el panel contextual comparten altura. Con la fila del
+    panel en `auto`, el panel se sirve su alto de contenido entero antes de que
+    `minmax(0, 1fr)` reparta nada: medido en K0 con el panel abierto, `auto`
+    pedía 716 px de los 732 disponibles en 390x844 y 275 px de 291 en 844x390,
+    y la fila de la rejilla se resolvía a `0px` en ambos. Como `.datasheet-main`
+    y `.datasheet-grid-scroll` declaran `min-height: 0` para poder encogerse
+    dentro de su carril, colapsaban sin protestar: la tabla quedaba con
+    `clientHeight` 0, invisible, fuera del hit-test y tapada por el panel.
+
+    La medición sobre layout real vive en `scripts/qa-datasheet-k0.mjs`; aquí se
+    fija el contrato que la hace imposible, porque es el que se puede perder en
+    una edición de la hoja.
+  */
+  it('never lets the contextual panel claim the grid budget when stacked', () => {
+    const narrow = mediaBlock('(max-width: 1023px)');
+    expect(narrow, 'la adaptación estrecha existe').not.toBe('');
+
+    const tracks = stackedRowTracks(narrow);
+    expect(tracks, 'la rejilla y el panel se apilan en dos filas').toHaveLength(2);
+
+    // La rejilla va primera y toma el espacio libre.
+    expect(tracks[0]).toMatch(/^minmax\(0,\s*1fr\)$/);
+
+    // Y la del panel está ACOTADA. `auto` —o cualquier pista sin tope— deja que
+    // el contenido del panel se coma el presupuesto entero y la rejilla se
+    // resuelva a 0.
+    expect(tracks[1], 'la fila del panel contextual no puede ser ilimitada').not.toBe('auto');
+    expect(tracks[1], 'la fila del panel contextual no puede ser ilimitada').not.toBe('max-content');
+    const capped = /^fit-content\((\d+)%\)$/.exec(tracks[1]);
+    expect(capped, `pista sin tope proporcional: ${tracks[1]}`).not.toBeNull();
+
+    // El tope deja a la rejilla la mayoría de la altura, no un resto simbólico.
+    expect(Number(capped?.[1])).toBeLessThanOrEqual(40);
+    expect(Number(capped?.[1])).toBeGreaterThan(0);
+  });
+
+  it('keeps the contextual panel present and scrollable instead of hiding it', () => {
+    // Acotar la fila no puede convertirse en esconder el panel: sigue en el
+    // flujo, y lo que no cabe se desplaza por dentro de su propio cuerpo.
+    const narrow = mediaBlock('(max-width: 1023px)');
+    expect(narrow).not.toMatch(/\.datasheet-context\b[^{]*\{[^}]*display:\s*none/);
+    expect(ruleFor('.datasheet-context__body')).toMatch(/overflow-y:\s*auto/);
   });
 
   it('honours the reduced-motion preference', () => {
