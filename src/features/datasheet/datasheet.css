@@ -788,9 +788,25 @@
 /* ------------------------------------------------------------------ */
 
 @media (max-width: 1023px) {
+  /*
+    Apiladas, la rejilla y el panel contextual compiten por la MISMA altura, y
+    `auto` deja que el panel se sirva primero: pide su alto de contenido entero
+    —716 px de 732 disponibles en 390x844— y a `minmax(0, 1fr)` no le queda
+    espacio libre que repartir, así que la fila de la rejilla se resuelve a 0.
+    `.datasheet-main` y `.datasheet-grid-scroll` llevan `min-height: 0` para
+    poder encogerse dentro de su carril, de modo que colapsan sin protestar: la
+    tabla queda con altura 0, invisible y fuera del hit-test, tapada por el
+    panel.
+
+    `fit-content` es el contrato que faltaba: el panel sigue midiéndose por su
+    contenido —cuando es corto ocupa lo que ocupa y no reserva de más— pero no
+    puede pasar de un cuarto de la superficie. La rejilla conserva siempre los
+    tres cuartos restantes, y el panel no pierde nada porque
+    `.datasheet-context__body` ya se desplaza por dentro.
+  */
   .datasheet-layout {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr) fit-content(25%);
     overflow-y: auto;
   }
 
