@@ -52,6 +52,14 @@ const copy = {
     foundationRoles: 'Mapa semántico', foundationLegend: 'Datos visuales de demostración. No corresponden a un análisis estructural.',
     foundationCurrent: 'Autoridad activa',
     materialLevels: 'Materia · 6 niveles', materialLevelsNote: 'BASE mantiene el dato técnico plano; INSET, RAISED, FLOATING, SHEET y MODAL declaran una relación física distinta.', materialBase: 'Datos técnicos', materialSheet: 'Entra por borde', materialModal: 'Interrupción', materialSurface: 'Materia',
+    radiusRoles: 'Radios por rol · V-05', radiusRolesNote: 'La escala del Brandbook: dato 0 · control 10 · tarjeta 18 · panel/hoja 24 · modal 28 · pastilla 999. El reparto es por rol, no por tamaño de caja.',
+    radiusData: 'Dato', radiusControl: 'Control', radiusCard: 'Tarjeta', radiusPanel: 'Panel / hoja', radiusModal: 'Modal', radiusPill: 'Pastilla',
+    depthSizes: 'Profundidad por tamaño · V-04', depthSizesNote: 'Las tres piezas valen lo mismo y dicen lo mismo. Sólo cambia cuánto ocupan: la profundidad describe física, no prestigio.',
+    depthSmall: 'Pieza pequeña', depthMedium: 'Tarjeta', depthLarge: 'Panel flotante', depthEqual: 'Misma importancia',
+    flatness: 'Planitud técnica · V-02', flatnessNote: 'Tabla, dato y campo numérico no reciben materia clay: sin sombra, sin canto de volumen, sin celdas redondeadas.',
+    flatnessTable: 'Extremos por miembro', flatnessMember: 'Miembro', flatnessValue: 'M máx', flatnessUnit: 'kN·m', flatnessField: 'Longitud',
+    pressStates: 'Estados del control', pressStatesNote: 'Reposo, hover, foco, pulsado y deshabilitado sobre la misma pieza. Pulsado invierte la luz y no deja sombra exterior; el foco es un anillo aparte del canto.',
+    pressRest: 'Reposo', pressHeld: 'Pulsado (mantenido)', pressDisabled: 'Deshabilitado',
     foundationOfficialSummary: 'La paleta oficial: los tokens vivos de tokens.css y su autoridad, brand/brandbook-clay.html. Sin overrides locales.',
     roleApp: 'Fondo de aplicación', roleCanvas: 'Canvas', roleSurface: 'Superficie', roleBrandFill: 'Brand fill', roleBrandStroke: 'Brand stroke', roleBrandInk: 'Brand ink', roleSelection: 'Selección', roleFocus: 'Foco', roleLoad: 'Carga puntual', roleAxial: 'Axial N', roleShear: 'Cortante V · stroke', roleShearArea: 'Cortante V · tint', roleInfluence: 'Influencia · edge', roleInfluenceArea: 'Influencia · area', roleMoment: 'Momento M', roleSuccess: 'Success', roleWarning: 'Advertencia', roleError: 'Error', roleAula: 'Mentor Aula',
     authorityDemo: 'Autoridad CRI-12C', brandAnatomy: 'Brand fill · stroke · ink', engineeringAnatomy: 'Ingeniería: V · influencia · deformada', interactionAnatomy: 'Focus + selection', themeAnatomy: 'Materia del tema activo', influenceLabel: 'Influencia · siempre dashed', deformedLabel: 'Deformada · siempre continuous',
@@ -101,6 +109,14 @@ const copy = {
     foundationRoles: 'Semantic map', foundationLegend: 'Visual demonstration data. It does not correspond to a structural analysis.',
     foundationCurrent: 'Active authority',
     materialLevels: 'Material · 6 levels', materialLevelsNote: 'BASE keeps technical data flat; INSET, RAISED, FLOATING, SHEET, and MODAL declare distinct physical relationships.', materialBase: 'Technical data', materialSheet: 'Enters from edge', materialModal: 'Interruption', materialSurface: 'Material',
+    radiusRoles: 'Radius by role · V-05', radiusRolesNote: 'The Brandbook scale: data 0 · control 10 · card 18 · panel/sheet 24 · modal 28 · pill 999. Assigned by role, not by box size.',
+    radiusData: 'Data', radiusControl: 'Control', radiusCard: 'Card', radiusPanel: 'Panel / sheet', radiusModal: 'Modal', radiusPill: 'Pill',
+    depthSizes: 'Depth by size · V-04', depthSizesNote: 'All three pieces matter equally and say the same thing. Only their size changes: depth describes physics, not prestige.',
+    depthSmall: 'Small piece', depthMedium: 'Card', depthLarge: 'Floating panel', depthEqual: 'Same importance',
+    flatness: 'Technical flatness · V-02', flatnessNote: 'Table, datum, and numeric field take no clay material: no shadow, no volume edge, no rounded cells.',
+    flatnessTable: 'Member extrema', flatnessMember: 'Member', flatnessValue: 'M max', flatnessUnit: 'kN·m', flatnessField: 'Length',
+    pressStates: 'Control states', pressStatesNote: 'Rest, hover, focus, pressed, and disabled on the same piece. Pressed inverts the light and keeps no outer shadow; focus is a ring separate from the edge.',
+    pressRest: 'Rest', pressHeld: 'Pressed (held)', pressDisabled: 'Disabled',
     foundationOfficialSummary: 'The official palette: the live tokens in tokens.css and their authority, brand/brandbook-clay.html. No local overrides.',
     roleApp: 'Application background', roleCanvas: 'Canvas', roleSurface: 'Surface', roleBrandFill: 'Brand fill', roleBrandStroke: 'Brand stroke', roleBrandInk: 'Brand ink', roleSelection: 'Selection', roleFocus: 'Focus', roleLoad: 'Point load', roleAxial: 'Axial N', roleShear: 'Shear V · stroke', roleShearArea: 'Shear V · tint', roleInfluence: 'Influence · edge', roleInfluenceArea: 'Influence · area', roleMoment: 'Moment M', roleSuccess: 'Success', roleWarning: 'Warning', roleError: 'Error', roleAula: 'Classroom mentor',
     authorityDemo: 'CRI-12C authority', brandAnatomy: 'Brand fill · stroke · ink', engineeringAnatomy: 'Engineering: V · influence · deformed', interactionAnatomy: 'Focus + selection', themeAnatomy: 'Active theme material', influenceLabel: 'Influence · always dashed', deformedLabel: 'Deformed · always continuous',
@@ -165,6 +181,31 @@ const FOUNDATION_ROLES = [
 ] as const;
 
 const MATERIAL_LEVELS: SurfaceLevel[] = ['flat', 'inset', 'raised', 'floating', 'sheet', 'modal'];
+
+/**
+ * CRI-105 · el reparto de radios por rol (V-05), tal y como lo fija el
+ * Brandbook. Cada muestra nombra el token, no un literal: si alguien mueve la
+ * escala, esta vitrina se mueve con ella.
+ */
+const RADIUS_ROLES = [
+  { id: 'data', token: '--sc-radius-data', value: '0' },
+  { id: 'control', token: '--sc-radius-control', value: '10px' },
+  { id: 'card', token: '--sc-radius-card', value: '18px' },
+  { id: 'panel', token: '--sc-radius-panel', value: '24px' },
+  { id: 'modal', token: '--sc-radius-modal', value: '28px' },
+  { id: 'pill', token: '--sc-radius-pill', value: '999px' },
+] as const;
+
+/**
+ * CRI-105 · la profundidad escala con el TAMAÑO de la pieza, nunca con su
+ * importancia. Las tres muestras dicen lo mismo y valen lo mismo: lo único que
+ * cambia entre ellas es cuánto ocupan.
+ */
+const DEPTH_SIZES = [
+  { id: 'sm', token: '--sc-shadow-clay-xs', radius: '--sc-radius-control' },
+  { id: 'md', token: '--sc-shadow-clay-md', radius: '--sc-radius-card' },
+  { id: 'lg', token: '--sc-shadow-clay-lg', radius: '--sc-radius-panel' },
+] as const;
 
 interface LabSectionProps {
   id: string;
@@ -359,6 +400,73 @@ export function ComponentLab() {
                 <span>{level === 'flat' ? t.materialBase : level === 'sheet' ? t.materialSheet : level === 'modal' ? t.materialModal : t.materialSurface}</span>
               </Surface>
             ))}
+          </div>
+        </DemoBlock>
+
+        {/* CRI-105 · V-05. Cada muestra dibuja su esquina con el token de su rol,
+            así que la vitrina no puede desviarse de la escala sin que se vea. */}
+        <DemoBlock title={t.radiusRoles} wide>
+          <p className="component-lab__material-note">{t.radiusRolesNote}</p>
+          <div className="component-lab__radius-roles" aria-label={t.radiusRoles}>
+            {RADIUS_ROLES.map(({ id, token, value }) => (
+              <div key={id} className={`component-lab__radius-role component-lab__radius-role--${id}`}>
+                <span className="component-lab__radius-sample" aria-hidden="true" />
+                <strong>{t[`radius${id[0].toUpperCase()}${id.slice(1)}` as keyof typeof t]}</strong>
+                <code>{token}</code>
+                <small>{value}</small>
+              </div>
+            ))}
+          </div>
+        </DemoBlock>
+
+        {/* CRI-105 · V-04. Las tres dicen lo mismo y valen lo mismo: si la
+            profundidad comunicara importancia, no podrían compartir etiqueta. */}
+        <DemoBlock title={t.depthSizes} wide>
+          <p className="component-lab__material-note">{t.depthSizesNote}</p>
+          <div className="component-lab__depth-sizes" aria-label={t.depthSizes}>
+            {DEPTH_SIZES.map(({ id, token, radius }) => (
+              <div key={id} className={`component-lab__depth-size component-lab__depth-size--${id}`}>
+                <strong>{id === 'sm' ? t.depthSmall : id === 'md' ? t.depthMedium : t.depthLarge}</strong>
+                <span>{t.depthEqual}</span>
+                <code>{token}</code>
+                <code>{radius}</code>
+              </div>
+            ))}
+          </div>
+        </DemoBlock>
+
+        {/* CRI-105 · V-02. La contraprueba: lo que NO recibe materia. */}
+        <DemoBlock title={t.flatness} wide>
+          <p className="component-lab__material-note">{t.flatnessNote}</p>
+          <div className="component-lab__flatness">
+            <table className="component-lab__flat-table">
+              <caption>{t.flatnessTable}</caption>
+              <thead><tr><th scope="col">{t.flatnessMember}</th><th scope="col">{t.flatnessValue}</th></tr></thead>
+              <tbody>
+                {[['M-01', 24.36], ['M-02', 18.02], ['M-03', 31.47], ['M-04', 12.8]].map(([member, value]) => (
+                  <tr key={member as string}>
+                    <th scope="row">{member}</th>
+                    <td><NumericValue value={value as number} unit={t.flatnessUnit} locale={locale} maximumFractionDigits={2} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="component-lab__flat-field">
+              <UnitField label={t.flatnessField} unit="m" value={4.25} onValueChange={() => undefined} />
+              <ResultMetric label={t.momentMetric} value={<NumericValue value={31.47} locale={locale} maximumFractionDigits={2} />} unit={t.flatnessUnit} tone="moment" />
+            </div>
+          </div>
+        </DemoBlock>
+
+        {/* CRI-105 · los cinco estados del mismo control, uno al lado del otro.
+            `pressHeld` no depende de que alguien mantenga el ratón: la muestra
+            declara `data-pressed` para que el estado sea fotografiable. */}
+        <DemoBlock title={t.pressStates} wide>
+          <p className="component-lab__material-note">{t.pressStatesNote}</p>
+          <div className="component-lab__press-states">
+            <Button variant="secondary">{t.pressRest}</Button>
+            <Surface as="div" level="raised" pressed className="component-lab__press-sample">{t.pressHeld}</Surface>
+            <Button variant="secondary" disabled>{t.pressDisabled}</Button>
           </div>
         </DemoBlock>
       </LabSection>

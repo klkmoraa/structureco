@@ -80,8 +80,14 @@
   opacity: 0.62;
 }
 
+/* El hundimiento de toda la librería sale del mismo token.
+   Antes esta regla escribía `scale(0.975)` a mano: un segundo hundimiento, con
+   otra magnitud que la del resto del sistema, y —lo importante— fuera del
+   alcance de `prefers-reduced-motion`, que sólo puede apagar el token. Los
+   segmentos, que no tienen regla `:active` propia, se hundían por aquí y
+   seguían desplazándose con el movimiento reducido activado. */
 :where(.sc-button, .sc-icon-button, .sc-segmented button, .sc-popover__trigger, .sc-tool-button, .sc-layer-toggle):not(:disabled):active {
-  transform: scale(0.975);
+  transform: var(--sc-clay-press-transform);
   transition-duration: var(--sc-motion-press);
 }
 
@@ -261,14 +267,14 @@
   grid-auto-columns: minmax(max-content, 1fr);
   gap: var(--sc-space-1);
   padding: var(--sc-space-1);
-  border-radius: var(--sc-radius-md);
+  border-radius: var(--sc-radius-card);
   background: var(--sc-color-surface-2);
   box-shadow: var(--sc-shadow-clay-pressed);
 }
 .sc-segmented button {
   min-height: var(--sc-control-height-md);
   border: 0;
-  border-radius: calc(var(--sc-radius-md) - var(--sc-space-1));
+  border-radius: var(--sc-radius-control);
   padding: 0 var(--sc-space-3);
   background: var(--sc-color-surface-1);
   color: var(--sc-color-text-secondary);
@@ -295,10 +301,10 @@
   width: max-content;
   max-width: 240px;
   padding: var(--sc-space-2) var(--sc-space-3);
-  border-radius: var(--sc-radius-sm);
+  border-radius: var(--sc-radius-control);
   background: var(--sc-color-text-primary);
   color: var(--sc-color-bg-app);
-  box-shadow: var(--sc-shadow-clay-md);
+  box-shadow: var(--sc-shadow-clay-sm);
   font-size: var(--sc-font-size-caption);
   line-height: var(--sc-line-height-compact);
   opacity: 0;
@@ -352,7 +358,7 @@
   width: min(320px, calc(100vw - (var(--sc-space-4) * 2)));
   padding: var(--sc-space-4);
   border: var(--sc-border-width) solid var(--sc-color-border-soft);
-  border-radius: var(--sc-radius-lg);
+  border-radius: var(--sc-radius-panel);
   background: var(--sc-color-surface-elevated);
   color: var(--sc-color-text-primary);
   box-shadow: var(--sc-shadow-clay-floating);
@@ -389,7 +395,7 @@
 .sc-modal-surface--dialog {
   width: min(560px, calc(100vw - (var(--sc-space-5) * 2)));
   max-height: min(720px, calc(100dvh - (var(--sc-space-5) * 2)));
-  border-radius: var(--sc-radius-lg);
+  border-radius: var(--sc-radius-modal);
 }
 .sc-modal-surface--drawer { position: absolute; }
 .sc-modal-surface--fullscreen { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0; }
@@ -443,7 +449,7 @@
   height: auto !important;
   max-width: min(280px, calc(100vw - (var(--sc-space-5) * 2))) !important;
   max-height: none !important;
-  border-radius: var(--sc-radius-sheet) !important;
+  border-radius: var(--sc-radius-card) !important;
   transition: inset var(--sc-motion-standard) var(--sc-ease-emphasized, ease);
 }
 .sc-modal-surface--peek.sc-modal-surface--right,
@@ -546,7 +552,7 @@
   gap: var(--sc-space-2);
   padding: 0 var(--sc-space-2);
   border: var(--sc-border-width) solid var(--sc-color-border);
-  border-radius: 999px;
+  border-radius: var(--sc-radius-pill);
   background: var(--sc-color-surface-2);
   color: var(--sc-color-text-secondary);
   font-size: var(--sc-font-size-caption);
@@ -567,7 +573,7 @@
   gap: var(--sc-space-3);
   padding: var(--sc-space-3) var(--sc-space-4);
   border: var(--sc-border-width) solid var(--sc-banner-color);
-  border-radius: var(--sc-radius-md);
+  border-radius: var(--sc-radius-card);
   background: color-mix(in srgb, var(--sc-banner-color) 7%, var(--sc-color-surface-1));
   color: var(--sc-color-text-primary);
 }
@@ -659,7 +665,7 @@
   gap: var(--sc-space-3);
   padding: var(--sc-space-3) var(--sc-space-4);
   border: var(--sc-border-width) solid color-mix(in srgb, var(--sc-status-color) 28%, var(--sc-color-border));
-  border-radius: var(--sc-radius-md);
+  border-radius: var(--sc-radius-card);
   background: color-mix(in srgb, var(--sc-status-color) 6%, var(--sc-color-surface-1));
 }
 .sc-status-strip--ready { --sc-status-color: var(--sc-color-action-primary); }
@@ -717,7 +723,7 @@
 .sc-layer-toggle__copy { min-width: 0; display: grid; gap: 2px; }
 .sc-layer-toggle__copy strong { font-size: var(--sc-font-size-label); }
 .sc-layer-toggle__copy small { color: var(--sc-color-text-secondary); font-size: var(--sc-font-size-caption); line-height: var(--sc-line-height-compact); }
-.sc-layer-toggle__switch { width: 34px; height: 20px; position: relative; border-radius: 999px; background: var(--sc-color-border); transition: background-color var(--sc-motion-fast) var(--sc-ease-standard); }
+.sc-layer-toggle__switch { width: 34px; height: 20px; position: relative; border-radius: var(--sc-radius-pill); background: var(--sc-color-border); transition: background-color var(--sc-motion-fast) var(--sc-ease-standard); }
 .sc-layer-toggle__switch i { width: 16px; height: 16px; position: absolute; top: 2px; left: 2px; border-radius: 50%; background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-xs); transition: transform var(--sc-motion-fast) var(--sc-ease-standard); }
 .sc-layer-toggle.is-checked .sc-layer-toggle__switch { background: var(--sc-color-action-ink); }
 .sc-layer-toggle.is-checked .sc-layer-toggle__switch i { transform: translateX(14px); }

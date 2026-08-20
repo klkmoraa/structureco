@@ -489,11 +489,20 @@ describe('AG-015 premium visual layer contract', () => {
       .toBeGreaterThanOrEqual(3);
   });
 
-  it('gives repeat controls the existing floating canvas-chrome material without the contact glow', () => {
-    const canvasChromeBlock = materialCss.match(/\.canvas-mode-badge,[\s\S]*?\n\}/)?.[0] ?? '';
-    expect(canvasChromeBlock).toContain('.repeat-action-control');
-    expect(canvasChromeBlock).toContain('.repeat-preview');
-    expect(canvasChromeBlock).toContain('box-shadow: var(--sc-shadow-clay-floating)');
+  it('gives repeat controls the shared canvas-chrome material without the contact glow', () => {
+    // CRI-105 reparte la profundidad del chrome por TAMAÑO: la pastilla de
+    // repetición se queda en el escalón de control y el aviso, que es una
+    // tarjeta flotante, en el de tarjeta. Antes los dos compartían la sombra de
+    // un panel flotante (22px de desenfoque bajo esquinas de 10-18px), que es
+    // el desenfoque mayor que el radio que V-04 prohíbe. Lo que esta prueba
+    // sigue guardando es lo mismo de antes: los dos toman su materia del grupo
+    // central, y ninguno vuelve al halo de marca.
+    const chromeChips = materialCss.match(/\.canvas-mode-badge,[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(chromeChips).toContain('.repeat-action-control');
+    expect(chromeChips).toContain('box-shadow: var(--sc-shadow-clay-sm)');
+    const chromeCards = materialCss.match(/\.cut-tooltip,[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(chromeCards).toContain('.repeat-preview');
+    expect(chromeCards).toContain('box-shadow: var(--sc-shadow-clay-md)');
     expect(phase1Css).not.toMatch(/\.repeat-action-control[^}]*--sc-shadow-contact/);
     expect(phase1Css).not.toMatch(/\.repeat-preview[^}]*--sc-shadow-contact/);
   });

@@ -27,7 +27,7 @@
   color: var(--text, #231f2f);
   background: var(--sc-color-surface-1);
   border: var(--sc-clay-edge);
-  border-radius: var(--sc-radius-md);
+  border-radius: var(--sc-radius-card);
   box-shadow: var(--sc-shadow-clay-md);
 }
 
@@ -100,7 +100,7 @@
   color: var(--text);
   background: var(--sc-color-surface-1);
   border: var(--sc-clay-edge);
-  border-radius: var(--sc-radius-lg);
+  border-radius: var(--sc-radius-panel);
   box-shadow: var(--sc-shadow-clay-lg);
   overscroll-behavior: contain;
 }
@@ -277,7 +277,7 @@
   background: var(--sc-color-surface-1);
   border: var(--sc-clay-edge);
   border-radius: var(--sc-radius-lg);
-  box-shadow: var(--sc-shadow-clay-lg);
+  box-shadow: var(--sc-shadow-clay-md);
   transform: translateX(-50%);
 }
 
@@ -326,7 +326,7 @@
   background: var(--sc-color-surface-1);
   border: var(--sc-clay-edge);
   border-radius: var(--sc-radius-lg);
-  box-shadow: var(--sc-shadow-clay-lg);
+  box-shadow: var(--sc-shadow-clay-md);
 }
 
 .contextual-actions__overflow-action {

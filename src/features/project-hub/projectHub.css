@@ -103,7 +103,7 @@
 .project-hub__recoveries button:active {
   background: var(--sc-color-surface-inset);
   box-shadow: var(--sc-shadow-clay-pressed);
-  transform: translateY(1px) scale(.97);
+  transform: var(--sc-clay-press-transform);
 }
 
 .project-hub__error { color: var(--sc-color-state-error-foreground); }

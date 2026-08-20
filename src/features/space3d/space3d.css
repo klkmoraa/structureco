@@ -214,7 +214,7 @@
 .space3d-tool:active:not(:disabled),
 .space3d-button:active:not(:disabled) {
   background: var(--sc-color-surface-inset);
-  transform: translateY(1.5px) scale(.985);
+  transform: var(--sc-clay-press-transform);
   box-shadow: var(--sc-shadow-clay-pressed);
 }
 
@@ -239,7 +239,7 @@
   background: var(--sc-color-action-primary);
   border-color: var(--sc-color-action-edge);
   color: var(--sc-color-action-foreground);
-  box-shadow: var(--sc-shadow-contact);
+  box-shadow: var(--sc-shadow-clay-action);
 }
 
 .space3d-button--primary:hover:not(:disabled) { background: var(--sc-color-action-hover); }
