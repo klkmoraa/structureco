@@ -291,6 +291,508 @@
       }
     },
     {
+      "name": "k0-portrait · ciclo · hay una celda alcanzable para seleccionar",
+      "ok": true
+    },
+    {
+      "name": "k0-portrait · ciclo · seleccionar una fila no suspende el Datasheet",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "visible": true,
+        "extent": "default",
+        "peekHandle": false,
+        "scrollTop": 0,
+        "selectedRows": 1,
+        "pending": 0,
+        "pendingText": "",
+        "backgroundInert": true,
+        "zocalo": false,
+        "focus": {
+          "insideDatasheet": true,
+          "insideInert": false,
+          "onBody": false,
+          "hidden": false
+        },
+        "canvasHit": {
+          "insideDatasheet": true,
+          "insideInert": false
+        }
+      }
+    },
+    {
+      "name": "k0-portrait · ciclo · sigue siendo modal: fondo inert y foco dentro de la hoja",
+      "ok": true,
+      "detail": {
+        "inert": true,
+        "focus": {
+          "insideDatasheet": true,
+          "insideInert": false,
+          "onBody": false,
+          "hidden": false
+        }
+      }
+    },
+    {
+      "name": "k0-portrait · ciclo · el carril contextual es alcanzable con la fila puesta",
+      "ok": true
+    },
+    {
+      "name": "k0-portrait · ciclo · hay borrador sin aplicar y desplazamiento antes de localizar",
+      "ok": true,
+      "detail": {
+        "pending": 1,
+        "text": "7.5",
+        "scrollTop": 240
+      }
+    },
+    {
+      "name": "k0-portrait · ciclo · Localizar degrada a peek y no cierra",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "visible": true,
+        "extent": "peek",
+        "peekHandle": true,
+        "scrollTop": 0,
+        "selectedRows": 1,
+        "pending": 1,
+        "pendingText": "7.5",
+        "backgroundInert": false,
+        "zocalo": true,
+        "focus": {
+          "insideDatasheet": false,
+          "insideInert": false,
+          "onBody": false,
+          "hidden": false
+        },
+        "canvasHit": {
+          "insideDatasheet": false,
+          "insideInert": false
+        }
+      }
+    },
+    {
+      "name": "k0-portrait · ciclo · en peek el fondo deja de ser inert y el lienzo recibe puntero",
+      "ok": true,
+      "detail": {
+        "inert": false,
+        "canvasHit": {
+          "insideDatasheet": false,
+          "insideInert": false
+        }
+      }
+    },
+    {
+      "name": "k0-portrait · ciclo · en peek el foco no queda huérfano ni en un elemento oculto o inerte",
+      "ok": true,
+      "detail": {
+        "insideDatasheet": false,
+        "insideInert": false,
+        "onBody": false,
+        "hidden": false
+      }
+    },
+    {
+      "name": "k0-portrait · ciclo · en peek vuelve el zócalo de acciones contextuales",
+      "ok": true,
+      "detail": {
+        "zocalo": true
+      }
+    },
+    {
+      "name": "k0-portrait · ciclo · peek conserva fila, selección y borrador",
+      "ok": true,
+      "detail": {
+        "before": {
+          "rows": 1,
+          "text": "7.5"
+        },
+        "after": {
+          "rows": 1,
+          "text": "7.5"
+        }
+      }
+    },
+    {
+      "name": "k0-portrait · ciclo · restaurar devuelve la hoja a default",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "visible": true,
+        "extent": "default",
+        "peekHandle": false,
+        "scrollTop": 240,
+        "selectedRows": 1,
+        "pending": 1,
+        "pendingText": "7.5",
+        "backgroundInert": true,
+        "zocalo": false,
+        "focus": {
+          "insideDatasheet": true,
+          "insideInert": false,
+          "onBody": false,
+          "hidden": false
+        },
+        "canvasHit": {
+          "insideDatasheet": true,
+          "insideInert": false
+        }
+      }
+    },
+    {
+      "name": "k0-portrait · ciclo · restaurar conserva desplazamiento, fila y borrador",
+      "ok": true,
+      "detail": {
+        "before": {
+          "scrollTop": 240,
+          "rows": 1,
+          "text": "7.5"
+        },
+        "after": {
+          "scrollTop": 240,
+          "rows": 1,
+          "text": "7.5"
+        }
+      }
+    },
+    {
+      "name": "k0-portrait · ciclo · restaurar devuelve el comportamiento modal",
+      "ok": true,
+      "detail": {
+        "inert": true,
+        "focus": {
+          "insideDatasheet": true,
+          "insideInert": false,
+          "onBody": false,
+          "hidden": false
+        }
+      }
+    },
+    {
+      "name": "k0-portrait · ciclo · el zócalo se retira mientras la hoja vuelve a ocupar el lienzo",
+      "ok": true,
+      "detail": {
+        "zocalo": false
+      }
+    },
+    {
+      "name": "k0-portrait · picker · el lienzo recibe el toque en peek y el Picker toma la ranura contextual",
+      "ok": true,
+      "detail": {
+        "picker": true,
+        "zocalo": false,
+        "datasheet": false
+      }
+    },
+    {
+      "name": "k0-portrait · picker · el zócalo derivado no se cuela encima del Picker",
+      "ok": true,
+      "detail": {
+        "picker": true,
+        "zocalo": false,
+        "datasheet": false
+      }
+    },
+    {
+      "name": "k0-portrait · picker · cancelar el Picker devuelve la hoja a su peek sin reconstruirla",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "visible": true,
+        "extent": "peek",
+        "peekHandle": true,
+        "scrollTop": 0,
+        "selectedRows": 1,
+        "pending": 1,
+        "pendingText": "7.5",
+        "backgroundInert": false,
+        "zocalo": true,
+        "focus": {
+          "insideDatasheet": false,
+          "insideInert": false,
+          "onBody": false,
+          "hidden": false
+        },
+        "canvasHit": {
+          "insideDatasheet": false,
+          "insideInert": false
+        }
+      }
+    },
+    {
+      "name": "k0-portrait · picker · la sustitución no destruyó fila ni borrador",
+      "ok": true,
+      "detail": {
+        "before": {
+          "rows": 1,
+          "text": "7.5"
+        },
+        "after": {
+          "rows": 1,
+          "text": "7.5"
+        }
+      }
+    },
+    {
+      "name": "k0-portrait · picker · con la hoja en peek el fondo sigue sin ser inert",
+      "ok": true,
+      "detail": {
+        "inert": false
+      }
+    },
+    {
+      "name": "k0-landscape · ciclo · hay una celda alcanzable para seleccionar",
+      "ok": true
+    },
+    {
+      "name": "k0-landscape · ciclo · seleccionar una fila no suspende el Datasheet",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "visible": true,
+        "extent": "default",
+        "peekHandle": false,
+        "scrollTop": 15,
+        "selectedRows": 1,
+        "pending": 0,
+        "pendingText": "",
+        "backgroundInert": true,
+        "zocalo": false,
+        "focus": {
+          "insideDatasheet": true,
+          "insideInert": false,
+          "onBody": false,
+          "hidden": false
+        },
+        "canvasHit": {
+          "insideDatasheet": true,
+          "insideInert": false
+        }
+      }
+    },
+    {
+      "name": "k0-landscape · ciclo · sigue siendo modal: fondo inert y foco dentro de la hoja",
+      "ok": true,
+      "detail": {
+        "inert": true,
+        "focus": {
+          "insideDatasheet": true,
+          "insideInert": false,
+          "onBody": false,
+          "hidden": false
+        }
+      }
+    },
+    {
+      "name": "k0-landscape · ciclo · el carril contextual es alcanzable con la fila puesta",
+      "ok": true
+    },
+    {
+      "name": "k0-landscape · ciclo · hay borrador sin aplicar y desplazamiento antes de localizar",
+      "ok": true,
+      "detail": {
+        "pending": 1,
+        "text": "7.5",
+        "scrollTop": 240
+      }
+    },
+    {
+      "name": "k0-landscape · ciclo · Localizar degrada a peek y no cierra",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "visible": true,
+        "extent": "peek",
+        "peekHandle": true,
+        "scrollTop": 0,
+        "selectedRows": 1,
+        "pending": 1,
+        "pendingText": "7.5",
+        "backgroundInert": false,
+        "zocalo": true,
+        "focus": {
+          "insideDatasheet": false,
+          "insideInert": false,
+          "onBody": false,
+          "hidden": false
+        },
+        "canvasHit": {
+          "insideDatasheet": false,
+          "insideInert": false
+        }
+      }
+    },
+    {
+      "name": "k0-landscape · ciclo · en peek el fondo deja de ser inert y el lienzo recibe puntero",
+      "ok": true,
+      "detail": {
+        "inert": false,
+        "canvasHit": {
+          "insideDatasheet": false,
+          "insideInert": false
+        }
+      }
+    },
+    {
+      "name": "k0-landscape · ciclo · en peek el foco no queda huérfano ni en un elemento oculto o inerte",
+      "ok": true,
+      "detail": {
+        "insideDatasheet": false,
+        "insideInert": false,
+        "onBody": false,
+        "hidden": false
+      }
+    },
+    {
+      "name": "k0-landscape · ciclo · en peek vuelve el zócalo de acciones contextuales",
+      "ok": true,
+      "detail": {
+        "zocalo": true
+      }
+    },
+    {
+      "name": "k0-landscape · ciclo · peek conserva fila, selección y borrador",
+      "ok": true,
+      "detail": {
+        "before": {
+          "rows": 1,
+          "text": "7.5"
+        },
+        "after": {
+          "rows": 1,
+          "text": "7.5"
+        }
+      }
+    },
+    {
+      "name": "k0-landscape · ciclo · restaurar devuelve la hoja a default",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "visible": true,
+        "extent": "default",
+        "peekHandle": false,
+        "scrollTop": 240,
+        "selectedRows": 1,
+        "pending": 1,
+        "pendingText": "7.5",
+        "backgroundInert": true,
+        "zocalo": false,
+        "focus": {
+          "insideDatasheet": true,
+          "insideInert": false,
+          "onBody": false,
+          "hidden": false
+        },
+        "canvasHit": {
+          "insideDatasheet": true,
+          "insideInert": false
+        }
+      }
+    },
+    {
+      "name": "k0-landscape · ciclo · restaurar conserva desplazamiento, fila y borrador",
+      "ok": true,
+      "detail": {
+        "before": {
+          "scrollTop": 240,
+          "rows": 1,
+          "text": "7.5"
+        },
+        "after": {
+          "scrollTop": 240,
+          "rows": 1,
+          "text": "7.5"
+        }
+      }
+    },
+    {
+      "name": "k0-landscape · ciclo · restaurar devuelve el comportamiento modal",
+      "ok": true,
+      "detail": {
+        "inert": true,
+        "focus": {
+          "insideDatasheet": true,
+          "insideInert": false,
+          "onBody": false,
+          "hidden": false
+        }
+      }
+    },
+    {
+      "name": "k0-landscape · ciclo · el zócalo se retira mientras la hoja vuelve a ocupar el lienzo",
+      "ok": true,
+      "detail": {
+        "zocalo": false
+      }
+    },
+    {
+      "name": "k0-landscape · picker · el lienzo recibe el toque en peek y el Picker toma la ranura contextual",
+      "ok": true,
+      "detail": {
+        "picker": true,
+        "zocalo": false,
+        "datasheet": false
+      }
+    },
+    {
+      "name": "k0-landscape · picker · el zócalo derivado no se cuela encima del Picker",
+      "ok": true,
+      "detail": {
+        "picker": true,
+        "zocalo": false,
+        "datasheet": false
+      }
+    },
+    {
+      "name": "k0-landscape · picker · cancelar el Picker devuelve la hoja a su peek sin reconstruirla",
+      "ok": true,
+      "detail": {
+        "mounted": true,
+        "visible": true,
+        "extent": "peek",
+        "peekHandle": true,
+        "scrollTop": 0,
+        "selectedRows": 1,
+        "pending": 1,
+        "pendingText": "7.5",
+        "backgroundInert": false,
+        "zocalo": true,
+        "focus": {
+          "insideDatasheet": false,
+          "insideInert": false,
+          "onBody": false,
+          "hidden": false
+        },
+        "canvasHit": {
+          "insideDatasheet": false,
+          "insideInert": false
+        }
+      }
+    },
+    {
+      "name": "k0-landscape · picker · la sustitución no destruyó fila ni borrador",
+      "ok": true,
+      "detail": {
+        "before": {
+          "rows": 1,
+          "text": "7.5"
+        },
+        "after": {
+          "rows": 1,
+          "text": "7.5"
+        }
+      }
+    },
+    {
+      "name": "k0-landscape · picker · con la hoja en peek el fondo sigue sin ser inert",
+      "ok": true,
+      "detail": {
+        "inert": false
+      }
+    },
+    {
       "name": "m1 · sigue en drawer de dos columnas",
       "ok": true,
       "detail": {
@@ -514,6 +1016,14 @@
     "reports/evidence/2026-08-20-datasheet-k0-grid-height/k0-portrait-grid-visible.png",
     "reports/evidence/2026-08-20-datasheet-k0-grid-height/k0-landscape-grid-visible.png",
     "reports/evidence/2026-08-20-datasheet-k0-grid-height/x2-peek.png",
+    "reports/evidence/2026-08-20-datasheet-k0-grid-height/k0-portrait-cycle-1-row-selected.png",
+    "reports/evidence/2026-08-20-datasheet-k0-grid-height/k0-portrait-cycle-2-peek.png",
+    "reports/evidence/2026-08-20-datasheet-k0-grid-height/k0-portrait-cycle-3-restored.png",
+    "reports/evidence/2026-08-20-datasheet-k0-grid-height/k0-portrait-cycle-4-picker-cancelled.png",
+    "reports/evidence/2026-08-20-datasheet-k0-grid-height/k0-landscape-cycle-1-row-selected.png",
+    "reports/evidence/2026-08-20-datasheet-k0-grid-height/k0-landscape-cycle-2-peek.png",
+    "reports/evidence/2026-08-20-datasheet-k0-grid-height/k0-landscape-cycle-3-restored.png",
+    "reports/evidence/2026-08-20-datasheet-k0-grid-height/k0-landscape-cycle-4-picker-cancelled.png",
     "reports/evidence/2026-08-20-datasheet-k0-grid-height/m1-grid-visible.png",
     "reports/evidence/2026-08-20-datasheet-k0-grid-height/x2-grid-visible.png"
   ]

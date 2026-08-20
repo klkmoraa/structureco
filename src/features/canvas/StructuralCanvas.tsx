@@ -281,7 +281,6 @@ export const StructuralCanvas = ({
   const contextualActionsSurface = surfaceBroker?.stateFor('contextualActions');
   const openContextualActionsSurface = surfaceBroker?.openSurface;
   const closeContextualActionsSurface = surfaceBroker?.closeSurface;
-  const activateCandidatePickerSurface = surfaceBroker?.activateSurface;
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const coordinateReadoutRef = useRef<HTMLOutputElement>(null);
@@ -341,19 +340,16 @@ export const StructuralCanvas = ({
   const [, refreshClipboardAvailability] = useState(0);
 
   // This intent is wholly derived from the canonical workspace selection. The
-  // broker stores only its presentation lifecycle, never a copied selection.
+  // broker stores only its presentation lifecycle, never a copied selection —
+  // and, being derived, it never outranks a surface the user opened. The
+  // Candidate Picker's precedence over it is the broker's, by surface role and
+  // in any opening order (CRI-108); it used to need a re-activation from here
+  // to win the "latest activation" race.
   useEffect(() => {
     if (!openContextualActionsSurface || !closeContextualActionsSurface) return;
     if (selection) openContextualActionsSurface('contextualActions');
     else closeContextualActionsSurface('contextualActions');
   }, [closeContextualActionsSurface, openContextualActionsSurface, selection]);
-
-  // A pending picker remains the current Compact contextual layer even if the
-  // selection-derived zócalo was scheduled in the same React commit or the
-  // shell recomposes while the picker is open.
-  useEffect(() => {
-    if (candidatePicker && surfaceBroker?.shellClass === 'K0') activateCandidatePickerSurface?.('candidatePicker');
-  }, [activateCandidatePickerSurface, candidatePicker, surfaceBroker?.shellClass]);
 
   const selectionBox = interaction.kind === 'selection-box' ? interaction : null;
   const candidatePreview = candidatePicker ? activeCandidate(candidatePicker) : null;

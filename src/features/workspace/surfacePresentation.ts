@@ -76,6 +76,49 @@ export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Re
   },
 };
 
+/**
+ * Clase de actividad por **rol** de superficie (CRI-108).
+ *
+ * La tabla de arriba dice *dónde* aparece una superficie; ésta dice *cómo
+ * compite por estar activa*. Son dos preguntas distintas y hasta ahora sólo
+ * estaba contestada la primera: en Compact ganaba siempre la última
+ * activación, tratando a las diez superficies como competidoras equivalentes.
+ *
+ * * `tool` — herramienta invocada que el usuario conduce (`drawer`/`fullscreen`).
+ * * `layer` — capa contextual que ocupa la ranura Compact (`sheet`, `overlay`,
+ *   `floating`, o los carriles residentes de X2/M1).
+ * * `derived` — no la abre el usuario: se deriva enteramente de la selección y
+ *   viaja pegada al lienzo (CRI-97). **Nunca** reclama la ranura contextual y
+ *   **nunca** suspende a nadie; está activa exactamente mientras el lienzo sea
+ *   alcanzable.
+ *
+ * `tool` y `layer` siguen resolviéndose entre sí por última activación —abrir
+ * el Picker o una hoja encima de una herramienta es un acto del usuario y debe
+ * ganar—. Lo único que cambia es que una apertura *derivada* ya no puede
+ * desbancar a lo que el usuario está usando.
+ */
+export const SURFACE_ACTIVITY_CLASSES = ['tool', 'layer', 'derived'] as const;
+
+export type SurfaceActivityClass = (typeof SURFACE_ACTIVITY_CLASSES)[number];
+
+export const SURFACE_ACTIVITY_CLASS: Readonly<Record<SurfaceId, SurfaceActivityClass>> = {
+  detail: 'layer',
+  analysisSetup: 'layer',
+  view: 'layer',
+  results: 'layer',
+  dense: 'tool',
+  datasheet: 'tool',
+  doctor: 'tool',
+  palette: 'layer',
+  candidatePicker: 'layer',
+  contextualActions: 'derived',
+};
+
+export const surfaceActivityClass = (surface: SurfaceId): SurfaceActivityClass => SURFACE_ACTIVITY_CLASS[surface];
+
+/** Las que compiten por la única ranura contextual de Compact (R-1). */
+const occupiesContextualSlot = (surface: SurfaceId): boolean => surfaceActivityClass(surface) !== 'derived';
+
 export interface SurfaceIntent {
   open: boolean;
   extent: SurfaceExtent;
@@ -167,12 +210,33 @@ const latest = (surfaces: readonly SurfaceId[], state: SurfaceBrokerState): Surf
   [...surfaces].sort((left, right) => state.surfaces[left].activation - state.surfaces[right].activation).at(-1)
 );
 
+/**
+ * Resolución de actividad (CRI-108).
+ *
+ * En Compact hay **una** ranura contextual (R-1) y la disputan sólo las
+ * superficies que la ocupan —`tool` y `layer`—, por última activación, como
+ * hasta ahora. Una superficie `derived` no entra en esa disputa: no la abre el
+ * usuario, así que no puede desbancar a lo que el usuario está usando. A
+ * cambio cede ella: está activa mientras el lienzo sea alcanzable, y se
+ * suspende —retenida, nunca destruida— cuando algo lo tapa.
+ *
+ * Una superficie en `peek` sigue ocupando la ranura —sigue siendo la única
+ * `drawer`/`fullscreen` retenida— pero ya no tapa el lienzo, así que el zócalo
+ * derivado vuelve con él. Es el mismo criterio con el que el proveedor levanta
+ * el `inert` del fondo en `peek`, no un segundo concepto.
+ *
+ * X2 y M1 no tienen ranura única: allí `derived` sigue activa siempre que esté
+ * abierta, exactamente como antes.
+ */
 export const resolveSurfaceActivity = (
   shellClass: ShellClass,
   state: SurfaceBrokerState,
 ): SurfaceActivityMap => {
   const open = BROKER_SURFACE_IDS.filter((surface) => state.surfaces[surface].open);
-  const compactWinner = shellClass === 'K0' ? latest(open, state) : undefined;
+  const compactWinner = shellClass === 'K0'
+    ? latest(open.filter(occupiesContextualSlot), state)
+    : undefined;
+  const canvasReachable = !compactWinner || state.surfaces[compactWinner].extent === 'peek';
   const modalWinner = latest(open.filter((surface) => (
     isModalPresentation(resolveSurfacePresentation(shellClass, surface))
   )), state);
@@ -182,6 +246,7 @@ export const resolveSurfaceActivity = (
     const presentation = resolveSurfacePresentation(shellClass, surface);
     let status: SurfaceStatus = 'active';
     if (!intent.open) status = 'closed';
+    else if (!occupiesContextualSlot(surface)) status = canvasReachable ? 'active' : 'suspended';
     else if (compactWinner && compactWinner !== surface) status = 'suspended';
     else if (isModalPresentation(presentation) && modalWinner !== surface) status = 'suspended';
     return [surface, { ...intent, presentation, status }];
@@ -213,7 +278,18 @@ export const validateSurfaceCombination = (
 ): string[] => {
   const errors: string[] = [];
   const active = BROKER_SURFACE_IDS.filter((surface) => activity[surface].status === 'active');
-  if (shellClass === 'K0' && active.length > 1) errors.push('Compact admite una sola capa contextual activa.');
+  // R-1 cuenta **capas contextuales**, no superficies activas. El zócalo
+  // derivado de la selección no ocupa la ranura —igual que las excepciones
+  // declaradas `status` y `transient` de CRI-94—, así que contarlo daba por
+  // buena la sustitución que este validador debía denunciar.
+  const activeSlot = active.filter(occupiesContextualSlot);
+  if (shellClass === 'K0' && activeSlot.length > 1) errors.push('Compact admite una sola capa contextual activa.');
+  // Y, por lo mismo, el zócalo no puede estar activo detrás de algo que tapa
+  // el lienzo: quedaría enfocable bajo un fondo `inert`.
+  const occluding = activeSlot.find((surface) => activity[surface].extent !== 'peek');
+  if (shellClass === 'K0' && occluding && activeSlot.length !== active.length) {
+    errors.push(`Una superficie derivada no puede estar activa mientras ${occluding} ocupa el lienzo.`);
+  }
   const modal = active.filter((surface) => isModalPresentation(activity[surface].presentation));
   if (modal.length > 1) errors.push('drawer y fullscreen son mutuamente exclusivos.');
   for (const surface of BROKER_SURFACE_IDS) {
