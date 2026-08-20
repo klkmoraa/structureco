@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useRef, useState } from 'react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -61,6 +61,18 @@ const BrokeredHarness = () => {
 const renderBrokeredCanvas = () => render(<ProjectProvider><BrokeredHarness /></ProjectProvider>);
 const target = (kind: string, id: string) => document.querySelector<SVGGElement>(`[data-structure-kind="${kind}"][data-structure-id="${id}"]`)!;
 const selectionModel = () => screen.getByLabelText('selection-model').textContent;
+const canvas = () => screen.getByRole('application');
+const pickerListbox = () => document.querySelector('[data-candidate-picker] [role="listbox"]');
+
+// Closing the picker hands the keyboard route back to the canvas on the next
+// animation frame. A real second gesture always arrives long after that frame;
+// a test that reopens the picker in the same tick does not, and the pending
+// restoration then lands on top of the *new* picker and steals its focus, so
+// its keys reach the canvas instead. Waiting for the restoration by condition
+// reproduces the real sequencing without depending on wall-clock timing.
+const settleFocusAfterClose = async () => {
+  await waitFor(() => expect(document.activeElement).toBe(canvas()));
+};
 
 const setCandidatesAtPoint = (...elements: Element[]) => {
   Object.defineProperty(document, 'elementsFromPoint', {
@@ -151,10 +163,24 @@ describe('StructuralCanvas candidate picker', () => {
     await user.keyboard('{Escape}');
     expect(document.querySelector('[data-candidate-picker]')).toBeNull();
     expect(selectionModel()).toContain('N3');
+    await settleFocusAfterClose();
 
     openByPointer('mouse', 4);
     await user.keyboard('{ArrowDown}{Enter}');
     expect(selectionModel()).toContain('M1');
+  });
+
+  it('hands the keyboard route to the picker on open and back to the canvas on Escape', async () => {
+    const user = userEvent.setup();
+    renderCanvas();
+    setCandidatesAtPoint(target('node', 'N1'), target('member', 'M1'), target('nodalLoad', 'NL1'));
+
+    openByPointer('mouse', 10);
+    expect(document.activeElement).toBe(pickerListbox());
+
+    await user.keyboard('{Escape}');
+    expect(document.querySelector('[data-candidate-picker]')).toBeNull();
+    await settleFocusAfterClose();
   });
 
   it('keeps an additive pointer selection when an explicit candidate is confirmed', async () => {
