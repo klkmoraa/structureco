@@ -1,0 +1,1 @@
+import{a as e}from"./rolldown-runtime-CNC7AqOf.js";import{n as t}from"./jsx-runtime-CaR_m4Xc.js";var n=e(t(),1),r=({level:e=`raised`,pressed:t=!1,as:r,className:i=``,children:a,ref:o,...s})=>(0,n.createElement)(r??`div`,{ref:o,className:`sc-surface${i?` ${i}`:``}`,"data-level":e,"data-pressed":t?`true`:void 0,...s},a);export{r as t};
