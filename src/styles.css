@@ -4988,7 +4988,7 @@ button:not(:disabled):active,.selection-card:active {
   background:var(--accent-soft);
   border-color:color-mix(in srgb, var(--accent) 42%, var(--border));
 }
-.welcome-step.active .welcome-step-index { background:var(--accent); color:var(--accent-foreground); border-color:transparent; }
+.welcome-step.active .welcome-step-index { background:var(--accent-fill); color:var(--accent-foreground); border-color:transparent; }
 .welcome-step--table { color:var(--text); border-color:var(--border); background:var(--surface); }
 .welcome-step--table:hover { color:var(--accent); border-color:color-mix(in srgb, var(--accent) 52%, var(--border)); }
 .welcome-step:focus-visible {
