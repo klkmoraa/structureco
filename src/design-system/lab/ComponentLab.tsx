@@ -49,6 +49,9 @@ const copy = {
     intro: 'Primitivos y patrones del editor probados de forma aislada. Esta ruta solo existe en desarrollo y no conecta con el motor de cálculo.',
     ready: 'Biblioteca lista para inspección', readyDetail: 'Estados, temas, teclado y vista móvil disponibles en una sola superficie.',
     foundations: 'Fundamentos cromáticos', foundationsNote: 'Roles semánticos aplicados a los mismos componentes, datos y estados en Día y Noche.',
+    typographyTitle: 'Tipografía estructural', typographyNote: 'Una voz editorial, una interfaz de trabajo y una lectura monoespaciada para valores, unidades e IDs.', typographyEditorial: 'Editorial', typographyInterface: 'Interfaz', typographyTechnical: 'Dato técnico',
+    loadIdentityTitle: 'Acción aplicada · respuesta estructural', loadIdentityNote: 'Las cargas usan identidad propia y sólida; los resultados conservan N, V, M, deformada y Aula sin depender sólo del color.', loadPoint: 'P · Carga puntual', loadDistributed: 'q · Carga distribuida', loadAppliedMoment: 'Mₐ · Momento aplicado', responseIdentity: 'N · V · M · δ · Aula',
+    motionPolicyTitle: 'Movimiento físico y accesible', motionPolicyNote: 'En modo normal, elevar, presionar y superponer se sienten con movimiento visible. Cuando el sistema activa prefers-reduced-motion, se retiran desplazamiento y escala, pero el estado conserva borde, color y profundidad.',
     foundationRoles: 'Mapa semántico', foundationLegend: 'Datos visuales de demostración. No corresponden a un análisis estructural.',
     foundationCurrent: 'Autoridad activa',
     materialLevels: 'Materia · 6 niveles', materialLevelsNote: 'BASE mantiene el dato técnico plano; INSET, RAISED, FLOATING, SHEET y MODAL declaran una relación física distinta.', materialBase: 'Datos técnicos', materialSheet: 'Entra por borde', materialModal: 'Interrupción', materialSurface: 'Materia',
@@ -61,7 +64,7 @@ const copy = {
     pressStates: 'Estados del control', pressStatesNote: 'Reposo, hover, foco, pulsado y deshabilitado sobre la misma pieza. Pulsado invierte la luz y no deja sombra exterior; el foco es un anillo aparte del canto.',
     pressRest: 'Reposo', pressHeld: 'Pulsado (mantenido)', pressDisabled: 'Deshabilitado',
     foundationOfficialSummary: 'La paleta oficial: los tokens vivos de tokens.css y su autoridad, brand/brandbook-clay.html. Sin overrides locales.',
-    roleApp: 'Fondo de aplicación', roleCanvas: 'Canvas', roleSurface: 'Superficie', roleBrandFill: 'Brand fill', roleBrandStroke: 'Brand stroke', roleBrandInk: 'Brand ink', roleSelection: 'Selección', roleFocus: 'Foco', roleLoad: 'Carga puntual', roleAxial: 'Axial N', roleShear: 'Cortante V · stroke', roleShearArea: 'Cortante V · tint', roleInfluence: 'Influencia · edge', roleInfluenceArea: 'Influencia · area', roleMoment: 'Momento M', roleSuccess: 'Success', roleWarning: 'Advertencia', roleError: 'Error', roleAula: 'Mentor Aula',
+    roleApp: 'Fondo de aplicación', roleCanvas: 'Canvas', roleSurface: 'Superficie', roleBrandFill: 'Brand fill', roleBrandStroke: 'Brand stroke', roleBrandInk: 'Brand ink', roleSelection: 'Selección', roleFocus: 'Foco', roleLoad: 'Carga puntual', roleDistributed: 'Carga distribuida', roleAppliedMoment: 'Momento aplicado', roleAxial: 'Axial N', roleShear: 'Cortante V · stroke', roleShearArea: 'Cortante V · tint', roleInfluence: 'Influencia · edge', roleInfluenceArea: 'Influencia · area', roleMoment: 'Momento M', roleSuccess: 'Success', roleWarning: 'Advertencia', roleError: 'Error', roleAula: 'Mentor Aula',
     authorityDemo: 'Autoridad CRI-12C', brandAnatomy: 'Brand fill · stroke · ink', engineeringAnatomy: 'Ingeniería: V · influencia · deformada', interactionAnatomy: 'Focus + selection', themeAnatomy: 'Materia del tema activo', influenceLabel: 'Influencia · siempre dashed', deformedLabel: 'Deformada · siempre continuous',
     controls: 'Controles', controlsNote: 'Acciones, captura de datos y selección compacta.',
     overlays: 'Capas y divulgación', overlaysNote: 'Contenido contextual con cierre por Escape y retorno de foco.',
@@ -106,6 +109,9 @@ const copy = {
     intro: 'Primitives and editor patterns tested in isolation. This route only exists in development and never connects to the calculation engine.',
     ready: 'Library ready for inspection', readyDetail: 'States, themes, keyboard behavior, and mobile layouts are available in one surface.',
     foundations: 'Color foundations', foundationsNote: 'Semantic roles applied to the same components, data, and states in Day and Night.',
+    typographyTitle: 'Structural typography', typographyNote: 'One editorial voice, one working interface, and one monospaced reading for values, units, and IDs.', typographyEditorial: 'Editorial', typographyInterface: 'Interface', typographyTechnical: 'Technical data',
+    loadIdentityTitle: 'Applied action · structural response', loadIdentityNote: 'Loads use their own solid identity; results keep N, V, M, deformation, and Classroom without relying on color alone.', loadPoint: 'P · Point load', loadDistributed: 'q · Distributed load', loadAppliedMoment: 'Mₐ · Applied moment', responseIdentity: 'N · V · M · δ · Classroom',
+    motionPolicyTitle: 'Physical and accessible motion', motionPolicyNote: 'In normal mode, lift, press, and overlap use visible motion. When the system enables prefers-reduced-motion, translation and scale stop while border, color, and depth keep the state legible.',
     foundationRoles: 'Semantic map', foundationLegend: 'Visual demonstration data. It does not correspond to a structural analysis.',
     foundationCurrent: 'Active authority',
     materialLevels: 'Material · 6 levels', materialLevelsNote: 'BASE keeps technical data flat; INSET, RAISED, FLOATING, SHEET, and MODAL declare distinct physical relationships.', materialBase: 'Technical data', materialSheet: 'Enters from edge', materialModal: 'Interruption', materialSurface: 'Material',
@@ -118,7 +124,7 @@ const copy = {
     pressStates: 'Control states', pressStatesNote: 'Rest, hover, focus, pressed, and disabled on the same piece. Pressed inverts the light and keeps no outer shadow; focus is a ring separate from the edge.',
     pressRest: 'Rest', pressHeld: 'Pressed (held)', pressDisabled: 'Disabled',
     foundationOfficialSummary: 'The official palette: the live tokens in tokens.css and their authority, brand/brandbook-clay.html. No local overrides.',
-    roleApp: 'Application background', roleCanvas: 'Canvas', roleSurface: 'Surface', roleBrandFill: 'Brand fill', roleBrandStroke: 'Brand stroke', roleBrandInk: 'Brand ink', roleSelection: 'Selection', roleFocus: 'Focus', roleLoad: 'Point load', roleAxial: 'Axial N', roleShear: 'Shear V · stroke', roleShearArea: 'Shear V · tint', roleInfluence: 'Influence · edge', roleInfluenceArea: 'Influence · area', roleMoment: 'Moment M', roleSuccess: 'Success', roleWarning: 'Warning', roleError: 'Error', roleAula: 'Classroom mentor',
+    roleApp: 'Application background', roleCanvas: 'Canvas', roleSurface: 'Surface', roleBrandFill: 'Brand fill', roleBrandStroke: 'Brand stroke', roleBrandInk: 'Brand ink', roleSelection: 'Selection', roleFocus: 'Focus', roleLoad: 'Point load', roleDistributed: 'Distributed load', roleAppliedMoment: 'Applied moment', roleAxial: 'Axial N', roleShear: 'Shear V · stroke', roleShearArea: 'Shear V · tint', roleInfluence: 'Influence · edge', roleInfluenceArea: 'Influence · area', roleMoment: 'Moment M', roleSuccess: 'Success', roleWarning: 'Warning', roleError: 'Error', roleAula: 'Classroom mentor',
     authorityDemo: 'CRI-12C authority', brandAnatomy: 'Brand fill · stroke · ink', engineeringAnatomy: 'Engineering: V · influence · deformed', interactionAnatomy: 'Focus + selection', themeAnatomy: 'Active theme material', influenceLabel: 'Influence · always dashed', deformedLabel: 'Deformed · always continuous',
     controls: 'Controls', controlsNote: 'Actions, data entry, and compact selection.',
     overlays: 'Layers and disclosure', overlaysNote: 'Contextual content with Escape dismissal and focus restoration.',
@@ -167,7 +173,9 @@ const FOUNDATION_ROLES = [
   { id: 'brand-ink', labelKey: 'roleBrandInk' },
   { id: 'selection', labelKey: 'roleSelection' },
   { id: 'focus', labelKey: 'roleFocus' },
-  { id: 'load', labelKey: 'roleLoad' },
+    { id: 'load', labelKey: 'roleLoad' },
+  { id: 'distributed-load', labelKey: 'roleDistributed' },
+  { id: 'applied-moment', labelKey: 'roleAppliedMoment' },
   { id: 'axial', labelKey: 'roleAxial' },
   { id: 'shear', labelKey: 'roleShear' },
   { id: 'shear-area', labelKey: 'roleShearArea' },
@@ -346,6 +354,33 @@ export function ComponentLab() {
           </div>
         </DemoBlock>
 
+        <DemoBlock title={t.typographyTitle} wide>
+          <p className="component-lab__material-note">{t.typographyNote}</p>
+          <div className="component-lab__type-specimens">
+            <Surface level="raised" className="component-lab__type-specimen component-lab__type-specimen--display">
+              <span>{t.typographyEditorial}</span><strong>StructureCo</strong><code>DM Serif Display</code>
+            </Surface>
+            <Surface level="inset" className="component-lab__type-specimen component-lab__type-specimen--ui">
+              <span>{t.typographyInterface}</span><strong>Modela con claridad</strong><code>Manrope</code>
+            </Surface>
+            <Surface level="flat" className="component-lab__type-specimen component-lab__type-specimen--mono">
+              <span>{t.typographyTechnical}</span><strong>+24.36 kN·m</strong><code>JetBrains Mono</code>
+            </Surface>
+          </div>
+        </DemoBlock>
+
+        <DemoBlock title={t.loadIdentityTitle} wide>
+          <p className="component-lab__material-note">{t.loadIdentityNote}</p>
+          <div className="component-lab__load-identities">
+            <Surface level="raised" className="component-lab__load-identity is-point"><strong>{t.loadPoint}</strong><code>--sc-color-load-point</code></Surface>
+            <Surface level="raised" className="component-lab__load-identity is-distributed"><strong>{t.loadDistributed}</strong><code>--sc-color-load-distributed</code></Surface>
+            <Surface level="raised" className="component-lab__load-identity is-applied-moment"><strong>{t.loadAppliedMoment}</strong><code>--sc-color-load-moment-applied</code></Surface>
+          </div>
+          <div className="component-lab__response-identities" aria-label={t.responseIdentity}>
+            <span className="is-axial">N</span><span className="is-shear">V</span><span className="is-moment">M</span><span className="is-deformed">δ</span><span className="is-aula">Aula</span><strong>{t.responseIdentity}</strong>
+          </div>
+        </DemoBlock>
+
         <DemoBlock title={t.authorityDemo} wide>
           <div className="component-lab__authority-grid">
             <article className="component-lab__authority-card">
@@ -468,6 +503,9 @@ export function ComponentLab() {
             <Surface as="div" level="raised" pressed className="component-lab__press-sample">{t.pressHeld}</Surface>
             <Button variant="secondary" disabled>{t.pressDisabled}</Button>
           </div>
+          <Surface level="inset" className="component-lab__motion-policy">
+            <strong>{t.motionPolicyTitle}</strong><p>{t.motionPolicyNote}</p>
+          </Surface>
         </DemoBlock>
       </LabSection>
 

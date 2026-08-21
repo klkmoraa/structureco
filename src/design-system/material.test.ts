@@ -38,6 +38,11 @@ describe('material grammar', () => {
     expect(base).not.toContain('gradient');
   });
 
+  it('uses a stable inset well without pretending the control is being pressed', () => {
+    expect(ruleFor(".sc-surface[data-level='inset']")).toContain('var(--sc-shadow-clay-inset)');
+    expect(ruleFor(".sc-surface[data-level='inset']")).not.toContain('var(--sc-shadow-clay-pressed)');
+  });
+
   it('presses every level with inset-only light', () => {
     expect(ruleFor(".sc-surface[data-pressed='true']")).toContain('var(--sc-shadow-clay-pressed)');
     const pressedToken = tokens.match(/--sc-shadow-clay-pressed:\s*([^;]+);/)?.[1] ?? '';

@@ -56,7 +56,7 @@
 .toolbar {
   background: var(--sc-color-surface-inset);
   border: 1px solid var(--sc-color-border-soft);
-  box-shadow: var(--sc-shadow-clay-pressed);
+  box-shadow: var(--sc-shadow-clay-inset);
 }
 
 .toolbar { border-width: var(--toolbar-clay-border-width, 1px); }

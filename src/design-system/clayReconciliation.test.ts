@@ -7,7 +7,7 @@
  * Lo que aquí se afirma NO es "el CSS dice tal cosa en tal línea", sino el
  * contrato semántico: qué escalón de radio corresponde a cada rol, que ningún
  * desenfoque supera el radio de la pieza que lo consume, que el pulsado no
- * conserva ninguna capa exterior, que el hundimiento vive en un solo token y
+ * conserva ninguna capa exterior, que cavidad y pulsado son materias distintas y
  * que ninguna pieza declara su propia fuente de luz.
  *
  * La autoridad de los valores es `brand/brandbook-clay.html` (V-05: control
@@ -183,6 +183,7 @@ const DEPTH_PAIRING = [
   { shadow: '--sc-shadow-clay-md', radius: '--sc-radius-card' },
   { shadow: '--sc-shadow-clay-lg', radius: '--sc-radius-panel' },
   { shadow: '--sc-shadow-clay-floating', radius: '--sc-radius-panel' },
+  { shadow: '--sc-shadow-clay-inset', radius: '--sc-radius-control' },
   { shadow: '--sc-shadow-sheet', radius: '--sc-radius-panel' },
   { shadow: '--sc-shadow-modal', radius: '--sc-radius-modal' },
   { shadow: '--sc-shadow-clay-pressed', radius: '--sc-radius-control' },
@@ -331,12 +332,21 @@ describe('CRI-105 · canto de 1px', () => {
 });
 
 // ---------------------------------------------------------------------------
-// V-04 / V-13 · Un solo token de hundimiento
+// V-04 / V-13 · Cavidad estable y pulsado físico
 // ---------------------------------------------------------------------------
 
 describe('CRI-105 · hundimiento y reduced-motion', () => {
-  it('declara un único token de hundimiento', () => {
-    expect(rootTokens.get('--sc-clay-press-transform')).toBe('translateY(1.5px) scale(0.985)');
+  it.each(['light', 'dark'] as const)('separa la cavidad estable del pulsado transitorio en %s', (theme) => {
+    const tokens = themed(theme);
+    const inset = tokens.get('--sc-shadow-clay-inset') ?? '';
+    const pressed = tokens.get('--sc-shadow-clay-pressed') ?? '';
+    expect(inset).not.toBe(pressed);
+    expect(outerLayers(inset)).toEqual([]);
+    expect(outerLayers(pressed)).toEqual([]);
+  });
+
+  it('declara un hundimiento táctil pronunciado', () => {
+    expect(rootTokens.get('--sc-clay-press-transform')).toBe('translateY(2px) scale(0.98)');
   });
 
   it('retira el hundimiento —y sólo el hundimiento— con reduced-motion', () => {
