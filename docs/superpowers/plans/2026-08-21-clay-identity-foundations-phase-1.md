@@ -4,7 +4,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` to implement this plan task-by-task. Apply `superpowers:test-driven-development` to every behavioral or contract change and `superpowers:verification-before-completion` before the phase commit.
 
-**Execution status:** Completed locally on `codex/clay-identity-redesign`; all listed gates passed. Push pending explicit user authorization.
+**Execution status:** Completed and published on `codex/clay-identity-redesign`; all listed gates passed. Draft review: `https://github.com/klkmoraa/structureco/pull/5`.
 
 **Goal:** Replace the current visual foundations with the approved pronounced matte Clay identity while leaving every structural, persistence, command and solver contract untouched.
 
