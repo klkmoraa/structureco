@@ -295,7 +295,12 @@
      la superficie de Noche, los valores nocturnos caían a 1,39-2,56:1. Unificar
      no fue sólo una decisión de identidad — subió el suelo real de toda la
      familia técnica por encima de 3:1 por primera vez. */
-  --sc-color-technical-load: var(--sc-coral-500);      /* 3,60:1 */
+  /* Applied actions have their own identities. Response diagrams keep the
+     established N/V/M palette so an applied moment never reads as its result. */
+  --sc-color-load-point: #3a72e3;                     /* 3,59:1 */
+  --sc-color-load-distributed: var(--sc-lime-700);   /* 3,84:1 */
+  --sc-color-load-moment-applied: var(--sc-amber-500);
+  --sc-color-technical-load: var(--sc-color-load-point);
   --sc-color-technical-axial: var(--sc-cyan-600);      /* 3,29:1 */
   --sc-color-technical-shear: var(--sc-lime-700);      /* 3,84:1 */
   --sc-color-technical-shear-area: var(--sc-lime-100); /* área; el canto carga el gate */
@@ -306,7 +311,7 @@
   --sc-color-technical-axis: #ad5e18;                  /* 3,36:1 */
   /* Alias del rol distribuido: la codificación del canvas usa el color de
      cortante para la carga repartida, y la interfaz necesita nombrarlo. */
-  --sc-color-technical-distributed: var(--sc-color-technical-shear);
+  --sc-color-technical-distributed: var(--sc-color-load-distributed);
   --sc-color-technical-distributed-area: var(--sc-color-technical-shear-area);
 
   /* Rampa del índice elástico estimado (CRI-42). Es una escala secuencial de
@@ -336,9 +341,7 @@
   --sc-color-structure-spring: var(--sc-color-technical-axis);
   --sc-color-structure-hinge: var(--sc-color-technical-axis);
   --sc-color-structure-release: var(--sc-color-technical-axis);
-  --sc-color-load-point: var(--sc-color-technical-load);
-  --sc-color-load-distributed: var(--sc-color-technical-shear);
-  --sc-color-load-moment: var(--sc-color-technical-moment);
+  --sc-color-load-moment: var(--sc-color-load-moment-applied);
   --sc-color-reaction: var(--sc-color-technical-reaction);
   --sc-color-axial-tension: var(--sc-color-technical-axial);
   --sc-color-axial-compression: var(--sc-plum-500); /* reservado: el canvas codifica signo por lado/etiqueta */
@@ -347,11 +350,11 @@
   --sc-color-moment-positive: var(--sc-color-technical-moment);
   --sc-color-moment-negative: var(--sc-color-technical-moment);
   --sc-color-deformation: var(--sc-color-technical-deformed);
-  /* Influencia: área pastel + canto fucsia frío medido (3,30:1 peor caso).
+  /* Influencia: área rosa empolvada + canto rosa arcilla (3,95:1 peor caso).
      El consumidor debe mantener stroke-dasharray; el patrón no sustituye el
      contraste. Deformada conserva trazo continuo en la autoridad visual. */
-  --sc-color-influence-area: var(--sc-fuchsia-200);
-  --sc-color-influence-line: var(--sc-fuchsia-500);
+  --sc-color-influence-area: #e7c6d2;
+  --sc-color-influence-line: #b96478;
   --sc-color-envelope: #8966db;
   --sc-color-critical-point: var(--sc-amber-500);
   --sc-color-geometry-error: var(--sc-color-state-error);
@@ -364,9 +367,9 @@
   /* Identificación de herramientas: refleja el canvas. Selección/foco = azul. */
   --sc-color-tool-navigation: var(--sc-color-text-secondary);
   --sc-color-tool-structure: var(--sc-color-text-primary);
-  --sc-color-tool-point-load: var(--sc-color-technical-load);
-  --sc-color-tool-distributed-load: var(--sc-color-technical-shear);
-  --sc-color-tool-moment: var(--sc-color-technical-moment);
+  --sc-color-tool-point-load: var(--sc-color-load-point);
+  --sc-color-tool-distributed-load: var(--sc-color-load-distributed);
+  --sc-color-tool-moment: var(--sc-color-load-moment-applied);
   --sc-color-tool-dimension: var(--sc-color-technical-dimension);
   --sc-color-tool-cut: var(--sc-color-technical-axis);
   --sc-color-tool-destructive: var(--sc-color-state-error);
@@ -502,6 +505,9 @@
   --sc-shadow-clay-md: 7px 8px 16px rgba(83, 72, 55, 0.17), -6px -6px 16px rgba(255, 255, 255, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.9), inset -3px -3px 7px rgba(83, 72, 55, 0.09);
   --sc-shadow-clay-lg: 9px 11px 22px rgba(83, 72, 55, 0.19), -8px -8px 22px rgba(255, 255, 255, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.9), inset -4px -4px 9px rgba(83, 72, 55, 0.1);
   --sc-shadow-clay-floating: 9px 11px 22px rgba(83, 72, 55, 0.19), -8px -8px 22px rgba(255, 255, 255, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.9), inset -4px -4px 9px rgba(83, 72, 55, 0.1);
+  /* A resting well is shallower than a pressed piece: both are cavities, but
+     only the second communicates an active touch. */
+  --sc-shadow-clay-inset: inset 2px 3px 6px rgba(83, 72, 55, 0.15), inset -2px -2px 4px rgba(255, 255, 255, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.32);
   /* Pulsado: la luz se invierte. Sólo capas interiores — cualquier sombra
      exterior lo devolvería a parecer que flota. */
   /* Una cavidad estándar es arcilla neutra: el color de marca queda para el
@@ -511,11 +517,11 @@
   --sc-clay-edge: 1px solid color-mix(in srgb, var(--sc-color-border) 58%, white);
   --sc-gradient-clay: var(--sc-color-surface-1);
 
-  /* El hundimiento de una tecla clay: baja 1,5px y encoge un pelo. Es un token
+  /* El hundimiento de una tecla clay: baja 2px y encoge de forma visible. Es un token
      y no un literal porque `prefers-reduced-motion` lo anula de una sola vez
      para todos los controles, en lugar de repetir un `transform:none` por
      selector al final de la hoja. */
-  --sc-clay-press-transform: translateY(1.5px) scale(0.985);
+  --sc-clay-press-transform: translateY(2px) scale(0.98);
 
   /* Arcilla teñida de marca: la única pieza que se rellena con el acento en
      lugar de con la superficie. Misma anatomía que el resto de la escala
@@ -551,43 +557,28 @@
   --sc-ring-inset: inset 0 1px 0 color-mix(in srgb, var(--sc-white) 72%, transparent);
   --sc-ring-focus: 0 0 0 var(--sc-focus-ring-width) color-mix(in srgb, var(--sc-color-focus) 30%, transparent);
 
-  /* Halos: color de marca proyectado. Sólo en estados activos o hover. */
-  --sc-glow-accent: 0 5px 11px color-mix(in srgb, var(--sc-color-action-primary) 28%, transparent);
-  --sc-glow-aula: 0 5px 11px color-mix(in srgb, var(--sc-color-aula) 28%, transparent);
-
-  /* Gradientes de identidad. `display` es el único sitio donde el cian y el
-     esmeralda comparten un mismo trazo. */
-  --sc-gradient-brand-soft: linear-gradient(150deg,
-    color-mix(in srgb, var(--sc-color-action-primary) 10%, var(--sc-color-surface-1)),
-    var(--sc-color-surface-1) 62%);
-  /* Arranca ya en marca. Una versión anterior empezaba en el color del texto
-     y la palabra acentuada se partía en dos: la mitad parecía tinta y la otra
-     mitad acento, que se lee como fallo de render y no como decisión. */
-  --sc-gradient-display: linear-gradient(102deg,
-    var(--sc-color-action-primary) 4%,
-    var(--sc-color-brand-secondary) 96%);
-  --sc-gradient-sheen: linear-gradient(180deg,
-    color-mix(in srgb, var(--sc-white) 64%, transparent),
-    transparent 46%);
+  /* Matte identity: no decorative light source, glossy sheen or display ink. */
+  --sc-glow-accent: 0 0 transparent;
+  --sc-glow-aula: 0 0 transparent;
+  --sc-gradient-brand-soft: none;
+  --sc-gradient-display: none;
+  --sc-gradient-sheen: none;
 
   /* ------------------------------------------------------------------ */
   /* 6 · TIPOGRAFÍA (Instrumento de Precisión)                           */
   /* ------------------------------------------------------------------ */
-  /* Las familias `Variable Display` / `Variable Text` de Windows 11 y las
-     `SF Pro` de Apple traen tamaños ópticos reales: la de display ajusta el
-     interletrado y adelgaza los remates a 64px, la de texto los engorda a
-     12px. Es la mejora tipográfica más grande disponible sin descargar una
-     fuente, y el sistema local-first no puede pedir una a la red. */
-  --sc-font-display: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --sc-font-ui: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Editorial titles, working UI and measured values have separate jobs. All
+     three families are self-hosted and never requested at runtime. */
+  --sc-font-display: "DM Serif Display", Georgia, serif;
+  --sc-font-ui: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --sc-font-heading: var(--sc-font-display);
-  --sc-font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Menlo, monospace;
+  --sc-font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
   --sc-font-weight-regular: 400;
   --sc-font-weight-medium: 550;
   --sc-font-weight-semibold: 650;
   --sc-font-weight-bold: 750;
   --sc-font-weight-heavy: 800;
-  --sc-font-weight-display: 720;
+  --sc-font-weight-display: 400;
   --sc-font-size-caption: 10px;
   --sc-font-size-technical: 12px;
   --sc-font-size-label: 12px;
@@ -719,7 +710,7 @@
   --axial: var(--sc-color-technical-axial);
   --shear: var(--sc-color-technical-shear);
   --moment: var(--sc-color-technical-moment);
-  --force: var(--sc-color-technical-load);
+  --force: var(--sc-color-load-point);
   --dimension: var(--sc-color-technical-dimension);
   --axis: var(--sc-color-technical-axis);
   --deformed: var(--sc-color-technical-deformed);
@@ -864,6 +855,7 @@
   --sc-shadow-clay-md: 7px 8px 16px rgba(0, 0, 0, 0.55), -6px -6px 16px rgba(62, 92, 102, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset -3px -3px 7px rgba(0, 0, 0, 0.30);
   --sc-shadow-clay-lg: 9px 11px 22px rgba(0, 0, 0, 0.58), -8px -8px 22px rgba(62, 92, 102, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset -4px -4px 9px rgba(0, 0, 0, 0.32);
   --sc-shadow-clay-floating: 9px 11px 22px rgba(0, 0, 0, 0.58), -8px -8px 22px rgba(62, 92, 102, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06), inset -4px -4px 9px rgba(0, 0, 0, 0.32);
+  --sc-shadow-clay-inset: inset 2px 3px 6px rgba(0, 0, 0, 0.38), inset -2px -2px 4px rgba(77, 108, 118, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.03);
   /* Las cavidades neutras conservan volumen con carbón y luz azul grisácea;
      el verde se reserva al control primario o a una selección real. */
   --sc-shadow-clay-pressed: inset 3px 4px 7px rgba(0, 0, 0, 0.46), inset -2px -2px 5px rgba(77, 108, 118, 0.20), inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -882,11 +874,6 @@
 
 
   --sc-ring-inset: inset 0 1px 0 color-mix(in srgb, var(--sc-color-action-primary) 14%, transparent);
-  --sc-glow-accent: 0 0 transparent;
-  --sc-glow-aula: 0 0 transparent;
-  --sc-gradient-sheen: linear-gradient(180deg,
-    color-mix(in srgb, var(--sc-color-action-primary) 10%, transparent),
-    transparent 46%);
 }
 
 @media (prefers-reduced-motion: reduce) {

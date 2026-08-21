@@ -79,6 +79,9 @@ describe('Phase 4 design-token contract', () => {
       '--sc-color-selection-stroke',
       '--sc-color-canvas-grid',
       '--sc-color-technical-load',
+      '--sc-color-load-point',
+      '--sc-color-load-distributed',
+      '--sc-color-load-moment-applied',
       '--sc-color-technical-axial',
       '--sc-color-technical-shear',
       '--sc-color-technical-moment',
@@ -143,6 +146,9 @@ describe('Phase 4 design-token contract', () => {
       '--sc-color-focus',
       '--sc-color-selection-stroke',
       '--sc-color-technical-load',
+      '--sc-color-load-point',
+      '--sc-color-load-distributed',
+      '--sc-color-load-moment-applied',
       '--sc-color-technical-axial',
       '--sc-color-technical-shear',
       '--sc-color-technical-moment',
@@ -189,6 +195,9 @@ describe('Phase 4 design-token contract', () => {
       '--sc-color-action-ink',
       '--sc-color-action-edge',
       '--sc-color-technical-load',
+      '--sc-color-load-point',
+      '--sc-color-load-distributed',
+      '--sc-color-load-moment-applied',
       '--sc-color-technical-axial',
       '--sc-color-technical-shear',
       '--sc-color-technical-moment',
@@ -249,7 +258,7 @@ describe('Phase 4 design-token contract', () => {
       ['--grid', '--sc-color-canvas-grid'],
       ['--member', '--sc-color-canvas-member'],
       ['--node-fill', '--sc-color-canvas-node-fill'],
-      ['--force', '--sc-color-technical-load'],
+      ['--force', '--sc-color-load-point'],
       ['--moment', '--sc-color-technical-moment'],
     ]);
 
@@ -261,9 +270,9 @@ describe('Phase 4 design-token contract', () => {
   it('keeps tool identity colors aligned with their canvas roles', () => {
     const toolRoles = new Map([
       ['--sc-color-tool-structure', '--sc-color-text-primary'],
-      ['--sc-color-tool-point-load', '--sc-color-technical-load'],
-      ['--sc-color-tool-distributed-load', '--sc-color-technical-shear'],
-      ['--sc-color-tool-moment', '--sc-color-technical-moment'],
+      ['--sc-color-tool-point-load', '--sc-color-load-point'],
+      ['--sc-color-tool-distributed-load', '--sc-color-load-distributed'],
+      ['--sc-color-tool-moment', '--sc-color-load-moment-applied'],
       ['--sc-color-tool-dimension', '--sc-color-technical-dimension'],
       ['--sc-color-tool-cut', '--sc-color-technical-axis'],
       ['--sc-color-tool-destructive', '--sc-color-state-error'],
@@ -272,6 +281,21 @@ describe('Phase 4 design-token contract', () => {
     for (const [tool, role] of toolRoles) {
       expect(rootTokens.declarations.get(tool)).toBe(`var(${role})`);
     }
+  });
+
+  it('separates applied-load identities from structural response identities', () => {
+    expect(resolveHex('--sc-color-load-point', lightTheme)).toBe('#3a72e3');
+    expect(resolveHex('--sc-color-load-distributed', lightTheme)).toBe('#468c09');
+    expect(resolveHex('--sc-color-load-moment-applied', lightTheme)).toBe('#d9720a');
+    expect(resolveHex('--sc-color-technical-moment', lightTheme)).toBe('#ed4b46');
+    expect(rootTokens.declarations.get('--sc-color-technical-load')).toBe('var(--sc-color-load-point)');
+  });
+
+  it('uses one muted clay-rose family for influence in Day and Night', () => {
+    expect(resolveHex('--sc-color-influence-line', lightTheme)).toBe('#b96478');
+    expect(resolveHex('--sc-color-influence-area', lightTheme)).toBe('#e7c6d2');
+    expect(darkTokens.declarations.has('--sc-color-influence-line')).toBe(false);
+    expect(darkTokens.declarations.has('--sc-color-influence-area')).toBe(false);
   });
 
   it.each([
@@ -400,25 +424,20 @@ describe('AG-015 premium visual layer contract', () => {
     for (const token of display) expect(rootTokens.declarations.has(token), token).toBe(true);
   });
 
-  it('declares rings, glows and gradients as tokens, not per-component literals', () => {
-    const materials = [
-      '--sc-ring-inset',
-      '--sc-glow-accent',
-      '--sc-glow-aula',
-      '--sc-shadow-lifted',
-      '--sc-gradient-brand-soft',
-      '--sc-gradient-display',
-      '--sc-gradient-sheen',
-    ];
-    for (const token of materials) expect(rootTokens.declarations.has(token), token).toBe(true);
+  it('keeps presentation materials matte and free of decorative glow', () => {
+    expect(rootTokens.declarations.get('--sc-glow-accent')).toBe('0 0 transparent');
+    expect(rootTokens.declarations.get('--sc-glow-aula')).toBe('0 0 transparent');
+    for (const token of ['--sc-gradient-brand-soft', '--sc-gradient-display', '--sc-gradient-sheen']) {
+      expect(rootTokens.declarations.get(token), token).not.toMatch(/gradient\(/);
+      expect(darkTokens.declarations.has(token), `${token} no necesita una versión brillante en Noche`).toBe(false);
+    }
   });
 
   it('recalibrates every material Dark cannot inherit from Day', () => {
-    // Rings and glows read inverted across themes: an accent halo that reads as
-    // light in Day reads as haze in Night. Re-measure them instead of inheriting.
+    // Rings and physical elevation change with the ground. Decorative glow is
+    // neutralized globally and therefore has no second Night declaration.
     const recalibrated = [
       '--sc-ring-inset',
-      '--sc-glow-accent',
       '--sc-shadow-lifted',
     ];
     for (const token of recalibrated) expect(darkTokens.declarations.has(token), token).toBe(true);
@@ -442,6 +461,7 @@ describe('AG-015 premium visual layer contract', () => {
       '--sc-shadow-clay-md',
       '--sc-shadow-clay-lg',
       '--sc-shadow-clay-floating',
+      '--sc-shadow-clay-inset',
       '--sc-shadow-clay-pressed',
     ];
     for (const token of clay) {

@@ -207,6 +207,8 @@ body:has(.component-lab),
 .component-lab__swatch-color.is-selection { background: var(--sc-color-selection-stroke); }
 .component-lab__swatch-color.is-focus { background: var(--sc-color-focus); }
 .component-lab__swatch-color.is-load { background: var(--sc-color-technical-load); }
+.component-lab__swatch-color.is-distributed-load { background: var(--sc-color-load-distributed); }
+.component-lab__swatch-color.is-applied-moment { background: var(--sc-color-load-moment-applied); }
 .component-lab__swatch-color.is-axial { background: var(--sc-color-technical-axial); }
 .component-lab__swatch-color.is-shear { background: var(--sc-color-technical-shear); }
 .component-lab__swatch-color.is-shear-area { background: var(--sc-color-technical-shear-area); }
@@ -376,6 +378,28 @@ body:has(.component-lab),
 .component-lab__theme-levels .is-canvas { background: var(--sc-color-bg-canvas); }
 .component-lab__theme-levels .is-surface { background: var(--sc-color-surface-1); }
 .component-lab__theme-levels .is-raised { background: var(--sc-color-surface-elevated); box-shadow: var(--sc-shadow-clay-xs); }
+.component-lab__type-specimens,
+.component-lab__load-identities { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sc-space-4); }
+.component-lab__type-specimen,
+.component-lab__load-identity { min-height: 132px; display: grid; align-content: space-between; gap: var(--sc-space-3); padding: var(--sc-space-4); }
+.component-lab__type-specimen span,
+.component-lab__type-specimen code,
+.component-lab__load-identity code { color: var(--sc-color-text-muted); font-family: var(--sc-font-mono); font-size: var(--sc-font-size-caption); }
+.component-lab__type-specimen--display strong { font-family: var(--sc-font-display); font-size: var(--sc-font-size-screen); font-weight: var(--sc-font-weight-display); }
+.component-lab__type-specimen--ui strong { font-family: var(--sc-font-ui); font-size: var(--sc-font-size-panel); }
+.component-lab__type-specimen--mono strong { font-family: var(--sc-font-mono); font-size: var(--sc-font-size-subtitle); font-variant-numeric: var(--sc-numeric-variant); }
+.component-lab__load-identity { border-inline-start-width: var(--sc-border-width-strong); }
+.component-lab__load-identity.is-point { border-inline-start-color: var(--sc-color-load-point); }
+.component-lab__load-identity.is-distributed { border-inline-start-color: var(--sc-color-load-distributed); }
+.component-lab__load-identity.is-applied-moment { border-inline-start-color: var(--sc-color-load-moment-applied); }
+.component-lab__response-identities { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sc-space-3); padding: var(--sc-space-3); border-bottom: var(--sc-border-width) solid var(--sc-color-border-soft); font-family: var(--sc-font-mono); }
+.component-lab__response-identities span { min-width: var(--sc-size-target-touch); min-height: var(--sc-size-target-touch); display: grid; place-items: center; border: var(--sc-border-width-strong) solid currentColor; border-radius: var(--sc-radius-control); }
+.component-lab__response-identities .is-axial { color: var(--sc-color-technical-axial); }
+.component-lab__response-identities .is-shear { color: var(--sc-color-technical-shear); }
+.component-lab__response-identities .is-moment { color: var(--sc-color-technical-moment); }
+.component-lab__response-identities .is-deformed { color: var(--sc-color-technical-deformed); }
+.component-lab__response-identities .is-aula { color: var(--sc-color-aula); }
+.component-lab__response-identities strong { color: var(--sc-color-text-primary); font-family: var(--sc-font-ui); font-size: var(--sc-font-size-label); }
 .component-lab__material-note { margin: 0; color: var(--sc-color-text-secondary); }
 .component-lab__material-levels { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: end; gap: var(--sc-space-3); }
 .component-lab__material-level { min-height: 120px; display: grid; align-content: end; gap: var(--sc-space-2); padding: var(--sc-space-3); color: var(--sc-color-text-primary); font-family: var(--sc-font-mono); }
@@ -457,6 +481,8 @@ body:has(.component-lab),
   font-weight: var(--sc-font-weight-semibold);
   transform: var(--sc-clay-press-transform);
 }
+.component-lab__motion-policy { margin-top: var(--sc-space-4); display: grid; gap: var(--sc-space-2); padding: var(--sc-space-4); }
+.component-lab__motion-policy p { margin: 0; color: var(--sc-color-text-secondary); }
 .component-lab__field-grid { display: grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: var(--sc-space-5); }
 .component-lab__popover-content { min-width: 260px; display: grid; gap: var(--sc-space-3); }
 .component-lab__popover-content > strong,
@@ -531,6 +557,8 @@ body:has(.component-lab),
   .component-lab__section-body { grid-template-columns: 1fr; gap: var(--sc-space-7); }
   .component-lab__demo--wide { grid-column: auto; }
   .component-lab__field-grid,
+  .component-lab__type-specimens,
+  .component-lab__load-identities,
   .component-lab__metrics,
   .component-lab__status-grid { grid-template-columns: 1fr; }
   .component-lab__swatches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
