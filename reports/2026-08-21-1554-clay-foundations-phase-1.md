@@ -83,4 +83,6 @@ La inspección comparó marfil, Noche profunda, serif editorial, verde de marca,
 - Solicitar aprobación visual de la Fase 1 antes de migrar superficies productivas.
 - Fase 2 propuesta: Workspace 2D, Tool Rail e Inspector, incluyendo jerarquía de cargas superpuestas para que la carga puntual quede por encima de la distribuida sin ocultamiento.
 - Home, Project Hub, Results, Aula, Datasheet, Model Doctor, Import Center, Generator y Space 3D permanecen sin migrar en esta fase.
-- El commit queda local hasta recibir autorización explícita para hacer `push`; no se crea PR ni se integra en `main` automáticamente.
+- El commit `8cd31d25cd99ec06354cc6dd1efb058c87cbfbc6` fue publicado en `origin/codex/clay-identity-redesign` con autorización del usuario.
+- Pull Request en borrador: `https://github.com/klkmoraa/structureco/pull/5` contra `main`; no se ha fusionado.
+- Las seis capturas esenciales se enviaron por correo para revisión: Día/Noche en desktop, tablet y móvil. No se enviaron imágenes redundantes.
