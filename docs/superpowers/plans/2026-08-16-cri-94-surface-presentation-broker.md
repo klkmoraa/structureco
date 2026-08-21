@@ -2,6 +2,8 @@
 
 **Clasificación:** `HISTORICAL`
 
+> **HISTORICAL** — Plan ejecutado; conserva decisiones y evidencia de su momento, no certifica el estado actual por sí solo.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace scattered workspace surface booleans and presentation decisions with one broker that preserves logical state, focus, drafts and canvas context across X2/M1/K0.

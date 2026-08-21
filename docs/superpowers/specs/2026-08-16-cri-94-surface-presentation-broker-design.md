@@ -2,6 +2,8 @@
 
 **Clasificación:** `HISTORICAL`
 
+> **HISTORICAL** — Contrato de la entrega CRI-94; conserva decisiones y evidencia de su momento, no certifica el estado actual por sí solo.
+
 ## Contrato
 
 CRI-94 introduce una única autoridad de presentación para las superficies que hoy coordina `WorkspaceShell`. La fuente principal es la issue CRI-94 en Linear; las decisiones de CRI-12 se leyeron desde el snapshot Git `3d5c807` porque `reports/cri-12/**` no está presente en el árbol de `main` `e59051b`.
