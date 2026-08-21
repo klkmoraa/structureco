@@ -42,8 +42,16 @@
 [data-workspace-surface][hidden] { display:none!important; }
 .workspace-surfaces { display:contents; }
 .workspace-surface-launcher { position:absolute; z-index:32; right:16px; bottom:16px; display:flex; gap:8px; align-items:center; }
-.app-shell:has(.inspector-panel[data-surface-presentation='inset']) .workspace,
-.app-shell:has(.inspector-panel[data-surface-presentation='sheet']) .workspace { grid-template-columns:var(--toolbar-w) minmax(0,1fr); }
+/* CRI-119 · `sheet` sólo ocurre en K0 (móvil) — ningún otro shell class lo usa
+   para el Inspector (`surfacePresentation.ts`). En K0 la Cinta no es un riel
+   lateral que necesite columna reservada: es una bandeja inferior, en su
+   propia fila (`grid-template-columns:1fr` en `styles.css`). La rama `sheet`
+   le aplicaba por error el layout de "riel + contenido" pensado para `inset`
+   (M1, donde el Inspector SÍ flota junto a un riel real), reservando
+   `--toolbar-w` como columna en un contexto sin riel que reservar — medido:
+   el lienzo quedaba a 76px de ancho en K0 con el Inspector retenido, y "Ajustar
+   modelo a la vista" podía dejar nodos fuera de pantalla. */
+.app-shell:has(.inspector-panel[data-surface-presentation='inset']) .workspace { grid-template-columns:var(--toolbar-w) minmax(0,1fr); }
 .inspector-panel[data-surface-presentation='dock'] { position:relative; display:flex; inset:auto; width:auto; height:auto; max-height:none; clip-path:none; border-radius:0; }
 .inspector-panel[data-surface-presentation='inset'] { position:absolute; z-index:31; inset:8px 8px 8px auto; display:flex; width:min(420px,calc(100% - 16px)); height:auto; max-height:none; clip-path:none; border-radius:var(--sc-radius-lg); }
 .inspector-panel[data-surface-presentation='sheet'] { position:fixed; z-index:31; inset:auto 0 var(--sc-visual-viewport-bottom,0px); display:flex; width:100%; height:min(58dvh,540px); max-height:calc(var(--sc-visual-viewport-height,100dvh) - 8px); clip-path:none; border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }

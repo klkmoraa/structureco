@@ -46,7 +46,7 @@ const WorkspaceBrokerContent = ({
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
   const modelDoctorToastRef = useRef<{ projectId: string; signature: string }>({ projectId, signature: '' });
   const { t } = useI18n();
-  const { project, analysis, setActiveTool, analyze, undo, redo, canUndo, canRedo } = useProject();
+  const { project, analysis, setActiveTool, setResultTab, analyze, undo, redo, canUndo, canRedo } = useProject();
   const { activeTool } = useWorkspaceUI();
   const { preferences: layout, setPreference, togglePreference } = layoutController;
   const { shellClass } = useShellComposition();
@@ -90,9 +90,16 @@ const WorkspaceBrokerContent = ({
       onWorkspaceCommand('open-datasheet', () => openSurface('datasheet')),
       onWorkspaceCommand('open-results', () => openSurface('results')),
       /* `dense` es invocada: el lanzador viaja en el propio comando para que el
-         broker sepa a dónde devolver el foco al cerrar. */
+         broker sepa a dónde devolver el foco al cerrar.
+         `influence` es además el único de los tres cuya lectura vive también
+         en el lienzo (CanvasResultLayer gatea el overlay de influencia con
+         `resultTab === 'influence'`, el mismo campo que `analyze()` ya mueve
+         a 'issues'/'summary'). CRI-101 dejó esa lectura sin quien la ponga:
+         el resto de superficies densas no tienen lectura en el lienzo, así
+         que no necesitan tocar `resultTab`. */
       onWorkspaceCommand('open-dense-results', ({ view: requestedView, trigger }) => {
         setDenseView(requestedView);
+        if (requestedView === 'influence') setResultTab('influence');
         openSurface('dense', trigger);
       }),
     ];

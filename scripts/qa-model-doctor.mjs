@@ -179,15 +179,36 @@ const assertGeometry = async (viewport, expectedSide) => {
 
 try {
   await page.goto(url, { waitUntil: 'networkidle' });
+  // CRI-119 · Este runner heredaba almacenamiento ajeno (IndexedDB
+  // `structureCo.projects` con un proyecto vacío de una corrida anterior). La
+  // bienvenida sí pinta primero, pero el arranque "con proyecto guardado"
+  // (CRI-104) le gana la carrera y entra solo a un modelo vacío antes de que
+  // el clic al pórtico de ejemplo llegue a registrarse. `qa.mjs` ya resuelve
+  // esto mismo en `loadCleanApp`: limpiar de verdad antes de entrar.
+  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
+  await page.evaluate(() => localStorage.clear());
+  await page.evaluate(() => new Promise((resolve) => {
+    const request = indexedDB.deleteDatabase('structureCo.projects');
+    request.onsuccess = () => resolve();
+    request.onerror = () => resolve();
+    request.onblocked = () => resolve();
+  }));
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
   await enterWorkspace(true, false);
   baselineProject = await page.evaluate(() => JSON.parse(localStorage.getItem('structureCo.project')));
 
-  // First lazy load on Compact suspends (but retains) Results and still returns to More.
+  // First lazy load on Compact suspends (but retains) Results and returns to its launcher.
   await page.setViewportSize({ width: 390, height: 844 });
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('structureco:open-results')));
   const retainedResults = page.locator('.results-panel');
   await retainedResults.waitFor({ state: 'visible' });
-  const firstMore = page.getByRole('button', { name: /m.s acciones/i });
+  // CRI-119 · Doctor y Estado "nunca desaparecen ni pierden su etiqueta
+  // accesible, sea cual sea la clase de composición" (CRI-95, comentario en
+  // `TopBar.tsx`): `.model-doctor-launcher` sigue visible en Compacto, así
+  // que `openDoctor()` siempre toma esa rama, nunca la de "Más acciones" —
+  // el foco vuelve ahí, no al overflow.
+  const firstLauncher = page.locator('.model-doctor-launcher');
   const firstPhoneDoctor = await openDoctor();
   const suspendedResults = await retainedResults.evaluate((panel) => ({
     status: panel.getAttribute('data-surface-status'),
@@ -199,7 +220,7 @@ try {
   }
   await page.keyboard.press('Escape');
   await firstPhoneDoctor.waitFor({ state: 'hidden' });
-  await page.waitForFunction((element) => document.activeElement === element, await firstMore.elementHandle());
+  await page.waitForFunction((element) => document.activeElement === element, await firstLauncher.elementHandle());
   await page.setViewportSize({ width: 1440, height: 900 });
 
   // HEALTHY: all clear, modal isolation and return to the persistent launcher.
@@ -247,10 +268,14 @@ try {
   let topologyFinding = topologyDoctor.locator('.model-doctor-finding').filter({ hasText: 'QA-SPLIT' }).first();
   await topologyFinding.waitFor();
   await topologyFinding.getByRole('button', { name: /localizar/i }).click();
-  await topologyDoctor.waitFor({ state: 'hidden' });
+  // CRI-119 · «Localizar degrada a peek, nunca cierra» (CRI-102 / D-11,
+  // comentario en `ModelDoctor.tsx`): la lista de hallazgos sigue montada, sólo
+  // se encoge a la manija de restaurar.
+  const peekHandle = topologyDoctor.locator('.sc-modal-surface__peek-handle');
+  await peekHandle.waitFor({ state: 'visible' });
   await page.locator('.node-object.selected').waitFor();
 
-  topologyDoctor = await openDoctor();
+  await peekHandle.click();
   topologyFinding = topologyDoctor.locator('.model-doctor-finding').filter({ hasText: 'QA-SPLIT' }).first();
   const sourceBeforePreview = await page.evaluate(() => localStorage.getItem('structureCo.project'));
   const membersBeforeRepair = await page.locator('.member-object').count();
