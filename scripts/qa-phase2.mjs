@@ -1,6 +1,7 @@
 import { chromium } from 'playwright';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { openExamplePortal } from './qa-welcome.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const baseURL = process.env.STRUCTURECO_PHASE2_URL ?? 'http://127.0.0.1:4182/';
@@ -60,7 +61,8 @@ try {
   page.on('requestfailed', (request) => runtimeErrors.push(`${request.url()} :: ${request.failure()?.errorText ?? 'failed'}`));
   await page.goto(baseURL, { waitUntil: 'domcontentloaded' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
-  await page.getByRole('button', { name: /Pórtico de ejemplo Pórtico/i }).click();
+  // CRI-116 · el pórtico de ejemplo vive en el tercer paso desde CRI-112.
+  await openExamplePortal(page, page.getByRole('button', { name: /Pórtico de ejemplo Pórtico/i }));
   await page.locator('.app-shell').waitFor({ state: 'visible' });
 
   const member = page.locator('.member-object').first();

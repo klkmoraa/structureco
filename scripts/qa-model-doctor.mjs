@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import { preview } from 'vite';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { openWelcomeStep } from './qa-welcome.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const previewServer = await preview({ root, preview: { host: '127.0.0.1', port: 4183, strictPort: true }, logLevel: 'error' });
@@ -36,20 +37,41 @@ const contrastRatio = (locator, backgroundSelector) => locator.evaluate((element
   return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
 }, backgroundSelector);
 
+/**
+ * CRI-116 · La bienvenida es un recorrido de cuatro pasos desde CRI-104, y
+ * CRI-112 terminó de mover los lanzadores de ejemplo a la tercera etapa
+ * ("Por dónde"). Este helper seguía asumiendo que el pórtico de ejemplo era
+ * visible al cargar y que continuar vivía en `.welcome-launcher-card--recent`
+ * —selector que ya no existe—, así que el gate entero moría esperando 30s. Ahora
+ * navega igual que lo haría una persona: pulsando el paso en el carril. Mismo
+ * recorrido que `enterWorkspace` en `qa.mjs`.
+ */
 const enterWorkspace = async (example = false, reload = true) => {
   if (reload) await page.reload({ waitUntil: 'networkidle' });
-  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
-  if (example) {
-    const exampleCard = page.getByRole('button', { name: /P.rtico de ejemplo/i }).first();
-    await exampleCard.waitFor({ state: 'visible' });
-    await exampleCard.click();
-  } else {
-    const continueCard = page.locator('.welcome-launcher-card--recent');
-    await continueCard.waitFor({ state: 'visible' });
-    await continueCard.click({ force: true });
+  const shell = page.locator('.app-shell');
+  // CRI-104 · con proyectos ya guardados el producto entra SOLO a la Mesa: pinta
+  // la bienvenida y ~1,5s después, cuando IndexedDB resuelve, salta y desmonta el
+  // carril. Las dos son la ruta real del usuario. No se puede correr una carrera
+  // entre ambas —la bienvenida siempre gana y luego se desvanece bajo el clic—,
+  // así que primero se le da su plazo al salto directo y sólo si no ocurre se
+  // recorre la bienvenida a mano. Este script no limpia IndexedDB, así que aquí
+  // el salto directo es el caso normal, no el raro.
+  const autoEntered = await shell.waitFor({ state: 'visible', timeout: 15_000 }).then(() => true, () => false);
+  if (!autoEntered) {
+    if (example) {
+      // CRI-116 · el pórtico de ejemplo vive en el tercer paso desde CRI-112.
+      await openWelcomeStep(page, 'Por dónde');
+      const exampleCard = page.getByRole('button', { name: /P.rtico de ejemplo/i }).first();
+      await exampleCard.waitFor({ state: 'visible' });
+      await exampleCard.click();
+    } else {
+      const continueCard = page.locator('.welcome-resume-card').first();
+      await continueCard.waitFor({ state: 'visible' });
+      await continueCard.click({ force: true });
+    }
   }
   try {
-    await page.locator('.app-shell').waitFor({ state: 'visible', timeout: 10_000 });
+    await shell.waitFor({ state: 'visible', timeout: 10_000 });
   } catch {
     const text = (await page.locator('body').innerText()).slice(0, 1200);
     const stored = await page.evaluate(() => ({

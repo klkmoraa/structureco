@@ -9,23 +9,50 @@ export interface ClipboardReadTextPort {
 export type ClipboardTextRead =
   | { status: 'unavailable' }
   | { status: 'blocked' }
+  | { status: 'timeout' }
   | { status: 'read'; text: string };
+
+/**
+ * CRI-118 · `navigator.clipboard.readText()` does not always settle. Measured in
+ * real Chromium: without `clipboard-read` granted the promise neither resolves
+ * nor rejects — it stays pending until the execution context is destroyed — so a
+ * `try/catch`, which only sees rejection, never fires and the caller waits
+ * forever with no way to know it is stuck. Two seconds is long enough for a
+ * permission prompt answered at gesture time and short enough that a paste that
+ * will never arrive falls back to the in-app clipboard instead of hanging.
+ */
+export const CLIPBOARD_READ_TIMEOUT_MS = 2_000;
 
 export const supportsClipboardReadText = (clipboard: ClipboardReadTextPort | null | undefined): clipboard is Required<ClipboardReadTextPort> => (
   typeof clipboard?.readText === 'function'
 );
 
-/** Reads at gesture time so a browser permission policy is observed, not guessed. */
+/**
+ * Reads at gesture time so a browser permission policy is observed, not guessed,
+ * and gives up after `timeoutMs` so an unsettled permission cannot strand the
+ * caller (CRI-118). A timeout is reported apart from `blocked`: the browser never
+ * said no, it never said anything, and the two deserve different words.
+ */
 export const readClipboardText = async (
   clipboard: ClipboardReadTextPort | null | undefined = typeof navigator === 'undefined'
     ? undefined
     : navigator.clipboard,
+  { timeoutMs = CLIPBOARD_READ_TIMEOUT_MS }: { timeoutMs?: number } = {},
 ): Promise<ClipboardTextRead> => {
   if (!supportsClipboardReadText(clipboard)) return { status: 'unavailable' };
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    return { status: 'read', text: await clipboard.readText() };
+    const timeout = new Promise<ClipboardTextRead>((resolve) => {
+      timer = setTimeout(() => resolve({ status: 'timeout' }), timeoutMs);
+    });
+    const read = clipboard.readText().then((text): ClipboardTextRead => ({ status: 'read', text }));
+    return await Promise.race([read, timeout]);
   } catch {
     return { status: 'blocked' };
+  } finally {
+    // The losing promise stays pending on purpose — it belongs to the browser and
+    // cannot be cancelled. Only the timer is ours to clean up.
+    if (timer !== undefined) clearTimeout(timer);
   }
 };
 

@@ -3,6 +3,7 @@ import { preview } from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { clearProjectLibraryOnBoot, continueStoredProject, openExamplePortal } from './qa-welcome.mjs';
 
 /**
  * QA de navegador de la edición múltiple.
@@ -52,6 +53,7 @@ const storedProject = (page) => page.evaluate(() => {
 });
 
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+await clearProjectLibraryOnBoot(context);
 const page = await context.newPage();
 page.on('console', (message) => {
   if (message.type() === 'error') results.console.push(message.text());
@@ -59,12 +61,16 @@ page.on('console', (message) => {
 page.on('pageerror', (error) => results.pageErrors.push(String(error)));
 
 const resetToExample = async () => {
+  // CRI-116 · nada de esperar la bienvenida ANTES de limpiar: con la biblioteca
+  // poblada el producto salta solo a la Mesa (CRI-104) y no hay bienvenida que
+  // esperar. La biblioteca se borra en el init del contexto, antes de que corra
+  // la app, así que cada navegación arranca ya sin proyectos.
   await page.goto(baseURL, { waitUntil: 'networkidle' });
-  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
-  await page.locator('.welcome-template-card').filter({ hasText: /P.rtico de ejemplo/i }).click();
+  // CRI-116 · el pórtico de ejemplo vive en el tercer paso desde CRI-112.
+  await openExamplePortal(page, page.locator('.welcome-template-card').filter({ hasText: /P.rtico de ejemplo/i }));
   await page.locator('.app-shell').waitFor({ state: 'visible' });
   await page.locator('[data-structure-kind="node"][data-structure-id="N1"]').waitFor({ state: 'visible' });
   await sleep(page);
@@ -84,9 +90,9 @@ const seedExample = async (mutate) => {
   mutate(project);
   await page.evaluate((next) => localStorage.setItem('structureCo.project', JSON.stringify(next)), project);
   await page.reload({ waitUntil: 'networkidle' });
-  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
-  await page.getByRole('button', { name: /continuar proyecto/i }).click();
-  await page.locator('.app-shell').waitFor({ state: 'visible' });
+  // CRI-116 · con proyecto guardado el producto entra solo (CRI-104); esperar la
+  // bienvenida a secas fallaba justo en ese caso, que es el normal aquí.
+  await continueStoredProject(page);
   await sleep(page);
   return storedProject(page);
 };

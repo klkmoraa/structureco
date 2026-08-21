@@ -3,6 +3,7 @@ import { preview } from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { clearProjectLibraryOnBoot, continueStoredProject, openExamplePortal, openResultsSurface } from './qa-welcome.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const engine = process.argv.includes('--webkit') ? 'webkit' : 'chromium';
@@ -57,14 +58,18 @@ const bootWithStoredProject = async (page, serializedProject = QA_CLEAR_STORAGE)
   const url = new URL(baseURL);
   url.searchParams.set(QA_BOOT_QUERY, serializedProject);
   await page.goto(url.toString(), { waitUntil: 'networkidle' });
-  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
+  // Sin esperar aquí la bienvenida: con un proyecto real sembrado el producto
+  // puede entrar solo a la Mesa (CRI-104). Cada llamador espera lo que necesita
+  // —`openExamplePortal` la bienvenida, `continueStoredProject` cualquiera de las
+  // dos—, que es lo único que se puede afirmar en los dos casos.
 };
 
 const resetToExample = async (page) => {
   await bootWithStoredProject(page);
   // Project-hub actions use the same project name. Scope this to the welcome
   // template card so the smoke path always opens the structural example.
-  await page.locator('.welcome-template-card').filter({ hasText: /P.rtico de ejemplo/i }).click();
+  // CRI-116 · el pórtico de ejemplo vive en el tercer paso desde CRI-112.
+  await openExamplePortal(page, page.locator('.welcome-template-card').filter({ hasText: /P.rtico de ejemplo/i }));
   await page.locator('.app-shell').waitFor({ state: 'visible' });
   await page.locator('[data-structure-kind="node"][data-structure-id="N1"]').waitFor({ state: 'visible' });
   // Vite loads the workspace CSS after the shell's lazy chunk. Do not navigate
@@ -81,8 +86,8 @@ const seedExample = async (page, mutate) => {
   const project = await storedProject(page);
   mutate(project);
   await bootWithStoredProject(page, JSON.stringify(project));
-  await page.getByRole('button', { name: /continuar proyecto/i }).click();
-  await page.locator('.app-shell').waitFor({ state: 'visible' });
+  // CRI-116 · con proyecto guardado el producto entra solo (CRI-104).
+  await continueStoredProject(page);
   await sleep(page);
 };
 
@@ -277,6 +282,8 @@ const runMovePointerAndCancel = async (page) => {
 const runMoveNumericAndAnalysisInvalidation = async (page) => {
   await resetToExample(page);
   await page.getByRole('button', { name: /^analizar$/i }).click();
+  // CRI-116 · analizar ya no abre las salidas por su cuenta; hay que pedirlas.
+  await openResultsSurface(page);
   await page.getByTestId('diagram-chart').waitFor({ state: 'visible' });
   await selectSingle(page, 'node', 'N1');
   const surface = await openEdit(page);
@@ -638,6 +645,10 @@ await context.addInitScript(({ marker, clearStorage }) => {
   if (serialized === clearStorage) window.localStorage.clear();
   else window.localStorage.setItem('structureCo.project', serialized);
 }, { marker: QA_BOOT_QUERY, clearStorage: QA_CLEAR_STORAGE });
+// CRI-116 · el init de arriba sólo limpiaba `localStorage`. La biblioteca vive en
+// IndexedDB y sobrevivía a la siembra, así que el producto saltaba solo a la Mesa
+// (CRI-104) y no quedaba bienvenida que recorrer.
+await clearProjectLibraryOnBoot(context);
 const page = await context.newPage();
 page.on('console', (message) => {
   if (message.type() === 'error') results.console.push(message.text());

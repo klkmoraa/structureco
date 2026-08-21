@@ -290,7 +290,9 @@
   margin: 0;
   border: var(--sc-border-width) dashed var(--sc-color-border);
   border-radius: var(--sc-radius-sm);
-  color: var(--sc-color-text-disabled);
+  /* CRI-117 · Es un mensaje que se lee («no hay cambios preparados»), no un
+     control inactivo: no le toca ninguna exención, le toca el piso de texto. */
+  color: var(--sc-color-text-secondary);
   font-size: var(--sc-font-size-control);
 }
 .bulk-preview__arrow { display: grid; place-items: center; color: var(--sc-color-text-muted); }

@@ -254,8 +254,14 @@
 .sc-unit-field__error { color: var(--sc-color-state-error-foreground); }
 .sc-field.has-error .sc-field__control,
 .sc-unit-field.has-error .sc-unit-field__control { border-color: var(--sc-color-state-error); }
+/* CRI-117 · Un campo apagado sigue mostrando su valor y su unidad: eso es
+   contenido que hay que leer, no un affordance apagado, así que aquí manda el
+   piso de texto (4,5:1) y no la exención de WCAG 1.4.3 para «inactive user
+   interface components». La opacidad compuesta hacía ese piso inalcanzable —a
+   0,62 sobre la superficie haría falta una tinta casi negra para medir 4,5:1—,
+   así que la señal de deshabilitado la lleva entera el color. */
 .sc-field.is-disabled,
-.sc-unit-field.is-disabled { color: var(--sc-color-text-disabled); opacity: 0.62; }
+.sc-unit-field.is-disabled { color: var(--sc-color-text-disabled-content); }
 
 /* La pista es la ranura y las teclas son las que se elevan. Marcada = hundida:
    antes la elegida era la única *elevada*, que es el gesto contrario al que

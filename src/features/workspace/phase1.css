@@ -1,7 +1,7 @@
 .overlap-picker { position:absolute; z-index:34; width:min(220px,calc(100% - 16px)); display:grid; gap:3px; padding:8px; border:1px solid var(--border); border-radius:11px; background:var(--surface); box-shadow:var(--sc-shadow-sheet); }
 .overlap-picker>strong { padding:4px 6px; color:var(--muted); font-size:10px; }
 .overlap-picker button { min-height:38px; padding:7px 9px; border:0; border-radius:7px; background:transparent; color:var(--text); text-align:left; }
-.overlap-picker button:hover,.overlap-picker button:focus-visible,.overlap-picker button[aria-selected='true'] { background:var(--accent-soft); color:var(--accent); }
+.overlap-picker button:hover,.overlap-picker button:focus-visible,.overlap-picker button[aria-selected='true'] { background:var(--accent-soft); color:var(--accent-on-soft); }
 .repeat-action-control { position:absolute; z-index:21; right:14px; bottom:68px; min-height:44px; padding:4px 7px 4px 5px; display:inline-flex; align-items:center; gap:7px; border:var(--sc-clay-edge); border-radius:var(--sc-radius-pill); background:var(--sc-color-surface-1); color:var(--text); font-size:10px; font-weight:750; letter-spacing:.01em; box-shadow:var(--sc-shadow-clay-xs); cursor:pointer; }
 .repeat-action-control__icon { width:32px; height:32px; display:grid; place-items:center; flex:0 0 auto; border-radius:50%; background:color-mix(in srgb,var(--success) 12%,var(--sc-color-surface-2)); color:var(--success); box-shadow:var(--sc-shadow-clay-pressed); }
 .repeat-action-control__copy { min-width:0; white-space:nowrap; }

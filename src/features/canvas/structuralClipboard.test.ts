@@ -35,6 +35,22 @@ describe('structural clipboard transport', () => {
       .resolves.toEqual({ status: 'blocked' });
   });
 
+  // CRI-118 · Measured in real Chromium: with `clipboard-read` neither granted nor
+  // denied the browser promise never settles at all. A rejection-only `try/catch`
+  // cannot see that, so the read has to bound itself or the paste action hangs.
+  it('gives up on a clipboard read that never settles instead of waiting forever', async () => {
+    const readText = vi.fn(() => new Promise<string>(() => {}));
+
+    await expect(readClipboardText({ readText }, { timeoutMs: 5 })).resolves.toEqual({ status: 'timeout' });
+    expect(readText).toHaveBeenCalledTimes(1);
+  });
+
+  it('still returns the text when the browser answers before the deadline', async () => {
+    const readText = vi.fn().mockResolvedValue('pegado');
+
+    await expect(readClipboardText({ readText }, { timeoutMs: 5_000 })).resolves.toEqual({ status: 'read', text: 'pegado' });
+  });
+
   it('round-trips explicit member catalog identity and provenance without float matching', () => {
     const decoded = decodeStructuralClipboard(encodeStructuralClipboard(memberClipboard));
 

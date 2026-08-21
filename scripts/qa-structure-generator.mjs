@@ -16,6 +16,7 @@ import { preview } from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { clearProjectLibraryOnBoot, openExamplePortal, openResultsSurface } from './qa-welcome.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const engine = process.argv.includes('--webkit') ? 'webkit' : 'chromium';
@@ -52,12 +53,16 @@ const storedProject = (page) => page.evaluate(() => {
 });
 
 const resetToExample = async (page) => {
+  // CRI-116 · nada de esperar la bienvenida ANTES de limpiar: con la biblioteca
+  // poblada el producto salta solo a la Mesa (CRI-104) y no hay bienvenida que
+  // esperar. La biblioteca se borra en el init del contexto, antes de que corra
+  // la app, así que cada navegación arranca ya sin proyectos.
   await page.goto(baseURL, { waitUntil: 'networkidle' });
-  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
-  await page.locator('.welcome-template-card').filter({ hasText: /P.rtico de ejemplo/i }).click();
+  // CRI-116 · el pórtico de ejemplo vive en el tercer paso desde CRI-112.
+  await openExamplePortal(page, page.locator('.welcome-template-card').filter({ hasText: /P.rtico de ejemplo/i }));
   await page.locator('.app-shell').waitFor({ state: 'visible' });
   await page.locator('[data-structure-kind="node"][data-structure-id="N1"]').waitFor({ state: 'visible' });
   await sleep(page);
@@ -217,6 +222,8 @@ const runReviewGenerateUndoRedo = async (page) => {
   await resetToExample(page);
   // Resultados vigentes: confirmar debe invalidarlos una sola vez.
   await page.getByRole('button', { name: /^analizar$/i }).click();
+  // CRI-116 · analizar ya no abre las salidas por su cuenta; hay que pedirlas.
+  await openResultsSurface(page);
   await page.getByTestId('diagram-chart').waitFor({ state: 'visible' });
 
   const source = await storedProject(page);
@@ -441,6 +448,7 @@ const runPreviewPerformance = async (page) => {
 };
 
 const context = await browser.newContext({ viewport: { width: 1536, height: 960 }, locale: 'es-MX' });
+await clearProjectLibraryOnBoot(context);
 const page = await context.newPage();
 page.on('console', (message) => {
   if (message.type() === 'error') results.console.push(message.text());

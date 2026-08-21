@@ -154,10 +154,24 @@
   --sc-color-text-secondary: #607068;
   --sc-color-text-muted: #6b7871;
   --sc-color-text-disabled: #9aa0a1;
+  /* CRI-117 · `--sc-color-text-disabled` (2,59:1 en Día) es legítimo para un
+     control inactivo: WCAG 1.4.3 exime a los «inactive user interface
+     components». Pero la auditoría por componente encontró superficies
+     deshabilitadas que SIGUEN llevando contenido obligatorio —el valor y su
+     unidad dentro de un campo apagado— y ahí no hay exención que valga. Este
+     rol es para ésas: 4,79:1 en el peor de los cuatro fondos. */
+  --sc-color-text-disabled-content: #6b7274;
   --sc-color-text-inverse: var(--sc-white);
   --sc-color-text-link: var(--sc-blue-600);
   --sc-color-text-technical: #4a5153;
-  --sc-color-text-unit: #7b8284;
+  /* CRI-114 · #7b8284 medía 3,82:1 sobre la superficie de Día — por debajo del
+     piso de texto (4,5:1). El rol escribe unidades y magnitudes del solver
+     («kN», «m»), que son contenido numérico que hay que leer, no adorno, así
+     que le corresponde el piso de texto entero. Bajado hasta 4,72:1 en el peor
+     de los cuatro fondos, todavía por encima de `--sc-color-text-secondary`
+     (5,11:1) para no aplanar la jerarquía. El tamaño (LEDGER-03, 10px) no se
+     toca: el hallazgo era de color. La variante de Noche ya medía 7,60:1. */
+  --sc-color-text-unit: #6c7375;
 
   --sc-color-border: #ded8ce;
   --sc-color-border-soft: #ebe5dc;
@@ -180,6 +194,15 @@
   --sc-color-action-edge: var(--sc-mint-700);
   /* Trazo de marca: canto, icono sobre superficie, snap y hover técnico. */
   --sc-color-action-ink: var(--sc-mint-700);
+  /* CRI-113 · Tinta de marca cuando el fondo es el tinte suave de acción y no
+     una superficie base. `--sc-color-action-ink` mide 4,45:1 sobre `accent-soft`
+     en Día pero 2,76:1 en Noche —bajo el piso no textual de 3:1— porque el
+     tinte nocturno aclara la base casi negra justo lo suficiente para comerse
+     el canto menta. La señal de marca sigue siendo invariante; lo que se
+     recalibra por tema es la tinta que la escribe, exactamente como ya ocurre
+     con `--sc-color-state-warning-foreground` y `--sc-color-state-error-foreground`.
+     En Día no cambia nada. */
+  --sc-color-action-ink-on-soft: var(--sc-color-action-ink);
   /* Fondo suave derivado de la superficie del tema; no crea un HEX semántico
      alternativo en el bloque Noche. */
   --sc-color-action-subtle: color-mix(in srgb, var(--sc-color-action-primary) 8%, var(--sc-color-surface-1));
@@ -683,6 +706,9 @@
   --accent-hover: var(--sc-color-action-hover);
   --accent-pressed: var(--sc-color-action-pressed);
   --accent-soft: color-mix(in srgb, var(--sc-color-action-primary) 10%, var(--sc-color-surface-1));
+  /* Pareja obligatoria del tinte suave. Quien pinte tinta encima usa ésta y no
+     `--accent`, que sólo está medido contra las superficies base (CRI-113). */
+  --accent-on-soft: var(--sc-color-action-ink-on-soft);
   --accent-foreground: var(--sc-color-action-foreground);
   --accent-edge: var(--sc-color-action-edge);
   --accent-ink: var(--sc-color-action-ink);
@@ -754,6 +780,7 @@
   --sc-color-text-secondary: #a6b6b0;
   --sc-color-text-muted: #8fa19b;
   --sc-color-text-disabled: #64746f;
+  --sc-color-text-disabled-content: #849590;
   --sc-color-text-inverse: #0d161b;
   --sc-color-text-link: #95d0e5;
   --sc-color-text-technical: #d1ddd8;
@@ -764,6 +791,12 @@
   --sc-color-border-strong: #58717a;
   --sc-color-border-canvas-chrome: #58717a;
   --sc-color-divider: #20313a;
+
+  /* CRI-113 · Única excepción del bloque de marca, y por la misma razón que las
+     tintas de estado de más abajo: sobre el tinte suave nocturno el canto menta
+     (mint-700) mide 2,76:1. El relleno de marca —mint-500, que ya vive en el
+     sistema— mide 4,46:1 sobre ese mismo fondo. No se inventa ningún HEX. */
+  --sc-color-action-ink-on-soft: var(--sc-color-action-primary);
 
   /* Marca, estados, trazo de selección, foco y Aula NO se redeclaran aquí:
      son invariantes y viven una sola vez en :root. Los rellenos suaves de

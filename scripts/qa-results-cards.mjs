@@ -15,6 +15,7 @@ import { preview } from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { openExamplePortal } from './qa-welcome.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = path.join(repoRoot, 'reports', 'evidence', '2026-08-17-cri-101-results-cards-dense');
@@ -73,8 +74,8 @@ const newPage = async (viewport, options = {}) => {
 const enterWorkspace = async (page) => {
   await page.goto(baseURL, { waitUntil: 'networkidle' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible', timeout: 20_000 });
-  const launcher = page.getByRole('button', { name: /pórtico de ejemplo/i }).first();
-  await launcher.click();
+  // CRI-116 · el pórtico de ejemplo vive en el tercer paso desde CRI-112.
+  const launcher = await openExamplePortal(page);
   const shell = page.locator('.app-shell');
   try {
     await shell.waitFor({ state: 'visible', timeout: 15_000 });

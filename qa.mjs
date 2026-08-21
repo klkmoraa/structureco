@@ -3,6 +3,8 @@ import { preview } from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+// CRI-116 · la navegación por los pasos de la bienvenida vive una sola vez.
+import { openWelcomeStep } from './scripts/qa-welcome.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const assetsDir = path.join(root, 'dist', 'assets');
@@ -82,19 +84,6 @@ async function activateWelcomeLauncher(page, launcher) {
     await launcher.click();
     await workspace.waitFor({ state: 'visible', timeout: 10_000 });
   }
-}
-
-/**
- * CRI-104 · la bienvenida es un recorrido de cuatro pasos. Los ejemplos, la
- * importación portátil, el DXF y Space 3D viven en la tercera etapa
- * ("Por dónde"); continuar y nuevo proyecto siguen en la primera. Este helper
- * navega igual que lo haría una persona: pulsando el paso en el carril.
- */
-async function openWelcomeStep(page, name) {
-  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
-  await page.locator('.welcome-steps').getByRole('button', { name, exact: true }).click();
-  await page.locator(`.welcome-screen[data-welcome-step="${name === 'Por dónde' ? 'where' : 'how'}"]`)
-    .waitFor({ state: 'visible' });
 }
 
 async function enterWorkspace(page, { example = false } = {}) {
@@ -208,32 +197,44 @@ async function verifyWelcomeHeaderResponsive(page) {
 
 // Ronda de corrección 1/5 sobre la Tarea 7: `.sc-surface` vivía sólo en
 // `design-system/components/ui.css`, que nadie carga en el chunk de entrada
-// (sólo `WorkspaceShell.tsx`, lazy). `.welcome-frame` dependía de ganar la
-// carrera del precalentamiento por `requestIdleCallback` para tener materia
-// en el primer pintado. `loadCleanApp` usa `waitUntil:'networkidle'`, así
-// que para cuando cualquier otro check mira la página el chunk diferido
-// siempre ha llegado — la ausencia de materia en el primer pintado es
-// invisible por construcción con ese arnés. Esta función navega aparte, con
-// `waitUntil:'domcontentloaded'`, para medir el estado real antes de que la
-// red termine de traer nada diferido.
+// (sólo `WorkspaceShell.tsx`, lazy), así que la pieza dominante de la
+// bienvenida dependía de ganar la carrera del precalentamiento por
+// `requestIdleCallback` para tener materia en el primer pintado.
+// `loadCleanApp` usa `waitUntil:'networkidle'`, así que para cuando cualquier
+// otro check mira la página el chunk diferido siempre ha llegado — la
+// ausencia de materia en el primer pintado es invisible por construcción con
+// ese arnés. Esta función navega aparte, con `waitUntil:'domcontentloaded'`,
+// para medir el estado real antes de que la red termine de traer nada
+// diferido.
+//
+// CRI-116 · El check medía `.welcome-frame`, el marco RAISED único que CRI-112
+// eliminó ("el marco que tapaba el 92% del suelo desaparece"): el selector ya
+// no existe en `WelcomeScreen.tsx` y el gate entero moría esperándolo 30s. La
+// pieza que heredó el papel —materia propia apoyada sobre la mesa, y la
+// primera que se pinta en la etapa de bienvenida— es el carril de puertas, y
+// declara su clay en `styles.css`, que sí viaja en el chunk de entrada. El
+// riesgo que el check vigila es el mismo; sólo cambia dónde se mide.
 async function verifyWelcomeFirstPaintMaterial() {
   const page = await newQaPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
   await page.goto(baseURL, { waitUntil: 'domcontentloaded' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 
-  const frame = await page.locator('.welcome-frame').evaluate((element) => {
+  const rail = await page.locator('.welcome-gate-rail').evaluate((element) => {
     const style = getComputedStyle(element);
     return {
       backgroundImage: style.backgroundImage,
+      backgroundColor: style.backgroundColor,
       boxShadow: style.boxShadow,
       borderTopWidth: style.borderTopWidth,
       borderRadius: style.borderRadius,
     };
   });
-  out.checks.welcomeFrameFirstPaintHasClayBackground = frame.backgroundImage !== 'none' || frame.boxShadow !== 'none';
-  out.checks.welcomeFrameFirstPaintHasClayShadow = frame.boxShadow !== 'none';
-  out.checks.welcomeFrameFirstPaintHasClayBorder = frame.borderTopWidth !== '0px';
-  out.checks.welcomeFrameFirstPaintHasHeroRadius = frame.borderRadius === '26px';
+  out.checks.welcomeRailFirstPaintHasClayBackground = rail.backgroundImage !== 'none' || rail.backgroundColor !== 'rgba(0, 0, 0, 0)';
+  out.checks.welcomeRailFirstPaintHasClayShadow = rail.boxShadow !== 'none';
+  out.checks.welcomeRailFirstPaintHasClayBorder = rail.borderTopWidth !== '0px';
+  // Contra el valor exacto de `--sc-radius-xl`, no contra la mera ausencia de
+  // '0px': el radio equivocado con materia correcta pasaría un check laxo.
+  out.checks.welcomeRailFirstPaintHasSurfaceRadius = rail.borderRadius === '24px';
   await page.close();
 }
 
@@ -684,21 +685,22 @@ async function verifyResultsPhoneLandscapeMaterial() {
 async function verifyWelcomeClayMaterial(page) {
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 
-  const frameMaterial = await readClayMaterial(page, '.welcome-frame');
-  out.checks.welcomeFrameHasNoBackdropFilter = frameMaterial.backdropFilter === 'none';
+  // CRI-116 · Mismo traslado que en `verifyWelcomeFirstPaintMaterial`: el marco
+  // único que este check vigilaba lo eliminó CRI-112, y su papel de pieza clay
+  // dominante de la bienvenida lo hereda el carril de puertas.
+  const railMaterial = await readClayMaterial(page, '.welcome-gate-rail');
+  out.checks.welcomeRailHasNoBackdropFilter = railMaterial.backdropFilter === 'none';
 
-  const frame = await page.locator('.welcome-frame').evaluate((element) => {
+  const rail = await page.locator('.welcome-gate-rail').evaluate((element) => {
     const style = getComputedStyle(element);
     return { backgroundImage: style.backgroundImage, borderRadius: style.borderRadius };
   });
-  out.checks.welcomeFrameHasClayBackground = frame.backgroundImage !== 'none' || frameMaterial.backgroundColor !== 'rgba(0, 0, 0, 0)';
-  // Comparado contra el valor exacto esperado (--sc-radius-hero = 40px), no
-  // contra una simple ausencia de '0px': `.sc-surface` (28px, --sc-radius-xl)
-  // y `.welcome-frame` (40px) tienen la misma especificidad (0,1,0) — un
-  // '28px' pasaría el check anterior (!== '0px') igual de verde que un
-  // '40px' correcto, que es exactamente como se coló el Critical 2 sin que
-  // ningún check lo viera.
-  out.checks.welcomeFrameHasHeroRadius = frame.borderRadius === '26px';
+  out.checks.welcomeRailHasClayBackground = rail.backgroundImage !== 'none' || railMaterial.backgroundColor !== 'rgba(0, 0, 0, 0)';
+  // Comparado contra el valor exacto esperado (--sc-radius-xl = 24px), no
+  // contra una simple ausencia de '0px': un radio de otra escala pasaría el
+  // check laxo igual de verde que el correcto, que es exactamente como se coló
+  // el Critical 2 sin que ningún check lo viera.
+  out.checks.welcomeRailHasSurfaceRadius = rail.borderRadius === '24px';
 
   // CRI-104 · las tres materias que este check vigila (tarjeta de puerta, zona
   // de archivo y tarjeta de ejemplo) conviven ahora en la etapa 3.
