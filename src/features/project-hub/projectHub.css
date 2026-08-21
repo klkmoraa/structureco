@@ -169,3 +169,81 @@
   border: 1px solid var(--sc-color-border-soft);
   box-shadow: none;
 }
+
+/* ==========================================================================
+   CRI-112 · La biblioteca como tabla técnica
+   --------------------------------------------------------------------------
+   Filas alineadas por columnas con encabezado real. Es la forma que
+   corresponde a los datos que el repositorio guarda de verdad —nombre, última
+   edición y revisión—: sin miniatura, una tarjeta no añadiría nada a una fila
+   y ocuparía el triple. Ni columna "Tipo" (no existe) ni columna "Estado" (es
+   copy prohibido por `success ≠ reliable ≠ safe`).
+   ========================================================================== */
+
+.project-hub { margin-top: 0; padding: var(--sc-space-4); }
+/* CRI-112 (ajuste final) · con pocas filas la tabla no necesita el mismo
+   respiro que cuando es la pieza más densa de la pantalla — encabezado y
+   padding se acercan un paso sin perder separación de las acciones. */
+.project-hub__header { margin-bottom: var(--sc-space-2); }
+
+/* Sin proyectos y sin copias recuperables, la biblioteca casi desaparece: una
+   línea discreta en vez de un panel entero para decir una frase. Se despliega
+   sola en cuanto hay algo — y la recuperación, por ser justo lo que fuerza el
+   despliegue, nunca puede quedar menos alcanzable que antes. */
+.project-hub--collapsed {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.project-hub--collapsed .project-hub__header { display: none; }
+.project-hub--collapsed .project-hub__empty {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--sc-color-text-muted);
+}
+
+/* Rejilla compartida por el encabezado y por cada fila, declarada una vez:
+   si las columnas se desalinean, se desalinean juntas y se ve. */
+.project-hub__columns,
+.project-hub__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: var(--sc-space-3);
+}
+
+.project-hub__columns {
+  padding: 0 var(--sc-space-3) 6px;
+  border-bottom: 1px solid var(--sc-color-divider);
+  margin-bottom: var(--sc-space-2);
+  color: var(--sc-color-text-muted);
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-caption);
+  font-weight: var(--sc-font-weight-bold);
+  letter-spacing: var(--sc-tracking-eyebrow);
+  text-transform: uppercase;
+}
+
+.project-hub__updated,
+.project-hub__revision {
+  font-family: var(--sc-font-mono);
+  font-size: var(--sc-font-size-caption);
+  font-variant-numeric: var(--sc-numeric-variant);
+  color: var(--sc-color-text-muted);
+  white-space: nowrap;
+}
+
+/* En K0 la tabla no cabe en cuatro columnas: la fila se pliega en dos —
+   identidad y acciones arriba, datos debajo— en vez de recortar campos. */
+@media (max-width: 700px) {
+  .project-hub__columns { display: none; }
+  .project-hub__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 6px;
+  }
+  .project-hub__identity { grid-column: 1; }
+  .project-hub__actions { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+  .project-hub__updated { grid-column: 1; }
+  .project-hub__revision { grid-column: 1; }
+}

@@ -132,7 +132,7 @@ const PORTAL_FILTER_ID = 'sc-portal-clay';
 export const StructuralPortalHero = () => {
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const { faces, groundLines, footEllipses } = useMemo(() => {
+  const { faces, groundLines, footEllipses, viewBox } = useMemo(() => {
     const faces = buildPortal();
     const footprints: [FootprintBox, FootprintBox] = [footprintOf(0), footprintOf(1)];
     const footEllipses = footprints.map(contactEllipseOf);
@@ -153,7 +153,35 @@ export const StructuralPortalHero = () => {
       };
     });
 
-    return { faces, groundLines, footEllipses };
+    /* Encuadre derivado, no copiado de un boceto (CRI-112). Antes el
+       `viewBox` era una constante escrita a mano, así que cambiar las
+       proporciones del pórtico lo descuadraba en silencio. Ahora sale del
+       bounding box real de todo lo que se pinta —caras, rejilla y elipses de
+       contacto— más un margen proporcional, de modo que la geometría puede
+       redibujarse sin volver a tocar este componente. */
+    const xs: number[] = [];
+    const ys: number[] = [];
+    for (const face of faces) for (const p of face.points) { xs.push(p.x); ys.push(p.y); }
+    for (const { constX, constZ } of groundLines) {
+      for (const p of [constX.p1, constX.p2, constZ.p1, constZ.p2]) { xs.push(p.x); ys.push(p.y); }
+    }
+    for (const e of footEllipses) { xs.push(e.cx - e.rx, e.cx + e.rx); ys.push(e.cy - e.ry, e.cy + e.ry); }
+
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    /* El margen absorbe el desenfoque de la sombra de contacto y la luz de
+       borde del filtro, que se salen del polígono. */
+    const pad = Math.max(maxX - minX, maxY - minY) * 0.06;
+    /* `formatFixed`, no `toFixed` crudo: la política numérica única
+       (`numericPolicy.test.ts`) cubre todo `features/**`, y el encuadre de un
+       SVG decorativo no es una excepción. */
+    const viewBox = [minX - pad, minY - pad, maxX - minX + pad * 2, maxY - minY + pad * 2]
+      .map((value) => formatFixed(value, 2, 'canvas'))
+      .join(' ');
+
+    return { faces, groundLines, footEllipses, viewBox };
   }, []);
 
   /* Inclinación con el puntero: sin `setState`, cero re-render de React por
@@ -198,7 +226,7 @@ export const StructuralPortalHero = () => {
     <svg
       ref={svgRef}
       className="portal-hero"
-      viewBox="-90 -190 290 325"
+      viewBox={viewBox}
       preserveAspectRatio="xMidYMid meet"
       role="presentation"
       aria-hidden="true"

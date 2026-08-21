@@ -22,8 +22,8 @@ beforeAll(() => {
 beforeEach(() => localStorage.clear());
 afterEach(() => cleanup());
 
-const renderWelcome = (language: 'es' | 'en' = 'es') => {
-  const project = createBlankProject();
+const renderWelcome = (language: 'es' | 'en' = 'es', base = createBlankProject()) => {
+  const project = base;
   project.settings = { ...project.settings, language };
   localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
   const onOpenWorkspace = vi.fn();
@@ -140,20 +140,37 @@ describe('WelcomeScreen launcher', () => {
       .toMatch(/six degrees of freedom|space frame/i);
   });
 
-  it('reports the current project size on the continue card', () => {
+  /**
+   * CRI-112 · la placa de Continuar es adaptativa. Con modelo enseña su medida
+   * real; recién creado, una fila de ceros en la pieza mayor de la pantalla no
+   * informa de nada y cede el sitio a la invitación. Las dos ramas se prueban:
+   * lo que no puede pasar es que la tarjeta invente un número, ni que se quede
+   * muda teniendo algo que contar.
+   */
+  it('reports the real model size on the continue card when there is a model', () => {
+    const example = exampleProjects[0].build();
+    const { container } = renderWelcome('es', example);
+    const resume = container.querySelector('.welcome-resume-card');
+
+    expect(resume?.querySelector('.welcome-project-stats')?.textContent)
+      .toBe(`${example.nodes.length} nudos · ${example.members.length} barras`);
+    expect(resume?.querySelector('.welcome-resume-invite')).toBeNull();
+  });
+
+  it('says the model is empty instead of showing a row of zeros', () => {
     const { container } = renderWelcome();
     const resume = container.querySelector('.welcome-resume-card');
 
-    // A blank project starts empty; the card must state that rather than omit the counts.
-    expect(resume?.querySelector('.welcome-project-stats')?.textContent).toBe('0 nudos · 0 barras');
+    expect(resume?.querySelector('.welcome-project-stats')).toBeNull();
+    expect(resume?.querySelector('.welcome-resume-invite')?.textContent?.trim()).toBeTruthy();
   });
 
   it('localizes the launcher and filters in English', async () => {
     const user = userEvent.setup();
     const { container } = renderWelcome('en');
 
-    expect(container.querySelector('.welcome-resume-card .welcome-project-stats')?.textContent)
-      .toBe('0 nodes · 0 members');
+    expect(container.querySelector('.welcome-resume-card .welcome-resume-invite')?.textContent)
+      .toBe('Empty model · start with the nodes');
 
     await openWhereStep(user);
     expect(screen.getByRole('tab', { name: 'All' })).toBeTruthy();
