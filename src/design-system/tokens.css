@@ -350,11 +350,11 @@
   --sc-color-moment-positive: var(--sc-color-technical-moment);
   --sc-color-moment-negative: var(--sc-color-technical-moment);
   --sc-color-deformation: var(--sc-color-technical-deformed);
-  /* Influencia: área pastel + canto fucsia frío medido (3,30:1 peor caso).
+  /* Influencia: área rosa empolvada + canto rosa arcilla (3,95:1 peor caso).
      El consumidor debe mantener stroke-dasharray; el patrón no sustituye el
      contraste. Deformada conserva trazo continuo en la autoridad visual. */
-  --sc-color-influence-area: var(--sc-fuchsia-200);
-  --sc-color-influence-line: var(--sc-fuchsia-500);
+  --sc-color-influence-area: #e7c6d2;
+  --sc-color-influence-line: #b96478;
   --sc-color-envelope: #8966db;
   --sc-color-critical-point: var(--sc-amber-500);
   --sc-color-geometry-error: var(--sc-color-state-error);

@@ -73,6 +73,27 @@ describe('Space3D three viewport', () => {
     viewport.dispose();
   });
 
+  it('conserva las identidades actuales de carga y momento cuando CSS no está disponible', () => {
+    vi.spyOn(window, 'getComputedStyle').mockReturnValue({ getPropertyValue: () => '' } as unknown as CSSStyleDeclaration);
+    const projectWithMoment = {
+      ...project,
+      nodalLoads: [...project.nodalLoads, {
+        id: 'L2', caseId: 'LC1', nodeId: 'N4',
+        fx: 0, fy: 0, fz: 0, mx: 0, my: 0, mz: 12,
+      }],
+    };
+    const harness = makeHarness();
+    const viewport = openViewport(harness, { model: sceneModel({ project: projectWithMoment }) });
+    const colors = new Set(viewport.scene.getObjectByName('loads')?.children.map((object) => {
+      const arrow = object as THREE.ArrowHelper;
+      return (arrow.line.material as THREE.LineBasicMaterial).color.getHexString();
+    }));
+
+    expect(colors).toContain('3a72e3');
+    expect(colors).toContain('ed4b46');
+    viewport.dispose();
+  });
+
   it('limita el device pixel ratio a 2 y ajusta el tamaño al canvas', () => {
     const harness = makeHarness();
     const viewport = openViewport(harness);

@@ -291,6 +291,13 @@ describe('Phase 4 design-token contract', () => {
     expect(rootTokens.declarations.get('--sc-color-technical-load')).toBe('var(--sc-color-load-point)');
   });
 
+  it('uses one muted clay-rose family for influence in Day and Night', () => {
+    expect(resolveHex('--sc-color-influence-line', lightTheme)).toBe('#b96478');
+    expect(resolveHex('--sc-color-influence-area', lightTheme)).toBe('#e7c6d2');
+    expect(darkTokens.declarations.has('--sc-color-influence-line')).toBe(false);
+    expect(darkTokens.declarations.has('--sc-color-influence-area')).toBe(false);
+  });
+
   it.each([
     ['Light', lightTheme],
     ['Dark', darkTheme],

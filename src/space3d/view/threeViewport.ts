@@ -106,7 +106,7 @@ const TOKEN_COLORS = {
   node: ['--sc-color-text-primary', '#23312c'],
   nodeSelected: ['--sc-color-selection-stroke', '#6a5df2'],
   support: ['--sc-color-technical-reaction', '#3a72e3'],
-  load: ['--sc-color-technical-load', '#ed4b46'],
+  load: ['--sc-color-technical-load', '#3a72e3'],
   moment: ['--sc-color-technical-moment', '#ed4b46'],
   deformed: ['--sc-color-technical-deformed', '#8b5cf6'],
   grid: ['--sc-color-canvas-grid', '#e8e1d7'],
