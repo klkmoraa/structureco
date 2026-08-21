@@ -58,5 +58,6 @@ Las dos capturas son suficientes porque el ajuste cambia únicamente color, no l
 
 ## Pendiente / siguiente paso
 
-- Publicar el ajuste en el Pull Request `#5` y enviar las dos capturas necesarias por correo.
+- Ajuste publicado en el Pull Request `#5` mediante `e091053318c42daec95572fe39d5c0fa70d8170b`.
+- Las dos capturas necesarias se enviaron por correo: Influencia rosa y Momento coral en Día/Noche.
 - Continuar con la especificación y el plan de la Fase 2: Workspace 2D, Tool Rail, Inspector y jerarquía de cargas superpuestas.
