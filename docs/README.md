@@ -64,6 +64,13 @@ código + pruebas + gates ejecutables
 
 Todo `reports/**`, salvo su archivo de política, se clasifica como `AUDIT/TEMPORARY`. Consulta [reports/README.md](../reports/README.md) antes de usar un reporte. No es necesario añadir avisos a cada reporte existente.
 
+## Planes activos de ejecución
+
+Estos documentos describen trabajo propuesto o en curso y no prueban implementación:
+
+- [Diseño Clay de Workspace · Fase 2](superpowers/specs/2026-08-21-clay-workspace-phase-2-design.md) — `AUDIT/TEMPORARY`.
+- [Plan Clay de Workspace · Fase 2](superpowers/plans/2026-08-21-clay-workspace-phase-2.md) — `AUDIT/TEMPORARY`.
+
 ## Dónde vive cada autoridad
 
 | Tema | Fuente de autoridad |
