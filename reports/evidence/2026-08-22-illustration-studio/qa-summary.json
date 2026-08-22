@@ -1,0 +1,127 @@
+{
+  "phase": "illustration-studio",
+  "engine": "chromium",
+  "generatedAt": "2026-08-22T09:53:19.313Z",
+  "scenarios": [
+    {
+      "id": "desktop-day",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "hasTouch": false,
+      "screenshot": "desktop-day.png",
+      "metrics": {
+        "horizontalOverflow": 0,
+        "smallTargets": [],
+        "lowContrastControls": [],
+        "personalPresets": 0,
+        "rootTheme": "light",
+        "previewTheme": "light",
+        "realWebgl": true,
+        "fallback": false
+      },
+      "consoleErrors": [],
+      "failures": []
+    },
+    {
+      "id": "desktop-night",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "hasTouch": false,
+      "screenshot": "desktop-night.png",
+      "metrics": {
+        "horizontalOverflow": 0,
+        "smallTargets": [],
+        "lowContrastControls": [],
+        "personalPresets": 0,
+        "rootTheme": "dark",
+        "previewTheme": "dark",
+        "realWebgl": true,
+        "fallback": false
+      },
+      "consoleErrors": [],
+      "failures": []
+    },
+    {
+      "id": "mobile-day",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "hasTouch": true,
+      "screenshot": "mobile-day.png",
+      "metrics": {
+        "horizontalOverflow": 0,
+        "smallTargets": [],
+        "lowContrastControls": [],
+        "personalPresets": 0,
+        "rootTheme": "light",
+        "previewTheme": "light",
+        "realWebgl": true,
+        "fallback": false
+      },
+      "consoleErrors": [],
+      "failures": []
+    },
+    {
+      "id": "mobile-night",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "hasTouch": true,
+      "screenshot": "mobile-night.png",
+      "metrics": {
+        "horizontalOverflow": 0,
+        "smallTargets": [],
+        "lowContrastControls": [],
+        "personalPresets": 0,
+        "rootTheme": "dark",
+        "previewTheme": "dark",
+        "realWebgl": true,
+        "fallback": false
+      },
+      "consoleErrors": [],
+      "failures": []
+    }
+  ],
+  "exports": [
+    {
+      "png": [
+        {
+          "scale": 1,
+          "width": 900,
+          "height": 600,
+          "cornerAlpha": 0
+        },
+        {
+          "scale": 2,
+          "width": 1800,
+          "height": 1200,
+          "cornerAlpha": 0
+        },
+        {
+          "scale": 4,
+          "width": 3600,
+          "height": 2400,
+          "cornerAlpha": 0
+        }
+      ],
+      "svgTransparent": true,
+      "svgSize": true
+    }
+  ],
+  "presetActions": {
+    "count": 2,
+    "inputColor": "rgb(16, 43, 45)",
+    "inputBackground": "rgb(255, 255, 255)"
+  },
+  "failures": []
+}

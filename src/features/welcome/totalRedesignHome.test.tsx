@@ -104,4 +104,26 @@ describe('Home total redesign contract', () => {
     expect(container.querySelector('.sc-home-nav--mobile')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Elige una estructura de partida' })).toBeTruthy();
   });
+
+  it('opens the full Illustration Studio from desktop Settings and returns focus after Escape', async () => {
+    const user = userEvent.setup();
+    renderHome();
+    const launcher = screen.getByRole('button', { name: 'Ajustes' });
+    await user.click(launcher);
+    expect(screen.getByRole('dialog', { name: 'Estudio de ilustraciones' })).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cerrar estudio' }));
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Estudio de ilustraciones' })).toBeNull();
+    expect(document.activeElement).toBe(launcher);
+  });
+
+  it('includes Settings in the existing mobile navigation menu', async () => {
+    const user = userEvent.setup();
+    const { container } = renderHome();
+    await user.click(screen.getByRole('button', { name: 'Abrir navegación' }));
+    const mobileNavigation = container.querySelector('.sc-home-nav--mobile') as HTMLElement;
+    await user.click(within(mobileNavigation).getByRole('button', { name: 'Ajustes' }));
+    expect(screen.getByRole('dialog', { name: 'Estudio de ilustraciones' })).toBeTruthy();
+    expect(container.querySelector('.sc-home-nav--mobile')).toBeNull();
+  });
 });

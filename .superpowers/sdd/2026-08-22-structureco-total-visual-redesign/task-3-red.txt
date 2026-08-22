@@ -1,0 +1,24 @@
+Task 3 · Illustration Studio · RED real
+Fecha: 2026-08-22 03:34
+
+Comando:
+npm.cmd test -- src/features/structural-assets/studio src/features/welcome/totalRedesignHome.test.tsx --reporter=verbose
+
+Resultado:
+Test Files 4 failed (4)
+Tests 2 failed | 5 passed (7)
+Exit code: 1
+
+Causas contractuales observadas:
+1. IllustrationStudio.test.tsx: Failed to resolve import "./IllustrationStudio".
+2. presetRepository.test.ts: Failed to resolve import "./presetRepository".
+3. studioScene.test.ts: Failed to resolve import "./studioScene".
+4. Home desktop: no dialog accesible llamado "Estudio de ilustraciones"; Ajustes aún abría el placeholder.
+5. Home móvil: el menú existente no contenía el botón "Ajustes".
+
+El primer intento previo fue descartado como RED válido porque dos pruebas usaban por error el helper inexistente `renderWelcome`; se corrigió a `renderHome` y se repitió el comando. Este archivo registra la segunda ejecución, donde todos los fallos corresponden al comportamiento ausente.
+
+GREEN posterior del mismo alcance:
+Test Files 4 passed (4)
+Tests 17 passed (17)
+Exit code: 0

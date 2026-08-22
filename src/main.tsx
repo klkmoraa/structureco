@@ -16,7 +16,9 @@ const render = (content: ReactNode) => root.render(
   </StrictMode>,
 );
 
-if (import.meta.env.DEV && window.location.pathname === '/__three-assets') {
+if (import.meta.env.DEV && window.location.pathname === '/__illustration-studio') {
+  void import('./features/structural-assets/studio/IllustrationStudio').then(({ IllustrationStudioRoute }) => render(<IllustrationStudioRoute />));
+} else if (import.meta.env.DEV && window.location.pathname === '/__three-assets') {
   void import('./features/structural-assets/ThreeAssetRenderLab').then(({ ThreeAssetRenderLab }) => render(<ThreeAssetRenderLab />));
 } else if (import.meta.env.DEV && window.location.pathname === '/__assets') {
   void import('./features/structural-assets/StructuralAssetStudio').then(({ StructuralAssetStudio }) => render(<StructuralAssetStudio />));
