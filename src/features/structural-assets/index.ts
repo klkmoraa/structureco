@@ -1,5 +1,6 @@
 export { STRUCTURAL_ASSET_IDS, STRUCTURAL_ASSET_REGISTRY, getStructuralAsset } from './registry';
 export { StructuralIllustration } from './StructuralIllustration';
+export { ThreeStructuralImage } from './ThreeStructuralImage';
 export type {
   StructuralAssetDetail,
   StructuralAssetFamily,

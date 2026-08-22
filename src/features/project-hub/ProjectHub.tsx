@@ -27,9 +27,13 @@ const formatUpdated = (iso: string, language: 'es' | 'en') => {
 export const ProjectHub = ({
   repository,
   onOpen,
+  limit,
+  variant = 'full',
 }: {
   repository?: ProjectRepository;
   onOpen: (record: StoredProjectRecord) => void;
+  limit?: number;
+  variant?: 'full' | 'recent';
 }) => {
   const { language } = useI18n();
   const { t } = usePhase2I18n(language);
@@ -103,8 +107,9 @@ export const ProjectHub = ({
      queda garantizada por construcción: su presencia es lo que fuerza el
      despliegue, así que nunca puede quedar menos alcanzable que hoy. */
   const collapsed = !loading && !error && projects.length === 0 && recoveries.length === 0;
+  const visibleProjects = limit === undefined ? projects : projects.slice(0, Math.max(0, limit));
 
-  return <section className={`project-hub${collapsed ? ' project-hub--collapsed' : ''}`} aria-labelledby="project-hub-title">
+  return <section className={`project-hub project-hub--${variant}${collapsed ? ' project-hub--collapsed' : ''}`} aria-labelledby="project-hub-title">
     <header className="project-hub__header">
       <div><span className="project-hub__eyebrow">{t('hub.localFirst')}</span><h2 id="project-hub-title">{t('hub.title')}</h2></div>
       <FolderClock size={22} aria-hidden="true" />
@@ -112,7 +117,7 @@ export const ProjectHub = ({
     {loading ? <p role="status">{t('hub.loading')}</p> : null}
     {error ? <p className="project-hub__error" role="alert">{error}</p> : null}
     {!loading && projects.length === 0 ? <p className="project-hub__empty">{t('hub.empty')}</p> : null}
-    {projects.length ? <div className="project-hub__list">
+    {visibleProjects.length ? <div className="project-hub__list">
       {/* Encabezados de columna reales. Sólo campos que el repositorio guarda
           de verdad: nombre, última edición y revisión. Ni miniatura, ni tipo,
           ni estado de análisis — ese último es copy prohibido. */}
@@ -122,7 +127,7 @@ export const ProjectHub = ({
         <span>{t('hub.columnRevision')}</span>
         <span />
       </div>
-      {projects.map((record) => <article className="project-hub__row" key={record.id}>
+      {visibleProjects.map((record) => <article className="project-hub__row" key={record.id}>
         <div className="project-hub__identity">
           {editing?.id === record.id ? <form onSubmit={(event) => { event.preventDefault(); void commitRename(); }}>
             <label><span className="sr-only">{t('hub.renameLabel')}</span><input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} autoFocus /></label>
@@ -131,7 +136,7 @@ export const ProjectHub = ({
           </form> : <strong>{record.name}</strong>}
         </div>
         <time className="project-hub__updated" dateTime={record.updatedAt}>{formatUpdated(record.updatedAt, language)}</time>
-        <small className="project-hub__revision">{t('hub.revision', { revision: record.revision })}</small>
+        {variant === 'full' ? <small className="project-hub__revision">{t('hub.revision', { revision: record.revision })}</small> : null}
         <div className="project-hub__actions">
           <button type="button" aria-label={t('hub.openLabel', { name: record.name })} onClick={() => onOpen(record)}><FolderOpen size={16} />{t('hub.open')}</button>
           <button type="button" aria-label={t('hub.renameAction', { name: record.name })} onClick={() => setEditing({ id: record.id, name: record.name })}><Pencil size={15} /></button>

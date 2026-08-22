@@ -11,6 +11,24 @@ beforeEach(() => localStorage.clear());
 afterEach(() => cleanup());
 
 describe('ProjectHub', () => {
+  it('shows exactly three compact recent projects without revision metadata', async () => {
+    const repository = new InMemoryProjectRepository();
+    for (const name of ['Uno', 'Dos', 'Tres', 'Cuatro']) {
+      await repository.saveProject({ ...createDefaultProject(), id: `project-${name}`, name });
+    }
+
+    render(
+      <ProjectProvider>
+        <ProjectHub repository={repository} onOpen={() => undefined} variant="recent" limit={3} />
+      </ProjectProvider>,
+    );
+
+    await screen.findByText('Cuatro');
+    expect(document.querySelectorAll('.project-hub__row')).toHaveLength(3);
+    expect(document.querySelector('.project-hub__revision')).toBeNull();
+    expect(screen.queryByText('Uno')).toBeNull();
+  });
+
   it('lists and opens a verified local project', async () => {
     const repository = new InMemoryProjectRepository();
     const project = { ...createDefaultProject(), name: 'Proyecto local verificado' };

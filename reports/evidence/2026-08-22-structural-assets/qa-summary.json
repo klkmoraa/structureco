@@ -1,0 +1,37 @@
+{
+  "phase": "structural-assets",
+  "generatedAt": "2026-08-22T07:02:43.390Z",
+  "captures": [
+    {
+      "theme": "light",
+      "screenshot": "atlas-light.png",
+      "metrics": {
+        "theme": "light",
+        "cards": 40,
+        "families": 10,
+        "uniqueAssets": 40,
+        "transparentSvgs": 40,
+        "rasterNodes": 0,
+        "filters": 0,
+        "horizontalOverflow": 0
+      },
+      "failures": []
+    },
+    {
+      "theme": "dark",
+      "screenshot": "atlas-dark.png",
+      "metrics": {
+        "theme": "dark",
+        "cards": 40,
+        "families": 10,
+        "uniqueAssets": 40,
+        "transparentSvgs": 40,
+        "rasterNodes": 0,
+        "filters": 0,
+        "horizontalOverflow": 0
+      },
+      "failures": []
+    }
+  ],
+  "failures": []
+}

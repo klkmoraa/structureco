@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createBlankProject, exampleProjects } from '../../data/defaultProject';
@@ -19,11 +19,14 @@ beforeAll(() => {
   });
 });
 
-beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  sessionStorage.clear();
+});
 afterEach(() => cleanup());
 
 const renderWelcome = (language: 'es' | 'en' = 'es', base = createBlankProject()) => {
-  const project = base;
+  const project = structuredClone(base);
   project.settings = { ...project.settings, language };
   localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
   const onOpenWorkspace = vi.fn();
@@ -38,142 +41,64 @@ const renderWelcome = (language: 'es' | 'en' = 'es', base = createBlankProject()
   return { ...result, onOpenWorkspace, onOpenSpace3D };
 };
 
-const templateCards = (container: HTMLElement) => [...container.querySelectorAll('.welcome-template-card')];
+const primaryNavigation = () => screen.getByRole('navigation', { name: /Navegación principal|Primary navigation/i });
 
-/**
- * La portada deja la vitrina, importación secundaria y Space 3D fuera del
- * primer vistazo. Las pruebas entran por el acceso real "otras formas de
- * empezar", que abre la superficie donde vive ese recorrido.
- */
-const openWhereStep = async (user: ReturnType<typeof userEvent.setup>) => {
-  await user.click(screen.getByRole('button', { name: /otras formas de empezar|see other ways to start/i }));
-};
-
-describe('WelcomeScreen template showcase', () => {
-  it('lists every built-in example with a category badge', async () => {
+describe('WelcomeScreen · plantillas estructurales', () => {
+  it('muestra todos los ejemplos con una ilustración editable del registro', async () => {
     const user = userEvent.setup();
     const { container } = renderWelcome();
-    await openWhereStep(user);
+    await user.click(within(primaryNavigation()).getByRole('button', { name: 'Plantillas' }));
 
-    const cards = templateCards(container);
+    const cards = [...container.querySelectorAll('.sc-home-template-grid > button')];
     expect(cards).toHaveLength(exampleProjects.length);
-    for (const card of cards) {
-      expect(card.querySelector('.welcome-category-badge')?.textContent?.trim()).toBeTruthy();
-    }
+    cards.forEach((card) => expect(card.querySelector('[data-structural-asset-id]')).not.toBeNull());
   });
 
-  it('filters templates by category and restores the full list', async () => {
-    const user = userEvent.setup();
-    const { container } = renderWelcome();
-    await openWhereStep(user);
-    const total = exampleProjects.length;
-
-    await user.click(screen.getByRole('tab', { name: 'Académicos' }));
-    await waitFor(() => expect(templateCards(container).length).toBeLessThan(total));
-    const academic = templateCards(container);
-    expect(academic.length).toBeGreaterThan(0);
-    for (const card of academic) {
-      expect(card.querySelector('.welcome-category-badge')?.textContent).toContain('Académico');
-    }
-
-    await user.click(screen.getByRole('tab', { name: 'Modelos' }));
-    await waitFor(() => expect(templateCards(container).length).toBe(total - academic.length));
-    for (const card of templateCards(container)) {
-      expect(card.querySelector('.welcome-category-badge')?.textContent).not.toContain('Académico');
-    }
-
-    await user.click(screen.getByRole('tab', { name: 'Todos' }));
-    await waitFor(() => expect(templateCards(container)).toHaveLength(total));
-  });
-
-  it('marks the active filter for assistive technology', async () => {
-    const user = userEvent.setup();
-    renderWelcome();
-    await openWhereStep(user);
-
-    expect(screen.getByRole('tab', { name: 'Todos' }).getAttribute('aria-selected')).toBe('true');
-    await user.click(screen.getByRole('tab', { name: 'Académicos' }));
-    expect(screen.getByRole('tab', { name: 'Académicos' }).getAttribute('aria-selected')).toBe('true');
-    expect(screen.getByRole('tab', { name: 'Todos' }).getAttribute('aria-selected')).toBe('false');
-  });
-
-  it('opens the workspace with the chosen template loaded', async () => {
+  it('abre la Mesa con la plantilla elegida', async () => {
     const user = userEvent.setup();
     const { container, onOpenWorkspace } = renderWelcome();
-    await openWhereStep(user);
-
-    const [firstCard] = templateCards(container);
-    await user.click(firstCard);
-
+    await user.click(within(primaryNavigation()).getByRole('button', { name: 'Plantillas' }));
+    await user.click(container.querySelector('.sc-home-template-grid > button') as HTMLElement);
     expect(onOpenWorkspace).toHaveBeenCalledOnce();
   });
 });
 
-describe('WelcomeScreen launcher', () => {
-  it('offers Space 3D as the only 3D surface on the start screen', async () => {
-    const user = userEvent.setup();
-    renderWelcome();
-    await openWhereStep(user);
-    expect(screen.queryByRole('button', { name: /experimental 3d/i })).toBeNull();
-    expect(screen.getAllByRole('button', { name: /space 3d/i })).toHaveLength(1);
-  });
-
-  it('opens Space 3D as a surface of its own, without touching the 2D project', async () => {
+describe('WelcomeScreen · Space 3D', () => {
+  it('abre primero su sección y sólo entra al entorno con la acción explícita', async () => {
     const user = userEvent.setup();
     const { onOpenSpace3D, onOpenWorkspace } = renderWelcome();
-    await openWhereStep(user);
 
-    const card = screen.getByRole('button', { name: /space 3d/i });
-    expect(card.textContent).toMatch(/experimental/i);
-    await user.click(card);
+    await user.click(within(primaryNavigation()).getByRole('button', { name: 'Space 3D' }));
+    expect(onOpenSpace3D).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'Modelo espacial' })).toBeTruthy();
 
+    await user.click(screen.getByRole('button', { name: 'Abrir Space 3D' }));
     expect(onOpenSpace3D).toHaveBeenCalledOnce();
     expect(onOpenWorkspace).not.toHaveBeenCalled();
   });
 
-  it('describes Space 3D in English too', async () => {
+  it('localiza la sección completa al inglés', async () => {
     const user = userEvent.setup();
     renderWelcome('en');
-    await openWhereStep(user);
-    expect(screen.getByRole('button', { name: /space 3d/i }).textContent)
-      .toMatch(/six degrees of freedom|space frame/i);
+    await user.click(within(primaryNavigation()).getByRole('button', { name: 'Space 3D' }));
+    expect(screen.getByRole('heading', { name: 'Spatial model' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open Space 3D' })).toBeTruthy();
   });
+});
 
-  /**
-   * CRI-112 · la placa de Continuar es adaptativa. Con modelo enseña su medida
-   * real; recién creado, una fila de ceros en la pieza mayor de la pantalla no
-   * informa de nada y cede el sitio a la invitación. Las dos ramas se prueban:
-   * lo que no puede pasar es que la tarjeta invente un número, ni que se quede
-   * muda teniendo algo que contar.
-   */
-  it('reports the real model size on the continue card when there is a model', () => {
+describe('WelcomeScreen · proyecto actual', () => {
+  it('usa el nombre real del proyecto y acciones primarias separadas', () => {
     const example = exampleProjects[0].build();
-    const { container } = renderWelcome('es', example);
-    const resume = container.querySelector('.welcome-resume-card');
-
-    expect(resume?.querySelector('.welcome-project-stats')?.textContent)
-      .toBe(`${example.nodes.length} nudos · ${example.members.length} barras`);
-    expect(resume?.querySelector('.welcome-resume-invite')).toBeNull();
+    renderWelcome('es', example);
+    expect(screen.getByRole('heading', { name: example.name })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Continuar proyecto' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Nuevo proyecto' })).toBeTruthy();
   });
 
-  it('says the model is empty instead of showing a row of zeros', () => {
-    const { container } = renderWelcome();
-    const resume = container.querySelector('.welcome-resume-card');
-
-    expect(resume?.querySelector('.welcome-project-stats')).toBeNull();
-    expect(resume?.querySelector('.welcome-resume-invite')?.textContent?.trim()).toBeTruthy();
-  });
-
-  it('localizes the launcher and filters in English', async () => {
-    const user = userEvent.setup();
-    const { container } = renderWelcome('en');
-
-    expect(container.querySelector('.welcome-resume-card .welcome-resume-invite')?.textContent)
-      .toBe('Empty model · start with the nodes');
-
-    await openWhereStep(user);
-    expect(screen.getByRole('tab', { name: 'All' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Academic' })).toBeTruthy();
-    expect(within(container).queryByText('Académicos')).toBeNull();
+  it('mantiene la ilustración hero estable durante la sesión', () => {
+    const { container, rerender } = renderWelcome();
+    const first = container.querySelector('.sc-home-hero-asset [data-structural-asset-id]')?.getAttribute('data-structural-asset-id');
+    rerender(<ProjectProvider><ClassroomSessionProvider projectId="welcome-test"><WelcomeScreen onOpenWorkspace={vi.fn()} /></ClassroomSessionProvider></ProjectProvider>);
+    expect(container.querySelector('.sc-home-hero-asset [data-structural-asset-id]')?.getAttribute('data-structural-asset-id')).toBe(first);
   });
 });
