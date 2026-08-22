@@ -5,6 +5,7 @@ import { createBlankProject, exampleProjects } from '../../data/defaultProject';
 import { useProject, useWorkspaceUI } from '../../store/ProjectContext';
 import { exportProjectJson } from '../../utils/export';
 import { useI18n } from '../../i18n/useI18n';
+import type { TranslationKey } from '../../i18n/catalogs';
 import { NewExerciseDialog } from './NewExerciseDialog';
 import { BrandMark } from '../topbar/BrandMark';
 import { presentExample } from './examplePresentation';
@@ -14,6 +15,7 @@ import type { PortalAssetId } from '../structural-assets/threePortalAssets';
 import type { ThreeStructuralAssetId } from '../structural-assets/threeStructuralRender';
 import { resolveSessionHeroId } from './homeSession';
 import { IllustrationStudio } from '../structural-assets/studio/IllustrationStudio';
+import type { ClassroomExerciseTemplateId } from '../../education/exerciseTemplates';
 import './totalHome.css';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
@@ -36,7 +38,7 @@ const copy = {
     settings: 'Ajustes', menu: 'Abrir navegación', closeMenu: 'Cerrar navegación', current: 'Proyecto abierto', continue: 'Continuar proyecto', create: 'Nuevo proyecto',
     recent: 'Proyectos recientes', viewAll: 'Ver todos', templatesTitle: 'Elige una estructura de partida', templatesBody: 'Abre un modelo preparado y adáptalo a tu caso.',
     projectsTitle: 'Tus proyectos', projectsBody: 'Abre, renombra o duplica el trabajo guardado en este dispositivo.',
-    classroomTitle: 'Practica con un caso guiado', classroomBody: 'Elige una estructura y revisa el mismo modelo y resultados del editor.', classroomAction: 'Crear ejercicio',
+    classroomTitle: 'Aprende resolviendo una estructura', classroomBody: 'Elige un caso, ajusta sus datos y avanza con una guía que no te quita el control del modelo.', classroomAction: 'Crear desde cero', classroomCases: 'O empieza con un caso preparado',
     importTitle: 'Trae un modelo', importBody: 'Revisa el archivo antes de modificar el proyecto abierto.',
     spaceTitle: 'Modelo espacial', spaceBody: 'Abre el entorno 3D independiente o continúa desde un proyecto 2D.', spaceAction: 'Abrir Space 3D',
     secondary: 'Accesos rápidos', local: 'Guardado local en este dispositivo',
@@ -46,7 +48,7 @@ const copy = {
     settings: 'Settings', menu: 'Open navigation', closeMenu: 'Close navigation', current: 'Open project', continue: 'Continue project', create: 'New project',
     recent: 'Recent projects', viewAll: 'View all', templatesTitle: 'Choose a starting structure', templatesBody: 'Open a prepared model and adapt it to your case.',
     projectsTitle: 'Your projects', projectsBody: 'Open, rename, or duplicate work saved on this device.',
-    classroomTitle: 'Practice with a guided case', classroomBody: 'Choose a structure and inspect the same model and results used by the editor.', classroomAction: 'Create exercise',
+    classroomTitle: 'Learn by solving a structure', classroomBody: 'Choose a case, adjust its data, and move forward with guidance that keeps you in control of the model.', classroomAction: 'Start from scratch', classroomCases: 'Or begin with a prepared case',
     importTitle: 'Bring in a model', importBody: 'Review the file before changing the open project.',
     spaceTitle: 'Spatial model', spaceBody: 'Open the independent 3D environment or continue from a 2D project.', spaceAction: 'Open Space 3D',
     secondary: 'Quick access', local: 'Saved locally on this device',
@@ -59,6 +61,12 @@ const NAV_ITEMS: ReadonlyArray<{ id: HomeView; icon: typeof Home }> = [
 ];
 
 const HOME_HERO_IDS = STRUCTURAL_ASSET_IDS.filter((assetId) => assetId.startsWith('portal:'));
+
+const CLASSROOM_FEATURES: ReadonlyArray<{ id: ClassroomExerciseTemplateId; assetId: ThreeStructuralAssetId; name: TranslationKey; description: TranslationKey }> = [
+  { id: 'simple-beam', assetId: 'beam:simply-supported', name: 'newExercise.template.simpleBeamName', description: 'newExercise.template.simpleBeamDescription' },
+  { id: 'triangular-truss', assetId: 'truss:pratt', name: 'newExercise.template.triangularTrussName', description: 'newExercise.template.triangularTrussDescription' },
+  { id: 'portal-frame', assetId: 'portal:two-bay', name: 'newExercise.template.portalFrameName', description: 'newExercise.template.portalFrameDescription' },
+];
 
 const templateAssetId = (name: string): ThreeStructuralAssetId => {
   if (/armadura|truss/i.test(name)) return 'truss:warren';
@@ -76,6 +84,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exerciseDialogOpen, setExerciseDialogOpen] = useState(false);
+  const [exerciseTemplateId, setExerciseTemplateId] = useState<ClassroomExerciseTemplateId>('blank');
   const [importCenterOpen, setImportCenterOpen] = useState(false);
   const [dxfImportOpen, setDxfImportOpen] = useState(false);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
@@ -139,6 +148,10 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
     setSettingsOpen(false);
     window.setTimeout(() => settingsLauncherRef.current?.focus(), 0);
   };
+  const openExercise = (templateId: ClassroomExerciseTemplateId = 'blank') => {
+    setExerciseTemplateId(templateId);
+    setExerciseDialogOpen(true);
+  };
   const renderNavigation = (mobile = false) => <nav className={mobile ? 'sc-home-nav sc-home-nav--mobile' : 'sc-home-nav'} aria-label={text.navigation}>
     {NAV_ITEMS.map(({ id, icon: Icon }) => <button key={id} type="button" className={view === id ? 'is-active' : undefined} aria-current={view === id ? 'page' : undefined} onClick={() => navigate(id)}><Icon size={19} /><span>{text[id]}</span></button>)}
     {mobile ? <button type="button" onClick={(event) => openSettings(event.currentTarget)}><Settings size={19} /><span>{text.settings}</span></button> : null}
@@ -162,7 +175,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
       <div className="sc-home-section-heading"><h2 id="home-quick-title">{text.secondary}</h2></div>
       <div className="sc-home-quick-row">
         <button type="button" onClick={() => setImportCenterOpen(true)}><Upload size={18} /><span>{text.import}</span></button>
-        <button type="button" onClick={() => setExerciseDialogOpen(true)}><GraduationCap size={18} /><span>{text.classroom}</span></button>
+        <button type="button" onClick={() => openExercise()}><GraduationCap size={18} /><span>{text.classroom}</span></button>
         <button type="button" onClick={onOpenSpace3D}><Box size={18} /><span>{text.space3d}</span></button>
       </div>
     </section>
@@ -180,10 +193,33 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
     })}</div>
   </section>;
 
+  const classroomLanding = <section className="sc-home-classroom" aria-labelledby="home-classroom-title">
+    <div className="sc-home-classroom-hero">
+      <div>
+        <p>{text.classroom}</p>
+        <h2 id="home-classroom-title">{text.classroomTitle}</h2>
+        <span>{text.classroomBody}</span>
+        <button type="button" className="sc-home-continue" onClick={() => openExercise()}>{text.classroomAction}<ArrowRight size={16} /></button>
+      </div>
+      <ThreeStructuralImage assetId="portal:two-story" theme={theme} eager />
+    </div>
+    <div className="sc-home-classroom-cases">
+      <h3>{text.classroomCases}</h3>
+      <div>
+        {CLASSROOM_FEATURES.map((item) => <button key={item.id} type="button" onClick={() => openExercise(item.id)}>
+          <ThreeStructuralImage assetId={item.assetId} theme={theme} />
+          <strong>{t(item.name)}</strong>
+          <span>{t(item.description)}</span>
+          <ArrowRight size={16} aria-hidden="true" />
+        </button>)}
+      </div>
+    </div>
+  </section>;
+
   const content = view === 'home' ? dashboard
     : view === 'projects' ? <section className="sc-home-view"><header><p>{text.projects}</p><h2>{text.projectsTitle}</h2><span>{text.projectsBody}</span></header><Suspense fallback={<p role="status">{t('hub.loading')}</p>}><Phase2ProjectHub onOpenWorkspace={onOpenWorkspace} /></Suspense></section>
       : view === 'templates' ? templates
-        : view === 'classroom' ? <section className="sc-home-view sc-home-focused"><GraduationCap size={30} /><header><p>{text.classroom}</p><h2>{text.classroomTitle}</h2><span>{text.classroomBody}</span></header><button type="button" className="sc-home-continue" onClick={() => setExerciseDialogOpen(true)}>{text.classroomAction}</button></section>
+        : view === 'classroom' ? classroomLanding
           : view === 'import' ? <section className="sc-home-view"><header><p>{text.import}</p><h2>{text.importTitle}</h2><span>{text.importBody}</span></header><div className="sc-home-import-grid"><button type="button" className="welcome-import-card" onClick={() => setImportCenterOpen(true)}><Upload size={20} /><strong>{t('welcome.import')}</strong><span>{t('welcome.importDescription')}</span></button><Suspense fallback={null}><Phase2DxfAction open={dxfImportOpen} onOpenChange={setDxfImportOpen} onOpenWorkspace={onOpenWorkspace} /></Suspense></div></section>
             : <section className="sc-home-view sc-home-focused"><Box size={30} /><header><p>{text.space3d}</p><h2>{text.spaceTitle}</h2><span>{text.spaceBody}</span></header><button type="button" className="sc-home-continue" onClick={onOpenSpace3D}>{text.spaceAction}</button></section>;
 
@@ -193,6 +229,6 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
     {mobileNavOpen ? renderNavigation(true) : null}
     <div className="sc-home-main"><header className="sc-home-topline"><span>{text[view]}</span><div><label><span className="sr-only">{t('language.label')}</span><select value={language} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, language: event.target.value as 'es' | 'en' } }))}><option value="es">ES</option><option value="en">EN</option></select></label><button type="button" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label={theme === 'light' ? t('theme.dark') : t('theme.light')}>{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</button></div></header><div className="sc-home-content">{content}</div></div>
     {importCenterOpen ? <Suspense fallback={null}><PortableImportCenter open currentProjectName={project.name} onClose={() => setImportCenterOpen(false)} onSaveCurrent={() => exportProjectJson(project)} onImported={(outcome) => { replaceProject({ ...outcome.project, settings: { ...outcome.project.settings, language } }, outcome.restoredAnalysis); setImportCenterOpen(false); onOpenWorkspace(); }} /></Suspense> : null}
-    <NewExerciseDialog open={exerciseDialogOpen} onClose={() => setExerciseDialogOpen(false)} onCreate={(next) => { replaceProject({ ...next, settings: { ...next.settings, language } }); setExerciseDialogOpen(false); onOpenWorkspace(); }} />
+    <NewExerciseDialog open={exerciseDialogOpen} initialTemplateId={exerciseTemplateId} onClose={() => setExerciseDialogOpen(false)} onCreate={(next) => { replaceProject({ ...next, settings: { ...next.settings, language } }); setExerciseDialogOpen(false); onOpenWorkspace(); }} />
   </main>{settingsOpen ? <IllustrationStudio language={language} initialTheme={theme} onClose={closeSettings} /> : null}</>;
 };

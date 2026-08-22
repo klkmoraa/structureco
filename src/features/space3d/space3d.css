@@ -1072,6 +1072,8 @@
   border: 0;
 }
 
+.space3d-mobile-controls { display: none; }
+
 /* --- Escritorio ---------------------------------------------------------- */
 
 @media (min-width: 960px) {
@@ -1247,6 +1249,199 @@
 
   .space3d-sheet:not([data-expanded]) .space3d-model-nav-panel,
   .space3d-sheet:not([data-expanded]) .space3d-rail-body { display: none; }
+}
+
+/* --- Rediseño 2026 · lienzo y comandos primero ------------------------- */
+
+.space3d-screen {
+  background: var(--sc-color-bg-app);
+}
+
+.space3d-experimental {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.space3d-button--primary { color: #fff; }
+
+.space3d-issues li,
+.space3d-issue-line li {
+  align-items: start;
+}
+
+@media (min-width: 960px) {
+  .space3d-layout {
+    grid-template-columns: 68px minmax(0, 1fr) minmax(340px, 400px);
+    grid-template-areas: "toolrail stage sheet";
+  }
+
+  .space3d-sheet {
+    grid-area: sheet;
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
+    align-self: stretch;
+    overflow: hidden;
+    border: var(--sc-clay-edge);
+    border-radius: var(--sc-radius-xl);
+    background: var(--sc-color-surface-1);
+    box-shadow: var(--sc-shadow-clay-md);
+  }
+
+  .space3d-sheet-handle { display: none; }
+
+  .space3d-sheet .space3d-model-nav-panel {
+    flex: none;
+    max-block-size: 245px;
+    overflow-y: auto;
+    border: 0;
+    border-block-end: 1px solid var(--sc-color-divider);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .space3d-sheet .space3d-rail {
+    flex: 1;
+    min-block-size: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+@media (min-width: 1440px) {
+  .space3d-layout {
+    grid-template-columns: 68px minmax(0, 1fr) minmax(360px, 420px);
+  }
+}
+
+@media (max-width: 599px) {
+  .space3d-screen {
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    gap: 6px;
+    overflow: hidden;
+  }
+
+  .space3d-header {
+    padding: max(7px, env(safe-area-inset-top)) 10px 7px;
+    gap: 5px;
+  }
+
+  .space3d-badge {
+    padding: 3px 7px;
+    font-size: 9px;
+  }
+
+  .space3d-project-picker {
+    min-block-size: 36px;
+    padding-block: 2px;
+  }
+
+  .space3d-toolbar {
+    position: relative;
+    inset: auto;
+    z-index: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    gap: 6px;
+    padding: 0 10px;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .space3d-mobile-controls {
+    order: 3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-block-size: 44px;
+    min-inline-size: 0;
+    padding-inline: 10px;
+    border: var(--sc-clay-edge);
+    border-radius: var(--sc-radius-md);
+    background: var(--sc-color-surface-1);
+    color: var(--sc-color-text-primary);
+    box-shadow: var(--sc-shadow-clay-xs);
+    font: 600 var(--sc-font-size-control)/1 var(--sc-font-ui);
+  }
+
+  .space3d-mobile-controls[aria-expanded='true'] {
+    background: var(--sc-color-action-subtle);
+    color: var(--sc-color-action-primary);
+    box-shadow: var(--sc-shadow-clay-pressed);
+  }
+
+  .space3d-toolbar > .space3d-tray:not(.space3d-tray--run) { display: none; }
+
+  .space3d-toolbar[data-mobile-open] > .space3d-tray:not(.space3d-tray--run) {
+    display: flex;
+    grid-column: 1 / -1;
+    inline-size: 100%;
+  }
+
+  .space3d-toolbar > .space3d-tray:nth-of-type(1) { order: 1; }
+  .space3d-toolbar > .space3d-tray:nth-of-type(2) { order: 2; }
+
+  .space3d-tray--run {
+    order: 4;
+    grid-column: 2;
+    inline-size: auto;
+    min-inline-size: 0;
+    margin: 0;
+    padding: 3px;
+  }
+
+  .space3d-tray--run .space3d-button--primary {
+    min-block-size: 38px;
+    min-inline-size: 0;
+    padding-inline: 10px;
+  }
+
+  .space3d-toolbar[data-mobile-open] .space3d-tray {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .space3d-toolbar[data-mobile-open] .space3d-tray::-webkit-scrollbar { display: none; }
+
+  .space3d-layout {
+    min-block-size: 0;
+    padding: 0 10px calc(var(--space3d-rail-h) + 6px);
+  }
+
+  .space3d-stage {
+    min-block-size: 0;
+    padding: 6px;
+    border-radius: var(--sc-radius-lg);
+  }
+
+  .space3d-canvas-stage {
+    block-size: 100%;
+    min-block-size: 0;
+  }
+
+  .space3d-help,
+  .space3d-status {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
 }
 
 @media (pointer: coarse) {

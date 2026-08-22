@@ -65,7 +65,7 @@ describe('WelcomeScreen · arquitectura nueva', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /DXF/ })).toBeTruthy());
 
     await user.click(within(navigation()).getByRole('button', { name: 'Aula' }));
-    expect(screen.getByRole('button', { name: 'Crear ejercicio' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Crear desde cero' })).toBeTruthy();
   });
 
   it('continuar abre la Mesa sin sustituir el proyecto', async () => {

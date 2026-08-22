@@ -5504,3 +5504,154 @@ button:not(:disabled):active,.selection-card:active {
 .welcome-cycle-axis { stroke: var(--sc-color-border-strong); stroke-width: 1; fill: none; }
 .welcome-cycle-diagram { stroke: var(--sc-color-technical-moment); stroke-width: 2; fill: none; stroke-linecap: round; }
 .welcome-cycle-diagram-area { fill: color-mix(in srgb, var(--sc-color-technical-moment) 16%, transparent); stroke: none; }
+
+/* Import Center · tres decisiones visibles sobre seis estados internos. */
+.import-center-backdrop {
+  background: color-mix(in srgb, var(--sc-color-bg-night) 74%, transparent);
+  backdrop-filter: none;
+}
+
+.import-center-dialog[data-import-layout='review-decide-open'] {
+  width: min(980px, calc(100vw - 40px));
+  max-height: min(780px, calc(100dvh - 40px));
+  border-radius: var(--sc-radius-sheet);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-shadow-sheet);
+}
+
+.import-center-dialog[data-import-layout='review-decide-open'] .import-center-header {
+  padding: 20px 22px 15px;
+  border-bottom: 0;
+}
+
+.import-center-dialog[data-import-layout='review-decide-open'] .import-center-header h2 {
+  max-width: 650px;
+  font-family: var(--sc-font-display);
+  font-size: clamp(23px, 3vw, 32px);
+  line-height: 1.05;
+}
+
+.import-center-dialog[data-import-layout='review-decide-open'] .import-center-close {
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-color-surface-elevated);
+  box-shadow: var(--sc-shadow-clay-xs);
+}
+
+.import-center-dialog[data-import-layout='review-decide-open'] .import-center-steps {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 22px;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-surface-inset);
+  box-shadow: var(--sc-shadow-clay-pressed);
+}
+
+.import-center-dialog[data-import-layout='review-decide-open'] .import-center-steps > span {
+  min-height: 38px;
+  justify-content: center;
+  padding: 0 12px;
+  border-radius: var(--sc-radius-pill);
+  font-family: var(--sc-font-mono);
+  font-size: 11px;
+}
+
+.import-center-dialog[data-import-layout='review-decide-open'] .import-center-steps > span::after { display: none; }
+.import-center-dialog[data-import-layout='review-decide-open'] .import-center-steps > span.active {
+  background: var(--sc-color-surface-elevated);
+  box-shadow: var(--sc-shadow-clay-xs);
+}
+.import-center-dialog[data-import-layout='review-decide-open'] .import-center-steps > span.complete { color: var(--sc-color-action-primary); }
+.import-center-dialog[data-import-layout='review-decide-open'] .import-center-steps i { width: 22px; height: 22px; }
+
+.import-center-dialog[data-import-layout='review-decide-open'] .import-center-body { padding: 20px 22px; }
+.import-center-dialog[data-import-layout='review-decide-open'][data-import-stage='select'] .import-center-section {
+  grid-template-columns: minmax(0, 1.45fr) minmax(260px, .75fr);
+  grid-template-areas: 'heading heading' 'drop formats';
+  gap: 14px;
+}
+.import-center-dialog[data-import-layout='review-decide-open'][data-import-stage='select'] .import-section-heading { grid-area: heading; }
+.import-center-dialog[data-import-layout='review-decide-open'][data-import-stage='select'] .import-dropzone { grid-area: drop; }
+.import-center-dialog[data-import-layout='review-decide-open'][data-import-stage='select'] .import-format-grid {
+  grid-area: formats;
+  grid-template-columns: 1fr;
+  align-content: start;
+  gap: 8px;
+}
+
+.import-center-dialog[data-import-layout='review-decide-open'] .import-dropzone {
+  min-height: 280px;
+  border-color: color-mix(in srgb, var(--sc-color-action-primary) 42%, var(--sc-color-border-soft));
+  border-radius: var(--sc-radius-lg);
+  background: var(--sc-color-surface-inset);
+  box-shadow: var(--sc-shadow-clay-pressed);
+}
+
+.import-center-dialog[data-import-layout='review-decide-open'] .import-format-grid article {
+  min-height: 82px;
+  padding: 13px;
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-md);
+  background: var(--sc-color-surface-elevated);
+  box-shadow: var(--sc-shadow-clay-xs);
+}
+
+.import-center-dialog[data-import-layout='review-decide-open'] .import-center-footer {
+  min-height: 64px;
+  padding: 10px 22px calc(10px + env(safe-area-inset-bottom));
+  background: var(--sc-color-surface-1);
+}
+.import-center-dialog[data-import-layout='review-decide-open'] .import-button-primary,
+.import-center-dialog[data-import-layout='review-decide-open'] .import-dropzone button { color: #fff; }
+
+@media (max-width: 700px) {
+  .import-center-dialog[data-import-layout='review-decide-open'] {
+    width: 100%;
+    max-height: calc(100dvh - max(14px, env(safe-area-inset-top)));
+    border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0;
+  }
+  .import-center-dialog[data-import-layout='review-decide-open'] .import-center-header { padding: 15px 16px 10px; }
+  .import-center-dialog[data-import-layout='review-decide-open'] .import-center-header h2 { font-size: 21px; }
+  .import-center-dialog[data-import-layout='review-decide-open'] .import-center-header p:last-child {
+    display: block;
+    max-width: 285px;
+    font-size: 11px;
+  }
+  .import-center-dialog[data-import-layout='review-decide-open'] .import-center-steps {
+    gap: 4px;
+    margin: 0 14px;
+    padding: 5px;
+  }
+  .import-center-dialog[data-import-layout='review-decide-open'] .import-center-steps > span {
+    min-height: 34px;
+    gap: 5px;
+    padding: 0 7px;
+    font-size: 9.5px;
+  }
+  .import-center-dialog[data-import-layout='review-decide-open'] .import-center-steps em { display: inline; }
+  .import-center-dialog[data-import-layout='review-decide-open'] .import-center-steps i { width: 20px; height: 20px; }
+  .import-center-dialog[data-import-layout='review-decide-open'] .import-center-body { padding: 14px; }
+  .import-center-dialog[data-import-layout='review-decide-open'][data-import-stage='select'] .import-center-section {
+    grid-template-columns: 1fr;
+    grid-template-areas: 'heading' 'drop' 'formats';
+    gap: 11px;
+  }
+  .import-center-dialog[data-import-layout='review-decide-open'] .import-dropzone {
+    min-height: 178px;
+    padding: 17px 12px;
+  }
+  .import-center-dialog[data-import-layout='review-decide-open'] .import-dropzone-icon {
+    width: 46px;
+    height: 46px;
+  }
+  .import-center-dialog[data-import-layout='review-decide-open'] .import-format-grid article {
+    min-height: 58px;
+    padding: 10px 11px;
+  }
+  .import-center-dialog[data-import-layout='review-decide-open'] .import-center-footer {
+    min-height: 62px;
+    padding: 9px 14px calc(9px + env(safe-area-inset-bottom));
+  }
+}
