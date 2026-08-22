@@ -335,3 +335,296 @@
     transform:none;
   }
 }
+
+/* ========================================================================
+   CLAY RESULTS · FASE 3
+   Resultados es una mesa de decisión: la envolvente y los mandos se sienten
+   físicos; números, curvas, ejes, cursor y tabla conservan la disciplina
+   plana de una lectura técnica. No introduce estado ni altera el broker.
+   ===================================================================== */
+
+.app-shell[data-shell-class='X2'] .results-panel[data-surface-presentation='dock'] {
+  margin:0 8px 8px;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-panel);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-md);
+}
+
+.app-shell[data-shell-class='M1'] .results-panel[data-surface-presentation='inset'] {
+  border:var(--sc-clay-edge);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-lg);
+}
+
+.app-shell[data-shell-class='K0'] .results-panel[data-surface-presentation='sheet'] {
+  border:var(--sc-clay-edge);
+  border-bottom:0;
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-sheet);
+}
+
+.app-shell .results-panel .results-commandbar {
+  min-height:50px;
+  margin:10px 10px 0;
+  padding:6px 8px 6px 12px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-card);
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-inset);
+}
+
+.app-shell .results-panel .results-commandbar__context > span {
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+  letter-spacing:var(--sc-tracking-eyebrow);
+  text-transform:uppercase;
+}
+
+.app-shell .results-panel .results-mode-control {
+  gap:4px;
+  padding:3px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-control);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell .results-panel .results-mode-control button,
+.app-shell .results-panel .results-dense-launchers button,
+.app-shell .results-panel .result-summary-actions button,
+.app-shell .results-panel .diagram-chart-heading .envelope-toggle {
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transition:transform 180ms var(--sc-ease-standard),box-shadow 180ms var(--sc-ease-standard),background-color 180ms var(--sc-ease-standard),color 180ms var(--sc-ease-standard);
+}
+
+.app-shell .results-panel :is(.results-mode-control button,.results-dense-launchers button,.result-summary-actions button,.diagram-chart-heading .envelope-toggle):hover:not(:disabled) {
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-sm);
+  transform:translateY(-1px);
+}
+
+.app-shell .results-panel :is(.results-mode-control button,.results-dense-launchers button,.result-summary-actions button,.diagram-chart-heading .envelope-toggle):active:not(:disabled),
+.app-shell .results-panel .results-mode-control button[aria-pressed='true'],
+.app-shell .results-panel .diagram-chart-heading .envelope-toggle[aria-pressed='true'] {
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell .results-panel .result-tabs {
+  height:auto;
+  min-height:54px;
+  flex-basis:auto;
+  align-items:center;
+  gap:5px;
+  margin:10px 10px 0;
+  padding:4px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-card);
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-inset);
+}
+
+.app-shell .results-panel .result-tab-family {
+  display:flex;
+  align-items:center;
+  gap:3px;
+  min-width:max-content;
+}
+
+.app-shell .results-panel .result-tab-family__label {
+  padding-inline:4px;
+  color:var(--sc-color-text-tertiary);
+  font-family:var(--sc-font-mono);
+  font-size:8px;
+  font-weight:750;
+  letter-spacing:var(--sc-tracking-eyebrow);
+  text-transform:uppercase;
+}
+
+.app-shell .results-panel .result-tabs button {
+  min-height:42px;
+  height:auto;
+  padding:0 11px;
+  border:1px solid transparent;
+  border-radius:var(--sc-radius-control);
+  color:var(--sc-color-text-secondary);
+  transition:transform 180ms var(--sc-ease-standard),box-shadow 180ms var(--sc-ease-standard),background-color 180ms var(--sc-ease-standard),color 180ms var(--sc-ease-standard);
+}
+
+.app-shell .results-panel .result-tabs button:hover:not([aria-selected='true']) {
+  border-color:var(--sc-color-border-soft);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transform:translateY(-1px);
+}
+
+.app-shell .results-panel .result-tabs button[aria-selected='true'] {
+  border-color:color-mix(in srgb,currentColor 26%,var(--sc-color-border));
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  font-weight:750;
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell .results-panel .result-tabs button[aria-selected='true']::after {
+  display:none;
+}
+
+.app-shell .results-panel .result-tabs button:active:not(:disabled) {
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell .results-panel .results-dense-launchers {
+  min-height:42px;
+  margin:10px 10px 0;
+  padding:5px 8px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-card);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell .results-panel .results-dense-launchers__label {
+  color:var(--sc-color-text-tertiary);
+  font-family:var(--sc-font-mono);
+}
+
+.app-shell .results-panel .results-body {
+  margin:10px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-card);
+  background:var(--sc-color-surface-1);
+}
+
+.app-shell .results-panel .result-summary-workspace {
+  padding:14px;
+  gap:14px;
+}
+
+.app-shell .results-panel .result-summary-header strong {
+  font-family:var(--sc-font-display);
+  font-size:clamp(17px,1.4vw,22px);
+  font-weight:500;
+}
+
+.app-shell .results-panel .result-extreme-grid {
+  gap:10px;
+}
+
+.app-shell .results-panel .result-extreme-card {
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell .results-panel .result-extreme-card__locate {
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+}
+
+.app-shell .results-panel .result-extreme-card__locate:hover:not(:disabled) {
+  color:var(--accent);
+  transform:translateY(-1px);
+}
+
+/* La precisión se lee sobre BASE: el marco exterior puede elevarse, pero el
+   diagrama, su cursor, cifras y celdas no se convierten en botones. */
+.app-shell .results-panel .diagram-chart,
+.app-shell .results-panel .results-table,
+.app-shell .results-panel .diagram-cursor-readout {
+  border-radius:var(--sc-radius-data);
+  background:var(--sc-color-surface-1);
+  box-shadow:none;
+}
+
+.app-shell .results-panel .diagram-chart {
+  border:1px solid var(--sc-color-border-soft);
+}
+
+.app-shell .results-panel .diagram-chart-heading {
+  min-height:44px;
+  padding:6px 8px;
+  border-bottom:1px solid var(--sc-color-border-soft);
+}
+
+.app-shell .results-panel .diagram-chart-heading select {
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-control);
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-inset);
+}
+
+.app-shell .results-panel .diagram-cursor-readout {
+  margin:0 8px 8px;
+  border:1px solid var(--sc-color-border-soft);
+}
+
+.app-shell .results-panel .result-table-card {
+  border:1px solid var(--sc-color-border-soft);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell .results-panel .results-table :is(th,td) {
+  border-radius:0;
+  box-shadow:none;
+}
+
+.app-shell .results-panel .deformed-orbit,
+.deformed-layer path {
+  filter:none;
+}
+
+.app-shell[data-shell-class='K0'] .results-panel .results-mobile-toggle,
+.app-shell[data-shell-class='K0'] .results-panel .results-mobile-focus {
+  min-width:44px;
+  min-height:44px;
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell[data-shell-class='K0'] .results-panel .results-mobile-toggle:active,
+.app-shell[data-shell-class='K0'] .results-panel .results-mobile-focus:active {
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+@media (max-width:700px) {
+  .app-shell[data-shell-class='K0'] .results-panel .results-commandbar {
+    min-height:44px;
+    margin:8px 8px 0;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .results-commandbar__context > span {
+    display:none;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .results-mode-control button:not([aria-pressed='true']) {
+    display:none;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .result-summary-workspace {
+    padding:12px;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .result-summary-header {
+    align-items:flex-start;
+  }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .app-shell .results-panel,
+  .app-shell .results-panel :is(button,.result-tabs button,.results-mobile-toggle,.results-mobile-focus),
+  .app-shell .results-panel :is(button,.result-tabs button,.results-mobile-toggle,.results-mobile-focus):hover,
+  .app-shell .results-panel :is(button,.result-tabs button,.results-mobile-toggle,.results-mobile-focus):active {
+    transition:none;
+    transform:none;
+  }
+}

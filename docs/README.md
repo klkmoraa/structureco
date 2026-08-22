@@ -70,6 +70,8 @@ Estos documentos describen trabajo propuesto o en curso y no prueban implementac
 
 - [Diseño Clay de Workspace · Fase 2](superpowers/specs/2026-08-21-clay-workspace-phase-2-design.md) — `AUDIT/TEMPORARY`.
 - [Plan Clay de Workspace · Fase 2](superpowers/plans/2026-08-21-clay-workspace-phase-2.md) — `AUDIT/TEMPORARY`.
+- [Diseño Clay de Resultados · Fase 3](superpowers/specs/2026-08-21-clay-results-phase-3-design.md) — `AUDIT/TEMPORARY`.
+- [Plan Clay de Resultados · Fase 3](superpowers/plans/2026-08-21-clay-results-phase-3.md) — `AUDIT/TEMPORARY`.
 
 ## Dónde vive cada autoridad
 
