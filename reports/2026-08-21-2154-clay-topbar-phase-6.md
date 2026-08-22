@@ -1,8 +1,8 @@
 # Barra superior Clay y móvil contenido — Fase 6
 
-**Fecha:** 2026-08-21 21:54  
-**Agente:** Codex  
-**Rama:** `codex/clay-workspace-phase-2`  
+**Fecha:** 2026-08-21 21:54
+**Agente:** Codex
+**Rama:** `codex/clay-workspace-phase-2`
 **Clasificación:** AUDIT/TEMPORARY
 
 ## Qué cambió
