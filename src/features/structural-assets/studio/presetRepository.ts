@@ -46,7 +46,7 @@ const includes = <T extends string>(values: readonly T[], value: unknown): value
 const normalizeScale = (value: unknown) => {
   const numeric = typeof value === 'number' && Number.isFinite(value) ? value : 1;
   const clamped = Math.min(1.4, Math.max(.75, numeric));
-  return Number((Math.round((clamped - .75) / .05) * .05 + .75).toFixed(2));
+  return Math.round((Math.round((clamped - .75) / .05) * .05 + .75) * 100) / 100;
 };
 
 export const createFactoryStudioParameters = (assetId: string): StudioParameters => ({

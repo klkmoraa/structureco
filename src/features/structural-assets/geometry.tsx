@@ -1,4 +1,5 @@
 import type { StructuralAssetDetail, StructuralAssetFamily, StructuralAssetVariantName } from './types';
+import { formatFixed } from '../../utils/numberFormat';
 
 const lineColor = 'var(--structural-asset-line, currentColor)';
 const primaryColor = 'var(--structural-asset-primary, currentColor)';
@@ -7,7 +8,7 @@ const accentColor = 'var(--structural-asset-accent, currentColor)';
 
 type Point2 = readonly [number, number];
 
-const pathFromPoints = (points: readonly Point2[]) => `${points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'}${x.toFixed(2)} ${y.toFixed(2)}`).join('')}Z`;
+const pathFromPoints = (points: readonly Point2[]) => `${points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'}${formatFixed(x, 2, 'canvas')} ${formatFixed(y, 2, 'canvas')}`).join('')}Z`;
 
 /**
  * A light-weight orthographic projection of a rectangular structural member.

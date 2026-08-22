@@ -5,6 +5,7 @@ import { STRUCTURAL_ASSET_REGISTRY } from '../registry';
 import { StructuralIllustration } from '../StructuralIllustration';
 import type { StructuralAssetFamily } from '../types';
 import { useModalFocus } from '../../../design-system/components/modalFocus';
+import { formatFixed } from '../../../utils/numberFormat';
 import {
   FACTORY_STUDIO_PRESETS,
   createPersonalPreset,
@@ -212,7 +213,7 @@ export function IllustrationStudio({ language = 'es', initialTheme = 'light', on
         <StudioPreview parameters={parameters} label={t.preview} />
         <div className="illustration-studio__tabs" role="tablist">{tabs.map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={section === id} onClick={() => setSection(id)}>{label}</button>)}</div>
         <div className="illustration-studio__panel" role="tabpanel">
-          {section === 'proportions' ? (['widthScale', 'heightScale', 'depthScale'] as const).map((key) => <label key={key}><span>{t[key]}</span><input aria-label={t[key]} type="range" min="0.75" max="1.4" step="0.05" value={parameters[key]} onChange={(event) => commit({ [key]: Number(event.target.value) })} /><output>{parameters[key].toFixed(2)}</output></label>) : null}
+          {section === 'proportions' ? (['widthScale', 'heightScale', 'depthScale'] as const).map((key) => <label key={key}><span>{t[key]}</span><input aria-label={t[key]} type="range" min="0.75" max="1.4" step="0.05" value={parameters[key]} onChange={(event) => commit({ [key]: Number(event.target.value) })} /><output>{formatFixed(parameters[key], 2, 'inspector')}</output></label>) : null}
           {section === 'material' ? <div className="illustration-studio__choices">{(['factory', 'concrete', 'steel', 'timber', 'technical'] as const).map((value) => <button type="button" key={value} aria-pressed={parameters.material === value} onClick={() => commit({ material: value })}>{t[value]}</button>)}</div> : null}
           {section === 'camera' ? <div className="illustration-studio__choices">{(['isometric', 'front', 'side', 'top'] as const).map((value) => <button type="button" key={value} aria-pressed={parameters.camera === value} onClick={() => commit({ camera: value })}>{t[value]}</button>)}</div> : null}
           {section === 'detail' ? <div className="illustration-studio__choices">{(['hero', 'card', 'compact'] as const).map((value) => <button type="button" key={value} aria-pressed={parameters.detail === value} onClick={() => commit({ detail: value })}>{t[value]}</button>)}</div> : null}

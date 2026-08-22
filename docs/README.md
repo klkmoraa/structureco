@@ -46,4 +46,14 @@ Los planes de fases cerradas, sus especificaciones, reportes narrativos y captur
 | Assets estructurales | `public/assets/structural/**`, sus contratos y `npm run verify:structural-assets`. |
 | Identidad visual | [Rediseño visual total](superpowers/specs/2026-08-22-structureco-total-visual-redesign.md), código y referencias aprobadas. |
 
+## Oráculos y generación
+
+| Comando | Qué comprueba o genera |
+|---|---|
+| `npm run qa:shell-composition` | Verifica las composiciones X2/M1/K0, continuidad de selección/foco y ausencia de desborde horizontal en el shell construido. |
+| `npm run qa:results-cards` | Verifica la materia de las tarjetas de resultados, la superficie `dense` y el Datasheet plano en la app construida. |
+| `npm run assets:generate` | Regenera las miniaturas PNG transparentes de las escenas Three.js editables y valida el bundle antes de publicarlo. |
+
+Los oráculos generan evidencia en `reports/evidence/`, una salida regenerable que permanece ignorada por Git.
+
 Los nuevos documentos bajo `docs/**` deben declarar una clasificación válida: `CANONICAL`, `REFERENCE`, `HISTORICAL` o `AUDIT/TEMPORARY`.

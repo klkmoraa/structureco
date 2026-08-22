@@ -25,6 +25,7 @@ export const RepeatActionOverlay = ({
 
   return <AnimatePresence initial={false}>
     {available ? <m.button
+      key="repeat-action"
       type="button"
       className="repeat-action-control"
       data-repeat-affordance={active ? 'active' : 'available'}
@@ -40,6 +41,7 @@ export const RepeatActionOverlay = ({
       <kbd aria-hidden="true">R</kbd>
     </m.button> : null}
     {active ? <m.section
+      key="repeat-preview"
       className="repeat-preview"
       data-repeat-affordance="active"
       role="status"

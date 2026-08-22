@@ -1,14 +1,12 @@
 /**
  * Navegación compartida por la bienvenida para los QA de Playwright.
  *
- * La portada Clay deja el recorrido de cuatro pasos fuera de la vista inicial:
- * se abre bajo demanda desde "otras formas de empezar". Cada QA que consume
- * ejemplos, DXF o Space 3D debe llegar primero a esa superficie real en vez de
- * asumir un carril visible al cargar. La navegación queda aquí para que todos
- * los guiones utilicen la misma ruta de producto.
+ * La Home actual concentra la navegación real en el menú lateral de escritorio
+ * y en el menú desplegable de móvil. Los QA que consumen plantillas o ejemplos
+ * deben llegar primero a esa superficie, en vez de asumir controles del prototipo
+ * anterior. La navegación queda aquí para que todos los guiones utilicen la
+ * misma ruta de producto.
  */
-
-const STEP_ID = { 'Por dónde': 'where', 'Cómo trabajas': 'how' };
 
 /**
  * Borra la biblioteca ANTES de que arranque el código de la aplicación.
@@ -26,48 +24,25 @@ export const clearProjectLibraryOnBoot = (target) => target.addInitScript(() => 
 });
 
 /**
- * Pulsa un paso del carril igual que lo haría una persona, y espera al panel.
+ * Abre la biblioteca de Plantillas desde la navegación real de la portada.
  *
- * El reintento no es decorativo: la biblioteca de proyectos (`.project-hub`) se
- * resuelve por IndexedDB DESPUÉS del primer pintado y remonta el árbol de la
- * bienvenida, así que el botón del carril puede quedar desprendido justo entre
- * que Playwright lo resuelve y lo pulsa. El auto-wait de Playwright reintenta
- * sobre el mismo handle y se rinde a los 30s; aquí se vuelve a resolver el
- * localizador en cada vuelta y se comprueba el EFECTO —que el panel cambió de
- * paso— en vez de dar por bueno el clic.
+ * La portada vigente ya no tiene el carril histórico de cuatro pasos ni las
+ * clases `.welcome-steps`/`.welcome-template-card`. Los QA deben seguir la
+ * navegación que ve una persona: en escritorio se usa la barra lateral y en
+ * móvil se abre primero el menú.
  */
-export const openWelcomeStep = async (page, name, { attempts = 5 } = {}) => {
-  const step = STEP_ID[name];
-  if (!step) throw new Error(`Paso de bienvenida desconocido: ${name}`);
+export const openWelcomeStep = async (page, name) => {
+  if (name !== 'Por dónde' && name !== 'Cómo trabajas') throw new Error(`Paso de bienvenida desconocido: ${name}`);
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
-  const panel = page.locator(`.welcome-screen[data-welcome-step="${step}"]`);
-
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    if (await panel.isVisible().catch(() => false)) return;
-    const stepRail = page.locator('.welcome-steps');
-    if ((await stepRail.count()) === 0) {
-      const otherWays = page.getByRole('button', { name: /otras formas de empezar|see other ways to start/i });
-      try {
-        await otherWays.click({ timeout: 5_000 });
-        await panel.waitFor({ state: 'visible', timeout: 5_000 });
-        return;
-      } catch (error) {
-        if (attempt === attempts) throw error;
-        await page.waitForTimeout(400);
-        continue;
-      }
-    }
-    const button = page.locator('.welcome-steps').getByRole('button', { name, exact: true });
-    try {
-      await button.click({ timeout: 5_000 });
-      await panel.waitFor({ state: 'visible', timeout: 5_000 });
-      return;
-    } catch (error) {
-      if (attempt === attempts) throw error;
-      // Deja que el remonte pendiente termine antes de volver a resolver.
-      await page.waitForTimeout(400);
-    }
+  const sidebarTemplates = page.locator('.sc-home-sidebar .sc-home-nav button').nth(2);
+  if (await sidebarTemplates.isVisible().catch(() => false)) {
+    await sidebarTemplates.click();
+  } else {
+    const menu = page.getByRole('button', { name: /abrir navegación|open navigation/i }).first();
+    await menu.click({ timeout: 5_000 });
+    await page.locator('.sc-home-nav--mobile button').nth(2).click({ timeout: 5_000 });
   }
+  await page.locator('.sc-home-template-grid').waitFor({ state: 'visible', timeout: 10_000 });
 };
 
 /**
@@ -76,9 +51,12 @@ export const openWelcomeStep = async (page, name, { attempts = 5 } = {}) => {
  */
 export const openExamplePortal = async (page, locator) => {
   await openWelcomeStep(page, 'Por dónde');
-  const card = locator ?? page.getByRole('button', { name: /p.rtico de ejemplo/i }).first();
+  const legacyCard = locator ?? page.locator('.welcome-template-card').filter({ hasText: /p.rtico de ejemplo/i }).first();
+  const card = await legacyCard.count() && await legacyCard.isVisible().catch(() => false)
+    ? legacyCard
+    : page.locator('.sc-home-template-grid > button').filter({ hasText: /p.rtico de ejemplo|example frame/i }).first();
   await card.waitFor({ state: 'visible' });
-  await card.click();
+  await card.evaluate((element) => element.click());
   return card;
 };
 
@@ -113,12 +91,28 @@ export const openResultsSurface = async (page, { timeout = 15_000 } = {}) => {
   const panel = page.locator('.results-panel');
   if (await panel.isVisible().catch(() => false)) return panel;
 
-  const launcher = page.getByRole('button', { name: /^resultados$/i }).first();
-  if (await launcher.count()) {
-    await launcher.click().catch(() => undefined);
-    if (await panel.waitFor({ state: 'visible', timeout: 5_000 }).then(() => true, () => false)) return panel;
+  const resultCommand = page.locator('[data-workspace-surface-command="open-results"]').last();
+  if (!await resultCommand.isVisible().catch(() => false)) {
+    const desktopLauncher = page.locator('.desktop-tool-list [data-workspace-panels-launcher]').first();
+    if (await desktopLauncher.isVisible().catch(() => false)) {
+      await desktopLauncher.locator('button').first().click();
+    } else {
+      const more = page.locator('.mobile-tool-dock').getByRole('button', { name: /^Más herramientas$|^More tools$/i }).first();
+      await more.click({ timeout: 5_000 });
+      const workspaceLauncher = page.locator('.mobile-tool-palette-more [data-workspace-panels-launcher]');
+      await workspaceLauncher.waitFor({ state: 'visible', timeout: 5_000 });
+      await workspaceLauncher.click({ timeout: 5_000 });
+      const workspacePalette = page.locator('.mobile-tool-palette-workspace');
+      await workspacePalette.waitFor({ state: 'visible', timeout: 5_000 });
+      await workspacePalette.getByRole('menuitem', { name: /^Resultados$|^Results$/i }).click({ timeout: 5_000 });
+    }
   }
-  await page.evaluate(() => window.dispatchEvent(new CustomEvent('structureco:open-results')));
+  if (await panel.isVisible().catch(() => false)) return panel;
+  await resultCommand.waitFor({ state: 'visible', timeout });
+  await resultCommand.click();
   await panel.waitFor({ state: 'visible', timeout });
+  if ((await panel.getAttribute('class'))?.includes('mobile-collapsed')) {
+    await panel.locator('.results-mobile-toggle').click({ timeout: 8_000 });
+  }
   return panel;
 };

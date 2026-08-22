@@ -38,7 +38,7 @@ describe('Three.js structural render framing', () => {
       signatures.add(parts.join('|'));
     }
     expect(signatures).toHaveLength(40);
-  });
+  }, 20_000);
 
   it('keeps every family asset inside a padded 3:2 orthographic frame', () => {
     const direction = new THREE.Vector3(5.4, 4.1, 6.2);

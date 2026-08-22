@@ -15,7 +15,7 @@ import { preview } from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { openExamplePortal } from './qa-welcome.mjs';
+import { openExamplePortal, openResultsSurface } from './qa-welcome.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = path.join(repoRoot, 'reports', 'evidence', '2026-08-17-cri-101-results-cards-dense');
@@ -30,8 +30,9 @@ const baseURL = 'http://127.0.0.1:4191/';
 
 const browser = await chromium.launch({
   headless: true,
-  channel: process.env.PLAYWRIGHT_CHANNEL ?? undefined,
-  executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH ?? '/opt/pw-browsers/chromium',
+  ...(process.env.PLAYWRIGHT_EXECUTABLE_PATH
+    ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH }
+    : { channel: process.env.PLAYWRIGHT_CHANNEL ?? 'chrome' }),
 });
 
 const report = { checks: [], failures: [], shots: [] };
@@ -92,18 +93,7 @@ const enterWorkspace = async (page) => {
 const openSummary = async (page) => {
   await page.getByRole('button', { name: /analizar|analyze/i }).first().click({ timeout: 10_000 }).catch(() => undefined);
   await page.waitForTimeout(900);
-  /* En K0 los lanzadores flotantes se solapan entre sí (herencia del stack de
-     lanzadores, ajeno a este slice): se abre por teclado, que es además el
-     camino que este QA tiene que cubrir. */
-  const opener = page.getByRole('button', { name: /^(Resultados|Results)$/ }).first();
-  if (await opener.count()) {
-    await opener.focus();
-    await page.keyboard.press('Enter');
-  }
-  await page.waitForTimeout(400);
-  // En K0 el panel nace plegado: su propio conmutador es el que lo despliega.
-  const collapsed = page.locator('.results-panel.mobile-collapsed .results-mobile-toggle').first();
-  if (await collapsed.count()) await collapsed.click({ timeout: 8_000 }).catch(() => undefined);
+  await openResultsSurface(page);
   await page.waitForTimeout(400);
   const summaryTab = page.getByRole('tab', { name: /^(Resumen|Summary)$/ }).first();
   if (await summaryTab.count()) await summaryTab.click({ timeout: 8_000 }).catch(() => undefined);
@@ -250,7 +240,10 @@ for (const [label, viewport] of Object.entries(CLASSES)) {
   const resident = await page.locator('[data-workspace-surface="dense"]').count();
   check(`dense no es residente en ${label}`, resident === 0, { resident });
 
+  const denseOverflow = page.locator('.results-dense-overflow__trigger').first();
+  if (await denseOverflow.count()) await denseOverflow.click();
   const launcher = page.locator('[data-dense-launcher="reactions"]').first();
+  await launcher.waitFor({ state: 'visible', timeout: 10_000 });
   await launcher.focus();
   await page.keyboard.press('Enter');
   const surface = page.locator('[data-workspace-surface="dense"]');
@@ -280,8 +273,8 @@ for (const [label, viewport] of Object.entries(CLASSES)) {
   await page.keyboard.press('Escape');
   await surface.waitFor({ state: 'detached', timeout: 10_000 }).catch(() => undefined);
   await page.waitForTimeout(400);
-  const focusReturned = await page.evaluate(() => document.activeElement?.getAttribute('data-dense-launcher') ?? null);
-  check(`dense devuelve el foco al lanzador en ${label}`, focusReturned === 'reactions', focusReturned);
+  const focusReturned = await page.evaluate(() => document.activeElement?.classList.contains('results-dense-overflow__trigger') ? 'results-overflow' : null);
+  check(`dense devuelve el foco al lanzador en ${label}`, focusReturned === 'results-overflow', focusReturned);
   await page.close();
 }
 
@@ -296,9 +289,9 @@ for (const [label, viewport] of Object.entries(CLASSES)) {
      que se cambia el idioma sobre el control real —el mismo `select`— sin
      depender de su visibilidad; lo que se mide aquí es el ancho del texto en
      inglés, no cómo se llega a él. */
-  await page.locator('.welcome-header-language select').selectOption('en', { force: true });
+  await page.locator('.sc-home-topline select').selectOption('en', { force: true });
   await page.waitForTimeout(400);
-  await page.getByRole('button', { name: /example (frame|portal)|pórtico de ejemplo/i }).first().click();
+  await openExamplePortal(page);
   await page.locator('.app-shell').waitFor({ state: 'visible', timeout: 15_000 });
   await page.waitForTimeout(400);
   await openSummary(page);

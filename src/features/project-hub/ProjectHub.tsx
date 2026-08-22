@@ -65,11 +65,11 @@ const projectAssetId = (project: ProjectModel): ThreeStructuralAssetId => {
     return 'beam:overhang';
   }
 
-  const levels = new Set(project.nodes.map((node) => node.y.toFixed(4))).size;
+  const levels = new Set(project.nodes.map((node) => Math.round(node.y * 10_000))).size;
   if (levels >= 3) return 'portal:two-story';
   if (vertical >= 3 || horizontal >= 2) return 'portal:two-bay';
   const elevatedNodes = project.nodes.filter((node) => node.y > Math.min(...ys));
-  if (elevatedNodes.length > 1 && new Set(elevatedNodes.map((node) => node.y.toFixed(4))).size > 1) return 'portal:industrial-pitched';
+  if (elevatedNodes.length > 1 && new Set(elevatedNodes.map((node) => Math.round(node.y * 10_000))).size > 1) return 'portal:industrial-pitched';
   return 'portal:single-bay';
 };
 
