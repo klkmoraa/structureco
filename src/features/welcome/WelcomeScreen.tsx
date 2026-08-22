@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Box, Folder, GraduationCap, Home, LayoutTemplate, Menu, Moon, Play, Settings, Sun, Upload } from 'lucide-react';
 import { m, useReducedMotion } from 'motion/react';
 import { createBlankProject, exampleProjects } from '../../data/defaultProject';
@@ -77,6 +77,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
   const [exerciseDialogOpen, setExerciseDialogOpen] = useState(false);
   const [importCenterOpen, setImportCenterOpen] = useState(false);
   const [dxfImportOpen, setDxfImportOpen] = useState(false);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const entry = useWelcomeEntry();
   const heroId = useMemo(() => resolveSessionHeroId(HOME_HERO_IDS, window.sessionStorage), []);
 
@@ -85,6 +86,18 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
     onDirectResume?.();
     onOpenWorkspace();
   }, [allowDirectResume, entry, onDirectResume, onOpenWorkspace]);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const closeMobileNavigation = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      setMobileNavOpen(false);
+      mobileMenuButtonRef.current?.focus();
+    };
+    window.addEventListener('keydown', closeMobileNavigation);
+    return () => window.removeEventListener('keydown', closeMobileNavigation);
+  }, [mobileNavOpen]);
 
   const openBlankProject = () => {
     const next = createBlankProject();
@@ -149,7 +162,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
 
   return <main className="sc-home" data-testid="welcome-screen">
     <aside className="sc-home-sidebar"><div className="sc-home-wordmark"><BrandMark size={30} /><strong><span>structure</span>Co</strong></div>{renderNavigation()}<button type="button" className="sc-home-settings" onClick={() => setSettingsOpen((open) => !open)}><Settings size={19} /><span>{text.settings}</span></button></aside>
-    <header className="sc-home-mobile-header"><div className="sc-home-wordmark"><BrandMark size={27} /><strong><span>structure</span>Co</strong></div><button type="button" aria-label={mobileNavOpen ? text.closeMenu : text.menu} aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen((open) => !open)}><Menu size={20} /></button></header>
+    <header className="sc-home-mobile-header"><div className="sc-home-wordmark"><BrandMark size={27} /><strong><span>structure</span>Co</strong></div><button ref={mobileMenuButtonRef} type="button" aria-label={mobileNavOpen ? text.closeMenu : text.menu} aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen((open) => !open)}><Menu size={20} /></button></header>
     {mobileNavOpen ? renderNavigation(true) : null}
     <div className="sc-home-main"><header className="sc-home-topline"><span>{text[view]}</span><div><label><span className="sr-only">{t('language.label')}</span><select value={language} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, language: event.target.value as 'es' | 'en' } }))}><option value="es">ES</option><option value="en">EN</option></select></label><button type="button" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label={theme === 'light' ? t('theme.dark') : t('theme.light')}>{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</button></div></header><div className="sc-home-content">{content}</div></div>
     {settingsOpen ? <div className="sc-home-settings-panel" role="dialog" aria-label={text.settings}><button type="button" onClick={() => setSettingsOpen(false)}>×</button><h2>{text.settings}</h2><p>{text.local}</p></div> : null}

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createBlankProject } from '../../data/defaultProject';
 import { PROJECT_STORAGE_KEY } from '../../data/projectStorage';
@@ -68,5 +69,39 @@ describe('Home total redesign contract', () => {
     expect(container.querySelector('[data-testid="home-secondary-actions"]')).toBeTruthy();
     expect(screen.queryByText(/Empieza en tres pasos/i)).toBeNull();
     expect(screen.queryByText(/Mesa/i)).toBeNull();
+  });
+
+  it('closes mobile navigation with Escape and returns focus to its menu button', async () => {
+    const user = userEvent.setup();
+    renderHome();
+    const menuButton = screen.getByRole('button', { name: 'Abrir navegación' });
+
+    await user.click(menuButton);
+    expect(menuButton.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getAllByRole('navigation', { name: 'Navegación principal' })).toHaveLength(2);
+
+    await user.keyboard('{Escape}');
+
+    expect(menuButton.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.getAllByRole('navigation', { name: 'Navegación principal' })).toHaveLength(1);
+    expect(document.activeElement).toBe(menuButton);
+  });
+
+  it('toggles mobile navigation state and closes it after selecting a destination', async () => {
+    const user = userEvent.setup();
+    const { container } = renderHome();
+    const menuButton = screen.getByRole('button', { name: 'Abrir navegación' });
+
+    expect(menuButton.getAttribute('aria-expanded')).toBe('false');
+    await user.click(menuButton);
+    expect(menuButton.getAttribute('aria-expanded')).toBe('true');
+
+    const mobileNavigation = container.querySelector('.sc-home-nav--mobile');
+    expect(mobileNavigation).not.toBeNull();
+    await user.click(within(mobileNavigation as HTMLElement).getByRole('button', { name: 'Plantillas' }));
+
+    expect(menuButton.getAttribute('aria-expanded')).toBe('false');
+    expect(container.querySelector('.sc-home-nav--mobile')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Elige una estructura de partida' })).toBeTruthy();
   });
 });

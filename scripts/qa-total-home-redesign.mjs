@@ -11,6 +11,8 @@ fs.mkdirSync(outputDir, { recursive: true });
 
 const scenarios = [
   { id: 'desktop-day', viewport: { width: 1440, height: 960 }, theme: 'light', hasTouch: false },
+  { id: 'desktop-night', viewport: { width: 1440, height: 960 }, theme: 'dark', hasTouch: false },
+  { id: 'tablet-day', viewport: { width: 1024, height: 900 }, theme: 'light', hasTouch: true },
   { id: 'tablet-night', viewport: { width: 1024, height: 900 }, theme: 'dark', hasTouch: true },
   { id: 'mobile-day', viewport: { width: 390, height: 844 }, theme: 'light', hasTouch: true },
   { id: 'mobile-night', viewport: { width: 390, height: 844 }, theme: 'dark', hasTouch: true },
