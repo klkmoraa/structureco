@@ -80,5 +80,5 @@
 - Create: `reports/YYYY-MM-DD-HHmm-sites-assets-mobile-inspector.md`
 
 - [x] Ejecutar typecheck, lint, pruebas focales, build y `verify:structural-assets`.
-- [ ] Verificar que el paquete de Sites contiene `/app/assets/structural/**`.
-- [ ] Commitear código y reporte juntos; dejar explícito que no se hizo push.
+- [x] Verificar que el paquete de Sites contiene `/app/assets/structural/**`.
+- [x] Commitear código y reporte en commits consecutivos; dejar explícito que no se hizo push.
