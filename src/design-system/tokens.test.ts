@@ -219,12 +219,12 @@ describe('Phase 4 design-token contract', () => {
     }
   });
 
-  /**
-   * El CTA es lima clara: su relleno mide 1,8:1 contra el marfil, así que la
-   * silueta la sostiene el canto. Si alguien devuelve el canto a `transparent`
-   * el control deja de cumplir 1.4.11 sin que ninguna otra prueba lo note.
-   */
-  it('gives the light brand fill a measured edge and a dark ink in every state', () => {
+  /** El CTA aprobado usa esmeralda profunda y tinta blanca en ambos temas. */
+  it('gives the deep emerald CTA a measured edge and white ink in every state', () => {
+    expect(resolveHex('--sc-color-action-primary', lightTheme)).toBe('#087e5c');
+    expect(resolveHex('--sc-color-action-hover', lightTheme)).toBe('#076f52');
+    expect(resolveHex('--sc-color-action-pressed', lightTheme)).toBe('#065f47');
+    expect(resolveHex('--sc-color-action-foreground', lightTheme)).toBe('#ffffff');
     for (const state of ['--sc-color-action-primary', '--sc-color-action-hover', '--sc-color-action-pressed']) {
       expect(contrast('--sc-color-action-foreground', state, lightTheme), `tinta sobre ${state}`)
         .toBeGreaterThanOrEqual(4.5);
@@ -236,14 +236,9 @@ describe('Phase 4 design-token contract', () => {
     expect(uiCss).toMatch(/\.sc-icon-button--primary \{[^}]*border-color: var\(--sc-color-action-edge\)/);
   });
 
-  /**
-   * El relleno de marca no puede llevar texto blanco: mediría 1,8:1. Ni el
-   * canario puede ser trazo suelto: 1,39:1 sobre marfil. Las dos son reglas del
-   * brandbook, y las dos son fáciles de romper por descuido.
-   */
-  it('never puts white ink on the light brand fill', () => {
-    expect(contrast('--sc-white', '--sc-color-action-primary', lightTheme)).toBeLessThan(4.5);
-    expect(rootTokens.declarations.get('--sc-color-action-foreground')).not.toBe('var(--sc-white)');
+  it('keeps white action ink accessible instead of placing it on the former light fill', () => {
+    expect(contrast('--sc-white', '--sc-color-action-primary', lightTheme)).toBeGreaterThanOrEqual(4.5);
+    expect(rootTokens.declarations.get('--sc-color-action-foreground')).toBe('var(--sc-white)');
     expect(componentCss).not.toMatch(/background:\s*var\(--accent\)/);
   });
 

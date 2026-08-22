@@ -2,7 +2,7 @@
 
 **Clasificación:** `AUDIT/TEMPORARY`
 
-**Estado:** Propuesta cerrada para revisión previa a implementación.
+**Estado:** Implementado; pendiente de cierre documental y publicación de evidencia.
 
 ## Objetivo
 
@@ -18,6 +18,7 @@ La fase debe sentirse como una mesa de cálculo real: lienzo técnico plano, ins
 - Momento de resultado permanece coral `#ED4B46`.
 - Influencia usa rosa apagado: línea `#B96478`, área `#E7C6D2` y patrón discontinuo.
 - Cargas aplicadas cambian por familia: puntual azul, distribuida verde lima profunda y momento aplicado ámbar.
+- La acción primaria conserva el mismo esmeralda profundo en Día y Noche: base `#087E5C`, hover `#076F52`, pressed `#065F47` y texto blanco `#FFFFFF`. Este token de acción no sustituye el verde técnico de Cortante o carga distribuida.
 - Tipografía aprobada en Fase 1: DM Serif Display, Manrope y JetBrains Mono.
 - El relieve debe ser pronunciado: hundimientos, superposición física, estados presionados visibles y movimiento táctil.
 - `prefers-reduced-motion: reduce` desactiva desplazamientos, escalas y duraciones, pero conserva contraste, jerarquía y estado.
@@ -154,6 +155,7 @@ El orden de pintura será: distribuida → puntual/nodal → momento aplicado �
 - `aria-pressed`, `aria-selected`, `aria-expanded`, roles y retorno de foco siguen gobernados por los componentes actuales.
 - Contraste se mide en Día/Noche y en simulación de deficiencia de color; patrón, forma y posición complementan el color.
 - Las cargas superpuestas deben seguir siendo seleccionables mediante el candidate picker existente.
+- Los avisos efímeros del lienzo informan sin interceptar el puntero, para permitir ediciones estructurales consecutivas.
 - No se modifica el contrato transaccional de selección: la previsualización es local y sólo confirmar cambia la selección.
 
 ## Verificación y evidencia

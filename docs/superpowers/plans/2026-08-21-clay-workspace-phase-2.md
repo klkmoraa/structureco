@@ -4,7 +4,7 @@
 
 > **Para agentes:** usar `executing-plans` tarea por tarea, `test-driven-development` para cada contrato, `systematic-debugging` ante cualquier discrepancia y `verification-before-completion` antes del commit de fase.
 
-**Estado de ejecución:** Pendiente de presentación al usuario; no hay cambios de producción de Fase 2.
+**Estado de ejecución:** Completado el 2026-08-21; pendiente únicamente de revisión visual del usuario y decisión de merge.
 
 **Objetivo:** Vestir Workspace 2D, Tool Rail e Inspector con la identidad Clay mate pronunciada y resolver visualmente las cargas superpuestas, sin modificar contratos estructurales.
 
@@ -21,6 +21,7 @@
 - No crear una segunda autoridad responsive, de selección o de presentación.
 - No usar glassmorphism, blur, glow decorativo, brillo o gradiente de presentación.
 - Mantener datos técnicos planos dentro de superficies elevadas.
+- Mantener la acción primaria en esmeralda profundo con texto blanco en Día y Noche, sin alterar los verdes técnicos.
 - No avanzar a Results, Aula, Datasheet, Model Doctor, Import Center, Generator o Space 3D en esta fase.
 
 ---
@@ -160,6 +161,14 @@
 - [ ] Generar el reporte con base SHA, backup, archivos, pruebas, capturas y pendientes.
 - [ ] Enviar al correo del usuario sólo las capturas necesarias, máximo seis en esta fase.
 - [ ] Stage explícito, commit y detenerse antes de push/merge si no existe autorización vigente.
+
+## Registro de ejecución
+
+- Tareas 1–5 completadas con resolutor puro de cargas, marcadores por familia y gramática Clay responsive X2/M1/K0.
+- Tarea 6 completada en Chromium y WebKit: seis escenarios por motor, sin fallos, overflow ni targets táctiles menores de 44 px.
+- Tarea 7 completada: 156 pruebas focales, 2266 pruebas globales, lint sin errores, typecheck, documentación, 38 archivos protegidos y build aprobados.
+- La acción primaria quedó en esmeralda profundo con texto blanco en ambos temas; los colores técnicos permanecen independientes.
+- No se iniciaron las superficies de fases posteriores ni se modificó el dominio estructural.
 
 ## Autorrevisión del plan
 

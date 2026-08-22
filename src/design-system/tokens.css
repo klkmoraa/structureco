@@ -82,13 +82,15 @@
      chunk de entrada sin pagar su sitio. Los valores intermedios de la familia
      están resumidos en README.md. */
 
-  /* Identidad menta/esmeralda CRI-12C. Los tres rellenos de acción y el canto
-     superan 3:1 sobre canvas/surface × Día/Noche. La tinta se mide contra los
-     rellenos: normal 6,04:1, hover 5,31:1, pressed 4,65:1. */
+  /* Identidad menta/esmeralda. La marca conserva los escalones claros; los
+     CTA aprobados usan la cola profunda con tinta blanca: 5,06:1 normal,
+     6,17:1 hover y 7,68:1 pressed. */
   --sc-mint-500: #1aa57a;
   --sc-mint-600: #159a72;
   --sc-mint-650: #148f69;
   --sc-mint-700: #087e5c;
+  --sc-mint-750: #076f52;
+  --sc-mint-800: #065f47;
   --sc-mint-ink: #02140f;
 
   /* Familia lima técnica. Ya no identifica la marca: el escalón 700 es el
@@ -184,13 +186,13 @@
   --sc-color-border-canvas-chrome: #82786d;
   --sc-color-divider: #e7e0d6;
 
-  /* Acción primaria menta — INVARIANTE por tema. Los rellenos, el canto y la
-     tinta fueron fijados por el gate CRI-91: el peor control llega a 3,06:1
-     contra los cuatro fondos y la peor pareja relleno/tinta llega a 4,65:1. */
-  --sc-color-action-primary: var(--sc-mint-500);
-  --sc-color-action-hover: var(--sc-mint-600);
-  --sc-color-action-pressed: var(--sc-mint-650);
-  --sc-color-action-foreground: var(--sc-mint-ink);
+  /* Acción primaria esmeralda — INVARIANTE por tema. El usuario aprobó tinta
+     blanca; el relleno baja al escalón 700 para sostener 4,5:1 también en
+     texto pequeño, y hover/pressed profundizan la cavidad. */
+  --sc-color-action-primary: var(--sc-mint-700);
+  --sc-color-action-hover: var(--sc-mint-750);
+  --sc-color-action-pressed: var(--sc-mint-800);
+  --sc-color-action-foreground: var(--sc-white);
   --sc-color-action-edge: var(--sc-mint-700);
   /* Trazo de marca: canto, icono sobre superficie, snap y hover técnico. */
   --sc-color-action-ink: var(--sc-mint-700);

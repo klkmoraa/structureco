@@ -88,3 +88,250 @@
 @media (prefers-reduced-motion:reduce) {
   .repeat-action-control,.repeat-action-control:hover,.repeat-action-control:active,.repeat-preview button:active { transform:none; transition:none; }
 }
+
+/* ========================================================================
+   CLAY WORKSPACE · FASE 2
+   El shell conserva sus autoridades X2/M1/K0 y el broker conserva dock,
+   inset y sheet. Este bloque sólo da materia, separación y tacto a esas
+   decisiones existentes. El lienzo técnico permanece plano y opaco.
+   ===================================================================== */
+
+.app-shell .workspace {
+  background:var(--sc-color-bg-app);
+}
+
+.app-shell .center-stage {
+  overflow:hidden;
+  background:var(--sc-color-bg-canvas);
+  border:1px solid var(--sc-color-border-soft);
+  box-shadow:var(--sc-shadow-clay-inset);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail {
+  margin:8px 0 8px 8px;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-panel) 0 0 var(--sc-radius-panel);
+}
+
+.app-shell[data-shell-class='X2'] .center-stage {
+  margin:8px 0;
+  border-radius:0;
+}
+
+.app-shell[data-shell-class='X2'] .inspector-panel[data-surface-presentation='dock'] {
+  margin:8px 8px 8px 0;
+  border-radius:0 var(--sc-radius-panel) var(--sc-radius-panel) 0;
+}
+
+.app-shell[data-shell-class='M1'] .tool-rail {
+  margin:8px 0 8px 8px;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-panel) 0 0 var(--sc-radius-panel);
+}
+
+.app-shell[data-shell-class='M1'] .center-stage {
+  margin:8px 8px 8px 0;
+  border-radius:0 var(--sc-radius-panel) var(--sc-radius-panel) 0;
+}
+
+.app-shell[data-shell-class='K0'] .center-stage {
+  margin:0;
+  border-width:0;
+  border-radius:0;
+  box-shadow:none;
+}
+
+.app-shell .tool-rail {
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-inset);
+}
+
+.app-shell .tool-rail .tool-group-actions {
+  gap:5px;
+}
+
+.app-shell .tool-rail .tool-button {
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transition:
+    transform 220ms var(--sc-ease-standard),
+    box-shadow 220ms var(--sc-ease-standard),
+    background-color 180ms var(--sc-ease-standard),
+    border-color 180ms var(--sc-ease-standard);
+}
+
+.app-shell .tool-rail .tool-button:hover:not(:disabled) {
+  border-color:color-mix(in srgb,var(--tool-color,var(--accent)) 36%,var(--sc-color-border));
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-md);
+  transform:translateY(-2px);
+}
+
+.app-shell .tool-rail .tool-button:is(.active,.is-active),
+.app-shell .tool-rail .tool-button:is(.active,.is-active):hover:not(:disabled),
+.app-shell .tool-rail .tool-button:active:not(:disabled) {
+  border-color:color-mix(in srgb,var(--tool-color,var(--accent)) 34%,var(--sc-color-border));
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell .tool-rail .tool-button:disabled {
+  color:var(--sc-color-text-disabled);
+  box-shadow:none;
+  opacity:.66;
+}
+
+.app-shell .tool-rail-tooltip {
+  border:1px solid var(--sc-color-border-strong);
+  background:var(--sc-color-text-primary);
+  color:var(--sc-color-bg-app);
+  box-shadow:var(--sc-shadow-clay-md);
+}
+
+.app-shell .inspector-panel[data-surface-presentation='dock'] {
+  border:var(--sc-clay-edge);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-md);
+}
+
+.app-shell .inspector-panel[data-surface-presentation='inset'] {
+  border:var(--sc-clay-edge);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-lg);
+}
+
+.app-shell .inspector-panel[data-surface-presentation='sheet'] {
+  border:var(--sc-clay-edge);
+  border-bottom:0;
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-sheet);
+}
+
+.app-shell .inspector-tabs {
+  height:auto;
+  min-height:48px;
+  flex-basis:auto;
+  gap:4px;
+  margin:10px 10px 0;
+  padding:4px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-card);
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-inset);
+}
+
+.app-shell .inspector-tabs button {
+  min-height:40px;
+  border-radius:var(--sc-radius-control);
+  transition:
+    transform 200ms var(--sc-ease-standard),
+    box-shadow 200ms var(--sc-ease-standard),
+    color 180ms var(--sc-ease-standard),
+    background-color 180ms var(--sc-ease-standard);
+}
+
+.app-shell .inspector-tabs button:hover:not(.active) {
+  color:var(--sc-color-text-primary);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transform:translateY(-1px);
+}
+
+.app-shell .inspector-tabs button.active {
+  color:var(--accent);
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell .inspector-tabs button.active::after {
+  display:none;
+}
+
+.app-shell .inspector-scroll {
+  padding-top:14px;
+}
+
+.app-shell .inspector-summary,
+.app-shell .inspector-property-group,
+.app-shell .inspector-derived-list > div {
+  box-shadow:none;
+}
+
+.app-shell .inspector-summary {
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-2);
+}
+
+.app-shell .inspector-property-group + .inspector-property-group {
+  margin-top:12px;
+  padding-top:14px;
+  border-top:1px solid var(--sc-color-border-soft);
+}
+
+.app-shell .inspector-numeric-field__control,
+.app-shell .select-field select,
+.app-shell .number-control {
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-inset);
+}
+
+.app-shell .inspector-numeric-field__control:focus-within,
+.app-shell .select-field select:focus-visible,
+.app-shell .number-control:focus-within {
+  border-color:var(--focus);
+  box-shadow:var(--sc-shadow-clay-inset),var(--sc-ring-focus);
+}
+
+.app-shell[data-shell-class='K0'] .toolbar {
+  border:var(--sc-clay-edge);
+  border-width:1px 0 0;
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-sheet);
+}
+
+.app-shell[data-shell-class='K0'] .mobile-tool-dock {
+  gap:4px;
+  padding:2px;
+  border-radius:var(--sc-radius-card);
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-inset);
+}
+
+.app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button {
+  min-width:44px;
+  min-height:50px;
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button.active,
+.app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button:active:not(:disabled) {
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell[data-shell-class='K0'] .inspector-panel[data-surface-presentation='sheet']::before {
+  width:52px;
+  height:5px;
+  margin-top:8px;
+  background:var(--sc-color-border-strong);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--sc-color-surface-elevated) 70%,transparent);
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .app-shell .tool-rail .tool-button,
+  .app-shell .tool-rail .tool-button:hover:not(:disabled),
+  .app-shell .tool-rail .tool-button:active:not(:disabled),
+  .app-shell .inspector-tabs button,
+  .app-shell .inspector-tabs button:hover:not(.active),
+  .app-shell .inspector-tabs button.active {
+    transition:none;
+    transform:none;
+  }
+}

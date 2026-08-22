@@ -686,8 +686,13 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .support-selection-frame { fill:color-mix(in srgb,var(--selection) 8%,transparent); stroke:var(--selection); stroke-width:1.5; stroke-dasharray:4 3; vector-effect:non-scaling-stroke; }
 .load-symbol { stroke: var(--force); fill: none; stroke-width: 2.2; cursor: pointer; }
 .load-symbol text, .distributed-symbol text { fill: var(--force); stroke: none; font-size: 12px; font-weight: 600; paint-order: stroke; stroke: var(--canvas-bg); stroke-width: 4px; }
+.load-symbol--point { stroke:var(--sc-color-load-point); color:var(--sc-color-load-point); }
+.load-symbol--point text { fill:var(--sc-color-load-point); }
+.load-symbol--moment { stroke:var(--sc-color-load-moment-applied); color:var(--sc-color-load-moment-applied); }
+.load-symbol--moment text { fill:var(--sc-color-load-moment-applied); }
 .load-symbol.selected { filter:drop-shadow(0 0 4px color-mix(in srgb,var(--selection) 46%,transparent)); }
 .distributed-symbol { stroke: var(--shear); stroke-width: 1.5; cursor: pointer; }
+.load-symbol--distributed { stroke:var(--sc-color-load-distributed); color:var(--sc-color-load-distributed); }
 .distributed-symbol text { fill: var(--shear); }
 .distributed-symbol.selected { filter:drop-shadow(0 0 4px color-mix(in srgb,var(--selection) 46%,transparent)); }
 .load-selection-halo { fill:none; stroke:var(--selection)!important; stroke-width:8!important; stroke-linecap:round; opacity:.4; pointer-events:none; vector-effect:non-scaling-stroke; }
@@ -741,7 +746,7 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 /* Coordinate readout is informational. It must never steal a structural
    selection gesture from geometry beneath the floating canvas chrome. */
 .canvas-status { position: absolute; right: 14px; bottom: 12px; color: var(--subtle); font-size: var(--sc-font-size-technical); display: flex; align-items: center; gap: 5px; padding: 5px 8px; border-radius: var(--sc-radius-control); pointer-events:none; }
-.canvas-feedback { position:absolute; z-index:6; left:50%; top:58px; transform:translateX(-50%); width:max-content; max-width:calc(100% - 28px); padding:9px 12px; border-radius:var(--sc-radius-control); color:var(--text); font-size:var(--sc-font-size-label); line-height:1.4; text-align:center; }
+.canvas-feedback { position:absolute; z-index:6; left:50%; top:58px; transform:translateX(-50%); width:max-content; max-width:calc(100% - 28px); padding:9px 12px; border-radius:var(--sc-radius-control); color:var(--text); font-size:var(--sc-font-size-label); line-height:1.4; text-align:center; pointer-events:none; }
 .canvas-host .canvas-feedback { border-color:color-mix(in srgb,var(--warning) 35%,var(--border)); }
 .canvas-result-legend { position:absolute; left:16px; top:54px; z-index:8; width:min(260px,calc(100% - 32px)); padding:9px 11px; border-radius:var(--sc-radius-control); display:grid; grid-template-columns:auto 1fr; align-items:center; gap:4px 9px; pointer-events:none; }
 .canvas-result-legend strong { font-size:var(--sc-font-size-label); }
