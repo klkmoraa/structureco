@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import { preview } from 'vite';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { clearProjectLibraryOnBoot, openWelcomeStep } from './qa-welcome.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const previewServer = await preview({ root, preview: { host: '127.0.0.1', port: 4177, strictPort: true }, logLevel: 'error' });
@@ -41,10 +42,23 @@ const LONG_PROJECT_NAME_EN = 'Reinforced concrete three-bay four-story frame wit
 const intersects = (first, second) => first.left < second.right && second.left < first.right && first.top < second.bottom && second.top < first.bottom;
 
 async function enterWorkspace() {
+  await clearProjectLibraryOnBoot(page);
   await page.addInitScript(() => localStorage.clear());
   await page.goto('http://127.0.0.1:4177/', { waitUntil: 'networkidle' });
-  await page.getByRole('button', { name: /continuar proyecto/i }).click();
-  await page.locator('.app-shell').waitFor({ state: 'visible' });
+  const shell = page.locator('.app-shell');
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    await openWelcomeStep(page, 'Por dónde');
+    const example = page.locator('.welcome-template-card').filter({ hasText: /Pórtico de ejemplo|Example frame/i }).first();
+    try {
+      await example.waitFor({ state: 'visible', timeout: 5_000 });
+      await example.evaluate((element) => element.click());
+      await shell.waitFor({ state: 'visible', timeout: 5_000 });
+      return;
+    } catch (error) {
+      if (attempt === 5) throw error;
+      await page.waitForTimeout(400);
+    }
+  }
 }
 
 async function readTopBarGeometry() {
@@ -59,13 +73,18 @@ async function readTopBarGeometry() {
         const style = getComputedStyle(control);
         return style.display !== 'none' && style.visibility !== 'hidden';
       })
-      .map((control) => ({ zone: control.closest('[data-topbar-zone]')?.getAttribute('data-topbar-zone'), rect: rect(control) }));
+      .map((control) => ({
+        zone: control.closest('[data-topbar-zone]')?.getAttribute('data-topbar-zone'),
+        name: control.getAttribute('aria-label') || control.textContent?.trim() || control.tagName,
+        rect: rect(control),
+      }));
     const accessibleName = (element) => (element?.getAttribute('aria-label') || element?.textContent || '').trim();
     const doctor = bar.querySelector('.model-doctor-launcher');
     const doctorStyle = doctor ? getComputedStyle(doctor) : null;
     const statusShell = bar.querySelector('.analysis-status-shell');
     const statusStyle = statusShell ? getComputedStyle(statusShell) : null;
     return {
+      shellClass: document.querySelector('.app-shell')?.getAttribute('data-shell-class'),
       zones,
       controls,
       scrollWidth: document.documentElement.scrollWidth,
@@ -91,7 +110,9 @@ function assertNoOverflow(result, width, label) {
 
 async function assertTopBarGeometry(width, height = 960) {
   await page.setViewportSize({ width, height });
-  await page.waitForTimeout(32);
+  // La composición confirma el cruce tras SHELL_STABLE_COMMIT_MS para evitar
+  // que un resize efímero cambie de clase; medir antes leía el X2 previo.
+  await page.waitForTimeout(220);
   const result = await readTopBarGeometry();
   const pairs = [['document', 'actions'], ['document', 'status'], ['actions', 'status']];
   for (const [firstName, secondName] of pairs) {
@@ -100,7 +121,9 @@ async function assertTopBarGeometry(width, height = 960) {
     if (!first || !second || intersects(first.rect, second.rect)) throw new Error(`TopBar zones overlap at ${width}px: ${firstName}/${secondName}`);
     for (const firstControl of result.controls.filter((control) => control.zone === firstName)) {
       for (const secondControl of result.controls.filter((control) => control.zone === secondName)) {
-        if (intersects(firstControl.rect, secondControl.rect)) throw new Error(`TopBar controls overlap at ${width}px: ${firstName}/${secondName}`);
+        if (intersects(firstControl.rect, secondControl.rect)) {
+          throw new Error(`TopBar controls overlap at ${width}px: ${firstName}/${secondName} (${firstControl.name} ${JSON.stringify(firstControl.rect)} / ${secondControl.name} ${JSON.stringify(secondControl.rect)}; shell=${result.shellClass}; zones=${JSON.stringify(result.zones)})`);
+        }
       }
     }
   }
@@ -109,10 +132,19 @@ async function assertTopBarGeometry(width, height = 960) {
 }
 
 async function renameProjectTo(name) {
+  await page.getByRole('button', { name: /proyecto actual|current project/i }).click();
   const input = page.getByRole('textbox', { name: /nombre del proyecto|project name/i });
   await input.fill(name);
   await input.blur();
+  await page.keyboard.press('Escape');
   await page.waitForTimeout(16);
+}
+
+async function readProjectNameValue() {
+  await page.getByRole('button', { name: /proyecto actual|current project/i }).click();
+  const value = await page.getByRole('textbox', { name: /nombre del proyecto|project name/i }).inputValue();
+  await page.keyboard.press('Escape');
+  return value;
 }
 
 try {
@@ -130,8 +162,9 @@ try {
   // declarado por el issue: Compact landscape móvil.
   for (const [language, longName] of [['es', LONG_PROJECT_NAME_ES], ['en', LONG_PROJECT_NAME_EN]]) {
     await page.setViewportSize({ width: 1200, height: 900 });
+    await page.waitForTimeout(220);
     if (language === 'en') {
-      await page.getByRole('button', { name: 'Más acciones' }).click();
+      await page.getByRole('button', { name: /herramientas del espacio de trabajo|workspace tools/i }).click();
       await page.getByLabel('Idioma').selectOption('en');
       await page.keyboard.press('Escape');
     }
@@ -147,13 +180,13 @@ try {
     }
 
     // El nombre truncado visualmente conserva su valor completo accesible.
-    const projectNameValue = await page.getByRole('textbox', { name: /nombre del proyecto|project name/i }).inputValue();
+    const projectNameValue = await readProjectNameValue();
     if (projectNameValue !== longName) throw new Error(`Project name lost its full accessible value in ${language} (got "${projectNameValue}")`);
   }
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.waitForTimeout(32);
-  if (!(await page.getByLabel('More actions').isVisible())) throw new Error('Mobile More actions is no longer reachable');
+  await page.waitForTimeout(220);
+  if (!(await page.getByRole('button', { name: /herramientas del espacio de trabajo|workspace tools/i }).isVisible())) throw new Error('Mobile workspace utilities are no longer reachable');
 
   console.log(`TopBar browser geometry passed: ${checkedWidths.join(', ')}px; breakpoints ${breakpointBoundaryWidths.join(', ')}px; continuous 1024-1600px; compact floor ${compactWidths.join(', ')}px; long ES/EN project name in portrait+landscape with Estado/Doctor always visible.`);
 } finally {

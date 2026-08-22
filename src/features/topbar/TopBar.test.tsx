@@ -56,19 +56,17 @@ describe('TopBar portable export', () => {
     expect(onOpenSpace3D).toHaveBeenCalledOnce();
   });
 
-  it('renders document identity, global action, and status as the only three top bar zones (CRI-95)', () => {
+  it('renders project, analysis, primary action, health, and utilities inside the three top bar zones', () => {
     render(<TopBarHarness><TopBar onOpenSpace3D={() => {}} /></TopBarHarness>);
     const bar = document.querySelector('.topbar')!;
     const zones = [...bar.querySelectorAll('[data-topbar-zone]')].map((zone) => zone.getAttribute('data-topbar-zone'));
     expect(zones).toEqual(['document', 'actions', 'status']);
-    const statusStyles = getComputedStyle(bar.querySelector('[data-topbar-zone="status"]')!);
-    expect(statusStyles.minWidth).not.toBe('0px');
-    expect(bar.querySelector('[data-topbar-cluster="document"]')).not.toBeNull();
-    // El contexto de análisis (D-09) viaja dentro de `actions`, no como zona propia.
-    expect(bar.querySelector('[data-topbar-zone="actions"] [data-topbar-cluster="context"]')).not.toBeNull();
-    expect(bar.querySelector('[data-topbar-zone="actions"] [data-topbar-cluster="actions"]')).not.toBeNull();
-    expect(bar.querySelector('[data-topbar-zone="status"]')).not.toBeNull();
-    expect(bar.querySelectorAll('[data-context-control]')).toHaveLength(4);
+    expect(bar.querySelector('[data-topbar-role="project"]')).not.toBeNull();
+    expect(bar.querySelector('[data-topbar-zone="actions"] [data-topbar-role="analysis"]')).not.toBeNull();
+    expect(bar.querySelector('[data-topbar-zone="actions"] [data-topbar-role="primary"]')).not.toBeNull();
+    expect(bar.querySelector('[data-topbar-role="utilities"]')).not.toBeNull();
+    expect(bar.querySelector('[data-topbar-zone="status"][data-topbar-role="health"]')).not.toBeNull();
+    expect(bar.querySelectorAll('[data-context-control]')).toHaveLength(0);
   });
 
   it('localizes portable export, navigation, and built-in example presentation in English', async () => {
@@ -79,13 +77,15 @@ describe('TopBar portable export', () => {
     render(<TopBarHarness><TopBar onOpenHome={vi.fn()} /></TopBarHarness>);
 
     expect(screen.getByRole('button', { name: 'Go to start' })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Open projects and examples' }));
-    expect(screen.getByRole('menuitem', { name: /Example frame.*6 × 4 m frame/ })).toBeTruthy();
-    expect(screen.getByRole('menuitem', { name: /Simply supported beam.*8 m beam/ })).toBeTruthy();
-    expect(screen.queryByText('Pórtico de ejemplo')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Current project' }));
+    expect(screen.queryByRole('button', { name: /Example frame.*6 × 4 m frame/ })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Example models' }));
+    expect(screen.getByRole('button', { name: /Example frame.*6 × 4 m frame/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Simply supported beam.*8 m beam/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Current project' }).textContent).toContain('Pórtico de ejemplo');
 
     await user.keyboard('{Escape}');
-    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Workspace tools' }));
     await user.click(screen.getByRole('button', { name: 'Complete reimportable PDF' }));
     await waitFor(() => expect(portableMocks.shareOrDownloadPortableBytes).toHaveBeenCalledWith(
       expect.any(Uint8Array),
@@ -103,7 +103,7 @@ describe('TopBar portable export', () => {
     portableMocks.createCalculationReport.mockRejectedValue(new Error('No se pudo generar el expediente.'));
     render(<TopBarHarness><TopBar /></TopBarHarness>);
 
-    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Workspace tools' }));
     await user.click(screen.getByRole('button', { name: 'Complete reimportable PDF' }));
 
     expect((await screen.findByRole('alert')).textContent).toContain('The package could not be generated.');
@@ -114,7 +114,7 @@ describe('TopBar portable export', () => {
     const user = userEvent.setup();
     render(<TopBarHarness><TopBar /></TopBarHarness>);
 
-    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
+    await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
     const pdfButton = screen.getByRole('button', { name: 'PDF completo reimportable' }) as HTMLButtonElement;
 
     expect(pdfButton.disabled).toBe(false);
@@ -124,7 +124,7 @@ describe('TopBar portable export', () => {
     const user = userEvent.setup();
     render(<TopBarHarness><TopBar /></TopBarHarness>);
 
-    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
+    await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
     await user.click(screen.getByRole('button', { name: 'PDF completo reimportable' }));
 
     await waitFor(() => expect(portableMocks.createCalculationReport).toHaveBeenCalledOnce());
@@ -188,6 +188,49 @@ describe('TopBar copy project JSON', () => {
 });
 
 describe('TopBar information architecture', () => {
+  it('opens the project control before exposing the editable project name', async () => {
+    const user = userEvent.setup();
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
+
+    expect(screen.queryByRole('textbox', { name: 'Nombre del proyecto' })).toBeNull();
+
+    const trigger = screen.getByRole('button', { name: 'Proyecto actual' });
+    await user.click(trigger);
+
+    const name = screen.getByRole('textbox', { name: 'Nombre del proyecto' });
+    await user.clear(name);
+    await user.type(name, 'Pórtico norte{Enter}');
+    expect((name as HTMLInputElement).value).toBe('Pórtico norte');
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  });
+
+  it('keeps the current project reachable from workspace utilities when the compact header hides its name', async () => {
+    const user = userEvent.setup();
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
+
+    await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
+    const utilities = screen.getByRole('dialog', { name: 'Herramientas del espacio de trabajo' });
+    await user.click(within(utilities).getByRole('button', { name: 'Proyecto actual' }));
+
+    expect(screen.getByRole('textbox', { name: 'Nombre del proyecto' })).toBeTruthy();
+  });
+
+  it('opens all analysis controls from one contextual summary', async () => {
+    const user = userEvent.setup();
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
+
+    expect(document.querySelectorAll('[data-context-control]')).toHaveLength(0);
+
+    await user.click(screen.getByRole('button', { name: 'Configuración de análisis' }));
+
+    expect(screen.getByRole('combobox', { name: 'Caso o combinación' })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: 'Modo de cálculo' })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: 'Orden del análisis' })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: 'Unidades' })).toBeTruthy();
+  });
+
   it('places Model Doctor and Estado in the protected status zone and opens the Doctor directly', async () => {
     const user = userEvent.setup();
     const openDoctor = vi.fn();
@@ -223,7 +266,7 @@ describe('TopBar information architecture', () => {
 
     // El duplicado del menú de desbordamiento no repite el `aria-live`: una
     // sola región lo anuncia (evita la doble locución del riesgo declarado).
-    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
+    await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
     const overflowMirror = container.querySelector<HTMLElement>('.mobile-storage-state');
     expect(overflowMirror?.getAttribute('aria-live')).toBeNull();
     expect(overflowMirror?.textContent).toContain('Local');
@@ -275,9 +318,9 @@ describe('TopBar information architecture', () => {
     const user = userEvent.setup();
     render(<TopBarHarness><TopBar /></TopBarHarness>);
 
-    const projectMenuTrigger = screen.getByRole('button', { name: 'Abrir proyectos y ejemplos' });
+    const projectMenuTrigger = screen.getByRole('button', { name: 'Proyecto actual' });
     await user.click(projectMenuTrigger);
-    await user.click(screen.getByRole('menuitem', { name: 'Importar JSON' }));
+    await user.click(screen.getByRole('button', { name: 'Importar JSON' }));
     await screen.findByRole('dialog', { name: /Trae un proyecto con contexto/i }, { timeout: 5000 });
 
     await user.keyboard('{Escape}');
@@ -294,14 +337,15 @@ describe('TopBar information architecture', () => {
     expect(container.querySelector('[data-topbar-zone="actions"]')).not.toBeNull();
     expect(container.querySelector('[data-topbar-zone="status"]')).not.toBeNull();
 
+    await user.click(screen.getByRole('button', { name: 'Proyecto actual' }));
     const projectName = screen.getByRole('textbox', { name: 'Nombre del proyecto' });
     expect(projectName.getAttribute('title')).toBe(projectName.getAttribute('value'));
+    await user.keyboard('{Escape}');
 
-    const moreButton = screen.getByRole('button', { name: 'Más acciones' });
+    const moreButton = screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' });
     await user.click(moreButton);
 
-    const dialog = screen.getByRole('dialog', { name: 'Más acciones' });
-    expect(within(dialog).getByRole('combobox', { name: 'Unidades' })).toBeTruthy();
+    const dialog = screen.getByRole('dialog', { name: 'Herramientas del espacio de trabajo' });
     expect(within(dialog).getByRole('combobox', { name: 'Idioma' })).toBeTruthy();
     expect(within(dialog).getByRole('button', { name: 'Tema oscuro' })).toBeTruthy();
     expect(within(dialog).getByText('Guardado localmente en este navegador.')).toBeTruthy();
@@ -322,17 +366,17 @@ describe('TopBar information architecture', () => {
       onToggleFullCanvas,
     }} /></TopBarHarness>);
 
-    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
+    await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
     await user.click(screen.getByRole('button', { name: 'Ocultar inspector' }));
     expect(onToggleInspector).toHaveBeenCalledOnce();
 
-    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
+    await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
     await user.click(screen.getByRole('button', { name: 'Mesa de trabajo completa' }));
     expect(onToggleFullCanvas).toHaveBeenCalledOnce();
 
     // La compacidad del riel dejó de ser una intención del usuario (CRI-89): la
     // decide la clase de composición, así que su conmutador ya no existe.
-    await user.click(screen.getByRole('button', { name: 'Más acciones' }));
+    await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
     expect(screen.queryByRole('button', { name: 'Contraer herramientas' })).toBeNull();
   });
 });

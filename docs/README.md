@@ -76,6 +76,8 @@ Estos documentos describen trabajo propuesto o en curso y no prueban implementac
 - [Plan Clay de Compact y Generator · Fase 4](superpowers/plans/2026-08-21-clay-compact-generator-phase-4.md) — `AUDIT/TEMPORARY`.
 - [Diseño Clay de Densidad móvil · Fase 5](superpowers/specs/2026-08-21-clay-mobile-density-phase-5-design.md) — `AUDIT/TEMPORARY`.
 - [Plan Clay de Densidad móvil · Fase 5](superpowers/plans/2026-08-21-clay-mobile-density-phase-5.md) — `AUDIT/TEMPORARY`.
+- [Diseño Clay de Top Bar · Fase 6](superpowers/specs/2026-08-21-clay-topbar-phase-6-design.md) — `AUDIT/TEMPORARY`.
+- [Plan Clay de Top Bar · Fase 6](superpowers/plans/2026-08-21-clay-topbar-phase-6.md) — `AUDIT/TEMPORARY`.
 
 ## Dónde vive cada autoridad
 

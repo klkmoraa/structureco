@@ -179,12 +179,14 @@ describe('TopBar rendered live: shares real state with the Palette, not a parall
     unsubscribe();
   });
 
-  it('Undo starts disabled on both the TopBar button and the Palette entry, sourced from the same project store', () => {
+  it('Undo starts disabled in the TopBar utilities and the Palette entry, sourced from the same project store', async () => {
+    const user = userEvent.setup();
     render(<TopBarHarness>
       <TopBar />
       <CommandPalette open onClose={() => {}} dispatchLayers={vi.fn()} />
     </TopBarHarness>);
 
+    await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
     const topBarUndo = screen.getByRole('button', { name: /deshacer/i }) as HTMLButtonElement;
     const paletteUndo = screen.getByRole('option', { name: /deshacer/i });
 
