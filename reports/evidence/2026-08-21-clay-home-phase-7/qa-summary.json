@@ -1,0 +1,242 @@
+{
+  "phase": "clay-home-phase-7",
+  "scenarios": [
+    {
+      "id": "desktop-day",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "theme": "light",
+      "metrics": {
+        "theme": "light",
+        "overflow": 0,
+        "dashboard": {
+          "width": 1216,
+          "height": 354,
+          "top": 102,
+          "bottom": 457
+        },
+        "resume": {
+          "width": 783,
+          "height": 238,
+          "top": 120,
+          "bottom": 359
+        },
+        "portal": {
+          "width": 391,
+          "height": 342,
+          "top": 102,
+          "bottom": 444
+        },
+        "hub": {
+          "width": 1216,
+          "height": 21,
+          "top": 495,
+          "bottom": 516
+        },
+        "quickActionCount": 4,
+        "actionStyles": [
+          {
+            "height": 96,
+            "backdrop": "none"
+          },
+          {
+            "height": 96,
+            "backdrop": "none"
+          },
+          {
+            "height": 96,
+            "backdrop": "none"
+          },
+          {
+            "height": 96,
+            "backdrop": "none"
+          }
+        ],
+        "stepRailVisible": false
+      },
+      "screenshot": "desktop-day.png",
+      "consoleErrors": [],
+      "failures": []
+    },
+    {
+      "id": "tablet-night",
+      "viewport": {
+        "width": 1024,
+        "height": 900
+      },
+      "theme": "dark",
+      "metrics": {
+        "theme": "dark",
+        "overflow": 0,
+        "dashboard": {
+          "width": 973,
+          "height": 314,
+          "top": 100,
+          "bottom": 414
+        },
+        "resume": {
+          "width": 628,
+          "height": 197,
+          "top": 109,
+          "bottom": 307
+        },
+        "portal": {
+          "width": 314,
+          "height": 276,
+          "top": 100,
+          "bottom": 376
+        },
+        "hub": {
+          "width": 973,
+          "height": 145,
+          "top": 450,
+          "bottom": 594
+        },
+        "quickActionCount": 4,
+        "actionStyles": [
+          {
+            "height": 96,
+            "backdrop": "none"
+          },
+          {
+            "height": 96,
+            "backdrop": "none"
+          },
+          {
+            "height": 96,
+            "backdrop": "none"
+          },
+          {
+            "height": 96,
+            "backdrop": "none"
+          }
+        ],
+        "stepRailVisible": false
+      },
+      "screenshot": "tablet-night.png",
+      "consoleErrors": [],
+      "failures": []
+    },
+    {
+      "id": "mobile-day",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "metrics": {
+        "theme": "light",
+        "overflow": 0,
+        "dashboard": {
+          "width": 358,
+          "height": 414,
+          "top": 83,
+          "bottom": 497
+        },
+        "resume": {
+          "width": 358,
+          "height": 174,
+          "top": 92,
+          "bottom": 266
+        },
+        "portal": {
+          "width": 358,
+          "height": 124,
+          "top": 373,
+          "bottom": 497
+        },
+        "hub": {
+          "width": 358,
+          "height": 68,
+          "top": 521,
+          "bottom": 589
+        },
+        "quickActionCount": 4,
+        "actionStyles": [
+          {
+            "height": 78,
+            "backdrop": "none"
+          },
+          {
+            "height": 78,
+            "backdrop": "none"
+          },
+          {
+            "height": 78,
+            "backdrop": "none"
+          },
+          {
+            "height": 78,
+            "backdrop": "none"
+          }
+        ],
+        "stepRailVisible": false
+      },
+      "screenshot": "mobile-day.png",
+      "consoleErrors": [],
+      "failures": []
+    },
+    {
+      "id": "mobile-night",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "metrics": {
+        "theme": "dark",
+        "overflow": 0,
+        "dashboard": {
+          "width": 358,
+          "height": 414,
+          "top": 83,
+          "bottom": 497
+        },
+        "resume": {
+          "width": 358,
+          "height": 174,
+          "top": 94,
+          "bottom": 268
+        },
+        "portal": {
+          "width": 358,
+          "height": 124,
+          "top": 373,
+          "bottom": 497
+        },
+        "hub": {
+          "width": 358,
+          "height": 128,
+          "top": 521,
+          "bottom": 649
+        },
+        "quickActionCount": 4,
+        "actionStyles": [
+          {
+            "height": 78,
+            "backdrop": "none"
+          },
+          {
+            "height": 78,
+            "backdrop": "none"
+          },
+          {
+            "height": 78,
+            "backdrop": "none"
+          },
+          {
+            "height": 78,
+            "backdrop": "none"
+          }
+        ],
+        "stepRailVisible": false
+      },
+      "screenshot": "mobile-night.png",
+      "consoleErrors": [],
+      "failures": []
+    }
+  ],
+  "failures": []
+}

@@ -110,16 +110,22 @@ afterEach(async () => {
 });
 
 /**
- * CRI-104 · El carril de los cuatro pasos. La Bienvenida ya no es una pantalla
- * plana con todas las puertas a la vez: es Bienvenida → Cómo trabajas → Por
- * dónde → Mesa, y cada puerta vive en su paso. Se consulta acotado al `<nav>`
- * porque los mismos rótulos aparecen también en los enlaces de avance del
- * panel — misma convención que `welcomeFlow.test.tsx`.
+ * El recorrido de cuatro pasos se conserva fuera de la portada editorial. Se
+ * abre desde "otras formas de empezar" y desde allí mantiene los destinos de
+ * Aula, DXF, ejemplos y Space 3D.
  */
 const stepRail = () => within(document.querySelector('.welcome-steps') as HTMLElement);
 
-/** Navega a un paso de la Bienvenida por su rótulo en el carril. */
+/** Navega a un destino secundario, abriendo antes la superficie bajo demanda. */
 const goToStep = async (user: ReturnType<typeof userEvent.setup>, step: string | RegExp) => {
+  if (!document.querySelector('.welcome-steps')) {
+    await user.click(screen.getByRole('button', { name: /otras formas de empezar|see other ways to start/i }));
+  }
+  const currentStep = document.querySelector('.welcome-screen')?.getAttribute('data-welcome-step');
+  const isWhere = typeof step === 'string'
+    ? /por dónde|where to start/i.test(step)
+    : /por dónde|where to start/i.test(step.source);
+  if (isWhere && currentStep === 'where') return;
   await user.click(stepRail().getByRole('button', { name: step }));
 };
 
@@ -236,14 +242,12 @@ describe('structureCo app shell', () => {
   }, 40_000);
 
   /**
-   * CRI-104 sustituyó la Bienvenida plana —titular editorial a dos líneas y
-   * todas las puertas amontonadas— por cuatro pasos con el trabajo propio
-   * primero. Esta prueba comprueba ESA pantalla: que la marca es wordmark y una
-   * sola línea, que el peso lo tiene el trabajo, y que los cuatro pasos siguen
-   * siendo alcanzables. El titular `/analiza estructuras con claridad/i` no se
-   * «arregla»: se retiró a propósito y no debe volver.
+   * Inicio tiene que ser una portada de trabajo: wordmark mínimo, proyecto
+   * actual, acciones compactas y biblioteca. El recorrido secundario se abre
+   * bajo demanda; dejar el carril arriba volvería a convertir esta pantalla en
+   * un onboarding alto.
    */
-  it('presents the four-step welcome with work first, and no editorial headline', async () => {
+  it('presents the editorial Home with work first, and no onboarding rail', async () => {
     render(<App />);
     expect(screen.getByTestId('welcome-screen')).toBeTruthy();
 
@@ -251,10 +255,9 @@ describe('structureCo app shell', () => {
     expect(screen.getByRole('heading', { name: /structureCo/i })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: /analiza estructuras con claridad/i })).toBeNull();
 
-    // Los cuatro pasos, en orden y accesibles desde el carril.
-    expect([...document.querySelectorAll('.welcome-steps .welcome-step')]
-      .map((step) => step.textContent?.replace(/^\d/, '').trim()))
-      .toEqual(['Bienvenida', 'Cómo trabajas', 'Por dónde', 'Mesa']);
+    expect(document.querySelector('.home-dashboard')).not.toBeNull();
+    expect(document.querySelector('.welcome-steps')).toBeNull();
+    expect(document.querySelectorAll('.home-quick-actions > button')).toHaveLength(4);
 
     // Paso 1 · el trabajo propio manda: continuar, nuevo proyecto y el hub.
     expect(document.querySelector('.welcome-resume-card')).not.toBeNull();
@@ -268,7 +271,8 @@ describe('structureCo app shell', () => {
 
     await user.click(screen.getByRole('button', { name: /nuevo proyecto/i }));
 
-    expect(await screen.findByDisplayValue('Proyecto sin título', {}, { timeout: 5000 })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /proyecto actual/i }, { timeout: 5000 })).toBeTruthy();
+    expect(document.querySelector('.topbar-project-trigger strong')?.textContent).toBe('Proyecto sin título');
     expect(container.querySelectorAll('.node-object')).toHaveLength(0);
     expect(container.querySelectorAll('.member-object')).toHaveLength(0);
   }, 10_000);
@@ -858,11 +862,12 @@ describe('structureCo app shell', () => {
       render(<App />);
 
       // El proyecto activo de `localStorage` NO es una biblioteca: sin
-      // repositorio (jsdom no implementa IndexedDB) el usuario es nuevo y la
-      // bienvenida se queda entera, con sus cuatro pasos.
-      expect(await readWelcomeEntry()).toEqual({ status: 'new', projects: 0, recoveries: 0 });
-      expect(await screen.findByTestId('welcome-screen')).toBeTruthy();
-      expect(document.querySelectorAll('.welcome-steps .welcome-step')).toHaveLength(4);
+       // repositorio (jsdom no implementa IndexedDB) el usuario es nuevo y la
+       // portada editorial se conserva visible.
+       expect(await readWelcomeEntry()).toEqual({ status: 'new', projects: 0, recoveries: 0 });
+       expect(await screen.findByTestId('welcome-screen')).toBeTruthy();
+       expect(document.querySelector('.home-dashboard')).not.toBeNull();
+       expect(document.querySelectorAll('.home-quick-actions > button')).toHaveLength(4);
     });
 
     it('keeps Home reachable from the workspace', async () => {

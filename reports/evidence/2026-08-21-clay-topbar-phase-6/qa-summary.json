@@ -90,10 +90,10 @@
         "analyzeForeground": "rgb(255, 255, 255)",
         "analyzeBackdrop": "none",
         "panelBounds": {
-          "left": 7.75164794921875,
-          "right": 382.24835205078125,
-          "top": 315.57501220703125,
-          "bottom": 836.265625
+          "left": 8,
+          "right": 382,
+          "top": 316,
+          "bottom": 836
         },
         "visibleProjectTrigger": true
       },

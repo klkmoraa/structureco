@@ -23,14 +23,13 @@ beforeAll(() => {
 beforeEach(() => localStorage.clear());
 afterEach(() => cleanup());
 
-/**
- * El carril de pasos. Se consulta acotado a `<nav>` porque los mismos rótulos
- * ("Por dónde", "Mesa") aparecen también en los enlaces de avance del panel:
- * son el mismo destino nombrado igual, que es justo lo que se quiere, y por
- * eso la prueba dice de cuál de los dos habla en vez de exigir que uno cambie
- * de nombre.
- */
+/** El recorrido secundario ya no ocupa la portada; se abre bajo demanda desde
+ * "otras formas de empezar". Dentro de esa superficie se conservan los pasos
+ * y las rutas históricas para no retirar herramientas reales. */
 const stepRail = (container: HTMLElement) => within(container.querySelector('.welcome-steps') as HTMLElement);
+const openOtherWays = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(screen.getByRole('button', { name: /otras formas de empezar|see other ways to start/i }));
+};
 
 const renderWelcome = (language: 'es' | 'en' = 'es') => {
   const project = createBlankProject();
@@ -47,8 +46,20 @@ const renderWelcome = (language: 'es' | 'en' = 'es') => {
 };
 
 describe('WelcomeScreen · los cuatro pasos', () => {
-  it('publica exactamente cuatro pasos, en orden', () => {
+  it('abre como Home editorial: proyecto, acciones compactas y biblioteca sin carril de pasos', async () => {
     const { container } = renderWelcome();
+
+    expect(container.querySelector('.home-dashboard')).not.toBeNull();
+    expect(container.querySelector('.welcome-steps')).toBeNull();
+    expect(container.querySelectorAll('.home-quick-actions > button')).toHaveLength(4);
+    expect(await screen.findByRole('heading', { name: /Tus proyectos en este dispositivo/ })).toBeTruthy();
+  });
+
+  it('mantiene exactamente cuatro pasos secundarios, en orden', async () => {
+    const user = userEvent.setup();
+    const { container } = renderWelcome();
+    await openOtherWays(user);
+
     const steps = [...container.querySelectorAll('.welcome-steps .welcome-step')];
     expect(steps.map((step) => step.textContent?.replace(/^\d/, '').trim()))
       .toEqual(['Bienvenida', 'Cómo trabajas', 'Por dónde', 'Mesa']);
@@ -57,15 +68,16 @@ describe('WelcomeScreen · los cuatro pasos', () => {
   it('los tres primeros pasos son navegables y marcan el activo para lectores de pantalla', async () => {
     const user = userEvent.setup();
     const { container } = renderWelcome();
+    await openOtherWays(user);
 
     const rail = stepRail(container);
-    expect(container.querySelector('.welcome-screen')?.getAttribute('data-welcome-step')).toBe('welcome');
-    expect(rail.getByRole('button', { name: 'Bienvenida' }).getAttribute('aria-current')).toBe('step');
+    expect(container.querySelector('.welcome-screen')?.getAttribute('data-welcome-step')).toBe('where');
+    expect(rail.getByRole('button', { name: 'Por dónde' }).getAttribute('aria-current')).toBe('step');
 
     await user.click(rail.getByRole('button', { name: 'Cómo trabajas' }));
     expect(container.querySelector('.welcome-screen')?.getAttribute('data-welcome-step')).toBe('how');
     expect(rail.getByRole('button', { name: 'Cómo trabajas' }).getAttribute('aria-current')).toBe('step');
-    expect(rail.getByRole('button', { name: 'Bienvenida' }).getAttribute('aria-current')).toBeNull();
+    expect(rail.getByRole('button', { name: 'Por dónde' }).getAttribute('aria-current')).toBeNull();
 
     await user.click(rail.getByRole('button', { name: 'Por dónde' }));
     expect(container.querySelector('.welcome-screen')?.getAttribute('data-welcome-step')).toBe('where');
@@ -74,17 +86,19 @@ describe('WelcomeScreen · los cuatro pasos', () => {
   it('el cuarto paso ES la Mesa: la abre en vez de cambiar de panel', async () => {
     const user = userEvent.setup();
     const { onOpenWorkspace, container } = renderWelcome();
+    await openOtherWays(user);
 
     await user.click(stepRail(container).getByRole('button', { name: 'Mesa' }));
     expect(onOpenWorkspace).toHaveBeenCalledOnce();
-    // La bienvenida no se reordena a sí misma: quien decide de pantalla es el shell.
-    expect(container.querySelector('.welcome-screen')?.getAttribute('data-welcome-step')).toBe('welcome');
+    // El shell decide el cambio de pantalla; este paso no sustituye el modelo.
+    expect(container.querySelector('.welcome-screen')?.getAttribute('data-welcome-step')).toBe('where');
   });
 
   it('elegir un modo de trabajo lleva a la etapa 3 y ordena la vitrina', async () => {
     const user = userEvent.setup();
     const { container } = renderWelcome();
 
+    await openOtherWays(user);
     await user.click(stepRail(container).getByRole('button', { name: 'Cómo trabajas' }));
     await user.click(screen.getByRole('button', { name: /Nuevo ejercicio/ }));
 
@@ -106,7 +120,7 @@ describe('WelcomeScreen · las puertas siguen alcanzables', () => {
   it('mantiene importación portátil, DXF, ejemplos, Aula y Space 3D en la etapa 3', async () => {
     const user = userEvent.setup();
     const { container } = renderWelcome();
-    await user.click(stepRail(container).getByRole('button', { name: 'Por dónde' }));
+    await openOtherWays(user);
 
     expect(screen.getByRole('button', { name: /Importar archivo/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Nuevo ejercicio/ })).toBeTruthy();
@@ -119,8 +133,8 @@ describe('WelcomeScreen · las puertas siguen alcanzables', () => {
 
   it('marca Space 3D como experimental, no como una superficie más', async () => {
     const user = userEvent.setup();
-    const { container } = renderWelcome();
-    await user.click(stepRail(container).getByRole('button', { name: 'Por dónde' }));
+    renderWelcome();
+    await openOtherWays(user);
     expect(screen.getByRole('button', { name: /space 3d/i }).textContent).toMatch(/experimental/i);
   });
 

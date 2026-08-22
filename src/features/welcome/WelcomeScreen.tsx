@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   Compass,
   GitCommitHorizontal,
-  FileUp,
   GraduationCap,
   Layers,
   LogIn,
@@ -30,6 +29,7 @@ import { presentExample } from './examplePresentation';
 import { shouldResumeDirectly, useWelcomeEntry } from './welcomeEntry';
 import { Drawer } from '../../design-system/components/overlays';
 import type { TranslationKey } from '../../i18n/catalogs';
+import './home.css';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
 const Phase2ProjectHub = lazy(() => import('./Phase2ProjectHub').then((module) => ({ default: module.Phase2ProjectHub })));
@@ -213,7 +213,7 @@ export const WelcomeScreen = ({
   );
 
   return (
-    <main className="welcome-screen" data-testid="welcome-screen" data-welcome-step={step}>
+    <main className="welcome-screen home-atlas" data-testid="welcome-screen" data-welcome-step={step}>
       <div className="welcome-base" inert={overlayOpen} aria-hidden={overlayOpen || undefined}>
         <header className="welcome-header">
           {/* Wordmark y UNA línea de marca. Nada más compite arriba: el resto
@@ -242,49 +242,13 @@ export const WelcomeScreen = ({
           </div>
         </header>
 
-        <div className="welcome-stage">
-          {/* CRI-112 · Carril de puertas.
-              Las cinco puertas que antes sólo existían en la etapa 3 suben
-              aquí, a la entrada, sin retirarse de allí. Se renderiza SÓLO en
-              la primera etapa: en la tercera las puertas son el contenido, y
-              dos juegos simultáneos romperían el contrato de CRI-104 de que
-              Space 3D es la única superficie 3D alcanzable de la pantalla
-              (`WelcomeScreen.test.tsx` lo comprueba contando exactamente uno). */}
-          {step === 'welcome' ? (
-            <nav className="welcome-gate-rail" aria-label={t('welcome.gateRailNav')}>
-              <button type="button" className="welcome-gate" onClick={openBlankProject}>
-                <span className="welcome-gate-icon"><Compass size={19} /></span>
-                <span className="welcome-gate-label">{t('welcome.blankCanvas')}</span>
-              </button>
-              <button type="button" className="welcome-gate welcome-gate--classroom" onClick={() => setExerciseDialogOpen(true)}>
-                <span className="welcome-gate-icon"><GraduationCap size={19} /></span>
-                <span className="welcome-gate-label">{t('welcome.newExercise')}</span>
-              </button>
-              <button type="button" className="welcome-gate" onClick={() => setImportCenterOpen(true)}>
-                <span className="welcome-gate-icon"><Upload size={19} /></span>
-                <span className="welcome-gate-label">{t('welcome.import')}</span>
-              </button>
-              <button type="button" className="welcome-gate welcome-gate--file" onClick={() => setDxfImportOpen(true)}>
-                <span className="welcome-gate-icon"><FileUp size={19} /></span>
-                <span className="welcome-gate-label">{t('welcome.gateDxf')}</span>
-              </button>
-              {onOpenSpace3D ? (
-                <button type="button" className="welcome-gate welcome-gate--space3d" onClick={onOpenSpace3D}>
-                  <span className="welcome-gate-icon"><Move3d size={19} /></span>
-                  <span className="welcome-gate-label">{t('space3d.title')}</span>
-                  {/* La marca de experimental viaja con la puerta, aquí también. */}
-                  <span className="welcome-gate-badge">{t('space3d.badge')}</span>
-                </button>
-              ) : null}
-            </nav>
-          ) : null}
+        <div className={`welcome-stage${step === 'welcome' ? ' home-dashboard-stage' : ''}`}>
 
-          <div className="welcome-work">
-            {/* Corona: el carril de progreso y la pieza clay. El pórtico ocupa
-                la columna derecha a lo alto de las DOS filas de la corona
-                —rail y acciones—, que es lo que le da presencia sin salirse de
-                su esquina. */}
-            <nav className="welcome-steps" aria-label={t('welcome.stepsNav')}>
+          <div className={`welcome-work${step === 'welcome' ? ' home-dashboard' : ''}`}>
+            {/* Fuera de Inicio, las rutas secundarias conservan su recorrido.
+                En Inicio, la misma pieza sólo acompaña al proyecto actual y
+                queda contenida para no abrir un hueco decorativo. */}
+            {step !== 'welcome' ? <nav className="welcome-steps" aria-label={t('welcome.stepsNav')}>
               <ol>
                 {STEP_ORDER.map((id, index) => (
                   <li key={id}>
@@ -317,7 +281,7 @@ export const WelcomeScreen = ({
                   </button>
                 </li>
               </ol>
-            </nav>
+            </nav> : null}
 
             {/* Pieza ilustrativa. Decorativa: todo lo que dice está en el texto
                 que la acompaña. */}
@@ -360,14 +324,40 @@ export const WelcomeScreen = ({
                     </span>
                   </button>
 
-                  <button type="button" className="welcome-launcher-card welcome-new-card" onClick={openBlankProject}>
-                    <span className="welcome-launcher-icon"><Compass size={20} /></span>
-                    <span className="welcome-launcher-info">
-                      <strong>{t('welcome.newProject')}</strong>
-                      <small>{t('welcome.newProjectDescription')}</small>
-                    </span>
-                    <ArrowRight size={16} className="welcome-launcher-arrow" />
-                  </button>
+                  <div className="home-quick-actions" aria-label={t('welcome.workTitle')}>
+                    <button type="button" className="welcome-launcher-card welcome-new-card" onClick={openBlankProject}>
+                      <span className="welcome-launcher-icon"><Compass size={20} /></span>
+                      <span className="welcome-launcher-info">
+                        <strong>{t('welcome.newProject')}</strong>
+                        <small>{t('welcome.newProjectDescription')}</small>
+                      </span>
+                      <ArrowRight size={16} className="welcome-launcher-arrow" />
+                    </button>
+                    <button type="button" className="welcome-launcher-card welcome-launcher-card--classroom" onClick={() => setExerciseDialogOpen(true)}>
+                      <span className="welcome-launcher-icon"><GraduationCap size={20} /></span>
+                      <span className="welcome-launcher-info">
+                        <strong>{t('welcome.newExercise')}</strong>
+                        <small>{t('welcome.launcherClassroomDescription')}</small>
+                      </span>
+                      <ArrowRight size={16} className="welcome-launcher-arrow" />
+                    </button>
+                    <button type="button" className="welcome-launcher-card home-import-card" onClick={() => setImportCenterOpen(true)}>
+                      <span className="welcome-launcher-icon"><Upload size={20} /></span>
+                      <span className="welcome-launcher-info">
+                        <strong>{t('welcome.import')}</strong>
+                        <small>{t('welcome.importDescription')}</small>
+                      </span>
+                      <ArrowRight size={16} className="welcome-launcher-arrow" />
+                    </button>
+                    <button type="button" className="welcome-launcher-card home-more-card" onClick={() => setStep('where')}>
+                      <span className="welcome-launcher-icon"><Layers size={20} /></span>
+                      <span className="welcome-launcher-info">
+                        <strong>{t('welcome.exploreOptions')}</strong>
+                        <small>{t('welcome.otherWays')}</small>
+                      </span>
+                      <ArrowRight size={16} className="welcome-launcher-arrow" />
+                    </button>
+                  </div>
                 </div>
 
               </section>
@@ -554,17 +544,7 @@ export const WelcomeScreen = ({
                   {step === 'how' ? t('welcome.stepWhere') : t('welcome.goToTable')} <ArrowRight size={16} />
                 </button>
               </div>
-            ) : (
-              <div className="welcome-panel-nav welcome-panel-nav--forward">
-                <button
-                  type="button"
-                  className="welcome-forward-link"
-                  onClick={() => setStep('how')}
-                >
-                  {t('welcome.exploreOptions')} <ArrowRight size={16} />
-                </button>
-              </div>
-            )}
+            ) : null}
           </div>
 
           {/* El hub real, respaldado por IndexedDB: recientes, renombrar,

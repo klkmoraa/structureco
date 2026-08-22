@@ -41,13 +41,12 @@ const renderWelcome = (language: 'es' | 'en' = 'es', base = createBlankProject()
 const templateCards = (container: HTMLElement) => [...container.querySelectorAll('.welcome-template-card')];
 
 /**
- * CRI-104 · la bienvenida es un recorrido de cuatro pasos y la vitrina de
- * ejemplos, la importación y Space 3D viven en la tercera etapa ("Por dónde").
- * Las pruebas que las miran navegan hasta allí igual que lo haría alguien con
- * el teclado: pulsando el paso en el carril.
+ * La portada deja la vitrina, importación secundaria y Space 3D fuera del
+ * primer vistazo. Las pruebas entran por el acceso real "otras formas de
+ * empezar", que abre la superficie donde vive ese recorrido.
  */
 const openWhereStep = async (user: ReturnType<typeof userEvent.setup>) => {
-  await user.click(screen.getByRole('button', { name: /por dónde|where to start/i }));
+  await user.click(screen.getByRole('button', { name: /otras formas de empezar|see other ways to start/i }));
 };
 
 describe('WelcomeScreen template showcase', () => {
