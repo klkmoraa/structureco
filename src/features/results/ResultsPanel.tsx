@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import { AlertCircle, ChevronUp, CircleDotDashed, GripHorizontal } from 'lucide-react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { AlertCircle, ChevronUp, CircleDotDashed, Eye, EyeOff, GripHorizontal } from 'lucide-react';
 import { useProject, type ResultTab } from '../../store/ProjectContext';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../../engine/diagram';
 import { resolveReliability } from '../../engine/reliability';
@@ -94,6 +94,7 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
   const [drag, setDrag] = useState<{ y: number; height: number } | null>(null);
   const mobileExpanded = status === 'active';
   const [panelMode, setPanelMode] = useState<ResultsPanelMode>(readResultsMode);
+  const [mobileMetricsVisible, setMobileMetricsVisible] = useState(true);
   const previousAnalysisRef = useRef(analysis);
   const resizeFrameRef = useRef<number | null>(null);
   const pendingHeightRef = useRef<number | null>(null);
@@ -271,6 +272,14 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
         <ChevronUp className={`results-toggle-chevron${mobileExpanded ? ' expanded' : ''}`} size={19} />
       </button>
       {isMobile && mobileExpanded ? <div className="results-mobile-commandbar">
+        {analysis?.success && activeTab.id !== 'summary' ? <button
+          type="button"
+          className="results-mobile-metrics-toggle"
+          aria-label={mobileMetricsVisible ? t('results.hideMetricCards') : t('results.showMetricCards')}
+          aria-controls="results-mobile-metrics"
+          aria-expanded={mobileMetricsVisible}
+          onClick={() => setMobileMetricsVisible((visible) => !visible)}
+        >{mobileMetricsVisible ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}</button> : null}
         <button
           type="button"
           className="results-mobile-focus"
@@ -351,13 +360,23 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
         {!analysis ? <EmptyResults onAnalyze={analyze} /> : null}
         {analysis && !analysis.success ? <FailedResults onOpenModelDoctor={() => emitWorkspaceCommand('open-model-doctor')} /> : null}
         {analysis?.success && activeTab.id === 'summary' ? <ResultSummary /> : null}
-        {analysis?.success && ['axial', 'shear', 'moment'].includes(activeTab.id) ? <DiagramView type={activeTab.id as 'axial' | 'shear' | 'moment'} memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
-        {analysis?.success && activeTab.id === 'deformed' ? <DeformationView memberResult={memberResult} memberId={selectedMemberId ?? ''} /> : null}
+        {analysis?.success && ['axial', 'shear', 'moment'].includes(activeTab.id) ? <DiagramView type={activeTab.id as 'axial' | 'shear' | 'moment'} memberResult={memberResult} memberId={selectedMemberId ?? ''} isMobile={isMobile} mobileMetricsVisible={mobileMetricsVisible} /> : null}
+        {analysis?.success && activeTab.id === 'deformed' ? <DeformationView memberResult={memberResult} memberId={selectedMemberId ?? ''} isMobile={isMobile} mobileMetricsVisible={mobileMetricsVisible} /> : null}
         {analysis?.success && provenanceRef ? <ProvenanceCard analysis={analysis} resultRef={provenanceRef} /> : null}
       </div>
     </section>
   </>;
 };
+
+const ResultMetricRail = ({ isMobile, visible, className, children }: { isMobile: boolean; visible: boolean; className: string; children: ReactNode }) => <div
+  id={isMobile ? 'results-mobile-metrics' : undefined}
+  data-testid={isMobile ? 'results-mobile-metrics' : undefined}
+  data-mobile-metrics-visible={isMobile ? String(visible) : undefined}
+  className={`result-metric-rail${isMobile ? ' is-mobile' : ''}`}
+  hidden={isMobile && !visible}
+>
+  <div className={`result-extreme-grid ${className}${isMobile ? ' is-mobile-rail' : ''}`}>{children}</div>
+</div>;
 
 const EmptyResults = ({ onAnalyze }: { onAnalyze: () => void }) => {
   const { t } = useI18n();
@@ -381,7 +400,7 @@ const FailedResults = ({ onOpenModelDoctor }: { onOpenModelDoctor: () => void })
   </div>;
 };
 
-const DiagramView = ({ type, memberResult, memberId }: { type: DiagramQuantity; memberResult: MemberResult | undefined; memberId: string }) => {
+const DiagramView = ({ type, memberResult, memberId, isMobile, mobileMetricsVisible }: { type: DiagramQuantity; memberResult: MemberResult | undefined; memberId: string; isMobile: boolean; mobileMetricsVisible: boolean }) => {
   const { project, analysis, selectedCombinationId, setSelection, resultCursor, setResultCursor } = useProject();
   const { t } = useI18n();
   const [hoverX, setHoverX] = useState<number | null>(null);
@@ -529,7 +548,7 @@ const DiagramView = ({ type, memberResult, memberId }: { type: DiagramQuantity; 
         componente, misma materia y los mismos datos que en el resumen. La
         lectura del cursor no es un extremo — sigue siendo lectura, y vive
         junto al gráfico. */}
-    <div className="result-extreme-grid diagram-focus-cards">
+    <ResultMetricRail isMobile={isMobile} visible={mobileMetricsVisible} className="diagram-focus-cards">
       <ResultExtremeCard
         label={`${label} · ${t('results.maximum')}`}
         value={formatFixed(displayValue(max), 3)}
@@ -551,7 +570,7 @@ const DiagramView = ({ type, memberResult, memberId }: { type: DiagramQuantity; 
         provenanceRef={minPoint ? extremeProvenance(minPoint.x, minPoint.side) : undefined}
       />
       {cursorPoint ? <div className="diagram-cursor-readout diagram-cursor-metric"><span>{t('results.cursorValue')}</span><strong>{formatFixed(displayValue(cursorPoint[type]), 3)} {unit}</strong><small>x {formatFixed(toDisplay(cursorPoint.x, units, 'length'), 2)} {lengthUnit}</small></div> : null}
-    </div>
+    </ResultMetricRail>
     <div className="diagram-guidance"><div className={`step-badge ${colorClass}`}>1</div><div><strong>{label}</strong><p>{t('results.exactCurves')}</p></div><div className="step-badge muted">2</div><div><strong>{t('results.mainValues')}</strong><p>{t('results.maximum')} {formatFixed(displayValue(max), 3)} {unit}<br />{t('results.minimum')} {formatFixed(displayValue(min), 3)} {unit}</p></div><div className="step-badge muted">3</div><div><strong>{t('results.verification')}</strong><p>{t('results.derivativeCheck')}</p></div></div>
     <div className={`diagram-chart ${colorClass}`} data-testid="diagram-chart"><div className="diagram-chart-heading"><label><span>{t('results.member')}</span><select aria-label={t('results.memberForDiagram')} value={memberId} onChange={(event) => { setSelection({ kind: 'member', id: event.target.value }); setResultCursor(null); }}>{memberOptions.map((member) => <option key={member.memberId} value={member.memberId}>{member.memberId}</option>)}</select></label><strong>{label}</strong><button className="envelope-toggle" aria-pressed={envelopeMode} disabled={envelopeBusy} title={t('results.compareAllCases')} onClick={() => { if (!envelopeScenarios) runEnvelopeAnalysis(); setEnvelopeMode((current) => !current); }}>{envelopeBusy ? '…' : 'Env.'}</button><small>{envelopeMode ? t('results.scenarioCount', { count: envelope?.includedScenarioIds.length ?? 0 }) : pinnedX === null ? t('results.pointerHint') : t('results.pinnedHint')}</small></div><span id={cursorHelpId} className="sr-only">{t('results.chartKeyboardHelp')}</span><svg tabIndex={0} role="img" aria-label={diagramAriaLabel} aria-describedby={cursorHelpId} aria-keyshortcuts="ArrowLeft ArrowRight Home End Escape" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" onKeyDown={movePinnedByKeyboard} onPointerMove={(event) => setHoverX(pointerX(event))} onPointerDown={(event) => pinAt(pointerX(event))} onPointerLeave={() => setHoverX(null)}>
       <title>{diagramAriaLabel}</title><desc>{t('results.chartKeyboardHelp')}</desc>
@@ -572,7 +591,7 @@ const DiagramView = ({ type, memberResult, memberId }: { type: DiagramQuantity; 
   </div>;
 };
 
-const DeformationView = ({ memberResult, memberId }: { memberResult: MemberResult | undefined; memberId: string }) => {
+const DeformationView = ({ memberResult, memberId, isMobile, mobileMetricsVisible }: { memberResult: MemberResult | undefined; memberId: string; isMobile: boolean; mobileMetricsVisible: boolean }) => {
   const { project, analysis, setSelection, resultCursor, setResultCursor } = useProject();
   const reliability = analysis ? resolveReliability(analysis).level : 'failed';
   const { t } = useI18n();
@@ -635,7 +654,7 @@ const DeformationView = ({ memberResult, memberId }: { memberResult: MemberResul
     {/* Los tres máximos de respuesta son extremos: misma tarjeta, misma
         materia. Sin procedencia porque el máximo interior no tiene dato
         almacenado que lo respalde — no se pierde nada que antes existiera. */}
-    <div className="result-extreme-grid deformation-focus-cards">
+    <ResultMetricRail isMobile={isMobile} visible={mobileMetricsVisible} className="deformation-focus-cards">
       {([
         { id: 'u', symbol: '|u|', point: absU, unit: unitLabel(units, 'length') },
         { id: 'v', symbol: '|v|', point: absV, unit: unitLabel(units, 'length') },
@@ -651,7 +670,7 @@ const DeformationView = ({ memberResult, memberId }: { memberResult: MemberResul
         reliability={reliability}
         accent="deformation"
       />)}
-    </div>
+    </ResultMetricRail>
     <div className="diagram-guidance deformation-guidance"><div className="step-badge deformed">1</div><div><strong>{t('results.exactMemberResponseTitle')}</strong><p>{t('results.exactMemberResponseBody')}</p></div><div className="step-badge muted">2</div><div><strong>{t('results.interiorMaximum')}</strong><p>{absolute ? t('results.responseAtPosition', { quantity, value: formatScientific(displayValue(absolute.value), 4), unit, x: formatFixed(toDisplay(absolute.x, units, 'length'), 3), lengthUnit: unitLabel(units, 'length') }) : '—'}</p></div></div>
     <div className="diagram-chart deformation" data-testid="deformation-chart"><div className="diagram-chart-heading"><label><span>{t('results.member')}</span><select aria-label={t('results.memberForDeformation')} value={memberId} onChange={(event) => { setSelection({ kind: 'member', id: event.target.value }); setResultCursor(null); }}>{memberOptions.map((member) => <option key={member.memberId} value={member.memberId}>{member.memberId}</option>)}</select></label><div className="response-selector" role="group" aria-label={t('results.memberResponse')}>{(['u', 'v', 'theta'] as const).map((item) => <button key={item} aria-pressed={quantity === item} className={quantity === item ? 'active' : ''} onClick={() => setQuantity(item)}>{item === 'theta' ? 'θ' : item}</button>)}</div><small>{pinnedX === null ? t('results.pointerHint') : t('results.pinnedHint')}</small></div>
       <span id={cursorHelpId} className="sr-only">{t('results.chartKeyboardHelp')}</span>

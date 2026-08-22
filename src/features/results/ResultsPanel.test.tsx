@@ -398,6 +398,27 @@ describe('Results analytical center', () => {
     }
   }, 10_000);
 
+  it('keeps phone result metrics as a hideable horizontal rail while the diagram remains available', async () => {
+    const user = userEvent.setup();
+    setViewport('phone');
+    renderResults();
+
+    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
+    const chart = await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+    const metrics = screen.getByTestId('results-mobile-metrics');
+
+    expect(metrics.getAttribute('data-mobile-metrics-visible')).toBe('true');
+    expect(metrics.querySelector('.result-extreme-grid')?.classList.contains('is-mobile-rail')).toBe(true);
+    expect(metrics.querySelectorAll('.result-extreme-card')).toHaveLength(2);
+
+    await user.click(screen.getByRole('button', { name: 'Ocultar tarjetas de resultados' }));
+    expect(metrics.hidden).toBe(true);
+    expect(chart).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Mostrar tarjetas de resultados' }));
+    expect(metrics.hidden).toBe(false);
+  }, 10_000);
+
   it('keeps native learning summaries inside the mobile focus loop', async () => {
     const user = userEvent.setup();
     setViewport('tablet');

@@ -1,8 +1,10 @@
 import type { LucideIcon } from 'lucide-react';
 import { CircleHelp, LockKeyhole, PencilLine } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useI18n } from '../../i18n/useI18n';
 import { Accordion } from '../../design-system/components/disclosure';
+import { Drawer } from '../../design-system/components/overlays';
+import { useShellComposition } from '../workspace/useShellComposition';
 
 export interface InspectorSummaryMetric {
   label: string;
@@ -114,15 +116,41 @@ export const InspectorAdvancedProperties = ({
   children: ReactNode;
 }) => {
   const { t } = useI18n();
-  return <Accordion
-    multiple
-    className="inspector-advanced"
-    expanded={expanded}
-    onExpandedChange={onExpandedChange}
-    items={[{
-      id,
-      title: t('inspector.advancedProperties'),
-      content: <div className="inspector-advanced__content">{children}</div>,
-    }]}
-  />;
+  const { shellClass } = useShellComposition();
+  const isCompactMobile = shellClass === 'K0';
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorLauncher, setEditorLauncher] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!isCompactMobile) setEditorOpen(false);
+  }, [isCompactMobile]);
+  const editorContent = <div className="inspector-advanced__content">{children}</div>;
+  return <>
+    <Accordion
+      multiple
+      className="inspector-advanced"
+      expanded={expanded}
+      onExpandedChange={onExpandedChange}
+      items={[{
+        id,
+        title: t('inspector.advancedProperties'),
+        content: isCompactMobile ? <div className="inspector-advanced__summary">
+          <p>{t('inspector.advancedMobileSummary')}</p>
+          <button type="button" className="inspector-advanced__edit" onClick={(event) => {
+            setEditorLauncher(event.currentTarget);
+            setEditorOpen(true);
+          }}>{t('inspector.editAll')}</button>
+        </div> : editorContent,
+      }]}
+    />
+    {isCompactMobile ? <Drawer
+      open={editorOpen}
+      onOpenChange={setEditorOpen}
+      presentation="fullscreen"
+      title={t('inspector.advancedProperties')}
+      description={t('inspector.advancedEditorDescription')}
+      closeLabel={t('toolbar.close')}
+      returnFocusTo={editorLauncher}
+      className="inspector-advanced-editor"
+    >{editorContent}</Drawer> : null}
+  </>;
 };

@@ -750,6 +750,31 @@ describe('Inspector advanced, locked, and validation states', () => {
     expect(document.getElementById(advanced.getAttribute('aria-controls') ?? '')?.hidden).toBe(false);
   });
 
+  it('uses a compact mobile advanced summary and opens the complete editor only on demand', async () => {
+    const user = userEvent.setup();
+    const originalWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 390 });
+
+    try {
+      renderInspector();
+      await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+      await user.click(screen.getByRole('button', { name: 'Propiedades avanzadas' }));
+
+      expect(screen.getByText('Edita semirrigidez, rótulas y offsets sólo cuando haga falta.')).toBeTruthy();
+      expect(screen.queryByRole('checkbox', { name: 'Activar en i' })).toBeNull();
+
+      await user.click(screen.getByRole('button', { name: 'Editar todo' }));
+      const editor = screen.getByRole('dialog', { name: 'Propiedades avanzadas' });
+      expect(within(editor).getByRole('checkbox', { name: 'Activar en i' })).toBeTruthy();
+
+      await user.click(within(editor).getByRole('button', { name: 'Cerrar' }));
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Propiedades avanzadas' })).toBeNull());
+      expect(screen.getByRole('button', { name: 'Editar todo' })).toBeTruthy();
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalWidth });
+    }
+  });
+
   it('locks material and advanced mechanics in classroom mode without hiding stored values', async () => {
     const user = userEvent.setup();
     renderInspector(createInspectorProject('classroom'));
