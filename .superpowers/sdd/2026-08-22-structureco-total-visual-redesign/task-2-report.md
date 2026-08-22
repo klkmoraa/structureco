@@ -15,6 +15,8 @@ Se completó la corrección solicitada para el Home de Task 2:
 - Se regeneró la evidencia visual y el checkpoint existente fue actualizado con resultados reproducibles y evidencia TDD completa.
 - Fix round 2 migró `WelcomeHeader.test.tsx` del header/editorial y drawer antiguos a los contratos responsive vigentes, manteniendo sus cinco comportamientos significativos.
 - El RED original quedó preservado como extracción literal concisa y trazable en `tdd-red-home.txt`.
+- El checkpoint visual aislado quedó publicado en Sites con acceso privado del propietario; permite alternar Día/Noche y Desktop/Tablet/Móvil sin añadir un adaptador ni dependencias a la aplicación real.
+- El enlace de revisión se envió al correo autorizado. No se hizo push del código fuente del producto.
 
 ## Alcance real
 
@@ -65,6 +67,14 @@ Se inspeccionaron manualmente las capturas `desktop-day.png`, `tablet-night.png`
 
 No quedan concerns funcionales dentro de Task 2. Lint conserva 13 warnings preexistentes fuera del diff y Vite mantiene el warning no bloqueante por chunks >500 kB.
 
+## Checkpoint externo
+
+- URL privada: `https://structureco-redesign-checkpoint.crdrawin.chatgpt.site`
+- Estado: desplegado correctamente, acceso owner-only verificado.
+- Contenido: las seis capturas responsive y cinco muestras Three.js transparentes, con selector Día/Noche.
+- Aislamiento: se construyó en el scratch SDD ignorado por Git; no cambió `package.json`, dependencias ni arquitectura de la aplicación real.
+- Entrega: enlace enviado a `crisdlm302@gmail.com` después de la publicación.
+
 ## Handoff
 
-El siguiente agente puede partir del commit local asociado a este reporte. Task 2 está cerrado: pruebas Home, tipado, frontera protegida, build y evidencia requerida están completos. El checkpoint existente funciona como change report, por lo que no se creó un duplicado.
+El siguiente agente puede partir del commit local asociado a este reporte. Task 2 está cerrado: pruebas Home, tipado, frontera protegida, build, evidencia y checkpoint externo están completos. El checkpoint existente funciona como change report, por lo que no se creó un duplicado.

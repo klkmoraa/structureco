@@ -75,4 +75,6 @@ Resultados de esta corrección:
 
 El alcance de Task 2 queda cerrado sin concerns funcionales pendientes: la suite completa de Home pasa. Permanecen únicamente los 13 warnings de lint ajenos al diff y el warning no bloqueante de Vite por chunks mayores de 500 kB; no se ampliaron en esta tarea.
 
+El checkpoint aislado de revisión también quedó publicado con acceso owner-only en `https://structureco-redesign-checkpoint.crdrawin.chatgpt.site`. Reúne la matriz Desktop/Tablet/Móvil en Día/Noche y las primeras familias Three.js sin placa azul. El enlace se envió al correo autorizado. Esta publicación no adaptó ni desplegó la SPA real, no cambió sus dependencias y no implicó push de la rama del producto.
+
 Este checkpoint existente sirve como change report obligatorio; no se creó un reporte duplicado. No se tocaron engine, solver, `ProjectModel`, persistencia, import/export, comandos, unidades, signos, topología ni interacción de canvas. Se preservó el archivo no rastreado ajeno `reports/evidence/2026-08-21-clay-mobile-density-phase-5/full-test.log`.
