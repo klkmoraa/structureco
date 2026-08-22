@@ -37,6 +37,7 @@ describe('ProjectHub', () => {
     render(<ProjectProvider><ProjectHub repository={repository} onOpen={onOpen} /></ProjectProvider>);
 
     expect(await screen.findByText('Proyecto local verificado')).toBeTruthy();
+    expect(document.querySelector('[data-structural-asset-id="portal:single-bay"]')).not.toBeNull();
     await userEvent.click(screen.getByRole('button', { name: 'Abrir Proyecto local verificado' }));
     expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: record.id, revision: record.revision }));
   });
@@ -47,8 +48,20 @@ describe('ProjectHub', () => {
     render(<ProjectProvider><ProjectHub repository={repository} onOpen={() => undefined} /></ProjectProvider>);
     expect(await screen.findByText('Modelo base')).toBeTruthy();
 
+    await userEvent.click(screen.getByRole('button', { name: 'Más acciones para Modelo base' }));
     await userEvent.click(screen.getByRole('button', { name: 'Duplicar Modelo base' }));
     await waitFor(() => expect(screen.getByText('Copia de Modelo base')).toBeTruthy());
     expect(screen.getByText('Modelo base')).toBeTruthy();
+  });
+
+  it('keeps secondary project actions inside one compact disclosure', async () => {
+    const repository = new InMemoryProjectRepository();
+    await repository.saveProject({ ...createDefaultProject(), name: 'Pórtico compacto' });
+    render(<ProjectProvider><ProjectHub repository={repository} onOpen={() => undefined} /></ProjectProvider>);
+
+    await screen.findByText('Pórtico compacto');
+    expect(screen.getAllByRole('button', { name: /Abrir Pórtico compacto/ })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Más acciones para Pórtico compacto' })).toBeTruthy();
+    expect(document.querySelectorAll('.project-hub__menu')).toHaveLength(1);
   });
 });

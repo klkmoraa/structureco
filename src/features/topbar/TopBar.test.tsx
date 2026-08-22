@@ -334,12 +334,25 @@ describe('TopBar information architecture', () => {
     const projectMenuTrigger = screen.getByRole('button', { name: 'Proyecto actual' });
     await user.click(projectMenuTrigger);
     await user.click(screen.getByRole('button', { name: 'Importar JSON' }));
-    await screen.findByRole('dialog', { name: /Trae un proyecto con contexto/i }, { timeout: 5000 });
+    await screen.findByRole('dialog', { name: /Importa sin perder el control/i }, { timeout: 5000 });
 
     await user.keyboard('{Escape}');
 
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Trae un proyecto con contexto/i })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Importa sin perder el control/i })).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(projectMenuTrigger));
+  });
+
+  it('presents the project menu as a real Project Hub instead of an unlabeled action stack', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);
+
+    await user.click(screen.getByRole('button', { name: 'Proyecto actual' }));
+
+    const hub = container.querySelector<HTMLElement>('[data-project-hub="true"]');
+    expect(hub).not.toBeNull();
+    expect(within(hub!).getByText('Proyecto abierto')).toBeTruthy();
+    expect(within(hub!).getByText('Empieza con una mesa limpia.')).toBeTruthy();
+    expect(within(hub!).getByText('Revisa un archivo antes de abrirlo.')).toBeTruthy();
   });
 
   it('groups document, action, and status without losing secondary controls', async () => {

@@ -371,19 +371,20 @@ export const ModelDoctor = ({
       onRegenerate={() => openRepairPreview()}
       onApply={() => { void applyRepair(); }}
       onCancel={() => { setPreview(null); setRepairError(''); }}
-    /> : <><section className="model-doctor-health" aria-label={copy.healthLabel}>
+    /> : <>{report.total > 0 ? <section className="model-doctor-health" aria-label={copy.healthLabel} data-model-health="attention">
       <div className="model-doctor-health__icon" aria-hidden="true"><ShieldAlert size={22} /></div>
       <div>
         <strong>{copy.summary(report.counts.critical, report.counts.warning, report.counts.suggestion)}</strong>
-        <span>{report.total === 0 ? copy.allClearBody : copy.description}</span>
+        <span>{copy.description}</span>
       </div>
-    </section>
+    </section> : null}
 
     {repairApplied ? <p ref={appliedStatusRef} className="model-doctor-repair-applied" role="status" tabIndex={-1}><CheckCircle2 size={16} aria-hidden="true" /> {copy.repairApplied}</p> : null}
     {repairError ? <p className="model-doctor-preview__error" role="alert">{repairError}</p> : null}
-    {report.total === 0 ? <section className="model-doctor-all-clear">
-      <CheckCircle2 size={32} aria-hidden="true" />
+    {report.total === 0 ? <section className="model-doctor-all-clear" data-model-health="clear" aria-label={copy.healthLabel}>
+      <div className="model-doctor-all-clear__seal" aria-hidden="true"><CheckCircle2 size={34} /></div>
       <div>
+        <span className="model-doctor-all-clear__eyebrow">{copy.summary(0, 0, 0)}</span>
         <h3>{copy.allClearTitle}</h3>
         <p>{copy.allClearBody}</p>
       </div>
@@ -443,7 +444,6 @@ export const ModelDoctor = ({
             </button>
 
             {isExpanded ? <div id={detailId} className="model-doctor-finding__detail">
-              <section><h4>{copy.detected}</h4><p>{presented.explanation}</p></section>
               <section><h4>{copy.why}</h4><p>{presented.whyItMatters}</p></section>
               <section><h4>{copy.action}</h4><p>{presented.suggestedAction}</p></section>
             </div> : null}

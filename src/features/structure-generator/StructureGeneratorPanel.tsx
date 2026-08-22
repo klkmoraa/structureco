@@ -385,7 +385,7 @@ export const StructureGeneratorPanel = ({
     </ul>
   </section> : null;
 
-  const summaryList = summary ? <section className="structure-generator__summary" aria-label={t('summary.title')}>
+  const summaryList = summary ? <section className="structure-generator__summary" aria-label={t('summary.title')} data-generator-stage="summary">
     <h3>{t('summary.title')}</h3>
     <dl>
       {rows.map((row) => <div key={row.id} data-summary-row={row.id}>
@@ -427,6 +427,7 @@ export const StructureGeneratorPanel = ({
     hidden={status !== 'active'}
     aria-hidden={status !== 'active' ? 'true' : undefined}
     data-structure-generator-view={reviewing ? 'review' : 'parameters'}
+    data-generator-layout="family-parameters-review"
     tabIndex={-1}
     onKeyDown={onKeyDown}
   >
@@ -448,7 +449,7 @@ export const StructureGeneratorPanel = ({
       <p className="structure-generator__note">{t('previewNote')}</p>
       {error ? <p className="structure-generator__error" role="alert">{error}</p> : null}
     </div> : <div className="structure-generator__body">
-      <div className="structure-generator__families" role="radiogroup" aria-label={t('familyLabel')}>
+      <div className="structure-generator__families" role="radiogroup" aria-label={t('familyLabel')} data-generator-stage="family">
         {GENERATOR_FAMILIES.map((family, index) => {
           const selected = family === form.family;
           return <button
@@ -472,7 +473,9 @@ export const StructureGeneratorPanel = ({
         })}
       </div>
 
-      {geometryFields}
+      <div className="structure-generator__parameter-stage" data-generator-stage="parameters">
+        {geometryFields}
+      </div>
 
       <Accordion
         multiple

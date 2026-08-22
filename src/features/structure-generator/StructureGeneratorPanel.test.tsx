@@ -72,6 +72,15 @@ const summaryValue = (id: string) =>
   document.querySelector(`[data-summary-row="${id}"] strong`)?.textContent;
 
 describe('parámetros por familia', () => {
+  it('declares a compact three-stage builder layout for the visual surface', () => {
+    staticPanel();
+    const surface = document.querySelector('[data-generator-layout="family-parameters-review"]');
+    expect(surface).not.toBeNull();
+    expect(surface?.querySelector('[data-generator-stage="family"]')).not.toBeNull();
+    expect(surface?.querySelector('[data-generator-stage="parameters"]')).not.toBeNull();
+    expect(surface?.querySelector('[data-generator-stage="summary"]')).not.toBeNull();
+  });
+
   it('muestra sólo las separaciones que la familia activa consume', async () => {
     const user = setup();
     render(<Harness />);

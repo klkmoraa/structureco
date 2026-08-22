@@ -390,7 +390,12 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
         </button>
         <AnimatePresence>
           {showProjectMenu ? (
-            <m.div {...popoverMotionProps} className="popover topbar-project-panel" role="dialog" aria-label={t('topbar.currentProject')}>
+            <m.div {...popoverMotionProps} className="popover topbar-project-panel" role="dialog" aria-label={t('topbar.currentProject')} data-project-hub="true">
+              <header className="topbar-project-hub-heading">
+                <span>{t('topbar.projectHubEyebrow')}</span>
+                <strong>{t('topbar.projectHubTitle')}</strong>
+                <small>{t('topbar.projectHubDescription')}</small>
+              </header>
               <label className="topbar-panel-field topbar-project-name-field">
                 <span>{t('project.name')}</span>
                 <input
@@ -411,10 +416,14 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
                 />
               </label>
               <div className="topbar-panel-actions">
-              <button onClick={() => { const next = createBlankProject(); replaceProject({ ...next, settings: { ...next.settings, language } }); setShowProjectMenu(false); }}>
-                <FilePlus2 size={17} /> {t('project.new')}
+              <button aria-label={t('project.new')} onClick={() => { const next = createBlankProject(); replaceProject({ ...next, settings: { ...next.settings, language } }); setShowProjectMenu(false); }}>
+                <FilePlus2 size={19} />
+                <span className="menu-copy"><strong>{t('project.new')}</strong><small>{t('topbar.projectHubNewDescription')}</small></span>
               </button>
-              <button onClick={() => { setImportCenterOpen(true); setShowProjectMenu(false); }}><FolderOpen size={17} /> {t('project.importJson')}</button>
+              <button aria-label={t('project.importJson')} onClick={() => { setImportCenterOpen(true); setShowProjectMenu(false); }}>
+                <FolderOpen size={19} />
+                <span className="menu-copy"><strong>{t('project.importJson')}</strong><small>{t('topbar.projectHubImportDescription')}</small></span>
+              </button>
               <button
                 className="topbar-project-examples-trigger"
                 aria-expanded={showProjectExamples}

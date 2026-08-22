@@ -1,19 +1,11 @@
-/*
- * Project Hub · misma materia clay que el editor.
- *
- * Antes se apoyaba en `--line`, `--surface-raised` y `--shadow-sm`, tokens que
- * el sistema no define: el navegador los descartaba y el hub quedaba plano,
- * sin canto ni volumen, en medio de una pantalla de arcilla. Ahora consume los
- * mismos roles semánticos que el resto de la aplicación, con los tres estados
- * canónicos — elevado en reposo, táctil en hover, rehundido al pulsar.
- */
 .project-hub {
-  margin-top: var(--sc-space-6);
-  padding: var(--sc-space-5);
-  border: var(--sc-clay-edge);
+  position: relative;
+  margin-top: 0;
+  padding: clamp(14px, 2vw, 22px);
+  border: 1px solid var(--sc-color-border-soft);
   border-radius: var(--sc-radius-lg);
   background: var(--sc-color-surface-1);
-  box-shadow: var(--sc-shadow-clay-sm);
+  color: var(--sc-color-text-primary);
 }
 
 .project-hub__header {
@@ -21,14 +13,15 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--sc-space-4);
-  margin-bottom: var(--sc-space-3);
+  margin-bottom: var(--sc-space-4);
   color: var(--sc-color-text-secondary);
 }
 
 .project-hub__header h2 {
-  margin: 2px 0 0;
+  margin: 3px 0 0;
   font-family: var(--sc-font-display);
-  font-size: var(--sc-font-size-panel);
+  font-size: clamp(20px, 2.2vw, 27px);
+  line-height: 1.05;
   color: var(--sc-color-text-primary);
 }
 
@@ -41,111 +34,213 @@
   text-transform: uppercase;
 }
 
-.project-hub__list { display: grid; gap: var(--sc-space-2); }
+.project-hub__list { display: grid; gap: 10px; }
 
 .project-hub__row {
-  display: flex;
+  position: relative;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--sc-space-3);
-  padding: 11px var(--sc-space-3);
+  min-height: 102px;
+  gap: 14px;
+  padding: 10px 12px 10px 10px;
   border: var(--sc-clay-edge);
-  border-radius: var(--sc-radius-sm);
+  border-radius: var(--sc-radius-md);
   background: var(--sc-color-surface-elevated);
   box-shadow: var(--sc-shadow-clay-xs);
-  transition: var(--sc-transition-control);
+  transition: transform 220ms cubic-bezier(.2,.8,.2,1), box-shadow 220ms cubic-bezier(.2,.8,.2,1), border-color 220ms ease;
 }
 
-.project-hub__row:hover { box-shadow: var(--sc-shadow-clay-sm); transform: translateY(-1.5px); }
+.project-hub__row:hover {
+  z-index: 2;
+  border-color: color-mix(in srgb, var(--sc-color-action-primary) 24%, var(--sc-color-border-soft));
+  box-shadow: var(--sc-shadow-clay-sm);
+  transform: translateY(-2px);
+}
 
-.project-hub__identity { min-width: 0; display: grid; gap: 2px; }
-.project-hub__identity strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.project-hub__identity small { color: var(--sc-color-text-muted); font-family: var(--sc-font-mono); font-size: var(--sc-font-size-caption); }
-.project-hub__identity form,
-.project-hub__actions { display: flex; align-items: center; gap: var(--sc-space-1); }
+.project-hub__preview {
+  align-self: stretch;
+  min-height: 80px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--sc-color-border-soft) 76%, transparent);
+  border-radius: calc(var(--sc-radius-md) - 4px);
+  background: var(--sc-color-surface-inset);
+  box-shadow: var(--sc-shadow-clay-pressed);
+}
 
+.project-hub__preview img,
+.project-hub__preview svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: scale(1.08);
+  transition: transform 360ms cubic-bezier(.2,.8,.2,1);
+}
+
+.project-hub__row:hover .project-hub__preview img,
+.project-hub__row:hover .project-hub__preview svg { transform: scale(1.13) translateY(-1px); }
+
+.project-hub__identity {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 5px;
+}
+
+.project-hub__identity strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.project-hub__identity > span { color: var(--sc-color-text-secondary); font-size: 12.5px; }
+
+.project-hub__record-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 3px;
+}
+
+.project-hub__updated,
+.project-hub__revision {
+  font-family: var(--sc-font-mono);
+  font-size: 10.5px;
+  font-variant-numeric: var(--sc-numeric-variant);
+  color: var(--sc-color-text-muted);
+  white-space: nowrap;
+}
+
+.project-hub__revision::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  margin: 0 8px 2px 0;
+  border-radius: 50%;
+  background: var(--sc-color-text-muted);
+}
+
+.project-hub__identity form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.project-hub__identity label { min-width: 0; }
 .project-hub__identity input {
-  min-width: 12rem;
-  min-height: var(--sc-control-height-sm);
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
   padding: 0 10px;
-  border: 0;
+  border: 1px solid var(--sc-color-border-soft);
   border-radius: var(--sc-radius-xs);
-  background: var(--sc-color-surface-2);
+  background: var(--sc-color-surface-inset);
   box-shadow: var(--sc-shadow-clay-pressed);
   color: var(--sc-color-text-primary);
   font: inherit;
 }
 
+.project-hub__actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.project-hub__open,
 .project-hub__identity button,
-.project-hub__actions button,
+.project-hub__menu > button,
+.project-hub__menu button,
 .project-hub__recoveries button {
-  min-height: var(--sc-control-height-sm);
-  padding: 0 10px;
+  min-height: 36px;
   display: inline-flex;
   align-items: center;
-  gap: var(--sc-space-1);
+  justify-content: center;
+  gap: 6px;
+  padding: 0 11px;
   border: var(--sc-clay-edge);
   border-radius: var(--sc-radius-pill);
   background: var(--sc-color-surface-1);
   box-shadow: var(--sc-shadow-clay-xs);
   color: var(--sc-color-text-primary);
   font: inherit;
+  font-size: 12.5px;
+  font-weight: var(--sc-font-weight-bold);
   cursor: pointer;
   transition: var(--sc-transition-control);
 }
 
-.project-hub__identity button:hover,
-.project-hub__actions button:hover,
-.project-hub__recoveries button:hover { box-shadow: var(--sc-shadow-clay-sm); transform: translateY(-1.5px); }
+.project-hub__open {
+  border-color: color-mix(in srgb, var(--sc-color-action-primary) 54%, var(--sc-color-border-soft));
+  background: var(--sc-color-action-primary);
+  color: #fff;
+  box-shadow: var(--sc-shadow-clay-sm);
+}
 
+.project-hub__menu { position: relative; }
+.project-hub__menu > button {
+  width: 36px;
+  padding: 0;
+}
+.project-hub__menu.is-open > button {
+  background: var(--sc-color-surface-inset);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  transform: translateY(1px);
+}
+
+.project-hub__menu > div {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + 7px);
+  right: 0;
+  width: 158px;
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-sm);
+  background: var(--sc-color-surface-elevated);
+  box-shadow: var(--sc-shadow-sheet);
+}
+
+.project-hub__menu button {
+  width: 100%;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: var(--sc-radius-xs);
+  box-shadow: none;
+}
+
+.project-hub__open:hover,
+.project-hub__identity button:hover,
+.project-hub__menu > button:hover,
+.project-hub__menu button:hover,
+.project-hub__recoveries button:hover { transform: translateY(-1.5px); }
+
+.project-hub__open:active,
 .project-hub__identity button:active,
-.project-hub__actions button:active,
+.project-hub__menu > button:active,
+.project-hub__menu button:active,
 .project-hub__recoveries button:active {
   background: var(--sc-color-surface-inset);
   box-shadow: var(--sc-shadow-clay-pressed);
+  color: var(--sc-color-text-primary);
   transform: var(--sc-clay-press-transform);
 }
 
-.project-hub__error { color: var(--sc-color-state-error-foreground); }
-.project-hub__empty { color: var(--sc-color-text-muted); }
-
-.project-hub__recoveries { margin-top: var(--sc-space-3); }
-.project-hub__recoveries summary {
-  cursor: pointer;
-  color: var(--sc-color-text-secondary);
-  font-weight: var(--sc-font-weight-bold);
+.project-hub__error {
+  padding: 12px 14px;
+  border-radius: var(--sc-radius-sm);
+  background: color-mix(in srgb, var(--sc-color-state-error) 9%, transparent);
+  color: var(--sc-color-state-error-foreground);
 }
-.project-hub__recoveries button { margin: var(--sc-space-2) var(--sc-space-2) 0 0; }
+.project-hub__empty { margin: 0; color: var(--sc-color-text-muted); }
 
-@media (max-width: 680px) {
-  .project-hub__row { align-items: stretch; flex-direction: column; }
-  .project-hub__actions { justify-content: flex-end; }
-  .project-hub__identity input { min-width: 0; width: 100%; }
-}
-
-@media (pointer: coarse) {
-  .project-hub__identity button,
-  .project-hub__actions button,
-  .project-hub__recoveries button { min-height: var(--sc-size-target-touch); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .project-hub__row,
-  .project-hub__row:hover,
-  .project-hub__identity button:hover,
-  .project-hub__actions button:hover,
-  .project-hub__recoveries button:hover,
-  .project-hub__identity button:active,
-  .project-hub__actions button:active,
-  .project-hub__recoveries button:active { transform: none; transition: none; }
-}
-
-/* CRI-104 · La recuperación deja de ser una línea gris al pie del hub.
-   Sigue siendo el mismo `<details>` sobre los mismos `RecoveryRecord` —no
-   cambia el almacenamiento ni el comportamiento— pero se abre por defecto y
-   se marca como lo que es: trabajo protegido que hay que poder ver de un
-   vistazo. El aviso no depende sólo del color: lleva su propio canto y el
-   recuento en el resumen. */
 .project-hub__recoveries {
   margin-top: var(--sc-space-4);
   padding: var(--sc-space-3);
@@ -153,97 +248,82 @@
   border-radius: var(--sc-radius-sm);
   background: color-mix(in srgb, var(--sc-color-state-warning) 8%, transparent);
 }
+.project-hub__recoveries summary { cursor: pointer; color: var(--sc-color-state-warning-foreground); font-weight: var(--sc-font-weight-bold); }
+.project-hub__recoveries button { margin: var(--sc-space-2) var(--sc-space-2) 0 0; }
 
-.project-hub__recoveries summary {
-  color: var(--sc-color-state-warning-foreground);
-}
-
-/* CRI-104 · El hub vive DENTRO de `.welcome-frame`, que ya es la superficie
-   RAISED. Aquí vuelve a BASE —canto suave, sin elevación— para no repetir el
-   nivel dentro de sí mismo. Las filas de proyecto conservan su relieve: son
-   controles, no un panel anidado. Esta regla va al final del archivo a
-   propósito: la hoja del hub se inyecta con su chunk perezoso, después de
-   `material.css`, así que su materia se decide aquí. */
-.project-hub {
-  margin-top: 0;
-  border: 1px solid var(--sc-color-border-soft);
-  box-shadow: none;
-}
-
-/* ==========================================================================
-   CRI-112 · La biblioteca como tabla técnica
-   --------------------------------------------------------------------------
-   Filas alineadas por columnas con encabezado real. Es la forma que
-   corresponde a los datos que el repositorio guarda de verdad —nombre, última
-   edición y revisión—: sin miniatura, una tarjeta no añadiría nada a una fila
-   y ocuparía el triple. Ni columna "Tipo" (no existe) ni columna "Estado" (es
-   copy prohibido por `success ≠ reliable ≠ safe`).
-   ========================================================================== */
-
-.project-hub { margin-top: 0; padding: var(--sc-space-4); }
-/* CRI-112 (ajuste final) · con pocas filas la tabla no necesita el mismo
-   respiro que cuando es la pieza más densa de la pantalla — encabezado y
-   padding se acercan un paso sin perder separación de las acciones. */
-.project-hub__header { margin-bottom: var(--sc-space-2); }
-
-/* Sin proyectos y sin copias recuperables, la biblioteca casi desaparece: una
-   línea discreta en vez de un panel entero para decir una frase. Se despliega
-   sola en cuanto hay algo — y la recuperación, por ser justo lo que fuerza el
-   despliegue, nunca puede quedar menos alcanzable que antes. */
-.project-hub--collapsed {
+.project-hub--recent {
   padding: 0;
   border: 0;
   background: transparent;
-  box-shadow: none;
 }
+.project-hub--recent .project-hub__header { display: none; }
+.project-hub--recent .project-hub__list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.project-hub--recent .project-hub__row {
+  grid-template-columns: 92px minmax(0, 1fr);
+  min-height: 112px;
+  padding: 9px;
+}
+.project-hub--recent .project-hub__actions { position: absolute; right: 8px; bottom: 8px; }
+.project-hub--recent .project-hub__open {
+  width: 34px;
+  min-height: 34px;
+  padding: 0;
+  font-size: 0;
+}
+.project-hub--recent .project-hub__menu > button { width: 34px; min-height: 34px; }
+
+.project-hub--collapsed { padding: 0; border: 0; background: transparent; }
 .project-hub--collapsed .project-hub__header { display: none; }
-.project-hub--collapsed .project-hub__empty {
-  margin: 0;
-  font-size: 12.5px;
-  color: var(--sc-color-text-muted);
-}
+.project-hub--collapsed .project-hub__empty { font-size: 12.5px; }
 
-/* Rejilla compartida por el encabezado y por cada fila, declarada una vez:
-   si las columnas se desalinean, se desalinean juntas y se ve. */
-.project-hub__columns,
-.project-hub__row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
-  align-items: center;
-  gap: var(--sc-space-3);
-}
-
-.project-hub__columns {
-  padding: 0 var(--sc-space-3) 6px;
-  border-bottom: 1px solid var(--sc-color-divider);
-  margin-bottom: var(--sc-space-2);
-  color: var(--sc-color-text-muted);
-  font-family: var(--sc-font-mono);
-  font-size: var(--sc-font-size-caption);
-  font-weight: var(--sc-font-weight-bold);
-  letter-spacing: var(--sc-tracking-eyebrow);
-  text-transform: uppercase;
-}
-
-.project-hub__updated,
-.project-hub__revision {
-  font-family: var(--sc-font-mono);
-  font-size: var(--sc-font-size-caption);
-  font-variant-numeric: var(--sc-numeric-variant);
-  color: var(--sc-color-text-muted);
-  white-space: nowrap;
-}
-
-/* En K0 la tabla no cabe en cuatro columnas: la fila se pliega en dos —
-   identidad y acciones arriba, datos debajo— en vez de recortar campos. */
-@media (max-width: 700px) {
-  .project-hub__columns { display: none; }
-  .project-hub__row {
-    grid-template-columns: minmax(0, 1fr) auto;
-    row-gap: 6px;
+@media (max-width: 1040px) {
+  .project-hub--recent .project-hub__list {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    padding: 2px 2px 10px;
   }
-  .project-hub__identity { grid-column: 1; }
-  .project-hub__actions { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
-  .project-hub__updated { grid-column: 1; }
-  .project-hub__revision { grid-column: 1; }
+  .project-hub--recent .project-hub__list::-webkit-scrollbar { display: none; }
+  .project-hub--recent .project-hub__row { min-width: min(340px, 86vw); scroll-snap-align: start; }
+}
+
+@media (max-width: 700px) {
+  .project-hub { padding: 12px; }
+  .project-hub__header { margin-bottom: 12px; }
+  .project-hub__row {
+    grid-template-columns: 86px minmax(0, 1fr);
+    min-height: 106px;
+    gap: 10px;
+    padding: 9px;
+  }
+  .project-hub__preview { min-height: 82px; }
+  .project-hub__identity { align-self: start; padding-top: 7px; padding-right: 34px; }
+  .project-hub__actions { position: absolute; right: 8px; bottom: 8px; }
+  .project-hub__open { min-height: 34px; padding: 0 10px; }
+  .project-hub__menu > button { width: 34px; min-height: 34px; }
+  .project-hub__menu > div { bottom: calc(100% + 7px); top: auto; }
+  .project-hub__identity form { grid-column: 1 / -1; grid-template-columns: 1fr auto; }
+  .project-hub__identity form label { grid-column: 1 / -1; }
+  .project-hub--recent { padding: 0; }
+  .project-hub--recent .project-hub__row { min-width: min(310px, 86vw); }
+}
+
+@media (pointer: coarse) {
+  .project-hub__open,
+  .project-hub__identity button,
+  .project-hub__menu > button,
+  .project-hub__menu button,
+  .project-hub__recoveries button { min-height: 44px; }
+  .project-hub__menu > button { width: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-hub__row,
+  .project-hub__preview img,
+  .project-hub__preview svg,
+  .project-hub__open,
+  .project-hub__identity button,
+  .project-hub__menu > button,
+  .project-hub__menu button { transition: none; transform: none !important; }
 }

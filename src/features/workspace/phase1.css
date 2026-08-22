@@ -1354,6 +1354,14 @@
   bottom:94px;
 }
 
+/* Generator ya contiene su propia salida y confirmación. Mientras está activo,
+   el dock se repliega para que no compita por el mismo plano ni tape el pie. */
+.app-shell[data-shell-class='X2']:has(.structure-generator[data-surface-status='active']) .tool-rail.is-floating-dock {
+  opacity:0;
+  pointer-events:none;
+  transform:translate(-50%,18px) scale(.96);
+}
+
 /* M1 is the tablet-landscape composition: a slim edge rail and a narrower
    inspector inset leave a useful drawing field instead of a squeezed desktop. */
 .app-shell[data-shell-class='M1'] .inspector-panel[data-surface-presentation='inset'] {
