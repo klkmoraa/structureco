@@ -70,7 +70,7 @@ describe('WelcomeScreen · Space 3D', () => {
 
     await user.click(within(primaryNavigation()).getByRole('button', { name: 'Space 3D' }));
     expect(onOpenSpace3D).not.toHaveBeenCalled();
-    expect(screen.getByRole('heading', { name: 'Modelo espacial' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Construye en tres dimensiones' })).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Abrir Space 3D' }));
     expect(onOpenSpace3D).toHaveBeenCalledOnce();
@@ -81,7 +81,7 @@ describe('WelcomeScreen · Space 3D', () => {
     const user = userEvent.setup();
     renderWelcome('en');
     await user.click(within(primaryNavigation()).getByRole('button', { name: 'Space 3D' }));
-    expect(screen.getByRole('heading', { name: 'Spatial model' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Build in three dimensions' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Open Space 3D' })).toBeTruthy();
   });
 });
