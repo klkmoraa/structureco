@@ -21,6 +21,21 @@ describe('ThreeStructuralImage', () => {
     expect(container.querySelector('img')?.getAttribute('src')).toBe('/assets/structural/night/slab/waffle.png');
   });
 
+  it('routes every new Three.js family to its transparent render folder', () => {
+    const cases = [
+      ['space-frame:industrial-shed', 'day/space-frame/industrial-shed.png'],
+      ['support:spring', 'day/support/spring.png'],
+      ['load:applied-moment', 'day/load/applied-moment.png'],
+      ['section:box', 'day/section/box.png'],
+      ['connection:base-plate', 'day/connection/base-plate.png'],
+    ] as const;
+    for (const [assetId, suffix] of cases) {
+      const { unmount, container } = render(<ThreeStructuralImage assetId={assetId} theme="light" alt={assetId} />);
+      expect(container.querySelector('img')?.getAttribute('src')).toBe(`/assets/structural/${suffix}`);
+      unmount();
+    }
+  });
+
   it('falls back to the editable SVG when the generated image cannot load', () => {
     const { container } = render(<ThreeStructuralImage assetId="portal:single-bay" theme="light" alt="Pórtico sencillo" />);
     fireEvent.error(container.querySelector('img')!);

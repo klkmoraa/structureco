@@ -7,9 +7,18 @@ import {
   type PortalAssetId,
   type StructuralRenderTheme,
 } from './threePortalAssets';
+import {
+  buildThreeTechnicalGroup,
+  THREE_TECHNICAL_ASSET_IDS,
+  type ThreeTechnicalAssetId,
+} from './threeTechnicalAssets';
 
-export type ThreeStructuralAssetId = PortalAssetId | ThreeFamilyAssetId;
-export const THREE_STRUCTURAL_ASSET_IDS: readonly ThreeStructuralAssetId[] = [...THREE_PORTAL_ASSET_IDS, ...THREE_FAMILY_ASSET_IDS];
+export type ThreeStructuralAssetId = PortalAssetId | ThreeFamilyAssetId | ThreeTechnicalAssetId;
+export const THREE_STRUCTURAL_ASSET_IDS: readonly ThreeStructuralAssetId[] = [
+  ...THREE_PORTAL_ASSET_IDS,
+  ...THREE_FAMILY_ASSET_IDS,
+  ...THREE_TECHNICAL_ASSET_IDS,
+];
 
 export type OrthographicFrame = {
   left: number;
@@ -58,7 +67,9 @@ export const calculateOrthographicFrame = (
 export const buildThreeStructuralGroup = (assetId: ThreeStructuralAssetId, theme: StructuralRenderTheme) => (
   assetId.startsWith('portal:')
     ? buildPortalGroup(assetId as PortalAssetId, theme)
-    : buildThreeFamilyGroup(assetId as ThreeFamilyAssetId, theme)
+    : THREE_FAMILY_ASSET_IDS.includes(assetId as ThreeFamilyAssetId)
+      ? buildThreeFamilyGroup(assetId as ThreeFamilyAssetId, theme)
+      : buildThreeTechnicalGroup(assetId as ThreeTechnicalAssetId, theme)
 );
 
 export const renderThreeStructuralAssetDataUrl = async (

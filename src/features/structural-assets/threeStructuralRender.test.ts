@@ -1,9 +1,17 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { calculateOrthographicFrame } from './threeStructuralRender';
+import { buildThreeStructuralGroup, calculateOrthographicFrame, THREE_STRUCTURAL_ASSET_IDS } from './threeStructuralRender';
 import { buildThreeFamilyGroup, THREE_FAMILY_ASSET_IDS } from './threeFamilyAssets';
 
 describe('Three.js structural render framing', () => {
+  it('routes all forty registry IDs to editable Three.js groups', () => {
+    expect(THREE_STRUCTURAL_ASSET_IDS).toHaveLength(40);
+    expect(new Set(THREE_STRUCTURAL_ASSET_IDS)).toHaveLength(40);
+    for (const assetId of THREE_STRUCTURAL_ASSET_IDS) {
+      expect(buildThreeStructuralGroup(assetId, 'day').userData.assetId).toBe(assetId);
+    }
+  });
+
   it('keeps every family asset inside a padded 3:2 orthographic frame', () => {
     const direction = new THREE.Vector3(5.4, 4.1, 6.2);
     for (const assetId of THREE_FAMILY_ASSET_IDS) {

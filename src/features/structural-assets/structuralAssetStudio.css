@@ -1,5 +1,7 @@
 .asset-studio {
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--sc-color-bg-app);
   color: var(--sc-color-text-primary);
   font-family: var(--sc-font-ui);
@@ -49,8 +51,8 @@
 .asset-studio__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 
 .asset-studio__card { min-width: 0; overflow: hidden; border: 1px solid var(--sc-color-border-soft); border-radius: 16px; background: var(--sc-color-surface-1); box-shadow: var(--sc-shadow-clay-xs); }
-.asset-studio__canvas { min-height: 190px; padding: 14px; display: grid; place-items: center; border-bottom: 1px solid var(--sc-color-border-soft); background-color: var(--sc-color-bg-canvas); background-image: linear-gradient(var(--sc-color-divider) 1px, transparent 1px), linear-gradient(90deg, var(--sc-color-divider) 1px, transparent 1px); background-size: 24px 24px; }
-.asset-studio__canvas svg { width: 100%; max-height: 190px; }
+.asset-studio__canvas { min-height: 190px; padding: 10px; display: grid; place-items: center; border-bottom: 1px solid var(--sc-color-border-soft); background: var(--sc-color-bg-canvas); }
+.asset-studio__canvas :is(img, svg) { width: 100%; max-height: 190px; }
 .asset-studio__meta { min-height: 76px; padding: 12px 14px 13px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 10px; align-items: baseline; }
 .asset-studio__meta strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .asset-studio__meta code { grid-row: 2; color: var(--sc-color-text-muted); font: 550 9px/1.2 var(--sc-font-mono); }
