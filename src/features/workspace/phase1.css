@@ -628,3 +628,222 @@
     transform:none;
   }
 }
+
+/* ========================================================================
+   CLAY MOBILE DENSITY · FASE 5
+   Un único icono despliega superficies del Workspace; K0 usa un dock de
+   aplicaciones que conserva el área segura, pero no una banda pesada. El
+   lienzo técnico y sus datos no reciben materia ni efectos decorativos.
+   ===================================================================== */
+
+.app-shell .tool-rail-surface-launcher,
+.app-shell .tool-rail-surface-launcher .sc-popover {
+  display:block;
+  width:100%;
+}
+
+.app-shell .tool-rail-surface-launcher .sc-popover__trigger {
+  width:100%;
+  min-height:52px;
+  display:grid;
+  grid-template-columns:28px minmax(0,1fr);
+  justify-content:start;
+  gap:8px;
+  padding:0 10px;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-md);
+  background:var(--sc-color-surface-1);
+  color:var(--sc-color-text-secondary);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transition:var(--sc-transition-control);
+}
+
+.app-shell .tool-rail-surface-launcher .sc-popover__trigger:hover:not(:disabled) {
+  border-color:var(--sc-color-border-soft);
+  color:var(--sc-color-text-primary);
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-sm);
+}
+
+.app-shell .tool-rail-surface-launcher .sc-popover__trigger[aria-expanded='true'] {
+  border-color:color-mix(in srgb,var(--accent) 26%,var(--sc-color-border));
+  color:var(--accent);
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell .tool-rail-surface-launcher .sc-tool-button__icon {
+  width:24px;
+  height:24px;
+  display:grid;
+  place-items:center;
+  color:currentColor;
+}
+
+.app-shell .tool-rail-surface-launcher .sc-tool-button__copy {
+  min-width:0;
+  overflow:hidden;
+}
+
+.app-shell .tool-rail-surface-launcher .sc-tool-button__copy strong {
+  display:block;
+  overflow:hidden;
+  font-size:var(--sc-font-size-label);
+  font-weight:750;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.app-shell .tool-rail-surface-launcher .sc-popover__surface {
+  width:min(248px,calc(100vw - 28px));
+  padding:6px;
+  border:var(--sc-clay-edge);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-lg);
+}
+
+.app-shell .tool-rail-surface-launcher__menu {
+  display:grid;
+  gap:3px;
+}
+
+.app-shell .tool-rail-surface-launcher__menu button {
+  min-height:44px;
+  display:grid;
+  grid-template-columns:24px minmax(0,1fr);
+  align-items:center;
+  gap:8px;
+  padding:0 9px;
+  border:1px solid transparent;
+  border-radius:var(--sc-radius-control);
+  background:transparent;
+  color:var(--sc-color-text-secondary);
+  font-size:var(--sc-font-size-label);
+  font-weight:700;
+  text-align:left;
+}
+
+.app-shell .tool-rail-surface-launcher__menu button:hover:not(:disabled),
+.app-shell .tool-rail-surface-launcher__menu button:focus-visible {
+  border-color:var(--sc-color-border-soft);
+  background:var(--sc-color-surface-elevated);
+  color:var(--sc-color-text-primary);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell .tool-rail-surface-launcher__menu button:active:not(:disabled) {
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell[data-shell-class='M1'] .tool-rail-surface-launcher .sc-popover__trigger {
+  width:48px;
+  min-width:48px;
+  min-height:48px;
+  grid-template-columns:1fr;
+  justify-items:center;
+  padding:4px;
+}
+
+.app-shell[data-shell-class='M1'] .tool-rail-surface-launcher .sc-tool-button__copy {
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+}
+
+@media (max-width:1023px) {
+  .app-shell[data-shell-class='K0'] .toolbar {
+    padding:4px max(8px,env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));
+    border:0;
+    background:transparent;
+    box-shadow:none;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock {
+    width:fit-content;
+    max-width:100%;
+    display:flex;
+    align-items:center;
+    gap:3px;
+    margin:0 auto;
+    padding:3px;
+    overflow-x:auto;
+    overscroll-behavior-x:contain;
+    scroll-snap-type:x proximity;
+    border:var(--sc-clay-edge);
+    border-radius:var(--sc-radius-pill);
+    background:var(--sc-color-surface-1);
+    box-shadow:var(--sc-shadow-clay-md);
+    scrollbar-width:none;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock::-webkit-scrollbar {
+    display:none;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button {
+    width:44px;
+    min-width:44px;
+    height:44px;
+    min-height:44px;
+    flex:0 0 44px;
+    scroll-snap-align:center;
+    padding:0;
+    border:1px solid transparent;
+    border-radius:50%;
+    background:transparent;
+    box-shadow:none;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button > span:not(.sc-tool-button__icon) {
+    display:none;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button :is(svg,.sc-tool-button__icon) {
+    width:19px;
+    height:19px;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button:hover:not(:disabled) {
+    background:var(--sc-color-surface-elevated);
+    box-shadow:var(--sc-shadow-clay-xs);
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button.active,
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button.is-active,
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button:active:not(:disabled) {
+    border-color:color-mix(in srgb,var(--tool-color,var(--accent)) 24%,var(--sc-color-border));
+    background:var(--sc-color-surface-inset);
+    color:var(--tool-color,var(--accent));
+    box-shadow:var(--sc-shadow-clay-pressed);
+    transform:var(--sc-clay-press-transform);
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-palette-workspace {
+    max-width:min(392px,calc(100vw - 16px));
+    margin-inline:auto;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-palette-workspace .mobile-tool-palette-list {
+    gap:5px;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-palette-workspace .mobile-palette-tool {
+    min-height:52px;
+    font-size:11px;
+  }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .app-shell .tool-rail-surface-launcher .sc-popover__trigger,
+  .app-shell .tool-rail-surface-launcher__menu button,
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button {
+    transition:none;
+    transform:none;
+  }
+}

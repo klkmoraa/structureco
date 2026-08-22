@@ -43,9 +43,10 @@ describe('ToolRail mobile action sheets', () => {
   it('offers an explicit compact desktop rail without changing tool identity', () => {
     const { container } = renderToolRail('M1');
     expect(container.querySelector('[data-tool-rail="compact"]')).toBeTruthy();
-    // Trece herramientas del registro más «Generar estructura», que no es una
-    // herramienta de lienzo pero sí una acción de creación con su mismo botón.
-    expect(container.querySelectorAll('.desktop-tool-list .sc-tool-button.is-compact')).toHaveLength(17);
+    // Doce herramientas del registro, Generar y Buscar: el lanzador de
+    // Paneles es un popover accesible separado y Cargas/Vista/Resultados ya
+    // no consumen tres claves del riel.
+    expect(container.querySelectorAll('.desktop-tool-list .sc-tool-button.is-compact')).toHaveLength(14);
     expect(container.querySelector('[data-tool-id="pointLoad"]')?.getAttribute('aria-keyshortcuts')).toBe('P');
     expect(container.querySelector('[data-tool-id="delete"]')?.getAttribute('aria-keyshortcuts')).toBe('Delete Backspace');
   });
@@ -53,7 +54,7 @@ describe('ToolRail mobile action sheets', () => {
   it('groups every desktop tool by intention without losing actions', () => {
     renderToolRail();
 
-    expect(within(screen.getByRole('group', { name: /navegar/i })).getAllByRole('button')).toHaveLength(6);
+    expect(within(screen.getByRole('group', { name: /navegar/i })).getAllByRole('button')).toHaveLength(4);
     // Nudo, barra y apoyo, más el generador de estructuras.
     expect(within(screen.getByRole('group', { name: /^crear$/i })).getAllByRole('button')).toHaveLength(4);
     expect(within(screen.getByRole('group', { name: /^cargas$/i })).getAllByRole('button')).toHaveLength(3);
@@ -77,7 +78,7 @@ describe('ToolRail mobile action sheets', () => {
     unsubscribe();
   });
 
-  it('moves Cargas de análisis, Vista and Resultados into the Clay navigation rail', async () => {
+  it('groups workspace panels behind one launcher without losing any route', async () => {
     const user = userEvent.setup();
     const openAnalysisSetup = vi.fn();
     const openView = vi.fn();
@@ -90,9 +91,17 @@ describe('ToolRail mobile action sheets', () => {
     renderToolRail('X2');
 
     const navigate = screen.getByRole('group', { name: /navegar/i });
-    await user.click(within(navigate).getByRole('button', { name: /cargas de análisis/i }));
-    await user.click(within(navigate).getByRole('button', { name: /^vista$/i }));
-    await user.click(within(navigate).getByRole('button', { name: /^resultados$/i }));
+    expect(within(navigate).queryByRole('button', { name: /cargas de análisis/i })).toBeNull();
+    expect(within(navigate).queryByRole('button', { name: /^vista$/i })).toBeNull();
+    expect(within(navigate).queryByRole('button', { name: /^resultados$/i })).toBeNull();
+    await user.click(within(navigate).getByRole('button', { name: /abrir paneles de trabajo/i }));
+
+    const panels = screen.getByRole('dialog', { name: /paneles de trabajo/i });
+    await user.click(within(panels).getByRole('menuitem', { name: /cargas de análisis/i }));
+    await user.click(within(navigate).getByRole('button', { name: /abrir paneles de trabajo/i }));
+    await user.click(within(screen.getByRole('dialog', { name: /paneles de trabajo/i })).getByRole('menuitem', { name: /^vista$/i }));
+    await user.click(within(navigate).getByRole('button', { name: /abrir paneles de trabajo/i }));
+    await user.click(within(screen.getByRole('dialog', { name: /paneles de trabajo/i })).getByRole('menuitem', { name: /^resultados$/i }));
 
     expect(openAnalysisSetup).toHaveBeenCalledOnce();
     expect(openView).toHaveBeenCalledOnce();
@@ -100,7 +109,7 @@ describe('ToolRail mobile action sheets', () => {
     unsubscribes.forEach((unsubscribe) => unsubscribe());
   });
 
-  it('reaches workspace surfaces from Más in K0 without native floating buttons', async () => {
+  it('reaches workspace surfaces from a Paneles sheet in K0 without native floating buttons', async () => {
     const user = userEvent.setup();
     const openView = vi.fn();
     const unsubscribe = onWorkspaceCommand('open-view-settings', openView);
@@ -112,9 +121,11 @@ describe('ToolRail mobile action sheets', () => {
 
     await user.click(screen.getByRole('button', { name: /más herramientas/i }));
     const menu = screen.getByRole('menu', { name: /más herramientas/i });
-    expect(within(menu).getByRole('menuitem', { name: /cargas de análisis/i })).toBeTruthy();
-    expect(within(menu).getByRole('menuitem', { name: /^resultados$/i })).toBeTruthy();
-    await user.click(within(menu).getByRole('menuitem', { name: /^vista$/i }));
+    expect(within(menu).queryByRole('menuitem', { name: /cargas de análisis/i })).toBeNull();
+    expect(within(menu).queryByRole('menuitem', { name: /^resultados$/i })).toBeNull();
+    await user.click(within(menu).getByRole('menuitem', { name: /paneles de trabajo/i }));
+    const panels = screen.getByRole('menu', { name: /paneles de trabajo/i });
+    await user.click(within(panels).getByRole('menuitem', { name: /^vista$/i }));
 
     await waitFor(() => expect(openView).toHaveBeenCalledOnce());
     expect(document.querySelector('.mobile-tool-palette-more')).toBeNull();
