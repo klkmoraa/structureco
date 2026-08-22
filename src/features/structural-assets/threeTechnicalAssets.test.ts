@@ -73,6 +73,20 @@ describe('Three.js technical structural scenes', () => {
     expect(() => validateThreeStructuralGroup(group, 'invalid:test')).toThrow(/MeshStandardMaterial/);
   });
 
+  it('rejects glass-like physical material subclasses with physical texture slots', () => {
+    const group = new THREE.Group();
+    const physicalTexture = new THREE.Texture();
+    const physicalMaterial = new THREE.MeshPhysicalMaterial({ roughness: 1, transmission: 1 });
+    physicalMaterial.transmissionMap = physicalTexture;
+    physicalMaterial.thicknessMap = physicalTexture;
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), physicalMaterial));
+
+    expect(() => validateThreeStructuralGroup(group, 'invalid:physical')).toThrow(/MeshStandardMaterial/);
+
+    physicalTexture.dispose();
+    physicalMaterial.dispose();
+  });
+
   it('uses only opaque matte texture-free standard materials across all forty scenes', () => {
     const textureSlots = [
       'map', 'alphaMap', 'aoMap', 'bumpMap', 'displacementMap', 'emissiveMap', 'envMap',

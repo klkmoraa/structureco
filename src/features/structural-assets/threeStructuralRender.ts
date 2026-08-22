@@ -47,7 +47,9 @@ export const validateThreeStructuralGroup = (group: THREE.Group, assetId: string
     if (object.geometry.type === 'PlaneGeometry') throw new Error(`${assetId} contains a decorative background plane`);
     const materials = Array.isArray(object.material) ? object.material : [object.material];
     for (const material of materials) {
-      if (!(material instanceof THREE.MeshStandardMaterial)) throw new Error(`${assetId} mesh material must be MeshStandardMaterial`);
+      if (!(material instanceof THREE.MeshStandardMaterial) || material.constructor !== THREE.MeshStandardMaterial) {
+        throw new Error(`${assetId} mesh material must be exactly MeshStandardMaterial`);
+      }
       for (const slot of textureSlots) if (material[slot] !== null) throw new Error(`${assetId} mesh material uses ${slot}`);
       if (material.roughness < 0.78) throw new Error(`${assetId} mesh material is not matte`);
       if (material.transparent || material.opacity !== 1 || !material.depthWrite) throw new Error(`${assetId} mesh material is glass-like`);

@@ -131,3 +131,25 @@ Se inspeccionaron nuevamente a escala de miniatura las 20 escenas nuevas en Día
 No se detectaron activos ambiguos. Los apoyos muestran mecanismos inequívocos; las secciones distinguen sólido, perfil I y caja hueca; las conexiones evidencian placa, pasador, base y empalme; los space frames cambian claramente de topología; y las cuatro cargas mantienen su color técnico exacto en ambos temas.
 
 El archivo foráneo `reports/evidence/2026-08-21-clay-mobile-density-phase-5/full-test.log` permanece sin tocar y fuera del staging. No se hizo push.
+
+## Fix round 2/5 · clase exacta de material
+
+La segunda revisión comprobó que `MeshPhysicalMaterial` heredaba de `MeshStandardMaterial` y, por tanto, superaba el antiguo `instanceof`. Una configuración física con `transmission: 1`, `transmissionMap` y `thicknessMap` podía entrar aunque el contrato sólo permite clay mate sin vidrio ni transmisión.
+
+La validación exige ahora que cada material de malla tenga como constructor exacto `THREE.MeshStandardMaterial`. Esto rechaza `MeshPhysicalMaterial` y cualquier otra subclase física antes de evaluar rugosidad, opacidad, emisión o texturas, mientras conserva las 40 escenas válidas existentes.
+
+### TDD RED
+
+```powershell
+npm.cmd test -- src/features/structural-assets/threeTechnicalAssets.test.ts --reporter=verbose
+```
+
+Resultado observado antes de modificar producción: exit 1; la nueva prueba `rejects glass-like physical material subclasses with physical texture slots` esperaba una excepción, pero el validador aceptó el grupo. Totales: 1 FAIL y 5 PASS.
+
+### GREEN y regresión
+
+- `npm.cmd test -- src/features/structural-assets/threeTechnicalAssets.test.ts --reporter=verbose` — PASS, 1 archivo y 6/6 pruebas.
+- `npm.cmd test -- src/features/structural-assets --reporter=verbose` — PASS, 8 archivos y 36/36 pruebas.
+- `npm.cmd run verify:structural-assets` — PASS, 6/6 contratos de PNG/publicación y 80 PNG válidos; 40 Día + 40 Noche, 900×600, con píxeles transparentes reales.
+
+No se tocaron escenas, geometrías, colores, assets generados, solver, dominio, persistencia ni canvas. La modificación ajena ya presente en `.superpowers/sdd/2026-08-22-structureco-total-visual-redesign/progress.md` y el `full-test.log` foráneo permanecen fuera de este cambio. No se hizo push.
