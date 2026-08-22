@@ -44,7 +44,7 @@ type Locale = 'es' | 'en';
 const copy = {
   es: {
     language: 'Idioma', theme: 'Tema', light: 'Claro', dark: 'Oscuro',
-    official: 'Oficial · Brandbook',
+    official: 'Sistema activo',
     eyebrow: 'Biblioteca visual · Fase 5', title: 'Component Lab',
     intro: 'Primitivos y patrones del editor probados de forma aislada. Esta ruta solo existe en desarrollo y no conecta con el motor de cálculo.',
     ready: 'Biblioteca lista para inspección', readyDetail: 'Estados, temas, teclado y vista móvil disponibles en una sola superficie.',
@@ -55,7 +55,7 @@ const copy = {
     foundationRoles: 'Mapa semántico', foundationLegend: 'Datos visuales de demostración. No corresponden a un análisis estructural.',
     foundationCurrent: 'Autoridad activa',
     materialLevels: 'Materia · 6 niveles', materialLevelsNote: 'BASE mantiene el dato técnico plano; INSET, RAISED, FLOATING, SHEET y MODAL declaran una relación física distinta.', materialBase: 'Datos técnicos', materialSheet: 'Entra por borde', materialModal: 'Interrupción', materialSurface: 'Materia',
-    radiusRoles: 'Radios por rol · V-05', radiusRolesNote: 'La escala del Brandbook: dato 0 · control 10 · tarjeta 18 · panel/hoja 24 · modal 28 · pastilla 999. El reparto es por rol, no por tamaño de caja.',
+    radiusRoles: 'Radios por rol', radiusRolesNote: 'Dato 0 · control 10 · tarjeta 18 · panel/hoja 24 · modal 28 · pastilla 999. El reparto responde a la función, no al tamaño de caja.',
     radiusData: 'Dato', radiusControl: 'Control', radiusCard: 'Tarjeta', radiusPanel: 'Panel / hoja', radiusModal: 'Modal', radiusPill: 'Pastilla',
     depthSizes: 'Profundidad por tamaño · V-04', depthSizesNote: 'Las tres piezas valen lo mismo y dicen lo mismo. Sólo cambia cuánto ocupan: la profundidad describe física, no prestigio.',
     depthSmall: 'Pieza pequeña', depthMedium: 'Tarjeta', depthLarge: 'Panel flotante', depthEqual: 'Misma importancia',
@@ -63,7 +63,7 @@ const copy = {
     flatnessTable: 'Extremos por miembro', flatnessMember: 'Miembro', flatnessValue: 'M máx', flatnessUnit: 'kN·m', flatnessField: 'Longitud',
     pressStates: 'Estados del control', pressStatesNote: 'Reposo, hover, foco, pulsado y deshabilitado sobre la misma pieza. Pulsado invierte la luz y no deja sombra exterior; el foco es un anillo aparte del canto.',
     pressRest: 'Reposo', pressHeld: 'Pulsado (mantenido)', pressDisabled: 'Deshabilitado',
-    foundationOfficialSummary: 'La paleta oficial: los tokens vivos de tokens.css y su autoridad, brand/brandbook-clay.html. Sin overrides locales.',
+    foundationOfficialSummary: 'La paleta vigente vive en los tokens de producto. Las referencias históricas no bloquean ajustes de la interfaz.',
     roleApp: 'Fondo de aplicación', roleCanvas: 'Canvas', roleSurface: 'Superficie', roleBrandFill: 'Brand fill', roleBrandStroke: 'Brand stroke', roleBrandInk: 'Brand ink', roleSelection: 'Selección', roleFocus: 'Foco', roleLoad: 'Carga puntual', roleDistributed: 'Carga distribuida', roleAppliedMoment: 'Momento aplicado', roleAxial: 'Axial N', roleShear: 'Cortante V · stroke', roleShearArea: 'Cortante V · tint', roleInfluence: 'Influencia · edge', roleInfluenceArea: 'Influencia · area', roleMoment: 'Momento M', roleSuccess: 'Success', roleWarning: 'Advertencia', roleError: 'Error', roleAula: 'Mentor Aula',
     authorityDemo: 'Autoridad CRI-12C', brandAnatomy: 'Brand fill · stroke · ink', engineeringAnatomy: 'Ingeniería: V · influencia · deformada', interactionAnatomy: 'Focus + selection', themeAnatomy: 'Materia del tema activo', influenceLabel: 'Influencia · siempre dashed', deformedLabel: 'Deformada · siempre continuous',
     controls: 'Controles', controlsNote: 'Acciones, captura de datos y selección compacta.',
@@ -104,7 +104,7 @@ const copy = {
   },
   en: {
     language: 'Language', theme: 'Theme', light: 'Light', dark: 'Dark',
-    official: 'Official · Brandbook',
+    official: 'Active system',
     eyebrow: 'Visual library · Phase 5', title: 'Component Lab',
     intro: 'Primitives and editor patterns tested in isolation. This route only exists in development and never connects to the calculation engine.',
     ready: 'Library ready for inspection', readyDetail: 'States, themes, keyboard behavior, and mobile layouts are available in one surface.',
@@ -115,7 +115,7 @@ const copy = {
     foundationRoles: 'Semantic map', foundationLegend: 'Visual demonstration data. It does not correspond to a structural analysis.',
     foundationCurrent: 'Active authority',
     materialLevels: 'Material · 6 levels', materialLevelsNote: 'BASE keeps technical data flat; INSET, RAISED, FLOATING, SHEET, and MODAL declare distinct physical relationships.', materialBase: 'Technical data', materialSheet: 'Enters from edge', materialModal: 'Interruption', materialSurface: 'Material',
-    radiusRoles: 'Radius by role · V-05', radiusRolesNote: 'The Brandbook scale: data 0 · control 10 · card 18 · panel/sheet 24 · modal 28 · pill 999. Assigned by role, not by box size.',
+    radiusRoles: 'Radius by role', radiusRolesNote: 'Data 0 · control 10 · card 18 · panel/sheet 24 · modal 28 · pill 999. Assigned by function, not by box size.',
     radiusData: 'Data', radiusControl: 'Control', radiusCard: 'Card', radiusPanel: 'Panel / sheet', radiusModal: 'Modal', radiusPill: 'Pill',
     depthSizes: 'Depth by size · V-04', depthSizesNote: 'All three pieces matter equally and say the same thing. Only their size changes: depth describes physics, not prestige.',
     depthSmall: 'Small piece', depthMedium: 'Card', depthLarge: 'Floating panel', depthEqual: 'Same importance',
@@ -123,7 +123,7 @@ const copy = {
     flatnessTable: 'Member extrema', flatnessMember: 'Member', flatnessValue: 'M max', flatnessUnit: 'kN·m', flatnessField: 'Length',
     pressStates: 'Control states', pressStatesNote: 'Rest, hover, focus, pressed, and disabled on the same piece. Pressed inverts the light and keeps no outer shadow; focus is a ring separate from the edge.',
     pressRest: 'Rest', pressHeld: 'Pressed (held)', pressDisabled: 'Disabled',
-    foundationOfficialSummary: 'The official palette: the live tokens in tokens.css and their authority, brand/brandbook-clay.html. No local overrides.',
+    foundationOfficialSummary: 'The live palette belongs to the product tokens. Historical references do not block interface refinements.',
     roleApp: 'Application background', roleCanvas: 'Canvas', roleSurface: 'Surface', roleBrandFill: 'Brand fill', roleBrandStroke: 'Brand stroke', roleBrandInk: 'Brand ink', roleSelection: 'Selection', roleFocus: 'Focus', roleLoad: 'Point load', roleDistributed: 'Distributed load', roleAppliedMoment: 'Applied moment', roleAxial: 'Axial N', roleShear: 'Shear V · stroke', roleShearArea: 'Shear V · tint', roleInfluence: 'Influence · edge', roleInfluenceArea: 'Influence · area', roleMoment: 'Moment M', roleSuccess: 'Success', roleWarning: 'Warning', roleError: 'Error', roleAula: 'Classroom mentor',
     authorityDemo: 'CRI-12C authority', brandAnatomy: 'Brand fill · stroke · ink', engineeringAnatomy: 'Engineering: V · influence · deformed', interactionAnatomy: 'Focus + selection', themeAnatomy: 'Active theme material', influenceLabel: 'Influence · always dashed', deformedLabel: 'Deformed · always continuous',
     controls: 'Controls', controlsNote: 'Actions, data entry, and compact selection.',
@@ -191,9 +191,8 @@ const FOUNDATION_ROLES = [
 const MATERIAL_LEVELS: SurfaceLevel[] = ['flat', 'inset', 'raised', 'floating', 'sheet', 'modal'];
 
 /**
- * CRI-105 · el reparto de radios por rol (V-05), tal y como lo fija el
- * Brandbook. Cada muestra nombra el token, no un literal: si alguien mueve la
- * escala, esta vitrina se mueve con ella.
+ * El reparto de radios por rol pertenece al sistema vivo. Cada muestra nombra
+ * el token, no un literal: si la escala cambia, la vitrina cambia con ella.
  */
 const RADIUS_ROLES = [
   { id: 'data', token: '--sc-radius-data', value: '0' },

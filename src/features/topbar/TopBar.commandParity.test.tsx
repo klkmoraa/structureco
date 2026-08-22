@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultProject } from '../../data/defaultProject';
@@ -179,16 +179,22 @@ describe('TopBar rendered live: shares real state with the Palette, not a parall
     unsubscribe();
   });
 
-  it('Undo starts disabled on both the TopBar button and the Palette entry, sourced from the same project store', () => {
+  it('Undo starts disabled in the TopBar utilities and the Palette entry, sourced from the same project store', async () => {
+    const user = userEvent.setup();
     render(<TopBarHarness>
       <TopBar />
       <CommandPalette open onClose={() => {}} dispatchLayers={vi.fn()} />
     </TopBarHarness>);
 
-    const topBarUndo = screen.getByRole('button', { name: /deshacer/i }) as HTMLButtonElement;
+    await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
+    const topBarUndo = within(document.querySelector('.topbar-history-cluster') as HTMLElement)
+      .getByRole('button', { name: /deshacer/i }) as HTMLButtonElement;
+    const utilityUndo = within(screen.getByRole('dialog', { name: 'Herramientas del espacio de trabajo' }))
+      .getByRole('button', { name: /deshacer/i }) as HTMLButtonElement;
     const paletteUndo = screen.getByRole('option', { name: /deshacer/i });
 
     expect(topBarUndo.disabled).toBe(true);
+    expect(utilityUndo.disabled).toBe(true);
     expect(paletteUndo.getAttribute('aria-disabled')).toBe('true');
   });
 });

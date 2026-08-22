@@ -1,0 +1,106 @@
+{
+  "phase": "clay-topbar-phase-6",
+  "scenarios": [
+    {
+      "id": "desktop-day",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "X2",
+      "metrics": {
+        "shell": "X2",
+        "theme": "light",
+        "topbarHeight": 72,
+        "overflow": 0,
+        "analyzeForeground": "rgb(255, 255, 255)",
+        "analyzeBackdrop": "none",
+        "panelBounds": null,
+        "visibleProjectTrigger": true
+      },
+      "screenshot": "desktop-day.png",
+      "consoleErrors": [],
+      "failures": []
+    },
+    {
+      "id": "tablet-night",
+      "viewport": {
+        "width": 1100,
+        "height": 768
+      },
+      "theme": "dark",
+      "shell": "M1",
+      "metrics": {
+        "shell": "M1",
+        "theme": "dark",
+        "topbarHeight": 68,
+        "overflow": 0,
+        "analyzeForeground": "rgb(255, 255, 255)",
+        "analyzeBackdrop": "none",
+        "panelBounds": null,
+        "visibleProjectTrigger": true
+      },
+      "screenshot": "tablet-night.png",
+      "consoleErrors": [],
+      "failures": []
+    },
+    {
+      "id": "mobile-day-project",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "shell": "K0",
+      "panel": "project",
+      "metrics": {
+        "shell": "K0",
+        "theme": "light",
+        "topbarHeight": 58,
+        "overflow": 0,
+        "analyzeForeground": "rgb(255, 255, 255)",
+        "analyzeBackdrop": "none",
+        "panelBounds": {
+          "left": 8,
+          "right": 382,
+          "top": 472.5,
+          "bottom": 836
+        },
+        "visibleProjectTrigger": true
+      },
+      "screenshot": "mobile-day-project.png",
+      "consoleErrors": [],
+      "failures": []
+    },
+    {
+      "id": "mobile-night-utilities",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "shell": "K0",
+      "panel": "utilities",
+      "metrics": {
+        "shell": "K0",
+        "theme": "dark",
+        "topbarHeight": 58,
+        "overflow": 0,
+        "analyzeForeground": "rgb(255, 255, 255)",
+        "analyzeBackdrop": "none",
+        "panelBounds": {
+          "left": 8,
+          "right": 382,
+          "top": 316,
+          "bottom": 836
+        },
+        "visibleProjectTrigger": true
+      },
+      "screenshot": "mobile-night-utilities.png",
+      "consoleErrors": [],
+      "failures": []
+    }
+  ],
+  "failures": []
+}

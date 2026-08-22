@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type Dispatch, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { Search } from 'lucide-react';
+import { Command, Search, X } from 'lucide-react';
 import { useI18n } from '../../i18n/useI18n';
 import type { TranslationKey } from '../../i18n/catalogs';
 import { useProject } from '../../store/ProjectContext';
@@ -149,9 +149,18 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
     role="presentation"
     onPointerDown={(event) => {
     if (event.target === event.currentTarget) close();
-  }}>
+    }}>
     <div className="command-palette" data-workspace-surface="palette" role="dialog" aria-labelledby={titleId}>
-      <h2 id={titleId} className="command-palette-title">{t('palette.title')}</h2>
+      <header className="command-palette-head">
+        <span className="command-palette-head__icon" aria-hidden="true"><Command size={17} /></span>
+        <div>
+          <span>{t('palette.openShort')}</span>
+          <h2 id={titleId} className="command-palette-title">{t('palette.title')}</h2>
+        </div>
+        <button type="button" className="command-palette-close" aria-label={t('toolbar.close')} onClick={close}>
+          <X size={16} />
+        </button>
+      </header>
       <div className="command-palette-search">
         <Search size={17} aria-hidden="true" />
         <input
@@ -170,7 +179,7 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={onInputKeyDown}
         />
-        <kbd>Esc</kbd>
+        <kbd aria-hidden="true">Esc</kbd>
       </div>
 
       <div className="command-palette-list" id={listId} role="listbox" aria-label={t('palette.title')} ref={listRef}>

@@ -87,14 +87,19 @@ type ImportStage = 'select' | 'inspect' | 'content' | 'conflicts' | 'confirm' | 
 
 type Translate = (key: TranslationKey, variables?: Record<string, string | number>) => string;
 
-const stages: Array<{ id: ImportStage; labelKey: TranslationKey }> = [
-  { id: 'select', labelKey: 'importCenter.stageFile' },
-  { id: 'inspect', labelKey: 'importCenter.stageInspection' },
-  { id: 'content', labelKey: 'importCenter.stageContent' },
-  { id: 'conflicts', labelKey: 'importCenter.stageDestination' },
-  { id: 'confirm', labelKey: 'importCenter.stageConfirm' },
-  { id: 'result', labelKey: 'importCenter.stageResult' },
+type ImportPhase = 'review' | 'decide' | 'open';
+
+const phases: Array<{ id: ImportPhase; labelKey: TranslationKey }> = [
+  { id: 'review', labelKey: 'importCenter.phaseReview' },
+  { id: 'decide', labelKey: 'importCenter.phaseDecide' },
+  { id: 'open', labelKey: 'importCenter.phaseOpen' },
 ];
+
+const phaseForStage = (stage: ImportStage): ImportPhase => {
+  if (stage === 'result') return 'open';
+  if (stage === 'conflicts' || stage === 'confirm') return 'decide';
+  return 'review';
+};
 
 const defaultContents = (project: ProjectModel, t: Translate): ImportContentOption[] => [
   {
@@ -336,7 +341,8 @@ export const ImportCenterDialog = ({
     }
   };
 
-  const activeIndex = stages.findIndex((item) => item.id === stage);
+  const activePhase = phaseForStage(stage);
+  const activeIndex = phases.findIndex((item) => item.id === activePhase);
   const FileIcon = getFileIcon(inspection?.kind ?? (file ? classifyFile(file) : undefined));
   const onModeKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
     const options = [...(dialogRef.current?.querySelectorAll<HTMLButtonElement>('.import-mode-options [role="radio"]:not(:disabled)') ?? [])];
@@ -357,7 +363,7 @@ export const ImportCenterDialog = ({
 
   return (
     <div className="import-center-backdrop" onPointerDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <div ref={dialogRef} className="import-center-dialog" role="dialog" aria-modal="true" aria-labelledby="import-center-title" aria-describedby="import-center-subtitle">
+      <div ref={dialogRef} className="import-center-dialog" data-import-layout="review-decide-open" data-import-stage={stage} role="dialog" aria-modal="true" aria-labelledby="import-center-title" aria-describedby="import-center-subtitle">
         <header className="import-center-header">
           <div>
             <p className="import-center-eyebrow">{t('importCenter.eyebrow')}</p>
@@ -368,7 +374,7 @@ export const ImportCenterDialog = ({
         </header>
 
         <nav className="import-center-steps" aria-label={t('importCenter.progress')}>
-          {stages.map((item, index) => (
+          {phases.map((item, index) => (
             <span key={item.id} className={index === activeIndex ? 'active' : index < activeIndex ? 'complete' : ''} aria-current={index === activeIndex ? 'step' : undefined}>
               <i>{index < activeIndex ? <Check size={12} /> : index + 1}</i><em>{t(item.labelKey)}</em>
             </span>
@@ -378,7 +384,7 @@ export const ImportCenterDialog = ({
         <div className="import-center-body">
           {stage === 'select' ? (
             <section className="import-center-section" aria-labelledby="import-select-title">
-              <div className="import-section-heading"><p>{t('importCenter.step', { step: 1 })}</p><h3 id="import-select-title">{t('importCenter.selectTitle')}</h3><span>{t('importCenter.selectFormats')}</span></div>
+              <div className="import-section-heading"><p>{t('importCenter.phaseReview')}</p><h3 id="import-select-title">{t('importCenter.selectTitle')}</h3><span>{t('importCenter.selectFormats')}</span></div>
               <div
                 className={`import-dropzone ${dragging ? 'dragging' : ''}`}
                 onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
@@ -427,7 +433,7 @@ export const ImportCenterDialog = ({
                 <div><strong>{file.name}</strong><span>{inspection.sourceLabel} · {formatBytes(file.size)}{inspection.version ? ` · ${t('importCenter.schema', { version: inspection.version })}` : ''}</span></div>
                 <span className={`import-confidence ${inspection.confidence >= 80 ? 'high' : inspection.confidence > 0 ? 'medium' : 'unknown'}`}>{inspection.confidence > 0 ? t('importCenter.confidence', { confidence: inspection.confidence }) : t('importCenter.reviewPending')}</span>
               </div>
-              <div className="import-section-heading"><p>{t('importCenter.step', { step: 3 })}</p><h3 id="import-content-title" tabIndex={-1} data-import-stage-focus="content">{t('importCenter.contentTitle')}</h3><span>{inspection.summary}</span></div>
+              <div className="import-section-heading"><p>{t('importCenter.phaseReview')}</p><h3 id="import-content-title" tabIndex={-1} data-import-stage-focus="content">{t('importCenter.contentTitle')}</h3><span>{inspection.summary}</span></div>
               {inspection.statistics.length ? <dl className="import-stat-grid">{inspection.statistics.map((stat) => <div key={stat.label}><dt>{stat.label}</dt><dd>{stat.value}</dd></div>)}</dl> : null}
               {inspection.warnings.length ? <div className="import-warning-list" role="status">{inspection.warnings.map((warning) => <p key={warning}><AlertTriangle size={16} />{warning}</p>)}</div> : null}
               <fieldset className="import-content-list">
@@ -454,7 +460,7 @@ export const ImportCenterDialog = ({
 
           {stage === 'conflicts' && inspection ? (
             <section className="import-center-section" aria-labelledby="import-destination-title">
-              <div className="import-section-heading"><p>{t('importCenter.step', { step: 4 })}</p><h3 id="import-destination-title" tabIndex={-1} data-import-stage-focus="conflicts">{t('importCenter.destinationTitle')}</h3><span>{t('importCenter.currentProject', { name: currentProjectName })}</span></div>
+              <div className="import-section-heading"><p>{t('importCenter.phaseDecide')}</p><h3 id="import-destination-title" tabIndex={-1} data-import-stage-focus="conflicts">{t('importCenter.destinationTitle')}</h3><span>{t('importCenter.currentProject', { name: currentProjectName })}</span></div>
               <div className="import-mode-options" role="radiogroup" aria-label={t('importCenter.destinationLabel')}>
                 <button type="button" role="radio" aria-checked={mode === 'new'} tabIndex={mode === 'new' ? 0 : -1} data-import-mode="new" className={mode === 'new' ? 'selected' : ''} onClick={() => setMode('new')} onKeyDown={onModeKeyDown}>
                   <span className="import-radio" /><span><strong>{t('importCenter.newModeTitle')}</strong><small>{t('importCenter.newModeDescription')}</small></span><b>{t('importCenter.recommended')}</b>
@@ -479,7 +485,7 @@ export const ImportCenterDialog = ({
 
           {stage === 'confirm' && file && inspection ? (
             <section className="import-center-section" aria-labelledby="import-confirm-title">
-              <div className="import-section-heading"><p>{t('importCenter.step', { step: 5 })}</p><h3 id="import-confirm-title" tabIndex={-1} data-import-stage-focus="confirm">{t('importCenter.confirmTitle')}</h3><span>{t('importCenter.confirmDescription')}</span></div>
+              <div className="import-section-heading"><p>{t('importCenter.phaseDecide')}</p><h3 id="import-confirm-title" tabIndex={-1} data-import-stage-focus="confirm">{t('importCenter.confirmTitle')}</h3><span>{t('importCenter.confirmDescription')}</span></div>
               <div className="import-confirm-card">
                 <div><FileIcon size={24} /><span><strong>{file.name}</strong><small>{inspection.sourceLabel} · {formatBytes(file.size)}</small></span></div>
                 <dl>
@@ -495,7 +501,7 @@ export const ImportCenterDialog = ({
           {stage === 'result' && outcome ? (
             <section className="import-center-result" aria-labelledby="import-result-title" aria-live="polite">
               <span className="import-result-icon"><CheckCircle2 size={32} /></span>
-              <p>{t('importCenter.step', { step: 6 })}</p>
+              <p>{t('importCenter.phaseOpen')}</p>
               <h3 id="import-result-title" tabIndex={-1} data-import-stage-focus="result">{outcome.title ?? t('importCenter.completedTitle')}</h3>
               <span>{outcome.message ?? t('importCenter.completedBody')}</span>
               {outcome.statistics?.length ? <dl className="import-stat-grid">{outcome.statistics.map((stat) => <div key={stat.label}><dt>{stat.label}</dt><dd>{stat.value}</dd></div>)}</dl> : null}

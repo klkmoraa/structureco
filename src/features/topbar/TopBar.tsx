@@ -20,6 +20,7 @@ import {
   Redo2,
   Save,
   Sheet,
+  SlidersHorizontal,
   Undo2,
   Wrench,
 } from 'lucide-react';
@@ -41,6 +42,7 @@ import { resolveTopBarCommand, type TopBarCommandContext } from '../workspace/co
 import { DEFAULT_PDELTA_CONFIG } from '../../engine/pDelta';
 import type { TranslationKey } from '../../i18n/catalogs';
 import type { PDeltaConfig } from '../../types';
+import './topbar.css';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
 
@@ -100,6 +102,8 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
       transition: { type: 'spring' as const, stiffness: 400, damping: 30 },
     };
   const [showProjectMenu, setShowProjectMenu] = useState(false);
+  const [showProjectExamples, setShowProjectExamples] = useState(false);
+  const [showAnalysisMenu, setShowAnalysisMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [importCenterOpen, setImportCenterOpen] = useState(false);
@@ -110,9 +114,10 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
   const topbarRef = useRef<HTMLElement>(null);
   const projectNameRef = useRef<HTMLInputElement>(null);
   const projectMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const analysisMenuButtonRef = useRef<HTMLButtonElement>(null);
   const exportMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
-  const menuOpen = showProjectMenu || showExportMenu || showMobileMenu;
+  const menuOpen = showProjectMenu || showAnalysisMenu || showExportMenu || showMobileMenu;
 
   useEffect(() => {
     const syncConnectivity = () => setOnline(navigator.onLine !== false);
@@ -126,6 +131,8 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
 
   const closeMenus = () => {
     setShowProjectMenu(false);
+    setShowProjectExamples(false);
+    setShowAnalysisMenu(false);
     setShowExportMenu(false);
     setShowMobileMenu(false);
   };
@@ -134,11 +141,17 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
     if (!menuOpen) return undefined;
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target instanceof Element ? event.target : null;
-      if (!target?.closest('.project-menu, .project-menu-toggle, .export-wrap, .mobile-actions-wrap')) closeMenus();
+      if (!target?.closest('.topbar-project-panel, .topbar-project-trigger, .topbar-analysis-panel, .topbar-analysis-trigger, .export-wrap, .mobile-actions-wrap')) closeMenus();
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
-      const trigger = showProjectMenu ? projectMenuButtonRef.current : showExportMenu ? exportMenuButtonRef.current : mobileMenuButtonRef.current;
+      const trigger = showProjectMenu
+        ? projectMenuButtonRef.current
+        : showAnalysisMenu
+          ? analysisMenuButtonRef.current
+          : showExportMenu
+            ? exportMenuButtonRef.current
+            : mobileMenuButtonRef.current;
       closeMenus();
       window.requestAnimationFrame(() => trigger?.focus());
     };
@@ -148,14 +161,22 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
       document.removeEventListener('pointerdown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [menuOpen, showExportMenu, showMobileMenu, showProjectMenu]);
+  }, [menuOpen, showAnalysisMenu, showExportMenu, showMobileMenu, showProjectMenu]);
 
   useEffect(() => {
-    const selector = showProjectMenu ? '.project-menu button:not(:disabled)' : showExportMenu ? '.export-menu button:not(:disabled)' : showMobileMenu ? '.mobile-actions-menu button:not(:disabled)' : null;
+    const selector = showProjectMenu
+      ? '.topbar-project-panel input:not(:disabled)'
+      : showAnalysisMenu
+        ? '.topbar-analysis-panel select:not(:disabled)'
+        : showExportMenu
+          ? '.export-menu button:not(:disabled)'
+          : showMobileMenu
+            ? '.mobile-actions-menu button:not(:disabled)'
+            : null;
     if (!selector) return undefined;
     const handle = window.requestAnimationFrame(() => topbarRef.current?.querySelector<HTMLButtonElement>(selector)?.focus());
     return () => window.cancelAnimationFrame(handle);
-  }, [showExportMenu, showMobileMenu, showProjectMenu]);
+  }, [showAnalysisMenu, showExportMenu, showMobileMenu, showProjectMenu]);
 
   const onMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
@@ -168,18 +189,29 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
   };
 
   const toggleProjectMenu = () => {
-    setShowProjectMenu((open) => !open);
+    const nextOpen = !showProjectMenu;
+    setShowProjectMenu(nextOpen);
+    if (!nextOpen) setShowProjectExamples(false);
+    setShowAnalysisMenu(false);
+    setShowExportMenu(false);
+    setShowMobileMenu(false);
+  };
+  const toggleAnalysisMenu = () => {
+    setShowAnalysisMenu((open) => !open);
+    setShowProjectMenu(false);
     setShowExportMenu(false);
     setShowMobileMenu(false);
   };
   const toggleExportMenu = () => {
     setShowExportMenu((open) => !open);
     setShowProjectMenu(false);
+    setShowAnalysisMenu(false);
     setShowMobileMenu(false);
   };
   const toggleMobileMenu = () => {
     setShowMobileMenu((open) => !open);
     setShowProjectMenu(false);
+    setShowAnalysisMenu(false);
     setShowExportMenu(false);
   };
 
@@ -335,251 +367,276 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
   const exportSvgCommand = command('export:svg');
   const exportPngCommand = command('export:png');
   const exportPrintCommand = command('export:print');
+  const analysisOrderLabel = t(project.settings.analysisMode === 'p-delta' ? 'analysis.orderPDelta' : 'analysis.orderFirst');
+  const analysisModeLabel = t(project.settings.calculationMode === 'classroom' ? 'analysis.modeClassroom' : 'analysis.modeComplete');
 
   return (
-    <header ref={topbarRef} className="topbar">
-      <div className="brand-block topbar-zone topbar-document-zone" data-topbar-zone="document" data-topbar-cluster="document">
+    <header ref={topbarRef} className="topbar topbar--atelier" data-topbar-layout="command-island">
+      <div className="topbar-zone topbar-document-zone topbar-project-zone" data-topbar-zone="document" data-topbar-role="project">
         <button className="brand-mark brand-home-button" type="button" aria-label={t('navigation.home')} onClick={onOpenHome}>
           <BrandMark size={46} />
         </button>
-        <div className="top-divider" />
-        <div className="document-identity">
-          <span className="brand-name">structureCo</span>
-          <div className="project-name">
-            <input
-              ref={projectNameRef}
-              aria-label={t('project.name')}
-              title={projectNameDraft}
-              value={projectNameDraft}
-              onChange={(event) => setProjectNameDraft(event.target.value)}
-              onBlur={commitProjectName}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') projectNameRef.current?.blur();
-                if (event.key === 'Escape') {
-                  setProjectNameDraft(project.name);
-                  projectNameRef.current?.blur();
-                }
-              }}
-            />
-            <button
-              ref={projectMenuButtonRef}
-              className="project-menu-toggle"
-              type="button"
-              aria-label={t('project.openExamples')}
-              aria-expanded={showProjectMenu}
-              aria-haspopup="menu"
-              onClick={toggleProjectMenu}
-            >
-              <ChevronDown size={15} />
-            </button>
-          </div>
-        </div>
+        <button
+          ref={projectMenuButtonRef}
+          className="topbar-project-trigger"
+          type="button"
+          aria-label={t('topbar.currentProject')}
+          aria-expanded={showProjectMenu}
+          aria-haspopup="dialog"
+          onClick={toggleProjectMenu}
+        >
+          <strong title={project.name}>{project.name}</strong>
+          <ChevronDown size={16} aria-hidden="true" />
+        </button>
         <AnimatePresence>
           {showProjectMenu ? (
-            <m.div {...popoverMotionProps} className="popover project-menu" role="menu" aria-label={t('project.openExamples')} onKeyDown={onMenuKeyDown}>
-              <button role="menuitem" onClick={() => { const next = createBlankProject(); replaceProject({ ...next, settings: { ...next.settings, language } }); setShowProjectMenu(false); }}>
-                <FilePlus2 size={17} /> {t('project.new')}
+            <m.div {...popoverMotionProps} className="popover topbar-project-panel" role="dialog" aria-label={t('topbar.currentProject')} data-project-hub="true">
+              <header className="topbar-project-hub-heading">
+                <span>{t('topbar.projectHubEyebrow')}</span>
+                <strong>{t('topbar.projectHubTitle')}</strong>
+                <small>{t('topbar.projectHubDescription')}</small>
+              </header>
+              <label className="topbar-panel-field topbar-project-name-field">
+                <span>{t('project.name')}</span>
+                <input
+                  ref={projectNameRef}
+                  aria-label={t('project.name')}
+                  title={projectNameDraft}
+                  value={projectNameDraft}
+                  onChange={(event) => setProjectNameDraft(event.target.value)}
+                  onBlur={commitProjectName}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') projectNameRef.current?.blur();
+                    if (event.key === 'Escape') {
+                      setProjectNameDraft(project.name);
+                      closeMenus();
+                      window.requestAnimationFrame(() => projectMenuButtonRef.current?.focus());
+                    }
+                  }}
+                />
+              </label>
+              <div className="topbar-panel-actions">
+              <button aria-label={t('project.new')} onClick={() => { const next = createBlankProject(); replaceProject({ ...next, settings: { ...next.settings, language } }); setShowProjectMenu(false); }}>
+                <FilePlus2 size={19} />
+                <span className="menu-copy"><strong>{t('project.new')}</strong><small>{t('topbar.projectHubNewDescription')}</small></span>
               </button>
+              <button aria-label={t('project.importJson')} onClick={() => { setImportCenterOpen(true); setShowProjectMenu(false); }}>
+                <FolderOpen size={19} />
+                <span className="menu-copy"><strong>{t('project.importJson')}</strong><small>{t('topbar.projectHubImportDescription')}</small></span>
+              </button>
+              <button
+                className="topbar-project-examples-trigger"
+                aria-expanded={showProjectExamples}
+                onClick={() => setShowProjectExamples((open) => !open)}
+              ><ChevronDown size={17} aria-hidden="true" /> {t('topbar.projectExamples')}</button>
+              </div>
+              {showProjectExamples ? <div className="topbar-project-examples">
               {exampleProjects.map((example) => {
                 const copy = presentExample(example.name, example.description, t);
-                return <button role="menuitem" key={example.name} onClick={() => { const next = example.build(); replaceProject({ ...next, settings: { ...next.settings, language } }); setShowProjectMenu(false); }}>
+                return <button key={example.name} onClick={() => { const next = example.build(); replaceProject({ ...next, settings: { ...next.settings, language } }); setShowProjectExamples(false); setShowProjectMenu(false); }}>
                   <span className="menu-copy"><strong>{copy.name}</strong><small>{copy.description}</small></span>
                 </button>;
               })}
-              <button role="menuitem" onClick={() => { setImportCenterOpen(true); setShowProjectMenu(false); }}><FolderOpen size={17} /> {t('project.importJson')}</button>
+              </div> : null}
+              <div className="topbar-project-compact-utilities" aria-label={t('topbar.utilities')}>
+                <span>{t('topbar.utilities')}</span>
+                <div>
+                  <button onClick={() => { datasheetCommand.run(); setShowProjectMenu(false); }}><Sheet size={16} /> {datasheetCommand.label}</button>
+                  {onOpenSpace3D ? <button onClick={() => { onOpenSpace3D(); setShowProjectMenu(false); }}><Box size={16} /> {t('space3d.open')}</button> : null}
+                  <button onClick={() => { modelDoctorCommand.run(); setShowProjectMenu(false); }}><Wrench size={16} /> {modelDoctorCommand.label}</button>
+                  <button onClick={() => { themeCommand.run(); setShowProjectMenu(false); }}><ThemeIcon size={16} /> {themeCommand.label}</button>
+                </div>
+              </div>
             </m.div>
           ) : null}
         </AnimatePresence>
       </div>
 
-      <div className="top-actions topbar-zone topbar-actions-zone" data-topbar-zone="actions">
-        <div className="topbar-context-zone" data-topbar-cluster="context" aria-label={t('analysis.caseOrCombination')}>
-          <label className="topbar-context-control topbar-context-control--scenario" data-context-control="scenario">
-            <span>{t('analysis.caseOrCombination')}</span>
-            <select
-              className="compact-select combination-select"
-              aria-label={t('analysis.caseOrCombination')}
-              value={selectedCombinationId}
-              onChange={(event) => setSelectedCombinationId(event.target.value)}
-            >
-              <option value="">{t('analysis.activeCases')}</option>
-              {project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}
-            </select>
-          </label>
-          <label className="topbar-context-control" data-context-control="mode">
-            <span>{t('analysis.mode')}</span>
-            <select
-              className="compact-select mode-select"
-              aria-label={t('analysis.mode')}
-              value={project.settings.calculationMode ?? 'complete'}
-              onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } }))}
-            >
-              <option value="classroom">{t('analysis.modeClassroom')}</option>
-              <option value="complete">{t('analysis.modeComplete')}</option>
-            </select>
-          </label>
-          <label className="topbar-context-control" data-context-control="order">
-            <span>{t('analysis.order')}</span>
-            <select
-              className="compact-select analysis-order-select"
-              aria-label={t('analysis.order')}
-              value={project.settings.analysisMode ?? 'first-order'}
-              onChange={(event) => updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: event.target.value as 'first-order' | 'p-delta' }))}
-            >
-              <option value="first-order">{t('analysis.orderFirst')}</option>
-              <option value="p-delta">{t('analysis.orderPDelta')}</option>
-            </select>
-          </label>
-          <label className="topbar-context-control topbar-context-control--units" data-context-control="units">
-            <span>{t('units.label')}</span>
-            <select
-              className="compact-select units-select"
-              aria-label={t('units.label')}
-              value={project.settings.units}
-              onChange={(event) => updateProjectView((draft) => ({
-                ...draft,
-                settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units },
-              }))}
-            >
-              <option value="kN-m">kN · m</option>
-              <option value="N-mm">N · mm</option>
-              <option value="kgf-m">kgf · m</option>
-              <option value="kip-ft">kip · ft</option>
-            </select>
-          </label>
-        </div>
-        <div className="topbar-command-cluster" data-topbar-cluster="actions">
-        <IconButton
-          variant="secondary"
-          className="icon-button datasheet-launcher"
-          label={datasheetCommand.label}
-          title={datasheetCommand.hint}
-          onClick={datasheetCommand.run}
-        ><Sheet size={19} /></IconButton>
-        {onOpenSpace3D ? <IconButton
-          variant="secondary"
-          className="icon-button space3d-open-button"
-          label={t('space3d.open')}
-          title={t('space3d.open')}
-          onClick={onOpenSpace3D}
-        ><Box size={19} /></IconButton> : null}
-        <div className="history-controls" aria-label={t('history.label')}>
-          <IconButton variant="secondary" className="icon-button" label={undoCommand.label} onClick={undoCommand.run} disabled={undoCommand.disabled} title={undoCommand.label}><Undo2 size={19} /></IconButton>
-          <IconButton variant="secondary" className="icon-button" label={redoCommand.label} onClick={redoCommand.run} disabled={redoCommand.disabled} title={redoCommand.label}><Redo2 size={19} /></IconButton>
-        </div>
-        <div className="export-wrap">
-          <IconButton variant="secondary" ref={exportMenuButtonRef} className="icon-button" label={t('export.label')} title={t('export.label')} aria-expanded={showExportMenu} aria-haspopup="menu" onClick={toggleExportMenu}><Download size={19} /></IconButton>
+      <div className="topbar-zone topbar-actions-zone" data-topbar-zone="actions">
+        <div className="topbar-analysis-wrap" data-topbar-role="analysis">
+          <button
+            ref={analysisMenuButtonRef}
+            className="topbar-analysis-trigger"
+            type="button"
+            aria-label={t('topbar.analysisSettings')}
+            aria-expanded={showAnalysisMenu}
+            aria-haspopup="dialog"
+            onClick={toggleAnalysisMenu}
+          >
+            <SlidersHorizontal size={17} aria-hidden="true" />
+            <span><strong>{scenarioName}</strong><small>{analysisModeLabel} · {analysisOrderLabel} · {project.settings.units}</small></span>
+            <ChevronDown size={15} aria-hidden="true" />
+          </button>
           <AnimatePresence>
-            {showExportMenu ? (
-              <m.div {...popoverMotionProps} className="popover export-menu" role="menu" aria-label={t('export.label')} onKeyDown={onMenuKeyDown}>
-                <button role="menuitem" onClick={() => { exportJsonCommand.run(); setShowExportMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
-                <button role="menuitem" onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
-                <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
-                <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
-                <button role="menuitem" onClick={() => { exportSvgCommand.run(); setShowExportMenu(false); }}>{exportSvgCommand.label}</button>
-                <button role="menuitem" onClick={() => { exportPngCommand.run(); setShowExportMenu(false); }}>{exportPngCommand.label}</button>
-                <button role="menuitem" onClick={() => { exportPrintCommand.run(); setShowExportMenu(false); }}>{exportPrintCommand.label}</button>
-              </m.div>
-            ) : null}
+            {showAnalysisMenu ? <m.div {...popoverMotionProps} className="popover topbar-analysis-panel" role="dialog" aria-label={t('topbar.analysisSettings')}>
+              <p>{t('topbar.analysisSummary')}</p>
+              <label className="topbar-panel-field">
+                <span>{t('analysis.caseOrCombination')}</span>
+                <select
+                  aria-label={t('analysis.caseOrCombination')}
+                  value={selectedCombinationId}
+                  onChange={(event) => setSelectedCombinationId(event.target.value)}
+                >
+                  <option value="">{t('analysis.activeCases')}</option>
+                  {project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}
+                </select>
+              </label>
+              <label className="topbar-panel-field">
+                <span>{t('analysis.mode')}</span>
+                <select
+                  aria-label={t('analysis.mode')}
+                  value={project.settings.calculationMode ?? 'complete'}
+                  onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } }))}
+                >
+                  <option value="classroom">{t('analysis.modeClassroom')}</option>
+                  <option value="complete">{t('analysis.modeComplete')}</option>
+                </select>
+              </label>
+              <label className="topbar-panel-field">
+                <span>{t('analysis.order')}</span>
+                <select
+                  aria-label={t('analysis.order')}
+                  value={project.settings.analysisMode ?? 'first-order'}
+                  onChange={(event) => updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: event.target.value as 'first-order' | 'p-delta' }))}
+                >
+                  <option value="first-order">{t('analysis.orderFirst')}</option>
+                  <option value="p-delta">{t('analysis.orderPDelta')}</option>
+                </select>
+              </label>
+              <label className="topbar-panel-field">
+                <span>{t('units.label')}</span>
+                <select
+                  aria-label={t('units.label')}
+                  value={project.settings.units}
+                  onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units } }))}
+                >
+                  <option value="kN-m">kN · m</option>
+                  <option value="N-mm">N · mm</option>
+                  <option value="kgf-m">kgf · m</option>
+                  <option value="kip-ft">kip · ft</option>
+                </select>
+              </label>
+              {(project.settings.analysisMode ?? 'first-order') === 'p-delta' ? <PDeltaAdvancedConfig /> : null}
+            </m.div> : null}
           </AnimatePresence>
         </div>
-        <div className="mobile-actions-wrap utility-actions-wrap">
-          <IconButton variant="secondary" ref={mobileMenuButtonRef} className="icon-button mobile-more-button utility-more-button" label={t('actions.more')} aria-expanded={showMobileMenu} aria-haspopup="dialog" onClick={toggleMobileMenu}><MoreHorizontal size={20} /></IconButton>
-          <AnimatePresence>
-            {showMobileMenu ? (
-              <m.div {...popoverMotionProps} className="popover mobile-actions-menu utility-actions-menu" role="dialog" aria-label={t('actions.more')}>
-                <div className="mobile-history-actions overflow-history" role="group" aria-label={t('history.label')}>
-                  <button onClick={undoCommand.run} disabled={undoCommand.disabled}><Undo2 size={17} /> {undoCommand.label}</button>
-                  <button onClick={redoCommand.run} disabled={redoCommand.disabled}><Redo2 size={17} /> {redoCommand.label}</button>
-                </div>
-
-                <div className="menu-section">
-                  <div className="menu-section-title">{t('menu.sectionAnalysis')}</div>
-                  <button onClick={() => { mobileMenuButtonRef.current?.focus({ preventScroll: true }); setShowMobileMenu(false); modelDoctorCommand.run(); }}><Wrench size={17} /> {modelDoctorCommand.label}</button>
-                  {/* Datasheet degrada a icono-only y luego a este desbordamiento antes
-                      de tocar Estado/Doctor (orden de degradación · CRI-95). */}
-                  <button className="overflow-datasheet" onClick={() => { datasheetCommand.run(); setShowMobileMenu(false); }}><Sheet size={17} /> {datasheetCommand.label}</button>
-                  <label className="mobile-menu-field overflow-case"><span>{t('analysis.caseOrCombination')}</span><select value={selectedCombinationId} onChange={(event) => setSelectedCombinationId(event.target.value)}><option value="">{t('analysis.activeCases')}</option>{project.combinations.map((combination) => <option key={combination.id} value={combination.id}>{combination.name}</option>)}</select></label>
-                  <label className="mobile-menu-field overflow-mode"><span>{t('analysis.mode')}</span><select value={project.settings.calculationMode ?? 'complete'} onChange={(event) => { updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, calculationMode: event.target.value as 'complete' | 'classroom' } })); setShowMobileMenu(false); }}><option value="classroom">{t('analysis.modeClassroom')}</option><option value="complete">{t('analysis.modeComplete')}</option></select></label>
-                  <label className="mobile-menu-field overflow-analysis-order"><span>{t('analysis.order')}</span><select value={project.settings.analysisMode ?? 'first-order'} onChange={(event) => { updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: event.target.value as 'first-order' | 'p-delta' })); setShowMobileMenu(false); }}><option value="first-order">{t('analysis.orderFirst')}</option><option value="p-delta">{t('analysis.orderPDelta')}</option></select></label>
-                  {(project.settings.analysisMode ?? 'first-order') === 'p-delta' ? <PDeltaAdvancedConfig /> : null}
-                </div>
-
-                <div className="menu-section">
-                  <div className="menu-section-title">{t('menu.sectionPreferences')}</div>
-                  <label className="mobile-menu-field overflow-units"><span>{t('units.label')}</span><select value={project.settings.units} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units } }))}><option value="kN-m">kN · m</option><option value="N-mm">N · mm</option><option value="kgf-m">kgf · m</option><option value="kip-ft">kip · ft</option></select></label>
-                  <label className="mobile-menu-field"><span>{t('language.label')}</span><select value={language} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, language: event.target.value as 'es' | 'en' } }))}><option value="es">{t('language.es')}</option><option value="en">{t('language.en')}</option></select></label>
-                  <button onClick={() => { themeCommand.run(); setShowMobileMenu(false); }}><ThemeIcon size={17} /> {themeCommand.label}</button>
-                </div>
-
-                {layoutActions ? <div className="menu-section overflow-layout-actions" role="group" aria-label={t('shell.viewLayout')}>
-                  <div className="menu-section-title">{t('menu.sectionViews')}</div>
-                  {onOpenSpace3D ? <button onClick={() => { onOpenSpace3D(); setShowMobileMenu(false); }}>
-                    <Box size={17} /> {t('space3d.open')}
-                  </button> : null}
-                  <button onClick={() => { layoutActions.onToggleInspector(); setShowMobileMenu(false); }}>
-                    {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? <PanelRightOpen size={17} /> : <PanelRightClose size={17} />}
-                    {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? t('shell.showInspector') : t('shell.hideInspector')}
-                  </button>
-                  <button onClick={() => { layoutActions.onToggleFullCanvas(); setShowMobileMenu(false); }}>
-                    {layoutActions.fullCanvas ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
-                    {layoutActions.fullCanvas ? t('shell.exitFullCanvas') : t('shell.fullCanvas')}
-                  </button>
-                </div> : null}
-
-                <div className="menu-section">
-                  <div className="menu-section-title">{t('menu.sectionExport')}</div>
-                  <button onClick={() => { exportJsonCommand.run(); setShowMobileMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
-                  <button onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
-                  <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
-                  <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
-                  <button onClick={() => { exportSvgCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportSvgCommand.label}</button>
-                  <button onClick={() => { exportPngCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportPngCommand.label}</button>
-                  <button onClick={() => { exportPrintCommand.run(); setShowMobileMenu(false); }}>{exportPrintCommand.label}</button>
-                </div>
-
-                {/* El chip de persistencia de la Cinta (zona `status`) ya es la
-                    única región `aria-live` de este estado; este es su duplicado
-                    visible del desbordamiento y no vuelve a anunciarse solo. */}
-                <div className={`mobile-storage-state ${storageHasError || storageState === 'offline' ? 'error' : ''}`} data-storage-state={storageState}>{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}<span><strong>{storageLabel}</strong><small>{storageDescription}</small></span></div>
-                {exportError ? <div className="portable-export-error" role="alert">{exportError}</div> : null}
-              </m.div>
-            ) : null}
-          </AnimatePresence>
-        </div>
-        <Button
-          className={`analyze-button${isAnalyzing ? ' analyzing' : ''}`}
-          variant="primary"
-          size="touch"
-          onClick={analyzeCommand.run}
-          loading={isAnalyzing}
-          loadingLabel={t('analysis.runningLabel')}
-          leadingIcon={<Play size={17} fill="currentColor" />}
-          aria-label={isAnalyzing ? t('analysis.runningLabel') : analyzeCommand.label}
-        >{isAnalyzing ? t('analysis.running') : analyzeCommand.label}</Button>
+        <div className="topbar-primary-actions" data-topbar-role="primary">
+          <div className="topbar-history-cluster" role="group" aria-label={t('history.label')}>
+            <IconButton
+              variant="secondary"
+              className="icon-button topbar-undo-button"
+              label={undoCommand.label}
+              title={undoCommand.hint}
+              onClick={undoCommand.run}
+              disabled={undoCommand.disabled}
+            ><Undo2 size={18} /></IconButton>
+            <IconButton
+              variant="secondary"
+              className="icon-button topbar-redo-button"
+              label={redoCommand.label}
+              title={redoCommand.hint}
+              onClick={redoCommand.run}
+              disabled={redoCommand.disabled}
+            ><Redo2 size={18} /></IconButton>
+          </div>
+          <IconButton
+            variant="secondary"
+            className="icon-button datasheet-launcher"
+            label={datasheetCommand.label}
+            title={datasheetCommand.hint}
+            onClick={datasheetCommand.run}
+          ><Sheet size={19} /></IconButton>
+          {onOpenSpace3D ? <IconButton
+            variant="secondary"
+            className="icon-button space3d-open-button"
+            label={t('space3d.open')}
+            title={t('space3d.open')}
+            onClick={onOpenSpace3D}
+          ><Box size={19} /></IconButton> : null}
+          <div className="export-wrap">
+            <IconButton variant="secondary" ref={exportMenuButtonRef} className="icon-button topbar-export-trigger" label={t('export.label')} title={t('export.label')} aria-expanded={showExportMenu} aria-haspopup="menu" onClick={toggleExportMenu}><Download size={19} /></IconButton>
+            <AnimatePresence>
+              {showExportMenu ? (
+                <m.div {...popoverMotionProps} className="popover export-menu" role="menu" aria-label={t('export.label')} onKeyDown={onMenuKeyDown}>
+                  <button role="menuitem" onClick={() => { exportJsonCommand.run(); setShowExportMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
+                  <button role="menuitem" onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
+                  <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
+                  <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
+                  <button role="menuitem" onClick={() => { exportSvgCommand.run(); setShowExportMenu(false); }}>{exportSvgCommand.label}</button>
+                  <button role="menuitem" onClick={() => { exportPngCommand.run(); setShowExportMenu(false); }}>{exportPngCommand.label}</button>
+                  <button role="menuitem" onClick={() => { exportPrintCommand.run(); setShowExportMenu(false); }}>{exportPrintCommand.label}</button>
+                </m.div>
+              ) : null}
+            </AnimatePresence>
+          </div>
+          <div className="mobile-actions-wrap topbar-utilities-wrap" data-topbar-role="utilities">
+            <IconButton variant="secondary" ref={mobileMenuButtonRef} className="icon-button mobile-more-button utility-more-button" label={t('topbar.utilities')} aria-expanded={showMobileMenu} aria-haspopup="dialog" onClick={toggleMobileMenu}><MoreHorizontal size={20} /></IconButton>
+            <AnimatePresence>
+              {showMobileMenu ? (
+                <m.div {...popoverMotionProps} className="popover mobile-actions-menu topbar-utilities-panel" role="dialog" aria-label={t('topbar.utilities')}>
+                  <button
+                    className="topbar-utility-project-launcher"
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      setShowProjectMenu(true);
+                    }}
+                  ><FolderOpen size={17} /> {t('topbar.currentProject')}</button>
+                  <div className="mobile-history-actions overflow-history" role="group" aria-label={t('history.label')}>
+                    <button onClick={undoCommand.run} disabled={undoCommand.disabled}><Undo2 size={17} /> {undoCommand.label}</button>
+                    <button onClick={redoCommand.run} disabled={redoCommand.disabled}><Redo2 size={17} /> {redoCommand.label}</button>
+                  </div>
+                  <div className="menu-section">
+                    <div className="menu-section-title">{t('menu.sectionAnalysis')}</div>
+                    <button onClick={() => { mobileMenuButtonRef.current?.focus({ preventScroll: true }); setShowMobileMenu(false); modelDoctorCommand.run(); }}><Wrench size={17} /> {modelDoctorCommand.label}</button>
+                    <button className="overflow-datasheet" onClick={() => { datasheetCommand.run(); setShowMobileMenu(false); }}><Sheet size={17} /> {datasheetCommand.label}</button>
+                  </div>
+                  <div className="menu-section">
+                    <div className="menu-section-title">{t('menu.sectionPreferences')}</div>
+                    <label className="mobile-menu-field"><span>{t('language.label')}</span><select value={language} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, language: event.target.value as 'es' | 'en' } }))}><option value="es">{t('language.es')}</option><option value="en">{t('language.en')}</option></select></label>
+                    <button onClick={() => { themeCommand.run(); setShowMobileMenu(false); }}><ThemeIcon size={17} /> {themeCommand.label}</button>
+                  </div>
+                  {layoutActions ? <div className="menu-section overflow-layout-actions" role="group" aria-label={t('shell.viewLayout')}>
+                    <div className="menu-section-title">{t('menu.sectionViews')}</div>
+                    <button onClick={() => { layoutActions.onToggleInspector(); setShowMobileMenu(false); }}>
+                      {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? <PanelRightOpen size={17} /> : <PanelRightClose size={17} />}
+                      {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? t('shell.showInspector') : t('shell.hideInspector')}
+                    </button>
+                    <button onClick={() => { layoutActions.onToggleFullCanvas(); setShowMobileMenu(false); }}>
+                      {layoutActions.fullCanvas ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
+                      {layoutActions.fullCanvas ? t('shell.exitFullCanvas') : t('shell.fullCanvas')}
+                    </button>
+                  </div> : null}
+                  <div className="menu-section">
+                    <div className="menu-section-title">{t('menu.sectionExport')}</div>
+                    <button onClick={() => { exportJsonCommand.run(); setShowMobileMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
+                    <button onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
+                    <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
+                    <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
+                    <button onClick={() => { exportSvgCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportSvgCommand.label}</button>
+                    <button onClick={() => { exportPngCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportPngCommand.label}</button>
+                    <button onClick={() => { exportPrintCommand.run(); setShowMobileMenu(false); }}>{exportPrintCommand.label}</button>
+                  </div>
+                  <div className={`mobile-storage-state ${storageHasError || storageState === 'offline' ? 'error' : ''}`} data-storage-state={storageState}>{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}<span><strong>{storageLabel}</strong><small>{storageDescription}</small></span></div>
+                  {exportError ? <div className="portable-export-error" role="alert">{exportError}</div> : null}
+                </m.div>
+              ) : null}
+            </AnimatePresence>
+          </div>
+          <Button
+            className={`analyze-button analyze-button--clay-primary${isAnalyzing ? ' analyzing' : ''}`}
+            data-label-tone="on-brand"
+            variant="primary"
+            size="touch"
+            onClick={analyzeCommand.run}
+            loading={isAnalyzing}
+            loadingLabel={t('analysis.runningLabel')}
+            leadingIcon={<Play size={17} fill="currentColor" />}
+            aria-label={isAnalyzing ? t('analysis.runningLabel') : analyzeCommand.label}
+          >{isAnalyzing ? t('analysis.running') : analyzeCommand.label}</Button>
         </div>
       </div>
 
-      <div className="topbar-zone topbar-status-zone" data-topbar-zone="status" data-topbar-cluster="status">
-        <div
-          className={`autosave-state${storageHasError || storageState === 'offline' ? ' has-issue' : ''} topbar-persistence`}
-          data-storage-state={storageState}
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          {storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}
-          <span className="autosave-state__label">{storageLabel}</span>
-          {/* La descripción sobrevive al icono-only del piso Compact: no es un
-              `span` genérico, así que la regla que oculta la etiqueta corta no
-              se la lleva por delante (GAP-1 · CRI-95). */}
-          <span className="sr-only">{storageDescription}</span>
-        </div>
-        {/* En pantallas anchas el botón lleva texto; por debajo de 1536px
-            colapsa a icono en CSS y libera el ancho que la zona necesita. Estado
-            y Doctor son la afirmación más crítica del producto (D-14 · CRI-95):
-            nunca desaparecen ni pierden su etiqueta accesible, sea cual sea la
-            clase de composición. */}
+      <div className="topbar-zone topbar-status-zone topbar-health-zone" data-topbar-zone="status" data-topbar-role="health">
         <button
           type="button"
           className="topbar-command-button model-doctor-launcher"
@@ -596,6 +653,17 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           isAnalyzing={isAnalyzing}
           onOpenModelDoctor={openModelDoctor}
         />
+        <div
+          className={`autosave-state${storageHasError || storageState === 'offline' ? ' has-issue' : ''} topbar-persistence`}
+          data-storage-state={storageState}
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}
+          <span className="autosave-state__label">{storageLabel}</span>
+          <span className="sr-only">{storageDescription}</span>
+        </div>
       </div>
       {exportError && showExportMenu ? <div className="portable-export-error desktop" role="alert">{exportError}</div> : null}
       {importCenterOpen ? <Suspense fallback={null}><PortableImportCenter

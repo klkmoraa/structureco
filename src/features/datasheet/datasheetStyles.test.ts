@@ -170,6 +170,13 @@ describe('datasheet styles', () => {
     expect(ruleFor('.datasheet-context__body')).toMatch(/overflow-y:\s*auto/);
   });
 
+  it('declares the audit workbench composition without turning technical rows into cards', () => {
+    expect(ruleFor('.datasheet-layout')).toMatch(/grid-template-columns:/);
+    expect(ruleFor('.datasheet-main')).toMatch(/min-width:\s*0/);
+    expect(ruleFor('.datasheet-context')).toMatch(/min-height:\s*0/);
+    expect(ruleFor('.datasheet-grid tbody td')).not.toMatch(/border-radius|box-shadow/);
+  });
+
   it('honours the reduced-motion preference', () => {
     expect(css).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   });

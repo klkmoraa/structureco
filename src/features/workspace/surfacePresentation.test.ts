@@ -17,14 +17,14 @@ import {
 } from './surfacePresentation';
 
 const expectedTable: Record<'X2' | 'M1' | 'K0', Record<SurfaceId, SurfacePresentation>> = {
-  X2: { detail: 'dock', analysisSetup: 'dock', view: 'dock', results: 'dock', dense: 'drawer', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
-  M1: { detail: 'inset', analysisSetup: 'inset', view: 'inset', results: 'inset', dense: 'drawer', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
-  K0: { detail: 'sheet', analysisSetup: 'sheet', view: 'sheet', results: 'sheet', dense: 'fullscreen', datasheet: 'fullscreen', doctor: 'fullscreen', palette: 'sheet', candidatePicker: 'sheet', contextualActions: 'inset' },
+  X2: { detail: 'dock', analysisSetup: 'dock', view: 'dock', results: 'dock', generator: 'floating', dense: 'drawer', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
+  M1: { detail: 'inset', analysisSetup: 'inset', view: 'inset', results: 'inset', generator: 'inset', dense: 'drawer', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
+  K0: { detail: 'sheet', analysisSetup: 'sheet', view: 'sheet', results: 'sheet', generator: 'sheet', dense: 'fullscreen', datasheet: 'fullscreen', doctor: 'fullscreen', palette: 'sheet', candidatePicker: 'sheet', contextualActions: 'inset' },
 };
 
 describe('surface presentation table', () => {
   it('is the literal X2/M1/K0 matrix for every broker-owned surface', () => {
-    expect(BROKER_SURFACE_IDS).toEqual(['detail', 'analysisSetup', 'view', 'results', 'dense', 'datasheet', 'doctor', 'palette', 'candidatePicker', 'contextualActions']);
+    expect(BROKER_SURFACE_IDS).toEqual(['detail', 'analysisSetup', 'view', 'results', 'generator', 'dense', 'datasheet', 'doctor', 'palette', 'candidatePicker', 'contextualActions']);
     expect(SURFACE_PRESENTATION_TABLE).toEqual(expectedTable);
 
     for (const shellClass of ['X2', 'M1', 'K0'] as const) {
@@ -92,6 +92,27 @@ describe('surface exclusivity', () => {
     expect(resolveSurfaceActivity('X2', state).datasheet.status).toBe('active');
   });
 
+  it('lets Generator coexist in X2, replace the M1 inset and own the K0 sheet until it closes', () => {
+    let state = openSurfaceIntent(createSurfaceBrokerState(['detail']), 'generator');
+
+    expect(resolveSurfaceActivity('X2', state)).toMatchObject({
+      detail: { status: 'active', presentation: 'dock' },
+      generator: { status: 'active', presentation: 'floating' },
+    });
+    expect(resolveSurfaceActivity('M1', state)).toMatchObject({
+      detail: { status: 'suspended', presentation: 'inset' },
+      generator: { status: 'active', presentation: 'inset' },
+    });
+    expect(resolveSurfaceActivity('K0', state)).toMatchObject({
+      detail: { status: 'suspended', presentation: 'sheet' },
+      generator: { status: 'active', presentation: 'sheet' },
+    });
+
+    state = closeSurfaceIntent(state, 'generator');
+    expect(resolveSurfaceActivity('M1', state).detail.status).toBe('active');
+    expect(resolveSurfaceActivity('K0', state).detail.status).toBe('active');
+  });
+
   it('treats the candidate picker as one contextual Compact layer and migrates it without a selection-side effect', () => {
     let state = openSurfaceIntent(createSurfaceBrokerState(['detail']), 'candidatePicker');
 
@@ -134,6 +155,7 @@ describe('activity classes', () => {
       analysisSetup: 'layer',
       view: 'layer',
       results: 'layer',
+      generator: 'tool',
       dense: 'tool',
       datasheet: 'tool',
       doctor: 'tool',

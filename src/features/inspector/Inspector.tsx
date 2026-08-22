@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import { ChevronRight, CircleHelp, MoveDown, Plus, RotateCcw, Sigma, X } from 'lucide-react';
+import { ChevronRight, CircleHelp, GripHorizontal, MoveDown, Plus, RotateCcw, Sigma, X } from 'lucide-react';
 import { fromDisplay, toDisplay, unitLabel, type UnitQuantity } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import { useProjectAnalysis } from '../../store/ProjectAnalysisContext';
@@ -138,6 +138,33 @@ const InspectorContent = ({
   };
 
   const inspectorTabs = ['inspector', 'loads', 'display'] as const;
+  const inspectorDetents: readonly InspectorDetent[] = ['compact', 'medium', 'large'];
+  const detentLabel = (detent: InspectorDetent) => detent === 'compact'
+    ? t('inspector.detentCompact')
+    : detent === 'medium'
+      ? t('inspector.detentMedium')
+      : t('inspector.detentLarge');
+  const moveDetent = (direction: 1 | -1) => {
+    if (!onMobileDetentChange) return;
+    const currentIndex = inspectorDetents.indexOf(mobileDetent);
+    const nextIndex = (currentIndex + direction + inspectorDetents.length) % inspectorDetents.length;
+    onMobileDetentChange(inspectorDetents[nextIndex]);
+  };
+  const onDetentHandleKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'ArrowRight' || event.key === 'ArrowUp' || event.key === 'PageUp') {
+      event.preventDefault();
+      moveDetent(1);
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown' || event.key === 'PageDown') {
+      event.preventDefault();
+      moveDetent(-1);
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      onMobileDetentChange?.('compact');
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      onMobileDetentChange?.('large');
+    }
+  };
   const onTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number) => {
     let nextIndex = index;
     if (event.key === 'ArrowLeft') nextIndex = (index - 1 + inspectorTabs.length) % inspectorTabs.length;
@@ -183,19 +210,24 @@ const InspectorContent = ({
         onPointerUp={() => setResizeOrigin(null)}
         onPointerCancel={() => setResizeOrigin(null)}
       /> : null}
-      {sheet && onMobileDetentChange ? <div className="inspector-detent-control" role="group" aria-label={t('inspector.detentGroup')}>
-        {(['compact', 'medium', 'large'] as const).map((detent) => <button
-          key={detent}
-          type="button"
-          aria-pressed={mobileDetent === detent}
-          onClick={() => onMobileDetentChange(detent)}
-        >{detent === 'compact' ? t('inspector.detentCompact') : detent === 'medium' ? t('inspector.detentMedium') : t('inspector.detentLarge')}</button>)}
+      {sheet && (onMobileDetentChange || onClose) ? <div className="inspector-sheet-controls">
+        {onMobileDetentChange ? <button
+            type="button"
+            className="inspector-sheet-handle"
+            aria-label={`${t('inspector.detentGroup')}: ${detentLabel(mobileDetent)}`}
+            onClick={() => moveDetent(1)}
+            onKeyDown={onDetentHandleKeyDown}
+          >
+            <GripHorizontal size={22} aria-hidden="true" />
+            <span className="sr-only">{detentLabel(mobileDetent)}</span>
+          </button> : <span aria-hidden="true" />}
+        {onClose ? <button type="button" className="mobile-inspector-close" aria-label={t('inspector.close')} onClick={onClose}><X size={18} /></button> : null}
       </div> : null}
       {!surface ? <div className="inspector-tabs" role="tablist" aria-label={t('inspector.tab')}>
         <button id="inspector-tab-inspector" type="button" role="tab" aria-controls="inspector-tabpanel" aria-selected={tab === 'inspector'} tabIndex={tab === 'inspector' ? 0 : -1} className={tab === 'inspector' ? 'active' : ''} onClick={() => setTab('inspector')} onKeyDown={(event) => onTabKeyDown(event, 0)}>{t('inspector.tab')}</button>
         <button id="inspector-tab-loads" type="button" role="tab" aria-controls="inspector-tabpanel" aria-selected={tab === 'loads'} tabIndex={tab === 'loads' ? 0 : -1} className={tab === 'loads' ? 'active' : ''} onClick={() => setTab('loads')} onKeyDown={(event) => onTabKeyDown(event, 1)}>{t('inspector.loadsTab')}</button>
         <button id="inspector-tab-display" type="button" role="tab" aria-controls="inspector-tabpanel" aria-selected={tab === 'display'} tabIndex={tab === 'display' ? 0 : -1} className={tab === 'display' ? 'active' : ''} onClick={() => setTab('display')} onKeyDown={(event) => onTabKeyDown(event, 2)}>{t('inspector.viewTab')}</button>
-        <button type="button" className="mobile-inspector-close" aria-label={t('inspector.close')} onClick={onClose}><X size={18} /></button>
+        {!sheet && onClose ? <button type="button" className="mobile-inspector-close" aria-label={t('inspector.close')} onClick={onClose}><X size={18} /></button> : null}
       </div> : null}
 
       <div id={surface ? `${surface}-tabpanel` : 'inspector-tabpanel'} className="inspector-scroll" role={surface ? undefined : 'tabpanel'} aria-labelledby={surface ? undefined : `inspector-tab-${activeTab}`}>

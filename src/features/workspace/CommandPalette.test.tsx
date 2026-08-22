@@ -33,11 +33,11 @@ const SeedModel = ({ seed }: { seed: boolean }) => {
   return null;
 };
 
-const renderPalette = ({ seed = false } = {}) => render(
+const renderPalette = ({ seed = false, onClose = () => {} }: { seed?: boolean; onClose?: () => void } = {}) => render(
   <ProjectProvider>
     <SeedModel seed={seed} />
     <StateProbe />
-    <CommandPalette open onClose={() => {}} dispatchLayers={dispatchLayers} />
+    <CommandPalette open onClose={onClose} dispatchLayers={dispatchLayers} />
   </ProjectProvider>,
 );
 
@@ -56,6 +56,16 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe('CommandPalette', () => {
+  it('offers an explicit close action for touch and pointer users', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderPalette({ onClose });
+
+    await user.click(screen.getByRole('button', { name: 'Cerrar' }));
+
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it('runs an existing tool command instead of a palette-only action', async () => {
     const user = userEvent.setup();
     renderPalette();

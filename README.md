@@ -51,7 +51,7 @@ npm.cmd run validate:ci
 
 - [Índice canónico y clasificación completa](docs/README.md)
 - [Mapa de arquitectura vigente](docs/architecture/README.md)
-- [Identidad visual oficial protegida](brand/README.md)
+- [Brandbook heredado y procedencia de assets](brand/README.md)
 - [Política de reportes y evidencia](reports/README.md)
 
 El roadmap y el backlog viven fuera de la documentación canónica del repositorio y no se duplican aquí.

@@ -1,0 +1,305 @@
+{
+  "phase": "total-home-redesign",
+  "generatedAt": "2026-08-22T07:45:36.642Z",
+  "scenarios": [
+    {
+      "id": "desktop-day",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "theme": "light",
+      "hasTouch": false,
+      "screenshot": "desktop-day.png",
+      "metrics": {
+        "theme": "light",
+        "horizontalOverflow": 0,
+        "sidebar": {
+          "width": 216,
+          "height": 960,
+          "top": 0,
+          "bottom": 960
+        },
+        "mobileHeader": null,
+        "hero": {
+          "width": 1126,
+          "height": 440,
+          "top": 117,
+          "bottom": 557
+        },
+        "heroAsset": {
+          "width": 646,
+          "height": 438,
+          "top": 118,
+          "bottom": 556
+        },
+        "quickActions": 3,
+        "recentLimit": 0,
+        "assetId": "portal:two-bay",
+        "oldStepRail": false,
+        "oldPortal": false,
+        "smallTargets": [
+          {
+            "label": "ESEN",
+            "width": 63,
+            "height": 40
+          },
+          {
+            "label": "Tema oscuro",
+            "width": 44,
+            "height": 40
+          }
+        ],
+        "translucent": [],
+        "primaryColor": "rgb(255, 255, 255)",
+        "primaryText": "Continuar proyecto",
+        "primaryTextOpacity": "1",
+        "heroShadow": "rgba(52, 42, 30, 0.14) 2px 3px 6px 0px, rgba(255, 255, 255, 0.72) -2px -2px 4px 0px, rgba(255, 255, 255, 0.72) 0px 1px 0px 0px inset, rgba(52, 42, 30, 0.08) -1px -1px 3px 0px inset"
+      },
+      "consoleErrors": [],
+      "failures": []
+    },
+    {
+      "id": "desktop-night",
+      "viewport": {
+        "width": 1440,
+        "height": 960
+      },
+      "theme": "dark",
+      "hasTouch": false,
+      "screenshot": "desktop-night.png",
+      "metrics": {
+        "theme": "dark",
+        "horizontalOverflow": 0,
+        "sidebar": {
+          "width": 216,
+          "height": 960,
+          "top": 0,
+          "bottom": 960
+        },
+        "mobileHeader": null,
+        "hero": {
+          "width": 1126,
+          "height": 440,
+          "top": 117,
+          "bottom": 557
+        },
+        "heroAsset": {
+          "width": 646,
+          "height": 438,
+          "top": 118,
+          "bottom": 556
+        },
+        "quickActions": 3,
+        "recentLimit": 0,
+        "assetId": "portal:single-bay",
+        "oldStepRail": false,
+        "oldPortal": false,
+        "smallTargets": [
+          {
+            "label": "ESEN",
+            "width": 63,
+            "height": 40
+          },
+          {
+            "label": "Tema claro",
+            "width": 44,
+            "height": 40
+          }
+        ],
+        "translucent": [],
+        "primaryColor": "rgb(255, 255, 255)",
+        "primaryText": "Continuar proyecto",
+        "primaryTextOpacity": "1",
+        "heroShadow": "rgba(0, 0, 0, 0.42) 2px 3px 6px 0px, rgba(67, 98, 108, 0.14) -2px -2px 4px 0px, rgba(255, 255, 255, 0.05) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.25) -1px -1px 3px 0px inset"
+      },
+      "consoleErrors": [],
+      "failures": []
+    },
+    {
+      "id": "tablet-day",
+      "viewport": {
+        "width": 1024,
+        "height": 900
+      },
+      "theme": "light",
+      "hasTouch": true,
+      "screenshot": "tablet-day.png",
+      "metrics": {
+        "theme": "light",
+        "horizontalOverflow": 0,
+        "sidebar": {
+          "width": 78,
+          "height": 900,
+          "top": 0,
+          "bottom": 900
+        },
+        "mobileHeader": null,
+        "hero": {
+          "width": 876,
+          "height": 400,
+          "top": 104,
+          "bottom": 504
+        },
+        "heroAsset": {
+          "width": 481,
+          "height": 398,
+          "top": 105,
+          "bottom": 503
+        },
+        "quickActions": 3,
+        "recentLimit": 0,
+        "assetId": "portal:single-bay",
+        "oldStepRail": false,
+        "oldPortal": false,
+        "smallTargets": [],
+        "translucent": [],
+        "primaryColor": "rgb(255, 255, 255)",
+        "primaryText": "Continuar proyecto",
+        "primaryTextOpacity": "1",
+        "heroShadow": "rgba(52, 42, 30, 0.14) 2px 3px 6px 0px, rgba(255, 255, 255, 0.72) -2px -2px 4px 0px, rgba(255, 255, 255, 0.72) 0px 1px 0px 0px inset, rgba(52, 42, 30, 0.08) -1px -1px 3px 0px inset"
+      },
+      "consoleErrors": [],
+      "failures": []
+    },
+    {
+      "id": "tablet-night",
+      "viewport": {
+        "width": 1024,
+        "height": 900
+      },
+      "theme": "dark",
+      "hasTouch": true,
+      "screenshot": "tablet-night.png",
+      "metrics": {
+        "theme": "dark",
+        "horizontalOverflow": 0,
+        "sidebar": {
+          "width": 78,
+          "height": 900,
+          "top": 0,
+          "bottom": 900
+        },
+        "mobileHeader": null,
+        "hero": {
+          "width": 876,
+          "height": 400,
+          "top": 104,
+          "bottom": 504
+        },
+        "heroAsset": {
+          "width": 481,
+          "height": 398,
+          "top": 105,
+          "bottom": 503
+        },
+        "quickActions": 3,
+        "recentLimit": 0,
+        "assetId": "portal:two-story",
+        "oldStepRail": false,
+        "oldPortal": false,
+        "smallTargets": [],
+        "translucent": [],
+        "primaryColor": "rgb(255, 255, 255)",
+        "primaryText": "Continuar proyecto",
+        "primaryTextOpacity": "1",
+        "heroShadow": "rgba(0, 0, 0, 0.42) 2px 3px 6px 0px, rgba(67, 98, 108, 0.14) -2px -2px 4px 0px, rgba(255, 255, 255, 0.05) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.25) -1px -1px 3px 0px inset"
+      },
+      "consoleErrors": [],
+      "failures": []
+    },
+    {
+      "id": "mobile-day",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "hasTouch": true,
+      "screenshot": "mobile-day.png",
+      "metrics": {
+        "theme": "light",
+        "horizontalOverflow": 0,
+        "sidebar": null,
+        "mobileHeader": {
+          "width": 390,
+          "height": 63,
+          "top": 0,
+          "bottom": 63
+        },
+        "hero": {
+          "width": 362,
+          "height": 495,
+          "top": 136,
+          "bottom": 631
+        },
+        "heroAsset": {
+          "width": 360,
+          "height": 228,
+          "top": 137,
+          "bottom": 365
+        },
+        "quickActions": 3,
+        "recentLimit": 0,
+        "assetId": "portal:industrial-pitched",
+        "oldStepRail": false,
+        "oldPortal": false,
+        "smallTargets": [],
+        "translucent": [],
+        "primaryColor": "rgb(255, 255, 255)",
+        "primaryText": "Continuar proyecto",
+        "primaryTextOpacity": "1",
+        "heroShadow": "rgba(52, 42, 30, 0.14) 2px 3px 6px 0px, rgba(255, 255, 255, 0.72) -2px -2px 4px 0px, rgba(255, 255, 255, 0.72) 0px 1px 0px 0px inset, rgba(52, 42, 30, 0.08) -1px -1px 3px 0px inset"
+      },
+      "consoleErrors": [],
+      "failures": []
+    },
+    {
+      "id": "mobile-night",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "hasTouch": true,
+      "screenshot": "mobile-night.png",
+      "metrics": {
+        "theme": "dark",
+        "horizontalOverflow": 0,
+        "sidebar": null,
+        "mobileHeader": {
+          "width": 390,
+          "height": 63,
+          "top": 0,
+          "bottom": 63
+        },
+        "hero": {
+          "width": 362,
+          "height": 495,
+          "top": 136,
+          "bottom": 631
+        },
+        "heroAsset": {
+          "width": 360,
+          "height": 228,
+          "top": 137,
+          "bottom": 365
+        },
+        "quickActions": 3,
+        "recentLimit": 0,
+        "assetId": "portal:single-bay",
+        "oldStepRail": false,
+        "oldPortal": false,
+        "smallTargets": [],
+        "translucent": [],
+        "primaryColor": "rgb(255, 255, 255)",
+        "primaryText": "Continuar proyecto",
+        "primaryTextOpacity": "1",
+        "heroShadow": "rgba(0, 0, 0, 0.42) 2px 3px 6px 0px, rgba(67, 98, 108, 0.14) -2px -2px 4px 0px, rgba(255, 255, 255, 0.05) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.25) -1px -1px 3px 0px inset"
+      },
+      "consoleErrors": [],
+      "failures": []
+    }
+  ],
+  "failures": []
+}

@@ -91,6 +91,33 @@ afterEach(() => {
 });
 
 describe('Results analytical center', () => {
+  it('uses one quantity bar, mirrors the active quantity, and keeps dense views in one overflow', async () => {
+    const user = userEvent.setup();
+    renderResults();
+
+    const panel = screen.getByRole('region', { name: 'Resultados del análisis' });
+    const quantityBar = panel.querySelector<HTMLElement>('[data-results-quantity-bar]');
+    expect(quantityBar).not.toBeNull();
+    expect(within(quantityBar!).getAllByRole('tab')).toHaveLength(5);
+    expect(panel.getAttribute('data-active-result-quantity')).toBe('moment');
+
+    await user.click(within(quantityBar!).getByRole('tab', { name: 'Cortante' }));
+    expect(panel.getAttribute('data-active-result-quantity')).toBe('shear');
+
+    expect(panel.querySelector('.results-dense-launchers')).toBeNull();
+    const overflow = within(panel).getByRole('button', { name: 'Más resultados' });
+    await user.click(overflow);
+    const menu = screen.getByRole('menu', { name: 'Más resultados' });
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Reacciones',
+      'Influencia',
+      'Aprender',
+    ]);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('menu', { name: 'Más resultados' })).toBeNull();
+    expect(document.activeElement).toBe(overflow);
+  });
+
   it('localizes the empty classroom next step in English', () => {
     const project = createBlankProject();
     project.settings = { ...project.settings, calculationMode: 'classroom', language: 'en' };
@@ -107,7 +134,7 @@ describe('Results analytical center', () => {
     const invocations: Array<{ view: string; trigger: string | null }> = [];
     const listener = (event: Event) => {
       const detail = (event as CustomEvent<{ view: string; trigger?: HTMLElement | null }>).detail;
-      invocations.push({ view: detail.view, trigger: detail.trigger?.textContent ?? null });
+      invocations.push({ view: detail.view, trigger: detail.trigger?.getAttribute('aria-label') ?? null });
     };
     window.addEventListener(workspaceCommandEventName('open-dense-results'), listener);
     renderResults();
@@ -118,14 +145,17 @@ describe('Results analytical center', () => {
     for (const name of ['Reacciones', 'Influencia', 'Aprender']) {
       expect(screen.queryByRole('tab', { name })).toBeNull();
     }
-    const launchers = screen.getByRole('group', { name: 'Datos densos' });
-    await user.click(within(launchers).getByRole('button', { name: 'Reacciones' }));
-    await user.click(within(launchers).getByRole('button', { name: 'Influencia' }));
+    const openDenseView = async (name: 'Reacciones' | 'Influencia') => {
+      await user.click(screen.getByRole('button', { name: 'Más resultados' }));
+      await user.click(within(screen.getByRole('menu', { name: 'Más resultados' })).getByRole('menuitem', { name }));
+    };
+    await openDenseView('Reacciones');
+    await openDenseView('Influencia');
 
     // El lanzador viaja en el comando: es a donde el broker devuelve el foco.
     expect(invocations).toEqual([
-      { view: 'reactions', trigger: 'Reacciones' },
-      { view: 'influence', trigger: 'Influencia' },
+      { view: 'reactions', trigger: 'Más resultados' },
+      { view: 'influence', trigger: 'Más resultados' },
     ]);
     window.removeEventListener(workspaceCommandEventName('open-dense-results'), listener);
   }, 10_000);
@@ -136,13 +166,11 @@ describe('Results analytical center', () => {
 
     const panel = screen.getByRole('region', { name: 'Resultados del análisis' });
     expect(screen.getByText('Centro analítico')).toBeTruthy();
-    for (const family of ['Estado', 'Esfuerzos', 'Forma']) {
-      expect(screen.getAllByText(family).length).toBeGreaterThan(0);
-    }
+    expect(panel.querySelectorAll('[data-results-quantity-bar]')).toHaveLength(1);
     expect(screen.queryByRole('tab', { name: 'Avisos' })).toBeNull();
     const moment = screen.getByRole('tab', { name: 'Momento' });
     expect(moment.getAttribute('aria-selected')).toBe('true');
-    expect(moment.getAttribute('aria-describedby')).toBe('result-family-forces');
+    expect(moment.getAttribute('aria-controls')).toBe('results-content');
     expect(screen.getByRole('tabpanel').getAttribute('aria-labelledby')).toBe('result-tab-moment');
 
     moment.focus();
@@ -262,14 +290,14 @@ describe('Results analytical center', () => {
     renderResults(project);
 
     expect(screen.getByText('Analysis center')).toBeTruthy();
-    for (const family of ['State', 'Forces', 'Shape']) {
-      expect(screen.getAllByText(family).length).toBeGreaterThan(0);
-    }
+    expect(screen.getByRole('tablist', { name: 'Analysis results' })).toBeTruthy();
     expect(screen.queryByRole('tab', { name: 'Issues' })).toBeNull();
-    const denseLaunchers = screen.getByRole('group', { name: 'Dense data' });
+    await user.click(screen.getByRole('button', { name: 'More results' }));
+    const denseLaunchers = screen.getByRole('menu', { name: 'More results' });
     for (const view of ['Reactions', 'Influence', 'Learn']) {
-      expect(within(denseLaunchers).getByRole('button', { name: view })).toBeTruthy();
+      expect(within(denseLaunchers).getByRole('menuitem', { name: view })).toBeTruthy();
     }
+    await user.click(screen.getByRole('button', { name: 'More results' }));
     expect(screen.getByRole('group', { name: 'Results panel size' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Compact' })).toBeTruthy();
     // State and reliability moved to the TopBar's AnalysisStatus in CRI-100;
@@ -398,6 +426,27 @@ describe('Results analytical center', () => {
     }
   }, 10_000);
 
+  it('keeps phone result metrics as a hideable horizontal rail while the diagram remains available', async () => {
+    const user = userEvent.setup();
+    setViewport('phone');
+    renderResults();
+
+    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
+    const chart = await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+    const metrics = screen.getByTestId('results-mobile-metrics');
+
+    expect(metrics.getAttribute('data-mobile-metrics-visible')).toBe('true');
+    expect(metrics.querySelector('.result-extreme-grid')?.classList.contains('is-mobile-rail')).toBe(true);
+    expect(metrics.querySelectorAll('.result-extreme-card')).toHaveLength(2);
+
+    await user.click(screen.getByRole('button', { name: 'Ocultar tarjetas de resultados' }));
+    expect(metrics.hidden).toBe(true);
+    expect(chart).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Mostrar tarjetas de resultados' }));
+    expect(metrics.hidden).toBe(false);
+  }, 10_000);
+
   it('keeps native learning summaries inside the mobile focus loop', async () => {
     const user = userEvent.setup();
     setViewport('tablet');
@@ -505,20 +554,23 @@ describe('Results analytical center', () => {
     await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
     await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
     expect(screen.getByRole('tab', { name: 'Deformada' })).toBeTruthy();
-    // Aula ve exactamente las mismas familias residentes y los mismos
-    // lanzadores densos que el modo completo: mismo análisis, misma
-    // arquitectura, ninguna vista propia.
-    const launchers = screen.getByRole('group', { name: 'Datos densos' });
+    // Aula conserva las mismas cantidades y las vistas densas en el mismo
+    // overflow: mismo análisis y ninguna arquitectura paralela.
+    await user.click(screen.getByRole('button', { name: 'Más resultados' }));
+    let denseMenu = screen.getByRole('menu', { name: 'Más resultados' });
     for (const view of ['Reacciones', 'Influencia', 'Aprender']) {
-      expect(within(launchers).getByRole('button', { name: view })).toBeTruthy();
+      expect(within(denseMenu).getByRole('menuitem', { name: view })).toBeTruthy();
     }
+    await user.click(screen.getByRole('button', { name: 'Más resultados' }));
     expect(screen.getByLabelText('Predicciones base').textContent).toBe('{}');
 
     const modelState = screen.getByLabelText('Estado del modelo').textContent;
     await user.click(screen.getByRole('button', { name: 'Modo completo test' }));
     await user.click(screen.getByRole('button', { name: 'Modo aula test' }));
     expect(screen.getByLabelText('Estado del modelo').textContent).toBe(modelState);
-    expect(within(screen.getByRole('group', { name: 'Datos densos' })).getByRole('button', { name: 'Aprender' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Más resultados' }));
+    denseMenu = screen.getByRole('menu', { name: 'Más resultados' });
+    expect(within(denseMenu).getByRole('menuitem', { name: 'Aprender' })).toBeTruthy();
   }, 10_000);
 
   it('keeps a failed analysis visible when switching into Aula', async () => {

@@ -1,0 +1,93 @@
+{
+  "phase": "clay-compact-generator-phase-4",
+  "scenarios": [
+    {
+      "id": "desktop-day",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "X2",
+      "presentation": "floating",
+      "metrics": {
+        "shell": "X2",
+        "theme": "light",
+        "presentation": "floating",
+        "status": "active",
+        "detailStatus": "active",
+        "railWidth": 156,
+        "familyCards": 5,
+        "familyPreviews": 5,
+        "shadow": "rgba(83, 72, 55, 0.19) 9px 11px 22px 0px, rgba(255, 255, 255, 0.95) -8px -8px 22px 0px, rgba(255, 255, 255, 0.9) 0px 1px 0px 0px inset, rgba(83, 72, 55, 0.1) -4px -4px 9px 0px inset",
+        "backdropFilter": "none",
+        "noDockOverlap": true,
+        "noHorizontalOverflow": true,
+        "floatingNativeTextButtons": 0,
+        "actionForeground": "#fff"
+      },
+      "consoleErrors": [],
+      "screenshot": "desktop-day.png",
+      "failures": []
+    },
+    {
+      "id": "tablet-night",
+      "viewport": {
+        "width": 1024,
+        "height": 768
+      },
+      "theme": "dark",
+      "shell": "M1",
+      "presentation": "inset",
+      "metrics": {
+        "shell": "M1",
+        "theme": "dark",
+        "presentation": "inset",
+        "status": "active",
+        "detailStatus": "suspended",
+        "railWidth": 68,
+        "familyCards": 5,
+        "familyPreviews": 5,
+        "shadow": "rgba(0, 0, 0, 0.58) 9px 11px 22px 0px, rgba(62, 92, 102, 0.22) -8px -8px 22px 0px, rgba(255, 255, 255, 0.06) 0px 1px 0px 0px inset, rgba(0, 0, 0, 0.32) -4px -4px 9px 0px inset",
+        "backdropFilter": "none",
+        "noDockOverlap": true,
+        "noHorizontalOverflow": true,
+        "floatingNativeTextButtons": 0,
+        "actionForeground": "#fff"
+      },
+      "consoleErrors": [],
+      "screenshot": "tablet-night.png",
+      "failures": []
+    },
+    {
+      "id": "mobile-day",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "shell": "K0",
+      "presentation": "sheet",
+      "metrics": {
+        "shell": "K0",
+        "theme": "light",
+        "presentation": "sheet",
+        "status": "active",
+        "detailStatus": "suspended",
+        "railWidth": 390,
+        "familyCards": 5,
+        "familyPreviews": 5,
+        "shadow": "rgba(83, 72, 55, 0.19) 9px 11px 22px 0px, rgba(255, 255, 255, 0.95) -8px -8px 22px 0px, rgba(255, 255, 255, 0.9) 0px 1px 0px 0px inset, rgba(83, 72, 55, 0.1) -4px -4px 9px 0px inset",
+        "backdropFilter": "none",
+        "noDockOverlap": true,
+        "noHorizontalOverflow": true,
+        "floatingNativeTextButtons": 0,
+        "actionForeground": "#fff"
+      },
+      "consoleErrors": [],
+      "screenshot": "mobile-day.png",
+      "failures": []
+    }
+  ],
+  "failures": []
+}

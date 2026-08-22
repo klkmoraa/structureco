@@ -81,7 +81,9 @@ describe('ModelDoctor surface', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'Model Doctor' });
     expect(within(dialog).getByText('0 críticos · 0 advertencias · 0 sugerencias')).toBeTruthy();
-    expect(within(dialog).getByRole('heading', { name: /modelo listo para revisar/i })).toBeTruthy();
+    expect(within(dialog).getByRole('heading', { name: /todo en orden por aquí/i })).toBeTruthy();
+    expect(document.querySelector('[data-model-health="clear"]')).not.toBeNull();
+    expect(within(dialog).getAllByText(/No encontramos problemas en la geometría/i)).toHaveLength(1);
   });
 
   it('shows an evident absence of grounding as a non-repairable critical before analysis', async () => {
@@ -367,7 +369,7 @@ describe('ModelDoctor surface', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'Model Doctor' });
     expect(within(dialog).getByText('0 critical · 0 warnings · 0 suggestions')).toBeTruthy();
-    expect(within(dialog).getByRole('heading', { name: /model ready for review/i })).toBeTruthy();
+    expect(within(dialog).getByRole('heading', { name: /everything looks good here/i })).toBeTruthy();
   });
 
   it('localizes a real finding, its category, explanation, impact, and actions in English', async () => {

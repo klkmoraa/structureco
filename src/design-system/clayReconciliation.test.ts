@@ -1,8 +1,8 @@
 /// <reference types="node" />
 
 /**
- * CRI-105 · Reconciliación Clay — los contratos de V-04 y V-05 que se pueden
- * demostrar de forma estática.
+ * Reconciliación de materia — contratos visuales que se pueden demostrar de
+ * forma estática.
  *
  * Lo que aquí se afirma NO es "el CSS dice tal cosa en tal línea", sino el
  * contrato semántico: qué escalón de radio corresponde a cada rol, que ningún
@@ -10,9 +10,9 @@
  * conserva ninguna capa exterior, que cavidad y pulsado son materias distintas y
  * que ninguna pieza declara su propia fuente de luz.
  *
- * La autoridad de los valores es `brand/brandbook-clay.html` (V-05: control
- * 10px · card 18px · panel/sheet 24px · modal 28px · pill 999px). Este archivo
- * no elige la escala: comprueba que el producto la implementa.
+ * La autoridad de los valores son los tokens vivos del producto: control 10px,
+ * card 18px, panel/sheet 24px, modal 28px y pill 999px. Este archivo no elige
+ * la escala: comprueba que el producto la implementa de forma consistente.
  */
 
 import { readFileSync } from 'node:fs';
@@ -115,11 +115,11 @@ const maxBlur = (value: string): number => Math.max(0, ...shadowLayers(value).ma
 const outerLayers = (value: string): string[] => shadowLayers(value).filter((layer) => !/(^|\s)inset(\s|$)/.test(layer));
 
 // ---------------------------------------------------------------------------
-// V-05 · Radios por rol
+// Radios por rol
 // ---------------------------------------------------------------------------
 
-/** La escala oficial del Brandbook, tal y como la enuncia V-05. */
-const BRANDBOOK_RADIUS = {
+/** La escala vigente del producto. */
+const ROLE_RADIUS = {
   '--sc-radius-data': 0,
   '--sc-radius-control': 10,
   '--sc-radius-card': 18,
@@ -127,20 +127,20 @@ const BRANDBOOK_RADIUS = {
   '--sc-radius-modal': 28,
 } as const;
 
-describe('CRI-105 · radios por rol (V-05)', () => {
-  it('declara la escala oficial del Brandbook, con un token por rol', () => {
-    for (const [token, expected] of Object.entries(BRANDBOOK_RADIUS)) {
+describe('radios por rol', () => {
+  it('declara la escala vigente, con un token por rol', () => {
+    for (const [token, expected] of Object.entries(ROLE_RADIUS)) {
       expect(resolvePx(token, rootTokens), token).toBe(expected);
     }
     expect(rootTokens.get('--sc-radius-pill')).toBe('999px');
   });
 
-  it('no deja ningún escalón de radio fuera de la escala oficial', () => {
+  it('no deja ningún escalón de radio fuera de la escala vigente', () => {
     // La escala genérica (xs/sm/md/lg/…) sobrevive como alias de migración,
     // pero ya no puede inventar un valor propio: cada uno resuelve a un
-    // escalón del Brandbook. Un componente que consuma `--sc-radius-md` recibe
+    // escalón definido. Un componente que consuma `--sc-radius-md` recibe
     // el radio de control, no un decimoquinto valor intermedio.
-    const permitted = new Set<number>([...Object.values(BRANDBOOK_RADIUS), 999]);
+    const permitted = new Set<number>([...Object.values(ROLE_RADIUS), 999]);
     const offenders: string[] = [];
     for (const [name] of rootTokens) {
       if (!name.startsWith('--sc-radius-')) continue;
@@ -150,9 +150,9 @@ describe('CRI-105 · radios por rol (V-05)', () => {
   });
 
   it('mantiene el radio del sheet en el escalón de panel y el modal por encima', () => {
-    // V-05 reparte "panel/sheet" al mismo escalón: una hoja es un panel que
+    // Panel y sheet comparten escalón: una hoja es un panel que
     // nace de un borde, no una interrupción.
-    expect(resolvePx('--sc-radius-sheet', rootTokens)).toBe(BRANDBOOK_RADIUS['--sc-radius-panel']);
+    expect(resolvePx('--sc-radius-sheet', rootTokens)).toBe(ROLE_RADIUS['--sc-radius-panel']);
     expect(resolvePx('--sc-radius-modal', rootTokens)).toBeGreaterThan(resolvePx('--sc-radius-panel', rootTokens));
   });
 

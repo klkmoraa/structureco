@@ -11,6 +11,8 @@ import { standardSections } from '../../data/standardSections';
 import { unitLabel } from '../../engine/units';
 import type { Language } from '../../i18n/catalogs';
 import type { UnitSystemId } from '../../types';
+import type { SurfacePresentation, SurfaceStatus } from '../workspace/surfacePresentation';
+import { GeneratorFamilyPreview } from './GeneratorFamilyPreview';
 import { createStructureGeneratorTranslator } from './structureGeneratorCopy';
 import {
   GENERATOR_FAMILIES,
@@ -74,6 +76,8 @@ export interface StructureGeneratorPanelProps {
   onGenerate: () => boolean | void | Promise<boolean | void>;
   onCancel: () => void;
   className?: string;
+  presentation?: SurfacePresentation;
+  status?: SurfaceStatus;
 }
 
 const SPACING_GROUP_KEY: Record<GeneratorSpacingField, `spacing.${GeneratorSpacingField}`> = {
@@ -100,6 +104,8 @@ export const StructureGeneratorPanel = ({
   onGenerate,
   onCancel,
   className = '',
+  presentation = 'floating',
+  status = 'active',
 }: StructureGeneratorPanelProps) => {
   const t = createStructureGeneratorTranslator(language);
   const [reviewing, setReviewing] = useState(false);
@@ -148,6 +154,18 @@ export const StructureGeneratorPanel = ({
   const rows = summary ? buildGeneratorSummaryRows(summary, units, language) : [];
   const presentedWarnings = presentGeneratorWarnings(warnings, language);
   const decisions = countGeneratorDecisions(warnings);
+
+  const selectFamilyFromKey = (index: number, key: string) => {
+    if (!['Home', 'End', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(key)) return;
+    let next = index;
+    if (key === 'Home') next = 0;
+    else if (key === 'End') next = GENERATOR_FAMILIES.length - 1;
+    else if (key === 'ArrowRight' || key === 'ArrowDown') next = (index + 1) % GENERATOR_FAMILIES.length;
+    else next = (index - 1 + GENERATOR_FAMILIES.length) % GENERATOR_FAMILIES.length;
+    const family = GENERATOR_FAMILIES[next];
+    patch({ family });
+    window.requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`[data-generator-family="${family}"]`)?.focus());
+  };
 
   const renderSpacing = (field: GeneratorSpacingField) => {
     const draft = form[field];
@@ -367,7 +385,7 @@ export const StructureGeneratorPanel = ({
     </ul>
   </section> : null;
 
-  const summaryList = summary ? <section className="structure-generator__summary" aria-label={t('summary.title')}>
+  const summaryList = summary ? <section className="structure-generator__summary" aria-label={t('summary.title')} data-generator-stage="summary">
     <h3>{t('summary.title')}</h3>
     <dl>
       {rows.map((row) => <div key={row.id} data-summary-row={row.id}>
@@ -403,7 +421,13 @@ export const StructureGeneratorPanel = ({
     className={`structure-generator${className ? ` ${className}` : ''}`}
     aria-label={t('title')}
     data-structure-generator-surface
+    data-workspace-surface="generator"
+    data-surface-presentation={presentation}
+    data-surface-status={status}
+    hidden={status !== 'active'}
+    aria-hidden={status !== 'active' ? 'true' : undefined}
     data-structure-generator-view={reviewing ? 'review' : 'parameters'}
+    data-generator-layout="family-parameters-review"
     tabIndex={-1}
     onKeyDown={onKeyDown}
   >
@@ -425,16 +449,33 @@ export const StructureGeneratorPanel = ({
       <p className="structure-generator__note">{t('previewNote')}</p>
       {error ? <p className="structure-generator__error" role="alert">{error}</p> : null}
     </div> : <div className="structure-generator__body">
-      <SegmentedControl
-        size="sm"
-        className="structure-generator__families"
-        label={t('familyLabel')}
-        value={form.family}
-        options={GENERATOR_FAMILIES.map((family) => ({ value: family, label: t(`family.${family}`) }))}
-        onValueChange={(value) => patch({ family: value as GeneratorFormState['family'] })}
-      />
+      <div className="structure-generator__families" role="radiogroup" aria-label={t('familyLabel')} data-generator-stage="family">
+        {GENERATOR_FAMILIES.map((family, index) => {
+          const selected = family === form.family;
+          return <button
+            key={family}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            aria-label={t(`family.${family}`)}
+            tabIndex={selected ? 0 : -1}
+            data-generator-family={family}
+            onClick={() => patch({ family })}
+            onKeyDown={(event) => {
+              if (!['Home', 'End', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(event.key)) return;
+              event.preventDefault();
+              selectFamilyFromKey(index, event.key);
+            }}
+          >
+            <GeneratorFamilyPreview family={family} />
+            <span>{t(`family.${family}`)}</span>
+          </button>;
+        })}
+      </div>
 
-      {geometryFields}
+      <div className="structure-generator__parameter-stage" data-generator-stage="parameters">
+        {geometryFields}
+      </div>
 
       <Accordion
         multiple

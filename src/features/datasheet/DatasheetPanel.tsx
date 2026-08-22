@@ -417,7 +417,7 @@ export const DatasheetPanel = ({
     onRestore={onRestore}
     restoreLabel={t('datasheet.restore')}
   >
-    <div className="datasheet-layout">
+    <div className="datasheet-layout" data-datasheet-layout="audit-workbench">
       <div className="datasheet-main">
         <div className="datasheet-toolbar">
           <div className="datasheet-entity" role="group" aria-label={t('datasheet.entityGroup')}>

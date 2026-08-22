@@ -7,19 +7,26 @@ import {
   Delete,
   GitCommitHorizontal,
   Grid3x3,
+  Layers3,
   Hand,
   Move,
   MousePointer2,
   MoreHorizontal,
   MoveDiagonal2,
+  PanelsTopLeft,
+  PanelBottom,
+  PanelLeft,
   RotateCcw,
   Ruler,
   Search,
+  SlidersHorizontal,
   Scissors,
   Sigma,
+  ChartNoAxesColumnIncreasing,
+  X,
   type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useProject } from '../../store/ProjectContext';
@@ -34,6 +41,8 @@ import {
 } from './toolRegistry';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { useShellComposition } from '../workspace/useShellComposition';
+import type { ToolDockPosition } from '../workspace/useWorkspaceLayoutPreferences';
+import { Popover } from '../../design-system/components/overlays';
 
 const toolIcons: Record<Tool, LucideIcon> = {
   select: MousePointer2,
@@ -72,13 +81,25 @@ const toolTones: Record<Tool, ToolTone> = {
   delete: 'destructive',
 };
 
+type DesktopDockGroup = 'navigate' | 'build' | 'loads' | 'refine';
+
+const DESKTOP_DOCK_GROUPS: readonly {
+  id: DesktopDockGroup;
+  sourceGroups: readonly (typeof TOOL_GROUPS)[number]['id'][];
+}[] = [
+  { id: 'navigate', sourceGroups: ['navigate'] },
+  { id: 'build', sourceGroups: ['create'] },
+  { id: 'loads', sourceGroups: ['loads'] },
+  { id: 'refine', sourceGroups: ['inspect', 'edit'] },
+] as const;
+
 /**
  * Tooltip local del riel, visible por foco y no sólo por hover (CRI-98 §4).
  * Se porta a `document.body` a propósito: `.toolbar` scrollea en Y
  * (`overflow-y:auto`), y eso recorta cualquier burbuja posicionada dentro de
  * su propia caja, sobre todo en `M1` donde el riel mide apenas 76px de ancho.
  */
-const RailTooltip = ({ id, content, children }: { id: string; content: string; children: ReactNode }) => {
+const RailTooltip = ({ id, content, children, placement = 'right' }: { id: string; content: string; children: ReactNode; placement?: 'right' | 'top' }) => {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
   const rect = open ? anchorRef.current?.getBoundingClientRect() : undefined;
@@ -97,7 +118,10 @@ const RailTooltip = ({ id, content, children }: { id: string; content: string; c
         role="tooltip"
         id={id}
         className="tool-rail-tooltip"
-        style={{ top: rect.top + rect.height / 2, left: rect.right + 8 }}
+        data-placement={placement}
+        style={placement === 'top'
+          ? { top: rect.top - 8, left: rect.left + rect.width / 2, transform: 'translate(-50%, -100%)' }
+          : { top: rect.top + rect.height / 2, left: rect.right + 8 }}
       >{content}</span>,
       document.body,
     ) : null}
@@ -139,6 +163,7 @@ const RegisteredToolButton = ({
     aria-checked={menuItem ? active : undefined}
     data-tool-id={id}
     data-tool-group={definition.group}
+    data-source-tool-group={definition.group}
   />;
 };
 
@@ -204,6 +229,108 @@ const MobileCommandPaletteButton = ({ label, accessibleLabel, onOpen }: { label:
   <kbd>Ctrl K</kbd>
 </button>;
 
+type WorkspaceSurfaceCommand = 'open-analysis-setup' | 'open-view-settings' | 'open-results';
+
+const WORKSPACE_SURFACE_ACTIONS: readonly {
+  command: WorkspaceSurfaceCommand;
+  labelKey: 'inspector.analysisSetupLauncher' | 'inspector.viewTab' | 'results.outputs';
+  icon: LucideIcon;
+}[] = [
+  { command: 'open-analysis-setup', labelKey: 'inspector.analysisSetupLauncher', icon: SlidersHorizontal },
+  { command: 'open-view-settings', labelKey: 'inspector.viewTab', icon: Layers3 },
+  { command: 'open-results', labelKey: 'results.outputs', icon: ChartNoAxesColumnIncreasing },
+];
+
+const WorkspacePanelsLauncher = ({ compact }: { compact: boolean }) => {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const label = t('toolbar.workspacePanelsOpen');
+  return <div className={`tool-rail-surface-launcher${compact ? ' is-compact' : ''}`} data-workspace-panels-launcher>
+    <Popover
+      label={label}
+      open={open}
+      onOpenChange={setOpen}
+      align={compact ? 'start' : 'center'}
+      className="tool-rail-surface-launcher__popover"
+      trigger={<><span className="sc-tool-button__icon" aria-hidden="true"><PanelsTopLeft size={22} strokeWidth={1.8} /></span><span className="sc-tool-button__copy"><strong>{t('toolbar.workspacePanels')}</strong></span></>}
+    >
+      <div className="tool-rail-surface-launcher__menu" role="menu" aria-label={t('toolbar.workspacePanelsTitle')}>
+        {WORKSPACE_SURFACE_ACTIONS.map((action) => {
+          const Icon = action.icon;
+          return <button
+            key={action.command}
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              emitWorkspaceCommand(action.command);
+            }}
+            data-workspace-surface-command={action.command}
+          ><Icon size={18} strokeWidth={1.8} /><span>{t(action.labelKey)}</span></button>;
+        })}
+        <button type="button" className="tool-rail-surface-launcher__close" role="menuitem" onClick={() => setOpen(false)}>
+          <X size={16} aria-hidden="true" /><span>{t('toolbar.closePanels')}</span>
+        </button>
+      </div>
+    </Popover>
+  </div>;
+};
+
+const DockPositionToggle = ({
+  position,
+  onChange,
+}: {
+  position: ToolDockPosition;
+  onChange?: (position: ToolDockPosition) => void;
+}) => {
+  const { t } = useI18n();
+  if (!onChange) return null;
+  const left = position === 'left';
+  const label = left ? 'toolbar.dockMoveBottom' : 'toolbar.dockMoveLeft';
+  const Icon = left ? PanelBottom : PanelLeft;
+  return <RailTooltip id="tool-rail-tip-dock-position" content={t(label)} placement="top">
+    <button type="button" className="dock-position-toggle" aria-label={t(label)} onClick={() => onChange(left ? 'bottom' : 'left')}>
+      <Icon size={18} aria-hidden="true" />
+    </button>
+  </RailTooltip>;
+};
+
+const MobileWorkspaceSurfaceButton = ({
+  label,
+  icon: Icon,
+  onOpen,
+}: {
+  label: string;
+  icon: LucideIcon;
+  onOpen: () => void;
+}) => <button className="mobile-palette-tool tool-workspace-surface" type="button" role="menuitem" aria-label={label} onClick={onOpen}>
+  <span className="mobile-palette-icon" aria-hidden="true"><Icon size={23} strokeWidth={1.8} /></span>
+  <span className="mobile-palette-copy"><strong>{label}</strong></span>
+  <ChevronRight size={19} aria-hidden="true" />
+</button>;
+
+const MobileWorkspacePanelsButton = ({
+  label,
+  onOpen,
+  buttonRef,
+}: {
+  label: string;
+  onOpen: () => void;
+  buttonRef: RefObject<HTMLButtonElement | null>;
+}) => <button
+  ref={buttonRef}
+  className="mobile-palette-tool tool-workspace-panels"
+  type="button"
+  role="menuitem"
+  aria-label={label}
+  onClick={onOpen}
+  data-workspace-panels-launcher
+>
+  <span className="mobile-palette-icon" aria-hidden="true"><PanelsTopLeft size={23} strokeWidth={1.8} /></span>
+  <span className="mobile-palette-copy"><strong>{label}</strong></span>
+  <ChevronRight size={19} aria-hidden="true" />
+</button>;
+
 /** The portal sheet owns inertness; restore it synchronously when it closes. */
 const setAppShellMobileInert = (inert: boolean) => {
   const background = document.querySelector<HTMLElement>('.app-shell');
@@ -220,12 +347,17 @@ const setAppShellMobileInert = (inert: boolean) => {
  * paleta táctil — sin booleano de compatibilidad que un llamador pueda pasar
  * por su cuenta.
  */
-export const ToolRail = () => {
+export const ToolRail = ({ dockPosition = 'bottom', onDockPositionChange }: {
+  dockPosition?: ToolDockPosition;
+  onDockPositionChange?: (position: ToolDockPosition) => void;
+}) => {
   const { activeTool, setActiveTool, project, selection } = useProject();
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [mobileMenu, setMobileMenu] = useState<'loads' | 'more' | null>(null);
+  const [mobileMenu, setMobileMenu] = useState<'loads' | 'more' | 'workspace' | null>(null);
+  const [desktopDockCollapsed, setDesktopDockCollapsed] = useState(false);
   const loadMenuButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const workspaceMenuButtonRef = useRef<HTMLButtonElement>(null);
   const paletteRef = useRef<HTMLElement>(null);
   const { shellClass } = useShellComposition();
   const previousShellClassRef = useRef(shellClass);
@@ -239,11 +371,13 @@ export const ToolRail = () => {
     ? TOOL_REGISTRY.filter((tool) => !tool.classroomAdvanced)
     : TOOL_REGISTRY;
   const mobilePrimaryTools = TOOL_REGISTRY.filter((tool) => tool.mobile === 'primary');
-  const mobilePaletteTools = TOOL_REGISTRY.filter((tool) => tool.mobile === mobileMenu);
+  const mobilePaletteTools = mobileMenu === 'loads' || mobileMenu === 'more'
+    ? TOOL_REGISTRY.filter((tool) => tool.mobile === mobileMenu)
+    : [];
   const loadToolActive = TOOL_REGISTRY.some((tool) => tool.mobile === 'loads' && tool.id === activeTool);
   const moreToolActive = TOOL_REGISTRY.some((tool) => tool.mobile === 'more' && tool.id === activeTool);
   const loadGroupHighlighted = mobileMenu ? mobileMenu === 'loads' : loadToolActive;
-  const moreGroupHighlighted = mobileMenu ? mobileMenu === 'more' : moreToolActive;
+  const moreGroupHighlighted = mobileMenu ? mobileMenu !== 'loads' : moreToolActive;
   const canEditSelection = selection?.kind === 'node'
     || selection?.kind === 'member'
     || (selection?.kind === 'multi' && (selection.nodeIds.length > 0 || selection.memberIds.length > 0));
@@ -270,6 +404,15 @@ export const ToolRail = () => {
     window.requestAnimationFrame(() => emitWorkspaceCommand('open-structure-generator'));
   };
 
+  const openWorkspaceSurfaceFromMobile = (command: WorkspaceSurfaceCommand) => {
+    closeMobileMenu(false);
+    window.requestAnimationFrame(() => emitWorkspaceCommand(command));
+  };
+
+  const openWorkspacePanelsFromMobile = () => {
+    setMobileMenu('workspace');
+  };
+
   const closeMobileMenu = (restoreFocus = true) => {
     const closingMenu = mobileMenu;
     setMobileMenu(null);
@@ -278,7 +421,7 @@ export const ToolRail = () => {
     setAppShellMobileInert(false);
     if (!restoreFocus || !closingMenu) return;
     window.requestAnimationFrame(() => {
-      (closingMenu === 'loads' ? loadMenuButtonRef : moreMenuButtonRef).current?.focus();
+      (closingMenu === 'loads' ? loadMenuButtonRef : closingMenu === 'workspace' ? workspaceMenuButtonRef : moreMenuButtonRef).current?.focus();
     });
   };
 
@@ -330,9 +473,17 @@ export const ToolRail = () => {
     if (shellClass !== 'K0') setMobileMenu(null);
   }, [shellClass]);
 
-  const paletteTitle = mobileMenu === 'loads' ? t('toolbar.addLoad') : t('toolbar.moreSheetTitle');
-  const paletteDescription = mobileMenu === 'loads' ? t('toolbar.loadSheetDescription') : t('toolbar.moreSheetDescription');
-  const paletteGroups = TOOL_GROUPS.filter((group) =>
+  const paletteTitle = mobileMenu === 'loads'
+    ? t('toolbar.addLoad')
+    : mobileMenu === 'workspace'
+      ? t('toolbar.workspacePanelsTitle')
+      : t('toolbar.moreSheetTitle');
+  const paletteDescription = mobileMenu === 'loads'
+    ? t('toolbar.loadSheetDescription')
+    : mobileMenu === 'workspace'
+      ? t('toolbar.workspacePanelsDescription')
+      : t('toolbar.moreSheetDescription');
+  const paletteGroups = mobileMenu === 'workspace' ? [] : TOOL_GROUPS.filter((group) =>
     mobilePaletteTools.some((tool) => tool.group === group.id)
       || (group.id === 'edit' && canEditSelection)
       // Generar no es una herramienta del registro y no depende de la
@@ -357,7 +508,12 @@ export const ToolRail = () => {
         <button type="button" className="mobile-tool-palette-close" onClick={() => closeMobileMenu()}>{t('toolbar.close')}</button>
       </header>
       <div className="mobile-tool-palette-list" role="menu" aria-label={paletteTitle}>
-        {paletteGroups.map((group) => <div key={group.id} className="mobile-palette-group" role="group" aria-label={t(group.labelKey)}>
+        {mobileMenu === 'workspace' ? WORKSPACE_SURFACE_ACTIONS.map((action) => <MobileWorkspaceSurfaceButton
+          key={action.command}
+          label={t(action.labelKey)}
+          icon={action.icon}
+          onOpen={() => openWorkspaceSurfaceFromMobile(action.command)}
+        />) : paletteGroups.map((group) => <div key={group.id} className="mobile-palette-group" role="group" aria-label={t(group.labelKey)}>
           <h3>{t(group.labelKey)}</h3>
           {toolsInGroup(group.id, mobilePaletteTools).map((definition) => <PaletteToolButton
             key={definition.id}
@@ -368,6 +524,7 @@ export const ToolRail = () => {
             onSelect={selectTool}
           />)}
           {group.id === 'navigate' ? <MobileCommandPaletteButton label={t('palette.openShort')} accessibleLabel={t('palette.open')} onOpen={openCommandPaletteFromMobile} /> : null}
+          {group.id === 'navigate' ? <MobileWorkspacePanelsButton label={t('toolbar.workspacePanelsTitle')} onOpen={openWorkspacePanelsFromMobile} buttonRef={workspaceMenuButtonRef} /> : null}
           {group.id === 'create' ? <button
             className="mobile-palette-tool tool-structure-generator"
             type="button"
@@ -397,11 +554,87 @@ export const ToolRail = () => {
     </section>
   </>, document.body) : null;
 
+  const renderDockGroup = (dockGroup: (typeof DESKTOP_DOCK_GROUPS)[number]) => {
+    const groupTools = visibleTools.filter((tool) => dockGroup.sourceGroups.includes(tool.group));
+    const headingId = `dock-group-${dockGroup.id}`;
+    const label = dockGroup.id === 'navigate'
+      ? t('toolbar.groupNavigate')
+      : dockGroup.id === 'build'
+        ? t('toolbar.groupCreate')
+        : dockGroup.id === 'loads'
+          ? t('toolbar.groupLoads')
+          : `${t('toolbar.groupInspect')} · ${t('toolbar.groupEdit')}`;
+
+    return <section
+      key={dockGroup.id}
+      className={`tool-group dock-group dock-group-${dockGroup.id}`}
+      role="group"
+      aria-labelledby={headingId}
+      data-dock-group={dockGroup.id}
+    >
+      <h2 id={headingId} className="tool-group-heading">{label}</h2>
+      <div className="tool-group-actions">
+        {groupTools.map((definition) => {
+          const tipId = `tool-rail-tip-${definition.id}`;
+          return <RailTooltip key={definition.id} id={tipId} content={`${t(definition.labelKey)} (${definition.shortcut})`} placement="top">
+            <RegisteredToolButton
+              definition={definition}
+              label={t(definition.labelKey)}
+              active={activeTool === definition.id}
+              compact
+              onSelect={selectTool}
+              aria-describedby={tipId}
+            />
+          </RailTooltip>;
+        })}
+        {dockGroup.id === 'navigate' ? <RailTooltip id="tool-rail-tip-command-palette" content={`${t('palette.open')} (Ctrl K)`} placement="top">
+          <CommandPaletteButton label={t('palette.openShort')} accessibleLabel={t('palette.open')} compact aria-describedby="tool-rail-tip-command-palette" />
+        </RailTooltip> : null}
+        {dockGroup.id === 'navigate' ? <RailTooltip id="tool-rail-tip-workspace-panels" content={t('toolbar.workspacePanelsTitle')} placement="top"><WorkspacePanelsLauncher compact /></RailTooltip> : null}
+        {dockGroup.id === 'build' ? <RailTooltip id="tool-rail-tip-generator" content={t('generator.launcher')} placement="top">
+          <EditorToolButton
+            className="tool-button tool-structure-generator is-compact"
+            label={t('generator.launcher')}
+            icon={<Grid3x3 size={22} strokeWidth={1.8} />}
+            tone="structure"
+            compact
+            onClick={() => emitWorkspaceCommand('open-structure-generator')}
+            aria-describedby="tool-rail-tip-generator"
+            data-structure-generator-command
+          />
+        </RailTooltip> : null}
+        {dockGroup.id === 'refine' && canEditSelection ? <RailTooltip id="tool-rail-tip-structural-edit" content={t('canvas.structuralEditLauncher')} placement="top">
+          <EditorToolButton
+            className="tool-button tool-structural-edit is-compact"
+            label={t('canvas.structuralEditLauncher')}
+            icon={<Move size={22} strokeWidth={1.8} />}
+            tone="structure"
+            compact
+            onClick={() => emitWorkspaceCommand('open-structural-edit')}
+            aria-describedby="tool-rail-tip-structural-edit"
+            data-structural-edit-command
+          />
+        </RailTooltip> : null}
+      </div>
+    </section>;
+  };
+
   return (
     <>
-      <aside className={`toolbar tool-rail${compact ? ' is-compact' : ''}${mobileMenu ? ' mobile-menu-open' : ''}`} aria-label={t('toolbar.label')} data-tool-rail={compact ? 'compact' : 'expanded'}>
-        <div className="desktop-tool-list">
-          {TOOL_GROUPS.map((group) => {
+      <aside className={`toolbar tool-rail${compact ? ' is-compact' : ' is-floating-dock'}${desktopDockCollapsed ? ' is-dock-collapsed' : ''}${mobileMenu ? ' mobile-menu-open' : ''}`} aria-label={t('toolbar.label')} data-tool-rail={compact ? 'compact' : 'dock'}>
+        <div className="desktop-tool-list" data-desktop-dock-tools={shellClass === 'X2' ? 'true' : undefined}>
+          {shellClass === 'X2' ? desktopDockCollapsed && activeDefinition
+            ? <RailTooltip id="tool-rail-tip-active-tool" content={`${t(activeDefinition.labelKey)} (${activeDefinition.shortcut})`} placement="top">
+              <RegisteredToolButton
+                definition={activeDefinition}
+                label={t(activeDefinition.labelKey)}
+                active
+                compact
+                onSelect={selectTool}
+                aria-describedby="tool-rail-tip-active-tool"
+              />
+            </RailTooltip>
+            : DESKTOP_DOCK_GROUPS.map(renderDockGroup) : TOOL_GROUPS.map((group) => {
             const groupTools = toolsInGroup(group.id, visibleTools);
             if (!groupTools.length && !(group.id === 'edit' && canEditSelection)) return null;
             const headingId = `tool-group-${group.id}`;
@@ -424,6 +657,7 @@ export const ToolRail = () => {
                 {group.id === 'navigate' ? <RailTooltip id="tool-rail-tip-command-palette" content={`${t('palette.open')} (Ctrl K)`}>
                   <CommandPaletteButton label={t('palette.openShort')} accessibleLabel={t('palette.open')} compact={compact} aria-describedby="tool-rail-tip-command-palette" />
                 </RailTooltip> : null}
+                {group.id === 'navigate' ? <RailTooltip id="tool-rail-tip-workspace-panels" content={t('toolbar.workspacePanelsTitle')}><WorkspacePanelsLauncher compact={compact} /></RailTooltip> : null}
                 {group.id === 'create' ? <RailTooltip id="tool-rail-tip-generator" content={t('generator.launcher')}>
                   <EditorToolButton
                     className={`tool-button tool-structure-generator${compact ? ' is-compact' : ''}`}
@@ -451,6 +685,14 @@ export const ToolRail = () => {
               </div>
             </section>;
           })}
+          {shellClass === 'X2' ? <button
+            type="button"
+            className="dock-collapse-toggle"
+            aria-label={t(desktopDockCollapsed ? 'toolbar.expandDock' : 'toolbar.collapseDock')}
+            aria-expanded={!desktopDockCollapsed}
+            onClick={() => setDesktopDockCollapsed((collapsed) => !collapsed)}
+          ><PanelsTopLeft size={18} aria-hidden="true" /></button> : null}
+          {shellClass === 'X2' ? <DockPositionToggle position={dockPosition} onChange={onDockPositionChange} /> : null}
           {classroom ? <button
             className="tool-button tool-more desktop-advanced-toggle"
             aria-label={showAdvanced ? t('toolbar.hideAdvanced') : t('toolbar.showAdvanced')}

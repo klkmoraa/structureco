@@ -43,6 +43,10 @@ structureco-palette-lab-package-*
 structureco-palette-lab/
 structureco-sites-worktrees/
 structureco-sites/
+/structureco-sites-test/
+/structureco-sites-test-publish/
+/validation/topbar-repeat-before/
+/validation/topbar-repeat-after/
 *.tar.gz
 *.json.manifest
 *.part-*

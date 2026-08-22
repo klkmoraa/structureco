@@ -46,7 +46,7 @@ import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { CanvasChrome } from './CanvasChrome';
 import { layoutSmartLabels, smartLabelDetailForScale, type SmartLabelCandidate } from './labelLayout';
 import { buildCanvasSelectionVisualState, selectionEnvelopeForPoints } from './selectionVisuals';
-import { emitWorkspaceCommand, onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
+import { onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
 import { CanvasGeometryLayer, type StructuralTarget } from './CanvasGeometryLayer';
 import {
   flexibleRatioFromGross,
@@ -77,12 +77,10 @@ import { parseQuickEntryPair } from './quickEntry';
 import { resolveRepeatRecipe, type RepeatRecipe } from './repeatAction';
 import { RepeatActionOverlay } from './RepeatActionOverlay';
 import { prepareDuplicatePreview } from './duplicatePreview';
-import { ContextualActions, type ContextualActionAvailability, type ContextualActionId } from './ContextualActions';
 import {
   decodeStructuralClipboard,
   encodeStructuralClipboard,
   readClipboardText,
-  supportsClipboardReadText,
 } from './structuralClipboard';
 import {
   createStructuralEditGeometryPreview,
@@ -221,16 +219,6 @@ const toolLabelKeys: Record<Tool, TranslationKey> = {
   delete: 'toolbar.delete',
 };
 
-const contextualActionLabelKeys: Record<ContextualActionId, TranslationKey> = {
-  copy: 'contextualActions.copy',
-  paste: 'contextualActions.paste',
-  duplicate: 'contextualActions.duplicate',
-  repeat: 'contextualActions.repeat',
-  delete: 'contextualActions.delete',
-  datasheet: 'contextualActions.datasheet',
-  structuralEdit: 'contextualActions.structuralEdit',
-};
-
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 const nextId = (prefix: string, ids: string[]) => {
@@ -278,9 +266,7 @@ export const StructuralCanvas = ({
   /** The broker owns Compact contextual-layer exclusivity; candidate identity stays local below. */
   const surfaceBroker = useContext(SurfacePresentationContext);
   const candidatePickerSurface = surfaceBroker?.stateFor('candidatePicker');
-  const contextualActionsSurface = surfaceBroker?.stateFor('contextualActions');
-  const openContextualActionsSurface = surfaceBroker?.openSurface;
-  const closeContextualActionsSurface = surfaceBroker?.closeSurface;
+  const generatorSurface = surfaceBroker?.stateFor('generator');
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const coordinateReadoutRef = useRef<HTMLOutputElement>(null);
@@ -307,7 +293,8 @@ export const StructuralCanvas = ({
    * —el ghost y su ancla— y quién está pidiendo un punto; los parámetros viven
    * en la superficie, que es la única que sabe traducirlos.
    */
-  const [generatorOpen, setGeneratorOpen] = useState(false);
+  const [standaloneGeneratorOpen, setStandaloneGeneratorOpen] = useState(false);
+  const generatorOpen = generatorSurface?.open ?? standaloneGeneratorOpen;
   const [generatorGhost, setGeneratorGhost] = useState<StructureGenerationGhost | null>(null);
   const [generatorOrigin, setGeneratorOrigin] = useState<{ x: number; y: number } | null>(null);
   const [generatorOriginPicking, setGeneratorOriginPicking] = useState(false);
@@ -339,34 +326,10 @@ export const StructuralCanvas = ({
   // React to re-read the existing in-app clipboard ref after Copy succeeds.
   const [, refreshClipboardAvailability] = useState(0);
 
-  // This intent is wholly derived from the canonical workspace selection. The
-  // broker stores only its presentation lifecycle, never a copied selection —
-  // and, being derived, it never outranks a surface the user opened. The
-  // Candidate Picker's precedence over it is the broker's, by surface role and
-  // in any opening order (CRI-108); it used to need a re-activation from here
-  // to win the "latest activation" race.
-  useEffect(() => {
-    if (!openContextualActionsSurface || !closeContextualActionsSurface) return;
-    if (selection) openContextualActionsSurface('contextualActions');
-    else closeContextualActionsSurface('contextualActions');
-  }, [closeContextualActionsSurface, openContextualActionsSurface, selection]);
-
   const selectionBox = interaction.kind === 'selection-box' ? interaction : null;
   const candidatePreview = candidatePicker ? activeCandidate(candidatePicker) : null;
   const repeatCandidate = useMemo(() => resolveRepeatRecipe(project, selection), [project, selection]);
   const editCapabilities = useMemo(() => structuralEditCapabilities(project, selection), [project, selection]);
-  const hasInAppClipboard = Boolean(clipboardRef.current);
-  const contextualActionAvailability = useMemo<ContextualActionAvailability>(() => {
-    const browserClipboard = typeof navigator === 'undefined' ? undefined : navigator.clipboard;
-    return {
-      copy: Boolean(copyModelSelection(project, selection)),
-      paste: hasInAppClipboard || supportsClipboardReadText(browserClipboard),
-      duplicate: Boolean(selection && ['node', 'member', 'multi'].includes(selection.kind)),
-      repeat: Boolean(repeatCandidate),
-      datasheet: Boolean(selection),
-      structuralEdit: editCapabilities.structural,
-    };
-  }, [editCapabilities.structural, hasInAppClipboard, project, repeatCandidate, selection]);
   const structuralEditPreview = useMemo((): { prepared: PreparedStructuralEdit | null; error: string } => {
     if (!structuralEditDraft) return { prepared: null, error: '' };
     if (structuralEditDraft.sourceSnapshot !== structuralEditSnapshot(project)) {
@@ -1133,12 +1096,13 @@ export const StructuralCanvas = ({
   const resolveGeneratorOriginPick = useCallback(() => setGeneratorPickedOrigin(null), []);
 
   const closeGenerator = useCallback(() => {
-    setGeneratorOpen(false);
+    if (surfaceBroker) surfaceBroker.closeSurface('generator');
+    else setStandaloneGeneratorOpen(false);
     setGeneratorGhost(null);
     setGeneratorOrigin(null);
     setGeneratorOriginPicking(false);
     generatorOriginPickingRef.current = false;
-  }, []);
+  }, [surfaceBroker]);
 
   const startPending = useCallback((event: ReactPointerEvent, target: StructuralTarget, candidates: CandidateTarget[] = []) => {
     const anchor = localScreenPoint(event.clientX, event.clientY);
@@ -1775,34 +1739,11 @@ export const StructuralCanvas = ({
     }
   }, [cancelActiveInteraction, closeCandidatePicker, editCapabilities.structural, project, selection, setActiveTool, showCanvasFeedback, t]);
 
-  const invokeContextualAction = useCallback((action: ContextualActionId) => {
-    switch (action) {
-      case 'copy':
-        void copyStructuralSelection();
-        return;
-      case 'paste':
-        void pasteStructuralSelection();
-        return;
-      case 'duplicate':
-        startDuplicate();
-        return;
-      case 'repeat':
-        activateRepeat();
-        return;
-      case 'delete':
-        deleteSelection();
-        return;
-      case 'datasheet':
-        emitWorkspaceCommand('open-datasheet');
-        return;
-      case 'structuralEdit':
-        emitWorkspaceCommand('open-structural-edit');
-        return;
-    }
-  }, [activateRepeat, copyStructuralSelection, deleteSelection, pasteStructuralSelection, startDuplicate]);
-
   useEffect(() => onWorkspaceCommand('open-structural-edit', () => startStructuralEdit('move')), [startStructuralEdit]);
-  useEffect(() => onWorkspaceCommand('open-structure-generator', () => setGeneratorOpen(true)), []);
+  useEffect(() => onWorkspaceCommand('open-structure-generator', () => {
+    if (surfaceBroker) surfaceBroker.openSurface('generator');
+    else setStandaloneGeneratorOpen(true);
+  }), [surfaceBroker]);
 
   const changeStructuralEditOperation = useCallback((kind: StructuralEditKind) => {
     setStructuralEditDraft((current) => current ? changeStructuralEditKind(project, current, kind) : current);
@@ -2324,6 +2265,9 @@ export const StructuralCanvas = ({
         <defs>
           <marker id="arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--force)" /></marker>
           <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--shear)" /></marker>
+          <marker id="arrow-load-point" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--sc-color-load-point)" /></marker>
+          <marker id="arrow-load-distributed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--sc-color-load-distributed)" /></marker>
+          <marker id="arrow-load-moment" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--sc-color-load-moment-applied)" /></marker>
           <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--axial)" /></marker>
           <marker id="arrow-mechanism" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--warning)" /></marker>
         </defs>
@@ -2542,6 +2486,8 @@ export const StructuralCanvas = ({
       </form> : null}
 
       {generatorOpen ? <Suspense fallback={null}><LazyStructureGeneratorSurface
+        presentation={generatorSurface?.presentation ?? 'floating'}
+        status={generatorSurface?.status ?? 'active'}
         pickedOrigin={generatorPickedOrigin}
         originPicking={generatorOriginPicking}
         onToggleOriginPick={toggleGeneratorOriginPick}
@@ -2608,25 +2554,6 @@ export const StructuralCanvas = ({
         canvasHeight={size.height}
       /> : null}
       {canvasFeedback ? <div className="canvas-feedback" role="alert">{canvasFeedback}</div> : null}
-      {selection && (!surfaceBroker || contextualActionsSurface?.status === 'active') ? <div
-        data-workspace-surface={surfaceBroker ? 'contextualActions' : undefined}
-        ref={surfaceBroker?.surfaceRootRef('contextualActions') as Ref<HTMLDivElement> | undefined}
-      >
-        <ContextualActions
-          selection={selection}
-          availability={contextualActionAvailability}
-          active
-          presentation={contextualActionsSurface?.presentation ?? 'inset'}
-          shellClass={surfaceBroker?.shellClass ?? 'K0'}
-          ariaLabel={t('contextualActions.title')}
-          labelForAction={(action) => t(contextualActionLabelKeys[action])}
-          accessibleLabelForAction={(action) => action === 'structuralEdit'
-            ? t('contextualActions.structuralEditAccessible')
-            : t(contextualActionLabelKeys[action])}
-          overflowLabel={t('contextualActions.more')}
-          onInvoke={invokeContextualAction}
-        />
-      </div> : null}
       <RepeatActionOverlay
         available={Boolean(repeatCandidate) && !structuralEditDraft}
         active={Boolean(repeatRecipe)}

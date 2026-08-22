@@ -1,0 +1,180 @@
+{
+  "phase": "illustration-studio-fix-round-1",
+  "engine": "webkit",
+  "generatedAt": "2026-08-22T11:33:46.077Z",
+  "scenarios": [
+    {
+      "id": "desktop-day",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "hasTouch": false,
+      "screenshot": "desktop-day-webkit.png",
+      "metrics": {
+        "horizontalOverflow": 0,
+        "smallTargets": [],
+        "lowContrastControls": [],
+        "presetStorage": null,
+        "personalPresets": 0,
+        "previewAspect": 1.5,
+        "canvasAspect": 1.496,
+        "previewTabOverlap": 0,
+        "projectionAspect": "1.5",
+        "rootTheme": "light",
+        "previewTheme": "light",
+        "realWebgl": true,
+        "fallback": false
+      },
+      "consoleErrors": [],
+      "failures": []
+    },
+    {
+      "id": "desktop-night",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "hasTouch": false,
+      "screenshot": "desktop-night-webkit.png",
+      "metrics": {
+        "horizontalOverflow": 0,
+        "smallTargets": [],
+        "lowContrastControls": [],
+        "presetStorage": null,
+        "personalPresets": 0,
+        "previewAspect": 1.5,
+        "canvasAspect": 1.496,
+        "previewTabOverlap": 0,
+        "projectionAspect": "1.5",
+        "rootTheme": "dark",
+        "previewTheme": "dark",
+        "realWebgl": true,
+        "fallback": false
+      },
+      "consoleErrors": [],
+      "failures": []
+    },
+    {
+      "id": "mobile-day",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "light",
+      "hasTouch": true,
+      "screenshot": "mobile-day-webkit.png",
+      "metrics": {
+        "horizontalOverflow": 0,
+        "smallTargets": [],
+        "lowContrastControls": [],
+        "presetStorage": null,
+        "personalPresets": 0,
+        "previewAspect": 1.5000633472697327,
+        "canvasAspect": 1.4919548967439504,
+        "previewTabOverlap": 0,
+        "projectionAspect": "1.5",
+        "rootTheme": "light",
+        "previewTheme": "light",
+        "realWebgl": true,
+        "fallback": false
+      },
+      "consoleErrors": [],
+      "failures": []
+    },
+    {
+      "id": "mobile-night",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "dark",
+      "hasTouch": true,
+      "screenshot": "mobile-night-webkit.png",
+      "metrics": {
+        "horizontalOverflow": 0,
+        "smallTargets": [],
+        "lowContrastControls": [],
+        "presetStorage": null,
+        "personalPresets": 0,
+        "previewAspect": 1.5000633472697327,
+        "canvasAspect": 1.4919548967439504,
+        "previewTabOverlap": 0,
+        "projectionAspect": "1.5",
+        "rootTheme": "dark",
+        "previewTheme": "dark",
+        "realWebgl": true,
+        "fallback": false
+      },
+      "consoleErrors": [],
+      "failures": []
+    }
+  ],
+  "exports": [
+    {
+      "png": [
+        {
+          "scale": 1,
+          "width": 900,
+          "height": 600,
+          "corners": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "transparentRatio": 0.7274277777777778
+        },
+        {
+          "scale": 2,
+          "width": 1800,
+          "height": 1200,
+          "corners": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "transparentRatio": 0.728337037037037
+        },
+        {
+          "scale": 4,
+          "width": 3600,
+          "height": 2400,
+          "corners": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "transparentRatio": 0.7291528935185185
+        }
+      ],
+      "svgSafe": true,
+      "svgSize": true,
+      "svgComposition": true,
+      "cameraAspect": 1.5,
+      "normalizedParameters": {
+        "assetId": "portal:two-story",
+        "widthScale": 1,
+        "heightScale": 1,
+        "depthScale": 1,
+        "material": "factory",
+        "camera": "isometric",
+        "detail": "hero",
+        "previewTheme": "light"
+      }
+    }
+  ],
+  "presetActions": {
+    "count": 0,
+    "selected": "",
+    "viewport": [
+      390,
+      844
+    ]
+  },
+  "failures": []
+}

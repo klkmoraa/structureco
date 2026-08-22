@@ -1,13 +1,11 @@
 /**
  * Navegación compartida por la bienvenida para los QA de Playwright.
  *
- * CRI-104 convirtió la bienvenida en un recorrido de cuatro pasos y CRI-112
- * terminó de mover los lanzadores de ejemplo del primer paso al tercero
- * ("Por dónde"). Cada script de QA llevaba su propia copia de la entrada a la
- * Mesa y todas asumían la pantalla anterior: el pórtico de ejemplo visible al
- * cargar. El síntoma era siempre el mismo —30s esperando un botón que existe
- * pero está en otro paso— y la causa una sola, así que la navegación vive aquí
- * una vez (CRI-116).
+ * La portada Clay deja el recorrido de cuatro pasos fuera de la vista inicial:
+ * se abre bajo demanda desde "otras formas de empezar". Cada QA que consume
+ * ejemplos, DXF o Space 3D debe llegar primero a esa superficie real en vez de
+ * asumir un carril visible al cargar. La navegación queda aquí para que todos
+ * los guiones utilicen la misma ruta de producto.
  */
 
 const STEP_ID = { 'Por dónde': 'where', 'Cómo trabajas': 'how' };
@@ -46,6 +44,19 @@ export const openWelcomeStep = async (page, name, { attempts = 5 } = {}) => {
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     if (await panel.isVisible().catch(() => false)) return;
+    const stepRail = page.locator('.welcome-steps');
+    if ((await stepRail.count()) === 0) {
+      const otherWays = page.getByRole('button', { name: /otras formas de empezar|see other ways to start/i });
+      try {
+        await otherWays.click({ timeout: 5_000 });
+        await panel.waitFor({ state: 'visible', timeout: 5_000 });
+        return;
+      } catch (error) {
+        if (attempt === attempts) throw error;
+        await page.waitForTimeout(400);
+        continue;
+      }
+    }
     const button = page.locator('.welcome-steps').getByRole('button', { name, exact: true });
     try {
       await button.click({ timeout: 5_000 });

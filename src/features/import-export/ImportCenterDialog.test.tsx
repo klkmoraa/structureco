@@ -72,15 +72,16 @@ describe('ImportCenterDialog', () => {
     );
 
     const dialog = screen.getByRole('dialog', {
-      name: 'Import a project with context',
-      description: 'Review the file before opening it and decide exactly what to keep.',
+      name: 'Import without losing control',
+      description: 'We review the file first. You decide what to open and what to keep.',
     });
     expect(screen.getByRole('button', { name: 'Close import center' })).toBeTruthy();
     const progress = screen.getByRole('navigation', { name: 'Import progress' });
-    for (const label of ['File', 'Inspection', 'Content', 'Destination', 'Confirm', 'Result']) {
+    for (const label of ['Review', 'Decide', 'Open']) {
       expect(progress.textContent).toContain(label);
     }
-    expect(screen.getByRole('heading', { name: 'Select the project package' })).toBeTruthy();
+    expect(dialog.getAttribute('data-import-layout')).toBe('review-decide-open');
+    expect(screen.getByRole('heading', { name: 'Choose the file' })).toBeTruthy();
     const chooseFile = screen.getByRole('button', { name: 'Choose file' });
     expect(chooseFile).toBeTruthy();
     await waitFor(() => expect(document.activeElement).toBe(chooseFile));
@@ -300,7 +301,7 @@ describe('ImportCenterDialog', () => {
     fireEvent.drop(container.querySelector('.import-dropzone')!, { dataTransfer: { files: [file] } });
 
     expect((await screen.findByRole('alert')).textContent).toContain('El archivo está dañado.');
-    expect(screen.getByRole('heading', { name: /selecciona el expediente/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /elige el archivo/i })).toBeTruthy();
   });
 
   it('lets the user cancel a slow inspection instead of being stuck with no way back', async () => {
@@ -325,12 +326,12 @@ describe('ImportCenterDialog', () => {
     expect(cancelButton.disabled).toBe(false);
     await user.click(cancelButton);
 
-    expect(await screen.findByRole('heading', { name: /selecciona el expediente/i })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: /elige el archivo/i })).toBeTruthy();
 
     // The abandoned inspection must not resurrect once it finally resolves.
     resolveInspect(inspection);
     await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(screen.getByRole('heading', { name: /selecciona el expediente/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /elige el archivo/i })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: /contenido encontrado/i })).toBeNull();
   });
 

@@ -1,0 +1,305 @@
+/* ===========================================================================
+   Inicio/Home · Fase 7
+   ---------------------------------------------------------------------------
+   La portada usa la misma materia Clay que el producto, pero una jerarquía
+   editorial propia: proyecto actual, acciones cortas y biblioteca real. Estas
+   reglas viven bajo `home-atlas` para no volver a cambiar las rutas secundarias
+   (Aula, ejemplos, DXF y Space 3D) que aún usan la composición de Welcome.
+   =========================================================================== */
+
+.home-atlas .welcome-stage.home-dashboard-stage {
+  display: block;
+  width: min(1216px, calc(100% - clamp(32px, 5vw, 88px)));
+  margin: 0 auto;
+  padding: clamp(24px, 4vh, 54px) 0 clamp(30px, 5vh, 66px);
+}
+
+.home-atlas .welcome-work.home-dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1.16fr) minmax(270px, 0.58fr);
+  grid-template-areas: "body portal";
+  align-items: stretch;
+  gap: clamp(18px, 3vw, 42px);
+}
+
+.home-atlas .home-dashboard .welcome-panel--work {
+  display: block;
+  grid-area: body;
+  min-width: 0;
+}
+
+.home-atlas .home-dashboard .welcome-work-actions {
+  display: grid;
+  grid-template-rows: minmax(196px, 1fr) auto;
+  gap: clamp(14px, 2vw, 20px);
+  height: 100%;
+}
+
+.home-atlas .home-dashboard .welcome-resume-card {
+  min-height: 196px;
+  padding: clamp(24px, 3.2vw, 40px);
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--sc-color-border));
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-shadow-clay-md);
+}
+
+.home-atlas .home-dashboard .welcome-resume-card:hover {
+  box-shadow: var(--sc-shadow-clay-lg);
+  transform: translateY(-2px);
+}
+
+.home-atlas .home-dashboard .welcome-resume-card:active {
+  background: var(--sc-color-surface-inset);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  transform: var(--sc-clay-press-transform);
+}
+
+.home-atlas .home-dashboard .welcome-resume-eyebrow {
+  font-size: var(--sc-font-size-caption);
+  letter-spacing: var(--sc-tracking-eyebrow);
+}
+
+.home-atlas .home-dashboard .welcome-resume-name {
+  max-width: 14ch;
+  font-size: clamp(1.8rem, 3.25vw, 3.1rem);
+  line-height: 0.98;
+}
+
+.home-atlas .home-dashboard .welcome-resume-meta {
+  margin-top: auto;
+  padding-top: var(--sc-space-3);
+}
+
+.home-atlas .home-dashboard .welcome-portal {
+  display: grid;
+  grid-area: portal;
+  place-items: center;
+  min-height: 196px;
+  padding: clamp(16px, 2.4vw, 28px);
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-xl);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-shadow-clay-sm);
+}
+
+.home-atlas .home-dashboard .welcome-portal .portal-hero {
+  width: min(100%, 360px);
+  height: clamp(194px, 22vw, 284px);
+}
+
+.home-atlas .home-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.home-atlas .home-quick-actions .welcome-launcher-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "icon info";
+  align-content: center;
+  min-height: 96px;
+  gap: 10px;
+  padding: 12px;
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-md);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-shadow-clay-xs);
+}
+
+.home-atlas .home-quick-actions .welcome-launcher-card:hover {
+  box-shadow: var(--sc-shadow-clay-sm);
+  transform: translateY(-1.5px);
+}
+
+.home-atlas .home-quick-actions .welcome-launcher-card:active {
+  background: var(--sc-color-surface-inset);
+  box-shadow: var(--sc-shadow-clay-pressed);
+  transform: var(--sc-clay-press-transform);
+}
+
+.home-atlas .home-quick-actions .welcome-launcher-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--sc-radius-sm);
+}
+
+.home-atlas .home-quick-actions .welcome-launcher-info {
+  gap: 3px;
+}
+
+.home-atlas .home-quick-actions .welcome-launcher-info strong {
+  font-size: 13px;
+  line-height: 1.15;
+}
+
+.home-atlas .home-quick-actions .welcome-launcher-info small {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--sc-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.home-atlas .home-quick-actions .welcome-launcher-arrow {
+  display: none;
+}
+
+.home-atlas .home-dashboard-stage > .project-hub,
+.home-atlas .home-dashboard-stage > .welcome-hub-band {
+  margin-top: clamp(26px, 4vh, 46px);
+}
+
+.home-atlas .home-dashboard-stage > .project-hub {
+  padding: clamp(16px, 2.2vw, 26px);
+  border: var(--sc-clay-edge);
+  border-radius: var(--sc-radius-xl);
+  background: var(--sc-color-surface-1);
+  box-shadow: var(--sc-shadow-clay-sm);
+}
+
+.home-atlas .home-dashboard-stage > .project-hub .project-hub__row {
+  min-height: 56px;
+}
+
+@media (max-width: 1023px) {
+  .home-atlas .welcome-stage.home-dashboard-stage {
+    width: calc(100% - 40px);
+    padding: 22px 0 34px;
+  }
+
+  .home-atlas .welcome-work.home-dashboard {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "body"
+      "portal";
+    gap: 18px;
+  }
+
+  .home-atlas .home-dashboard .welcome-portal {
+    min-height: 128px;
+  }
+
+  .home-atlas .home-dashboard .welcome-portal .portal-hero {
+    width: min(100%, 300px);
+    height: 132px;
+  }
+
+  .home-atlas .home-quick-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .home-atlas .welcome-stage.home-dashboard-stage {
+    width: calc(100% - 32px);
+    padding: 18px 0 28px;
+  }
+
+  .home-atlas .home-dashboard .welcome-work-actions {
+    grid-template-rows: minmax(174px, auto) auto;
+    gap: 14px;
+  }
+
+  .home-atlas .home-dashboard .welcome-resume-card {
+    min-height: 174px;
+    padding: 22px;
+    border-radius: var(--sc-radius-lg);
+  }
+
+  .home-atlas .home-dashboard .welcome-resume-name {
+    max-width: none;
+    font-size: clamp(1.75rem, 9vw, 2.35rem);
+  }
+
+  .home-atlas .home-dashboard .welcome-resume-meta {
+    gap: 8px;
+  }
+
+  .home-atlas .home-dashboard .welcome-portal {
+    min-height: 104px;
+    padding: 10px 16px;
+    border-radius: var(--sc-radius-lg);
+  }
+
+  .home-atlas .home-dashboard .welcome-portal .portal-hero {
+    height: 102px;
+  }
+
+  .home-atlas .home-quick-actions {
+    grid-auto-columns: minmax(144px, 44vw);
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    overflow-x: auto;
+    padding: 3px;
+    scrollbar-width: thin;
+    scroll-padding-inline: 3px;
+    scroll-snap-type: x proximity;
+  }
+
+  .home-atlas .home-quick-actions .welcome-launcher-card {
+    min-height: 78px;
+    padding: 10px;
+    scroll-snap-align: start;
+  }
+
+  .home-atlas .home-quick-actions .welcome-launcher-icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .home-atlas .home-quick-actions .welcome-launcher-info strong {
+    font-size: 12px;
+  }
+
+  .home-atlas .home-quick-actions .welcome-launcher-info small {
+    display: none;
+  }
+
+  .home-atlas .home-dashboard-stage > .project-hub,
+  .home-atlas .home-dashboard-stage > .welcome-hub-band {
+    margin-top: 24px;
+  }
+
+  .home-atlas .home-dashboard-stage > .project-hub {
+    padding: 14px;
+    border-radius: var(--sc-radius-lg);
+  }
+}
+
+@media (max-width: 1023px) and (orientation: landscape) and (max-height: 600px) {
+  .home-atlas .welcome-stage.home-dashboard-stage {
+    padding-top: 14px;
+  }
+
+  .home-atlas .welcome-work.home-dashboard {
+    grid-template-columns: minmax(0, 1fr) minmax(190px, 0.42fr);
+    grid-template-areas: "body portal";
+    gap: 16px;
+  }
+
+  .home-atlas .home-dashboard .welcome-resume-card {
+    min-height: 144px;
+    padding: 18px 22px;
+  }
+
+  .home-atlas .home-dashboard .welcome-portal,
+  .home-atlas .home-dashboard .welcome-portal .portal-hero {
+    min-height: 0;
+    height: 136px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-atlas .home-dashboard .welcome-resume-card,
+  .home-atlas .home-dashboard .welcome-resume-card:hover,
+  .home-atlas .home-dashboard .welcome-resume-card:active,
+  .home-atlas .home-quick-actions .welcome-launcher-card,
+  .home-atlas .home-quick-actions .welcome-launcher-card:hover,
+  .home-atlas .home-quick-actions .welcome-launcher-card:active {
+    transform: none;
+    transition: none;
+  }
+}

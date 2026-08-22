@@ -1,0 +1,530 @@
+/*
+ * Top Bar · fase 6
+ *
+ * La cinta es una sola superficie de trabajo. Esta capa usa clases propias
+ * para no arrastrar la composición histórica de pequeños clusters; conserva
+ * los tokens Clay, los tres roles de zona y todos los comandos existentes.
+ */
+
+.app-shell .topbar.topbar--atelier {
+  display:grid;
+  grid-template-columns:minmax(180px, .82fr) minmax(300px, 1.35fr) max-content;
+  align-items:center;
+  gap:clamp(8px, 1vw, 16px);
+  min-height:72px;
+  height:auto;
+  padding:8px var(--sc-layout-gutter);
+  background:var(--sc-color-surface-1);
+  border-bottom:1px solid var(--sc-color-border);
+  box-shadow:0 2px 0 color-mix(in srgb, var(--sc-color-text-primary) 7%, transparent);
+}
+
+.topbar--atelier .topbar-zone { min-width:0; }
+.topbar--atelier .topbar-project-zone,
+.topbar--atelier .topbar-actions-zone,
+.topbar--atelier .topbar-health-zone,
+.topbar--atelier .topbar-primary-actions,
+.topbar--atelier .topbar-status-zone { display:flex; align-items:center; }
+
+.topbar--atelier .topbar-project-zone { position:relative; gap:8px; }
+.topbar--atelier .brand-home-button {
+  width:44px;
+  height:44px;
+  flex:0 0 44px;
+  display:grid;
+  place-items:center;
+  border:var(--sc-clay-edge);
+  border-radius:14px;
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-xs);
+  color:var(--accent);
+}
+.topbar--atelier .brand-home-button:hover,
+.topbar--atelier .brand-home-button:focus-visible { background:var(--sc-color-surface-1); box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1px); }
+.topbar--atelier .brand-home-button:active { background:var(--sc-color-surface-inset); box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
+.topbar--atelier .brand-home-button svg { width:27px; height:27px; }
+
+.topbar--atelier .topbar-project-trigger,
+.topbar--atelier .topbar-analysis-trigger {
+  min-width:0;
+  min-height:44px;
+  display:grid;
+  align-items:center;
+  border:var(--sc-clay-edge);
+  border-radius:14px;
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-xs);
+  color:var(--text);
+  cursor:pointer;
+  font:inherit;
+  text-align:left;
+  transition:var(--sc-transition-control);
+}
+.topbar--atelier .topbar-project-trigger:hover,
+.topbar--atelier .topbar-analysis-trigger:hover,
+.topbar--atelier .topbar-project-trigger:focus-visible,
+.topbar--atelier .topbar-analysis-trigger:focus-visible { background:var(--sc-color-surface-1); box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1px); }
+.topbar--atelier .topbar-project-trigger:active,
+.topbar--atelier .topbar-project-trigger[aria-expanded='true'],
+.topbar--atelier .topbar-analysis-trigger:active,
+.topbar--atelier .topbar-analysis-trigger[aria-expanded='true'] { background:var(--sc-color-surface-inset); box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
+
+.topbar--atelier .topbar-project-trigger {
+  grid-template-columns:minmax(0, 1fr) auto;
+  grid-template-areas:"label arrow" "name arrow";
+  column-gap:8px;
+  width:min(100%, 340px);
+  padding:6px 10px 6px 13px;
+}
+.topbar--atelier .topbar-project-trigger > span { grid-area:label; color:var(--subtle); font-family:var(--sc-font-mono); font-size:9px; font-weight:750; letter-spacing:.08em; line-height:1; text-transform:uppercase; }
+.topbar--atelier .topbar-project-trigger > strong { grid-area:name; min-width:0; overflow:hidden; font-size:13px; font-weight:750; letter-spacing:var(--sc-tracking-tight); line-height:1.25; text-overflow:ellipsis; white-space:nowrap; }
+.topbar--atelier .topbar-project-trigger > svg { grid-area:arrow; color:var(--subtle); }
+
+.topbar--atelier .topbar-actions-zone { justify-self:stretch; justify-content:space-between; gap:10px; }
+.topbar--atelier .topbar-analysis-wrap,
+.topbar--atelier .topbar-utilities-wrap,
+.topbar--atelier .export-wrap { position:relative; }
+.topbar--atelier .topbar-analysis-wrap { min-width:0; flex:1 1 auto; }
+.topbar--atelier .topbar-analysis-trigger {
+  grid-template-columns:auto minmax(0, 1fr) auto;
+  width:100%;
+  gap:9px;
+  padding:6px 10px;
+}
+.topbar--atelier .topbar-analysis-trigger > svg:first-child { color:var(--accent); }
+.topbar--atelier .topbar-analysis-trigger > span { min-width:0; display:grid; gap:2px; }
+.topbar--atelier .topbar-analysis-trigger strong { overflow:hidden; font-size:12px; font-weight:750; line-height:1.15; text-overflow:ellipsis; white-space:nowrap; }
+.topbar--atelier .topbar-analysis-trigger small { overflow:hidden; color:var(--subtle); font-family:var(--sc-font-mono); font-size:9px; font-weight:650; line-height:1.15; text-overflow:ellipsis; white-space:nowrap; }
+.topbar--atelier .topbar-analysis-trigger > svg:last-child { color:var(--subtle); }
+
+.topbar--atelier .topbar-primary-actions { flex:0 0 auto; gap:5px; }
+.topbar--atelier .topbar-primary-actions .sc-icon-button,
+.topbar--atelier .topbar-command-button {
+  width:40px;
+  min-width:40px;
+  height:40px;
+  min-height:40px;
+  padding:0;
+  display:grid;
+  place-items:center;
+  border:var(--sc-clay-edge);
+  border-radius:13px;
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-xs);
+  color:var(--muted);
+}
+.topbar--atelier .topbar-primary-actions .sc-icon-button:hover:not(:disabled),
+.topbar--atelier .topbar-command-button:hover { color:var(--text); background:var(--sc-color-surface-1); box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1px); }
+.topbar--atelier .topbar-primary-actions .sc-icon-button:active:not(:disabled),
+.topbar--atelier .topbar-command-button:active { background:var(--sc-color-surface-inset); box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
+.topbar--atelier .topbar-command-button > span { display:none; }
+
+.topbar--atelier .analyze-button {
+  width:auto;
+  min-width:126px;
+  height:44px;
+  padding:0 16px;
+  border:1px solid color-mix(in srgb, var(--accent) 74%, var(--sc-color-border));
+  border-radius:14px;
+  background:var(--accent-fill);
+  box-shadow:0 5px 0 color-mix(in srgb, var(--accent) 26%, var(--sc-color-text-primary) 16%), var(--sc-shadow-clay-xs);
+  color:#fff;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.005em;
+}
+.topbar--atelier .analyze-button:hover:not(:disabled) { background:var(--accent-hover); box-shadow:0 7px 0 color-mix(in srgb, var(--accent) 30%, var(--sc-color-text-primary) 16%), var(--sc-shadow-clay-sm); transform:translateY(-1px); }
+.topbar--atelier .analyze-button:active:not(:disabled) { box-shadow:0 2px 0 color-mix(in srgb, var(--accent) 28%, var(--sc-color-text-primary) 16%), var(--sc-shadow-clay-pressed); transform:translateY(2px) scale(.985); }
+.topbar--atelier .analyze-button .sc-button__label { display:block; color:#fff; }
+
+.topbar--atelier .topbar-health-zone { justify-self:end; gap:5px; }
+.topbar--atelier .analysis-status-shell { min-width:32px; }
+.topbar--atelier .analysis-status { height:40px; min-width:40px; padding:0; border-radius:13px; box-shadow:var(--sc-shadow-clay-xs); }
+.topbar--atelier .analysis-status-label { display:none; }
+.topbar--atelier .analysis-reliability-line { display:none; }
+.topbar--atelier .autosave-state {
+  min-width:40px;
+  min-height:40px;
+  justify-content:center;
+  padding:0;
+  border:var(--sc-clay-edge);
+  border-radius:13px;
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+.topbar--atelier .autosave-state__label { display:none; }
+
+.topbar--atelier .topbar-project-panel,
+.topbar--atelier .topbar-analysis-panel,
+.topbar--atelier .topbar-utilities-panel { width:min(350px, calc(100vw - 24px)); padding:10px; border-radius:20px; }
+.topbar--atelier .topbar-project-panel { left:0; top:calc(100% + 9px); width:min(470px,calc(100vw - 24px)); padding:14px; transform-origin:top left; }
+.topbar--atelier .topbar-analysis-panel { left:0; top:calc(100% + 9px); transform-origin:top left; }
+.topbar--atelier .topbar-utilities-panel { right:0; top:calc(100% + 9px); transform-origin:top right; }
+.topbar--atelier .topbar-panel-field { display:grid; gap:6px; margin:4px; color:var(--subtle); font-family:var(--sc-font-mono); font-size:9px; font-weight:750; letter-spacing:.07em; text-transform:uppercase; }
+.topbar--atelier .topbar-panel-field input,
+.topbar--atelier .topbar-panel-field select {
+  width:100%;
+  min-height:42px;
+  padding:0 11px;
+  border:var(--sc-clay-edge);
+  border-radius:11px;
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  color:var(--text);
+  font-family:var(--sc-font-sans);
+  font-size:13px;
+  font-weight:650;
+  letter-spacing:normal;
+  text-transform:none;
+}
+.topbar--atelier .topbar-panel-field input:focus-visible,
+.topbar--atelier .topbar-panel-field select:focus-visible { outline:none; box-shadow:var(--sc-shadow-clay-pressed),var(--sc-ring-focus); }
+.topbar--atelier .topbar-analysis-panel > p { margin:4px 6px 9px; color:var(--subtle); font-family:var(--sc-font-mono); font-size:9px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
+.topbar--atelier .topbar-panel-actions { display:grid; gap:3px; margin-top:9px; padding-top:8px; border-top:1px solid var(--sc-color-border-soft); }
+.topbar--atelier .topbar-project-panel .topbar-panel-actions button,
+.topbar--atelier .topbar-project-compact-utilities button { min-height:40px; }
+.topbar--atelier .topbar-project-examples { display:grid; gap:3px; margin-top:4px; }
+.topbar--atelier .topbar-project-examples-trigger svg { transition:transform var(--sc-motion-fast) var(--sc-ease-standard); }
+.topbar--atelier .topbar-project-examples-trigger[aria-expanded='true'] svg { transform:rotate(180deg); }
+.topbar--atelier .topbar-project-compact-utilities { display:none; }
+
+.topbar--atelier .topbar-project-hub-heading {
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:3px;
+  margin:1px 4px 13px;
+  padding:0 2px 12px;
+  border-bottom:1px solid var(--sc-color-border-soft);
+}
+.topbar--atelier .topbar-project-hub-heading > span {
+  color:var(--accent);
+  font-family:var(--sc-font-mono);
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+.topbar--atelier .topbar-project-hub-heading > strong {
+  color:var(--text);
+  font-size:17px;
+  line-height:1.2;
+}
+.topbar--atelier .topbar-project-hub-heading > small {
+  color:var(--subtle);
+  font-size:11px;
+  line-height:1.35;
+}
+.topbar--atelier .topbar-project-panel .topbar-panel-actions {
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;
+  border-top:0;
+}
+.topbar--atelier .topbar-project-panel .topbar-panel-actions > button {
+  min-width:0;
+  min-height:66px;
+  align-items:flex-start;
+  padding:10px;
+  border:var(--sc-clay-edge);
+  border-radius:13px;
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+.topbar--atelier .topbar-project-panel .topbar-panel-actions > button:hover {
+  box-shadow:var(--sc-shadow-clay-sm);
+  transform:translateY(-1px);
+}
+.topbar--atelier .topbar-project-panel .topbar-panel-actions > button:active {
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+.topbar--atelier .topbar-project-panel .topbar-panel-actions > button:last-child {
+  grid-column:1/-1;
+  min-height:42px;
+  align-items:center;
+}
+.topbar--atelier .topbar-project-panel .menu-copy { min-width:0; display:grid; gap:3px; text-align:left; }
+.topbar--atelier .topbar-project-panel .menu-copy strong { font-size:12px; }
+.topbar--atelier .topbar-project-panel .menu-copy small { color:var(--subtle); font-size:10px; font-weight:500; line-height:1.3; }
+.topbar--atelier .topbar-project-examples {
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  max-height:min(42dvh,320px);
+  overflow:auto;
+}
+.topbar--atelier .topbar-project-examples > button { min-width:0; align-items:flex-start; border-radius:12px; }
+
+.topbar--atelier .topbar-utilities-panel { max-height:min(70dvh, 560px); overflow:auto; }
+.topbar--atelier .topbar-utilities-panel .menu-section-title { padding-inline:8px; color:var(--subtle); }
+.topbar--atelier .topbar-utilities-panel .menu-section button { min-height:38px; }
+.topbar--atelier .topbar-utility-project-launcher { display:none; }
+
+@media (max-width:1439px) {
+  .app-shell .topbar.topbar--atelier { grid-template-columns:minmax(170px, .9fr) minmax(260px, 1.1fr) max-content; }
+  .topbar--atelier .topbar-export-trigger { display:none; }
+}
+
+.app-shell[data-shell-class='M1'] .topbar--atelier { grid-template-columns:minmax(160px, .86fr) minmax(180px, 1fr) max-content; min-height:66px; gap:8px; }
+.app-shell[data-shell-class='M1'] .topbar--atelier .topbar-analysis-trigger small { font-size:8px; }
+.app-shell[data-shell-class='M1'] .topbar--atelier .space3d-open-button { display:none; }
+.app-shell[data-shell-class='M1'] .topbar--atelier .topbar-project-trigger { width:min(100%, 250px); }
+.app-shell[data-shell-class='M1'] .topbar--atelier .topbar-history-cluster { display:none; }
+.app-shell[data-shell-class='M1'] .topbar--atelier :is(.topbar-project-zone,.topbar-actions-zone,.topbar-health-zone,.topbar-primary-actions) { min-width:0; flex-wrap:nowrap; }
+.app-shell[data-shell-class='M1'] .topbar--atelier .topbar-analysis-wrap { flex:1 1 170px; }
+
+.app-shell[data-shell-class='K0'] .topbar.topbar--atelier {
+  grid-template-columns:minmax(0, 1fr) max-content max-content;
+  min-height:58px;
+  height:calc(58px + env(safe-area-inset-top));
+  padding:calc(7px + env(safe-area-inset-top)) 8px 7px;
+  gap:5px;
+}
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-zone { gap:5px; min-width:0; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .brand-home-button { width:42px; height:42px; flex-basis:42px; border-radius:12px; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .brand-home-button svg { width:25px; height:25px; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-trigger { width:min(100%, 112px); min-height:42px; padding:5px 7px 5px 9px; border-radius:12px; column-gap:4px; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-trigger > span { display:none; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-trigger > strong { font-size:11px; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-utility-project-launcher { display:flex; align-items:center; gap:8px; width:100%; min-height:42px; margin-bottom:5px; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-actions-zone { justify-self:end; display:flex; gap:0; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-analysis-wrap,
+.app-shell[data-shell-class='K0'] .topbar--atelier .datasheet-launcher,
+.app-shell[data-shell-class='K0'] .topbar--atelier .space3d-open-button,
+.app-shell[data-shell-class='K0'] .topbar--atelier .export-wrap { display:none; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions { gap:4px; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions .sc-icon-button { width:40px; min-width:40px; height:42px; min-height:42px; border-radius:12px; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .analyze-button { min-width:84px; width:84px; height:42px; padding:0 8px; border-radius:12px; font-size:11px; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .analyze-button > .sc-button__label { display:block; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-health-zone { gap:3px; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-command-button { width:42px; min-width:42px; height:42px; min-height:42px; border-radius:12px; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .analysis-status { width:28px; min-width:28px; height:42px; border-radius:12px; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .autosave-state { display:none; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-panel { position:fixed; inset:auto 8px calc(8px + env(safe-area-inset-bottom)) 8px; width:auto; max-height:min(70dvh, 520px); overflow:auto; transform-origin:bottom center; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-utilities-panel { position:fixed; inset:auto 8px calc(8px + env(safe-area-inset-bottom)) 8px; width:auto; max-height:min(70dvh, 520px); overflow:auto; transform-origin:bottom center; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-compact-utilities { display:grid; gap:7px; margin:10px 4px 2px; padding-top:10px; border-top:1px solid var(--sc-color-border-soft); color:var(--subtle); font-family:var(--sc-font-mono); font-size:9px; font-weight:750; letter-spacing:.07em; text-transform:uppercase; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-compact-utilities > div { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-compact-utilities button { display:flex; align-items:center; gap:7px; padding:8px; font-size:11px; letter-spacing:normal; text-transform:none; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-panel .topbar-panel-actions,
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-examples { grid-template-columns:minmax(0,1fr); }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-panel .topbar-panel-actions > button { min-height:58px; }
+
+@media (max-width:374px) {
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-trigger { display:none; }
+}
+
+@media (pointer:coarse) {
+  .topbar--atelier .topbar-project-trigger,
+  .topbar--atelier .topbar-analysis-trigger,
+  .topbar--atelier .topbar-primary-actions .sc-icon-button,
+  .topbar--atelier .topbar-command-button,
+  .topbar--atelier .analysis-status { min-height:44px; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .topbar--atelier .topbar-project-trigger,
+  .topbar--atelier .topbar-analysis-trigger,
+  .topbar--atelier .brand-home-button,
+  .topbar--atelier .analyze-button,
+  .topbar--atelier .topbar-primary-actions .sc-icon-button,
+  .topbar--atelier .topbar-command-button { transition:none; transform:none; }
+}
+
+/* ========================================================================
+   COMMAND ISLAND · TOTAL REDESIGN / X2
+   A single floating command surface with three clear zones. It remains
+   opaque and matte; depth comes from edge, offset and short physical motion.
+   ===================================================================== */
+
+.app-shell[data-shell-class='X2'] .topbar.topbar--atelier {
+  width:auto;
+  min-height:64px;
+  margin:10px 12px 0;
+  padding:7px;
+  grid-template-columns:minmax(210px,.78fr) minmax(540px,1.7fr) max-content;
+  gap:7px;
+  border:var(--sc-clay-edge);
+  border-radius:20px;
+  background:var(--sc-color-surface-1);
+  box-shadow:
+    0 6px 0 color-mix(in srgb,var(--sc-color-text-primary) 8%,transparent),
+    var(--sc-shadow-clay-md);
+  isolation:isolate;
+  z-index:45;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier > .topbar-zone {
+  min-height:50px;
+  padding:4px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:15px;
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-pressed);
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-project-zone {
+  padding-right:6px;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .brand-home-button {
+  width:42px;
+  height:42px;
+  flex-basis:42px;
+  border-radius:12px;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-project-trigger {
+  width:100%;
+  min-height:42px;
+  grid-template-columns:minmax(0,1fr) auto;
+  grid-template-areas:'name arrow';
+  padding:5px 9px 5px 12px;
+  border-color:transparent;
+  background:transparent;
+  box-shadow:none;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-project-trigger:hover,
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-project-trigger:focus-visible {
+  border-color:var(--sc-color-border-soft);
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-project-trigger > strong {
+  font-size:13px;
+  font-weight:780;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-actions-zone {
+  justify-content:flex-end;
+  gap:7px;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-analysis-wrap {
+  flex:1 1 230px;
+  max-width:310px;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-analysis-trigger {
+  min-height:42px;
+  border-radius:12px;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-primary-actions {
+  gap:4px;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-history-cluster {
+  display:flex;
+  align-items:center;
+  gap:2px;
+  padding:2px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:12px;
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-history-cluster .sc-icon-button {
+  width:34px;
+  min-width:34px;
+  height:34px;
+  min-height:34px;
+  border-color:transparent;
+  border-radius:9px;
+  background:transparent;
+  box-shadow:none;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-primary-actions > .sc-icon-button,
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-primary-actions > .export-wrap .sc-icon-button,
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-primary-actions > .topbar-utilities-wrap .sc-icon-button {
+  width:38px;
+  min-width:38px;
+  height:38px;
+  min-height:38px;
+  border-radius:11px;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .analyze-button--clay-primary {
+  min-width:118px;
+  height:42px;
+  border-radius:12px;
+  color:#fff !important;
+  box-shadow:
+    0 4px 0 color-mix(in srgb,var(--accent) 46%,#14352c),
+    var(--sc-shadow-clay-xs);
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .analyze-button--clay-primary :is(svg,.sc-button__label) {
+  color:#fff !important;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .analyze-button--clay-primary:hover:not(:disabled) {
+  transform:translateY(-2px);
+  box-shadow:
+    0 6px 0 color-mix(in srgb,var(--accent) 48%,#14352c),
+    var(--sc-shadow-clay-sm);
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .analyze-button--clay-primary:active:not(:disabled) {
+  transform:translateY(2px) scale(.985);
+  box-shadow:
+    0 1px 0 color-mix(in srgb,var(--accent) 44%,#14352c),
+    var(--sc-shadow-clay-pressed);
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-health-zone {
+  gap:4px;
+  padding-inline:5px;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-health-zone > * {
+  flex:0 0 auto;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier :is(.topbar-command-button,.analysis-status,.autosave-state) {
+  width:38px;
+  min-width:38px;
+  height:38px;
+  min-height:38px;
+  border-radius:11px;
+}
+
+/* K0 keeps the same command logic but only one physical row. History remains
+   available in the utilities sheet, so it no longer creates a duplicate
+   second row in the mobile chrome. */
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-history-cluster {
+  display:none;
+}
+
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-zone,
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-actions-zone,
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-health-zone {
+  min-width:0;
+  flex-wrap:nowrap;
+}
+
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions {
+  flex-wrap:nowrap;
+}
+
+.app-shell[data-shell-class='K0'] .topbar--atelier .utility-more-button {
+  display:grid;
+}
+
+.app-shell[data-shell-class='K0'] .topbar--atelier .analyze-button {
+  width:48px;
+  min-width:48px;
+  padding:0;
+}
+
+.app-shell[data-shell-class='K0'] .topbar--atelier .analyze-button > .sc-button__label {
+  position:absolute;
+  width:1px;
+  height:1px;
+  margin:-1px;
+  padding:0;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  white-space:nowrap;
+}

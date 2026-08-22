@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ChevronDown, ChevronLeft, CircleStop, Download, Grid3x3, Home, Layers, Minus,
-  Moon, PenLine, Play, Plus, Sparkles, Spline, Sun, Tag, Upload, Weight,
+  Moon, PenLine, Play, Plus, SlidersHorizontal, Sparkles, Spline, Sun, Tag, Upload, Weight,
 } from 'lucide-react';
 import { Space3DProjectProvider, useSpace3DProject, type Space3DSelection } from '../../space3d/store/Space3DProjectContext';
 import {
@@ -207,6 +207,7 @@ const WorkspaceBody = ({
   const [modelNavFocus, setModelNavFocus] = useState<Space3DModelFocus>('node');
   const [propertiesOpen, setPropertiesOpen] = useState(false);
   const [sheetExpanded, setSheetExpanded] = useState(false);
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
   const [lastAnalyzedAt, setLastAnalyzedAt] = useState<number | null>(null);
   const hasContent = project.nodes.length > 0;
   // Doce clics en cada sentido: suficiente margen para explorar sin llegar a
@@ -378,7 +379,7 @@ const WorkspaceBody = ({
     </select>
   </label>;
 
-  return <div className="space3d-screen">
+  return <div className="space3d-screen" data-space3d-layout="canvas-command-dock">
     <header className="space3d-header">
       <div className="space3d-identity">
         <BrandMark size={30} />
@@ -409,7 +410,17 @@ const WorkspaceBody = ({
 
     <p className="space3d-experimental" role="note">{t('space3d.experimentalNotice')}</p>
 
-    <div className="space3d-toolbar">
+    <div className="space3d-toolbar" data-mobile-open={mobileToolsOpen || undefined}>
+      <button
+        type="button"
+        className="space3d-mobile-controls"
+        aria-expanded={mobileToolsOpen}
+        aria-label={mobileToolsOpen ? t('space3d.closeControls') : t('space3d.controls')}
+        onClick={() => setMobileToolsOpen((current) => !current)}
+      >
+        <SlidersHorizontal size={16} aria-hidden="true" />
+        <span>{t('space3d.controls')}</span>
+      </button>
       <div className="space3d-tray" role="group" aria-label={t('space3d.toolbarProject')}>
         <button type="button" className="space3d-tool" onClick={() => requestReplace('example')}>
           <Sparkles size={16} aria-hidden="true" />{t('space3d.loadExample')}
@@ -468,8 +479,7 @@ const WorkspaceBody = ({
         : <>
           <p className="space3d-notice space3d-notice--warn" role="status">{t('space3d.bridgeBody')}</p>
           <ul className="space3d-issues">
-            {[...new Map(pendingNotes.map((item) => [item.code, item])).values()].map((item) => <li key={item.code}>
-              <code>{item.code}</code>
+            {[...new Map(pendingNotes.map((item) => [item.code, item])).values()].map((item) => <li key={item.code} data-diagnostic-code={item.code}>
               <span>{t(BRIDGE_KEYS[item.code] ?? 'space3d.error.generic')}</span>
               <em>{pendingNotes.filter((other) => other.code === item.code).map((other) => other.entityId).filter(Boolean).join(' ')}</em>
             </li>)}
@@ -493,8 +503,8 @@ const WorkspaceBody = ({
       ? <div className="space3d-notice space3d-notice--error" role="alert">
         <strong>{t('space3d.analysisIssues')}</strong>
         <ul className="space3d-issue-line">
-          {analysis.issues.slice(0, 4).map((issue, index) => <li key={`${issue.code}-${issue.entityId}-${index}`}>
-            <code>{issue.code}</code> {t(ANALYSIS_ISSUE_KEYS[issue.code] ?? 'space3d.error.generic')}
+          {analysis.issues.slice(0, 4).map((issue, index) => <li key={`${issue.code}-${issue.entityId}-${index}`} data-diagnostic-code={issue.code}>
+            {t(ANALYSIS_ISSUE_KEYS[issue.code] ?? 'space3d.error.generic')}
           </li>)}
         </ul>
       </div>

@@ -1,0 +1,41 @@
+{
+  "phase": "structural-assets",
+  "generatedAt": "2026-08-22T09:05:59.601Z",
+  "captures": [
+    {
+      "theme": "light",
+      "screenshot": "atlas-light.png",
+      "metrics": {
+        "theme": "light",
+        "cards": 40,
+        "families": 10,
+        "threeImages": 40,
+        "uniqueAssets": 40,
+        "correctThemeImages": 40,
+        "svgFallbacks": 0,
+        "canvasNodes": 0,
+        "filters": 0,
+        "horizontalOverflow": 0
+      },
+      "failures": []
+    },
+    {
+      "theme": "dark",
+      "screenshot": "atlas-dark.png",
+      "metrics": {
+        "theme": "dark",
+        "cards": 40,
+        "families": 10,
+        "threeImages": 40,
+        "uniqueAssets": 40,
+        "correctThemeImages": 40,
+        "svgFallbacks": 0,
+        "canvasNodes": 0,
+        "filters": 0,
+        "horizontalOverflow": 0
+      },
+      "failures": []
+    }
+  ],
+  "failures": []
+}

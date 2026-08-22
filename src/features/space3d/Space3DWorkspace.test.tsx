@@ -230,6 +230,19 @@ describe('Space3DWorkspace end to end', () => {
     expect(home).toHaveBeenCalled();
     expect(editor).toHaveBeenCalled();
   });
+
+  it('keeps secondary project and layer controls in a compact disclosure', async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+    const screenRoot = document.querySelector('.space3d-screen');
+    expect(screenRoot?.getAttribute('data-space3d-layout')).toBe('canvas-command-dock');
+
+    const launcher = screen.getByRole('button', { name: 'Controles 3D' });
+    expect(launcher.getAttribute('aria-expanded')).toBe('false');
+    await user.click(launcher);
+    expect(launcher.getAttribute('aria-expanded')).toBe('true');
+    expect(document.querySelector('.space3d-toolbar')?.getAttribute('data-mobile-open')).toBe('true');
+  });
 });
 
 describe('Space3DWorkspace discard confirmation', () => {

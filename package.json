@@ -12,6 +12,7 @@
     "test": "vitest run --maxWorkers=1",
     "verify:docs": "node --test scripts/check-docs.test.mjs && node scripts/check-docs.mjs",
     "verify:protected": "node scripts/check-protected-baseline.mjs",
+    "verify:structural-assets": "node --test scripts/structural-png-contract.test.mjs scripts/structural-asset-bundle.test.mjs && node scripts/check-three-structural-renders.mjs",
     "perf": "npm run build && node scripts/measure-performance.mjs",
     "inspect:pdf": "node scripts/inspect-pdf.mjs",
     "validate:ci": "node scripts/validate-ci.mjs",

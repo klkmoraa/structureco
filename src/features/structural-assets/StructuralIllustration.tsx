@@ -22,7 +22,7 @@ export const StructuralIllustration = ({
   const asset = getStructuralAsset(assetId);
   if (!asset) return null;
 
-  const accessibleTitle = title ?? asset.label;
+  const accessibleTitle = title?.trim() || asset.label;
   const dimensions = detailDimensions[detail];
   const classes = [
     'structural-illustration',

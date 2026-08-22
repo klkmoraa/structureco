@@ -1,20 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export const WORKSPACE_LAYOUT_STORAGE_KEY = 'structureco:workspace-layout:v1';
+export const WORKSPACE_LAYOUT_STORAGE_KEY = 'structureco:workspace-layout:v2';
+const LEGACY_WORKSPACE_LAYOUT_STORAGE_KEY = 'structureco:workspace-layout:v1';
 
 export type InspectorDetent = 'compact' | 'medium' | 'large';
+export type ToolDockPosition = 'bottom' | 'left';
 
 /**
  * `toolRailCompact` ya NO vive aquí: desde CRI-89 la compacidad del riel se
  * deriva de la clase de composición (`isToolRailCompact`), no de una
- * preferencia. La clave persistida no sube de versión y el campo almacenado se
- * ignora **sin borrarlo** — ver `readPreferences` y el efecto de escritura.
+ * preferencia. La clave v1 se conserva como fuente de migración; no se borra,
+ * pero el Inspector empieza cerrado en la nueva experiencia.
  */
 export interface WorkspaceLayoutPreferences {
   inspectorCollapsed: boolean;
   fullCanvas: boolean;
   inspectorWidth: number;
   inspectorDetent: InspectorDetent;
+  toolDockPosition: ToolDockPosition;
 }
 
 export const MIN_INSPECTOR_WIDTH = 280;
@@ -36,22 +39,32 @@ export const clampInspectorWidth = (value: number) => Math.min(
 );
 
 const DEFAULT_PREFERENCES: WorkspaceLayoutPreferences = {
-  inspectorCollapsed: false,
+  inspectorCollapsed: true,
   fullCanvas: false,
   inspectorWidth: DEFAULT_INSPECTOR_WIDTH,
   inspectorDetent: 'medium',
+  toolDockPosition: 'bottom',
 };
 
 /** Lo que hubiera en la clave y este lector ya no gobierna. Se conserva tal cual. */
-const readStoredRecord = (): Record<string, unknown> => {
+const parseStoredRecord = (key: string): Record<string, unknown> => {
   if (typeof window === 'undefined') return {};
   try {
-    const stored: unknown = JSON.parse(window.localStorage.getItem(WORKSPACE_LAYOUT_STORAGE_KEY) ?? '{}');
+    const stored: unknown = JSON.parse(window.localStorage.getItem(key) ?? '{}');
     return stored && typeof stored === 'object' && !Array.isArray(stored) ? stored as Record<string, unknown> : {};
   } catch {
     return {};
   }
 };
+
+const readStoredRecord = (): Record<string, unknown> => {
+  const current = parseStoredRecord(WORKSPACE_LAYOUT_STORAGE_KEY);
+  return Object.keys(current).length > 0 ? current : parseStoredRecord(LEGACY_WORKSPACE_LAYOUT_STORAGE_KEY);
+};
+
+const hasCurrentStoredRecord = (): boolean => (
+  typeof window !== 'undefined' && window.localStorage.getItem(WORKSPACE_LAYOUT_STORAGE_KEY) !== null
+);
 
 /**
  * Lectura tolerante: un `toolRailCompact` almacenado se descarta sin invalidar
@@ -60,8 +73,12 @@ const readStoredRecord = (): Record<string, unknown> => {
  */
 const readPreferences = (): WorkspaceLayoutPreferences => {
   const stored = readStoredRecord() as Partial<WorkspaceLayoutPreferences>;
+  const currentRecord = hasCurrentStoredRecord();
   return {
-    inspectorCollapsed: typeof stored.inspectorCollapsed === 'boolean' ? stored.inspectorCollapsed : DEFAULT_PREFERENCES.inspectorCollapsed,
+    // A v1 `false` was the accidental always-open mobile default. Preserve
+    // the legacy record, but migrate that one presentation choice to closed;
+    // a deliberate choice in v2 remains sticky.
+    inspectorCollapsed: currentRecord && typeof stored.inspectorCollapsed === 'boolean' ? stored.inspectorCollapsed : DEFAULT_PREFERENCES.inspectorCollapsed,
     fullCanvas: typeof stored.fullCanvas === 'boolean' ? stored.fullCanvas : DEFAULT_PREFERENCES.fullCanvas,
     inspectorWidth: typeof stored.inspectorWidth === 'number' && Number.isFinite(stored.inspectorWidth)
       ? clampInspectorWidth(stored.inspectorWidth)
@@ -69,6 +86,9 @@ const readPreferences = (): WorkspaceLayoutPreferences => {
     inspectorDetent: stored.inspectorDetent === 'compact' || stored.inspectorDetent === 'medium' || stored.inspectorDetent === 'large'
       ? stored.inspectorDetent
       : DEFAULT_PREFERENCES.inspectorDetent,
+    toolDockPosition: stored.toolDockPosition === 'left' || stored.toolDockPosition === 'bottom'
+      ? stored.toolDockPosition
+      : DEFAULT_PREFERENCES.toolDockPosition,
   };
 };
 

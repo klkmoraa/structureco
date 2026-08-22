@@ -1,14 +1,9 @@
-# structureCo — reglas persistentes
+# StructureCo — contrato de trabajo
 
-- Este proyecto es trabajado por dos agentes distintos sobre el mismo repo: Claude Code y Codex. Ninguno ve la conversación del otro — git/GitHub (`github.com/klkmoraa/structureco`, rama `main`) es el único puente entre ambos.
-- **USO OBLIGATORIO DE SUPERPOWERS Y PLUGINS**: Tanto Claude Code como Codex DEBEN activar y seguir el flujo de trabajo de Superpowers (`using-superpowers`, `brainstorming`, `writing-plans`, `executing-plans`, `test-driven-development`, `verification-before-completion`, `systematic-debugging`) y aplicar los plugins configurados (`frontend-design`, `ui-theme-designer`, `code-simplifier`, `typescript-lsp`, `security-guidance`) en toda tarea de desarrollo, refactor, resolución de bugs o diseño.
-- Flujo Git normal: trabajar directamente en `main` local, hacer commit y ejecutar `git push origin main` sin force push. `main` no requiere Pull Request ni status checks; ramas, Pull Requests y worktrees son opcionales y no son el flujo ordinario. Nunca hacer push sin confirmación explícita del usuario en el chat de esa sesión.
-- Después de cualquier cambio relevante (código, config, diseño, docs), generar un reporte en `reports/YYYY-MM-DD-HHmm-slug.md` (qué cambió, por qué, archivos tocados, cómo verificar, pendientes) y commitearlo junto con el cambio, para que el otro agente pueda verlo con `git pull`. Ver `.claude/skills/change-report/SKILL.md` para el template exacto.
-- Consultar `docs/README.md` como índice documental canónico; no crear fuentes de verdad paralelas y mantener la clasificación `CANONICAL`, `REFERENCE`, `HISTORICAL` o `AUDIT/TEMPORARY` en toda documentación nueva o reclasificada.
-- Antes de modificar, usar structureco-project-guardian: respaldo local, hashes, versión de package.json y alcance.
-- Informar toda discrepancia de versión; una especificación, roadmap o T09 no prueba implementación.
-- Activar structureco-engine-safety al tocar rutas críticas; no tocar solver en tareas visuales.
-- Activar structureco-ux-responsive en UI, structureco-classroom-mode en Aula, structureco-documentation-handoff en contexto y structureco-release-certification antes de cerrar versión.
-- No ampliar teoría física ni actualizar dependencias sin autorización explícita.
-- Mantener unidades, signos, IDs, snapshots, topología, persistencia, undo/redo y resultados.
-- No revelar secretos. Ejecutar pruebas relacionadas y no declarar éxito sin evidencia.
+- GitHub (`github.com/klkmoraa/structureco`, `main`) es el puente entre agentes. Antes de integrar o publicar: revisar rama, diff, archivos sin seguimiento y el SHA remoto.
+- La dirección visual vigente vive en el código y en la [especificación del rediseño total](docs/superpowers/specs/2026-08-22-structureco-total-visual-redesign.md), además de las referencias aprobadas por la persona usuaria. `brand/**` es procedencia histórica: no limita decisiones visuales nuevas.
+- En trabajo visual no se cambia el motor, unidades, signos, IDs, topología, `ProjectModel`, workers, persistencia, import/export, undo/redo ni resultados. Un cambio de dominio requiere una solicitud explícita y pruebas de comportamiento.
+- Todo cambio relevante lleva un reporte breve en `reports/` con archivos, motivo, verificaciones y pendientes. `docs/README.md` clasifica la documentación; planes y capturas no prueban por sí solos el producto.
+- Los artefactos de build, capturas locales, worktrees y wrappers de prueba no se versionan. Si se elimina material, primero se comprueba que no tenga consumidores ni sea trabajo de otro agente.
+- Publicar requiere autorización explícita, nunca force push, y evidencia fresca de los gates proporcionales. La publicación de `main` y la de `gh-pages` se verifican por separado.
+- No introducir dependencias, teoría física ni secretos sin una necesidad autorizada y verificable.

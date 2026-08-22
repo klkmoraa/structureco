@@ -54,37 +54,1416 @@
 .app-shell:has(.inspector-panel[data-surface-presentation='inset']) .workspace { grid-template-columns:var(--toolbar-w) minmax(0,1fr); }
 .inspector-panel[data-surface-presentation='dock'] { position:relative; display:flex; inset:auto; width:auto; height:auto; max-height:none; clip-path:none; border-radius:0; }
 .inspector-panel[data-surface-presentation='inset'] { position:absolute; z-index:31; inset:8px 8px 8px auto; display:flex; width:min(420px,calc(100% - 16px)); height:auto; max-height:none; clip-path:none; border-radius:var(--sc-radius-lg); }
-.inspector-panel[data-surface-presentation='sheet'] { position:fixed; z-index:31; inset:auto 0 var(--sc-visual-viewport-bottom,0px); display:flex; width:100%; height:min(58dvh,540px); max-height:calc(var(--sc-visual-viewport-height,100dvh) - 8px); clip-path:none; border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
+.inspector-panel[data-surface-presentation='sheet'] { position:fixed; z-index:31; inset:auto 0 calc(64px + var(--sc-visual-viewport-bottom,0px)); display:flex; width:100%; height:min(58dvh,540px); max-height:calc(var(--sc-visual-viewport-height,100dvh) - 76px); clip-path:none; border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
 .results-panel[data-surface-presentation='dock'] { position:relative; inset:auto; width:auto; }
 .results-panel[data-surface-presentation='inset'] { position:absolute; z-index:8; inset:auto 8px 8px; width:auto; height:min(42dvh,320px)!important; border-radius:var(--sc-radius-lg); }
-.results-panel[data-surface-presentation='sheet'] { position:absolute; z-index:8; inset:auto 0 0; width:100%; height:min(46dvh,420px)!important; border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
+.results-panel[data-surface-presentation='sheet'] { position:absolute; z-index:8; inset:auto 0 0; width:100%; height:min(55dvh,500px)!important; border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
 .command-palette-backdrop--sheet { align-items:end; padding:0; background:transparent; pointer-events:none; }
 .command-palette-backdrop--sheet .command-palette { width:100%; max-height:min(88dvh,720px); border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; pointer-events:auto; }
 
 @media (max-width:1023px) {
-  .inspector-panel[data-mobile-detent='compact'] { height:min(34dvh,320px); }
-  .inspector-panel[data-mobile-detent='medium'] { height:min(58dvh,540px); }
-  .inspector-panel[data-mobile-detent='large'] { height:min(88dvh,780px,calc(var(--sc-visual-viewport-height,100dvh) - 8px)); }
-  .inspector-detent-control { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:3px; flex:0 0 auto; margin:14px max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left)); padding:3px; border-radius:10px; background:var(--surface-2); }
-  .inspector-detent-control button { min-height:36px; border:0; border-radius:7px; background:transparent; color:var(--muted); font-size:10px; }
-  .inspector-detent-control button[aria-pressed='true'] { background:var(--sc-color-surface-inset); color:var(--accent); font-weight:700; box-shadow:var(--sc-shadow-clay-pressed); }
+  .inspector-panel[data-surface-presentation='sheet']::before { display:none; }
+  .inspector-panel[data-mobile-detent='compact'] { height:min(35dvh,320px); }
+  .inspector-panel[data-mobile-detent='medium'] { height:min(55dvh,540px); }
+  .inspector-panel[data-mobile-detent='large'] { height:min(85dvh,780px,calc(var(--sc-visual-viewport-height,100dvh) - 8px)); }
+  .inspector-sheet-controls { display:flex; align-items:center; justify-content:space-between; flex:0 0 auto; min-height:46px; padding:4px max(10px,env(safe-area-inset-right)) 0 max(10px,env(safe-area-inset-left)); }
+  .inspector-sheet-handle { display:grid; place-items:center; width:52px; height:34px; padding:0; border:1px solid var(--border-soft); border-radius:var(--sc-radius-pill); background:var(--surface-2); color:var(--muted); box-shadow:var(--sc-shadow-clay-xs); cursor:pointer; }
+  .inspector-sheet-handle:hover { color:var(--text); box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1px); }
+  .inspector-sheet-handle:active { box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
+  .inspector-sheet-handle:focus-visible { outline:none; box-shadow:var(--sc-shadow-clay-xs),var(--sc-ring-focus); }
+  .inspector-sheet-controls .mobile-inspector-close { display:grid!important; place-items:center; width:36px; height:36px; align-self:center; border-radius:9px; color:var(--muted); }
+  .inspector-sheet-controls .mobile-inspector-close:hover { background:var(--surface-2); color:var(--text); }
+  .inspector-sheet-controls .mobile-inspector-close::after { display:none; }
   .results-mobile-focus { display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; }
   .results-mobile-commandbar { display:flex; }
 }
 
 @media (max-width:700px) {
-  .inspector-panel.mobile-open[data-mobile-detent='compact'] { height:min(34dvh,320px); }
-  .inspector-panel.mobile-open[data-mobile-detent='medium'] { height:min(58dvh,540px); }
-  .inspector-panel.mobile-open[data-mobile-detent='large'] { height:min(88dvh,780px,calc(var(--sc-visual-viewport-height,100dvh) - 8px)); }
+  .inspector-panel.mobile-open[data-mobile-detent='compact'] { height:min(35dvh,320px); }
+  .inspector-panel.mobile-open[data-mobile-detent='medium'] { height:min(55dvh,540px); }
+  .inspector-panel.mobile-open[data-mobile-detent='large'] { height:min(85dvh,780px,calc(var(--sc-visual-viewport-height,100dvh) - 76px)); }
   .repeat-action-control { right:max(10px,env(safe-area-inset-right)); bottom:calc(76px + env(safe-area-inset-bottom)); min-height:44px; }
   .repeat-preview { top:calc(var(--canvas-safe-top) + 8px); }
   .results-panel.results-mode-focused { position:fixed; inset:var(--sc-visual-viewport-top,0px) 0 var(--sc-visual-viewport-bottom,0px); width:100%; height:var(--sc-visual-viewport-height,100dvh)!important; min-height:0; max-height:none; z-index:calc(var(--sc-z-modal) + 1); border-radius:0; }
 }
 
 @media (min-width:701px) {
-  .inspector-detent-control { display:none; }
+  .inspector-sheet-controls { display:none; }
 }
 
 @media (prefers-reduced-motion:reduce) {
   .repeat-action-control,.repeat-action-control:hover,.repeat-action-control:active,.repeat-preview button:active { transform:none; transition:none; }
+}
+
+/* ========================================================================
+   WORKSPACE X2 · FLOATING TOOL DOCK + SINGLE RESULTS QUANTITY BAR
+   ===================================================================== */
+
+.app-shell[data-shell-class='X2'] .workspace {
+  grid-template-columns:minmax(0,1fr) var(--inspector-w);
+  gap:0;
+}
+
+.app-shell[data-shell-class='X2'][data-inspector-collapsed='true'] .workspace,
+.app-shell[data-shell-class='X2'][data-full-canvas='true'] .workspace {
+  grid-template-columns:minmax(0,1fr);
+}
+
+.app-shell[data-shell-class='X2'] .center-stage {
+  margin:10px;
+  border-radius:var(--sc-radius-panel);
+  box-shadow:var(--sc-shadow-clay-inset),0 2px 0 color-mix(in srgb,var(--sc-color-text-primary) 5%,transparent);
+}
+
+.app-shell[data-shell-class='X2'] .inspector-panel[data-surface-presentation='dock'] {
+  margin:10px 10px 10px 0;
+  border-radius:var(--sc-radius-panel);
+  box-shadow:var(--sc-shadow-clay-md);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock {
+  position:absolute;
+  z-index:38;
+  left:50%;
+  bottom:76px;
+  width:max-content;
+  max-width:calc(100% - 40px);
+  height:auto;
+  max-height:none;
+  margin:0;
+  padding:6px;
+  overflow:visible;
+  border:var(--sc-clay-edge);
+  border-radius:22px;
+  background:var(--sc-color-surface-1);
+  box-shadow:
+    0 7px 0 color-mix(in srgb,var(--sc-color-text-primary) 9%,transparent),
+    var(--sc-shadow-clay-lg);
+  transform:translateX(-50%);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .desktop-tool-list {
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  gap:4px;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock :is(.toolbar-spacer,.selection-tip,.mobile-tool-dock) {
+  display:none;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-group {
+  position:relative;
+  display:block;
+  min-width:0;
+  padding:0 4px;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-group + .dock-group {
+  padding-top:0;
+  border-top:0;
+  border-left:1px solid var(--sc-color-border-soft);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-group-heading {
+  position:absolute;
+  width:1px;
+  height:1px;
+  margin:-1px;
+  padding:0;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  white-space:nowrap;
+  border:0;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-group-actions {
+  display:flex;
+  align-items:center;
+  gap:3px;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-rail-tooltip-anchor {
+  width:42px;
+  flex:0 0 42px;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-button,
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .sc-popover__trigger {
+  width:42px;
+  min-width:42px;
+  height:42px;
+  min-height:42px;
+  padding:0;
+  border-radius:13px;
+  box-shadow:var(--sc-shadow-clay-xs);
+  transition:
+    transform 260ms cubic-bezier(.2,.85,.24,1.22),
+    box-shadow 220ms var(--sc-ease-standard),
+    background-color 180ms var(--sc-ease-standard),
+    border-color 180ms var(--sc-ease-standard);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-collapse-toggle {
+  width:34px;
+  min-width:34px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  margin-left:3px;
+  padding:0;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:12px;
+  background:var(--sc-color-surface-inset);
+  color:var(--sc-color-text-secondary);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  cursor:pointer;
+  transition:transform 220ms cubic-bezier(.2,.85,.24,1.18),box-shadow 180ms var(--sc-ease-standard),color 180ms var(--sc-ease-standard);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-collapse-toggle:hover,
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-collapse-toggle:focus-visible {
+  color:var(--accent);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transform:translateY(-2px);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-collapse-toggle:active {
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-position-toggle {
+  width:34px;
+  min-width:34px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  margin-left:3px;
+  padding:0;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:12px;
+  background:var(--sc-color-surface-elevated);
+  color:var(--sc-color-text-secondary);
+  box-shadow:var(--sc-shadow-clay-xs);
+  cursor:pointer;
+  transition:transform 220ms cubic-bezier(.2,.85,.24,1.18),box-shadow 180ms var(--sc-ease-standard),color 180ms var(--sc-ease-standard);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-position-toggle:hover,
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-position-toggle:focus-visible {
+  color:var(--accent);
+  box-shadow:var(--sc-shadow-clay-sm);
+  transform:translateY(-2px);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-position-toggle:active {
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail-surface-launcher .sc-tool-button__copy {
+  display:none;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail-surface-launcher .sc-popover__trigger {
+  grid-template-columns:1fr;
+  justify-items:center;
+}
+
+/* El dock puede vivir en el borde izquierdo cuando el borde inferior compite
+   con resultados. Sólo cambia la composición del chrome; el canvas y sus
+   coordenadas permanecen intactos. */
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock {
+  top:50%;
+  right:auto;
+  bottom:auto;
+  left:12px;
+  transform:translateY(-50%);
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .desktop-tool-list {
+  flex-direction:column;
+  align-items:stretch;
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .dock-group {
+  padding:4px 0;
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .dock-group + .dock-group {
+  border-top:1px solid var(--sc-color-border-soft);
+  border-left:0;
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .dock-collapse-toggle,
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .dock-position-toggle {
+  width:42px;
+  min-width:42px;
+  height:34px;
+  min-height:34px;
+  margin:3px 0 0;
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .dock-position-toggle {
+  margin-top:3px;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock.is-dock-collapsed {
+  border-radius:18px;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-button:hover:not(:disabled),
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .sc-popover__trigger:hover:not(:disabled) {
+  z-index:2;
+  transform:translateY(-7px) scale(1.1);
+  box-shadow:
+    0 5px 0 color-mix(in srgb,var(--tool-color,var(--accent)) 18%,transparent),
+    var(--sc-shadow-clay-md);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-button:is(.active,.is-active),
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-button:active:not(:disabled),
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .sc-popover__trigger:active:not(:disabled) {
+  transform:var(--sc-clay-press-transform);
+  box-shadow:var(--sc-shadow-clay-pressed);
+}
+
+.tool-rail-tooltip[data-placement='top'] {
+  border-radius:10px;
+  font-weight:700;
+  letter-spacing:.005em;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail-surface-launcher .sc-popover__surface {
+  width:236px;
+  padding:7px;
+  border-radius:17px;
+  transform-origin:bottom center;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail-surface-launcher__menu {
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:5px;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail-surface-launcher__menu button {
+  min-height:70px;
+  grid-template-columns:1fr;
+  grid-template-rows:28px auto;
+  justify-items:center;
+  gap:5px;
+  padding:8px 4px 6px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:12px;
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-xs);
+  font-size:10px;
+  text-align:center;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail-surface-launcher__menu .tool-rail-surface-launcher__close {
+  grid-column:1/-1;
+  min-height:32px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  padding:0 8px;
+  color:var(--muted);
+  font-size:10px;
+}
+
+.app-shell[data-shell-class='X2'] .results-panel .results-quantity-bar {
+  min-height:50px;
+  display:flex;
+  align-items:center;
+  gap:5px;
+  padding:4px;
+  overflow:visible;
+}
+
+.app-shell[data-shell-class='X2'] .results-panel .results-quantity-tabs {
+  min-width:0;
+  flex:1 1 auto;
+  display:grid;
+  grid-template-columns:repeat(5,minmax(72px,1fr));
+  gap:4px;
+}
+
+.app-shell[data-shell-class='X2'] .results-panel .results-quantity-bar button {
+  min-width:0;
+  min-height:40px;
+  height:40px;
+  padding:0 10px;
+  border-radius:11px;
+}
+
+.app-shell[data-shell-class='X2'] .results-panel .results-dense-overflow {
+  position:relative;
+  flex:0 0 auto;
+}
+
+.app-shell[data-shell-class='X2'] .results-panel .results-dense-overflow__trigger {
+  width:40px;
+  padding:0;
+  display:grid;
+  place-items:center;
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-1);
+  color:var(--sc-color-text-secondary);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell[data-shell-class='X2'] .results-panel .results-dense-overflow__trigger:hover,
+.app-shell[data-shell-class='X2'] .results-panel .results-dense-overflow__trigger:focus-visible {
+  background:var(--sc-color-surface-elevated);
+  color:var(--sc-color-text-primary);
+  box-shadow:var(--sc-shadow-clay-sm);
+  transform:translateY(-1px);
+}
+
+.app-shell[data-shell-class='X2'] .results-panel .results-dense-overflow__trigger[aria-expanded='true'],
+.app-shell[data-shell-class='X2'] .results-panel .results-dense-overflow__trigger:active {
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell .results-panel .results-dense-overflow__menu {
+  position:absolute;
+  z-index:var(--sc-z-popover);
+  right:0;
+  top:auto;
+  bottom:calc(100% + 8px);
+  width:170px;
+  display:grid;
+  gap:4px;
+  padding:6px;
+  border:var(--sc-clay-edge);
+  border-radius:14px;
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-lg);
+}
+
+.app-shell .results-panel .results-dense-overflow__menu button {
+  min-height:38px;
+  padding:0 10px;
+  border:1px solid transparent;
+  border-radius:9px;
+  background:transparent;
+  color:var(--sc-color-text-secondary);
+  font:inherit;
+  font-size:11px;
+  font-weight:700;
+  text-align:left;
+}
+
+.app-shell .results-panel .results-dense-overflow__menu button:hover,
+.app-shell .results-panel .results-dense-overflow__menu button:focus-visible {
+  border-color:var(--sc-color-border-soft);
+  background:var(--sc-color-surface-elevated);
+  color:var(--sc-color-text-primary);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell[data-shell-class='X2']:has(.results-panel[data-surface-status='active']) .tool-rail.is-floating-dock {
+  bottom:min(42dvh,350px);
+}
+
+/* ========================================================================
+   CLAY WORKSPACE · FASE 2
+   El shell conserva sus autoridades X2/M1/K0 y el broker conserva dock,
+   inset y sheet. Este bloque sólo da materia, separación y tacto a esas
+   decisiones existentes. El lienzo técnico permanece plano y opaco.
+   ===================================================================== */
+
+.app-shell .workspace {
+  background:var(--sc-color-bg-app);
+}
+
+.app-shell .center-stage {
+  overflow:hidden;
+  background:var(--sc-color-bg-canvas);
+  border:1px solid var(--sc-color-border-soft);
+  box-shadow:var(--sc-shadow-clay-inset);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail {
+  margin:8px 0 8px 8px;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-panel) 0 0 var(--sc-radius-panel);
+}
+
+.app-shell[data-shell-class='X2'] .center-stage {
+  margin:8px 0;
+  border-radius:0;
+}
+
+.app-shell[data-shell-class='X2'] .inspector-panel[data-surface-presentation='dock'] {
+  margin:8px 8px 8px 0;
+  border-radius:0 var(--sc-radius-panel) var(--sc-radius-panel) 0;
+}
+
+.app-shell[data-shell-class='M1'] .tool-rail {
+  margin:8px 0 8px 8px;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-panel) 0 0 var(--sc-radius-panel);
+}
+
+.app-shell[data-shell-class='M1'] .center-stage {
+  margin:8px 8px 8px 0;
+  border-radius:0 var(--sc-radius-panel) var(--sc-radius-panel) 0;
+}
+
+.app-shell[data-shell-class='K0'] .center-stage {
+  margin:0;
+  border-width:0;
+  border-radius:0;
+  box-shadow:none;
+}
+
+.app-shell .tool-rail {
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-inset);
+}
+
+.app-shell .tool-rail .tool-group-actions {
+  gap:5px;
+}
+
+.app-shell .tool-rail .tool-button {
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transition:
+    transform 220ms var(--sc-ease-standard),
+    box-shadow 220ms var(--sc-ease-standard),
+    background-color 180ms var(--sc-ease-standard),
+    border-color 180ms var(--sc-ease-standard);
+}
+
+.app-shell .tool-rail .tool-button:hover:not(:disabled) {
+  border-color:color-mix(in srgb,var(--tool-color,var(--accent)) 36%,var(--sc-color-border));
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-md);
+  transform:translateY(-2px);
+}
+
+.app-shell .tool-rail .tool-button:is(.active,.is-active),
+.app-shell .tool-rail .tool-button:is(.active,.is-active):hover:not(:disabled),
+.app-shell .tool-rail .tool-button:active:not(:disabled) {
+  border-color:color-mix(in srgb,var(--tool-color,var(--accent)) 34%,var(--sc-color-border));
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell .tool-rail .tool-button:disabled {
+  color:var(--sc-color-text-disabled);
+  box-shadow:none;
+  opacity:.66;
+}
+
+.app-shell .tool-rail-tooltip {
+  border:1px solid var(--sc-color-border-strong);
+  background:var(--sc-color-text-primary);
+  color:var(--sc-color-bg-app);
+  box-shadow:var(--sc-shadow-clay-md);
+}
+
+.app-shell .inspector-panel[data-surface-presentation='dock'] {
+  border:var(--sc-clay-edge);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-md);
+}
+
+.app-shell .inspector-panel[data-surface-presentation='inset'] {
+  border:var(--sc-clay-edge);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-lg);
+}
+
+.app-shell .inspector-panel[data-surface-presentation='sheet'] {
+  border:var(--sc-clay-edge);
+  border-bottom:0;
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-sheet);
+}
+
+.app-shell .inspector-tabs {
+  height:auto;
+  min-height:48px;
+  flex-basis:auto;
+  gap:4px;
+  margin:10px 10px 0;
+  padding:4px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-card);
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-inset);
+}
+
+.app-shell .inspector-tabs button {
+  min-height:40px;
+  border-radius:var(--sc-radius-control);
+  transition:
+    transform 200ms var(--sc-ease-standard),
+    box-shadow 200ms var(--sc-ease-standard),
+    color 180ms var(--sc-ease-standard),
+    background-color 180ms var(--sc-ease-standard);
+}
+
+.app-shell .inspector-tabs button:hover:not(.active) {
+  color:var(--sc-color-text-primary);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transform:translateY(-1px);
+}
+
+.app-shell .inspector-tabs button.active {
+  color:var(--accent);
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell .inspector-tabs button.active::after {
+  display:none;
+}
+
+.app-shell .inspector-scroll {
+  padding-top:14px;
+}
+
+.app-shell .inspector-summary,
+.app-shell .inspector-property-group,
+.app-shell .inspector-derived-list > div {
+  box-shadow:none;
+}
+
+.app-shell .inspector-summary {
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-2);
+}
+
+.app-shell .inspector-property-group + .inspector-property-group {
+  margin-top:12px;
+  padding-top:14px;
+  border-top:1px solid var(--sc-color-border-soft);
+}
+
+.app-shell .inspector-numeric-field__control,
+.app-shell .select-field select,
+.app-shell .number-control {
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-inset);
+}
+
+.app-shell .inspector-numeric-field__control:focus-within,
+.app-shell .select-field select:focus-visible,
+.app-shell .number-control:focus-within {
+  border-color:var(--focus);
+  box-shadow:var(--sc-shadow-clay-inset),var(--sc-ring-focus);
+}
+
+.app-shell[data-shell-class='K0'] .toolbar {
+  border:var(--sc-clay-edge);
+  border-width:1px 0 0;
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-sheet);
+}
+
+.app-shell[data-shell-class='K0'] .mobile-tool-dock {
+  gap:4px;
+  padding:2px;
+  border-radius:var(--sc-radius-card);
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-inset);
+}
+
+.app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button {
+  min-width:44px;
+  min-height:50px;
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button.active,
+.app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button:active:not(:disabled) {
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell[data-shell-class='K0'] .inspector-panel[data-surface-presentation='sheet']::before {
+  width:52px;
+  height:5px;
+  margin-top:8px;
+  background:var(--sc-color-border-strong);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--sc-color-surface-elevated) 70%,transparent);
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .app-shell .tool-rail .tool-button,
+  .app-shell .tool-rail .tool-button:hover:not(:disabled),
+  .app-shell .tool-rail .tool-button:active:not(:disabled),
+  .app-shell .inspector-tabs button,
+  .app-shell .inspector-tabs button:hover:not(.active),
+  .app-shell .inspector-tabs button.active {
+    transition:none;
+    transform:none;
+  }
+}
+
+/* ========================================================================
+   CLAY RESULTS · FASE 3
+   Resultados es una mesa de decisión: la envolvente y los mandos se sienten
+   físicos; números, curvas, ejes, cursor y tabla conservan la disciplina
+   plana de una lectura técnica. No introduce estado ni altera el broker.
+   ===================================================================== */
+
+.app-shell[data-shell-class='X2'] .results-panel[data-surface-presentation='dock'] {
+  margin:0 8px 8px;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-panel);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-md);
+}
+
+.app-shell[data-shell-class='M1'] .results-panel[data-surface-presentation='inset'] {
+  border:var(--sc-clay-edge);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-lg);
+}
+
+.app-shell[data-shell-class='K0'] .results-panel[data-surface-presentation='sheet'] {
+  border:var(--sc-clay-edge);
+  border-bottom:0;
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-sheet);
+}
+
+.app-shell .results-panel .results-commandbar {
+  min-height:50px;
+  margin:10px 10px 0;
+  padding:6px 8px 6px 12px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-card);
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-inset);
+}
+
+.app-shell .results-panel .results-commandbar__context > span {
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+  letter-spacing:var(--sc-tracking-eyebrow);
+  text-transform:uppercase;
+}
+
+.app-shell .results-panel .results-mode-control {
+  gap:4px;
+  padding:3px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-control);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell .results-panel .results-mode-control button,
+.app-shell .results-panel .results-dense-launchers button,
+.app-shell .results-panel .result-summary-actions button,
+.app-shell .results-panel .diagram-chart-heading .envelope-toggle {
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transition:transform 180ms var(--sc-ease-standard),box-shadow 180ms var(--sc-ease-standard),background-color 180ms var(--sc-ease-standard),color 180ms var(--sc-ease-standard);
+}
+
+.app-shell .results-panel :is(.results-mode-control button,.results-dense-launchers button,.result-summary-actions button,.diagram-chart-heading .envelope-toggle):hover:not(:disabled) {
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-sm);
+  transform:translateY(-1px);
+}
+
+.app-shell .results-panel :is(.results-mode-control button,.results-dense-launchers button,.result-summary-actions button,.diagram-chart-heading .envelope-toggle):active:not(:disabled),
+.app-shell .results-panel .results-mode-control button[aria-pressed='true'],
+.app-shell .results-panel .diagram-chart-heading .envelope-toggle[aria-pressed='true'] {
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell .results-panel .result-tabs {
+  height:auto;
+  min-height:54px;
+  flex-basis:auto;
+  align-items:center;
+  gap:5px;
+  margin:10px 10px 0;
+  padding:4px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-card);
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-inset);
+}
+
+.app-shell .results-panel .result-tab-family {
+  display:flex;
+  align-items:center;
+  gap:3px;
+  min-width:max-content;
+}
+
+.app-shell .results-panel .result-tab-family__label {
+  padding-inline:4px;
+  color:var(--sc-color-text-tertiary);
+  font-family:var(--sc-font-mono);
+  font-size:8px;
+  font-weight:750;
+  letter-spacing:var(--sc-tracking-eyebrow);
+  text-transform:uppercase;
+}
+
+.app-shell .results-panel .result-tabs button {
+  min-height:42px;
+  height:auto;
+  padding:0 11px;
+  border:1px solid transparent;
+  border-radius:var(--sc-radius-control);
+  color:var(--sc-color-text-secondary);
+  transition:transform 180ms var(--sc-ease-standard),box-shadow 180ms var(--sc-ease-standard),background-color 180ms var(--sc-ease-standard),color 180ms var(--sc-ease-standard);
+}
+
+.app-shell .results-panel .result-tabs button:hover:not([aria-selected='true']) {
+  border-color:var(--sc-color-border-soft);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transform:translateY(-1px);
+}
+
+.app-shell .results-panel .result-tabs button[aria-selected='true'] {
+  border-color:color-mix(in srgb,currentColor 26%,var(--sc-color-border));
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  font-weight:750;
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell .results-panel .result-tabs button[aria-selected='true']::after {
+  display:none;
+}
+
+.app-shell .results-panel .result-tabs button:active:not(:disabled) {
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell .results-panel .results-dense-launchers {
+  min-height:42px;
+  margin:10px 10px 0;
+  padding:5px 8px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-card);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell .results-panel .results-dense-launchers__label {
+  color:var(--sc-color-text-tertiary);
+  font-family:var(--sc-font-mono);
+}
+
+.app-shell .results-panel .results-body {
+  margin:10px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-card);
+  background:var(--sc-color-surface-1);
+}
+
+.app-shell .results-panel .result-summary-workspace {
+  padding:14px;
+  gap:14px;
+}
+
+.app-shell .results-panel .result-summary-header strong {
+  font-family:var(--sc-font-display);
+  font-size:clamp(17px,1.4vw,22px);
+  font-weight:500;
+}
+
+.app-shell .results-panel .result-extreme-grid {
+  gap:10px;
+}
+
+.app-shell .results-panel .result-extreme-card {
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell .results-panel .result-extreme-card__locate {
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+}
+
+.app-shell .results-panel .result-extreme-card__locate:hover:not(:disabled) {
+  color:var(--accent);
+  transform:translateY(-1px);
+}
+
+/* La precisión se lee sobre BASE: el marco exterior puede elevarse, pero el
+   diagrama, su cursor, cifras y celdas no se convierten en botones. */
+.app-shell .results-panel .diagram-chart,
+.app-shell .results-panel .results-table,
+.app-shell .results-panel .diagram-cursor-readout {
+  border-radius:var(--sc-radius-data);
+  background:var(--sc-color-surface-1);
+  box-shadow:none;
+}
+
+.app-shell .results-panel .diagram-chart {
+  border:1px solid var(--sc-color-border-soft);
+}
+
+.app-shell .results-panel .diagram-chart-heading {
+  min-height:44px;
+  padding:6px 8px;
+  border-bottom:1px solid var(--sc-color-border-soft);
+}
+
+.app-shell .results-panel .diagram-chart-heading select {
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-control);
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-inset);
+}
+
+.app-shell .results-panel .diagram-cursor-readout {
+  margin:0 8px 8px;
+  border:1px solid var(--sc-color-border-soft);
+}
+
+.app-shell .results-panel .result-table-card {
+  border:1px solid var(--sc-color-border-soft);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell .results-panel .results-table :is(th,td) {
+  border-radius:0;
+  box-shadow:none;
+}
+
+.app-shell .results-panel .deformed-orbit,
+.deformed-layer path {
+  filter:none;
+}
+
+.app-shell[data-shell-class='K0'] .results-panel .results-mobile-toggle,
+.app-shell[data-shell-class='K0'] .results-panel .results-mobile-focus {
+  min-width:44px;
+  min-height:44px;
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell[data-shell-class='K0'] .results-panel .results-mobile-toggle:active,
+.app-shell[data-shell-class='K0'] .results-panel .results-mobile-focus:active {
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+@media (max-width:700px) {
+  .app-shell[data-shell-class='K0'] .results-panel .results-commandbar {
+    min-height:44px;
+    margin:8px 8px 0;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .results-commandbar__context > span {
+    display:none;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .results-mode-control button:not([aria-pressed='true']) {
+    display:none;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .result-summary-workspace {
+    padding:12px;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .result-summary-header {
+    align-items:flex-start;
+  }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .app-shell .results-panel,
+  .app-shell .results-panel :is(button,.result-tabs button,.results-mobile-toggle,.results-mobile-focus),
+  .app-shell .results-panel :is(button,.result-tabs button,.results-mobile-toggle,.results-mobile-focus):hover,
+  .app-shell .results-panel :is(button,.result-tabs button,.results-mobile-toggle,.results-mobile-focus):active {
+    transition:none;
+    transform:none;
+  }
+}
+
+/* ========================================================================
+   CLAY MOBILE DENSITY · FASE 5
+   Un único icono despliega superficies del Workspace; K0 usa un dock de
+   aplicaciones que conserva el área segura, pero no una banda pesada. El
+   lienzo técnico y sus datos no reciben materia ni efectos decorativos.
+   ===================================================================== */
+
+.app-shell .tool-rail-surface-launcher,
+.app-shell .tool-rail-surface-launcher .sc-popover {
+  display:block;
+  width:100%;
+}
+
+.app-shell .tool-rail-surface-launcher .sc-popover__trigger {
+  width:100%;
+  min-height:52px;
+  display:grid;
+  grid-template-columns:28px minmax(0,1fr);
+  justify-content:start;
+  gap:8px;
+  padding:0 10px;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-md);
+  background:var(--sc-color-surface-1);
+  color:var(--sc-color-text-secondary);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transition:var(--sc-transition-control);
+}
+
+.app-shell .tool-rail-surface-launcher .sc-popover__trigger:hover:not(:disabled) {
+  border-color:var(--sc-color-border-soft);
+  color:var(--sc-color-text-primary);
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-sm);
+}
+
+.app-shell .tool-rail-surface-launcher .sc-popover__trigger[aria-expanded='true'] {
+  border-color:color-mix(in srgb,var(--accent) 26%,var(--sc-color-border));
+  color:var(--accent);
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell .tool-rail-surface-launcher .sc-tool-button__icon {
+  width:24px;
+  height:24px;
+  display:grid;
+  place-items:center;
+  color:currentColor;
+}
+
+.app-shell .tool-rail-surface-launcher .sc-tool-button__copy {
+  min-width:0;
+  overflow:hidden;
+}
+
+.app-shell .tool-rail-surface-launcher .sc-tool-button__copy strong {
+  display:block;
+  overflow:hidden;
+  font-size:var(--sc-font-size-label);
+  font-weight:750;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.app-shell .tool-rail-surface-launcher .sc-popover__surface {
+  width:min(248px,calc(100vw - 28px));
+  padding:6px;
+  border:var(--sc-clay-edge);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-lg);
+}
+
+.app-shell .tool-rail-surface-launcher__menu {
+  display:grid;
+  gap:3px;
+}
+
+.app-shell .tool-rail-surface-launcher__menu button {
+  min-height:44px;
+  display:grid;
+  grid-template-columns:24px minmax(0,1fr);
+  align-items:center;
+  gap:8px;
+  padding:0 9px;
+  border:1px solid transparent;
+  border-radius:var(--sc-radius-control);
+  background:transparent;
+  color:var(--sc-color-text-secondary);
+  font-size:var(--sc-font-size-label);
+  font-weight:700;
+  text-align:left;
+}
+
+.app-shell .tool-rail-surface-launcher__menu button:hover:not(:disabled),
+.app-shell .tool-rail-surface-launcher__menu button:focus-visible {
+  border-color:var(--sc-color-border-soft);
+  background:var(--sc-color-surface-elevated);
+  color:var(--sc-color-text-primary);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell .tool-rail-surface-launcher__menu button:active:not(:disabled) {
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell[data-shell-class='M1'] .tool-rail-surface-launcher .sc-popover__trigger {
+  width:48px;
+  min-width:48px;
+  min-height:48px;
+  grid-template-columns:1fr;
+  justify-items:center;
+  padding:4px;
+}
+
+.app-shell[data-shell-class='M1'] .tool-rail-surface-launcher .sc-tool-button__copy {
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+}
+
+@media (max-width:1023px) {
+  .app-shell[data-shell-class='K0'] .toolbar {
+    padding:4px max(8px,env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));
+    border:0;
+    background:transparent;
+    box-shadow:none;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock {
+    width:fit-content;
+    max-width:100%;
+    display:flex;
+    align-items:center;
+    gap:3px;
+    margin:0 auto;
+    padding:3px;
+    overflow-x:auto;
+    overscroll-behavior-x:contain;
+    scroll-snap-type:x proximity;
+    border:var(--sc-clay-edge);
+    border-radius:var(--sc-radius-pill);
+    background:var(--sc-color-surface-1);
+    box-shadow:var(--sc-shadow-clay-md);
+    scrollbar-width:none;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock::-webkit-scrollbar {
+    display:none;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button {
+    width:44px;
+    min-width:44px;
+    height:44px;
+    min-height:44px;
+    flex:0 0 44px;
+    scroll-snap-align:center;
+    padding:0;
+    border:1px solid transparent;
+    border-radius:50%;
+    background:transparent;
+    box-shadow:none;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button > span:not(.sc-tool-button__icon) {
+    display:none;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button :is(svg,.sc-tool-button__icon) {
+    width:19px;
+    height:19px;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button:hover:not(:disabled) {
+    background:var(--sc-color-surface-elevated);
+    box-shadow:var(--sc-shadow-clay-xs);
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button.active,
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button.is-active,
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button:active:not(:disabled) {
+    border-color:color-mix(in srgb,var(--tool-color,var(--accent)) 24%,var(--sc-color-border));
+    background:var(--sc-color-surface-inset);
+    color:var(--tool-color,var(--accent));
+    box-shadow:var(--sc-shadow-clay-pressed);
+    transform:var(--sc-clay-press-transform);
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-palette-workspace {
+    max-width:min(392px,calc(100vw - 16px));
+    margin-inline:auto;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-palette-workspace .mobile-tool-palette-list {
+    gap:5px;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-palette-workspace .mobile-palette-tool {
+    min-height:52px;
+    font-size:11px;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .results-mobile-commandbar {
+    align-items:center;
+    gap:6px;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .results-mobile-metrics-toggle {
+    width:44px;
+    min-width:44px;
+    min-height:44px;
+    display:inline-grid;
+    place-items:center;
+    padding:0;
+    border:1px solid var(--sc-color-border-soft);
+    border-radius:50%;
+    background:var(--sc-color-surface-1);
+    color:var(--sc-color-text-secondary);
+    box-shadow:var(--sc-shadow-clay-xs);
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .results-mobile-metrics-toggle:active {
+    background:var(--sc-color-surface-pressed);
+    box-shadow:var(--sc-shadow-clay-pressed);
+    transform:var(--sc-clay-press-transform);
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .result-metric-rail.is-mobile {
+    width:100%;
+    overflow-x:auto;
+    overscroll-behavior-x:contain;
+    scrollbar-width:none;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .result-metric-rail.is-mobile::-webkit-scrollbar {
+    display:none;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .result-extreme-grid.is-mobile-rail {
+    display:flex;
+    width:max-content;
+    min-width:100%;
+    padding:1px 2px 3px;
+    scroll-snap-type:x proximity;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .result-extreme-grid.is-mobile-rail .result-extreme-card {
+    width:min(252px,74vw);
+    min-width:min(252px,74vw);
+    min-height:112px;
+    flex:0 0 min(252px,74vw);
+    scroll-snap-align:start;
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-advanced__summary {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    gap:10px;
+    padding:9px 11px 11px;
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-advanced__summary p {
+    margin:0;
+    color:var(--sc-color-text-secondary);
+    font-size:var(--sc-font-size-label);
+    line-height:var(--sc-line-height-compact);
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-advanced__edit {
+    min-height:38px;
+    padding:0 10px;
+    border:var(--sc-clay-edge);
+    border-radius:var(--sc-radius-control);
+    background:var(--sc-color-surface-elevated);
+    color:var(--accent);
+    box-shadow:var(--sc-shadow-clay-xs);
+    font-size:var(--sc-font-size-label);
+    font-weight:750;
+    white-space:nowrap;
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-advanced__edit:active {
+    background:var(--sc-color-surface-pressed);
+    box-shadow:var(--sc-shadow-clay-pressed);
+    transform:var(--sc-clay-press-transform);
+  }
+
+  .inspector-advanced-editor .inspector-advanced__content {
+    display:grid;
+    gap:10px;
+  }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .app-shell .tool-rail-surface-launcher .sc-popover__trigger,
+  .app-shell .tool-rail-surface-launcher__menu button,
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button,
+  .app-shell[data-shell-class='K0'] .results-panel .results-mobile-metrics-toggle,
+  .app-shell[data-shell-class='K0'] .inspector-advanced__edit {
+    transition:none;
+    transform:none;
+  }
+}
+
+/* Late X2 precedence: the legacy responsive layer above still describes the
+   old attached rail, so the new floating composition closes the cascade. */
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock {
+  margin:0;
+  border-radius:22px;
+  background:var(--sc-color-surface-1);
+  box-shadow:0 7px 0 color-mix(in srgb,var(--sc-color-text-primary) 9%,transparent),var(--sc-shadow-clay-lg);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .desktop-tool-list {
+  flex-direction:row;
+}
+
+.app-shell[data-shell-class='X2'] .center-stage {
+  margin:10px;
+  border-radius:var(--sc-radius-panel);
+}
+
+.app-shell[data-shell-class='X2'] .inspector-panel[data-surface-presentation='dock'] {
+  margin:10px 10px 10px 0;
+  border-radius:var(--sc-radius-panel);
+}
+
+.app-shell[data-shell-class='X2'] .results-panel [data-results-quantity-bar] {
+  min-height:50px;
+  height:auto;
+  flex-basis:auto;
+  align-items:center;
+  gap:5px;
+  padding:4px;
+  overflow:visible;
+}
+
+.app-shell[data-shell-class='X2'] .results-panel [data-results-quantity-bar] button {
+  min-width:0;
+  min-height:40px;
+  height:40px;
+  padding:0 10px;
+  border-radius:11px;
+}
+
+.app-shell .results-panel [data-result-tab='summary'][aria-selected='true'] { color:var(--accent); }
+.app-shell .results-panel [data-result-tab='axial'][aria-selected='true'] { color:var(--axial); }
+.app-shell .results-panel [data-result-tab='shear'][aria-selected='true'] { color:var(--shear); }
+.app-shell .results-panel [data-result-tab='moment'][aria-selected='true'] { color:var(--moment); }
+.app-shell .results-panel [data-result-tab='deformed'][aria-selected='true'] { color:var(--deformed); }
+
+.app-shell .results-panel [data-result-tab][aria-selected='true'] {
+  border-color:color-mix(in srgb,currentColor 38%,var(--sc-color-border));
+  box-shadow:inset 0 -3px 0 currentColor,var(--sc-shadow-clay-pressed);
+}
+
+/* K0 is a purpose-built touch composition: one tool route and one horizontally
+   sliding quantity rail. The hidden desktop list must never leak into it. */
+.app-shell[data-shell-class='K0'] .tool-rail .desktop-tool-list,
+.app-shell[data-shell-class='K0'] .tool-rail :is(.toolbar-spacer,.selection-tip) {
+  display:none !important;
+}
+
+.app-shell[data-shell-class='K0'] .results-panel [data-results-quantity-bar] {
+  min-height:52px;
+  height:52px;
+  flex:0 0 52px;
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:center;
+  gap:4px;
+  padding:4px;
+  overflow:visible;
+}
+
+.app-shell[data-shell-class='K0'] .results-panel .results-quantity-tabs {
+  min-width:0;
+  flex:1 1 auto;
+  display:flex;
+  align-items:center;
+  gap:4px;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  scroll-snap-type:x proximity;
+  scrollbar-width:none;
+}
+
+.app-shell[data-shell-class='K0'] .results-panel .results-quantity-tabs::-webkit-scrollbar {
+  display:none;
+}
+
+.app-shell[data-shell-class='K0'] .results-panel [data-results-quantity-bar] [data-result-tab] {
+  min-width:72px;
+  width:72px;
+  height:42px;
+  min-height:42px;
+  flex:0 0 72px;
+  padding:0 8px;
+  scroll-snap-align:center;
+  border-radius:11px;
+  font-size:10px;
+}
+
+.app-shell[data-shell-class='K0'] .results-panel .results-dense-overflow__trigger {
+  width:42px;
+  min-width:42px;
+  height:42px;
+  min-height:42px;
+  display:grid;
+  place-items:center;
+  padding:0;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:11px;
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell[data-shell-class='K0']:has(.results-panel[data-surface-status='active']:not(.mobile-collapsed)) .workspace-surface-launcher {
+  display:none;
+}
+
+.app-shell[data-shell-class='K0'] .mobile-inspector-toggle[aria-expanded='true'] {
+  display:none;
+}
+
+.app-shell[data-shell-class='X2']:has(.contextual-actions):not(:has(.results-panel[data-surface-status='active'])) .tool-rail.is-floating-dock {
+  bottom:94px;
+}
+
+/* Generator ya contiene su propia salida y confirmación. Mientras está activo,
+   el dock se repliega para que no compita por el mismo plano ni tape el pie. */
+.app-shell[data-shell-class='X2']:has(.structure-generator[data-surface-status='active']) .tool-rail.is-floating-dock {
+  opacity:0;
+  pointer-events:none;
+  transform:translate(-50%,18px) scale(.96);
+}
+
+/* M1 is the tablet-landscape composition: a slim edge rail and a narrower
+   inspector inset leave a useful drawing field instead of a squeezed desktop. */
+.app-shell[data-shell-class='M1'] .inspector-panel[data-surface-presentation='inset'] {
+  width:min(360px,38vw) !important;
+}
+
+.app-shell[data-shell-class='M1']:has(.inspector-panel[data-surface-presentation='inset'][data-surface-status='active']) .contextual-actions {
+  left:32%;
+  width:min(440px,calc(64% - 24px));
 }

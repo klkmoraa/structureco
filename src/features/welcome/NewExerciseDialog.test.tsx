@@ -34,6 +34,8 @@ describe('NewExerciseDialog', () => {
       name: 'New exercise',
       description: 'Start from scratch or generate a model with editable geometry, supports, and load.',
     });
+    expect(dialog.getAttribute('data-aula-layout')).toBe('guided-builder');
+    expect(dialog.querySelector('[data-structural-asset-id="portal:single-bay"]')).toBeTruthy();
     const descriptionId = dialog.getAttribute('aria-describedby');
     expect(descriptionId).toBe('new-exercise-subtitle');
     expect(document.getElementById(descriptionId!)?.textContent).toBe('Start from scratch or generate a model with editable geometry, supports, and load.');

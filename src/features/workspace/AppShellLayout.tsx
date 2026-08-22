@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode, Ref } from 'react';
 import { isToolRailCompact, type ShellClass } from './shellComposition';
+import type { ToolDockPosition } from './useWorkspaceLayoutPreferences';
 
 export interface AppShellLayoutProps {
   projectId: string;
@@ -20,6 +21,7 @@ export interface AppShellLayoutProps {
   inspectorCollapsed?: boolean;
   fullCanvas?: boolean;
   inspectorWidth?: number;
+  toolDockPosition?: ToolDockPosition;
   ref?: Ref<HTMLDivElement>;
 }
 
@@ -42,6 +44,7 @@ export function AppShellLayout({
   inspectorCollapsed = false,
   fullCanvas = false,
   inspectorWidth,
+  toolDockPosition = 'bottom',
   ref,
 }: AppShellLayoutProps) {
   return <div
@@ -52,6 +55,7 @@ export function AppShellLayout({
     data-inspector-collapsed={inspectorCollapsed || undefined}
     data-full-canvas={fullCanvas || undefined}
     data-tool-rail-compact={isToolRailCompact(shellClass) || undefined}
+    data-tool-dock-position={toolDockPosition}
     style={inspectorWidth === undefined ? undefined : { '--inspector-w': `${inspectorWidth}px` } as CSSProperties}
   >
     <a className="app-shell-skip-link" href="#workspace-canvas">{skipLabel}</a>

@@ -271,7 +271,7 @@ describe('Inspector selection variants', () => {
     expect(screen.getByRole('option', { name: 'Distributed' })).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Coordinate system' })).toBeTruthy();
     expectDescribedUnit(screen.getByRole('textbox', { name: 'From' }), 'x/L');
-    expect(screen.getByRole('button', { name: 'Delete load' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Delete selection' })).toBeTruthy();
   });
 
   it('distinguishes a free node from a support and exposes units plus calculated values', async () => {
@@ -750,6 +750,31 @@ describe('Inspector advanced, locked, and validation states', () => {
     expect(document.getElementById(advanced.getAttribute('aria-controls') ?? '')?.hidden).toBe(false);
   });
 
+  it('uses a compact mobile advanced summary and opens the complete editor only on demand', async () => {
+    const user = userEvent.setup();
+    const originalWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 390 });
+
+    try {
+      renderInspector();
+      await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+      await user.click(screen.getByRole('button', { name: 'Propiedades avanzadas' }));
+
+      expect(screen.getByText('Edita semirrigidez, rótulas y offsets sólo cuando haga falta.')).toBeTruthy();
+      expect(screen.queryByRole('checkbox', { name: 'Activar en i' })).toBeNull();
+
+      await user.click(screen.getByRole('button', { name: 'Editar todo' }));
+      const editor = screen.getByRole('dialog', { name: 'Propiedades avanzadas' });
+      expect(within(editor).getByRole('checkbox', { name: 'Activar en i' })).toBeTruthy();
+
+      await user.click(within(editor).getByRole('button', { name: 'Cerrar' }));
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Propiedades avanzadas' })).toBeNull());
+      expect(screen.getByRole('button', { name: 'Editar todo' })).toBeTruthy();
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalWidth });
+    }
+  });
+
   it('locks material and advanced mechanics in classroom mode without hiding stored values', async () => {
     const user = userEvent.setup();
     renderInspector(createInspectorProject('classroom'));
@@ -827,7 +852,7 @@ describe('Inspector advanced, locked, and validation states', () => {
     renderInspector(createInspectorProject(), { modal: true, onClose });
 
     expect(screen.getByRole('dialog', { name: 'Inspector' }).hasAttribute('aria-modal')).toBe(false);
-    const last = screen.getByRole('button', { name: 'Cerrar inspector' });
+    const last = screen.getByRole('tab', { name: 'Vista' });
     last.focus();
     await user.tab();
     expect(document.activeElement).toBe(document.body);
@@ -835,17 +860,15 @@ describe('Inspector advanced, locked, and validation states', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it('exposes three mutually exclusive phone heights without mutating the model', async () => {
+  it('keeps the phone height control compact and cycles it without mutating the model', async () => {
     const user = userEvent.setup();
     const onMobileDetentChange = vi.fn();
     renderInspector(createInspectorProject(), { modal: true, mobileDetent: 'medium', onMobileDetentChange });
 
-    const group = screen.getByRole('group', { name: 'Altura del Inspector' });
-    expect(within(group).getByRole('button', { name: 'Compacta' }).getAttribute('aria-pressed')).toBe('false');
-    expect(within(group).getByRole('button', { name: 'Media' }).getAttribute('aria-pressed')).toBe('true');
-    expect(within(group).getByRole('button', { name: 'Casi completa' }).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.queryByRole('group', { name: 'Altura del Inspector' })).toBeNull();
+    const handle = screen.getByRole('button', { name: 'Altura del Inspector: Media' });
 
-    await user.click(within(group).getByRole('button', { name: 'Casi completa' }));
+    await user.click(handle);
     expect(onMobileDetentChange).toHaveBeenCalledWith('large');
     expect(screen.getByLabelText('Puede deshacer').textContent).toBe('false');
   });

@@ -84,6 +84,43 @@ describe('StructuralIllustration', () => {
     expect(new Set(signatures).size).toBe(40);
   });
 
+  it('uses canonical Pratt and Howe diagonal orientation around the centre', () => {
+    const pathsFor = (assetId: string) => {
+      const { container, unmount } = render(<StructuralIllustration assetId={assetId} />);
+      const paths = [...container.querySelectorAll('[data-element="web"]')].map((path) => path.getAttribute('d'));
+      unmount();
+      return paths;
+    };
+
+    expect(pathsFor('truss:pratt')).toEqual(expect.arrayContaining([
+      'M50 58 85 118', 'M85 58 120 118', 'M190 58 155 118', 'M155 58 120 118',
+    ]));
+    expect(pathsFor('truss:howe')).toEqual(expect.arrayContaining([
+      'M50 118 85 58', 'M85 118 120 58', 'M190 118 155 58', 'M155 118 120 58',
+    ]));
+  });
+
+  it('builds every portal hero from matte planes and restrained connection accents', () => {
+    for (const assetId of ['portal:single-bay', 'portal:two-bay', 'portal:two-story', 'portal:industrial-pitched']) {
+      const { container, unmount } = render(<StructuralIllustration assetId={assetId} detail="hero" />);
+      expect(container.querySelectorAll('[data-element="surface"]').length, assetId).toBeGreaterThanOrEqual(6);
+      expect(container.querySelector(`[fill="${'var(--structural-asset-accent, currentColor)'}"]`), assetId).not.toBeNull();
+      unmount();
+    }
+  });
+
+  it('uses projected structural solids for the architectural thumbnail families', () => {
+    const projectedFamilies = ['portal:single-bay', 'beam:simply-supported', 'cantilever:wall', 'truss:pratt'];
+    for (const assetId of projectedFamilies) {
+      const { container, unmount } = render(<StructuralIllustration assetId={assetId} detail="card" />);
+      expect(container.querySelectorAll('[data-element="surface"]').length, assetId).toBeGreaterThanOrEqual(3);
+      if (!assetId.startsWith('portal:')) {
+        expect(container.querySelector('[data-element="prismatic-member"]'), assetId).not.toBeNull();
+      }
+      unmount();
+    }
+  });
+
   it('keeps every SVG transparent and free of raster, filters, gradients and network references', () => {
     for (const preset of allPresets()) {
       const markup = renderToStaticMarkup(<StructuralIllustration assetId={preset.id} />);
@@ -160,6 +197,15 @@ describe('StructuralIllustration', () => {
     expect(svg?.getAttribute('role')).toBe('img');
     expect(svg?.getAttribute('aria-label')).toBe('Rigid beam-to-column connection');
     expect(svg?.querySelector('title')?.textContent).toBe('Rigid beam-to-column connection');
+  });
+
+  it('falls back to the registry label when a semantic title is empty', () => {
+    const { container } = render(
+      <StructuralIllustration assetId="connection:rigid" decorative={false} title="   " />,
+    );
+    const svg = container.querySelector('svg');
+    expect(svg?.getAttribute('aria-label')).toBe('Rigid connection');
+    expect(svg?.querySelector('title')?.textContent).toBe('Rigid connection');
   });
 
   it('publishes motion metadata with a static reduced-motion fallback', () => {

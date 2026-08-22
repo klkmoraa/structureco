@@ -224,12 +224,12 @@ describe('Phase 4 design-token contract', () => {
     }
   });
 
-  /**
-   * El CTA es lima clara: su relleno mide 1,8:1 contra el marfil, así que la
-   * silueta la sostiene el canto. Si alguien devuelve el canto a `transparent`
-   * el control deja de cumplir 1.4.11 sin que ninguna otra prueba lo note.
-   */
-  it('gives the primary fill a measured edge and white text in every state', () => {
+  /** El CTA aprobado usa verde técnico exacto y tinta blanca en ambos temas. */
+  it('gives the exact deep green CTA a measured edge and white ink in every state', () => {
+    expect(resolveHex('--sc-color-action-primary', lightTheme)).toBe('#007d61');
+    expect(resolveHex('--sc-color-action-hover', lightTheme)).toBe('#006d55');
+    expect(resolveHex('--sc-color-action-pressed', lightTheme)).toBe('#005e49');
+    expect(resolveHex('--sc-color-action-foreground', lightTheme)).toBe('#ffffff');
     for (const state of ['--sc-color-action-primary', '--sc-color-action-hover', '--sc-color-action-pressed']) {
       expect(contrast('--sc-color-action-foreground', state, lightTheme), `tinta sobre ${state}`)
         .toBeGreaterThanOrEqual(4.5);

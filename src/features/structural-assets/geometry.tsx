@@ -5,6 +5,50 @@ const primaryColor = 'var(--structural-asset-primary, currentColor)';
 const secondaryColor = 'var(--structural-asset-secondary, currentColor)';
 const accentColor = 'var(--structural-asset-accent, currentColor)';
 
+type Point2 = readonly [number, number];
+
+const pathFromPoints = (points: readonly Point2[]) => `${points.map(([x, y], index) => `${index === 0 ? 'M' : 'L'}${x.toFixed(2)} ${y.toFixed(2)}`).join('')}Z`;
+
+/**
+ * A light-weight orthographic projection of a rectangular structural member.
+ *
+ * The product already ships Three.js for Space 3D, but importing WebGL into
+ * every Home thumbnail would turn a tiny, editable asset into a heavy runtime.
+ * This primitive keeps the same 3D thinking (front, top and end planes) and
+ * emits deterministic SVG geometry instead.
+ */
+const PrismaticMember = ({
+  from,
+  to,
+  thickness = 9,
+  depth = 6,
+  accent = false,
+}: {
+  from: Point2;
+  to: Point2;
+  thickness?: number;
+  depth?: number;
+  accent?: boolean;
+}) => {
+  const [x1, y1] = from;
+  const [x2, y2] = to;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const length = Math.hypot(dx, dy) || 1;
+  const nx = (-dy / length) * thickness * 0.5;
+  const ny = (dx / length) * thickness * 0.5;
+  const extrusion: Point2 = [-depth * 0.72, -depth];
+  const front: readonly Point2[] = [[x1 + nx, y1 + ny], [x2 + nx, y2 + ny], [x2 - nx, y2 - ny], [x1 - nx, y1 - ny]];
+  const shifted = front.map(([x, y]) => [x + extrusion[0], y + extrusion[1]] as const);
+  const paint = accent ? accentColor : primaryColor;
+
+  return <g className="structural-illustration__prism" data-element="prismatic-member">
+    <path className="structural-illustration__face structural-illustration__face--front" data-element="surface" d={pathFromPoints(front)} fill={paint} fillOpacity="0.3" stroke={lineColor} strokeLinejoin="round" strokeWidth="1.8" vectorEffect="non-scaling-stroke" />
+    <path className="structural-illustration__face structural-illustration__face--top" data-element="surface" d={pathFromPoints([shifted[0], shifted[1], front[1], front[0]])} fill={secondaryColor} fillOpacity="0.2" stroke={lineColor} strokeLinejoin="round" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+    <path className="structural-illustration__face structural-illustration__face--end" data-element="surface" d={pathFromPoints([shifted[1], shifted[2], front[2], front[1]])} fill={paint} fillOpacity="0.16" stroke={lineColor} strokeLinejoin="round" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+  </g>;
+};
+
 const Members = ({ paths, accent = false }: { paths: readonly string[]; accent?: boolean }) => (
   <>
     {paths.map((d) => (
@@ -127,55 +171,88 @@ const SupportGlyph = ({ kind, x, y, scale = 1 }: { kind: SupportKind; x: number;
 
 const PortalGeometry = ({ variant }: { variant: StructuralAssetVariantName }) => {
   if (variant === 'single-bay') {
-    return <><Members paths={['M55 126V48H185V126']} /><Face d="M43 126h24l8 9H35Z" /><Face d="M173 126h24l8 9h-40Z" /><Nodes points={[[55, 48], [185, 48]]} /></>;
+    return <>
+      <Face d="M30 128H194L218 141 54 151 30 138Z" opacity={0.12} />
+      <Face d="M48 50H64V129H48Z" opacity={0.28} /><Face d="M42 44 48 50V129L42 123Z" opacity={0.14} />
+      <Face d="M178 50H194V129H178Z" opacity={0.28} /><Face d="M172 44 178 50V129L172 123Z" opacity={0.14} />
+      <Face d="M48 50H194V64H48Z" opacity={0.3} /><Face d="M42 44H188L194 50H48Z" opacity={0.16} />
+      <Face d="M45 48H67V57H45Z" accent opacity={0.5} /><Face d="M175 48H197V57H175Z" accent opacity={0.5} />
+      <Face d="M44 124H68V132H44Z" accent opacity={0.38} /><Face d="M174 124H198V132H174Z" accent opacity={0.38} />
+    </>;
   }
   if (variant === 'two-bay') {
-    return <><Members paths={['M36 126V54H120V126', 'M120 54H204V126']} /><Face d="M24 126h24l8 9H16Z" /><Face d="M108 126h24l8 9h-40Z" /><Face d="M192 126h24l8 9h-40Z" /><Nodes points={[[36, 54], [120, 54], [204, 54]]} /></>;
+    return <>
+      <Face d="M17 130H207L225 141 35 151 17 140Z" opacity={0.12} />
+      <Face d="M30 55H43V130H30Z" opacity={0.27} /><Face d="M25 50 30 55V130L25 125Z" opacity={0.13} />
+      <Face d="M112 55H125V130H112Z" opacity={0.27} /><Face d="M107 50 112 55V130L107 125Z" opacity={0.13} />
+      <Face d="M194 55H207V130H194Z" opacity={0.27} /><Face d="M189 50 194 55V130L189 125Z" opacity={0.13} />
+      <Face d="M30 55H207V67H30Z" opacity={0.3} /><Face d="M25 50H202L207 55H30Z" opacity={0.16} />
+      <Face d="M27 53H46V61H27Z" accent opacity={0.48} /><Face d="M109 53H128V61H109Z" accent opacity={0.48} /><Face d="M191 53H210V61H191Z" accent opacity={0.48} />
+    </>;
   }
   if (variant === 'two-story') {
-    return <><Members paths={['M55 132V28', 'M185 132V28', 'M55 80H185', 'M55 28H185']} /><Web paths={['M55 80l130-52', 'M185 80 55 28']} /><Face d="M43 132h24l8 8H35Z" /><Face d="M173 132h24l8 8h-40Z" /><Nodes points={[[55, 28], [185, 28], [55, 80], [185, 80]]} /></>;
+    return <>
+      <Face d="M30 132H196L217 143 52 152 30 142Z" opacity={0.12} />
+      <Face d="M48 36H63V133H48Z" opacity={0.28} /><Face d="M42 30 48 36V133L42 127Z" opacity={0.14} />
+      <Face d="M179 36H194V133H179Z" opacity={0.28} /><Face d="M173 30 179 36V133L173 127Z" opacity={0.14} />
+      <Face d="M48 36H194V49H48Z" opacity={0.3} /><Face d="M42 30H188L194 36H48Z" opacity={0.16} />
+      <Face d="M48 78H194V91H48Z" opacity={0.3} /><Face d="M42 72H188L194 78H48Z" opacity={0.16} />
+      <Face d="M45 76H66V85H45Z" accent opacity={0.5} /><Face d="M176 76H197V85H176Z" accent opacity={0.5} />
+      <Face d="M45 34H66V43H45Z" accent opacity={0.5} /><Face d="M176 34H197V43H176Z" accent opacity={0.5} />
+    </>;
   }
-  return <><Members paths={['M42 130V74L120 30l78 44v56', 'M42 74h156']} accent /><Web paths={['M65 61v69', 'M175 61v69', 'M82 52l38 22 38-22']} /><Face d="M30 130h24l8 9H22Z" /><Face d="M186 130h24l8 9h-40Z" /><Nodes points={[[42, 74], [120, 30], [198, 74]]} /></>;
+  return <>
+    <Face d="M27 132H202L222 143 48 152 27 142Z" opacity={0.1} />
+    <Face d="M40 76H54V132H40Z" opacity={0.32} /><Face d="M34 70 40 76V132L34 126Z" opacity={0.15} />
+    <Face d="M188 76H202V132H188Z" opacity={0.32} /><Face d="M182 70 188 76V132L182 126Z" opacity={0.15} />
+    <Face d="M40 76 116 28 125 39 49 87Z" opacity={0.34} /><Face d="M116 28 193 72 187 83 125 39Z" opacity={0.34} />
+    <Face d="M34 70 110 22 116 28 40 76Z" opacity={0.16} /><Face d="M110 22 199 70 193 76 116 28Z" opacity={0.16} />
+    <Face d="M37 72 57 78 53 88 36 83Z" accent opacity={0.55} /><Face d="M184 72 204 72 202 84 187 83Z" accent opacity={0.55} /><Face d="M110 25 124 32 121 43 108 35Z" accent opacity={0.55} />
+    <Web paths={['M52 126 92 78M52 78l40 48', 'M150 78l38 48m0-48-38 48', 'M72 67 116 91 169 61']} />
+  </>;
 };
 
 const BeamGeometry = ({ variant }: { variant: StructuralAssetVariantName }) => {
   const supports: Array<{ kind: SupportKind; x: number }> = [];
-  let beamPath = 'M35 70H205';
   if (variant === 'simply-supported') supports.push({ kind: 'pin', x: 45 }, { kind: 'roller', x: 195 });
   if (variant === 'two-span') supports.push({ kind: 'pin', x: 35 }, { kind: 'roller', x: 120 }, { kind: 'roller', x: 205 });
   if (variant === 'three-span') supports.push({ kind: 'pin', x: 25 }, { kind: 'roller', x: 88 }, { kind: 'roller', x: 152 }, { kind: 'roller', x: 215 });
   if (variant === 'overhang') {
-    beamPath = 'M20 70H220';
     supports.push({ kind: 'pin', x: 65 }, { kind: 'roller', x: 170 });
   }
-  return <><Members paths={[beamPath]} accent={variant === 'overhang'} />{supports.map((support) => <SupportGlyph key={`${support.kind}:${support.x}`} kind={support.kind} x={support.x} y={74} scale={0.72} />)}<Nodes points={supports.map(({ x }) => [x, 70] as const)} /></>;
+  const [beamStart, beamEnd] = variant === 'overhang' ? [20, 220] : [35, 205];
+  return <>
+    <PrismaticMember from={[beamStart, 70]} to={[beamEnd, 70]} thickness={11} depth={7} accent={variant === 'overhang'} />
+    {supports.map((support) => <SupportGlyph key={`${support.kind}:${support.x}`} kind={support.kind} x={support.x} y={77} scale={0.72} />)}
+    <Nodes points={supports.map(({ x }) => [x, 70] as const)} />
+  </>;
 };
 
 const CantileverGeometry = ({ variant }: { variant: StructuralAssetVariantName }) => {
   if (variant === 'wall') {
-    return <><SupportGlyph kind="fixed" x={46} y={78} scale={1.3} /><Members paths={['M46 78H205']} /><Nodes points={[[205, 78]]} /></>;
+    return <><SupportGlyph kind="fixed" x={46} y={78} scale={1.3} /><PrismaticMember from={[46, 78]} to={[205, 78]} thickness={12} depth={8} /><Nodes points={[[205, 78]]} /></>;
   }
   if (variant === 'double') {
-    return <><Members paths={['M24 76H216', 'M120 76V128']} /><Face d="M107 128h26l10 9H97Z" /><Nodes points={[[24, 76], [120, 76], [216, 76]]} /></>;
+    return <><PrismaticMember from={[24, 76]} to={[216, 76]} thickness={11} depth={7} /><PrismaticMember from={[120, 76]} to={[120, 128]} thickness={12} depth={7} /><Face d="M107 128h26l10 9H97Z" /><Nodes points={[[24, 76], [120, 76], [216, 76]]} /></>;
   }
   if (variant === 'stepped') {
-    return <><SupportGlyph kind="fixed" x={38} y={92} scale={1.15} /><Members paths={['M38 92H104V68H164V46H214']} /><Nodes points={[[104, 92], [104, 68], [164, 68], [164, 46], [214, 46]]} /></>;
+    return <><SupportGlyph kind="fixed" x={38} y={92} scale={1.15} /><PrismaticMember from={[38, 92]} to={[104, 92]} thickness={11} /><PrismaticMember from={[104, 92]} to={[104, 68]} thickness={11} /><PrismaticMember from={[104, 68]} to={[164, 68]} thickness={11} /><PrismaticMember from={[164, 68]} to={[164, 46]} thickness={11} /><PrismaticMember from={[164, 46]} to={[214, 46]} thickness={11} /><Nodes points={[[104, 92], [104, 68], [164, 68], [164, 46], [214, 46]]} /></>;
   }
   return <><SupportGlyph kind="fixed" x={42} y={92} scale={1.15} /><Face d="M42 70 205 50l20 18L58 92Z" opacity={0.2} /><Web paths={['M58 92 42 70', 'M205 50l20 18', 'M95 65l17 18', 'M153 58l18 18']} /><Nodes points={[[42, 70], [58, 92], [205, 50], [225, 68]]} /></>;
 };
 
 const TrussGeometry = ({ variant }: { variant: StructuralAssetVariantName }) => {
-  const bottom = 'M25 118H215';
+  const bottom = <PrismaticMember from={[25, 118]} to={[215, 118]} thickness={7} depth={4.5} />;
   if (variant === 'pratt') {
-    return <><Members paths={[bottom, 'M25 118 60 58h120l35 60']} /><Web paths={['M60 58v60M100 58v60M140 58v60M180 58v60M60 58l40 60m0-60 40 60m0-60 40 60']} /><Nodes points={[[25, 118], [60, 58], [100, 58], [140, 58], [180, 58], [215, 118]]} /></>;
+    return <>{bottom}<PrismaticMember from={[25, 118]} to={[50, 58]} thickness={7} depth={4.5} /><PrismaticMember from={[50, 58]} to={[190, 58]} thickness={7} depth={4.5} /><PrismaticMember from={[190, 58]} to={[215, 118]} thickness={7} depth={4.5} /><Web paths={['M50 58V118M85 58V118M120 58V118M155 58V118M190 58V118', 'M50 58 85 118', 'M85 58 120 118', 'M190 58 155 118', 'M155 58 120 118']} /><Nodes points={[[25, 118], [50, 58], [85, 58], [120, 58], [155, 58], [190, 58], [215, 118], [50, 118], [85, 118], [120, 118], [155, 118], [190, 118]]} /></>;
   }
   if (variant === 'howe') {
-    return <><Members paths={[bottom, 'M25 118 60 58h120l35 60']} /><Web paths={['M60 58v60M100 58v60M140 58v60M180 58v60M100 58l-40 60m80-60-40 60m80-60-40 60']} /><Nodes points={[[25, 118], [60, 58], [100, 58], [140, 58], [180, 58], [215, 118]]} /></>;
+    return <>{bottom}<PrismaticMember from={[25, 118]} to={[50, 58]} thickness={7} depth={4.5} /><PrismaticMember from={[50, 58]} to={[190, 58]} thickness={7} depth={4.5} /><PrismaticMember from={[190, 58]} to={[215, 118]} thickness={7} depth={4.5} /><Web paths={['M50 58V118M85 58V118M120 58V118M155 58V118M190 58V118', 'M50 118 85 58', 'M85 118 120 58', 'M190 118 155 58', 'M155 118 120 58']} /><Nodes points={[[25, 118], [50, 58], [85, 58], [120, 58], [155, 58], [190, 58], [215, 118], [50, 118], [85, 118], [120, 118], [155, 118], [190, 118]]} /></>;
   }
   if (variant === 'warren') {
-    return <><Members paths={[bottom, 'M25 118 55 62h130l30 56']} /><Web paths={['M25 118 55 62l32 56 33-56 33 56 32-56 30 56']} /><Nodes points={[[25, 118], [55, 62], [87, 118], [120, 62], [153, 118], [185, 62], [215, 118]]} /></>;
+    return <>{bottom}<PrismaticMember from={[25, 118]} to={[55, 62]} thickness={7} depth={4.5} /><PrismaticMember from={[55, 62]} to={[185, 62]} thickness={7} depth={4.5} /><PrismaticMember from={[185, 62]} to={[215, 118]} thickness={7} depth={4.5} /><Web paths={['M25 118 55 62l32 56 33-56 33 56 32-56 30 56']} /><Nodes points={[[25, 118], [55, 62], [87, 118], [120, 62], [153, 118], [185, 62], [215, 118]]} /></>;
   }
-  return <><Members paths={[bottom, 'M25 118 120 40l95 78']} /><Web paths={['M120 40v78', 'M72 79l48 39m48-39-48 39']} /><Nodes points={[[25, 118], [72, 79], [120, 40], [168, 79], [215, 118]]} /></>;
+  return <>{bottom}<PrismaticMember from={[25, 118]} to={[120, 40]} thickness={7} depth={4.5} /><PrismaticMember from={[120, 40]} to={[215, 118]} thickness={7} depth={4.5} /><Web paths={['M120 40v78', 'M72 79l48 39m48-39-48 39']} /><Nodes points={[[25, 118], [72, 79], [120, 40], [168, 79], [215, 118]]} /></>;
 };
 
 const SlabGeometry = ({ variant }: { variant: StructuralAssetVariantName }) => {

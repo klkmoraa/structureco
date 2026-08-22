@@ -110,17 +110,22 @@ afterEach(async () => {
 });
 
 /**
- * CRI-104 · El carril de los cuatro pasos. La Bienvenida ya no es una pantalla
- * plana con todas las puertas a la vez: es Bienvenida → Cómo trabajas → Por
- * dónde → Mesa, y cada puerta vive en su paso. Se consulta acotado al `<nav>`
- * porque los mismos rótulos aparecen también en los enlaces de avance del
- * panel — misma convención que `welcomeFlow.test.tsx`.
+ * El rediseño total sustituyó el onboarding de cuatro pasos por destinos
+ * persistentes de producto. Esta ayuda recorre la navegación real y evita
+ * que App.test.tsx vuelva a convertir Inicio en una puerta oculta.
  */
-const stepRail = () => within(document.querySelector('.welcome-steps') as HTMLElement);
+type HomeDestination = 'projects' | 'templates' | 'classroom' | 'import' | 'space3d';
 
-/** Navega a un paso de la Bienvenida por su rótulo en el carril. */
-const goToStep = async (user: ReturnType<typeof userEvent.setup>, step: string | RegExp) => {
-  await user.click(stepRail().getByRole('button', { name: step }));
+const navigateHome = async (user: ReturnType<typeof userEvent.setup>, destination: HomeDestination) => {
+  const labels: Record<HomeDestination, RegExp> = {
+    projects: /proyectos|projects/i,
+    templates: /plantillas|templates/i,
+    classroom: /aula|classroom/i,
+    import: /importar|import/i,
+    space3d: /^space 3d$/i,
+  };
+  const sidebar = document.querySelector('.sc-home-sidebar') as HTMLElement;
+  await user.click(within(sidebar).getByRole('button', { name: labels[destination] }));
 };
 
 const openWorkspace = async (user: ReturnType<typeof userEvent.setup>) => {
@@ -143,8 +148,8 @@ const renderExampleApp = async (user: ReturnType<typeof userEvent.setup>) => {
  */
 const openUtilityMenu = async (user: ReturnType<typeof userEvent.setup>) => {
   const topbar = within(document.querySelector('.topbar') as HTMLElement);
-  await user.click(topbar.getByRole('button', { name: /más acciones/i }));
-  return screen.findByRole('dialog', { name: /más acciones/i });
+  await user.click(topbar.getByRole('button', { name: /herramientas del espacio de trabajo|workspace tools/i }));
+  return screen.findByRole('dialog', { name: /herramientas del espacio de trabajo|workspace tools/i });
 };
 
 /**
@@ -153,8 +158,12 @@ const openUtilityMenu = async (user: ReturnType<typeof userEvent.setup>) => {
  * Pedirla es parte del contrato, no un rodeo de la prueba.
  */
 const openResults = async (user: ReturnType<typeof userEvent.setup>) => {
-  await user.click(screen.getByRole('button', { name: 'Resultados' }));
+  await user.keyboard('{Control>}k{/Control}');
+  const palette = await screen.findByRole('dialog', { name: /paleta de comandos|command palette/i });
+  await user.click(within(palette).getByRole('option', { name: /resultados: resumen|results: summary/i }));
   await waitFor(() => expect(document.querySelector('.results-panel')).toBeTruthy());
+  const results = document.querySelector('.results-panel') as HTMLElement;
+  await user.click(within(results).getByRole('tab', { name: /momento|moment/i }));
 };
 
 /**
@@ -162,7 +171,15 @@ const openResults = async (user: ReturnType<typeof userEvent.setup>) => {
  * panel: son la superficie `dense`, que se pide desde sus lanzadores.
  */
 const openDenseResults = async (user: ReturnType<typeof userEvent.setup>, view: 'reactions' | 'influence' | 'learn') => {
-  await user.click(document.querySelector(`[data-dense-launcher="${view}"]`) as HTMLElement);
+  const labels: Record<typeof view, RegExp> = {
+    reactions: /reacciones|reactions/i,
+    influence: /influencia|influence/i,
+    learn: /aprender|learn/i,
+  };
+  const results = document.querySelector('.results-panel') as HTMLElement;
+  await user.click(within(results).getByRole('button', { name: /más resultados|more results/i }));
+  const menu = await screen.findByRole('menu', { name: /más resultados|more results/i });
+  await user.click(within(menu).getByRole('menuitem', { name: labels[view] }));
   await waitFor(() => expect(document.querySelector('.dense-results-surface')).toBeTruthy(), { timeout: 5000 });
 };
 
@@ -201,8 +218,8 @@ describe('structureCo app shell', () => {
 
     // CRI-104 · su puerta desde Inicio vive en el paso «Por dónde», marcada
     // como experimental. Sigue existiendo; lo que cambió es por dónde se llega.
-    await goToStep(user, 'Por dónde');
-    await user.click(screen.getByRole('button', { name: /space 3d/i }));
+    await navigateHome(user, 'space3d');
+    await user.click(screen.getByRole('button', { name: /abrir space 3d|open space 3d/i }));
     expect(await screen.findByRole('button', { name: /^analizar$/i }, { timeout: 10_000 })).toBeTruthy();
     expect(document.querySelector('.space3d-screen')).not.toBeNull();
 
@@ -211,12 +228,10 @@ describe('structureCo app shell', () => {
     expect(document.querySelector('.space3d-screen')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: /ir al inicio/i }));
-    // Volver a Inicio lleva de verdad a Inicio: el salto directo a la Mesa se
-    // ofrece UNA vez por sesión, así que la Bienvenida vuelve a estar entera y
-    // con sus cuatro pasos (CRI-104).
+    // Volver a Inicio restaura la portada real, con sus destinos persistentes.
     await screen.findByTestId('welcome-screen');
-    await goToStep(user, 'Por dónde');
-    await user.click(await screen.findByRole('button', { name: /space 3d/i }));
+    await navigateHome(user, 'space3d');
+    await user.click(await screen.findByRole('button', { name: /abrir space 3d|open space 3d/i }));
     await user.click(await screen.findByRole('button', { name: 'Inicio' }));
     expect(await screen.findByTestId('welcome-screen')).toBeTruthy();
   }, 40_000);
@@ -227,39 +242,29 @@ describe('structureCo app shell', () => {
     render(<App />);
     const before = localStorage.getItem(PROJECT_STORAGE_KEY);
 
-    await goToStep(user, 'Por dónde');
-    await user.click(screen.getByRole('button', { name: /space 3d/i }));
+    await navigateHome(user, 'space3d');
+    await user.click(screen.getByRole('button', { name: /abrir space 3d|open space 3d/i }));
     await screen.findByRole('button', { name: /^analizar$/i }, { timeout: 10_000 });
     await waitFor(() => expect(localStorage.getItem('structureco:space3d:v1')).toBeTruthy(), { timeout: 10_000 });
 
     expect(localStorage.getItem(PROJECT_STORAGE_KEY)).toBe(before);
   }, 40_000);
 
-  /**
-   * CRI-104 sustituyó la Bienvenida plana —titular editorial a dos líneas y
-   * todas las puertas amontonadas— por cuatro pasos con el trabajo propio
-   * primero. Esta prueba comprueba ESA pantalla: que la marca es wordmark y una
-   * sola línea, que el peso lo tiene el trabajo, y que los cuatro pasos siguen
-   * siendo alcanzables. El titular `/analiza estructuras con claridad/i` no se
-   * «arregla»: se retiró a propósito y no debe volver.
-   */
-  it('presents the four-step welcome with work first, and no editorial headline', async () => {
+  it('presents the total-redesign Home with work first, live Three artwork and no onboarding rail', async () => {
     render(<App />);
     expect(screen.getByTestId('welcome-screen')).toBeTruthy();
 
-    // Marca: wordmark y UNA línea. Nada de titular editorial a dos líneas.
-    expect(screen.getByRole('heading', { name: /structureCo/i })).toBeTruthy();
-    expect(screen.queryByRole('heading', { name: /analiza estructuras con claridad/i })).toBeNull();
+    expect(document.querySelector('.sc-home-wordmark strong')?.textContent).toBe('structureCo');
+    expect(screen.getByRole('navigation', { name: /navegación principal/i })).toBeTruthy();
 
-    // Los cuatro pasos, en orden y accesibles desde el carril.
-    expect([...document.querySelectorAll('.welcome-steps .welcome-step')]
-      .map((step) => step.textContent?.replace(/^\d/, '').trim()))
-      .toEqual(['Bienvenida', 'Cómo trabajas', 'Por dónde', 'Mesa']);
+    expect(document.querySelector('.sc-home')).not.toBeNull();
+    expect(document.querySelector('.welcome-steps')).toBeNull();
+    expect(document.querySelectorAll('.sc-home-quick-row > button')).toHaveLength(3);
 
-    // Paso 1 · el trabajo propio manda: continuar, nuevo proyecto y el hub.
-    expect(document.querySelector('.welcome-resume-card')).not.toBeNull();
+    expect(document.querySelector('.sc-home-hero')).not.toBeNull();
+    expect(document.querySelector('[data-structural-render="three-prerender"]')).not.toBeNull();
     expect(screen.getByRole('button', { name: /nuevo proyecto/i })).toBeTruthy();
-    expect(await screen.findByRole('heading', { name: /tus proyectos en este dispositivo/i })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: /proyectos recientes/i })).toBeTruthy();
   }, 10_000);
 
   it('opens a blank project from the work step and reaches the workspace', async () => {
@@ -268,32 +273,27 @@ describe('structureCo app shell', () => {
 
     await user.click(screen.getByRole('button', { name: /nuevo proyecto/i }));
 
-    expect(await screen.findByDisplayValue('Proyecto sin título', {}, { timeout: 5000 })).toBeTruthy();
+    expect(await screen.findByRole('button', { name: /proyecto actual/i }, { timeout: 5000 })).toBeTruthy();
+    expect(document.querySelector('.topbar-project-trigger strong')?.textContent).toBe('Proyecto sin título');
     expect(container.querySelectorAll('.node-object')).toHaveLength(0);
     expect(container.querySelectorAll('.member-object')).toHaveLength(0);
   }, 10_000);
 
-  /**
-   * Las puertas que CRI-104 prometió NO retirar, cada una por la suya. El
-   * reordenamiento del peso visual movió la entrada; no eliminó ninguna.
-   */
-  it('keeps every existing gate reachable through its current step', async () => {
+  it('keeps every product entry point reachable from Home navigation', async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    await goToStep(user, 'Cómo trabajas');
-    expect(screen.getByRole('button', { name: /proyecto completo/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /nuevo ejercicio/i })).toBeTruthy();
+    await navigateHome(user, 'classroom');
+    expect(screen.getByRole('button', { name: /crear desde cero|start from scratch/i })).toBeTruthy();
 
-    await goToStep(user, 'Por dónde');
-    expect(screen.getByRole('button', { name: /importar archivo/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /lienzo en blanco/i })).toBeTruthy();
-    expect(document.querySelectorAll('.welcome-template-card').length).toBeGreaterThan(0);
-    // Space 3D sigue presente y sigue marcado como experimental, no como una
-    // superficie más del producto.
-    expect(screen.getByRole('button', { name: /space 3d/i }).textContent).toMatch(/experimental/i);
-    // El DXF llega en su propio chunk perezoso.
-    await waitFor(() => expect(screen.getByRole('button', { name: /DXF/ })).toBeTruthy());
+    await navigateHome(user, 'templates');
+    expect(document.querySelectorAll('.sc-home-template-grid > button').length).toBeGreaterThan(0);
+
+    await navigateHome(user, 'import');
+    expect(screen.getByRole('button', { name: /importar archivo|import file/i })).toBeTruthy();
+
+    await navigateHome(user, 'space3d');
+    expect(screen.getByRole('button', { name: /abrir space 3d|open space 3d/i })).toBeTruthy();
   }, 15_000);
 
   it('localizes built-in example cards and preserves English when an example opens', async () => {
@@ -303,9 +303,7 @@ describe('structureCo app shell', () => {
     localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
     const { container } = render(<App />);
 
-    // Los ejemplos viven en el paso «Por dónde» (CRI-104). El rótulo del carril
-    // también está traducido: la puerta no desapareció, se movió.
-    await goToStep(user, 'Where to start');
+    await navigateHome(user, 'templates');
     const exampleFrame = screen.getByRole('button', { name: /Example frame.*6 × 4 m frame/ });
     expect(exampleFrame).toBeTruthy();
     expect(screen.getByRole('button', { name: /Simply supported beam.*8 m beam/ })).toBeTruthy();
@@ -325,10 +323,8 @@ describe('structureCo app shell', () => {
     localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
     render(<App />);
 
-    // En «Cómo trabajas» el ejercicio guiado es una ELECCIÓN de modo que avanza
-    // a la etapa 3; quien abre el diálogo es su lanzador de «Por dónde».
-    await goToStep(user, 'Where to start');
-    await user.click(screen.getByRole('button', { name: /new exercise/i }));
+    await navigateHome(user, 'classroom');
+    await user.click(screen.getByRole('button', { name: /start from scratch/i }));
     await user.click(screen.getByRole('radio', { name: /simply supported beam/i }));
     await user.click(screen.getByRole('button', { name: /create exercise/i }));
 
@@ -340,9 +336,9 @@ describe('structureCo app shell', () => {
     const user = userEvent.setup();
     await renderExampleApp(user);
 
-    expect(screen.getByText('structureCo')).toBeTruthy();
+    expect(document.querySelector('.topbar .brand-mark')).not.toBeNull();
     expect(screen.getByRole('button', { name: /^analizar$/i })).toBeTruthy();
-    expect(screen.getByDisplayValue('Pórtico de ejemplo')).toBeTruthy();
+    expect(document.querySelector('.topbar-project-trigger')?.textContent).toContain('Pórtico de ejemplo');
 
     await user.click(screen.getByRole('button', { name: /^analizar$/i }));
 
@@ -351,9 +347,7 @@ describe('structureCo app shell', () => {
     expect(document.querySelector('.results-panel')).toBeNull();
     await openResults(user);
 
-    await waitFor(() => {
-      expect(screen.getAllByText(/Diagrama de momento flector/i).length).toBeGreaterThan(0);
-    }, { timeout: 2000 });
+    await screen.findByTestId('diagram-chart', {}, { timeout: 5_000 });
 
     expect(screen.queryByText(/No se generaron resultados/i)).toBeNull();
   }, 15_000);
@@ -394,17 +388,15 @@ describe('structureCo app shell', () => {
 
     await user.click(screen.getByRole('button', { name: /^analizar$/i }));
     await openResults(user);
-    await waitFor(() => {
-      expect(screen.getAllByText(/Diagrama de momento flector/i).length).toBeGreaterThan(0);
-    }, { timeout: 2000 });
-    const diagramsBefore = screen.getAllByText(/Diagrama de momento flector/i).length;
+    await screen.findByTestId('diagram-chart', {}, { timeout: 5_000 });
+    const diagramsBefore = screen.getAllByTestId('diagram-chart').length;
 
     await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
     await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
     await user.keyboard('{Escape}');
 
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Model Doctor' })).toBeNull());
-    expect(screen.getAllByText(/Diagrama de momento flector/i)).toHaveLength(diagramsBefore);
+    expect(screen.getAllByTestId('diagram-chart')).toHaveLength(diagramsBefore);
   }, 15_000);
 
   it('returns focus through the complete keyboard launcher path', async () => {
@@ -451,9 +443,9 @@ describe('structureCo app shell', () => {
     expect(within(doctor).getByText(/reconocido para esta sesi/i)).toBeTruthy();
     await user.click(within(doctor).getByRole('button', { name: /cerrar model doctor/i }));
 
-    await user.click(screen.getByRole('button', { name: /abrir proyectos y ejemplos/i }));
-    await user.click(within(screen.getByRole('menu', { name: /abrir proyectos y ejemplos/i }))
-      .getByRole('menuitem', { name: /proyecto nuevo/i }));
+    await user.click(screen.getByRole('button', { name: /proyecto actual/i }));
+    const projectHub = await screen.findByRole('dialog', { name: /proyecto actual/i });
+    await user.click(within(projectHub).getByRole('button', { name: /proyecto nuevo/i }));
     await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
     doctor = await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
     noLoads = within(doctor).getByRole('article', { name: /sin cargas/i });
@@ -470,18 +462,21 @@ describe('structureCo app shell', () => {
     const user = userEvent.setup();
     await renderExampleApp(user);
     expect(document.querySelector('.app-shell')?.getAttribute('data-shell-class')).toBe('K0');
+    await user.click(screen.getByRole('button', { name: /^analizar$/i }));
+    await waitFor(() =>
+      expect(document.querySelector('.analysis-status-shell')?.getAttribute('data-analysis-status')).toBe('resolved'),
+    );
     await openResults(user);
     const results = document.querySelector<HTMLElement>('.results-panel')!;
     expect(results.classList.contains('mobile-collapsed')).toBe(false);
 
-    const menu = await openUtilityMenu(user);
-    await user.click(within(menu).getByRole('button', { name: 'Model Doctor' }));
+    await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
 
     await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
     await waitFor(() => expect(results.classList.contains('mobile-collapsed')).toBe(true));
     await user.keyboard('{Escape}');
     await waitFor(() => expect(document.activeElement)
-      .toBe(within(document.querySelector('.topbar') as HTMLElement).getByRole('button', { name: /más acciones/i })));
+      .toBe(screen.getByRole('button', { name: 'Model Doctor' })));
   });
 
   it('shows one Model Doctor toast for a new diagnosis and does not repeat it while unchanged', async () => {
@@ -497,6 +492,7 @@ describe('structureCo app shell', () => {
     expect(await screen.findByText('Model Doctor encontró problemas')).toBeTruthy();
     expect(screen.getByText(/Abre Model Doctor para revisarlos/i)).toBeTruthy();
 
+    await user.click(screen.getByRole('button', { name: /configuración de análisis/i }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Unidades' }), { target: { value: 'N-mm' } });
 
     await waitFor(() => expect(screen.getAllByText('Model Doctor encontró problemas')).toHaveLength(1));
@@ -530,7 +526,7 @@ describe('structureCo app shell', () => {
     // superficie `dense`. La capa de reacciones del lienzo, que es lo que esta
     // prueba mide, se dibuja con el resultado resuelto y sigue siendo la misma.
     await openResults(user);
-    expect(document.querySelector('[data-dense-launcher="reactions"]')).toBeTruthy();
+    await openDenseResults(user, 'reactions');
 
     await waitFor(() => expect(container.querySelector('.reaction-symbol[data-node-id="A"]')).toBeTruthy());
     const reaction = container.querySelector('.reaction-symbol[data-node-id="A"]')!;
@@ -553,12 +549,12 @@ describe('structureCo app shell', () => {
   it('creates a guided classroom exercise and analyzes it without prediction gates', async () => {
     const user = userEvent.setup();
     render(<App />);
-    await goToStep(user, 'Por dónde');
-    await user.click(screen.getByRole('button', { name: /nuevo ejercicio/i }));
+    await navigateHome(user, 'classroom');
+    await user.click(screen.getByRole('button', { name: /crear desde cero/i }));
     await user.click(screen.getByRole('radio', { name: /viga simplemente apoyada/i }));
     await user.click(screen.getByRole('button', { name: /crear ejercicio/i }));
 
-    expect(await screen.findByDisplayValue('Viga simplemente apoyada')).toBeTruthy();
+    expect((await screen.findByRole('button', { name: /proyecto actual/i })).textContent).toContain('Viga simplemente apoyada');
     expect(screen.getAllByText(/modo aula/i).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: /^analizar$/i }));
     // CRI-95 · el estado del análisis vive ahora en la TopBar y su afirmación
@@ -597,6 +593,7 @@ describe('structureCo app shell', () => {
     await user.selectOptions(within(menu).getByRole('combobox', { name: /idioma/i }), 'en');
 
     expect(screen.getByRole('button', { name: /^analyze$/i })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: /analysis settings/i }));
     expect(screen.getAllByRole('combobox', { name: /load case or combination/i }).length).toBeGreaterThan(0);
     await waitFor(() => expect(document.documentElement.lang).toBe('en'));
     await waitFor(() => {
@@ -790,7 +787,7 @@ describe('structureCo app shell', () => {
     expect(screen.getByRole('alert').textContent).toContain('Enter two valid numeric values.');
 
     await user.click(screen.getByRole('button', { name: /^analyze$/i }));
-    await user.click(screen.getByRole('button', { name: 'Results' }));
+    await openResults(user);
     await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
     expect(container.querySelector('.canvas-result-legend')?.getAttribute('aria-label')).toBe('Diagram convention');
     expect(container.querySelector('.canvas-result-legend')?.textContent).toContain('Exact curve');
@@ -803,7 +800,8 @@ describe('structureCo app shell', () => {
     await user.click(screen.getByRole('button', { name: /^analizar$/i }));
     await openResults(user);
     await screen.findByTestId('diagram-chart');
-    const name = screen.getByRole('textbox', { name: /nombre del proyecto/i });
+    await user.click(screen.getByRole('button', { name: /proyecto actual/i }));
+    const name = await screen.findByRole('textbox', { name: /nombre del proyecto/i });
     await user.clear(name);
     await user.type(name, 'Marco principal');
     await user.tab();
@@ -858,11 +856,12 @@ describe('structureCo app shell', () => {
       render(<App />);
 
       // El proyecto activo de `localStorage` NO es una biblioteca: sin
-      // repositorio (jsdom no implementa IndexedDB) el usuario es nuevo y la
-      // bienvenida se queda entera, con sus cuatro pasos.
-      expect(await readWelcomeEntry()).toEqual({ status: 'new', projects: 0, recoveries: 0 });
-      expect(await screen.findByTestId('welcome-screen')).toBeTruthy();
-      expect(document.querySelectorAll('.welcome-steps .welcome-step')).toHaveLength(4);
+       // repositorio (jsdom no implementa IndexedDB) el usuario es nuevo y la
+       // portada editorial se conserva visible.
+       expect(await readWelcomeEntry()).toEqual({ status: 'new', projects: 0, recoveries: 0 });
+       expect(await screen.findByTestId('welcome-screen')).toBeTruthy();
+       expect(document.querySelector('.sc-home')).not.toBeNull();
+       expect(document.querySelectorAll('.sc-home-quick-row > button')).toHaveLength(3);
     });
 
     it('keeps Home reachable from the workspace', async () => {
@@ -873,8 +872,7 @@ describe('structureCo app shell', () => {
 
       const welcome = await screen.findByTestId('welcome-screen');
       expect(welcome).toBeTruthy();
-      // Inicio es Inicio de verdad: las puertas de la etapa 1 siguen ahí.
-      expect(document.querySelector('.welcome-resume-card')).not.toBeNull();
+      expect(document.querySelector('.sc-home-hero')).not.toBeNull();
       expect(screen.getByRole('button', { name: /nuevo proyecto/i })).toBeTruthy();
     }, 15_000);
   });
