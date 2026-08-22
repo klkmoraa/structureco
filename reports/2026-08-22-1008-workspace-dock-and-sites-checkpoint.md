@@ -42,8 +42,10 @@ El usuario reportó que “Paneles de trabajo” era confuso, que no podía cerr
 - `npm.cmd run build` — PASS.
 - El build del wrapper de Sites — PASS; el paquete contiene `dist/server/index.js`, `dist/.openai/hosting.json` y 80 assets bajo `dist/client/app/assets/structural/**`.
 
-## Pendiente / siguiente paso
+## Publicación
 
-El wrapper de Sites quedó preparado localmente en el commit `a5643aa` y el paquete validado está listo, pero el conector rechazó guardar la versión porque exige que ese commit sea el HEAD remoto de la rama `main`. Además, el Site existente reporta una discrepancia: la política sólo lista al usuario propietario, pero el modo aparece como `public`.
+Con autorización explícita del usuario se subió la rama de producto `codex/clay-workspace-phase-2` hasta `30205c1`. El paquete de Sites se subió desde el wrapper validado en `a5643aa` mediante la credencial efímera oficial de Sites; no se modificó la copia local que contenía trabajo ajeno.
 
-No se hizo push a GitHub ni se cambió la visibilidad del Site. Falta autorización explícita para subir el commit del wrapper y decidir si se publica con el acceso público registrado o se corrige primero a propietario únicamente. El test heredado `structureco-sites/tests/rendered-html.test.mjs` sigue esperando el skeleton inicial que ya no existe; el build real sí termina correctamente.
+Se guardó la versión 3 y se desplegó correctamente en [StructureCo · Rediseño total](https://structureco-redesign-checkpoint.crdrawin.chatgpt.site). Se conservó el acceso `public` que ya tenía el Site, según la decisión A del usuario.
+
+El test heredado `structureco-sites/tests/rendered-html.test.mjs` continúa esperando el skeleton inicial que ya no existe; el build real y el paquete desplegado terminan correctamente.
