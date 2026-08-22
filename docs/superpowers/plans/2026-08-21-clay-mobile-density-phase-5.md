@@ -1,5 +1,7 @@
 # Densidad móvil, dock y edición avanzada · Fase 5 Implementation Plan
 
+**Clasificación:** `AUDIT/TEMPORARY`
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Convertir las superficies móviles del Workspace en un dock compacto, resultados legibles y propiedades avanzadas bajo demanda sin alterar el dominio estructural.
