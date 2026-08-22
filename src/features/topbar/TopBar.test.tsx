@@ -188,6 +188,19 @@ describe('TopBar copy project JSON', () => {
 });
 
 describe('TopBar information architecture', () => {
+  it('publishes the X2 command island and keeps Analyze as a white-on-green command', () => {
+    const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);
+
+    const island = container.querySelector<HTMLElement>('[data-topbar-layout="command-island"]');
+    expect(island).not.toBeNull();
+    expect(island?.querySelectorAll(':scope > [data-topbar-zone]')).toHaveLength(3);
+    expect(island?.querySelector('.topbar-project-trigger > span')).toBeNull();
+
+    const analyze = screen.getByRole('button', { name: 'Analizar' });
+    expect(analyze.classList.contains('analyze-button--clay-primary')).toBe(true);
+    expect(analyze.getAttribute('data-label-tone')).toBe('on-brand');
+  });
+
   it('opens the project control before exposing the editable project name', async () => {
     const user = userEvent.setup();
     render(<TopBarHarness><TopBar /></TopBarHarness>);

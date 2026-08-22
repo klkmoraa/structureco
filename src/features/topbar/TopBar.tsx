@@ -371,7 +371,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
   const analysisModeLabel = t(project.settings.calculationMode === 'classroom' ? 'analysis.modeClassroom' : 'analysis.modeComplete');
 
   return (
-    <header ref={topbarRef} className="topbar topbar--atelier">
+    <header ref={topbarRef} className="topbar topbar--atelier" data-topbar-layout="command-island">
       <div className="topbar-zone topbar-document-zone topbar-project-zone" data-topbar-zone="document" data-topbar-role="project">
         <button className="brand-mark brand-home-button" type="button" aria-label={t('navigation.home')} onClick={onOpenHome}>
           <BrandMark size={46} />
@@ -385,7 +385,6 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           aria-haspopup="dialog"
           onClick={toggleProjectMenu}
         >
-          <span>{t('topbar.projectLabel')}</span>
           <strong title={project.name}>{project.name}</strong>
           <ChevronDown size={16} aria-hidden="true" />
         </button>
@@ -513,6 +512,24 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
           </AnimatePresence>
         </div>
         <div className="topbar-primary-actions" data-topbar-role="primary">
+          <div className="topbar-history-cluster" role="group" aria-label={t('history.label')}>
+            <IconButton
+              variant="secondary"
+              className="icon-button topbar-undo-button"
+              label={undoCommand.label}
+              title={undoCommand.hint}
+              onClick={undoCommand.run}
+              disabled={undoCommand.disabled}
+            ><Undo2 size={18} /></IconButton>
+            <IconButton
+              variant="secondary"
+              className="icon-button topbar-redo-button"
+              label={redoCommand.label}
+              title={redoCommand.hint}
+              onClick={redoCommand.run}
+              disabled={redoCommand.disabled}
+            ><Redo2 size={18} /></IconButton>
+          </div>
           <IconButton
             variant="secondary"
             className="icon-button datasheet-launcher"
@@ -597,7 +614,8 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
             </AnimatePresence>
           </div>
           <Button
-            className={`analyze-button${isAnalyzing ? ' analyzing' : ''}`}
+            className={`analyze-button analyze-button--clay-primary${isAnalyzing ? ' analyzing' : ''}`}
+            data-label-tone="on-brand"
             variant="primary"
             size="touch"
             onClick={analyzeCommand.run}

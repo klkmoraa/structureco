@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { AlertCircle, ChevronUp, CircleDotDashed, Eye, EyeOff, GripHorizontal } from 'lucide-react';
+import { AlertCircle, ChevronUp, CircleDotDashed, Eye, EyeOff, GripHorizontal, MoreHorizontal } from 'lucide-react';
 import { useProject, type ResultTab } from '../../store/ProjectContext';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../../engine/diagram';
 import { resolveReliability } from '../../engine/reliability';
@@ -43,12 +43,6 @@ const denseViewLabelKey: Record<DenseResultView, TranslationKey> = {
 type ResultsPanelMode = 'compact' | 'expanded' | 'focused';
 
 const RESULTS_MODE_STORAGE_KEY = 'structureCo.results.mode.v1';
-const resultFamilies: Array<{ id: string; labelKey: TranslationKey; tabs: ResultTab[] }> = [
-  { id: 'state', labelKey: 'results.familyState', tabs: ['summary'] },
-  { id: 'forces', labelKey: 'results.familyForces', tabs: ['axial', 'shear', 'moment'] },
-  { id: 'shape', labelKey: 'results.familyShape', tabs: ['deformed'] },
-];
-
 const classroomProgressCopy: Record<ClassroomProgressStepId, { title: TranslationKey; description: TranslationKey; action: TranslationKey }> = {
   geometry: { title: 'classroom.buildTitle', description: 'classroom.buildBody', action: 'classroom.buildAction' },
   supports: { title: 'classroom.defineTitle', description: 'classroom.defineBody', action: 'classroom.defineAction' },
@@ -95,6 +89,10 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
   const mobileExpanded = status === 'active';
   const [panelMode, setPanelMode] = useState<ResultsPanelMode>(readResultsMode);
   const [mobileMetricsVisible, setMobileMetricsVisible] = useState(true);
+  const [denseMenuOpen, setDenseMenuOpen] = useState(false);
+  const denseMenuId = useId();
+  const denseTriggerRef = useRef<HTMLButtonElement>(null);
+  const denseMenuRef = useRef<HTMLDivElement>(null);
   const previousAnalysisRef = useRef(analysis);
   const resizeFrameRef = useRef<number | null>(null);
   const pendingHeightRef = useRef<number | null>(null);
@@ -159,10 +157,6 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
   }, [analysis, memberResult, project.loadCases, resultCursor, resultTab, selectedCombinationId, selection, t]);
   const availableTabs = tabs;
   const activeTab = availableTabs.find((tab) => tab.id === resultTab) ?? availableTabs[0];
-  const visibleFamilies = resultFamilies.map((family) => ({
-    ...family,
-    tabs: family.tabs.map((id) => availableTabs.find((tab) => tab.id === id)).filter((tab): tab is (typeof tabs)[number] => Boolean(tab)),
-  })).filter((family) => family.tabs.length > 0);
   const mobileResultLabel = analysis
     ? `${t(activeTab.labelKey)} · ${resultContext.label}`
     : t('results.outputs');
@@ -245,6 +239,7 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
       data-surface-status={status}
       hidden={status !== 'active'}
       data-results-mode={panelMode}
+      data-active-result-quantity={activeTab.id}
       data-canvas-interactive={phoneCanvasInteractive ? 'true' : undefined}
       tabIndex={-1}
       style={{ height: isMobile && !mobileExpanded ? 54 : height }}
@@ -322,40 +317,72 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
           >{mode === 'compact' ? t('results.modeCompact') : mode === 'expanded' ? t('results.modeExpanded') : panelMode === 'focused' ? t('results.modeExitFocus') : t('results.modeFocus')}</button>)}
         </div>
       </header>
-      <nav className="result-tabs" role="tablist" aria-label={t('results.panel')}>
-        {visibleFamilies.map((family) => <div className="result-tab-family" role="presentation" key={family.id}>
-          <span id={`result-family-${family.id}`} className="result-tab-family__label">{t(family.labelKey)}</span>
-          <div role="presentation">{family.tabs.map((tab) => {
-            const index = availableTabs.findIndex((item) => item.id === tab.id);
-            return <button id={`result-tab-${tab.id}`} key={tab.id} data-result-tab={tab.id} role="tab" aria-selected={activeTab.id === tab.id} aria-describedby={`result-family-${family.id}`} aria-controls="results-content" tabIndex={activeTab.id === tab.id ? 0 : -1} className={`${activeTab.id === tab.id ? 'active' : ''} ${tab.color ?? ''}`} onClick={() => setResultTab(tab.id)} onKeyDown={(event) => {
-              let nextIndex = index;
-              if (event.key === 'ArrowLeft') nextIndex = (index - 1 + availableTabs.length) % availableTabs.length;
-              else if (event.key === 'ArrowRight') nextIndex = (index + 1) % availableTabs.length;
-              else if (event.key === 'Home') nextIndex = 0;
-              else if (event.key === 'End') nextIndex = availableTabs.length - 1;
-              else return;
+      <nav className="result-tabs results-quantity-bar" role="tablist" aria-label={t('results.panel')} data-results-quantity-bar>
+        <div className="results-quantity-tabs" role="presentation">{availableTabs.map((tab) => {
+          const index = availableTabs.findIndex((item) => item.id === tab.id);
+          return <button id={`result-tab-${tab.id}`} key={tab.id} data-result-tab={tab.id} role="tab" aria-selected={activeTab.id === tab.id} aria-controls="results-content" tabIndex={activeTab.id === tab.id ? 0 : -1} className={`${activeTab.id === tab.id ? 'active' : ''} ${tab.color ?? ''}`} onClick={() => setResultTab(tab.id)} onKeyDown={(event) => {
+            let nextIndex = index;
+            if (event.key === 'ArrowLeft') nextIndex = (index - 1 + availableTabs.length) % availableTabs.length;
+            else if (event.key === 'ArrowRight') nextIndex = (index + 1) % availableTabs.length;
+            else if (event.key === 'Home') nextIndex = 0;
+            else if (event.key === 'End') nextIndex = availableTabs.length - 1;
+            else return;
+            event.preventDefault();
+            const next = availableTabs[nextIndex];
+            setResultTab(next.id);
+            window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-result-tab="${next.id}"]`)?.focus());
+          }}>{t(tab.labelKey)}</button>;
+        })}</div>
+        <div className="results-dense-overflow">
+          <button
+            ref={denseTriggerRef}
+            type="button"
+            className="results-dense-overflow__trigger"
+            aria-label={t('results.moreResults')}
+            aria-haspopup="menu"
+            aria-expanded={denseMenuOpen}
+            aria-controls={denseMenuId}
+            onClick={() => setDenseMenuOpen((open) => !open)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape' && denseMenuOpen) {
+                event.preventDefault();
+                setDenseMenuOpen(false);
+                return;
+              }
+              if (event.key !== 'ArrowDown') return;
               event.preventDefault();
-              const next = availableTabs[nextIndex];
-              setResultTab(next.id);
-              window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-result-tab="${next.id}"]`)?.focus());
-            }}>{t(tab.labelKey)}</button>;
-          })}</div>
-        </div>)}
+              setDenseMenuOpen(true);
+              window.requestAnimationFrame(() => denseMenuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus());
+            }}
+          ><MoreHorizontal size={18} aria-hidden="true" /></button>
+          {denseMenuOpen ? <div
+            ref={denseMenuRef}
+            id={denseMenuId}
+            className="results-dense-overflow__menu"
+            role="menu"
+            aria-label={t('results.moreResults')}
+            onKeyDown={(event) => {
+              if (event.key !== 'Escape') return;
+              event.preventDefault();
+              setDenseMenuOpen(false);
+              denseTriggerRef.current?.focus();
+            }}
+          >
+            {DENSE_RESULT_VIEWS.map((view) => <button
+              key={view}
+              type="button"
+              role="menuitem"
+              data-dense-launcher={view}
+              onFocus={() => { void preloadDenseResultsSurface(); if (view === 'influence') void preloadInfluenceLineView(); }}
+              onPointerEnter={() => { void preloadDenseResultsSurface(); if (view === 'influence') void preloadInfluenceLineView(); }}
+              onClick={(event) => {
+                setDenseMenuOpen(false);
+                emitWorkspaceCommand('open-dense-results', { view, trigger: denseTriggerRef.current ?? event.currentTarget });
+              }}
+            >{t(denseViewLabelKey[view])}</button>)}
+          </div> : null}
+        </div>
       </nav>
-      {/* Los datos densos no ocupan sitio: se piden. El lanzador manda su propio
-          elemento en el comando para que el broker devuelva aquí el foco al
-          cerrar, y precarga por hover/foco lo que va a hacer falta. */}
-      <div className="results-dense-launchers" role="group" aria-label={t('results.denseTitle')}>
-        <span className="results-dense-launchers__label">{t('results.denseTitle')}</span>
-        <div>{DENSE_RESULT_VIEWS.map((view) => <button
-          key={view}
-          type="button"
-          data-dense-launcher={view}
-          onFocus={() => { void preloadDenseResultsSurface(); if (view === 'influence') void preloadInfluenceLineView(); }}
-          onPointerEnter={() => { void preloadDenseResultsSurface(); if (view === 'influence') void preloadInfluenceLineView(); }}
-          onClick={(event) => emitWorkspaceCommand('open-dense-results', { view, trigger: event.currentTarget })}
-        >{t(denseViewLabelKey[view])}</button>)}</div>
-      </div>
       <div id="results-content" className="results-body" role="tabpanel" aria-labelledby={`result-tab-${activeTab.id}`} aria-busy={isAnalyzing}>
         {!analysis ? <EmptyResults onAnalyze={analyze} /> : null}
         {analysis && !analysis.success ? <FailedResults onOpenModelDoctor={() => emitWorkspaceCommand('open-model-doctor')} /> : null}

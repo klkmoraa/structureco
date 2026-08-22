@@ -202,6 +202,9 @@
 .app-shell[data-shell-class='M1'] .topbar--atelier .topbar-analysis-trigger small { font-size:8px; }
 .app-shell[data-shell-class='M1'] .topbar--atelier .space3d-open-button { display:none; }
 .app-shell[data-shell-class='M1'] .topbar--atelier .topbar-project-trigger { width:min(100%, 250px); }
+.app-shell[data-shell-class='M1'] .topbar--atelier .topbar-history-cluster { display:none; }
+.app-shell[data-shell-class='M1'] .topbar--atelier :is(.topbar-project-zone,.topbar-actions-zone,.topbar-health-zone,.topbar-primary-actions) { min-width:0; flex-wrap:nowrap; }
+.app-shell[data-shell-class='M1'] .topbar--atelier .topbar-analysis-wrap { flex:1 1 170px; }
 
 .app-shell[data-shell-class='K0'] .topbar.topbar--atelier {
   grid-template-columns:minmax(0, 1fr) max-content max-content;
@@ -255,4 +258,205 @@
   .topbar--atelier .analyze-button,
   .topbar--atelier .topbar-primary-actions .sc-icon-button,
   .topbar--atelier .topbar-command-button { transition:none; transform:none; }
+}
+
+/* ========================================================================
+   COMMAND ISLAND · TOTAL REDESIGN / X2
+   A single floating command surface with three clear zones. It remains
+   opaque and matte; depth comes from edge, offset and short physical motion.
+   ===================================================================== */
+
+.app-shell[data-shell-class='X2'] .topbar.topbar--atelier {
+  width:auto;
+  min-height:64px;
+  margin:10px 12px 0;
+  padding:7px;
+  grid-template-columns:minmax(210px,.78fr) minmax(540px,1.7fr) max-content;
+  gap:7px;
+  border:var(--sc-clay-edge);
+  border-radius:20px;
+  background:var(--sc-color-surface-1);
+  box-shadow:
+    0 6px 0 color-mix(in srgb,var(--sc-color-text-primary) 8%,transparent),
+    var(--sc-shadow-clay-md);
+  isolation:isolate;
+  z-index:45;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier > .topbar-zone {
+  min-height:50px;
+  padding:4px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:15px;
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-pressed);
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-project-zone {
+  padding-right:6px;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .brand-home-button {
+  width:42px;
+  height:42px;
+  flex-basis:42px;
+  border-radius:12px;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-project-trigger {
+  width:100%;
+  min-height:42px;
+  grid-template-columns:minmax(0,1fr) auto;
+  grid-template-areas:'name arrow';
+  padding:5px 9px 5px 12px;
+  border-color:transparent;
+  background:transparent;
+  box-shadow:none;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-project-trigger:hover,
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-project-trigger:focus-visible {
+  border-color:var(--sc-color-border-soft);
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-project-trigger > strong {
+  font-size:13px;
+  font-weight:780;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-actions-zone {
+  justify-content:flex-end;
+  gap:7px;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-analysis-wrap {
+  flex:1 1 230px;
+  max-width:310px;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-analysis-trigger {
+  min-height:42px;
+  border-radius:12px;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-primary-actions {
+  gap:4px;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-history-cluster {
+  display:flex;
+  align-items:center;
+  gap:2px;
+  padding:2px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:12px;
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-history-cluster .sc-icon-button {
+  width:34px;
+  min-width:34px;
+  height:34px;
+  min-height:34px;
+  border-color:transparent;
+  border-radius:9px;
+  background:transparent;
+  box-shadow:none;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-primary-actions > .sc-icon-button,
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-primary-actions > .export-wrap .sc-icon-button,
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-primary-actions > .topbar-utilities-wrap .sc-icon-button {
+  width:38px;
+  min-width:38px;
+  height:38px;
+  min-height:38px;
+  border-radius:11px;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .analyze-button--clay-primary {
+  min-width:118px;
+  height:42px;
+  border-radius:12px;
+  color:#fff !important;
+  box-shadow:
+    0 4px 0 color-mix(in srgb,var(--accent) 46%,#14352c),
+    var(--sc-shadow-clay-xs);
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .analyze-button--clay-primary :is(svg,.sc-button__label) {
+  color:#fff !important;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .analyze-button--clay-primary:hover:not(:disabled) {
+  transform:translateY(-2px);
+  box-shadow:
+    0 6px 0 color-mix(in srgb,var(--accent) 48%,#14352c),
+    var(--sc-shadow-clay-sm);
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .analyze-button--clay-primary:active:not(:disabled) {
+  transform:translateY(2px) scale(.985);
+  box-shadow:
+    0 1px 0 color-mix(in srgb,var(--accent) 44%,#14352c),
+    var(--sc-shadow-clay-pressed);
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-health-zone {
+  gap:4px;
+  padding-inline:5px;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier .topbar-health-zone > * {
+  flex:0 0 auto;
+}
+
+.app-shell[data-shell-class='X2'] .topbar--atelier :is(.topbar-command-button,.analysis-status,.autosave-state) {
+  width:38px;
+  min-width:38px;
+  height:38px;
+  min-height:38px;
+  border-radius:11px;
+}
+
+/* K0 keeps the same command logic but only one physical row. History remains
+   available in the utilities sheet, so it no longer creates a duplicate
+   second row in the mobile chrome. */
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-history-cluster {
+  display:none;
+}
+
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-zone,
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-actions-zone,
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-health-zone {
+  min-width:0;
+  flex-wrap:nowrap;
+}
+
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions {
+  flex-wrap:nowrap;
+}
+
+.app-shell[data-shell-class='K0'] .topbar--atelier .utility-more-button {
+  display:grid;
+}
+
+.app-shell[data-shell-class='K0'] .topbar--atelier .analyze-button {
+  width:48px;
+  min-width:48px;
+  padding:0;
+}
+
+.app-shell[data-shell-class='K0'] .topbar--atelier .analyze-button > .sc-button__label {
+  position:absolute;
+  width:1px;
+  height:1px;
+  margin:-1px;
+  padding:0;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  white-space:nowrap;
 }

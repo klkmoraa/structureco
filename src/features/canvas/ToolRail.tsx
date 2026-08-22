@@ -77,13 +77,25 @@ const toolTones: Record<Tool, ToolTone> = {
   delete: 'destructive',
 };
 
+type DesktopDockGroup = 'navigate' | 'build' | 'loads' | 'refine';
+
+const DESKTOP_DOCK_GROUPS: readonly {
+  id: DesktopDockGroup;
+  sourceGroups: readonly (typeof TOOL_GROUPS)[number]['id'][];
+}[] = [
+  { id: 'navigate', sourceGroups: ['navigate'] },
+  { id: 'build', sourceGroups: ['create'] },
+  { id: 'loads', sourceGroups: ['loads'] },
+  { id: 'refine', sourceGroups: ['inspect', 'edit'] },
+] as const;
+
 /**
  * Tooltip local del riel, visible por foco y no sólo por hover (CRI-98 §4).
  * Se porta a `document.body` a propósito: `.toolbar` scrollea en Y
  * (`overflow-y:auto`), y eso recorta cualquier burbuja posicionada dentro de
  * su propia caja, sobre todo en `M1` donde el riel mide apenas 76px de ancho.
  */
-const RailTooltip = ({ id, content, children }: { id: string; content: string; children: ReactNode }) => {
+const RailTooltip = ({ id, content, children, placement = 'right' }: { id: string; content: string; children: ReactNode; placement?: 'right' | 'top' }) => {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
   const rect = open ? anchorRef.current?.getBoundingClientRect() : undefined;
@@ -102,7 +114,10 @@ const RailTooltip = ({ id, content, children }: { id: string; content: string; c
         role="tooltip"
         id={id}
         className="tool-rail-tooltip"
-        style={{ top: rect.top + rect.height / 2, left: rect.right + 8 }}
+        data-placement={placement}
+        style={placement === 'top'
+          ? { top: rect.top - 8, left: rect.left + rect.width / 2, transform: 'translate(-50%, -100%)' }
+          : { top: rect.top + rect.height / 2, left: rect.right + 8 }}
       >{content}</span>,
       document.body,
     ) : null}
@@ -144,6 +159,7 @@ const RegisteredToolButton = ({
     aria-checked={menuItem ? active : undefined}
     data-tool-id={id}
     data-tool-group={definition.group}
+    data-source-tool-group={definition.group}
   />;
 };
 
@@ -309,6 +325,7 @@ export const ToolRail = () => {
   const { activeTool, setActiveTool, project, selection } = useProject();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [mobileMenu, setMobileMenu] = useState<'loads' | 'more' | 'workspace' | null>(null);
+  const [desktopDockCollapsed, setDesktopDockCollapsed] = useState(false);
   const loadMenuButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuButtonRef = useRef<HTMLButtonElement>(null);
   const workspaceMenuButtonRef = useRef<HTMLButtonElement>(null);
@@ -508,11 +525,87 @@ export const ToolRail = () => {
     </section>
   </>, document.body) : null;
 
+  const renderDockGroup = (dockGroup: (typeof DESKTOP_DOCK_GROUPS)[number]) => {
+    const groupTools = visibleTools.filter((tool) => dockGroup.sourceGroups.includes(tool.group));
+    const headingId = `dock-group-${dockGroup.id}`;
+    const label = dockGroup.id === 'navigate'
+      ? t('toolbar.groupNavigate')
+      : dockGroup.id === 'build'
+        ? t('toolbar.groupCreate')
+        : dockGroup.id === 'loads'
+          ? t('toolbar.groupLoads')
+          : `${t('toolbar.groupInspect')} · ${t('toolbar.groupEdit')}`;
+
+    return <section
+      key={dockGroup.id}
+      className={`tool-group dock-group dock-group-${dockGroup.id}`}
+      role="group"
+      aria-labelledby={headingId}
+      data-dock-group={dockGroup.id}
+    >
+      <h2 id={headingId} className="tool-group-heading">{label}</h2>
+      <div className="tool-group-actions">
+        {groupTools.map((definition) => {
+          const tipId = `tool-rail-tip-${definition.id}`;
+          return <RailTooltip key={definition.id} id={tipId} content={`${t(definition.labelKey)} (${definition.shortcut})`} placement="top">
+            <RegisteredToolButton
+              definition={definition}
+              label={t(definition.labelKey)}
+              active={activeTool === definition.id}
+              compact
+              onSelect={selectTool}
+              aria-describedby={tipId}
+            />
+          </RailTooltip>;
+        })}
+        {dockGroup.id === 'navigate' ? <RailTooltip id="tool-rail-tip-command-palette" content={`${t('palette.open')} (Ctrl K)`} placement="top">
+          <CommandPaletteButton label={t('palette.openShort')} accessibleLabel={t('palette.open')} compact aria-describedby="tool-rail-tip-command-palette" />
+        </RailTooltip> : null}
+        {dockGroup.id === 'navigate' ? <RailTooltip id="tool-rail-tip-workspace-panels" content={t('toolbar.workspacePanelsTitle')} placement="top"><WorkspacePanelsLauncher compact /></RailTooltip> : null}
+        {dockGroup.id === 'build' ? <RailTooltip id="tool-rail-tip-generator" content={t('generator.launcher')} placement="top">
+          <EditorToolButton
+            className="tool-button tool-structure-generator is-compact"
+            label={t('generator.launcher')}
+            icon={<Grid3x3 size={22} strokeWidth={1.8} />}
+            tone="structure"
+            compact
+            onClick={() => emitWorkspaceCommand('open-structure-generator')}
+            aria-describedby="tool-rail-tip-generator"
+            data-structure-generator-command
+          />
+        </RailTooltip> : null}
+        {dockGroup.id === 'refine' && canEditSelection ? <RailTooltip id="tool-rail-tip-structural-edit" content={t('canvas.structuralEditLauncher')} placement="top">
+          <EditorToolButton
+            className="tool-button tool-structural-edit is-compact"
+            label={t('canvas.structuralEditLauncher')}
+            icon={<Move size={22} strokeWidth={1.8} />}
+            tone="structure"
+            compact
+            onClick={() => emitWorkspaceCommand('open-structural-edit')}
+            aria-describedby="tool-rail-tip-structural-edit"
+            data-structural-edit-command
+          />
+        </RailTooltip> : null}
+      </div>
+    </section>;
+  };
+
   return (
     <>
-      <aside className={`toolbar tool-rail${compact ? ' is-compact' : ''}${mobileMenu ? ' mobile-menu-open' : ''}`} aria-label={t('toolbar.label')} data-tool-rail={compact ? 'compact' : 'expanded'}>
-        <div className="desktop-tool-list">
-          {TOOL_GROUPS.map((group) => {
+      <aside className={`toolbar tool-rail${compact ? ' is-compact' : ' is-floating-dock'}${desktopDockCollapsed ? ' is-dock-collapsed' : ''}${mobileMenu ? ' mobile-menu-open' : ''}`} aria-label={t('toolbar.label')} data-tool-rail={compact ? 'compact' : 'dock'}>
+        <div className="desktop-tool-list" data-desktop-dock-tools={shellClass === 'X2' ? 'true' : undefined}>
+          {shellClass === 'X2' ? desktopDockCollapsed && activeDefinition
+            ? <RailTooltip id="tool-rail-tip-active-tool" content={`${t(activeDefinition.labelKey)} (${activeDefinition.shortcut})`} placement="top">
+              <RegisteredToolButton
+                definition={activeDefinition}
+                label={t(activeDefinition.labelKey)}
+                active
+                compact
+                onSelect={selectTool}
+                aria-describedby="tool-rail-tip-active-tool"
+              />
+            </RailTooltip>
+            : DESKTOP_DOCK_GROUPS.map(renderDockGroup) : TOOL_GROUPS.map((group) => {
             const groupTools = toolsInGroup(group.id, visibleTools);
             if (!groupTools.length && !(group.id === 'edit' && canEditSelection)) return null;
             const headingId = `tool-group-${group.id}`;
@@ -563,6 +656,13 @@ export const ToolRail = () => {
               </div>
             </section>;
           })}
+          {shellClass === 'X2' ? <button
+            type="button"
+            className="dock-collapse-toggle"
+            aria-label={t(desktopDockCollapsed ? 'toolbar.expandDock' : 'toolbar.collapseDock')}
+            aria-expanded={!desktopDockCollapsed}
+            onClick={() => setDesktopDockCollapsed((collapsed) => !collapsed)}
+          ><PanelsTopLeft size={18} aria-hidden="true" /></button> : null}
           {classroom ? <button
             className="tool-button tool-more desktop-advanced-toggle"
             aria-label={showAdvanced ? t('toolbar.hideAdvanced') : t('toolbar.showAdvanced')}

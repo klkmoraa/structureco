@@ -40,6 +40,33 @@ beforeEach(() => localStorage.clear());
 afterEach(() => cleanup());
 
 describe('ToolRail mobile action sheets', () => {
+  it('renders the X2 rail as a four-group floating dock with each registered tool exactly once', () => {
+    const { container } = renderToolRail('X2');
+
+    const dock = container.querySelector<HTMLElement>('[data-tool-rail="dock"]');
+    expect(dock).not.toBeNull();
+    const groups = [...(dock?.querySelectorAll<HTMLElement>('[data-dock-group]') ?? [])];
+    expect(groups.map((group) => group.dataset.dockGroup)).toEqual(['navigate', 'build', 'loads', 'refine']);
+
+    const toolIds = [...(dock?.querySelectorAll<HTMLElement>('[data-desktop-dock-tools] [data-tool-id]') ?? [])]
+      .map((tool) => tool.dataset.toolId);
+    expect(toolIds).toHaveLength(12);
+    expect(new Set(toolIds).size).toBe(12);
+    expect(groups.at(-1)?.querySelectorAll('[data-source-tool-group="inspect"], [data-source-tool-group="edit"]')).toHaveLength(4);
+  });
+
+  it('folds the X2 dock into the active tool and restores every group', async () => {
+    const user = userEvent.setup();
+    const { container } = renderToolRail('X2');
+
+    await user.click(screen.getByRole('button', { name: 'Compactar herramientas' }));
+    expect(container.querySelectorAll('[data-dock-group]')).toHaveLength(0);
+    expect(container.querySelector('[data-desktop-dock-tools] [data-tool-id="select"]')).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Mostrar todas las herramientas' }));
+    expect(container.querySelectorAll('[data-dock-group]')).toHaveLength(4);
+  });
+
   it('offers an explicit compact desktop rail without changing tool identity', () => {
     const { container } = renderToolRail('M1');
     expect(container.querySelector('[data-tool-rail="compact"]')).toBeTruthy();
@@ -51,15 +78,14 @@ describe('ToolRail mobile action sheets', () => {
     expect(container.querySelector('[data-tool-id="delete"]')?.getAttribute('aria-keyshortcuts')).toBe('Delete Backspace');
   });
 
-  it('groups every desktop tool by intention without losing actions', () => {
+  it('groups every desktop tool in the four desktop intentions without losing actions', () => {
     renderToolRail();
 
     expect(within(screen.getByRole('group', { name: /navegar/i })).getAllByRole('button')).toHaveLength(4);
     // Nudo, barra y apoyo, más el generador de estructuras.
     expect(within(screen.getByRole('group', { name: /^crear$/i })).getAllByRole('button')).toHaveLength(4);
     expect(within(screen.getByRole('group', { name: /^cargas$/i })).getAllByRole('button')).toHaveLength(3);
-    expect(within(screen.getByRole('group', { name: /anotar e inspeccionar/i })).getAllByRole('button')).toHaveLength(2);
-    expect(within(screen.getByRole('group', { name: /^editar$/i })).getAllByRole('button')).toHaveLength(2);
+    expect(within(screen.getByRole('group', { name: /anotar e inspeccionar.*editar/i })).getAllByRole('button')).toHaveLength(4);
     expect(document.querySelectorAll('[data-tool-id]')).toHaveLength(16);
   });
 

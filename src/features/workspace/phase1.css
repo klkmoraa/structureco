@@ -90,6 +90,294 @@
 }
 
 /* ========================================================================
+   WORKSPACE X2 · FLOATING TOOL DOCK + SINGLE RESULTS QUANTITY BAR
+   ===================================================================== */
+
+.app-shell[data-shell-class='X2'] .workspace {
+  grid-template-columns:minmax(0,1fr) var(--inspector-w);
+  gap:0;
+}
+
+.app-shell[data-shell-class='X2'][data-inspector-collapsed='true'] .workspace,
+.app-shell[data-shell-class='X2'][data-full-canvas='true'] .workspace {
+  grid-template-columns:minmax(0,1fr);
+}
+
+.app-shell[data-shell-class='X2'] .center-stage {
+  margin:10px;
+  border-radius:var(--sc-radius-panel);
+  box-shadow:var(--sc-shadow-clay-inset),0 2px 0 color-mix(in srgb,var(--sc-color-text-primary) 5%,transparent);
+}
+
+.app-shell[data-shell-class='X2'] .inspector-panel[data-surface-presentation='dock'] {
+  margin:10px 10px 10px 0;
+  border-radius:var(--sc-radius-panel);
+  box-shadow:var(--sc-shadow-clay-md);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock {
+  position:absolute;
+  z-index:38;
+  left:50%;
+  bottom:76px;
+  width:max-content;
+  max-width:calc(100% - 40px);
+  height:auto;
+  max-height:none;
+  margin:0;
+  padding:6px;
+  overflow:visible;
+  border:var(--sc-clay-edge);
+  border-radius:22px;
+  background:var(--sc-color-surface-1);
+  box-shadow:
+    0 7px 0 color-mix(in srgb,var(--sc-color-text-primary) 9%,transparent),
+    var(--sc-shadow-clay-lg);
+  transform:translateX(-50%);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .desktop-tool-list {
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  gap:4px;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock :is(.toolbar-spacer,.selection-tip,.mobile-tool-dock) {
+  display:none;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-group {
+  position:relative;
+  display:block;
+  min-width:0;
+  padding:0 4px;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-group + .dock-group {
+  padding-top:0;
+  border-top:0;
+  border-left:1px solid var(--sc-color-border-soft);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-group-heading {
+  position:absolute;
+  width:1px;
+  height:1px;
+  margin:-1px;
+  padding:0;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  white-space:nowrap;
+  border:0;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-group-actions {
+  display:flex;
+  align-items:center;
+  gap:3px;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-rail-tooltip-anchor {
+  width:42px;
+  flex:0 0 42px;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-button,
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .sc-popover__trigger {
+  width:42px;
+  min-width:42px;
+  height:42px;
+  min-height:42px;
+  padding:0;
+  border-radius:13px;
+  box-shadow:var(--sc-shadow-clay-xs);
+  transition:
+    transform 260ms cubic-bezier(.2,.85,.24,1.22),
+    box-shadow 220ms var(--sc-ease-standard),
+    background-color 180ms var(--sc-ease-standard),
+    border-color 180ms var(--sc-ease-standard);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-collapse-toggle {
+  width:34px;
+  min-width:34px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  margin-left:3px;
+  padding:0;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:12px;
+  background:var(--sc-color-surface-inset);
+  color:var(--sc-color-text-secondary);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  cursor:pointer;
+  transition:transform 220ms cubic-bezier(.2,.85,.24,1.18),box-shadow 180ms var(--sc-ease-standard),color 180ms var(--sc-ease-standard);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-collapse-toggle:hover,
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-collapse-toggle:focus-visible {
+  color:var(--accent);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transform:translateY(-2px);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-collapse-toggle:active {
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:translateY(1px) scale(.96);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock.is-dock-collapsed {
+  border-radius:18px;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-button:hover:not(:disabled),
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .sc-popover__trigger:hover:not(:disabled) {
+  z-index:2;
+  transform:translateY(-7px) scale(1.1);
+  box-shadow:
+    0 5px 0 color-mix(in srgb,var(--tool-color,var(--accent)) 18%,transparent),
+    var(--sc-shadow-clay-md);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-button:is(.active,.is-active),
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-button:active:not(:disabled),
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .sc-popover__trigger:active:not(:disabled) {
+  transform:translateY(2px) scale(.94);
+  box-shadow:var(--sc-shadow-clay-pressed);
+}
+
+.tool-rail-tooltip[data-placement='top'] {
+  border-radius:10px;
+  font-weight:700;
+  letter-spacing:.005em;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail-surface-launcher .sc-popover__surface {
+  width:236px;
+  padding:7px;
+  border-radius:17px;
+  transform-origin:bottom center;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail-surface-launcher__menu {
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:5px;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail-surface-launcher__menu button {
+  min-height:70px;
+  grid-template-columns:1fr;
+  grid-template-rows:28px auto;
+  justify-items:center;
+  gap:5px;
+  padding:8px 4px 6px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:12px;
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-xs);
+  font-size:10px;
+  text-align:center;
+}
+
+.app-shell[data-shell-class='X2'] .results-panel .results-quantity-bar {
+  min-height:50px;
+  display:flex;
+  align-items:center;
+  gap:5px;
+  padding:4px;
+  overflow:visible;
+}
+
+.app-shell[data-shell-class='X2'] .results-panel .results-quantity-tabs {
+  min-width:0;
+  flex:1 1 auto;
+  display:grid;
+  grid-template-columns:repeat(5,minmax(72px,1fr));
+  gap:4px;
+}
+
+.app-shell[data-shell-class='X2'] .results-panel .results-quantity-bar button {
+  min-width:0;
+  min-height:40px;
+  height:40px;
+  padding:0 10px;
+  border-radius:11px;
+}
+
+.app-shell[data-shell-class='X2'] .results-panel .results-dense-overflow {
+  position:relative;
+  flex:0 0 auto;
+}
+
+.app-shell[data-shell-class='X2'] .results-panel .results-dense-overflow__trigger {
+  width:40px;
+  padding:0;
+  display:grid;
+  place-items:center;
+  border:1px solid var(--sc-color-border-soft);
+  background:var(--sc-color-surface-1);
+  color:var(--sc-color-text-secondary);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell[data-shell-class='X2'] .results-panel .results-dense-overflow__trigger:hover,
+.app-shell[data-shell-class='X2'] .results-panel .results-dense-overflow__trigger:focus-visible {
+  background:var(--sc-color-surface-elevated);
+  color:var(--sc-color-text-primary);
+  box-shadow:var(--sc-shadow-clay-sm);
+  transform:translateY(-1px);
+}
+
+.app-shell[data-shell-class='X2'] .results-panel .results-dense-overflow__trigger[aria-expanded='true'],
+.app-shell[data-shell-class='X2'] .results-panel .results-dense-overflow__trigger:active {
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:translateY(1px) scale(.98);
+}
+
+.app-shell .results-panel .results-dense-overflow__menu {
+  position:absolute;
+  z-index:var(--sc-z-popover);
+  right:0;
+  top:calc(100% + 8px);
+  width:170px;
+  display:grid;
+  gap:4px;
+  padding:6px;
+  border:var(--sc-clay-edge);
+  border-radius:14px;
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-lg);
+}
+
+.app-shell .results-panel .results-dense-overflow__menu button {
+  min-height:38px;
+  padding:0 10px;
+  border:1px solid transparent;
+  border-radius:9px;
+  background:transparent;
+  color:var(--sc-color-text-secondary);
+  font:inherit;
+  font-size:11px;
+  font-weight:700;
+  text-align:left;
+}
+
+.app-shell .results-panel .results-dense-overflow__menu button:hover,
+.app-shell .results-panel .results-dense-overflow__menu button:focus-visible {
+  border-color:var(--sc-color-border-soft);
+  background:var(--sc-color-surface-elevated);
+  color:var(--sc-color-text-primary);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell[data-shell-class='X2']:has(.results-panel[data-surface-status='active']) .tool-rail.is-floating-dock {
+  bottom:min(42dvh,350px);
+}
+
+/* ========================================================================
    CLAY WORKSPACE · FASE 2
    El shell conserva sus autoridades X2/M1/K0 y el broker conserva dock,
    inset y sheet. Este bloque sólo da materia, separación y tacto a esas
@@ -939,4 +1227,140 @@
     transition:none;
     transform:none;
   }
+}
+
+/* Late X2 precedence: the legacy responsive layer above still describes the
+   old attached rail, so the new floating composition closes the cascade. */
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock {
+  margin:0;
+  border-radius:22px;
+  background:var(--sc-color-surface-1);
+  box-shadow:0 7px 0 color-mix(in srgb,var(--sc-color-text-primary) 9%,transparent),var(--sc-shadow-clay-lg);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .desktop-tool-list {
+  flex-direction:row;
+}
+
+.app-shell[data-shell-class='X2'] .center-stage {
+  margin:10px;
+  border-radius:var(--sc-radius-panel);
+}
+
+.app-shell[data-shell-class='X2'] .inspector-panel[data-surface-presentation='dock'] {
+  margin:10px 10px 10px 0;
+  border-radius:var(--sc-radius-panel);
+}
+
+.app-shell[data-shell-class='X2'] .results-panel [data-results-quantity-bar] {
+  min-height:50px;
+  height:auto;
+  flex-basis:auto;
+  align-items:center;
+  gap:5px;
+  padding:4px;
+  overflow:visible;
+}
+
+.app-shell[data-shell-class='X2'] .results-panel [data-results-quantity-bar] button {
+  min-width:0;
+  min-height:40px;
+  height:40px;
+  padding:0 10px;
+  border-radius:11px;
+}
+
+.app-shell .results-panel [data-result-tab='summary'][aria-selected='true'] { color:var(--accent); }
+.app-shell .results-panel [data-result-tab='axial'][aria-selected='true'] { color:var(--axial); }
+.app-shell .results-panel [data-result-tab='shear'][aria-selected='true'] { color:var(--shear); }
+.app-shell .results-panel [data-result-tab='moment'][aria-selected='true'] { color:var(--moment); }
+.app-shell .results-panel [data-result-tab='deformed'][aria-selected='true'] { color:var(--deformed); }
+
+.app-shell .results-panel [data-result-tab][aria-selected='true'] {
+  border-color:color-mix(in srgb,currentColor 38%,var(--sc-color-border));
+  box-shadow:inset 0 -3px 0 currentColor,var(--sc-shadow-clay-pressed);
+}
+
+/* K0 is a purpose-built touch composition: one tool route and one horizontally
+   sliding quantity rail. The hidden desktop list must never leak into it. */
+.app-shell[data-shell-class='K0'] .tool-rail .desktop-tool-list,
+.app-shell[data-shell-class='K0'] .tool-rail :is(.toolbar-spacer,.selection-tip) {
+  display:none !important;
+}
+
+.app-shell[data-shell-class='K0'] .results-panel [data-results-quantity-bar] {
+  min-height:52px;
+  height:52px;
+  flex:0 0 52px;
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:center;
+  gap:4px;
+  padding:4px;
+  overflow:visible;
+}
+
+.app-shell[data-shell-class='K0'] .results-panel .results-quantity-tabs {
+  min-width:0;
+  flex:1 1 auto;
+  display:flex;
+  align-items:center;
+  gap:4px;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  scroll-snap-type:x proximity;
+  scrollbar-width:none;
+}
+
+.app-shell[data-shell-class='K0'] .results-panel .results-quantity-tabs::-webkit-scrollbar {
+  display:none;
+}
+
+.app-shell[data-shell-class='K0'] .results-panel [data-results-quantity-bar] [data-result-tab] {
+  min-width:72px;
+  width:72px;
+  height:42px;
+  min-height:42px;
+  flex:0 0 72px;
+  padding:0 8px;
+  scroll-snap-align:center;
+  border-radius:11px;
+  font-size:10px;
+}
+
+.app-shell[data-shell-class='K0'] .results-panel .results-dense-overflow__trigger {
+  width:42px;
+  min-width:42px;
+  height:42px;
+  min-height:42px;
+  display:grid;
+  place-items:center;
+  padding:0;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:11px;
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+.app-shell[data-shell-class='K0']:has(.results-panel[data-surface-status='active']:not(.mobile-collapsed)) .workspace-surface-launcher {
+  display:none;
+}
+
+.app-shell[data-shell-class='K0'] .mobile-inspector-toggle[aria-expanded='true'] {
+  display:none;
+}
+
+.app-shell[data-shell-class='X2']:has(.contextual-actions):not(:has(.results-panel[data-surface-status='active'])) .tool-rail.is-floating-dock {
+  bottom:94px;
+}
+
+/* M1 is the tablet-landscape composition: a slim edge rail and a narrower
+   inspector inset leave a useful drawing field instead of a squeezed desktop. */
+.app-shell[data-shell-class='M1'] .inspector-panel[data-surface-presentation='inset'] {
+  width:min(360px,38vw) !important;
+}
+
+.app-shell[data-shell-class='M1']:has(.inspector-panel[data-surface-presentation='inset'][data-surface-status='active']) .contextual-actions {
+  left:32%;
+  width:min(440px,calc(64% - 24px));
 }
