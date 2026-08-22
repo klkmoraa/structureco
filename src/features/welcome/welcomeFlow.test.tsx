@@ -68,6 +68,18 @@ describe('WelcomeScreen · arquitectura nueva', () => {
     expect(screen.getByRole('button', { name: 'Crear desde cero' })).toBeTruthy();
   });
 
+  it('presenta Space 3D con una vista estructural reconocible y una entrada directa', async () => {
+    const user = userEvent.setup();
+    const { container, onOpenSpace3D } = renderWelcome();
+    const navigation = screen.getByRole('navigation', { name: 'Navegación principal' });
+
+    await user.click(within(navigation).getByRole('button', { name: 'Space 3D' }));
+
+    expect(container.querySelector('[data-structural-asset-id="space-frame:multi-bay"]')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Abrir Space 3D' }));
+    expect(onOpenSpace3D).toHaveBeenCalledOnce();
+  });
+
   it('continuar abre la Mesa sin sustituir el proyecto', async () => {
     const user = userEvent.setup();
     const { onOpenWorkspace } = renderWelcome();

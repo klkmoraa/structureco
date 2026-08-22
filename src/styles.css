@@ -710,12 +710,12 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .multi-selection-handle { fill:var(--surface); stroke:var(--selection); stroke-width:1.5; vector-effect:non-scaling-stroke; }
 .multi-selection-badge rect { fill:color-mix(in srgb,var(--selection) 12%,var(--surface)); stroke:var(--selection); stroke-width:1; }
 .multi-selection-badge text { fill:var(--selection); font-size:10px; font-weight:800; }
-.influence-canvas-overlay .influence-path { stroke:var(--accent);stroke-width:5;stroke-linecap:round;stroke-dasharray:10 7;opacity:.9;vector-effect:non-scaling-stroke; }
+.influence-canvas-overlay .influence-path { stroke:var(--sc-color-influence-line);stroke-width:5;stroke-linecap:round;stroke-dasharray:10 7;opacity:.9;vector-effect:non-scaling-stroke; }
 .influence-canvas-overlay .influence-target line { stroke:var(--shear);stroke-width:2;vector-effect:non-scaling-stroke; }
 .influence-canvas-overlay .influence-target circle { fill:var(--canvas-bg);stroke:var(--shear);stroke-width:2;vector-effect:non-scaling-stroke; }
 .influence-canvas-overlay .influence-target text,.influence-canvas-overlay .influence-unit-load text { fill:var(--text);font-size:10px;font-weight:700;paint-order:stroke;stroke:var(--canvas-bg);stroke-width:4px;stroke-linejoin:round; }
 .influence-canvas-overlay .influence-unit-load line { stroke:var(--force);stroke-width:2;vector-effect:non-scaling-stroke; }
-.influence-canvas-overlay .influence-unit-load circle { fill:var(--accent);stroke:var(--canvas-bg);stroke-width:2;vector-effect:non-scaling-stroke; }
+.influence-canvas-overlay .influence-unit-load circle { fill:var(--sc-color-influence-line);stroke:var(--canvas-bg);stroke-width:2;vector-effect:non-scaling-stroke; }
 .deformed-layer path { fill: none; stroke: var(--deformed); stroke-width: 3; stroke-dasharray: 6 4; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--deformed) 35%, transparent)); }
 .mechanism-layer { pointer-events: none; }
 .mechanism-member { stroke: var(--warning); stroke-width: 4; stroke-dasharray: 9 6; opacity: .88; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--warning) 38%, transparent)); }
@@ -868,7 +868,7 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .result-tabs button.active { color: var(--text); font-weight: 650; }
 .result-tabs button.active::after { content:''; position:absolute; left:10px; right:10px; bottom:-1px; height:2px; background: var(--accent-ink); }
 .result-tabs button.active.axial::after{background:var(--axial)}.result-tabs button.active.shear::after{background:var(--shear)}.result-tabs button.active.moment::after{background:var(--moment)}
-.result-tabs button.active.influence::after{background:var(--deformed)}
+.result-tabs button.active.influence::after{background:var(--sc-color-influence-line)}
 .issue-count { display: inline-grid; place-items:center; min-width:17px; height:17px; border-radius:9px; margin-left:6px; background:var(--error); color:white; font-size:9px; }
 .results-body { min-height: 0; flex: 1; overflow: auto; }
 .empty-results, .failed-results { min-height: 100%; display:flex; align-items:center; justify-content:center; gap:16px; padding:24px; color:var(--muted); }
@@ -1398,7 +1398,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 .result-tabs button.active.axial { color:var(--axial); }
 .result-tabs button.active.shear { color:var(--shear); }
 .result-tabs button.active.moment { color:var(--moment); }
-.result-tabs button.active.influence { color:var(--deformed); }
+.result-tabs button.active.influence { color:var(--sc-color-influence-line); }
 .resize-handle { border-color:var(--border-soft); box-shadow:var(--sc-shadow-raised); }
 .empty-results,.failed-results {
   min-height:calc(100% - 32px);
@@ -1414,21 +1414,25 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 .influence-line-view {
   min-width:0;
   margin:10px 14px 14px;
-  border-color:color-mix(in srgb,var(--deformed) 38%,var(--border));
+  border-color:color-mix(in srgb,var(--sc-color-influence-line) 42%,var(--border));
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
 }
 .influence-line-view .education-explorer-heading {
-  background:color-mix(in srgb,var(--deformed) 8%,var(--surface));
+  border-bottom:1px solid color-mix(in srgb,var(--sc-color-influence-line) 28%,var(--border-soft));
+  border-inline-start:3px solid var(--sc-color-influence-line);
+  background:var(--sc-color-surface-2);
 }
-.influence-line-view .education-explorer-heading>span { color:var(--deformed); }
+.influence-line-view .education-explorer-heading>span { color:var(--sc-color-influence-line); }
 .influence-line-view .diagram-chart {
   margin:0 12px;
   border:1px solid var(--border-soft);
   border-radius:10px;
-  background:color-mix(in srgb,var(--surface) 96%,var(--deformed));
+  background:color-mix(in srgb,var(--sc-color-influence-area) 20%,var(--surface));
 }
-.influence-line-view .diagram-chart .chart-line { stroke:var(--deformed); }
+.influence-line-view .diagram-chart .chart-line { stroke:var(--sc-color-influence-line); }
 .influence-line-view .diagram-chart .chart-jump,
-.influence-line-view .diagram-chart .chart-critical { color:var(--deformed); }
+.influence-line-view .diagram-chart .chart-critical { color:var(--sc-color-influence-line); }
 
 .influence-field-control { width:100%; min-width:0; min-height:36px; padding:0 9px; border:0; border-radius:var(--sc-radius-sm); background:var(--surface-2); color:var(--text); box-shadow:var(--sc-shadow-clay-pressed); font-variant-numeric:tabular-nums; }
 .influence-field-control:focus-visible { outline:var(--sc-focus-ring-width) solid var(--focus); outline-offset:-2px; }
@@ -1441,8 +1445,8 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 .influence-calculate-btn:active:not(:disabled) { box-shadow:var(--sc-shadow-clay-action-pressed); transform:var(--sc-clay-press-transform); }
 .influence-calculate-btn:disabled { opacity:.55; cursor:not-allowed; }
 .influence-line-view>.verification-grid { margin:8px 12px 0; }
-.influence-line-view input[type='range'] { accent-color:var(--deformed); }
-.influence-line-view .response-selector button.active { color:var(--deformed); }
+.influence-line-view input[type='range'] { accent-color:var(--sc-color-influence-line); }
+.influence-line-view .response-selector button.active { background:color-mix(in srgb,var(--sc-color-influence-area) 42%,var(--sc-color-surface-inset)); color:var(--sc-color-influence-line); }
 .professional-note { background:var(--surface); border-color:var(--border-soft); font-size:10px; }
 
 .import-center-backdrop { background:var(--sc-color-overlay-strong); }
@@ -1630,7 +1634,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
   .results-mobile-toggle i.axial { background:var(--axial); }
   .results-mobile-toggle i.shear { background:var(--shear); }
   .results-mobile-toggle i.moment { background:var(--moment); }
-  .results-mobile-toggle i.influence { background:var(--deformed); }
+  .results-mobile-toggle i.influence { background:var(--sc-color-influence-line); }
   .results-mobile-toggle strong { overflow:hidden; text-overflow:ellipsis; font-size:12px; white-space:nowrap; }
   .results-panel { min-height:220px; max-height:58dvh; }
   .results-panel.mobile-collapsed { min-height:54px; max-height:54px; height:54px!important; overflow:hidden; }
@@ -1740,7 +1744,10 @@ html { -webkit-tap-highlight-color:transparent; }
 .welcome-base { display:contents; }
 .canvas-host { contain:layout paint; }
 .toolbar { contain:layout style; }
-.inspector-panel,.results-panel { contain:layout paint style; }
+.inspector-panel { contain:layout paint style; }
+/* El menú de vistas densas sale del borde superior del panel compacto. La
+   contención de pintura lo recortaba y dejaba sólo «Reacciones» visible. */
+.results-panel { contain:layout style; }
 .welcome-screen,.app-shell,.topbar,.toolbar,.inspector-panel,.results-panel,.professional-note {
   transition:var(--sc-transition-theme);
 }
@@ -2976,7 +2983,7 @@ button:not(:disabled):active,.selection-card:active {
 .result-tabs button.active.axial::after { background: var(--axial); }
 .result-tabs button.active.shear::after { background: var(--shear); }
 .result-tabs button.active.moment::after { background: var(--moment); }
-.result-tabs button.active.influence::after { background: var(--deformed); }
+.result-tabs button.active.influence::after { background: var(--sc-color-influence-line); }
 .inspector-tabs button:hover:not(.active), .result-tabs button:hover:not(.active) {
   color: var(--text);
 }
@@ -4741,8 +4748,8 @@ button:not(:disabled):active,.selection-card:active {
   background:var(--sc-color-overlay-soft);
 }
 .command-palette {
-  width:min(640px,100%);
-  max-height:min(70vh,560px);
+  width:min(760px,100%);
+  max-height:min(78vh,680px);
   display:flex;
   flex-direction:column;
   overflow:hidden;
@@ -4751,16 +4758,41 @@ button:not(:disabled):active,.selection-card:active {
   background:var(--sc-color-surface-1);
   box-shadow:var(--sc-shadow-modal);
 }
+.command-palette-head {
+  min-height:58px;
+  padding:9px 10px 9px 14px;
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr) 36px;
+  align-items:center;
+  gap:10px;
+  border-bottom:1px solid var(--border-soft);
+  background:var(--sc-color-surface-elevated);
+}
+.command-palette-head__icon,
+.command-palette-close {
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border:var(--sc-clay-edge);
+  border-radius:11px;
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+.command-palette-head__icon { color:var(--accent); box-shadow:var(--sc-shadow-clay-pressed); }
+.command-palette-head > div { min-width:0; display:grid; gap:1px; }
+.command-palette-head > div > span { color:var(--accent); font-family:var(--sc-font-mono); font-size:9px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+.command-palette-close { color:var(--muted); cursor:pointer; transition:var(--sc-transition-control); }
+.command-palette-close:hover { color:var(--text); transform:translateY(-1px); box-shadow:var(--sc-shadow-clay-sm); }
+.command-palette-close:active { transform:var(--sc-clay-press-transform); box-shadow:var(--sc-shadow-clay-pressed); }
+.command-palette-close:focus-visible { outline:none; box-shadow:var(--sc-shadow-clay-xs),var(--sc-ring-focus); }
 .command-palette-title {
-  position:absolute;
-  width:1px;
-  height:1px;
-  padding:0;
-  margin:-1px;
-  overflow:hidden;
-  clip:rect(0,0,0,0);
-  white-space:nowrap;
-  border:0;
+  margin:0;
+  color:var(--text);
+  font-family:var(--sc-font-ui);
+  font-size:14px;
+  font-weight:760;
+  letter-spacing:-.01em;
 }
 .command-palette-search {
   display:flex;
@@ -4792,9 +4824,10 @@ button:not(:disabled):active,.selection-card:active {
   font-family:var(--sc-font-mono);
   font-size:var(--sc-font-size-caption);
 }
-.command-palette-list { flex:1; min-height:0; overflow-y:auto; padding:8px; }
+.command-palette-list { flex:1; min-height:0; overflow-y:auto; padding:10px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-content:start; gap:10px; }
 .command-palette-empty { margin:16px 8px; color:var(--muted); font-size:var(--sc-font-size-technical); }
-.command-palette-group + .command-palette-group { margin-top:8px; }
+.command-palette-group { min-width:0; padding:7px; border:1px solid var(--border-soft); border-radius:var(--sc-radius-card); background:var(--sc-color-surface-2); }
+.command-palette-group + .command-palette-group { margin-top:0; }
 .command-palette-group h3 {
   margin:0 0 4px;
   padding:0 8px;
@@ -4854,6 +4887,8 @@ button:not(:disabled):active,.selection-card:active {
 @media (max-width:640px) {
   .command-palette-backdrop { padding-top:max(24px,env(safe-area-inset-top)); }
   .command-palette { max-height:82vh; }
+  .command-palette-list { grid-template-columns:1fr; padding:8px; }
+  .command-palette-head { min-height:54px; }
   .command-palette-footer { display:none; }
 }
 
@@ -5507,7 +5542,7 @@ button:not(:disabled):active,.selection-card:active {
 
 /* Import Center · tres decisiones visibles sobre seis estados internos. */
 .import-center-backdrop {
-  background: color-mix(in srgb, var(--sc-color-bg-night) 74%, transparent);
+  background: var(--sc-color-overlay-strong);
   backdrop-filter: none;
 }
 
@@ -5604,7 +5639,7 @@ button:not(:disabled):active,.selection-card:active {
   background: var(--sc-color-surface-1);
 }
 .import-center-dialog[data-import-layout='review-decide-open'] .import-button-primary,
-.import-center-dialog[data-import-layout='review-decide-open'] .import-dropzone button { color: #fff; }
+.import-center-dialog[data-import-layout='review-decide-open'] .import-dropzone button { color: var(--accent-foreground); }
 
 @media (max-width: 700px) {
   .import-center-dialog[data-import-layout='review-decide-open'] {

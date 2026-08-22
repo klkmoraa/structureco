@@ -40,7 +40,8 @@ const copy = {
     projectsTitle: 'Tus proyectos', projectsBody: 'Abre, renombra o duplica el trabajo guardado en este dispositivo.',
     classroomTitle: 'Aprende resolviendo una estructura', classroomBody: 'Elige un caso, ajusta sus datos y avanza con una guía que no te quita el control del modelo.', classroomAction: 'Crear desde cero', classroomCases: 'O empieza con un caso preparado',
     importTitle: 'Trae un modelo', importBody: 'Revisa el archivo antes de modificar el proyecto abierto.',
-    spaceTitle: 'Modelo espacial', spaceBody: 'Abre el entorno 3D independiente o continúa desde un proyecto 2D.', spaceAction: 'Abrir Space 3D',
+    spaceTitle: 'Construye en tres dimensiones', spaceBody: 'Trabaja con pórticos espaciales, niveles y cargas en un entorno separado de tu modelo 2D.', spaceAction: 'Abrir Space 3D',
+    spacePreview: 'Pórtico espacial de varios vanos', spaceCoordinates: 'Ejes X, Y y Z', spaceModel: 'Geometría espacial', spaceLoads: 'Cargas y apoyos 3D',
     secondary: 'Accesos rápidos', local: 'Guardado local en este dispositivo',
   },
   en: {
@@ -50,7 +51,8 @@ const copy = {
     projectsTitle: 'Your projects', projectsBody: 'Open, rename, or duplicate work saved on this device.',
     classroomTitle: 'Learn by solving a structure', classroomBody: 'Choose a case, adjust its data, and move forward with guidance that keeps you in control of the model.', classroomAction: 'Start from scratch', classroomCases: 'Or begin with a prepared case',
     importTitle: 'Bring in a model', importBody: 'Review the file before changing the open project.',
-    spaceTitle: 'Spatial model', spaceBody: 'Open the independent 3D environment or continue from a 2D project.', spaceAction: 'Open Space 3D',
+    spaceTitle: 'Build in three dimensions', spaceBody: 'Work with spatial frames, levels, and loads in an environment separate from your 2D model.', spaceAction: 'Open Space 3D',
+    spacePreview: 'Multi-bay spatial frame', spaceCoordinates: 'X, Y, and Z axes', spaceModel: 'Spatial geometry', spaceLoads: '3D loads and supports',
     secondary: 'Quick access', local: 'Saved locally on this device',
   },
 } as const;
@@ -221,7 +223,22 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
       : view === 'templates' ? templates
         : view === 'classroom' ? classroomLanding
           : view === 'import' ? <section className="sc-home-view"><header><p>{text.import}</p><h2>{text.importTitle}</h2><span>{text.importBody}</span></header><div className="sc-home-import-grid"><button type="button" className="welcome-import-card" onClick={() => setImportCenterOpen(true)}><Upload size={20} /><strong>{t('welcome.import')}</strong><span>{t('welcome.importDescription')}</span></button><Suspense fallback={null}><Phase2DxfAction open={dxfImportOpen} onOpenChange={setDxfImportOpen} onOpenWorkspace={onOpenWorkspace} /></Suspense></div></section>
-            : <section className="sc-home-view sc-home-focused"><Box size={30} /><header><p>{text.space3d}</p><h2>{text.spaceTitle}</h2><span>{text.spaceBody}</span></header><button type="button" className="sc-home-continue" onClick={onOpenSpace3D}>{text.spaceAction}</button></section>;
+            : <section className="sc-home-space" aria-labelledby="home-space-title">
+              <div className="sc-home-space__copy">
+                <p>{text.space3d}</p>
+                <h2 id="home-space-title">{text.spaceTitle}</h2>
+                <span>{text.spaceBody}</span>
+                <button type="button" className="sc-home-continue" onClick={onOpenSpace3D}>{text.spaceAction}<ArrowRight size={16} /></button>
+                <div className="sc-home-space__capabilities" aria-label={text.space3d}>
+                  <span><strong>XYZ</strong>{text.spaceCoordinates}</span>
+                  <span><strong>3D</strong>{text.spaceModel}</span>
+                  <span><strong>↧</strong>{text.spaceLoads}</span>
+                </div>
+              </div>
+              <div className="sc-home-space__asset">
+                <ThreeStructuralImage assetId="space-frame:multi-bay" theme={theme} alt={text.spacePreview} eager />
+              </div>
+            </section>;
 
   return <><main ref={homeRef} className="sc-home" data-testid="welcome-screen">
     <aside className="sc-home-sidebar"><div className="sc-home-wordmark"><BrandMark size={30} /><strong><span>structure</span>Co</strong></div>{renderNavigation()}<button type="button" className="sc-home-settings" onClick={(event) => openSettings(event.currentTarget)}><Settings size={19} /><span>{text.settings}</span></button></aside>

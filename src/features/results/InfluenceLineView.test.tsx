@@ -55,16 +55,16 @@ describe('Influence line presentation', () => {
 
     const region = screen.getByRole('region', { name: 'Influence line and axle train' });
     expect(within(region).getAllByText('Influence line').length).toBeGreaterThan(0);
-    expect(within(region).getByText('Vertical unit load · validated cubic reconstruction · extrema without sweeping')).toBeTruthy();
+    expect(within(region).getByText('Move a unit load across the structure and see where it governs.')).toBeTruthy();
     expect(within(region).getByRole('group', { name: 'Influence-line response' })).toBeTruthy();
-    expect(within(region).getByText('Target response')).toBeTruthy();
-    expect(within(region).getByText('Target member')).toBeTruthy();
-    expect(within(region).getByText('Cut limit')).toBeTruthy();
-    expect(within(region).getByRole('button', { name: 'Use selection (1)' })).toBeTruthy();
+    expect(within(region).getByText('What to measure')).toBeTruthy();
+    expect(within(region).getByText('Where to measure')).toBeTruthy();
+    expect(within(region).getByText('Cut side')).toBeTruthy();
+    expect(within(region).getByRole('button', { name: 'Use selected members (1)' })).toBeTruthy();
     expect(within(region).getByRole('spinbutton', { name: 'Cut coordinate' })).toBeTruthy();
     expect(within(region).getByText('1 member · M2')).toBeTruthy();
     expect(within(region).getByRole('tablist', { name: 'Influence view' })).toBeTruthy();
-    expect(within(region).getByText('Define the section and path, then select Calculate.')).toBeTruthy();
+    expect(within(region).getByText('Choose where to measure and where the load should travel. Then calculate.')).toBeTruthy();
 
     await user.click(within(region).getByRole('button', { name: 'Calculate' }));
 
@@ -93,7 +93,7 @@ describe('Influence line presentation', () => {
     expect(within(region).getByRole('img', { name: 'Exact axle-train response for M at M2' })).toBeTruthy();
     expect(within(region).getByText('Exact axle positions at the extrema')).toBeTruthy();
     expect(region.textContent).not.toMatch(
-      /Esfuerzo objetivo|Miembro objetivo|Límite en el corte|Usar selección|Coordenada del corte|Calcular|Tren de ejes|Quitar|Cierre polinómico|Precisión estimada/,
+      /Qué quieres medir|Dónde quieres medir|Lado del corte|Usar miembros seleccionados|Coordenada del corte|Calcular|Tren de ejes|Quitar|Cierre polinómico|Precisión estimada/,
     );
   }, 15_000);
 
