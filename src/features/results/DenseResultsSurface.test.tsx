@@ -103,13 +103,13 @@ describe('Dense results surface', () => {
     const user = userEvent.setup();
     renderDense();
 
-    expect(screen.queryByRole('dialog', { name: 'Datos densos' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Resultados avanzados' })).toBeNull();
     const launcher = await analyzeAndOpen(user);
-    const surface = await screen.findByRole('dialog', { name: 'Datos densos' });
+    const surface = await screen.findByRole('dialog', { name: 'Resultados avanzados' });
     expect(surface.getAttribute('aria-modal')).toBe('true');
 
-    await user.click(within(surface).getByRole('button', { name: 'Cerrar datos densos' }));
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Datos densos' })).toBeNull());
+    await user.click(within(surface).getByRole('button', { name: 'Cerrar resultados avanzados' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Resultados avanzados' })).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(launcher));
   }, 15_000);
 
@@ -117,11 +117,11 @@ describe('Dense results surface', () => {
     const user = userEvent.setup();
     renderDense();
     const launcher = await analyzeAndOpen(user);
-    await screen.findByRole('dialog', { name: 'Datos densos' });
+    await screen.findByRole('dialog', { name: 'Resultados avanzados' });
 
     await user.keyboard('{Escape}');
 
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Datos densos' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Resultados avanzados' })).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(launcher));
   }, 15_000);
 
@@ -129,7 +129,7 @@ describe('Dense results surface', () => {
     const user = userEvent.setup();
     renderDense();
     await analyzeAndOpen(user);
-    const surface = await screen.findByRole('dialog', { name: 'Datos densos' });
+    const surface = await screen.findByRole('dialog', { name: 'Resultados avanzados' });
 
     const cards = within(surface).getAllByRole('article');
     expect(cards.length).toBeGreaterThan(0);
@@ -171,8 +171,8 @@ describe('Dense results surface', () => {
     const user = userEvent.setup();
     renderDense();
     await analyzeAndOpen(user);
-    const surface = await screen.findByRole('dialog', { name: 'Datos densos' });
-    const tabs = within(surface).getByRole('tablist', { name: 'Vistas densas' });
+    const surface = await screen.findByRole('dialog', { name: 'Resultados avanzados' });
+    const tabs = within(surface).getByRole('tablist', { name: 'Secciones de resultados' });
 
     const reactions = within(tabs).getByRole('tab', { name: 'Reacciones' });
     reactions.focus();
@@ -186,7 +186,7 @@ describe('Dense results surface', () => {
     const user = userEvent.setup();
     renderDense(createSimpleBeamExercise(), { initialView: 'learn' });
     await analyzeAndOpen(user);
-    const surface = await screen.findByRole('dialog', { name: 'Datos densos' });
+    const surface = await screen.findByRole('dialog', { name: 'Resultados avanzados' });
 
     const levels = within(surface).getByRole('group', { name: 'Niveles pedagógicos' });
     expect(within(levels).getByRole('button', { name: 'Fundamentos' })).toBeTruthy();
@@ -199,7 +199,7 @@ describe('Dense results surface', () => {
     const user = userEvent.setup();
     renderDense(createHibbelerStyleDiagramPractice(), { initialView: 'learn' });
     await analyzeAndOpen(user);
-    const surface = await screen.findByRole('dialog', { name: 'Datos densos' });
+    const surface = await screen.findByRole('dialog', { name: 'Resultados avanzados' });
 
     await user.click(await within(surface).findByRole('tab', { name: 'Elemento' }, { timeout: 5_000 }));
     const panel = await within(surface).findByRole('tabpanel', { name: 'Elemento' }, { timeout: 5_000 });
@@ -224,7 +224,7 @@ describe('Dense results surface', () => {
     project.settings.language = 'en';
     renderDense(project, { initialView: 'learn' });
     await analyzeAndOpen(user);
-    const surface = await screen.findByRole('dialog', { name: 'Dense data' });
+    const surface = await screen.findByRole('dialog', { name: 'Advanced results' });
 
     const explorer = within(surface).getByRole('region', { name: 'Stiffness-method explorer' });
     expect(within(explorer).getByRole('tablist', { name: 'Method stages' })).toBeTruthy();
