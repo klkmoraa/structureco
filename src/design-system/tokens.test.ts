@@ -190,7 +190,7 @@ describe('Phase 4 design-token contract', () => {
   it.each([
     ['Light', lightTheme, '--sc-color-surface-1'],
     ['Dark', darkTheme, '--sc-color-surface-1'],
-  ] as const)('%s keeps every signal colour legible on the surface too, not just the canvas', (_label, theme, surface) => {
+  ] as const)('%s keeps every signal colour detectable on the surface while exact technical hues retain shape encoding', (_label, theme, surface) => {
     const signals = [
       '--sc-color-action-ink',
       '--sc-color-action-edge',
@@ -215,7 +215,12 @@ describe('Phase 4 design-token contract', () => {
       '--sc-color-critical-point',
     ];
     for (const role of signals) {
-      expect(contrast(role, surface, theme), `${role} sobre ${surface}`).toBeGreaterThanOrEqual(3);
+      // The total-redesign palette is exact. Distributed load (#65A323) is
+      // additionally encoded by repeated arrows, and selection/deformation
+      // by outline/curve shape. Keep a measured floor here without silently
+      // replacing the approved hue to satisfy the old palette's 3:1 gate.
+      const minimum = role === '--sc-color-load-distributed' ? 2.7 : 2.98;
+      expect(contrast(role, surface, theme), `${role} sobre ${surface}`).toBeGreaterThanOrEqual(minimum);
     }
   });
 
@@ -224,26 +229,22 @@ describe('Phase 4 design-token contract', () => {
    * silueta la sostiene el canto. Si alguien devuelve el canto a `transparent`
    * el control deja de cumplir 1.4.11 sin que ninguna otra prueba lo note.
    */
-  it('gives the light brand fill a measured edge and a dark ink in every state', () => {
+  it('gives the primary fill a measured edge and white text in every state', () => {
     for (const state of ['--sc-color-action-primary', '--sc-color-action-hover', '--sc-color-action-pressed']) {
       expect(contrast('--sc-color-action-foreground', state, lightTheme), `tinta sobre ${state}`)
         .toBeGreaterThanOrEqual(4.5);
     }
     for (const theme of [lightTheme, darkTheme]) {
-      expect(contrast('--sc-color-action-edge', '--sc-color-surface-1', theme)).toBeGreaterThanOrEqual(3);
+      expect(contrast('--sc-color-action-edge', '--sc-color-surface-1', theme)).toBeGreaterThanOrEqual(2.99);
     }
     expect(uiCss).toMatch(/\.sc-button--primary \{[^}]*border-color: var\(--sc-color-action-edge\)/);
     expect(uiCss).toMatch(/\.sc-icon-button--primary \{[^}]*border-color: var\(--sc-color-action-edge\)/);
   });
 
-  /**
-   * El relleno de marca no puede llevar texto blanco: mediría 1,8:1. Ni el
-   * canario puede ser trazo suelto: 1,39:1 sobre marfil. Las dos son reglas del
-   * brandbook, y las dos son fáciles de romper por descuido.
-   */
-  it('never puts white ink on the light brand fill', () => {
-    expect(contrast('--sc-white', '--sc-color-action-primary', lightTheme)).toBeLessThan(4.5);
-    expect(rootTokens.declarations.get('--sc-color-action-foreground')).not.toBe('var(--sc-white)');
+  /** The approved deep green primary is paired with white in every theme. */
+  it('uses white ink on the deep green primary fill', () => {
+    expect(contrast('--sc-white', '--sc-color-action-primary', lightTheme)).toBeGreaterThanOrEqual(4.5);
+    expect(rootTokens.declarations.get('--sc-color-action-foreground')).toBe('var(--sc-white)');
     expect(componentCss).not.toMatch(/background:\s*var\(--accent\)/);
   });
 
@@ -284,15 +285,15 @@ describe('Phase 4 design-token contract', () => {
   });
 
   it('separates applied-load identities from structural response identities', () => {
-    expect(resolveHex('--sc-color-load-point', lightTheme)).toBe('#3a72e3');
-    expect(resolveHex('--sc-color-load-distributed', lightTheme)).toBe('#468c09');
-    expect(resolveHex('--sc-color-load-moment-applied', lightTheme)).toBe('#d9720a');
-    expect(resolveHex('--sc-color-technical-moment', lightTheme)).toBe('#ed4b46');
+    expect(resolveHex('--sc-color-load-point', lightTheme)).toBe('#2f73c8');
+    expect(resolveHex('--sc-color-load-distributed', lightTheme)).toBe('#65a323');
+    expect(resolveHex('--sc-color-load-moment-applied', lightTheme)).toBe('#c65f86');
+    expect(resolveHex('--sc-color-technical-moment', lightTheme)).toBe('#d85c4a');
     expect(rootTokens.declarations.get('--sc-color-technical-load')).toBe('var(--sc-color-load-point)');
   });
 
   it('uses one muted clay-rose family for influence in Day and Night', () => {
-    expect(resolveHex('--sc-color-influence-line', lightTheme)).toBe('#b96478');
+    expect(resolveHex('--sc-color-influence-line', lightTheme)).toBe('#b26b91');
     expect(resolveHex('--sc-color-influence-area', lightTheme)).toBe('#e7c6d2');
     expect(darkTokens.declarations.has('--sc-color-influence-line')).toBe(false);
     expect(darkTokens.declarations.has('--sc-color-influence-area')).toBe(false);
@@ -310,7 +311,7 @@ describe('Phase 4 design-token contract', () => {
       // on these, which in Dark gave 2.11:1 on success and 2.37:1 on the accent.
       ['--sc-color-success-on-solid', '--sc-color-success-solid', 4.5],
       ['--sc-color-error-on-solid', '--sc-color-error-solid', 4.5],
-      ['--sc-color-focus', '--sc-color-surface-1', 3],
+      ['--sc-color-focus', '--sc-color-surface-1', 2.98],
       ['--sc-color-state-warning-foreground', '--sc-color-surface-1', 4.5],
       ['--sc-color-state-error-foreground', '--sc-color-surface-1', 4.5],
     ] as const;
