@@ -1,0 +1,56 @@
+.structural-illustration {
+  --structural-asset-line: var(--sc-ink, currentColor);
+  --structural-asset-primary: var(--sc-accent-primary, currentColor);
+  --structural-asset-secondary: var(--sc-ink-muted, currentColor);
+  --structural-asset-accent: var(--sc-accent-technical, currentColor);
+  color: var(--sc-ink, currentColor);
+  display: block;
+  height: auto;
+  max-width: 100%;
+  overflow: visible;
+}
+
+.structural-illustration--concrete {
+  --structural-asset-primary: var(--sc-material-concrete, currentColor);
+}
+
+.structural-illustration--steel {
+  --structural-asset-primary: var(--sc-material-steel, currentColor);
+}
+
+.structural-illustration--timber {
+  --structural-asset-primary: var(--sc-material-timber, currentColor);
+}
+
+.structural-illustration--technical {
+  --structural-asset-primary: var(--sc-accent-technical, currentColor);
+}
+
+.structural-illustration--load {
+  --structural-asset-accent: var(--sc-load-color, currentColor);
+}
+
+.structural-illustration--motion-safe .structural-illustration__geometry {
+  animation: structural-asset-settle var(--structural-asset-duration, 480ms) cubic-bezier(.2, .8, .2, 1) both;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+
+@keyframes structural-asset-settle {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .structural-illustration--motion-safe .structural-illustration__geometry {
+    animation: none;
+    transform: none;
+  }
+}
