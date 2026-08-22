@@ -5,6 +5,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { ProjectProvider, useProject } from '../../store/ProjectContext';
 import { onWorkspaceCommand } from '../workspace/workspaceCommands';
 import { ShellCompositionContext } from '../workspace/useShellComposition';
+import type { ToolDockPosition } from '../workspace/useWorkspaceLayoutPreferences';
 import type { ShellClass } from '../workspace/shellComposition';
 import { ToolRail } from './ToolRail';
 
@@ -20,10 +21,10 @@ const SelectionSetter = () => {
 
 /** La forma del riel la decide `shellClass` (CRI-98): se fija explícito por
  * prueba en vez de depender del viewport por defecto de jsdom. */
-const renderToolRail = (shellClass: ShellClass = 'X2') => render(
+const renderToolRail = (shellClass: ShellClass = 'X2', dockProps: { dockPosition?: ToolDockPosition; onDockPositionChange?: (position: ToolDockPosition) => void } = {}) => render(
   <ShellCompositionContext.Provider value={{ shellClass, phone: shellClass === 'K0' }}>
     <ProjectProvider>
-      <ToolRail />
+      <ToolRail {...dockProps} />
       <ActiveToolStatus />
     </ProjectProvider>
   </ShellCompositionContext.Provider>,
@@ -40,6 +41,15 @@ beforeEach(() => localStorage.clear());
 afterEach(() => cleanup());
 
 describe('ToolRail mobile action sheets', () => {
+  it('offers an explicit bottom/left placement control for the desktop dock', async () => {
+    const user = userEvent.setup();
+    const onDockPositionChange = vi.fn();
+    renderToolRail('X2', { dockPosition: 'bottom', onDockPositionChange });
+
+    await user.click(screen.getByRole('button', { name: 'Poner herramientas a la izquierda' }));
+    expect(onDockPositionChange).toHaveBeenCalledWith('left');
+  });
+
   it('renders the X2 rail as a four-group floating dock with each registered tool exactly once', () => {
     const { container } = renderToolRail('X2');
 
@@ -133,6 +143,18 @@ describe('ToolRail mobile action sheets', () => {
     expect(openView).toHaveBeenCalledOnce();
     expect(openResults).toHaveBeenCalledOnce();
     unsubscribes.forEach((unsubscribe) => unsubscribe());
+  });
+
+  it('closes the workspace panels menu from its own clear action', async () => {
+    const user = userEvent.setup();
+    renderToolRail('X2');
+
+    const navigate = screen.getByRole('group', { name: /navegar/i });
+    await user.click(within(navigate).getByRole('button', { name: /abrir paneles de trabajo/i }));
+    const panels = screen.getByRole('dialog', { name: /paneles de trabajo/i });
+    await user.click(within(panels).getByRole('menuitem', { name: /cerrar paneles/i }));
+
+    expect(screen.queryByRole('dialog', { name: /paneles de trabajo/i })).toBeNull();
   });
 
   it('reaches workspace surfaces from a Paneles sheet in K0 without native floating buttons', async () => {

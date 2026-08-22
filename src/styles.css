@@ -2454,6 +2454,11 @@ button:not(:disabled):active,.selection-card:active {
 .inspector-summary__metrics .is-axial dd { color:var(--axial); }
 .inspector-summary__metrics .is-shear dd { color:var(--shear); }
 .inspector-summary__metrics .is-moment dd { color:var(--moment); }
+.inspector-selection-actions { display:flex; padding:0 0 9px; }
+.inspector-selection-edit { min-height:38px; display:inline-flex; align-items:center; justify-content:center; gap:7px; width:100%; padding:0 12px; border:1px solid color-mix(in srgb,var(--accent) 28%,var(--border)); border-radius:var(--sc-radius-sm); background:color-mix(in srgb,var(--accent) 7%,var(--surface)); color:var(--accent); font-size:11px; font-weight:720; box-shadow:var(--sc-shadow-clay-xs); cursor:pointer; transition:var(--sc-transition-control); }
+.inspector-selection-edit:hover { background:color-mix(in srgb,var(--accent) 12%,var(--surface)); box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1px); }
+.inspector-selection-edit:active { box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
+.inspector-selection-edit:focus-visible { outline:none; box-shadow:var(--sc-shadow-clay-xs),var(--sc-ring-focus); }
 
 .inspector-empty-state { padding:5px 0 13px; }
 .inspector-property-group { min-width:0; padding:16px 0; border-bottom:1px solid var(--border-soft); }
@@ -2537,7 +2542,8 @@ button:not(:disabled):active,.selection-card:active {
 .inspector-inline-issues>div.is-error { border-color:color-mix(in srgb,var(--error) 34%,var(--border)); }
 .inspector-inline-issues>div.is-error>svg { color:var(--error); }
 .inspector-inline-issues>div.is-warning>svg { color:var(--warning); }
-.inspector-properties>.danger-button { margin:15px 0 4px; min-height:40px; }
+.inspector-selection-danger { margin-top:8px; padding-top:12px; border-top:1px solid var(--border-soft); }
+.inspector-selection-danger .danger-button { margin:0 0 4px; min-height:40px; }
 .inspector-property-group .subsection-title { margin:15px 0 7px; color:var(--muted); font-size:10px; font-weight:750; letter-spacing:.025em; text-transform:uppercase; }
 
 @media (min-width:701px) and (max-width:1023px) {
@@ -2625,6 +2631,26 @@ button:not(:disabled):active,.selection-card:active {
 .results-panel.results-mode-compact .result-tab-family__label { display:none; }
 .results-panel.results-mode-compact .result-tabs { height:43px; flex-basis:43px; }
 .results-panel.results-mode-compact .result-tabs button { height:43px; }
+
+/* Compacto muestra la lectura esencial sin pagar una altura de panel por una
+   columna de ayuda vacía. Expandido conserva la guía, pero el gráfico y sus
+   tarjetas dejan de estirarse hasta formar una pared de espacio muerto. */
+.results-panel.results-mode-compact .diagram-guidance,
+.results-panel.results-mode-compact .deformation-guidance { display:none; }
+.results-panel.results-mode-compact .diagram-result-layout,
+.results-panel.results-mode-compact .deformation-result-layout { min-height:0; }
+.results-panel.results-mode-compact .diagram-chart { padding:6px 14px 7px; }
+.results-panel.results-mode-compact .diagram-chart-heading { min-height:25px; }
+.results-panel.results-mode-compact .diagram-chart svg { height:96px; }
+.results-panel.results-mode-compact .results-metric-cards { margin:6px 14px 0; gap:5px; }
+.results-panel.results-mode-compact .results-metric-cards > div,
+.results-panel.results-mode-compact .results-metric-cards > button { min-height:40px; padding:5px 7px; gap:1px; }
+.results-panel.results-mode-compact .results-metric-cards strong { font-size:11px; }
+.results-panel.results-mode-expanded .diagram-result-layout,
+.results-panel.results-mode-expanded .deformation-result-layout { min-height:0; }
+.results-panel.results-mode-expanded .diagram-guidance { padding-block:9px; }
+.results-panel.results-mode-expanded .diagram-chart { padding-block:8px; }
+.results-panel.results-mode-expanded .diagram-chart svg { height:140px; }
 .result-tabs { height:60px; flex-basis:60px; align-items:stretch; gap:10px; padding-inline:16px; }
 .result-tab-family { flex:0 0 auto; display:grid; grid-template-rows:17px minmax(0,1fr); align-items:stretch; border-right:1px solid var(--border-soft); padding:3px 10px 0 0; }
 .result-tab-family:last-child { border-right:0; padding-right:0; }

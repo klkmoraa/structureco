@@ -1,6 +1,6 @@
 # StructureCo Total Visual Redesign
 
-**Classification:** CANONICAL
+**Clasificación:** `CANONICAL`
 
 ## Product intent
 

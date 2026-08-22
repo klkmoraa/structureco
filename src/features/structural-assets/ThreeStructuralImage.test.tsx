@@ -1,11 +1,16 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ThreeStructuralImage } from './ThreeStructuralImage';
+import { resolveStructuralAssetUrl, ThreeStructuralImage } from './ThreeStructuralImage';
 
 afterEach(cleanup);
 
 describe('ThreeStructuralImage', () => {
+  it('resolves the generated asset under a nested Sites app base', () => {
+    expect(resolveStructuralAssetUrl('portal:two-story', 'day', '/app/')).toBe('/app/assets/structural/day/portal/two-story.png');
+    expect(resolveStructuralAssetUrl('portal:two-story', 'night', './')).toBe('./assets/structural/night/portal/two-story.png');
+  });
+
   it('selects the generated transparent render for the active theme', () => {
     const { container, rerender } = render(<ThreeStructuralImage assetId="portal:two-story" theme="light" alt="Pórtico de dos niveles" eager />);
     expect(container.querySelector('img')?.getAttribute('src')).toBe('/assets/structural/day/portal/two-story.png');

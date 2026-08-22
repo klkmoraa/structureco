@@ -80,6 +80,9 @@ Estos documentos describen trabajo propuesto o en curso y no prueban implementac
 - [Plan Clay de Top Bar · Fase 6](superpowers/plans/2026-08-21-clay-topbar-phase-6.md) — `AUDIT/TEMPORARY`.
 - [Diseño Clay de Inicio/Home · Fase 7](superpowers/specs/2026-08-21-clay-home-phase-7-design.md) — `AUDIT/TEMPORARY`.
 - [Plan Clay de Inicio/Home · Fase 7](superpowers/plans/2026-08-21-clay-home-phase-7.md) — `AUDIT/TEMPORARY`.
+- [Especificación del rediseño visual total](superpowers/specs/2026-08-22-structureco-total-visual-redesign.md) — `CANONICAL`.
+- [Plan del rediseño visual total](superpowers/plans/2026-08-22-structureco-total-visual-redesign.md) — `AUDIT/TEMPORARY`.
+- [Plan de assets y superficies móviles para Sites](superpowers/plans/2026-08-22-sites-assets-mobile-inspector.md) — `AUDIT/TEMPORARY`.
 
 ## Dónde vive cada autoridad
 

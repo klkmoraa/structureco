@@ -7,6 +7,7 @@ import {
   Minus,
   MoveDown,
   MousePointer2,
+  Pencil,
   Plus,
   RotateCcw,
   Sigma,
@@ -39,6 +40,7 @@ import { MaterialPresetSelector } from './MaterialPresetSelector';
 import { formatInspectorValue } from './numericFormatting';
 import { SectionPresetSelector } from './SectionPresetSelector';
 import { SectionViewer2D } from './SectionViewer2D';
+import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import {
   InspectorAdvancedProperties,
   InspectorDerivedList,
@@ -265,11 +267,17 @@ export const InspectorProperties = () => {
     return draft;
   });
 
-  const deleteLoad = (kind: 'nodal' | 'member', id: string) => updateProject((draft) => {
-    if (kind === 'nodal') draft.nodalLoads = draft.nodalLoads.filter((load) => load.id !== id);
-    else draft.memberLoads = draft.memberLoads.filter((load) => load.id !== id);
-    return draft;
-  });
+  const deleteSelection = () => {
+    if (!selection) return;
+    if (selection.kind === 'member') void executeProjectCommand({ kind: 'member.delete', description: `Eliminar miembro ${selection.id}`, memberId: selection.id });
+    else if (selection.kind === 'node') void executeProjectCommand({ kind: 'node.delete', description: 'Eliminar nodo', nodeId: selection.id });
+    else if (selection.kind === 'multi') void executeProjectCommand({ kind: 'selection.delete', description: 'Eliminar selección', selection });
+    else if (selection.kind === 'nodalLoad') updateProject((draft) => ({ ...draft, nodalLoads: draft.nodalLoads.filter((load) => load.id !== selection.id) }));
+    else updateProject((draft) => ({ ...draft, memberLoads: draft.memberLoads.filter((load) => load.id !== selection.id) }));
+    setSelection(null);
+  };
+
+  const canEditSelection = selection !== null && ['node', 'member', 'multi'].includes(selection.kind);
 
   const updatePrescribed = (id: string, key: keyof PrescribedDisplacement, value: string | number) => updateProject((draft) => {
     const item = (draft.prescribedDisplacements ?? []).find((candidate) => candidate.id === id);
@@ -484,6 +492,13 @@ export const InspectorProperties = () => {
       <InspectorHelper>{t('inspector.emptyPropertiesHelp')}</InspectorHelper>
     </div> : null}
 
+    {canEditSelection ? <div className="inspector-selection-actions" aria-label={t('contextualActions.title')}>
+      <button type="button" className="inspector-selection-edit" onClick={() => emitWorkspaceCommand('open-structural-edit')}>
+        <Pencil size={15} aria-hidden="true" />
+        <span>{t('contextualActions.structuralEdit')}</span>
+      </button>
+    </div> : null}
+
     {selection?.kind === 'multi' ? <>
       <InspectorPropertyGroup title={t('inspector.selectionSummary')} mode="derived" description={t('inspector.multipleSelectionDescription')}>
         <InspectorDerivedList rows={[
@@ -599,7 +614,6 @@ export const InspectorProperties = () => {
         <InspectorLockedState title={t('inspector.modelRelationship')}>{t('inspector.modelRelationshipBody')}</InspectorLockedState>
       </InspectorAdvancedProperties>
       <InspectorIssues issues={selectedIssues} />
-      <button type="button" className="danger-button" onClick={() => deleteLoad('nodal', selectedNodalLoad.id)}><Trash2 size={15} /> {t('inspector.deleteLoad')}</button>
     </> : null}
 
     {selectedMemberLoad ? <>
@@ -636,7 +650,13 @@ export const InspectorProperties = () => {
         </InspectorPropertyGroup>
       </InspectorAdvancedProperties>
       <InspectorIssues issues={selectedIssues} />
-      <button type="button" className="danger-button" onClick={() => deleteLoad('member', selectedMemberLoad.id)}><Trash2 size={15} /> {t('inspector.deleteLoad')}</button>
     </> : null}
+
+    {selection ? <div className="inspector-selection-danger">
+      <button type="button" className="danger-button" onClick={deleteSelection}>
+        <Trash2 size={15} aria-hidden="true" />
+        <span>{t('inspector.deleteSelection')}</span>
+      </button>
+    </div> : null}
   </div>;
 };

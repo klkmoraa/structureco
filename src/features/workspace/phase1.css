@@ -62,12 +62,18 @@
 .command-palette-backdrop--sheet .command-palette { width:100%; max-height:min(88dvh,720px); border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; pointer-events:auto; }
 
 @media (max-width:1023px) {
+  .inspector-panel[data-surface-presentation='sheet']::before { display:none; }
   .inspector-panel[data-mobile-detent='compact'] { height:min(35dvh,320px); }
   .inspector-panel[data-mobile-detent='medium'] { height:min(55dvh,540px); }
   .inspector-panel[data-mobile-detent='large'] { height:min(85dvh,780px,calc(var(--sc-visual-viewport-height,100dvh) - 8px)); }
-  .inspector-detent-control { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:3px; flex:0 0 auto; margin:14px max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left)); padding:3px; border-radius:10px; background:var(--surface-2); }
-  .inspector-detent-control button { min-height:36px; border:0; border-radius:7px; background:transparent; color:var(--muted); font-size:10px; }
-  .inspector-detent-control button[aria-pressed='true'] { background:var(--sc-color-surface-inset); color:var(--accent); font-weight:700; box-shadow:var(--sc-shadow-clay-pressed); }
+  .inspector-sheet-controls { display:flex; align-items:center; justify-content:space-between; flex:0 0 auto; min-height:46px; padding:4px max(10px,env(safe-area-inset-right)) 0 max(10px,env(safe-area-inset-left)); }
+  .inspector-sheet-handle { display:grid; place-items:center; width:52px; height:34px; padding:0; border:1px solid var(--border-soft); border-radius:var(--sc-radius-pill); background:var(--surface-2); color:var(--muted); box-shadow:var(--sc-shadow-clay-xs); cursor:pointer; }
+  .inspector-sheet-handle:hover { color:var(--text); box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1px); }
+  .inspector-sheet-handle:active { box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
+  .inspector-sheet-handle:focus-visible { outline:none; box-shadow:var(--sc-shadow-clay-xs),var(--sc-ring-focus); }
+  .inspector-sheet-controls .mobile-inspector-close { display:grid!important; place-items:center; width:36px; height:36px; align-self:center; border-radius:9px; color:var(--muted); }
+  .inspector-sheet-controls .mobile-inspector-close:hover { background:var(--surface-2); color:var(--text); }
+  .inspector-sheet-controls .mobile-inspector-close::after { display:none; }
   .results-mobile-focus { display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; }
   .results-mobile-commandbar { display:flex; }
 }
@@ -82,7 +88,7 @@
 }
 
 @media (min-width:701px) {
-  .inspector-detent-control { display:none; }
+  .inspector-sheet-controls { display:none; }
 }
 
 @media (prefers-reduced-motion:reduce) {
@@ -225,7 +231,83 @@
 
 .app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-collapse-toggle:active {
   box-shadow:var(--sc-shadow-clay-pressed);
-  transform:translateY(1px) scale(.96);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-position-toggle {
+  width:34px;
+  min-width:34px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  margin-left:3px;
+  padding:0;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:12px;
+  background:var(--sc-color-surface-elevated);
+  color:var(--sc-color-text-secondary);
+  box-shadow:var(--sc-shadow-clay-xs);
+  cursor:pointer;
+  transition:transform 220ms cubic-bezier(.2,.85,.24,1.18),box-shadow 180ms var(--sc-ease-standard),color 180ms var(--sc-ease-standard);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-position-toggle:hover,
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-position-toggle:focus-visible {
+  color:var(--accent);
+  box-shadow:var(--sc-shadow-clay-sm);
+  transform:translateY(-2px);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .dock-position-toggle:active {
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail-surface-launcher .sc-tool-button__copy {
+  display:none;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail-surface-launcher .sc-popover__trigger {
+  grid-template-columns:1fr;
+  justify-items:center;
+}
+
+/* El dock puede vivir en el borde izquierdo cuando el borde inferior compite
+   con resultados. Sólo cambia la composición del chrome; el canvas y sus
+   coordenadas permanecen intactos. */
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock {
+  top:50%;
+  right:auto;
+  bottom:auto;
+  left:12px;
+  transform:translateY(-50%);
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .desktop-tool-list {
+  flex-direction:column;
+  align-items:stretch;
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .dock-group {
+  padding:4px 0;
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .dock-group + .dock-group {
+  border-top:1px solid var(--sc-color-border-soft);
+  border-left:0;
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .dock-collapse-toggle,
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .dock-position-toggle {
+  width:42px;
+  min-width:42px;
+  height:34px;
+  min-height:34px;
+  margin:3px 0 0;
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .dock-position-toggle {
+  margin-top:3px;
 }
 
 .app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock.is-dock-collapsed {
@@ -279,6 +361,18 @@
   box-shadow:var(--sc-shadow-clay-xs);
   font-size:10px;
   text-align:center;
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail-surface-launcher__menu .tool-rail-surface-launcher__close {
+  grid-column:1/-1;
+  min-height:32px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  padding:0 8px;
+  color:var(--muted);
+  font-size:10px;
 }
 
 .app-shell[data-shell-class='X2'] .results-panel .results-quantity-bar {

@@ -14,6 +14,8 @@ import {
   MoreHorizontal,
   MoveDiagonal2,
   PanelsTopLeft,
+  PanelBottom,
+  PanelLeft,
   RotateCcw,
   Ruler,
   Search,
@@ -21,6 +23,7 @@ import {
   Scissors,
   Sigma,
   ChartNoAxesColumnIncreasing,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
@@ -38,6 +41,7 @@ import {
 } from './toolRegistry';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { useShellComposition } from '../workspace/useShellComposition';
+import type { ToolDockPosition } from '../workspace/useWorkspaceLayoutPreferences';
 import { Popover } from '../../design-system/components/overlays';
 
 const toolIcons: Record<Tool, LucideIcon> = {
@@ -264,9 +268,31 @@ const WorkspacePanelsLauncher = ({ compact }: { compact: boolean }) => {
             data-workspace-surface-command={action.command}
           ><Icon size={18} strokeWidth={1.8} /><span>{t(action.labelKey)}</span></button>;
         })}
+        <button type="button" className="tool-rail-surface-launcher__close" role="menuitem" onClick={() => setOpen(false)}>
+          <X size={16} aria-hidden="true" /><span>{t('toolbar.closePanels')}</span>
+        </button>
       </div>
     </Popover>
   </div>;
+};
+
+const DockPositionToggle = ({
+  position,
+  onChange,
+}: {
+  position: ToolDockPosition;
+  onChange?: (position: ToolDockPosition) => void;
+}) => {
+  const { t } = useI18n();
+  if (!onChange) return null;
+  const left = position === 'left';
+  const label = left ? 'toolbar.dockMoveBottom' : 'toolbar.dockMoveLeft';
+  const Icon = left ? PanelBottom : PanelLeft;
+  return <RailTooltip id="tool-rail-tip-dock-position" content={t(label)} placement="top">
+    <button type="button" className="dock-position-toggle" aria-label={t(label)} onClick={() => onChange(left ? 'bottom' : 'left')}>
+      <Icon size={18} aria-hidden="true" />
+    </button>
+  </RailTooltip>;
 };
 
 const MobileWorkspaceSurfaceButton = ({
@@ -321,7 +347,10 @@ const setAppShellMobileInert = (inert: boolean) => {
  * paleta táctil — sin booleano de compatibilidad que un llamador pueda pasar
  * por su cuenta.
  */
-export const ToolRail = () => {
+export const ToolRail = ({ dockPosition = 'bottom', onDockPositionChange }: {
+  dockPosition?: ToolDockPosition;
+  onDockPositionChange?: (position: ToolDockPosition) => void;
+}) => {
   const { activeTool, setActiveTool, project, selection } = useProject();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [mobileMenu, setMobileMenu] = useState<'loads' | 'more' | 'workspace' | null>(null);
@@ -663,6 +692,7 @@ export const ToolRail = () => {
             aria-expanded={!desktopDockCollapsed}
             onClick={() => setDesktopDockCollapsed((collapsed) => !collapsed)}
           ><PanelsTopLeft size={18} aria-hidden="true" /></button> : null}
+          {shellClass === 'X2' ? <DockPositionToggle position={dockPosition} onChange={onDockPositionChange} /> : null}
           {classroom ? <button
             className="tool-button tool-more desktop-advanced-toggle"
             aria-label={showAdvanced ? t('toolbar.hideAdvanced') : t('toolbar.showAdvanced')}

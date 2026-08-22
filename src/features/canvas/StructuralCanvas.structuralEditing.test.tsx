@@ -7,6 +7,7 @@ import { ProjectProvider, useProject } from '../../store/ProjectContext';
 import type { Selection } from '../../types';
 import { createEditorLayerState } from './editorLayers';
 import { StructuralCanvas } from './StructuralCanvas';
+import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 
 class ResizeObserverMock {
   observe() {}
@@ -54,8 +55,15 @@ const renderCanvas = () => render(<ProjectProvider><Harness /></ProjectProvider>
 const model = () => JSON.parse(screen.getByLabelText('project-model').textContent ?? '{}') as ReturnType<typeof createDefaultProject>;
 const openStructuralEdit = async (user: ReturnType<typeof userEvent.setup>, selectionButton: string) => {
   await user.click(screen.getByText(selectionButton));
-  await user.click(screen.getByRole('button', { name: /abrir editor estructural/i }));
-  return screen.getByRole('region', { name: /edición estructural/i });
+  const expectedSelection = selectionButton === 'select-three-nodes'
+    ? 'N1'
+    : selectionButton.replace('select-', '"').concat('"');
+  await waitFor(() => expect(screen.getByLabelText('selection-model').textContent).toContain(expectedSelection));
+  // La barra contextual fue retirada del canvas: la edición se abre desde el
+  // Inspector/ToolRail en producto, y el contrato de comando sigue siendo la
+  // ruta agnóstica de superficie para esta prueba del núcleo del canvas.
+  emitWorkspaceCommand('open-structural-edit');
+  return screen.findByRole('region', { name: /edición estructural/i });
 };
 const chooseOperation = async (user: ReturnType<typeof userEvent.setup>, surface: HTMLElement, name: RegExp) => {
   await user.click(within(surface).getByRole('radio', { name }));

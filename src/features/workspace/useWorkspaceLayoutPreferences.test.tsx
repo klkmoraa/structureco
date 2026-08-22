@@ -14,8 +14,10 @@ const Harness = () => {
   const { preferences, setPreference, togglePreference } = useWorkspaceLayoutPreferences();
   return <>
     <button onClick={() => togglePreference('fullCanvas')}>{preferences.fullCanvas ? 'full' : 'standard'}</button>
+    <button onClick={() => togglePreference('inspectorCollapsed')}>{preferences.inspectorCollapsed ? 'closed' : 'open'}</button>
     <button onClick={() => setPreference('inspectorWidth', MAX_INSPECTOR_WIDTH + 100)}>Ancho {preferences.inspectorWidth}</button>
     <button onClick={() => setPreference('inspectorDetent', 'large')}>Altura {preferences.inspectorDetent}</button>
+    <button onClick={() => setPreference('toolDockPosition', 'left')}>Dock {preferences.toolDockPosition}</button>
   </>;
 };
 
@@ -23,6 +25,24 @@ beforeEach(() => localStorage.clear());
 afterEach(cleanup);
 
 describe('useWorkspaceLayoutPreferences', () => {
+  it('starts the Inspector closed for a fresh workspace', () => {
+    render(<Harness />);
+    expect(screen.getByRole('button', { name: 'closed' })).toBeTruthy();
+  });
+
+  it('migrates the old always-open Inspector preference without discarding other layout choices', () => {
+    localStorage.setItem('structureco:workspace-layout:v1', JSON.stringify({ inspectorCollapsed: false, fullCanvas: true }));
+    render(<Harness />);
+    expect(screen.getByRole('button', { name: 'closed' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'full' })).toBeTruthy();
+  });
+
+  it('honors an explicit closed/open choice saved in the current layout version', () => {
+    localStorage.setItem(WORKSPACE_LAYOUT_STORAGE_KEY, JSON.stringify({ inspectorCollapsed: false }));
+    render(<Harness />);
+    expect(screen.getByRole('button', { name: 'open' })).toBeTruthy();
+  });
+
   it('falls back safely when storage is invalid', () => {
     localStorage.setItem(WORKSPACE_LAYOUT_STORAGE_KEY, '{invalid');
     render(<Harness />);
@@ -88,5 +108,14 @@ describe('useWorkspaceLayoutPreferences', () => {
     expect(normalizeInspectorDetent('large', { width: 390, height: 844 })).toBe('large');
     expect(normalizeInspectorDetent('large', { width: 844, height: 390 })).toBe('medium');
     expect(normalizeInspectorDetent('medium', { width: 320, height: 300 })).toBe('compact');
+  });
+
+  it('defaults the dock below and persists the explicit left position', async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    expect(screen.getByRole('button', { name: 'Dock bottom' })).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Dock bottom' }));
+    expect(screen.getByRole('button', { name: 'Dock left' })).toBeTruthy();
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(WORKSPACE_LAYOUT_STORAGE_KEY) ?? '{}')).toMatchObject({ toolDockPosition: 'left' }));
   });
 });

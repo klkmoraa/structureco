@@ -271,7 +271,7 @@ describe('Inspector selection variants', () => {
     expect(screen.getByRole('option', { name: 'Distributed' })).toBeTruthy();
     expect(screen.getByRole('group', { name: 'Coordinate system' })).toBeTruthy();
     expectDescribedUnit(screen.getByRole('textbox', { name: 'From' }), 'x/L');
-    expect(screen.getByRole('button', { name: 'Delete load' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Delete selection' })).toBeTruthy();
   });
 
   it('distinguishes a free node from a support and exposes units plus calculated values', async () => {
@@ -852,7 +852,7 @@ describe('Inspector advanced, locked, and validation states', () => {
     renderInspector(createInspectorProject(), { modal: true, onClose });
 
     expect(screen.getByRole('dialog', { name: 'Inspector' }).hasAttribute('aria-modal')).toBe(false);
-    const last = screen.getByRole('button', { name: 'Cerrar inspector' });
+    const last = screen.getByRole('tab', { name: 'Vista' });
     last.focus();
     await user.tab();
     expect(document.activeElement).toBe(document.body);
@@ -860,17 +860,15 @@ describe('Inspector advanced, locked, and validation states', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it('exposes three mutually exclusive phone heights without mutating the model', async () => {
+  it('keeps the phone height control compact and cycles it without mutating the model', async () => {
     const user = userEvent.setup();
     const onMobileDetentChange = vi.fn();
     renderInspector(createInspectorProject(), { modal: true, mobileDetent: 'medium', onMobileDetentChange });
 
-    const group = screen.getByRole('group', { name: 'Altura del Inspector' });
-    expect(within(group).getByRole('button', { name: 'Compacta' }).getAttribute('aria-pressed')).toBe('false');
-    expect(within(group).getByRole('button', { name: 'Media' }).getAttribute('aria-pressed')).toBe('true');
-    expect(within(group).getByRole('button', { name: 'Casi completa' }).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.queryByRole('group', { name: 'Altura del Inspector' })).toBeNull();
+    const handle = screen.getByRole('button', { name: 'Altura del Inspector: Media' });
 
-    await user.click(within(group).getByRole('button', { name: 'Casi completa' }));
+    await user.click(handle);
     expect(onMobileDetentChange).toHaveBeenCalledWith('large');
     expect(screen.getByLabelText('Puede deshacer').textContent).toBe('false');
   });

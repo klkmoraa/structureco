@@ -12,9 +12,14 @@ interface ThreeStructuralImageProps {
   eager?: boolean;
 }
 
-const imageSource = (assetId: ThreeStructuralAssetId, theme: StructuralRenderTheme) => {
+export const resolveStructuralAssetUrl = (
+  assetId: ThreeStructuralAssetId,
+  theme: StructuralRenderTheme,
+  baseUrl = import.meta.env.BASE_URL,
+) => {
   const [family, variant] = assetId.split(':');
-  return `/assets/structural/${theme}/${family}/${variant}.png`;
+  const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  return `${base}assets/structural/${theme}/${family}/${variant}.png`;
 };
 
 export function ThreeStructuralImage({ assetId, theme, alt = '', className = '', eager = false }: ThreeStructuralImageProps) {
@@ -31,7 +36,7 @@ export function ThreeStructuralImage({ assetId, theme, alt = '', className = '',
     height="600"
     loading={eager ? 'eager' : 'lazy'}
     onError={() => setFailed(true)}
-    src={imageSource(assetId, theme === 'dark' ? 'night' : 'day')}
+    src={resolveStructuralAssetUrl(assetId, theme === 'dark' ? 'night' : 'day')}
     width="900"
   />;
 }
