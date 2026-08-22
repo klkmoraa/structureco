@@ -6,24 +6,24 @@ import { describe, expect, it } from 'vitest';
 const fontsCss = readFileSync(new URL('./fonts.css', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const tokensCss = readFileSync(new URL('./tokens.css', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 
-describe('Clay identity typography', () => {
-  it('self-hosts the editorial, interface and technical families', () => {
-    expect(fontsCss).toContain("font-family: 'DM Serif Display'");
-    expect(fontsCss).toContain("url('/fonts/dm-serif-display-latin-400.woff2')");
-    expect(fontsCss).toContain("font-family: 'Manrope'");
-    expect(fontsCss).toContain("url('/fonts/manrope-latin-variable.woff2')");
-    expect(fontsCss).toContain("font-family: 'JetBrains Mono'");
-    expect(fontsCss).toContain("url('/fonts/jetbrains-mono-latin-variable.woff2')");
-    expect(fontsCss).toContain("url('/fonts/jetbrains-mono-greek-variable.woff2')");
-    expect(fontsCss.match(/font-display:\s*swap/g)).toHaveLength(4);
+describe('Total-redesign typography', () => {
+  it('self-hosts the interface and technical variable families', () => {
+    expect(fontsCss).toContain("font-family: 'Instrument Sans'");
+    expect(fontsCss).toContain("url('/fonts/instrument-sans-variable.woff2')");
+    expect(fontsCss).toContain("font-family: 'Geist Mono'");
+    expect(fontsCss).toContain("url('/fonts/geist-mono-variable.woff2')");
+    expect(fontsCss.match(/font-display:\s*swap/g)).toHaveLength(2);
+    expect(fontsCss).not.toMatch(/https?:\/\//);
   });
 
   it('assigns one family to each semantic reading role', () => {
-    expect(tokensCss).toMatch(/--sc-font-display:\s*"DM Serif Display", Georgia, serif;/);
-    expect(tokensCss).toMatch(/--sc-font-ui:\s*"Manrope", ui-sans-serif, system-ui, sans-serif;/);
-    expect(tokensCss).toMatch(/--sc-font-mono:\s*"JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;/);
-    expect(fontsCss).not.toContain('IBM Plex');
-    expect(tokensCss).not.toContain('"IBM Plex');
+    expect(tokensCss).toMatch(/--sc-font-display:\s*"Instrument Sans", ui-sans-serif, system-ui, sans-serif;/);
+    expect(tokensCss).toMatch(/--sc-font-ui:\s*"Instrument Sans", ui-sans-serif, system-ui, sans-serif;/);
+    expect(tokensCss).toMatch(/--sc-font-mono:\s*"Geist Mono", ui-monospace, "Cascadia Mono", monospace;/);
+    for (const superseded of ['IBM Plex', 'DM Serif Display', 'Manrope', 'JetBrains Mono']) {
+      expect(fontsCss).not.toContain(superseded);
+      expect(tokensCss).not.toContain(`"${superseded}`);
+    }
   });
 
   it('does not ship the superseded IBM Plex webfont bundle', () => {
