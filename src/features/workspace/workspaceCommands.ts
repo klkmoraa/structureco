@@ -29,6 +29,10 @@ export interface WorkspaceCommands {
   'fit-canvas': void;
   /** Request the Results surface; the presentation broker chooses its placement. */
   'open-results': void;
+  /** Open analysis cases, combinations and setup without selecting a placement tool. */
+  'open-analysis-setup': void;
+  /** Open canvas visibility and display settings. */
+  'open-view-settings': void;
   /**
    * Invoke the dense results surface (reactions, influence, "Entender") on a
    * given view. It is never resident, so the launcher travels with the element

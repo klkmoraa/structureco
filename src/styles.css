@@ -3544,17 +3544,10 @@ button:not(:disabled):active,.selection-card:active {
   .inspector-panel.mobile-open { border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
 }
 
-/* El rail del mockup conserva etiqueta e icono en escritorio. El dock físico
-   compacto sigue reservado al breakpoint móvil, sin desplazar Results de su
-   posición debajo del canvas. */
+/* M1 usa el token compacto resuelto por el shell. No se vuelve a reservar el
+   ancho X2: hacerlo deja una columna muerta aunque React ya pinte icon-only. */
 @media (min-width:1024px) and (max-width:1439px) {
-  :root { --toolbar-w:var(--sc-layout-rail); }
-  .toolbar { padding:10px 9px; gap:4px; }
-  .tool-button { grid-template-columns:32px minmax(0,1fr) auto; justify-items:stretch; min-height:52px; padding:0 9px; }
-  .tool-button > span:not(.sc-tool-button__icon),
-  .selection-tip span { display:inline; }
-  .tool-button kbd { display:block; }
-  .selection-tip { justify-content:flex-start; }
+  :root { --toolbar-w:var(--sc-layout-rail-compact); }
 }
 
 /* Noche según el brandbook: los controles neutros son petróleo, no negro

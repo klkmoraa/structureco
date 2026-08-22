@@ -279,6 +279,7 @@ export const StructuralCanvas = ({
   const surfaceBroker = useContext(SurfacePresentationContext);
   const candidatePickerSurface = surfaceBroker?.stateFor('candidatePicker');
   const contextualActionsSurface = surfaceBroker?.stateFor('contextualActions');
+  const generatorSurface = surfaceBroker?.stateFor('generator');
   const openContextualActionsSurface = surfaceBroker?.openSurface;
   const closeContextualActionsSurface = surfaceBroker?.closeSurface;
   const hostRef = useRef<HTMLDivElement>(null);
@@ -307,7 +308,8 @@ export const StructuralCanvas = ({
    * —el ghost y su ancla— y quién está pidiendo un punto; los parámetros viven
    * en la superficie, que es la única que sabe traducirlos.
    */
-  const [generatorOpen, setGeneratorOpen] = useState(false);
+  const [standaloneGeneratorOpen, setStandaloneGeneratorOpen] = useState(false);
+  const generatorOpen = generatorSurface?.open ?? standaloneGeneratorOpen;
   const [generatorGhost, setGeneratorGhost] = useState<StructureGenerationGhost | null>(null);
   const [generatorOrigin, setGeneratorOrigin] = useState<{ x: number; y: number } | null>(null);
   const [generatorOriginPicking, setGeneratorOriginPicking] = useState(false);
@@ -1133,12 +1135,13 @@ export const StructuralCanvas = ({
   const resolveGeneratorOriginPick = useCallback(() => setGeneratorPickedOrigin(null), []);
 
   const closeGenerator = useCallback(() => {
-    setGeneratorOpen(false);
+    if (surfaceBroker) surfaceBroker.closeSurface('generator');
+    else setStandaloneGeneratorOpen(false);
     setGeneratorGhost(null);
     setGeneratorOrigin(null);
     setGeneratorOriginPicking(false);
     generatorOriginPickingRef.current = false;
-  }, []);
+  }, [surfaceBroker]);
 
   const startPending = useCallback((event: ReactPointerEvent, target: StructuralTarget, candidates: CandidateTarget[] = []) => {
     const anchor = localScreenPoint(event.clientX, event.clientY);
@@ -1802,7 +1805,10 @@ export const StructuralCanvas = ({
   }, [activateRepeat, copyStructuralSelection, deleteSelection, pasteStructuralSelection, startDuplicate]);
 
   useEffect(() => onWorkspaceCommand('open-structural-edit', () => startStructuralEdit('move')), [startStructuralEdit]);
-  useEffect(() => onWorkspaceCommand('open-structure-generator', () => setGeneratorOpen(true)), []);
+  useEffect(() => onWorkspaceCommand('open-structure-generator', () => {
+    if (surfaceBroker) surfaceBroker.openSurface('generator');
+    else setStandaloneGeneratorOpen(true);
+  }), [surfaceBroker]);
 
   const changeStructuralEditOperation = useCallback((kind: StructuralEditKind) => {
     setStructuralEditDraft((current) => current ? changeStructuralEditKind(project, current, kind) : current);
@@ -2545,6 +2551,8 @@ export const StructuralCanvas = ({
       </form> : null}
 
       {generatorOpen ? <Suspense fallback={null}><LazyStructureGeneratorSurface
+        presentation={generatorSurface?.presentation ?? 'floating'}
+        status={generatorSurface?.status ?? 'active'}
         pickedOrigin={generatorPickedOrigin}
         originPicking={generatorOriginPicking}
         onToggleOriginPick={toggleGeneratorOriginPick}

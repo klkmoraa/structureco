@@ -18,6 +18,7 @@ export const BROKER_SURFACE_IDS = [
   'analysisSetup',
   'view',
   'results',
+  'generator',
   /**
    * `dense` es la superficie invocada de los datos densos de Results
    * —reacciones, influencia y «Entender» (CRI-101)—. No es residente en
@@ -43,6 +44,7 @@ export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Re
     analysisSetup: 'dock',
     view: 'dock',
     results: 'dock',
+    generator: 'floating',
     dense: 'drawer',
     datasheet: 'drawer',
     doctor: 'drawer',
@@ -55,6 +57,7 @@ export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Re
     analysisSetup: 'inset',
     view: 'inset',
     results: 'inset',
+    generator: 'inset',
     dense: 'drawer',
     datasheet: 'drawer',
     doctor: 'drawer',
@@ -67,6 +70,7 @@ export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Re
     analysisSetup: 'sheet',
     view: 'sheet',
     results: 'sheet',
+    generator: 'sheet',
     dense: 'fullscreen',
     datasheet: 'fullscreen',
     doctor: 'fullscreen',
@@ -106,6 +110,7 @@ export const SURFACE_ACTIVITY_CLASS: Readonly<Record<SurfaceId, SurfaceActivityC
   analysisSetup: 'layer',
   view: 'layer',
   results: 'layer',
+  generator: 'tool',
   dense: 'tool',
   datasheet: 'tool',
   doctor: 'tool',
@@ -236,6 +241,7 @@ export const resolveSurfaceActivity = (
   const compactWinner = shellClass === 'K0'
     ? latest(open.filter(occupiesContextualSlot), state)
     : undefined;
+  const mediumGeneratorActive = shellClass === 'M1' && state.surfaces.generator.open;
   const canvasReachable = !compactWinner || state.surfaces[compactWinner].extent === 'peek';
   const modalWinner = latest(open.filter((surface) => (
     isModalPresentation(resolveSurfacePresentation(shellClass, surface))
@@ -247,6 +253,9 @@ export const resolveSurfaceActivity = (
     let status: SurfaceStatus = 'active';
     if (!intent.open) status = 'closed';
     else if (!occupiesContextualSlot(surface)) status = canvasReachable ? 'active' : 'suspended';
+    else if (mediumGeneratorActive
+      && surface !== 'generator'
+      && ['detail', 'analysisSetup', 'view', 'results'].includes(surface)) status = 'suspended';
     else if (compactWinner && compactWinner !== surface) status = 'suspended';
     else if (isModalPresentation(presentation) && modalWinner !== surface) status = 'suspended';
     return [surface, { ...intent, presentation, status }];

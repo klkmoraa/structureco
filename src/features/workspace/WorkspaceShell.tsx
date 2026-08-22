@@ -89,6 +89,8 @@ const WorkspaceBrokerContent = ({
       onWorkspaceCommand('open-model-doctor', () => openSurface('doctor')),
       onWorkspaceCommand('open-datasheet', () => openSurface('datasheet')),
       onWorkspaceCommand('open-results', () => openSurface('results')),
+      onWorkspaceCommand('open-analysis-setup', () => openSurface('analysisSetup')),
+      onWorkspaceCommand('open-view-settings', () => openSurface('view')),
       /* `dense` es invocada: el lanzador viaja en el propio comando para que el
          broker sepa a dónde devolver el foco al cerrar.
          `influence` es además el único de los tres cuya lectura vive también
@@ -108,7 +110,7 @@ const WorkspaceBrokerContent = ({
 
   useEffect(() => {
     setModelDoctorAcknowledgedIds(new Set());
-    (['dense', 'datasheet', 'doctor', 'palette'] as const).forEach((surface) => closeSurface(surface));
+    (['generator', 'dense', 'datasheet', 'doctor', 'palette'] as const).forEach((surface) => closeSurface(surface));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
@@ -313,13 +315,6 @@ const WorkspaceBrokerContent = ({
     </div>}
     floatingActions={<div className="workspace-surface-launcher">
       <button className="mobile-inspector-toggle" onClick={(event) => openSurface('detail', event.currentTarget)} aria-label={t('inspector.open')} aria-expanded={detail.status === 'active'} aria-controls="workspace-detail"><SlidersHorizontal size={20} /></button>
-      <button type="button" onClick={(event) => openSurface('analysisSetup', event.currentTarget)} aria-label={t('inspector.loadsTab')}>{t('inspector.loadsTab')}</button>
-      <button type="button" onClick={(event) => openSurface('view', event.currentTarget)} aria-label={t('inspector.viewTab')}>{t('inspector.viewTab')}</button>
-      {/* Results ya no es residente en ninguna clase (CRI-100): estado y
-          fiabilidad viven siempre en el TopBar, N/V/M/deformada/mapa como capas
-          del lienzo; este lanzador abre el panel sólo para lo que sigue siendo
-          denso (resumen, reacciones, influencia, aprender). */}
-      <button type="button" onClick={(event) => openSurface('results', event.currentTarget)} aria-label={t('results.outputs')}>{t('results.outputs')}</button>
     </div>}
     footer={<div className="professional-note">{t('app.professionalNote')}</div>}
   />;

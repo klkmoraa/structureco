@@ -7,6 +7,7 @@ import {
   Delete,
   GitCommitHorizontal,
   Grid3x3,
+  Layers3,
   Hand,
   Move,
   MousePointer2,
@@ -15,8 +16,10 @@ import {
   RotateCcw,
   Ruler,
   Search,
+  SlidersHorizontal,
   Scissors,
   Sigma,
+  ChartNoAxesColumnIncreasing,
   type LucideIcon,
 } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -204,6 +207,52 @@ const MobileCommandPaletteButton = ({ label, accessibleLabel, onOpen }: { label:
   <kbd>Ctrl K</kbd>
 </button>;
 
+type WorkspaceSurfaceCommand = 'open-analysis-setup' | 'open-view-settings' | 'open-results';
+
+const WORKSPACE_SURFACE_ACTIONS: readonly {
+  command: WorkspaceSurfaceCommand;
+  labelKey: 'inspector.analysisSetupLauncher' | 'inspector.viewTab' | 'results.outputs';
+  icon: LucideIcon;
+}[] = [
+  { command: 'open-analysis-setup', labelKey: 'inspector.analysisSetupLauncher', icon: SlidersHorizontal },
+  { command: 'open-view-settings', labelKey: 'inspector.viewTab', icon: Layers3 },
+  { command: 'open-results', labelKey: 'results.outputs', icon: ChartNoAxesColumnIncreasing },
+];
+
+const WorkspaceSurfaceButton = ({
+  label,
+  icon: Icon,
+  compact,
+  command,
+}: {
+  label: string;
+  icon: LucideIcon;
+  compact: boolean;
+  command: WorkspaceSurfaceCommand;
+}) => <EditorToolButton
+  className={`tool-button tool-workspace-surface tool-workspace-surface--${command}${compact ? ' is-compact' : ''}`}
+  label={label}
+  icon={<Icon size={22} strokeWidth={1.8} />}
+  tone="navigation"
+  compact={compact}
+  onClick={() => emitWorkspaceCommand(command)}
+  data-workspace-surface-command={command}
+/>;
+
+const MobileWorkspaceSurfaceButton = ({
+  label,
+  icon: Icon,
+  onOpen,
+}: {
+  label: string;
+  icon: LucideIcon;
+  onOpen: () => void;
+}) => <button className="mobile-palette-tool tool-workspace-surface" type="button" role="menuitem" aria-label={label} onClick={onOpen}>
+  <span className="mobile-palette-icon" aria-hidden="true"><Icon size={23} strokeWidth={1.8} /></span>
+  <span className="mobile-palette-copy"><strong>{label}</strong></span>
+  <ChevronRight size={19} aria-hidden="true" />
+</button>;
+
 /** The portal sheet owns inertness; restore it synchronously when it closes. */
 const setAppShellMobileInert = (inert: boolean) => {
   const background = document.querySelector<HTMLElement>('.app-shell');
@@ -268,6 +317,11 @@ export const ToolRail = () => {
   const openStructureGeneratorFromMobile = () => {
     closeMobileMenu(false);
     window.requestAnimationFrame(() => emitWorkspaceCommand('open-structure-generator'));
+  };
+
+  const openWorkspaceSurfaceFromMobile = (command: WorkspaceSurfaceCommand) => {
+    closeMobileMenu(false);
+    window.requestAnimationFrame(() => emitWorkspaceCommand(command));
   };
 
   const closeMobileMenu = (restoreFocus = true) => {
@@ -368,6 +422,12 @@ export const ToolRail = () => {
             onSelect={selectTool}
           />)}
           {group.id === 'navigate' ? <MobileCommandPaletteButton label={t('palette.openShort')} accessibleLabel={t('palette.open')} onOpen={openCommandPaletteFromMobile} /> : null}
+          {group.id === 'navigate' ? WORKSPACE_SURFACE_ACTIONS.map((action) => <MobileWorkspaceSurfaceButton
+            key={action.command}
+            label={t(action.labelKey)}
+            icon={action.icon}
+            onOpen={() => openWorkspaceSurfaceFromMobile(action.command)}
+          />) : null}
           {group.id === 'create' ? <button
             className="mobile-palette-tool tool-structure-generator"
             type="button"
@@ -424,6 +484,18 @@ export const ToolRail = () => {
                 {group.id === 'navigate' ? <RailTooltip id="tool-rail-tip-command-palette" content={`${t('palette.open')} (Ctrl K)`}>
                   <CommandPaletteButton label={t('palette.openShort')} accessibleLabel={t('palette.open')} compact={compact} aria-describedby="tool-rail-tip-command-palette" />
                 </RailTooltip> : null}
+                {group.id === 'navigate' ? WORKSPACE_SURFACE_ACTIONS.map((action) => <RailTooltip
+                  key={action.command}
+                  id={`tool-rail-tip-${action.command}`}
+                  content={t(action.labelKey)}
+                >
+                  <WorkspaceSurfaceButton
+                    label={t(action.labelKey)}
+                    icon={action.icon}
+                    compact={compact}
+                    command={action.command}
+                  />
+                </RailTooltip>) : null}
                 {group.id === 'create' ? <RailTooltip id="tool-rail-tip-generator" content={t('generator.launcher')}>
                   <EditorToolButton
                     className={`tool-button tool-structure-generator${compact ? ' is-compact' : ''}`}

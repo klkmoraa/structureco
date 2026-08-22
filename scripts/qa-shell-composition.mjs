@@ -30,8 +30,8 @@ const baseURL = 'http://127.0.0.1:4187/';
 
 const browser = await chromium.launch({
   headless: true,
-  channel: process.env.PLAYWRIGHT_CHANNEL ?? undefined,
-  executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH ?? '/opt/pw-browsers/chromium',
+  channel: process.env.PLAYWRIGHT_CHANNEL ?? 'chrome',
+  executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH,
 });
 
 /**
@@ -85,6 +85,7 @@ const readShellState = (page) => page.evaluate(() => {
     toolRailCompact: shell?.dataset.toolRailCompact ?? null,
     densityRow: getComputedStyle(shell).getPropertyValue('--sc-density-row').trim(),
     railDataAttr: rail?.dataset.toolRail ?? null,
+    railWidth: rail ? Math.round(rail.getBoundingClientRect().width) : null,
     cellHeight: cell ? Math.round(cell.getBoundingClientRect().height) : null,
     canvasArea: (() => {
       const stage = document.querySelector('.center-stage');
@@ -154,6 +155,9 @@ for (const testCase of CLASS_CASES) {
     check(`densidad heredada por la tabla densa ${testCase.label}`, state.denseRowHeight.inheritedDensity === testCase.density, state.denseRowHeight);
   }
   check(`riel ${testCase.label}`, (state.toolRailCompact === 'true') === (testCase.expected !== 'X2'), { toolRailCompact: state.toolRailCompact });
+  if (testCase.expected === 'M1') {
+    check(`riel M1 ocupa sólo su token compacto ${testCase.label}`, state.railWidth !== null && state.railWidth <= 80, { railWidth: state.railWidth });
+  }
   // Cero overflow horizontal en ninguna clase.
   const overflow = state.docScrollWidth - state.innerWidth;
   report.overflow.push({ label: testCase.label, overflowPx: overflow });

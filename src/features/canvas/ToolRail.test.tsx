@@ -45,7 +45,7 @@ describe('ToolRail mobile action sheets', () => {
     expect(container.querySelector('[data-tool-rail="compact"]')).toBeTruthy();
     // Trece herramientas del registro más «Generar estructura», que no es una
     // herramienta de lienzo pero sí una acción de creación con su mismo botón.
-    expect(container.querySelectorAll('.desktop-tool-list .sc-tool-button.is-compact')).toHaveLength(14);
+    expect(container.querySelectorAll('.desktop-tool-list .sc-tool-button.is-compact')).toHaveLength(17);
     expect(container.querySelector('[data-tool-id="pointLoad"]')?.getAttribute('aria-keyshortcuts')).toBe('P');
     expect(container.querySelector('[data-tool-id="delete"]')?.getAttribute('aria-keyshortcuts')).toBe('Delete Backspace');
   });
@@ -53,7 +53,7 @@ describe('ToolRail mobile action sheets', () => {
   it('groups every desktop tool by intention without losing actions', () => {
     renderToolRail();
 
-    expect(within(screen.getByRole('group', { name: /navegar/i })).getAllByRole('button')).toHaveLength(3);
+    expect(within(screen.getByRole('group', { name: /navegar/i })).getAllByRole('button')).toHaveLength(6);
     // Nudo, barra y apoyo, más el generador de estructuras.
     expect(within(screen.getByRole('group', { name: /^crear$/i })).getAllByRole('button')).toHaveLength(4);
     expect(within(screen.getByRole('group', { name: /^cargas$/i })).getAllByRole('button')).toHaveLength(3);
@@ -74,6 +74,50 @@ describe('ToolRail mobile action sheets', () => {
     await user.click(commandSearch);
 
     expect(openPalette).toHaveBeenCalledOnce();
+    unsubscribe();
+  });
+
+  it('moves Cargas de análisis, Vista and Resultados into the Clay navigation rail', async () => {
+    const user = userEvent.setup();
+    const openAnalysisSetup = vi.fn();
+    const openView = vi.fn();
+    const openResults = vi.fn();
+    const unsubscribes = [
+      onWorkspaceCommand('open-analysis-setup', openAnalysisSetup),
+      onWorkspaceCommand('open-view-settings', openView),
+      onWorkspaceCommand('open-results', openResults),
+    ];
+    renderToolRail('X2');
+
+    const navigate = screen.getByRole('group', { name: /navegar/i });
+    await user.click(within(navigate).getByRole('button', { name: /cargas de análisis/i }));
+    await user.click(within(navigate).getByRole('button', { name: /^vista$/i }));
+    await user.click(within(navigate).getByRole('button', { name: /^resultados$/i }));
+
+    expect(openAnalysisSetup).toHaveBeenCalledOnce();
+    expect(openView).toHaveBeenCalledOnce();
+    expect(openResults).toHaveBeenCalledOnce();
+    unsubscribes.forEach((unsubscribe) => unsubscribe());
+  });
+
+  it('reaches workspace surfaces from Más in K0 without native floating buttons', async () => {
+    const user = userEvent.setup();
+    const openView = vi.fn();
+    const unsubscribe = onWorkspaceCommand('open-view-settings', openView);
+    render(
+      <ShellCompositionContext.Provider value={{ shellClass: 'K0', phone: true }}>
+        <ProjectProvider><div className="app-shell"><ToolRail /></div></ProjectProvider>
+      </ShellCompositionContext.Provider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: /más herramientas/i }));
+    const menu = screen.getByRole('menu', { name: /más herramientas/i });
+    expect(within(menu).getByRole('menuitem', { name: /cargas de análisis/i })).toBeTruthy();
+    expect(within(menu).getByRole('menuitem', { name: /^resultados$/i })).toBeTruthy();
+    await user.click(within(menu).getByRole('menuitem', { name: /^vista$/i }));
+
+    await waitFor(() => expect(openView).toHaveBeenCalledOnce());
+    expect(document.querySelector('.mobile-tool-palette-more')).toBeNull();
     unsubscribe();
   });
 

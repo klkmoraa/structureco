@@ -9,6 +9,7 @@ import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import { serializeNumber } from '../../utils/numberFormat';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
+import type { SurfacePresentation, SurfaceStatus } from '../workspace/surfacePresentation';
 import { StructureGeneratorPanel } from './StructureGeneratorPanel';
 import { createStructureGeneratorTranslator } from './structureGeneratorCopy';
 import {
@@ -46,6 +47,8 @@ export interface StructureGeneratorSurfaceProps {
   onOriginChange?: (origin: { readonly x: number; readonly y: number } | null) => void;
   onClose: () => void;
   className?: string;
+  presentation?: SurfacePresentation;
+  status?: SurfaceStatus;
 }
 
 interface PreparationState {
@@ -62,6 +65,8 @@ export const StructureGeneratorSurface = ({
   onOriginChange,
   onClose,
   className,
+  presentation = 'floating',
+  status = 'active',
 }: StructureGeneratorSurfaceProps) => {
   const { project, executePreparedStructureGeneration } = useProjectModel();
   const { setSelection } = useWorkspaceUI();
@@ -170,6 +175,8 @@ export const StructureGeneratorSurface = ({
     onToggleOriginPick={onToggleOriginPick}
     onGenerate={generate}
     onCancel={onClose}
+    presentation={presentation}
+    status={status}
     {...(className ? { className } : {})}
   />;
 };
