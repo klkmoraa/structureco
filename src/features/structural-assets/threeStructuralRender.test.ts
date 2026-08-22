@@ -1,15 +1,43 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { buildThreeStructuralGroup, calculateOrthographicFrame, THREE_STRUCTURAL_ASSET_IDS } from './threeStructuralRender';
+import { STRUCTURAL_ASSET_REGISTRY } from './registry';
+import {
+  buildThreeStructuralGroup,
+  calculateOrthographicFrame,
+  isThreeStructuralAssetId,
+  THREE_STRUCTURAL_ASSET_IDS,
+} from './threeStructuralRender';
 import { buildThreeFamilyGroup, THREE_FAMILY_ASSET_IDS } from './threeFamilyAssets';
 
 describe('Three.js structural render framing', () => {
-  it('routes all forty registry IDs to editable Three.js groups', () => {
-    expect(THREE_STRUCTURAL_ASSET_IDS).toHaveLength(40);
-    expect(new Set(THREE_STRUCTURAL_ASSET_IDS)).toHaveLength(40);
+  it('derives the Three.js manifest from canonical registry ids and order', () => {
+    expect(THREE_STRUCTURAL_ASSET_IDS).toEqual(STRUCTURAL_ASSET_REGISTRY.map((asset) => asset.id));
+    expect(THREE_STRUCTURAL_ASSET_IDS.every(isThreeStructuralAssetId)).toBe(true);
+    expect(isThreeStructuralAssetId('unknown:asset')).toBe(false);
+  });
+
+  it('builds forty distinct editable scene signatures without cross-family collisions', () => {
+    const signatures = new Set<string>();
     for (const assetId of THREE_STRUCTURAL_ASSET_IDS) {
-      expect(buildThreeStructuralGroup(assetId, 'day').userData.assetId).toBe(assetId);
+      const group = buildThreeStructuralGroup(assetId, 'day');
+      expect(group).toBeInstanceOf(THREE.Group);
+      expect(group.userData.assetId).toBe(assetId);
+      const parts: string[] = [];
+      group.traverse((object) => {
+        if (!(object instanceof THREE.Mesh) && !(object instanceof THREE.Line) && !(object instanceof THREE.LineSegments)) return;
+        expect(object.geometry, assetId).toBeInstanceOf(THREE.BufferGeometry);
+        parts.push([
+          object.type,
+          object.geometry.type,
+          object.position.toArray().map((value) => value.toFixed(3)).join(','),
+          object.quaternion.toArray().map((value) => value.toFixed(3)).join(','),
+          object.scale.toArray().map((value) => value.toFixed(3)).join(','),
+        ].join(':'));
+      });
+      expect(parts.length, assetId).toBeGreaterThan(3);
+      signatures.add(parts.join('|'));
     }
+    expect(signatures).toHaveLength(40);
   });
 
   it('keeps every family asset inside a padded 3:2 orthographic frame', () => {

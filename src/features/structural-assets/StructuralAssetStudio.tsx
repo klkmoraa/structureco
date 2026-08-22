@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { STRUCTURAL_ASSET_REGISTRY } from './registry';
 import { ThreeStructuralImage } from './ThreeStructuralImage';
-import type { ThreeStructuralAssetId } from './threeStructuralRender';
+import { isThreeStructuralAssetId } from './threeStructuralRender';
 import type { StructuralAssetFamily } from './types';
 import './structuralAssetStudio.css';
 
@@ -25,7 +25,10 @@ export function StructuralAssetStudio() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const groups = useMemo(() => families.map((family) => ({
     family,
-    assets: STRUCTURAL_ASSET_REGISTRY.filter((asset) => asset.family === family),
+    assets: STRUCTURAL_ASSET_REGISTRY.filter((asset) => asset.family === family).map((asset) => {
+      if (!isThreeStructuralAssetId(asset.id)) throw new Error(`Atlas asset is missing its Three.js scene: ${asset.id}`);
+      return { asset, assetId: asset.id };
+    }),
   })), []);
 
   return <main className="asset-studio" data-theme={theme} data-testid="structural-asset-studio">
@@ -45,8 +48,8 @@ export function StructuralAssetStudio() {
       {groups.map(({ family, assets }) => <section key={family} className="asset-studio__family" data-asset-family={family} aria-labelledby={`asset-family-${family}`}>
         <header><h2 id={`asset-family-${family}`}>{FAMILY_LABELS[family]}</h2><span>{assets.length} variantes</span></header>
         <div className="asset-studio__grid">
-          {assets.map((asset) => <article key={asset.id} className="asset-studio__card" data-asset-card={asset.id}>
-            <div className="asset-studio__canvas"><ThreeStructuralImage assetId={asset.id as ThreeStructuralAssetId} theme={theme} alt={asset.label} /></div>
+          {assets.map(({ asset, assetId }) => <article key={asset.id} className="asset-studio__card" data-asset-card={asset.id}>
+            <div className="asset-studio__canvas"><ThreeStructuralImage assetId={assetId} theme={theme} alt={asset.label} /></div>
             <div className="asset-studio__meta"><strong>{asset.label}</strong><code>{asset.id}</code><span>{asset.material}</span></div>
           </article>)}
         </div>

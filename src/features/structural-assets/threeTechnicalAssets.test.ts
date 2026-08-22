@@ -4,6 +4,11 @@ import {
   THREE_TECHNICAL_ASSET_IDS,
   buildThreeTechnicalGroup,
 } from './threeTechnicalAssets';
+import {
+  buildThreeStructuralGroup,
+  THREE_STRUCTURAL_ASSET_IDS,
+  validateThreeStructuralGroup,
+} from './threeStructuralRender';
 
 const EXPECTED_IDS = [
   'space-frame:single-module', 'space-frame:multi-bay', 'space-frame:two-story', 'space-frame:industrial-shed',
@@ -62,24 +67,39 @@ describe('Three.js technical structural scenes', () => {
     expect(new Set(signatures)).toHaveLength(20);
   });
 
-  it('uses only matte texture-free materials with no decorative plane backgrounds', () => {
+  it('rejects unsupported mesh material classes', () => {
+    const group = new THREE.Group();
+    group.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial()));
+    expect(() => validateThreeStructuralGroup(group, 'invalid:test')).toThrow(/MeshStandardMaterial/);
+  });
+
+  it('uses only opaque matte texture-free standard materials across all forty scenes', () => {
+    const textureSlots = [
+      'map', 'alphaMap', 'aoMap', 'bumpMap', 'displacementMap', 'emissiveMap', 'envMap',
+      'lightMap', 'metalnessMap', 'normalMap', 'roughnessMap',
+    ] as const;
     for (const theme of ['day', 'night'] as const) {
-      for (const assetId of THREE_TECHNICAL_ASSET_IDS) {
-        const group = buildThreeTechnicalGroup(assetId, theme);
+      for (const assetId of THREE_STRUCTURAL_ASSET_IDS) {
+        const group = buildThreeStructuralGroup(assetId, theme);
+        expect(() => validateThreeStructuralGroup(group, assetId)).not.toThrow();
         group.traverse((object) => {
           if (!(object instanceof THREE.Mesh)) return;
           expect(object.geometry.type, `${assetId} background plane`).not.toBe('PlaneGeometry');
           const materials = Array.isArray(object.material) ? object.material : [object.material];
           for (const material of materials) {
-            if (!(material instanceof THREE.MeshStandardMaterial)) continue;
-            expect(material.map, assetId).toBeNull();
-            expect(material.emissiveMap, assetId).toBeNull();
+            expect(material, `${assetId} material class`).toBeInstanceOf(THREE.MeshStandardMaterial);
+            if (!(material instanceof THREE.MeshStandardMaterial)) throw new Error(`${assetId} uses unsupported mesh material`);
+            for (const slot of textureSlots) expect(material[slot], `${assetId} ${slot}`).toBeNull();
             expect(material.roughness, assetId).toBeGreaterThanOrEqual(0.78);
+            expect(material.transparent, assetId).toBe(false);
+            expect(material.opacity, assetId).toBe(1);
+            expect(material.depthWrite, assetId).toBe(true);
+            expect(material.emissive.getHex(), assetId).toBe(0x000000);
           }
         });
       }
     }
-  });
+  }, 15_000);
 
   it('keeps exact load colors identical in Day and Night', () => {
     const expected = new Map([

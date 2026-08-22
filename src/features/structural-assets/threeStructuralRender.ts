@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { STRUCTURAL_ASSET_REGISTRY } from './registry';
 import { buildThreeFamilyGroup, THREE_FAMILY_ASSET_IDS, type ThreeFamilyAssetId } from './threeFamilyAssets';
 import {
   buildPortalGroup,
@@ -14,11 +15,47 @@ import {
 } from './threeTechnicalAssets';
 
 export type ThreeStructuralAssetId = PortalAssetId | ThreeFamilyAssetId | ThreeTechnicalAssetId;
-export const THREE_STRUCTURAL_ASSET_IDS: readonly ThreeStructuralAssetId[] = [
+const implementedAssetIds: readonly ThreeStructuralAssetId[] = [
   ...THREE_PORTAL_ASSET_IDS,
   ...THREE_FAMILY_ASSET_IDS,
   ...THREE_TECHNICAL_ASSET_IDS,
 ];
+const implementedAssetIdSet = new Set<string>(implementedAssetIds);
+
+export const isThreeStructuralAssetId = (assetId: string): assetId is ThreeStructuralAssetId => implementedAssetIdSet.has(assetId);
+
+const registryAssetIds = STRUCTURAL_ASSET_REGISTRY.map((asset) => asset.id);
+if (implementedAssetIdSet.size !== registryAssetIds.length || registryAssetIds.some((assetId) => !isThreeStructuralAssetId(assetId))) {
+  throw new Error('Three.js structural manifest does not cover the canonical registry exactly');
+}
+export const THREE_STRUCTURAL_ASSET_IDS: readonly ThreeStructuralAssetId[] = Object.freeze(registryAssetIds.map((assetId) => {
+  if (!isThreeStructuralAssetId(assetId)) throw new Error(`Missing Three.js structural scene: ${assetId}`);
+  return assetId;
+}));
+
+const textureSlots = [
+  'map', 'alphaMap', 'aoMap', 'bumpMap', 'displacementMap', 'emissiveMap', 'envMap',
+  'lightMap', 'metalnessMap', 'normalMap', 'roughnessMap',
+] as const;
+
+export const validateThreeStructuralGroup = (group: THREE.Group, assetId: string) => {
+  if (!(group instanceof THREE.Group)) throw new Error(`${assetId} must be an editable THREE.Group`);
+  group.traverse((object) => {
+    if (!(object instanceof THREE.Mesh) && !(object instanceof THREE.Line) && !(object instanceof THREE.LineSegments)) return;
+    if (!(object.geometry instanceof THREE.BufferGeometry)) throw new Error(`${assetId} contains non-editable geometry`);
+    if (!(object instanceof THREE.Mesh)) return;
+    if (object.geometry.type === 'PlaneGeometry') throw new Error(`${assetId} contains a decorative background plane`);
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    for (const material of materials) {
+      if (!(material instanceof THREE.MeshStandardMaterial)) throw new Error(`${assetId} mesh material must be MeshStandardMaterial`);
+      for (const slot of textureSlots) if (material[slot] !== null) throw new Error(`${assetId} mesh material uses ${slot}`);
+      if (material.roughness < 0.78) throw new Error(`${assetId} mesh material is not matte`);
+      if (material.transparent || material.opacity !== 1 || !material.depthWrite) throw new Error(`${assetId} mesh material is glass-like`);
+      if (material.emissive.getHex() !== 0x000000) throw new Error(`${assetId} mesh material is emissive`);
+    }
+  });
+  return group;
+};
 
 export type OrthographicFrame = {
   left: number;
@@ -64,13 +101,16 @@ export const calculateOrthographicFrame = (
   };
 };
 
-export const buildThreeStructuralGroup = (assetId: ThreeStructuralAssetId, theme: StructuralRenderTheme) => (
-  assetId.startsWith('portal:')
-    ? buildPortalGroup(assetId as PortalAssetId, theme)
-    : THREE_FAMILY_ASSET_IDS.includes(assetId as ThreeFamilyAssetId)
-      ? buildThreeFamilyGroup(assetId as ThreeFamilyAssetId, theme)
-      : buildThreeTechnicalGroup(assetId as ThreeTechnicalAssetId, theme)
-);
+const includesAssetId = <T extends string>(ids: readonly T[], assetId: string): assetId is T => ids.some((candidate) => candidate === assetId);
+
+export const buildThreeStructuralGroup = (assetId: ThreeStructuralAssetId, theme: StructuralRenderTheme) => {
+  const group = includesAssetId(THREE_PORTAL_ASSET_IDS, assetId)
+    ? buildPortalGroup(assetId, theme)
+    : includesAssetId(THREE_FAMILY_ASSET_IDS, assetId)
+      ? buildThreeFamilyGroup(assetId, theme)
+      : buildThreeTechnicalGroup(assetId, theme);
+  return validateThreeStructuralGroup(group, assetId);
+};
 
 export const renderThreeStructuralAssetDataUrl = async (
   assetId: ThreeStructuralAssetId,

@@ -79,3 +79,55 @@ Se inspeccionaron las 20 escenas nuevas en ambos temas a escala de tarjeta. No s
 ## Pendiente / siguiente paso
 
 Task 1C queda lista para revisión independiente. No se tocó solver, dominio, persistencia, comandos, import/export, canvas real ni el archivo ajeno `reports/evidence/2026-08-21-clay-mobile-density-phase-5/full-test.log`. No se hizo push.
+
+## Fix round 1/5 · hallazgos Important
+
+La primera revisión independiente detectó cinco contratos que estaban incompletos aunque la salida visual era correcta. Esta ronda los cierra sin modificar escenas, colores ni geometría:
+
+1. **Transparencia real:** el gate ahora descomprime `IDAT`, revierte los filtros PNG 0–4 y exige al menos un píxel con alfa menor que 255. Una imagen RGBA completamente opaca ya no pasa por tener solamente color type 6.
+2. **Contrato global de 40 escenas:** una prueba recorre todos los IDs canónicos, exige `THREE.Group`, `BufferGeometry`, más de tres objetos editables y 40 firmas distintas, incluidas colisiones potenciales entre familias antiguas y nuevas.
+3. **Autoridad del registro:** `THREE_STRUCTURAL_ASSET_IDS` se deriva en el orden de `STRUCTURAL_ASSET_REGISTRY`; una guarda runtime comprueba cobertura exacta. El atlas dejó de usar un cast y valida cada ID mediante el mismo type guard.
+4. **Generación transaccional:** los 80 renders se escriben en un directorio hermano temporal con nombre controlado. Sólo después de validar conteo, estructura, resolución y transparencia se publica el bundle; una validación fallida conserva el bundle completo anterior. El reemplazo sólo acepta el destino exacto `public/assets/structural`, y el mensaje de éxito se emite únicamente después de publicar.
+5. **Materiales honestos:** el validador de producción y la prueba Día/Noche rechazan clases distintas de `MeshStandardMaterial`, texturas en once slots, planos decorativos, rugosidad menor a `0.78`, transparencia/opacidad de vidrio, `depthWrite` desactivado y emisión distinta de negro. La cobertura incluye las 40 escenas.
+
+### TDD RED
+
+```powershell
+node --test scripts/structural-png-contract.test.mjs scripts/structural-asset-bundle.test.mjs
+```
+
+Resultado esperado observado: exit 1; faltaba `structural-asset-bundle.mjs` y no existía `hasTransparentPixels` (1 PASS, 3 FAIL).
+
+```powershell
+npm.cmd test -- src/features/structural-assets/threeStructuralRender.test.ts src/features/structural-assets/threeTechnicalAssets.test.ts --reporter=verbose
+```
+
+Resultado esperado observado: exit 1; faltaban `isThreeStructuralAssetId` y `validateThreeStructuralGroup` (5 PASS, 3 FAIL). La prueba de caracterización global sí confirmó que las 40 firmas existentes ya eran distintas.
+
+### GREEN y gates frescos
+
+- `node --test scripts/structural-png-contract.test.mjs scripts/structural-asset-bundle.test.mjs` — PASS, 6/6.
+- `npm.cmd test -- src/features/structural-assets/threeStructuralRender.test.ts src/features/structural-assets/threeTechnicalAssets.test.ts --reporter=verbose` — PASS, 8/8. El test exhaustivo de 80 grupos usa un timeout focal explícito de 15 s; no se cambió el timeout global.
+- `node scripts/generate-three-portal-assets.mjs` — PASS, `Generated 80 validated transparent Three.js structural renders`.
+- `npm.cmd run verify:structural-assets` — PASS, 6/6 más 80 PNG; 40 Día + 40 Noche, 900×600 y píxeles transparentes reales.
+- `npm.cmd test -- src/features/structural-assets --reporter=verbose` — PASS, 8 archivos y 35/35 pruebas.
+- `npm.cmd run typecheck` — PASS.
+- `npm.cmd run lint` — exit 0; conserva 13 warnings preexistentes fuera del alcance.
+- `npm.cmd run verify:protected` — PASS, 38 archivos protegidos intactos.
+- `npm.cmd run build` — PASS; conserva el warning conocido por chunks mayores a 500 kB.
+- `node scripts/qa-structural-assets.mjs` — PASS; 40 imágenes Three.js únicas por tema, 0 fallback SVG, 0 canvas/filtros y 0 overflow.
+
+### Evidencia visual de la ronda
+
+Se inspeccionaron nuevamente a escala de miniatura las 20 escenas nuevas en Día y Noche mediante:
+
+- `reports/evidence/2026-08-22-three-structural-assets/family-space-frame-{light,dark}.png`
+- `reports/evidence/2026-08-22-three-structural-assets/family-support-{light,dark}.png`
+- `reports/evidence/2026-08-22-three-structural-assets/family-load-{light,dark}.png`
+- `reports/evidence/2026-08-22-three-structural-assets/family-section-{light,dark}.png`
+- `reports/evidence/2026-08-22-three-structural-assets/family-connection-{light,dark}.png`
+- `reports/evidence/2026-08-22-three-structural-assets/qa-summary.json`
+
+No se detectaron activos ambiguos. Los apoyos muestran mecanismos inequívocos; las secciones distinguen sólido, perfil I y caja hueca; las conexiones evidencian placa, pasador, base y empalme; los space frames cambian claramente de topología; y las cuatro cargas mantienen su color técnico exacto en ambos temas.
+
+El archivo foráneo `reports/evidence/2026-08-21-clay-mobile-density-phase-5/full-test.log` permanece sin tocar y fuera del staging. No se hizo push.
