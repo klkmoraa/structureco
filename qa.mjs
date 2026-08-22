@@ -55,7 +55,7 @@ async function disablePwaUpdateLifecycle(page) {
  * siguiente en "usuario recurrente" y la bienvenida ya no se pintaba. Borrar
  * la biblioteca antes de que arranque la app devuelve a cada página el estado
  * que sus checks describen. La ruta del usuario recurrente tiene su propia
- * evidencia en `reports/evidence/2026-08-19-cri-104/capture.mjs`.
+ * historial de QA disponible en Git.
  */
 async function startWithEmptyLibrary(page) {
   await page.addInitScript(() => {

@@ -44,7 +44,7 @@
 - Suite completa: 119 archivos, 811 aprobadas y 3 omitidas de 814.
 - Build: aprobado mediante `npm.cmd run verify`; rendimiento: medición registrada por `verify:perf` sin techo bloqueante.
 - Navegador real: 1440×900 y 390×844; claro/oscuro; español/inglés; poblado/vacío; controles de cámara; pérdida y reintento de WebGL.
-- Evidencia visual: `reports/evidence/2026-08-09-fase-4/`.
+- La evidencia visual histórica vive en Git; una verificación actual se obtiene ejecutando los gates correspondientes.
 - Alcance de accesibilidad: se comprobó DOM accesible, teclado, foco, touch y movimiento reducido; no se afirma compatibilidad con lector de pantalla no probado.
 
 ## Dependencias y orden

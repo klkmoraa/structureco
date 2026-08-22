@@ -266,5 +266,4 @@ npx tsc --noEmit -p tsconfig.app.json
 
 ## Historia
 
-- [Diseño de CRI-81](../superpowers/specs/2026-08-13-structural-datasheet-cri-81-design.md) — fase de auditoría; no prueba el estado actual.
-- [Diseño de CRI-82](../superpowers/specs/2026-08-14-datasheet-editor-cri-82-design.md) — fase de edición; no prueba el estado actual.
+- Las decisiones de fases anteriores viven en el historial de Git. El estado actual se verifica en el código, las pruebas y los gates vigentes.

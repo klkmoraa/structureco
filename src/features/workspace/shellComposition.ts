@@ -5,9 +5,8 @@
  * función pura de datos a datos — sin React, sin DOM, sin `matchMedia` — para
  * que sus fronteras y su histéresis se prueben con `vitest` sin navegador.
  *
- * POR QUÉ ES CREÍBLE: las constantes de chrome y las reglas CB-1..CB-6 son un
- * port literal de `reports/evidence/2026-08-15-cri-9-adaptive-architecture/
- * canvas-budget-model.mjs`, cuyo modelo reproduce las once mediciones reales de
+ * POR QUÉ ES CREÍBLE: las constantes de chrome y las reglas CB-1..CB-6 usan el
+ * modelo versionado `scripts/canvas-budget-model.mjs`, que reproduce once mediciones de
  * CRI-7 §2 con un error máximo de 0.24 puntos porcentuales. La frontera
  * Expanded↔Medium NO está escrita en ninguna parte: sale de CB, y este módulo
  * la recalcula (1042–1130 px según altura, ver `expandedBoundaryWidth`).

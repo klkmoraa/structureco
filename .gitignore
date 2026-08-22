@@ -1,6 +1,7 @@
 node_modules/
 dist/
 qa-artifacts/
+/reports/evidence/
 /output/
 tmp/
 __pycache__/
