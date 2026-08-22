@@ -99,6 +99,10 @@ const assertUniqueName = (library: readonly PersonalStudioPreset[], name: string
   }
 };
 
+const assertUsableId = (library: readonly PersonalStudioPreset[], id: string) => {
+  if (!id.trim() || library.some((preset) => preset.id === id)) throw new Error('El identificador del diseño debe ser único y no vacío.');
+};
+
 export const createPersonalPreset = (
   library: readonly PersonalStudioPreset[],
   factoryAssetId: string,
@@ -107,6 +111,7 @@ export const createPersonalPreset = (
 ) => {
   const normalizedName = normalizeName(name);
   assertUniqueName(library, normalizedName);
+  assertUsableId(library, id);
   if (!isThreeStructuralAssetId(factoryAssetId)) throw new Error('Activo estructural inválido.');
   return [...library, { kind: 'personal' as const, id, name: normalizedName, factoryAssetId, parameters: createFactoryStudioParameters(factoryAssetId) }];
 };
@@ -125,6 +130,7 @@ export const duplicatePersonalPreset = (library: readonly PersonalStudioPreset[]
   if (!source) return [...library];
   const normalizedName = normalizeName(name);
   assertUniqueName(library, normalizedName);
+  assertUsableId(library, duplicateId);
   return [...library, { ...source, id: duplicateId, name: normalizedName, parameters: { ...source.parameters } }];
 };
 
@@ -137,7 +143,7 @@ export const restorePersonalPreset = (library: readonly PersonalStudioPreset[], 
 const decodePreset = (raw: unknown): PersonalStudioPreset => {
   if (!raw || typeof raw !== 'object') throw new Error('Preset inválido');
   const value = raw as Record<string, unknown>;
-  if (typeof value.id !== 'string' || typeof value.name !== 'string' || !isThreeStructuralAssetId(String(value.factoryAssetId))) throw new Error('Preset inválido');
+  if (typeof value.id !== 'string' || !value.id.trim() || typeof value.name !== 'string' || !isThreeStructuralAssetId(String(value.factoryAssetId))) throw new Error('Preset inválido');
   if (!value.parameters || typeof value.parameters !== 'object') throw new Error('Parámetros inválidos');
   const parameters = value.parameters as Record<string, unknown>;
   if (!isThreeStructuralAssetId(String(parameters.assetId)) || ![parameters.widthScale, parameters.heightScale, parameters.depthScale].every((item) => typeof item === 'number')) throw new Error('Parámetros inválidos');
@@ -159,12 +165,18 @@ export const readPersonalPresetLibrary = (storage: Storage): PersonalStudioPrese
     if (!Array.isArray(payload.presets)) return [];
     const decoded = payload.presets.map(decodePreset);
     const names = new Set(decoded.map((preset) => preset.name.toLocaleLowerCase()));
-    return names.size === decoded.length ? decoded : [];
+    const ids = new Set(decoded.map((preset) => preset.id));
+    return names.size === decoded.length && ids.size === decoded.length ? decoded : [];
   } catch {
     return [];
   }
 };
 
 export const writePersonalPresetLibrary = (storage: Storage, library: readonly PersonalStudioPreset[]) => {
-  storage.setItem(STUDIO_PRESET_STORAGE_KEY, JSON.stringify({ schemaVersion: STUDIO_PRESET_SCHEMA_VERSION, presets: library }));
+  try {
+    storage.setItem(STUDIO_PRESET_STORAGE_KEY, JSON.stringify({ schemaVersion: STUDIO_PRESET_SCHEMA_VERSION, presets: library }));
+    return { ok: true as const };
+  } catch {
+    return { ok: false as const, reason: 'storage-unavailable' as const };
+  }
 };

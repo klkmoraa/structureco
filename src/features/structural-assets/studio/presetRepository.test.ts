@@ -72,4 +72,36 @@ describe('Illustration Studio preset boundary', () => {
     expect(JSON.parse(localStorage.getItem(STUDIO_PRESET_STORAGE_KEY)!)).toEqual({ schemaVersion: 1, presets: [] });
     expect(localStorage.getItem('structureCo.project')).toBe(project);
   });
+
+  it('rejects empty or duplicate personal ids on create, duplicate and recovery', () => {
+    const library = createPersonalPreset([], 'portal:single-bay', 'Modelo A', 'personal-1');
+    expect(() => createPersonalPreset(library, 'beam:two-span', 'Modelo B', '')).toThrow(/identificador/i);
+    expect(() => createPersonalPreset(library, 'beam:two-span', 'Modelo B', 'personal-1')).toThrow(/identificador/i);
+    expect(() => duplicatePersonalPreset(library, 'personal-1', 'Copia', '')).toThrow(/identificador/i);
+    expect(() => duplicatePersonalPreset(library, 'personal-1', 'Copia', 'personal-1')).toThrow(/identificador/i);
+
+    const preset = library[0];
+    localStorage.setItem(STUDIO_PRESET_STORAGE_KEY, JSON.stringify({ schemaVersion: 1, presets: [preset, { ...preset, name: 'Modelo B' }] }));
+    expect(readPersonalPresetLibrary(localStorage)).toEqual([]);
+    localStorage.setItem(STUDIO_PRESET_STORAGE_KEY, JSON.stringify({ schemaVersion: 1, presets: [{ ...preset, id: '' }] }));
+    expect(readPersonalPresetLibrary(localStorage)).toEqual([]);
+  });
+
+  it('keeps future and corrupt source strings untouched until a valid explicit mutation', () => {
+    for (const original of ['{corrupt', JSON.stringify({ schemaVersion: 9, presets: [{ future: true }] })]) {
+      localStorage.setItem(STUDIO_PRESET_STORAGE_KEY, original);
+      expect(readPersonalPresetLibrary(localStorage)).toEqual([]);
+      expect(localStorage.getItem(STUDIO_PRESET_STORAGE_KEY)).toBe(original);
+    }
+  });
+
+  it('returns a non-fatal write failure without touching project persistence', () => {
+    const project = '{"protected":"project"}';
+    const storage = {
+      getItem: (key: string) => key === 'structureCo.project' ? project : null,
+      setItem: () => { throw new DOMException('Quota exceeded', 'QuotaExceededError'); },
+    } as unknown as Storage;
+    expect(writePersonalPresetLibrary(storage, [])).toEqual({ ok: false, reason: 'storage-unavailable' });
+    expect(storage.getItem('structureCo.project')).toBe(project);
+  });
 });

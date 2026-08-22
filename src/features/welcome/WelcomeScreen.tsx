@@ -79,6 +79,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
   const [importCenterOpen, setImportCenterOpen] = useState(false);
   const [dxfImportOpen, setDxfImportOpen] = useState(false);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const homeRef = useRef<HTMLElement>(null);
   const settingsLauncherRef = useRef<HTMLButtonElement | null>(null);
   const entry = useWelcomeEntry();
   const heroId = useMemo(() => resolveSessionHeroId(HOME_HERO_IDS, window.sessionStorage), []);
@@ -101,6 +102,20 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
     return () => window.removeEventListener('keydown', closeMobileNavigation);
   }, [mobileNavOpen]);
 
+  useEffect(() => {
+    if (!settingsOpen || !homeRef.current) return undefined;
+    const home = homeRef.current;
+    const previousInert = home.inert;
+    const previousAriaHidden = home.getAttribute('aria-hidden');
+    home.inert = true;
+    home.setAttribute('aria-hidden', 'true');
+    return () => {
+      home.inert = previousInert;
+      if (previousAriaHidden === null) home.removeAttribute('aria-hidden');
+      else home.setAttribute('aria-hidden', previousAriaHidden);
+    };
+  }, [settingsOpen]);
+
   const openBlankProject = () => {
     const next = createBlankProject();
     replaceProject({ ...next, settings: { ...next.settings, language } });
@@ -116,7 +131,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
     setMobileNavOpen(false);
   };
   const openSettings = (launcher: HTMLButtonElement) => {
-    settingsLauncherRef.current = launcher;
+    settingsLauncherRef.current = launcher.closest('.sc-home-nav--mobile') ? mobileMenuButtonRef.current : launcher;
     setMobileNavOpen(false);
     setSettingsOpen(true);
   };
@@ -172,13 +187,12 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
           : view === 'import' ? <section className="sc-home-view"><header><p>{text.import}</p><h2>{text.importTitle}</h2><span>{text.importBody}</span></header><div className="sc-home-import-grid"><button type="button" className="welcome-import-card" onClick={() => setImportCenterOpen(true)}><Upload size={20} /><strong>{t('welcome.import')}</strong><span>{t('welcome.importDescription')}</span></button><Suspense fallback={null}><Phase2DxfAction open={dxfImportOpen} onOpenChange={setDxfImportOpen} onOpenWorkspace={onOpenWorkspace} /></Suspense></div></section>
             : <section className="sc-home-view sc-home-focused"><Box size={30} /><header><p>{text.space3d}</p><h2>{text.spaceTitle}</h2><span>{text.spaceBody}</span></header><button type="button" className="sc-home-continue" onClick={onOpenSpace3D}>{text.spaceAction}</button></section>;
 
-  return <main className="sc-home" data-testid="welcome-screen">
+  return <><main ref={homeRef} className="sc-home" data-testid="welcome-screen">
     <aside className="sc-home-sidebar"><div className="sc-home-wordmark"><BrandMark size={30} /><strong><span>structure</span>Co</strong></div>{renderNavigation()}<button type="button" className="sc-home-settings" onClick={(event) => openSettings(event.currentTarget)}><Settings size={19} /><span>{text.settings}</span></button></aside>
     <header className="sc-home-mobile-header"><div className="sc-home-wordmark"><BrandMark size={27} /><strong><span>structure</span>Co</strong></div><button ref={mobileMenuButtonRef} type="button" aria-label={mobileNavOpen ? text.closeMenu : text.menu} aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen((open) => !open)}><Menu size={20} /></button></header>
     {mobileNavOpen ? renderNavigation(true) : null}
     <div className="sc-home-main"><header className="sc-home-topline"><span>{text[view]}</span><div><label><span className="sr-only">{t('language.label')}</span><select value={language} onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, language: event.target.value as 'es' | 'en' } }))}><option value="es">ES</option><option value="en">EN</option></select></label><button type="button" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label={theme === 'light' ? t('theme.dark') : t('theme.light')}>{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</button></div></header><div className="sc-home-content">{content}</div></div>
-    {settingsOpen ? <IllustrationStudio language={language} initialTheme={theme} onClose={closeSettings} /> : null}
     {importCenterOpen ? <Suspense fallback={null}><PortableImportCenter open currentProjectName={project.name} onClose={() => setImportCenterOpen(false)} onSaveCurrent={() => exportProjectJson(project)} onImported={(outcome) => { replaceProject({ ...outcome.project, settings: { ...outcome.project.settings, language } }, outcome.restoredAnalysis); setImportCenterOpen(false); onOpenWorkspace(); }} /></Suspense> : null}
     <NewExerciseDialog open={exerciseDialogOpen} onClose={() => setExerciseDialogOpen(false)} onCreate={(next) => { replaceProject({ ...next, settings: { ...next.settings, language } }); setExerciseDialogOpen(false); onOpenWorkspace(); }} />
-  </main>;
+  </main>{settingsOpen ? <IllustrationStudio language={language} initialTheme={theme} onClose={closeSettings} /> : null}</>;
 };

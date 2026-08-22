@@ -1,6 +1,6 @@
 # Task 3 — Illustration Studio
 
-**Estado:** DONE
+**Estado:** READY FOR RE-REVIEW
 **Fecha:** 2026-08-22 03:57
 **Rama:** `codex/clay-workspace-phase-2`
 
@@ -58,3 +58,23 @@ RED real archivado en `task-3-red.txt`: 4 archivos fallaron por los tres módulo
 ## Concerns
 
 Sólo permanecen 13 warnings de lint preexistentes y el warning conocido de tamaño de chunk. No se hizo push.
+
+## Fix round 1 — revisión independiente
+
+La primera revisión independiente detectó 1 hallazgo crítico y 18 importantes. La ronda se corrigió con pruebas de regresión antes de tocar implementación:
+
+- móvil conserva selector, renombrar, duplicar, restaurar y borrar presets;
+- preview, SVG y PNG comparten cámara y encuadre 3:2;
+- el modal contiene el foco, bloquea la superficie de Home y devuelve el foco a un launcher montado;
+- renombrar ya no recorta cada pulsación y los errores de nombre/storage/export aparecen en la interfaz;
+- cambiar o restaurar diseños conserva Día/Noche;
+- payloads futuros no se reescriben al montar, e IDs vacíos/duplicados se rechazan;
+- exportar limpia renderer/canvas incluso al fallar y revoca la URL temporal del SVG;
+- los materiales de presentación no recolorean acentos técnicos;
+- Night eleva contraste de texto/bordes y el QA mide todos los controles y textos clave;
+- labels de canvas/familias están en español;
+- las pruebas comprueban encuadre, colores técnicos y ciclo móvil completo de presets;
+- Chromium y WebKit regeneraron ocho capturas con WebGL real, cero overflow, cero targets pequeños, cero fallos de contraste y consola limpia;
+- PNG 1×/2×/4× conserva alfa transparente real y SVG verifica composición, dimensiones y ausencia de fondo decorativo.
+
+Evidencia fresca del controlador: 4 archivos / 31 pruebas PASS, typecheck PASS, lint exit 0 con warnings preexistentes, frontera protegida 38/38 y `git diff --check` PASS. El estado queda listo para la segunda revisión independiente; no se hizo push.

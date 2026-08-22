@@ -125,5 +125,20 @@ describe('Home total redesign contract', () => {
     await user.click(within(mobileNavigation).getByRole('button', { name: 'Ajustes' }));
     expect(screen.getByRole('dialog', { name: 'Estudio de ilustraciones' })).toBeTruthy();
     expect(container.querySelector('.sc-home-nav--mobile')).toBeNull();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Estudio de ilustraciones' })).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Abrir navegación' }));
+  });
+
+  it('makes Home inert and aria-hidden while the Studio modal is open', async () => {
+    const user = userEvent.setup();
+    renderHome();
+    await user.click(screen.getByRole('button', { name: 'Ajustes' }));
+    const home = screen.getByTestId('welcome-screen');
+    expect(home.inert).toBe(true);
+    expect(home.getAttribute('aria-hidden')).toBe('true');
+    await user.keyboard('{Escape}');
+    expect(home.inert).toBeFalsy();
+    expect(home.hasAttribute('aria-hidden')).toBe(false);
   });
 });

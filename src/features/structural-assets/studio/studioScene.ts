@@ -6,6 +6,7 @@ import type { StudioParameters } from './presetRepository';
 import { normalizeStudioParameters } from './presetRepository';
 
 export type StudioExportScale = 1 | 2 | 4;
+export const STUDIO_PROJECTION_ASPECT = 1.5;
 
 const cameraDirections = {
   isometric: new THREE.Vector3(5.4, 4.1, 6.2),
@@ -21,6 +22,8 @@ const materialPalettes = {
   technical: { light: 0x007d61, dark: 0x007d61, metalness: .02 },
 } as const;
 
+const persistentTechnicalColors = new Set([0x007d61, 0x168a6c, 0x2f73c8, 0x65a323, 0xc65f86]);
+
 const applyMaterialPresentation = (group: THREE.Group, parameters: StudioParameters) => {
   if (parameters.material === 'factory') return;
   const palette = materialPalettes[parameters.material];
@@ -29,6 +32,7 @@ const applyMaterialPresentation = (group: THREE.Group, parameters: StudioParamet
     const originals = Array.isArray(object.material) ? object.material : [object.material];
     const replacements = originals.map((material) => {
       if (!(material instanceof THREE.MeshStandardMaterial)) return material;
+      if (persistentTechnicalColors.has(material.color.getHex())) return material;
       const replacement = material.clone();
       replacement.color.setHex(palette[parameters.previewTheme]);
       replacement.metalness = palette.metalness;
@@ -69,7 +73,7 @@ export const buildStudioScene = (input: StudioParameters): StudioSceneBundle => 
   const center = bounds.getCenter(new THREE.Vector3());
   const direction = cameraDirections[parameters.camera].clone();
   const padding = parameters.detail === 'hero' ? 1.08 : parameters.detail === 'card' ? 1.16 : 1.28;
-  const frame = calculateOrthographicFrame(bounds, 1.5, direction, padding);
+  const frame = calculateOrthographicFrame(bounds, STUDIO_PROJECTION_ASPECT, direction, padding);
   const camera = new THREE.OrthographicCamera(frame.left, frame.right, frame.top, frame.bottom, .1, 100);
   if (parameters.camera === 'top') camera.up.set(0, 0, -1);
   camera.position.copy(center).add(direction.normalize().multiplyScalar(10));
@@ -82,22 +86,33 @@ export const buildStudioScene = (input: StudioParameters): StudioSceneBundle => 
 
 export const disposeStudioScene = (bundle: StudioSceneBundle) => disposeThreeObject(bundle.scene);
 
+export const withStudioScene = <T>(parameters: StudioParameters, operation: (bundle: StudioSceneBundle) => T): T => {
+  const bundle = buildStudioScene(parameters);
+  try {
+    return operation(bundle);
+  } finally {
+    disposeStudioScene(bundle);
+  }
+};
+
 export const getStudioExportDimensions = (scale: StudioExportScale) => ({ width: 900 * scale, height: 600 * scale, alpha: true as const });
 
 export const serializeStudioSvg = (parameters: StudioParameters) => {
-  const bundle = buildStudioScene(parameters);
   const renderer = new SVGRenderer();
-  renderer.autoClear = false;
-  renderer.setQuality('high');
-  renderer.setSize(900, 600);
-  renderer.render(bundle.scene, bundle.camera);
-  const svg = renderer.domElement;
-  svg.removeAttribute('style');
-  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-  svg.setAttribute('data-structural-asset-id', bundle.parameters.assetId);
-  const markup = new XMLSerializer().serializeToString(svg);
-  disposeStudioScene(bundle);
-  return markup;
+  return withStudioScene(parameters, (bundle) => {
+    renderer.autoClear = false;
+    renderer.setQuality('high');
+    renderer.setSize(900, 600);
+    renderer.render(bundle.scene, bundle.camera);
+    const svg = renderer.domElement;
+    svg.removeAttribute('style');
+    svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    svg.setAttribute('data-structural-asset-id', bundle.parameters.assetId);
+    svg.setAttribute('data-studio-composition', '3:2');
+    svg.setAttribute('data-studio-camera', bundle.parameters.camera);
+    svg.setAttribute('data-studio-scales', `${bundle.parameters.widthScale},${bundle.parameters.heightScale},${bundle.parameters.depthScale}`);
+    return new XMLSerializer().serializeToString(svg);
+  });
 };
 
 export const renderStudioPng = async (parameters: StudioParameters, scale: StudioExportScale) => {
@@ -105,17 +120,20 @@ export const renderStudioPng = async (parameters: StudioParameters, scale: Studi
   const canvas = document.createElement('canvas');
   canvas.width = dimensions.width;
   canvas.height = dimensions.height;
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
-  renderer.setPixelRatio(1);
-  renderer.setSize(dimensions.width, dimensions.height, false);
-  renderer.setClearColor(0x000000, 0);
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  const bundle = buildStudioScene(parameters);
-  renderer.render(bundle.scene, bundle.camera);
-  const dataUrl = canvas.toDataURL('image/png');
-  disposeStudioScene(bundle);
-  renderer.dispose();
-  renderer.forceContextLoss();
-  return dataUrl;
+  let renderer: THREE.WebGLRenderer | undefined;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(1);
+    renderer.setSize(dimensions.width, dimensions.height, false);
+    renderer.setClearColor(0x000000, 0);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    return withStudioScene(parameters, (bundle) => {
+      renderer!.render(bundle.scene, bundle.camera);
+      return canvas.toDataURL('image/png');
+    });
+  } finally {
+    renderer?.dispose();
+    renderer?.forceContextLoss();
+  }
 };

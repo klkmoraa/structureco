@@ -1,7 +1,7 @@
 {
-  "phase": "illustration-studio",
+  "phase": "illustration-studio-fix-round-1",
   "engine": "webkit",
-  "generatedAt": "2026-08-22T09:53:43.327Z",
+  "generatedAt": "2026-08-22T11:33:46.077Z",
   "scenarios": [
     {
       "id": "desktop-day",
@@ -16,7 +16,12 @@
         "horizontalOverflow": 0,
         "smallTargets": [],
         "lowContrastControls": [],
+        "presetStorage": null,
         "personalPresets": 0,
+        "previewAspect": 1.5,
+        "canvasAspect": 1.496,
+        "previewTabOverlap": 0,
+        "projectionAspect": "1.5",
         "rootTheme": "light",
         "previewTheme": "light",
         "realWebgl": true,
@@ -38,7 +43,12 @@
         "horizontalOverflow": 0,
         "smallTargets": [],
         "lowContrastControls": [],
+        "presetStorage": null,
         "personalPresets": 0,
+        "previewAspect": 1.5,
+        "canvasAspect": 1.496,
+        "previewTabOverlap": 0,
+        "projectionAspect": "1.5",
         "rootTheme": "dark",
         "previewTheme": "dark",
         "realWebgl": true,
@@ -60,7 +70,12 @@
         "horizontalOverflow": 0,
         "smallTargets": [],
         "lowContrastControls": [],
+        "presetStorage": null,
         "personalPresets": 0,
+        "previewAspect": 1.5000633472697327,
+        "canvasAspect": 1.4919548967439504,
+        "previewTabOverlap": 0,
+        "projectionAspect": "1.5",
         "rootTheme": "light",
         "previewTheme": "light",
         "realWebgl": true,
@@ -82,7 +97,12 @@
         "horizontalOverflow": 0,
         "smallTargets": [],
         "lowContrastControls": [],
+        "presetStorage": null,
         "personalPresets": 0,
+        "previewAspect": 1.5000633472697327,
+        "canvasAspect": 1.4919548967439504,
+        "previewTabOverlap": 0,
+        "projectionAspect": "1.5",
         "rootTheme": "dark",
         "previewTheme": "dark",
         "realWebgl": true,
@@ -92,7 +112,69 @@
       "failures": []
     }
   ],
-  "exports": [],
-  "presetActions": null,
+  "exports": [
+    {
+      "png": [
+        {
+          "scale": 1,
+          "width": 900,
+          "height": 600,
+          "corners": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "transparentRatio": 0.7274277777777778
+        },
+        {
+          "scale": 2,
+          "width": 1800,
+          "height": 1200,
+          "corners": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "transparentRatio": 0.728337037037037
+        },
+        {
+          "scale": 4,
+          "width": 3600,
+          "height": 2400,
+          "corners": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "transparentRatio": 0.7291528935185185
+        }
+      ],
+      "svgSafe": true,
+      "svgSize": true,
+      "svgComposition": true,
+      "cameraAspect": 1.5,
+      "normalizedParameters": {
+        "assetId": "portal:two-story",
+        "widthScale": 1,
+        "heightScale": 1,
+        "depthScale": 1,
+        "material": "factory",
+        "camera": "isometric",
+        "detail": "hero",
+        "previewTheme": "light"
+      }
+    }
+  ],
+  "presetActions": {
+    "count": 0,
+    "selected": "",
+    "viewport": [
+      390,
+      844
+    ]
+  },
   "failures": []
 }

@@ -40,4 +40,6 @@ Resultados finales: 90/90 pruebas focales, typecheck PASS, lint exit 0 con 13 wa
 
 ## Pendiente / siguiente paso
 
-Nada pendiente dentro de Task 3. No se hizo push. Persisten únicamente warnings preexistentes y el warning conocido de chunk grande.
+La primera revisión independiente abrió 19 hallazgos (1 crítico y 18 importantes). La ronda de corrección ya está implementada y verificada: presets completos en móvil, foco modal, errores visibles, persistencia segura, tema conservado, cámara 3:2 compartida, exportación transaccional, acentos técnicos intactos, contraste Night y oráculos Chromium/WebKit más estrictos.
+
+Evidencia fresca: 31/31 pruebas de regresión, typecheck PASS, lint exit 0, frontera protegida 38/38, `git diff --check` PASS y ocho capturas regeneradas sin fallos de consola, overflow, tamaño táctil o contraste. Queda únicamente la re-revisión independiente de esta ronda antes de declarar Task 3 cerrada. No se hizo push.
