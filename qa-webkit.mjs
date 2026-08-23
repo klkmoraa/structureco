@@ -87,7 +87,7 @@ await nativePdf.attach(Buffer.from(JSON.stringify(nativePayload)), 'structureco-
 const nativePdfBuffer = Buffer.from(await nativePdf.save());
 
 const verifyWelcomeScroll = async (page) => {
-  const welcome = page.locator('.welcome-screen');
+  const welcome = page.locator('.sc-home');
   await welcome.waitFor({ state: 'visible' });
   const before = await welcome.evaluate((element) => ({
     clientHeight: element.clientHeight,
@@ -99,12 +99,13 @@ const verifyWelcomeScroll = async (page) => {
   const scrollTop = await welcome.evaluate((element) => element.scrollTop);
   const reachability = await welcome.evaluate((element) => {
     element.scrollTop = element.scrollHeight;
-    const footer = element.querySelector('.welcome-footer')?.getBoundingClientRect();
-    const steps = element.querySelector('.welcome-workflow')?.getBoundingClientRect();
+    const quickActions = element.querySelector('.sc-home-quick')?.getBoundingClientRect();
+    const recentProjectsElement = element.querySelector('.sc-home-recents');
+    const recentProjects = recentProjectsElement?.getBoundingClientRect();
     const fullyVisible = (rect) => Boolean(rect && rect.top >= -1 && rect.bottom <= window.innerHeight + 1);
     return {
-      footerReachable: fullyVisible(footer),
-      stepsReachable: fullyVisible(steps),
+      quickActionsReachable: fullyVisible(quickActions),
+      recentProjectsReachable: !recentProjectsElement || !recentProjects?.height || fullyVisible(recentProjects),
     };
   });
   return {
@@ -114,8 +115,19 @@ const verifyWelcomeScroll = async (page) => {
   };
 };
 
+const waitForWorkspaceStylesheet = async (page) => {
+  const preloadTrigger = page.locator('.sc-home-primary-actions');
+  if (await preloadTrigger.isVisible().catch(() => false)) await preloadTrigger.hover();
+  await page.waitForFunction(() => Array.from(document.styleSheets)
+    .some((sheet) => sheet.href?.includes('WorkspaceShell')), null, { timeout: 15_000 });
+};
+
 for (const deviceName of ['iPhone 13', 'iPad Pro 11']) {
   const context = await browser.newContext({ ...devices[deviceName], locale: 'es-MX' });
+  await context.addInitScript(() => {
+    localStorage.clear();
+    try { indexedDB.deleteDatabase('structureCo.projects'); } catch { /* noop */ }
+  });
   const page = await context.newPage();
   page.on('console', (message) => {
     if (message.type() === 'warning' && message.text().includes('preloaded using link preload')) return;
@@ -124,10 +136,11 @@ for (const deviceName of ['iPhone 13', 'iPad Pro 11']) {
   page.on('pageerror', (error) => results.errors.push(`${deviceName} page: ${String(error)}`));
   await page.goto(baseURL, { waitUntil: 'networkidle' });
   const title = await page.title();
+  await waitForWorkspaceStylesheet(page);
   const welcomeScroll = deviceName === 'iPhone 13' ? await verifyWelcomeScroll(page) : null;
-  if (welcomeScroll) await page.locator('.welcome-screen').evaluate((element) => { element.scrollTop = 0; });
-  await page.getByRole('button', { name: /Importar archivo/i }).click();
-  const dialog = page.getByRole('dialog', { name: /Trae un proyecto con contexto/i });
+  if (welcomeScroll) await page.locator('.sc-home').evaluate((element) => { element.scrollTop = 0; });
+  await page.locator('.sc-home-quick-row').getByRole('button', { name: /^Importar$/i }).click();
+  const dialog = page.getByRole('dialog', { name: /Importa sin perder el control/i });
   await dialog.waitFor({ state: 'visible' });
   const before = await page.evaluate(() => {
     const box = document.querySelector('.import-center-dialog')?.getBoundingClientRect();
@@ -157,7 +170,8 @@ for (const deviceName of ['iPhone 13', 'iPad Pro 11']) {
   }));
   await dialog.getByRole('button', { name: /Abrir proyecto/i }).click();
   await page.locator('.app-shell').waitFor({ state: 'visible' });
-  const importedName = await page.getByLabel('Nombre del proyecto').inputValue();
+  await waitForWorkspaceStylesheet(page);
+  const importedName = (await page.locator('.topbar-project-trigger').innerText()).trim();
   // AG-014: the 44px floor used to be measured on the import footer alone, so a control
   // anywhere else could shrink unnoticed — the source link of an academic exercise sat at
   // 296x33 because the coarse-pointer rule covered buttons, inputs and selects but not
@@ -183,9 +197,13 @@ for (const deviceName of ['iPhone 13', 'iPad Pro 11']) {
   if (undersizedTargets.length) {
     console.log(`  targets tactiles por debajo de 44px en ${deviceName}:`, JSON.stringify(undersizedTargets));
   }
-  await page.getByLabel('Ir al inicio').click();
-  await page.getByRole('button', { name: /Importar archivo/i }).click();
-  const nativeDialog = page.getByRole('dialog', { name: /Trae un proyecto con contexto/i });
+  // Con un proyecto ya importado, "Ir al inicio" puede reanudar de inmediato
+  // la Mesa por la política de continuidad. Abrir el mismo centro desde el
+  // hub del proyecto conserva la ruta real de importación sin depender de esa
+  // transición de Home.
+  await page.locator('.topbar-project-trigger').click();
+  await page.locator('.topbar-project-panel').getByRole('button', { name: 'Importar JSON', exact: true }).click();
+  const nativeDialog = page.getByRole('dialog', { name: /Importa sin perder el control/i });
   await nativeDialog.locator('input.import-file-input').setInputFiles({
     name: 'memoria-webkit.structureco.pdf',
     mimeType: 'application/pdf',
@@ -205,10 +223,10 @@ for (const deviceName of ['iPhone 13', 'iPad Pro 11']) {
     touchTargetsAtLeast44: controls.every((control) => control.width >= 44 && control.height >= 44),
     workspaceTouchTargetsAtLeast44: undersizedTargets.length === 0,
     ...(welcomeScroll ? {
-      welcomeHasScrollableOverflow: welcomeScroll.hasScrollableOverflow,
-      welcomeScrollIncreased: welcomeScroll.scrollIncreased,
-      welcomeFooterReachable: welcomeScroll.footerReachable,
-      welcomeStepsReachable: welcomeScroll.stepsReachable,
+      homeHasScrollableOverflow: welcomeScroll.hasScrollableOverflow,
+      homeScrollIncreased: welcomeScroll.scrollIncreased,
+      homeQuickActionsReachable: welcomeScroll.quickActionsReachable,
+      homeRecentProjectsReachable: welcomeScroll.recentProjectsReachable,
     } : {}),
   };
   await context.close();

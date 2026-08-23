@@ -24,12 +24,35 @@ export const clearProjectLibraryOnBoot = (target) => target.addInitScript(() => 
 });
 
 /**
+ * Los runners contra `vite preview` sirven el build de producción, por lo que
+ * `PwaUpdateNotice` intenta registrar `sw.js`. Si un service worker anterior
+ * detecta el build nuevo, puede recargar la página durante una comprobación y
+ * volver a ejecutar la siembra `__structurecoQaProject`, borrando el proyecto
+ * recién abierto. Los gates necesitan aislar esa actualización externa del
+ * recorrido funcional que están midiendo.
+ */
+export const disablePwaUpdateLifecycle = (target) => target.addInitScript(() => {
+  const registration = {
+    installing: null,
+    waiting: null,
+    addEventListener: () => undefined,
+  };
+  Object.defineProperty(navigator, 'serviceWorker', {
+    configurable: true,
+    value: {
+      controller: null,
+      register: async () => registration,
+      addEventListener: () => undefined,
+    },
+  });
+});
+
+/**
  * Abre la biblioteca de Plantillas desde la navegación real de la portada.
  *
- * La portada vigente ya no tiene el carril histórico de cuatro pasos ni las
- * clases `.welcome-steps`/`.welcome-template-card`. Los QA deben seguir la
- * navegación que ve una persona: en escritorio se usa la barra lateral y en
- * móvil se abre primero el menú.
+ * La portada vigente concentra las plantillas en la navegación de Home. Los
+ * QA deben seguir la navegación que ve una persona: en escritorio se usa la
+ * barra lateral y en móvil se abre primero el menú.
  */
 export const openWelcomeStep = async (page, name) => {
   if (name !== 'Por dónde' && name !== 'Cómo trabajas') throw new Error(`Paso de bienvenida desconocido: ${name}`);
@@ -51,12 +74,11 @@ export const openWelcomeStep = async (page, name) => {
  */
 export const openExamplePortal = async (page, locator) => {
   await openWelcomeStep(page, 'Por dónde');
-  const legacyCard = locator ?? page.locator('.welcome-template-card').filter({ hasText: /p.rtico de ejemplo/i }).first();
-  const card = await legacyCard.count() && await legacyCard.isVisible().catch(() => false)
-    ? legacyCard
+  const card = locator && await locator.count() && await locator.isVisible().catch(() => false)
+    ? locator
     : page.locator('.sc-home-template-grid > button').filter({ hasText: /p.rtico de ejemplo|example frame/i }).first();
   await card.waitFor({ state: 'visible' });
-  await card.evaluate((element) => element.click());
+  await card.click({ force: true });
   return card;
 };
 

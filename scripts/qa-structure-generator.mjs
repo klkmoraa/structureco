@@ -16,7 +16,7 @@ import { preview } from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { clearProjectLibraryOnBoot, openExamplePortal, openResultsSurface } from './qa-welcome.mjs';
+import { clearProjectLibraryOnBoot, disablePwaUpdateLifecycle, openExamplePortal, openResultsSurface } from './qa-welcome.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const engine = process.argv.includes('--webkit') ? 'webkit' : 'chromium';
@@ -62,7 +62,7 @@ const resetToExample = async (page) => {
   await page.reload({ waitUntil: 'networkidle' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
   // CRI-116 · el pórtico de ejemplo vive en el tercer paso desde CRI-112.
-  await openExamplePortal(page, page.locator('.welcome-template-card').filter({ hasText: /P.rtico de ejemplo/i }));
+  await openExamplePortal(page);
   await page.locator('.app-shell').waitFor({ state: 'visible' });
   await page.locator('[data-structure-kind="node"][data-structure-id="N1"]').waitFor({ state: 'visible' });
   await sleep(page);
@@ -265,13 +265,13 @@ const runReviewGenerateUndoRedo = async (page) => {
   check('confirmingInvalidatesPriorResults', await page.getByTestId('diagram-chart').count() === 0);
 
   // Un solo deshacer retira la geometría entera, no una entidad por vez.
-  await page.locator('.history-controls').getByLabel(/^deshacer$/i).click();
+  await page.locator('.topbar-history-cluster .topbar-undo-button').click();
   await page.waitForFunction((count) =>
     JSON.parse(localStorage.getItem('structureCo.project')).nodes.length === count, source.nodes.length);
   check('oneUndoRemovesTheWholeBatch',
     (await storedProject(page)).members.length === source.members.length);
 
-  await page.locator('.history-controls').getByLabel(/^rehacer$/i).click();
+  await page.locator('.topbar-history-cluster .topbar-redo-button').click();
   await page.waitForFunction((count) =>
     JSON.parse(localStorage.getItem('structureCo.project')).nodes.length === count,
   source.nodes.length + promised.nodes);
@@ -448,6 +448,7 @@ const runPreviewPerformance = async (page) => {
 };
 
 const context = await browser.newContext({ viewport: { width: 1536, height: 960 }, locale: 'es-MX' });
+await disablePwaUpdateLifecycle(context);
 await clearProjectLibraryOnBoot(context);
 const page = await context.newPage();
 page.on('console', (message) => {

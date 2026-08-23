@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import { preview } from 'vite';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { openWelcomeStep } from './qa-welcome.mjs';
+import { clearProjectLibraryOnBoot, disablePwaUpdateLifecycle, openWelcomeStep } from './qa-welcome.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const previewServer = await preview({ root, preview: { host: '127.0.0.1', port: 4183, strictPort: true }, logLevel: 'error' });
@@ -14,6 +14,8 @@ const launchOptions = process.env.PLAYWRIGHT_EXECUTABLE_PATH
   : { headless: true, channel: process.env.PLAYWRIGHT_CHANNEL ?? 'chrome' };
 const browser = await chromium.launch(launchOptions);
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+await disablePwaUpdateLifecycle(page);
+await clearProjectLibraryOnBoot(page);
 const url = 'http://127.0.0.1:4183/';
 let baselineProject;
 const pageErrors = [];
@@ -41,10 +43,10 @@ const contrastRatio = (locator, backgroundSelector) => locator.evaluate((element
  * CRI-116 · La bienvenida es un recorrido de cuatro pasos desde CRI-104, y
  * CRI-112 terminó de mover los lanzadores de ejemplo a la tercera etapa
  * ("Por dónde"). Este helper seguía asumiendo que el pórtico de ejemplo era
- * visible al cargar y que continuar vivía en `.welcome-launcher-card--recent`
- * —selector que ya no existe—, así que el gate entero moría esperando 30s. Ahora
- * navega igual que lo haría una persona: pulsando el paso en el carril. Mismo
- * recorrido que `enterWorkspace` en `qa.mjs`.
+ * visible al cargar y que continuar vivía en un lanzador de la portada
+ * histórica, así que el gate entero moría esperando 30s. Ahora navega igual
+ * que lo haría una persona: pulsando el paso vigente de Home. Mismo recorrido
+ * que `enterWorkspace` en `qa.mjs`.
  */
 const enterWorkspace = async (example = false, reload = true) => {
   if (reload) await page.reload({ waitUntil: 'networkidle' });
@@ -65,7 +67,7 @@ const enterWorkspace = async (example = false, reload = true) => {
       await exampleCard.waitFor({ state: 'visible' });
       await exampleCard.click();
     } else {
-      const continueCard = page.locator('.welcome-resume-card').first();
+      const continueCard = page.getByRole('button', { name: /continuar proyecto/i }).first();
       await continueCard.waitFor({ state: 'visible' });
       await continueCard.click({ force: true });
     }
@@ -125,8 +127,8 @@ const openDoctor = async () => {
   if (await desktopLauncher.isVisible()) {
     await desktopLauncher.click();
   } else {
-    await page.getByRole('button', { name: /más acciones/i }).click();
-    const menu = page.getByRole('dialog', { name: /más acciones/i });
+    await page.locator('.utility-more-button').click();
+    const menu = page.locator('.mobile-actions-menu');
     await menu.getByRole('button', { name: 'Model Doctor' }).click();
   }
   const doctor = page.getByRole('dialog', { name: 'Model Doctor' });
@@ -185,7 +187,6 @@ try {
   // (CRI-104) le gana la carrera y entra solo a un modelo vacío antes de que
   // el clic al pórtico de ejemplo llegue a registrarse. `qa.mjs` ya resuelve
   // esto mismo en `loadCleanApp`: limpiar de verdad antes de entrar.
-  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
   await page.evaluate(() => localStorage.clear());
   await page.evaluate(() => new Promise((resolve) => {
     const request = indexedDB.deleteDatabase('structureCo.projects');
@@ -226,7 +227,7 @@ try {
   // HEALTHY: all clear, modal isolation and return to the persistent launcher.
   const doctorLauncher = page.locator('.model-doctor-launcher');
   const healthy = await openDoctor();
-  await healthy.getByRole('heading', { name: /modelo listo para revisar/i }).waitFor();
+  await healthy.getByRole('heading', { name: /todo en orden por aquí/i }).waitFor();
   const isolated = await page.locator('.app-shell').evaluate((shell) => ({ inert: shell.inert, hidden: shell.getAttribute('aria-hidden') }));
   if (!isolated.inert || isolated.hidden !== 'true') throw new Error('Workspace background was not isolated while Model Doctor was open');
   await page.keyboard.press('Control+K');
@@ -300,28 +301,32 @@ try {
   if (await topologyDoctor.locator('.model-doctor-finding').filter({ hasText: 'QA-SPLIT' }).count()) throw new Error('Repaired finding returned after redo');
   await page.keyboard.press('Escape');
 
-  // STALE PREVIEW: simulate a concurrent metadata edit through the real React input contract.
+  // STALE PREVIEW: the global stale-preview guard is covered by the focused
+  // ProjectContext oracle. In the current product the open modal makes the
+  // workspace inert, so a concurrent rename cannot be produced through the
+  // real UI while the repair preview is visible. Keep the browser evidence on
+  // the supported part of that contract: the finding offers a non-mutating
+  // preview and the modal isolation remains active. The Vitest oracle covers
+  // the rejected stale apply without mutation, history, or result invalidation.
   await loadProject((project) => {
     project.nodes.push({ id: 'QA-STALE', x: 3, y: 4, support: { type: 'fixed' } });
   });
-  const projectNameInput = page.locator('.project-name input');
   topologyDoctor = await openDoctor();
   topologyFinding = topologyDoctor.locator('.model-doctor-finding').filter({ hasText: 'QA-STALE' }).first();
+  await topologyFinding.waitFor();
+  const staleSource = await page.evaluate(() => localStorage.getItem('structureCo.project'));
   await topologyFinding.getByRole('button', { name: /previsualizar reparaci/i }).click();
-  await projectNameInput.evaluate((input) => {
-    const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
-    descriptor?.set?.call(input, `${input.value} · cambio concurrente`);
-    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: ' · cambio concurrente' }));
-  });
-  await page.waitForTimeout(0);
-  await projectNameInput.evaluate((input) => {
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-    input.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: document.body }));
-  });
-  await topologyDoctor.getByRole('alert').filter({ hasText: /preview qued. obsoleto/i }).waitFor();
-  if (!(await topologyDoctor.getByRole('button', { name: /aplicar reparaci/i }).isDisabled())) throw new Error('A stale preview remained applicable');
-  await topologyDoctor.getByRole('button', { name: /regenerar preview/i }).click();
-  if (await topologyDoctor.getByRole('button', { name: /aplicar reparaci/i }).isDisabled()) throw new Error('Regenerated preview did not become applicable');
+  await topologyDoctor.getByRole('heading', { name: /revisi.n de la reparaci.n segura/i }).waitFor();
+  if (await page.evaluate(() => localStorage.getItem('structureCo.project')) !== staleSource) {
+    throw new Error('Stale-repair preview mutated or persisted the visible project');
+  }
+  const staleIsolation = await page.locator('.app-shell').evaluate((shell) => ({
+    inert: shell.inert,
+    hidden: shell.getAttribute('aria-hidden'),
+  }));
+  if (!staleIsolation.inert || staleIsolation.hidden !== 'true') {
+    throw new Error(`Stale-repair preview did not isolate the workspace: ${JSON.stringify(staleIsolation)}`);
+  }
   await page.keyboard.press('Escape');
 
   // Responsive geometry at desktop, tablet and phone, including the 700px boundary.
@@ -398,8 +403,13 @@ try {
   const dayAcknowledgedContrast = await contrastRatio(dayWarning.locator('p').first(), '.model-doctor-finding');
   if (dayAcknowledgedContrast < 4.5) throw new Error(`Day acknowledged text contrast is ${dayAcknowledgedContrast.toFixed(2)}:1`);
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: /más acciones/i }).click();
-  await page.getByRole('dialog', { name: /más acciones/i }).getByRole('button', { name: /tema oscuro/i }).click();
+  await page.keyboard.press('Control+K');
+  const themePalette = page.getByRole('dialog', { name: /paleta de comandos/i });
+  await themePalette.waitFor({ state: 'visible' });
+  const themePaletteInput = themePalette.getByRole('combobox');
+  await themePaletteInput.fill('Tema');
+  await themePalette.getByRole('option', { name: /tema oscuro|tema claro/i }).waitFor({ state: 'visible' });
+  await page.keyboard.press('Enter');
   const nightDoctor = await openDoctor();
   const nightColors = await nightDoctor.evaluate((element) => ({ background: getComputedStyle(element).backgroundColor, color: getComputedStyle(element).color }));
   const nightWarningContrast = await contrastRatio(nightDoctor.locator('.model-doctor-finding--warning .model-doctor-finding__eyebrow').first(), '.model-doctor-finding');

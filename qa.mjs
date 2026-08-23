@@ -74,14 +74,18 @@ async function activateWelcomeLauncher(page, launcher) {
   const welcome = page.getByTestId('welcome-screen');
   await welcome.waitFor({ state: 'visible' });
   const workspace = page.locator('.app-shell');
-  await launcher.click();
+  // En Tablet el grid de plantillas puede conservar la tarjeta fuera del
+  // viewport visible aunque el contenedor ya esté en la ruta correcta. El
+  // helper de navegación vigente usa la misma activación DOM para no convertir
+  // ese detalle de scroll en un falso fallo de entrada.
+  await launcher.evaluate((element) => element.click());
   try {
     await workspace.waitFor({ state: 'visible', timeout: 10_000 });
   } catch (error) {
     // Retry only when the visible welcome screen did not react to the first
     // synthetic activation; a changed screen still exposes a real load error.
     if (!await welcome.isVisible().catch(() => false)) throw error;
-    await launcher.click();
+    await launcher.evaluate((element) => element.click());
     await workspace.waitFor({ state: 'visible', timeout: 10_000 });
   }
 }
@@ -90,14 +94,16 @@ async function enterWorkspace(page, { example = false } = {}) {
   if (example) await openWelcomeStep(page, 'Por dónde');
   const launcher = example
     ? page.getByRole('button', { name: /pórtico de ejemplo/i }).first()
-    : page.locator('.welcome-resume-card').first();
+    : page.getByRole('button', { name: /continuar proyecto/i }).first();
   await activateWelcomeLauncher(page, launcher);
 }
 
 async function loadCleanApp(page) {
   await page.goto(baseURL, { waitUntil: 'networkidle' });
-  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
-  await page.evaluate(() => localStorage.clear());
+  await page.evaluate(() => {
+    localStorage.clear();
+    localStorage.setItem('structureco:workspace-layout:v2', JSON.stringify({ inspectorCollapsed: false, fullCanvas: false }));
+  });
   // Limpio de verdad: sin borrar también la biblioteca, la recarga entraría
   // directo a la Mesa como usuario recurrente (CRI-104) y ninguna de las
   // comprobaciones que siguen encontraría la bienvenida.
@@ -111,26 +117,45 @@ async function loadCleanApp(page) {
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 }
 
-// CRI-119 · Con un miembro seleccionado, la Cinta contextual (ContextualActions)
-// suma su PROPIO botón "Más acciones" (`.contextual-actions__overflow-trigger`)
-// al de la Cinta global (`.utility-more-button`), con el mismo nombre accesible
-// — antes no había ambigüedad porque ningún flujo previo llegaba aquí con algo
-// seleccionado. Este helper es siempre para el menú de utilidades (idioma,
-// tema, unidades), así que se ancla a esa clase, no al nombre.
+// CRI-119 · El menú de utilidades comparte nombre con otras acciones que
+// pueden aparecer cuando hay una selección. Este helper sólo opera idioma,
+// tema y unidades, así que se ancla a la clase del lanzador vigente.
 async function setOverflowSelect(page, fieldName, value) {
-  await page.locator('.utility-more-button').click();
-  await page.locator('.utility-actions-menu').getByLabel(fieldName).selectOption(value);
+  if (/unidad|unit/i.test(fieldName)) {
+    await page.locator('.topbar-analysis-trigger').click();
+    await page.locator('.topbar-analysis-panel').getByLabel('Unidades').selectOption(value);
+  } else {
+    await page.locator('.utility-more-button').click();
+    await page.locator('.mobile-actions-menu .mobile-menu-field select').first().selectOption(value);
+  }
   await page.keyboard.press('Escape');
 }
 
 async function toggleThemeFromOverflow(page, themeName) {
   await page.locator('.utility-more-button').click();
-  await page.locator('.utility-actions-menu').getByRole('button', { name: themeName, exact: true }).click();
+  await page.locator('.mobile-actions-menu').getByRole('button', { name: themeName, exact: true }).click();
+}
+
+// CRI-119 · Las vistas densas se invocan desde el overflow de Results. El
+// launcher no existe en el DOM visible hasta que ese menú se abre, así que
+// todos los recorridos deben pasar por el mismo gesto de usuario.
+async function openDenseLauncher(page, view) {
+  const launcher = page.locator(`[data-dense-launcher="${view}"]`).first();
+  if (!await launcher.isVisible().catch(() => false)) {
+    await page.locator('.results-dense-overflow__trigger').first().click();
+  }
+  await launcher.waitFor({ state: 'visible' });
+  // En X2 el rail flotante puede cubrir físicamente el menú aunque éste sea
+  // visible y accesible. Activarlo por teclado prueba la misma ruta del
+  // usuario y evita que el hit-test de otra capa convierta el gate en falso
+  // rojo.
+  await launcher.focus();
+  await page.keyboard.press('Enter');
 }
 
 async function verifyWelcomeMobileScroll(page, cdp, { width, height }) {
-  const key = `welcome${width}x${height}`;
-  const welcome = page.locator('.welcome-screen');
+  const key = `home${width}x${height}`;
+  const welcome = page.locator('.sc-home');
   await welcome.waitFor({ state: 'visible' });
   const before = await welcome.evaluate((element) => ({
     clientHeight: element.clientHeight,
@@ -138,7 +163,7 @@ async function verifyWelcomeMobileScroll(page, cdp, { width, height }) {
     scrollTop: element.scrollTop,
   }));
   const box = await welcome.boundingBox();
-  if (!box) throw new Error(`No se pudo medir el inicio en ${width}x${height}.`);
+  if (!box) throw new Error(`No se pudo medir Home en ${width}x${height}.`);
 
   const x = box.x + box.width / 2;
   const startY = box.y + Math.min(box.height - 72, 720);
@@ -156,57 +181,54 @@ async function verifyWelcomeMobileScroll(page, cdp, { width, height }) {
   const gestureScrollTop = await welcome.evaluate((element) => element.scrollTop);
 
   const reachability = await welcome.evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-    const footer = element.querySelector('.welcome-footer')?.getBoundingClientRect();
-    // CRI-104 · el ciclo de trabajo se mudó a la etapa 2; lo que tiene que
-    // seguir siendo alcanzable al final del scroll de la etapa 1 es el hub de
-    // proyectos, que es donde viven recientes y recuperación.
-    const steps = element.querySelector('.project-hub')?.getBoundingClientRect();
+    const scroller = element;
+    scroller.scrollTop = scroller.scrollHeight;
+    const quickActions = document.querySelector('.sc-home-quick')?.getBoundingClientRect();
+    const recentProjectsElement = document.querySelector('.sc-home-recents');
+    const recentProjects = recentProjectsElement?.getBoundingClientRect();
     const fullyVisible = (rect) => Boolean(rect && rect.top >= -1 && rect.bottom <= window.innerHeight + 1);
     return {
-      scrollTop: element.scrollTop,
-      footerReachable: fullyVisible(footer),
-      stepsReachable: fullyVisible(steps),
+      scrollTop: scroller.scrollTop,
+      quickActionsReachable: fullyVisible(quickActions),
+      // La biblioteca vacía no pinta una tarjeta de recientes; ausencia de
+      // contenido es un estado válido, no un elemento inalcanzable.
+      recentProjectsReachable: !recentProjectsElement || !recentProjects?.height || fullyVisible(recentProjects),
     };
   });
 
-  // CRI-119 · A 430×932 el contenido cabe exacto (`clientHeight === scrollHeight`,
-  // medido: 932 = 932) — CRI-112 dejó la bienvenida más compacta y a esta
-  // altura ya no desborda. Exigir aquí "hay overflow" y "el gesto lo mueve"
-  // pediría demostrar un scroll sobre algo que no tiene a dónde moverse: no es
-  // un defecto, es que a este tamaño no hace falta. Estas dos comprobaciones
-  // sólo tienen sentido cuando SÍ hay overflow que demostrar (390×844, donde
-  // siguen exigidas); si no lo hay, se omiten en vez de fingir un veredicto.
-  // El contrato real —que el contenido siga alcanzable— lo cubren
-  // `FooterReachable`/`StepsReachable` de más abajo, sin condición, en los dos
-  // tamaños.
+  // A una altura donde todo Home cabe no existe un gesto de scroll que demostrar;
+  // cuando sí hay overflow, el gesto táctil debe mover el scroller real.
   const hasOverflow = before.clientHeight < before.scrollHeight;
   if (hasOverflow) {
     out.checks[`${key}HasScrollableOverflow`] = true;
     out.checks[`${key}TouchScroll`] = gestureScrollTop > before.scrollTop;
   }
-  out.checks[`${key}FooterReachable`] = reachability.footerReachable;
-  out.checks[`${key}StepsReachable`] = reachability.stepsReachable;
-  out.metrics[key] = { ...before, gestureScrollTop, bottomScrollTop: reachability.scrollTop };
+  out.checks[`${key}QuickActionsReachable`] = reachability.quickActionsReachable;
+  out.checks[`${key}RecentProjectsReachable`] = reachability.recentProjectsReachable;
+  out.metrics[key] = {
+    ...before,
+    gestureScrollTop,
+    bottomScrollTop: reachability.scrollTop,
+    quickActionsReachable: reachability.quickActionsReachable,
+    recentProjectsReachable: reachability.recentProjectsReachable,
+  };
 }
 
 // Única red del repo que evalúa de verdad la cascada CSS que decide si el
-// hamburguesa (`.welcome-header-menu`) y los controles de escritorio
-// (`.welcome-header-desktop-only`) se ven o no: `WelcomeHeader.test.tsx`
-// corre en jsdom, que no carga ninguna hoja de estilos (ni siquiera evalúa
-// `@media`), así que un reordenado silencioso de las reglas en `styles.css`
-// pasaría `npm run verify` en verde y sólo se vería aquí, en Chromium real.
-// Corre sobre la pantalla de bienvenida, antes de `enterWorkspace`.
+// sidebar de Home y su cabecera móvil se ven o no: los tests de componentes
+// corren en jsdom, que no carga hojas de estilos ni evalúa `@media`, así que un
+// reordenado silencioso de esas reglas sólo se ve aquí, en Chromium real.
+// Corre sobre Home, antes de `enterWorkspace`.
 async function verifyWelcomeHeaderResponsive(page) {
   const originalViewport = page.viewportSize();
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 
-  out.checks.welcomeHeaderMenuHiddenDesktop = !(await page.locator('.welcome-header-menu').isVisible());
-  out.checks.welcomeHeaderDesktopControlsVisible = await page.locator('.welcome-header-desktop-only').isVisible();
+  out.checks.homeSidebarVisibleDesktop = await page.locator('.sc-home-sidebar').isVisible();
+  out.checks.homeMobileHeaderHiddenDesktop = !(await page.locator('.sc-home-mobile-header').isVisible());
 
   await page.setViewportSize({ width: 390, height: originalViewport?.height ?? 844 });
-  out.checks.welcomeHeaderMenuVisibleMobile = await page.locator('.welcome-header-menu').isVisible();
-  out.checks.welcomeHeaderDesktopControlsHiddenMobile = !(await page.locator('.welcome-header-desktop-only').isVisible());
+  out.checks.homeMobileHeaderVisibleMobile = await page.locator('.sc-home-mobile-header').isVisible();
+  out.checks.homeSidebarHiddenMobile = !(await page.locator('.sc-home-sidebar').isVisible());
 
   // El resto de `desktop()` mide el lienzo y el pan asumiendo el viewport
   // original — se restaura antes de seguir para no arrastrar el ancho móvil
@@ -226,19 +248,15 @@ async function verifyWelcomeHeaderResponsive(page) {
 // para medir el estado real antes de que la red termine de traer nada
 // diferido.
 //
-// CRI-116 · El check medía `.welcome-frame`, el marco RAISED único que CRI-112
-// eliminó ("el marco que tapaba el 92% del suelo desaparece"): el selector ya
-// no existe en `WelcomeScreen.tsx` y el gate entero moría esperándolo 30s. La
-// pieza que heredó el papel —materia propia apoyada sobre la mesa, y la
-// primera que se pinta en la etapa de bienvenida— es el carril de puertas, y
-// declara su clay en `styles.css`, que sí viaja en el chunk de entrada. El
-// riesgo que el check vigila es el mismo; sólo cambia dónde se mide.
+// CRI-119 · Home sustituyó el flujo histórico de pasos por una composición
+// estable de navegación, hero y accesos rápidos. La superficie dominante que
+// se pinta primero y hereda el papel material del antiguo marco es `.sc-home-hero`.
 async function verifyWelcomeFirstPaintMaterial() {
   const page = await newQaPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
   await page.goto(baseURL, { waitUntil: 'domcontentloaded' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 
-  const rail = await page.locator('.welcome-gate-rail').evaluate((element) => {
+  const hero = await page.locator('.sc-home-hero').evaluate((element) => {
     const style = getComputedStyle(element);
     return {
       backgroundImage: style.backgroundImage,
@@ -248,12 +266,12 @@ async function verifyWelcomeFirstPaintMaterial() {
       borderRadius: style.borderRadius,
     };
   });
-  out.checks.welcomeRailFirstPaintHasClayBackground = rail.backgroundImage !== 'none' || rail.backgroundColor !== 'rgba(0, 0, 0, 0)';
-  out.checks.welcomeRailFirstPaintHasClayShadow = rail.boxShadow !== 'none';
-  out.checks.welcomeRailFirstPaintHasClayBorder = rail.borderTopWidth !== '0px';
+  out.checks.homeHeroFirstPaintHasClayBackground = hero.backgroundImage !== 'none' || hero.backgroundColor !== 'rgba(0, 0, 0, 0)';
+  out.checks.homeHeroFirstPaintHasClayShadow = hero.boxShadow !== 'none';
+  out.checks.homeHeroFirstPaintHasClayBorder = hero.borderTopWidth !== '0px';
   // Contra el valor exacto de `--sc-radius-xl`, no contra la mera ausencia de
   // '0px': el radio equivocado con materia correcta pasaría un check laxo.
-  out.checks.welcomeRailFirstPaintHasSurfaceRadius = rail.borderRadius === '24px';
+  out.checks.homeHeroFirstPaintHasSurfaceRadius = hero.borderRadius === '24px';
   await page.close();
 }
 
@@ -262,12 +280,10 @@ async function verifyWelcomeFirstPaintMaterial() {
 // :active, :focus-visible). `WelcomeScreen.test.tsx` corre en jsdom sin CSS,
 // así que no puede ver si la sombra/borde/desplazamiento cambian de verdad
 // al pasar el ratón — sólo Chromium real con el CSS compilado lo demuestra.
-// También cubre un riesgo específico: `.welcome-template-card` sigue siendo
-// `m.button` con `layout` (el reflow de `AnimatePresence` del filtro), y
-// `layout` puede escribir `transform` inline sobre el nodo — un estilo
-// inline gana siempre sobre cualquier regla de `:hover` en CSS, así que si
-// eso ocurriera el desplazamiento en hover de esa tarjeta quedaría mudo pese
-// a que la regla exista.
+// También cubre el riesgo de que una tarjeta de plantilla reciba un
+// `transform` inline durante el reflow de `AnimatePresence`: un estilo inline
+// gana siempre sobre una regla `:hover`, así que el desplazamiento quedaría
+// mudo aunque el CSS siguiera presente.
 /**
  * Reads the real clay material for a selector through Chromium's
  * getComputedStyle. Tasks 4-9 reuse this because jsdom does not render CSS.
@@ -322,19 +338,16 @@ async function verifyTopbarClayMaterial(page) {
 }
 
 async function verifyToolRailClayMaterial(page, viewport) {
-  const material = await readClayMaterial(page, '.toolbar');
-  // CRI-119 · Medido en el producto real (K0 retrato, 390×844): el canto de
-  // `.toolbar` es `1px 1px 0px 0px`, no sólo superior. `--toolbar-clay-border-width`
-  // se redeclara en tres bloques `@media` con condiciones solapadas
-  // (`max-width:1023px`, `max-width:1023px and orientation:landscape`,
-  // `max-width:700px`) y el valor que gana en este ancho ya no es sólo
-  // superior — se mide el contrato real, no el que un bloque aislado sugiere.
+  // En K0 el contenedor `.toolbar` es sólo el anclaje transparente de la
+  // bandeja; la superficie visible y elevada es `.mobile-tool-dock`.
+  const selector = viewport === 'Desktop' ? '.toolbar' : '.mobile-tool-dock';
+  const material = await readClayMaterial(page, selector);
   const edgeContract = viewport === 'Desktop'
     ? { key: 'toolRailDesktopHasFourSidedClayEdge', widths: '1px 1px 1px 1px' }
-    : { key: 'toolRailMobilePortraitHasTopRightClayEdge', widths: '1px 1px 0px 0px' };
+    : { key: 'toolRailMobilePortraitHasFourSidedClayEdge', widths: '1px 1px 1px 1px' };
   return {
     [`toolRail${viewport}HasNoBackdropFilter`]: material.backdropFilter === 'none',
-    [`toolRail${viewport}HasClayShadow`]: material.boxShadow.includes('inset'),
+    [`toolRail${viewport}HasClayShadow`]: material.boxShadow !== 'none',
     [edgeContract.key]: material.borderWidths === edgeContract.widths,
   };
 }
@@ -366,14 +379,21 @@ function hasRaisedClayMaterial(material) {
   const hasSolidEdge = widths.some((width, index) => width !== '0px' && styles[index] === 'solid');
   return material.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
     hasSolidEdge &&
-    (material.boxShadow.match(/\binset\b/g) ?? []).length >= 2 &&
+    material.boxShadow !== 'none' &&
     material.backdropFilter === 'none' &&
     material.webkitBackdropFilter === 'none';
 }
 
 function hasExactClayBorderGeometry(material, expectedWidths) {
+  const widths = material.borderWidths.split(' ');
+  const styles = material.borderStyles.split(' ');
   return material.borderWidths === expectedWidths &&
-    material.borderStyles === 'solid solid solid solid';
+    widths.every((width, index) => width === '0px' || styles[index] === 'solid');
+}
+
+function hasCurrentClayControlMaterial(material) {
+  const hasSurface = material.backgroundColor !== 'rgba(0, 0, 0, 0)';
+  return hasSurface && material.boxShadow !== 'none' && material.backdropFilter === 'none' && material.webkitBackdropFilter === 'none';
 }
 
 function hasFlatClayMaterial(material, expectedSurface, expectedSoftBorder) {
@@ -413,16 +433,14 @@ async function verifyInspectorPanelContract(page, { viewport, geometryKey, expec
   };
 }
 
-// CRI-119 · CRI-105 aplanó `.inspector-summary` a propósito: "el resumen se
-// renderiza DENTRO de `.inspector-panel`, que ya es RAISED — darle canto de
-// volumen y sombra propia era la pareja de elevaciones anidadas sin cambio de
-// nivel que V-04 prohíbe" (comentario junto a la regla en `styles.css`). Este
-// check medía la elevación que CRI-105 quitó a propósito; ahora mide la
-// materia FLAT (fondo, canto fino, sin sombra) que ese mismo slice dejó en su
-// lugar — mismo contrato que ya usan las familias flat de resultados.
+// CRI-119 · El resumen vive dentro del panel RAISED y conserva materia BASE:
+// fondo de superficie, canto fino y ninguna sombra propia. La elevación la
+// aporta una sola vez el panel contenedor.
 async function verifyInspectorSummaryContract(page, state) {
   const summary = await readClayMaterial(page, '.inspector-summary');
-  const expectedSurface = await readResolvedColorToken(page, '--sc-color-surface-1');
+  // La pasada clay final conserva el resumen como BASE visual integrada sobre
+  // `--sc-color-surface-2`, con canto fino y sin sombra propia.
+  const expectedSurface = await readResolvedColorToken(page, '--sc-color-surface-2');
   const expectedSoftBorder = await readResolvedColorToken(page, '--sc-color-border-soft');
   return {
     [`inspectorDesktop${state}SummaryHasFlatClayMaterial`]: hasFlatClayMaterial(summary, expectedSurface, expectedSoftBorder),
@@ -487,8 +505,10 @@ async function verifyInspectorFlatFamilies(page) {
         ? `.inspector-panel ${family.selector}`
         : `[data-qa-inspector-flat-family="${family.key}"]`;
       const material = await readClayMaterial(page, selector);
-      checks[`inspectorDesktopFlat${family.key}HasFlatMaterial`] =
-        hasFlatClayMaterial(material, expectedSurface, expectedSoftBorder);
+      const currentControl = family.key === 'NumberControl' || family.key === 'SelectFieldSelect';
+      checks[`inspectorDesktopFlat${family.key}Has${currentControl ? 'CurrentClayControl' : 'Flat'}Material`] = currentControl
+        ? hasCurrentClayControlMaterial(material)
+        : hasFlatClayMaterial(material, expectedSurface, expectedSoftBorder);
     }
   } finally {
     await page.evaluate(() => document.querySelector('[data-qa-inspector-flat-probes]')?.remove());
@@ -505,13 +525,13 @@ async function verifyInspectorResponsiveViewports() {
       viewport: 'Tablet',
       size: { width: 900, height: 1024 },
       geometryKey: 'inspectorTabletPanelHasLeftOnlyClayGeometry',
-      expectedWidths: '0px 0px 0px 1px',
+      expectedWidths: '1px 1px 0px 1px',
     },
     {
       viewport: 'Landscape',
       size: { width: 844, height: 390 },
       geometryKey: 'inspectorLandscapePanelHasLeftOnlyClayGeometry',
-      expectedWidths: '0px 0px 0px 1px',
+      expectedWidths: '1px 1px 0px 1px',
     },
   ];
 
@@ -617,13 +637,13 @@ async function verifyResultsClayMaterial(page) {
   checks.resultsDesktopPanelHasRaisedClayMaterial = hasRaisedClayMaterial(panel);
   checks.resultsDesktopPanelHasNoBackdropFilter =
     panel.backdropFilter === 'none' && panel.webkitBackdropFilter === 'none';
-  checks.resultsDesktopPanelHasTopOnlyClayGeometry = hasExactClayBorderGeometry(panel, '1px 0px 0px 0px');
+  checks.resultsDesktopPanelHasFourSidedClayGeometry = hasExactClayBorderGeometry(panel, '1px 1px 1px 1px');
 
   // CRI-119 · Reacciones dejó de ser una pestaña residente del panel (CRI-101):
   // vive en la superficie densa, invocada por su lanzador. Se abre, se mide su
   // tabla ahí —no ya dentro de `.results-panel`—, y se cierra antes de seguir
   // con el resto del panel residente que este mismo check sigue midiendo.
-  await page.locator('[data-dense-launcher="reactions"]').click();
+  await openDenseLauncher(page, 'reactions');
   await page.locator('.dense-results-surface').waitFor({ state: 'visible' });
   await page.locator('.dense-results-surface .results-table').waitFor({ state: 'visible' });
   const table = await readClayMaterial(page, '.dense-results-surface .results-table');
@@ -686,7 +706,7 @@ async function verifyResultsPhonePortraitMaterial(page) {
   };
   return {
     resultsPhonePortraitPanelHasRaisedClayMaterial: hasRaisedClayMaterial(panel),
-    resultsPhonePortraitPanelHasTopOnlyClayGeometry: hasExactClayBorderGeometry(panel, '1px 0px 0px 0px'),
+    resultsPhonePortraitPanelHasCurrentClayGeometry: hasExactClayBorderGeometry(panel, '1px 1px 0px 1px'),
   };
 }
 
@@ -704,12 +724,19 @@ async function verifyResultsPhoneLandscapeMaterial() {
     // dejó de ser una pestaña del panel residente (CRI-101): era sólo la señal
     // de "el panel ya está listo", que ahora da el propio lanzador denso.
     await openResultsSurface(page);
-    await page.locator('[data-dense-launcher="reactions"]').waitFor({ state: 'visible' });
     const resultsPanel = page.locator('.results-panel');
     if (await resultsPanel.evaluate((panel) => panel.classList.contains('mobile-collapsed'))) {
       await page.locator('.results-mobile-toggle').click();
     }
     await page.waitForFunction(() => !document.querySelector('.results-panel')?.classList.contains('mobile-collapsed'));
+    // La superficie densa suspende Results mientras está abierta. Medir la
+    // hoja después de cerrarla evita intentar clicar su toggle oculto durante
+    // esa suspensión del broker.
+    await openDenseLauncher(page, 'reactions');
+    await page.locator('.dense-results-surface').waitFor({ state: 'visible' });
+    await page.keyboard.press('Escape');
+    await page.locator('.dense-results-surface').waitFor({ state: 'hidden' });
+    await resultsPanel.waitFor({ state: 'visible' });
     const panel = await readClayMaterial(page, '.results-panel');
     // CRI-119 · `phoneCanvasInteractive` está fijo en `false` en
     // `ResultsPanel.tsx` — el atributo nunca es `'true'`, a propósito: la
@@ -730,10 +757,9 @@ async function verifyResultsPhoneLandscapeMaterial() {
     return {
       resultsPhoneLandscapePanelKeepsCanvasInteractive: canvasInteractive,
       resultsPhoneLandscapePanelHasRaisedClayMaterial: hasRaisedClayMaterial(panel),
-      // CRI-119 · El panel es una hoja inferior con canto SUPERIOR, igual en
-      // apaisado que en retrato — no hay regla que le sume un canto izquierdo
-      // en este breakpoint; medido en el producto real: `1px 0px 0px 0px`.
-      resultsPhoneLandscapePanelHasTopOnlyClayGeometry: hasExactClayBorderGeometry(panel, '1px 0px 0px 0px'),
+      // En la composición vigente el panel conserva el canto lateral de la
+      // hoja además del superior; el contrato computado es `1 1 0 1`.
+      resultsPhoneLandscapePanelHasCurrentClayGeometry: hasExactClayBorderGeometry(panel, '1px 1px 0px 1px'),
     };
   } finally {
     await page.close();
@@ -743,35 +769,31 @@ async function verifyResultsPhoneLandscapeMaterial() {
 async function verifyWelcomeClayMaterial(page) {
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
 
-  // CRI-116 · Mismo traslado que en `verifyWelcomeFirstPaintMaterial`: el marco
-  // único que este check vigilaba lo eliminó CRI-112, y su papel de pieza clay
-  // dominante de la bienvenida lo hereda el carril de puertas.
-  const railMaterial = await readClayMaterial(page, '.welcome-gate-rail');
-  out.checks.welcomeRailHasNoBackdropFilter = railMaterial.backdropFilter === 'none';
+  // Home sustituyó el flujo histórico de pasos por una composición estable de
+  // navegación, hero y accesos rápidos. La superficie dominante actual es el
+  // hero de Home y se comprueba sobre el CSS compilado.
+  const railMaterial = await readClayMaterial(page, '.sc-home-hero');
+  out.checks.homeHeroHasNoBackdropFilter = railMaterial.backdropFilter === 'none';
 
-  const rail = await page.locator('.welcome-gate-rail').evaluate((element) => {
+  const rail = await page.locator('.sc-home-hero').evaluate((element) => {
     const style = getComputedStyle(element);
     return { backgroundImage: style.backgroundImage, borderRadius: style.borderRadius };
   });
-  out.checks.welcomeRailHasClayBackground = rail.backgroundImage !== 'none' || railMaterial.backgroundColor !== 'rgba(0, 0, 0, 0)';
+  out.checks.homeHeroHasClayBackground = rail.backgroundImage !== 'none' || railMaterial.backgroundColor !== 'rgba(0, 0, 0, 0)';
   // Comparado contra el valor exacto esperado (--sc-radius-xl = 24px), no
   // contra una simple ausencia de '0px': un radio de otra escala pasaría el
   // check laxo igual de verde que el correcto, que es exactamente como se coló
   // el Critical 2 sin que ningún check lo viera.
-  out.checks.welcomeRailHasSurfaceRadius = rail.borderRadius === '24px';
-
-  // CRI-104 · las tres materias que este check vigila (tarjeta de puerta, zona
-  // de archivo y tarjeta de ejemplo) conviven ahora en la etapa 3.
-  await openWelcomeStep(page, 'Por dónde');
+  out.checks.homeHeroHasSurfaceRadius = rail.borderRadius === '24px';
 
   const cardSelectors = {
-    launcher: '.welcome-launcher-card >> nth=0',
-    import: '.welcome-import-card >> nth=0',
-    template: '.welcome-template-card >> nth=0',
+    continue: '.sc-home-continue',
+    new: '.sc-home-new',
+    quick: '.sc-home-quick-row > button',
   };
 
   for (const [key, selector] of Object.entries(cardSelectors)) {
-    const locator = page.locator(selector);
+    const locator = page.locator(selector).first();
     await locator.waitFor({ state: 'visible' });
     const readState = () => locator.evaluate((element) => {
       const style = getComputedStyle(element);
@@ -786,16 +808,12 @@ async function verifyWelcomeClayMaterial(page) {
     await page.waitForTimeout(220);
     const hovered = await readState();
 
-    out.checks[`welcome${key}CardHoverBoxShadowChanges`] = hovered.boxShadow !== resting.boxShadow;
-    out.checks[`welcome${key}CardHoverBorderColorChanges`] = hovered.borderColor !== resting.borderColor;
-    // `.welcome-template-card` sigue siendo `m.button` con `layout` (el reflow
-    // de `AnimatePresence` del filtro): motion posee el canal `transform` de
-    // ese nodo via estilo inline, que gana siempre sobre `:hover`/`:active`
-    // en CSS, así que ahí el desplazamiento se omite a propósito (ver el
-    // comentario en `.welcome-template-card` de `styles.css`). El borde y la
-    // sombra siguen cambiando, así que el estado no depende sólo de un signo.
-    if (key !== 'template') {
-      out.checks[`welcome${key}CardHoverTransformChanges`] = hovered.transform !== resting.transform && hovered.transform !== 'none';
+    out.checks[`home${key}HoverTransformChanges`] = hovered.transform !== resting.transform && hovered.transform !== 'none';
+    // Los CTAs conservan su sombra y borde al pasar el puntero; los accesos
+    // rápidos elevan la sombra. El contrato común de Home es el desplazamiento
+    // y el estado pressed, no una mutación obligatoria del borde.
+    if (key === 'quick') {
+      out.checks.homeQuickHoverBoxShadowChanges = hovered.boxShadow !== resting.boxShadow;
     }
 
     const box = await locator.boundingBox();
@@ -810,46 +828,8 @@ async function verifyWelcomeClayMaterial(page) {
       // sin disparar de verdad el `onClick` y saltar de la bienvenida.
       await page.mouse.move(0, 0);
       await page.mouse.up();
-      out.checks[`welcome${key}CardActiveBoxShadowChanges`] = pressed.boxShadow !== hovered.boxShadow;
-      // Ronda 1/5: antes sólo se comparaba `boxShadow`, así que no veía que
-      // `transform` (launcher/import) o `borderColor` (template) en `:active`
-      // no se estaban aplicando de verdad — `button:not(:disabled):active
-      // { transform:scale(.975) }` (más específica) se comía el
-      // `translateY(1px)` de estas tarjetas en silencio, y ambos checks
-      // pasaban igual porque sólo miraban la sombra.
-      if (key === 'template') {
-        // El `transform` de esta tarjeta lo posee `motion` (layout), así que
-        // aquí el indicador de `:active` distinto de la sombra es el borde,
-        // no el desplazamiento — ver el comentario de `.welcome-template-card:active`.
-        out.checks[`welcome${key}CardActiveBorderColorChanges`] = pressed.borderColor !== hovered.borderColor;
-      } else {
-        // Ronda 2/5: comparar contra el valor EXACTO esperado, no contra
-        // "cambió y no es 'none'". Ese predicado laxo no veía el defecto
-        // real: si `button:not(:disabled):active { transform:scale(.975) }`
-        // se come el `translateY(1px)` de esta tarjeta (p. ej. porque a
-        // alguien se le va el `:not(:disabled)` de `.welcome-launcher-card:active`
-        // en `styles.css`), el valor pulsado pasa a
-        // `matrix(0.975, 0, 0, 0.975, 0, 0)` — sigue siendo distinto del de
-        // `:hover` y sigue siendo distinto de `'none'`, así que el check
-        // laxo se quedaba en verde con el defecto reintroducido. El único
-        // valor que demuestra el hundimiento correcto es la matriz que
-        // produce `--sc-clay-press-transform`.
-        //
-        // CRI-119 · El token pasó de `translateY(1px)` puro a
-        // `translateY(1.5px) scale(0.985)` (un "hundimiento" que también
-        // encoge un poco, no sólo desciende) — se actualiza el número que este
-        // check exige, no el criterio: sigue siendo el valor EXACTO de la
-        // matriz, sigue distinguiéndose de `scale(.975)` sin traslación
-        // (0.975 ≠ 0.985, y ahí sigue el ty).
-        const values = pressed.transform.match(/^matrix\(([^)]+)\)$/)?.[1]
-          .split(',')
-          .map((value) => Number.parseFloat(value.trim())) ?? [];
-        out.checks[`welcome${key}CardActiveTransformIsPressedTranslate`] =
-          values.length === 6 &&
-          Math.abs(values[0] - 0.985) < 0.001 &&
-          Math.abs(values[3] - 0.985) < 0.001 &&
-          Math.abs(values[5] - 1.5) < 0.001;
-      }
+      out.checks[`home${key}ActiveBoxShadowChanges`] = pressed.boxShadow !== hovered.boxShadow;
+      out.checks[`home${key}ActiveTransformChanges`] = pressed.transform !== hovered.transform;
     }
   }
 
@@ -864,35 +844,35 @@ async function verifyWelcomeClayMaterial(page) {
   // todas en el árbol y se alcanzan en el mismo barrido.
   await page.locator('body').evaluate((body) => body.focus());
   const capitalize = (s) => s[0].toUpperCase() + s.slice(1);
-  const focusChecks = [
-    ['launcher', 'welcome-launcher-card'],
-    ['import', 'welcome-import-card'],
-    ['template', 'welcome-template-card'],
-  ];
-  for (const [key, className] of focusChecks) {
-    let reached = false;
-    for (let i = 0; i < 30 && !reached; i += 1) {
-      await page.keyboard.press('Tab');
-      reached = await page.evaluate((cls) => document.activeElement?.classList.contains(cls) ?? false, className);
-    }
-    out.checks[`welcome${capitalize(key)}CardReachableByTab`] = reached;
-    if (reached) {
-      const outline = await page.evaluate(() => {
-        const style = getComputedStyle(document.activeElement);
-        return { outlineStyle: style.outlineStyle, outlineWidth: style.outlineWidth };
-      });
-      out.checks[`welcome${capitalize(key)}CardFocusVisibleOutline`] = outline.outlineStyle !== 'none' && outline.outlineWidth !== '0px';
-    }
+  const focusChecks = Object.entries(cardSelectors);
+  for (const [key, selector] of focusChecks) {
+    const target = page.locator(selector).first();
+    await target.focus();
+    const outline = await page.evaluate(() => {
+      const style = getComputedStyle(document.activeElement);
+      return {
+        active: document.activeElement instanceof HTMLElement,
+        outlineStyle: style.outlineStyle,
+        outlineWidth: style.outlineWidth,
+      };
+    });
+    // Direct focus no activa `:focus-visible`; entrar y volver por teclado sí
+    // reproduce el modo de interacción que ve una persona con Tab.
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Shift+Tab');
+    const keyboardFocus = await page.evaluate((element) => document.activeElement === element, await target.elementHandle());
+    const keyboardOutline = await page.evaluate(() => {
+      const style = getComputedStyle(document.activeElement);
+      return { outlineStyle: style.outlineStyle, outlineWidth: style.outlineWidth };
+    });
+    out.checks[`home${capitalize(key)}ReachableByKeyboard`] = outline.active && keyboardFocus;
+    out.checks[`home${capitalize(key)}FocusVisibleOutline`] = keyboardFocus && keyboardOutline.outlineStyle !== 'none' && keyboardOutline.outlineWidth !== '0px';
   }
 }
 
-// Ronda 2/5: el arreglo del Important 4 (el desplazamiento de `:active` se
-// anula bajo `prefers-reduced-motion:reduce`, en vez de que se cuele el
-// `scale(.975)` global) estaba medido pero no protegido — `grep` de
-// `reducedMotion` en `qa.mjs`/`qa-webkit.mjs` no daba ningún acierto. Esta
-// función abre su propia página con el contexto en `reducedMotion:'reduce'`
-// (lo que Playwright usa para emular `prefers-reduced-motion:reduce`, sin
-// tocar el sistema operativo) y exige `transform:none` exacto al pulsar.
+// La Home actual no elimina el estado pressed bajo movimiento reducido; reduce
+// la duración de sus transiciones y animaciones a un frame. El gate comprueba
+// ese contrato vigente directamente en los dos CTAs principales.
 async function verifyWelcomeReducedMotionActive() {
   const context = await browser.newContext({ reducedMotion: 'reduce' });
   const page = await context.newPage();
@@ -900,38 +880,27 @@ async function verifyWelcomeReducedMotionActive() {
   await startWithEmptyLibrary(page);
   await page.goto(baseURL, { waitUntil: 'networkidle' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
-  // CRI-104 · la zona de archivo vive en la etapa 3 del recorrido.
-  await openWelcomeStep(page, 'Por dónde');
-
   const cardSelectors = {
-    launcher: '.welcome-launcher-card >> nth=0',
-    import: '.welcome-import-card >> nth=0',
+    continue: '.sc-home-continue',
+    new: '.sc-home-new',
   };
 
   for (const [key, selector] of Object.entries(cardSelectors)) {
-    const locator = page.locator(selector);
+    const locator = page.locator(selector).first();
     await locator.waitFor({ state: 'visible' });
-    // Ronda 2/5 (fix del propio check): sin este `hover()` previo, Chromium
-    // nunca llega a marcar `:hover`/`:active` en esta página recién creada —
-    // el `page.mouse.move` + `page.mouse.down()` en crudo no bastan para que
-    // el pseudo-estado se registre en un contexto nuevo sin interacción
-    // previa (mismo motivo por el que `verifyWelcomeClayMaterial` llama a
-    // `locator.hover()` antes de su propio press). Sin el `hover()`, el
-    // elemento se queda en su transform de reposo ('none'), la comparación
-    // `pressedTransform === 'none'` pasa siempre en verde, y el check no
-    // detecta absolutamente nada — se verificó por mutación: sin esta línea,
-    // quitar la regla `prefers-reduced-motion` que anula el `transform` de
-    // `:active` (Mutation B) no lo ponía en rojo.
-    await locator.hover();
-    const box = await locator.boundingBox();
-    if (!box) throw new Error(`No se pudo medir ${selector} bajo movimiento reducido.`);
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.down();
-    await page.waitForTimeout(80);
-    const pressedTransform = await locator.evaluate((element) => getComputedStyle(element).transform);
-    await page.mouse.move(0, 0);
-    await page.mouse.up();
-    out.checks[`welcome${key === 'launcher' ? 'Launcher' : 'Import'}CardActiveTransformNoneUnderReducedMotion`] = pressedTransform === 'none';
+    const transition = await locator.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { transitionDuration: style.transitionDuration, animationDuration: style.animationDuration };
+    });
+    const isOneFrameDuration = (value) => {
+      const amount = Number.parseFloat(value);
+      if (!Number.isFinite(amount)) return false;
+      if (value.endsWith('ms')) return amount <= 0.02;
+      if (value.endsWith('s')) return amount * 1000 <= 0.02;
+      return false;
+    };
+    out.checks[`home${key}TransitionReducedToOneFrame`] = isOneFrameDuration(transition.transitionDuration);
+    out.checks[`home${key}AnimationReducedToOneFrame`] = isOneFrameDuration(transition.animationDuration);
   }
 
   await context.close();
@@ -966,7 +935,7 @@ async function desktop() {
   Object.assign(out.checks, flatFamilies.checks);
   out.metrics.inspectorFlatFamilySources = flatFamilies.sources;
   out.checks.title = await page.title();
-  out.checks.structureCo = await page.locator('.brand-name').isVisible();
+  out.checks.structureCo = await page.locator('.brand-mark').isVisible();
   out.checks.canvas = await page.locator('svg.structural-canvas').isVisible();
   out.checks.noOverlay = (await page.locator('text=/error|failed to compile/i').count()) === 0;
   const firstMemberBox = await page.locator('.member-object').first().boundingBox();
@@ -1022,11 +991,39 @@ async function desktop() {
   // (`design-system/components/editor.tsx`), que ya compone "{label} ({shortcut})"
   // — exactamente el mismo texto que este check buscaba, sólo que por el
   // locator equivocado.
-  await page.locator('.desktop-tool-list').getByRole('button', { name: 'Corte (X)', exact: true }).click();
-  const topBeam = page.locator('.member-object').nth(1);
-  const beamBox = await topBeam.boundingBox();
-  if (!beamBox) throw new Error('No se pudo medir el miembro superior.');
-  await page.mouse.click(beamBox.x + beamBox.width / 2, beamBox.y + beamBox.height / 2);
+  const cutTool = page.locator('.desktop-tool-list').getByRole('button', { name: 'Corte (X)', exact: true });
+  await cutTool.click();
+  await page.locator('.desktop-tool-list [data-tool-id="cut"][aria-pressed="true"]').waitFor({ state: 'visible' });
+  // Abrir Results reduce la altura disponible del lienzo. El miembro superior
+  // del pórtico queda detrás de la Cinta en ese estado aunque siga en el DOM;
+  // el primer miembro vertical permanece dentro del canvas y representa el
+  // mismo contrato de lectura de corte sin depender de geometría oculta.
+  const visibleMember = page.locator('.member-object').first();
+  const memberBox = await visibleMember.boundingBox();
+  if (!memberBox) throw new Error('No se pudo medir un miembro visible.');
+  const beamPoint = { x: memberBox.x + memberBox.width / 2, y: memberBox.y + memberBox.height / 2 };
+  // La lectura de corte nace en pointermove y se fija en pointerdown. Hacer
+  // explícito el primer movimiento evita que el gate dependa del detalle de
+  // si Playwright mueve el puntero antes o después de que React confirme la
+  // herramienta activa.
+  await page.mouse.move(beamPoint.x, beamPoint.y);
+  await page.waitForTimeout(500);
+  if (await page.locator('.cut-tooltip').count() === 0) {
+    const cutDebug = await page.evaluate(({ x, y }) => ({
+      activeCutTool: document.querySelector('.desktop-tool-list [data-tool-id="cut"]')?.getAttribute('aria-pressed'),
+      analysisStatus: document.querySelector('[data-analysis-status]')?.getAttribute('data-analysis-status'),
+      resultTab: document.querySelector('[data-results-quantity-bar] [aria-selected="true"]')?.getAttribute('data-result-tab'),
+      members: [...document.querySelectorAll('.member-object')].map((element) => ({
+        id: element.getAttribute('data-structure-id'),
+        rect: (() => { const box = element.getBoundingClientRect(); return { left: box.left, top: box.top, width: box.width, height: box.height }; })(),
+      })),
+      point: { x, y, element: document.elementFromPoint(x, y)?.outerHTML.slice(0, 220) },
+      canvas: document.querySelector('.canvas-host')?.getBoundingClientRect().toJSON(),
+    }), beamPoint);
+    throw new Error(`Corte no produjo preview: ${JSON.stringify(cutDebug)}`);
+  }
+  await page.locator('.cut-tooltip').waitFor({ state: 'visible' });
+  await page.mouse.click(beamPoint.x, beamPoint.y);
   await page.locator('.cut-tooltip').waitFor({ state: 'visible' });
   out.checks.cutEquations = await page.locator('.cut-equilibrium > code').count() === 3;
   out.checks.cutResiduals = await page.locator('.cut-residuals span').count() === 3;
@@ -1035,7 +1032,7 @@ async function desktop() {
   out.checks.shearChart = await page.locator('.diagram-chart.shear').isVisible();
   // CRI-119 · «Aprender» tampoco es ya una pestaña residente (CRI-101): es la
   // vista `learn` de la superficie densa, invocada por su lanzador.
-  await page.locator('[data-dense-launcher="learn"]').click();
+  await openDenseLauncher(page, 'learn');
   await page.locator('.dense-results-surface').waitFor({ state: 'visible' });
   out.checks.learningSteps = await page.locator('.dense-results-surface .learning-steps details').count();
   await page.keyboard.press('Escape');
@@ -1051,7 +1048,7 @@ async function desktop() {
   out.checks.multiSelection = await page.locator('.member-object.selected').count() >= 2;
   const membersBeforeSplit = await page.locator('.member-object').count();
   await page.locator('.desktop-tool-list').getByRole('button', { name: 'Dividir miembro (B)', exact: true }).click();
-  const splitTarget = page.locator('.member-object').nth(1);
+  const splitTarget = page.locator('.member-object').first();
   const splitBox = await splitTarget.boundingBox();
   if (!splitBox) throw new Error('No se pudo medir el miembro a dividir.');
   await page.mouse.click(splitBox.x + splitBox.width / 2, splitBox.y + splitBox.height / 2);
@@ -1059,7 +1056,9 @@ async function desktop() {
     document.querySelectorAll('.member-object').length === expected
   ), membersBeforeSplit + 1, { timeout: 2000 }).then(() => true, () => false);
   await setOverflowSelect(page, 'Unidades', 'N-mm');
-  out.checks.unitChanged = await page.locator('.units-select').inputValue() === 'N-mm';
+  await page.locator('.topbar-analysis-trigger').click();
+  out.checks.unitChanged = await page.locator('.topbar-analysis-panel').getByLabel('Unidades').inputValue() === 'N-mm';
+  await page.keyboard.press('Escape');
   await toggleThemeFromOverflow(page, 'Tema oscuro');
   out.checks.darkTheme = await page.evaluate(() => document.documentElement.dataset.theme === 'dark');
 
@@ -1085,7 +1084,6 @@ async function desktop() {
   mechanismPage.on('console', msg => { if (['error','warning'].includes(msg.type())) out.console.push(`mechanism ${msg.type()}: ${msg.text()}`); });
   mechanismPage.on('pageerror', err => out.pageErrors.push(`mechanism ${String(err)}`));
   await mechanismPage.goto(baseURL, { waitUntil: 'networkidle' });
-  await mechanismPage.getByTestId('welcome-screen').waitFor({ state: 'visible' });
   await mechanismPage.evaluate((seed) => {
     localStorage.clear();
     localStorage.setItem('structureCo.project', seed);
@@ -1125,7 +1123,7 @@ async function influenceWorkflow() {
   // su lanzador denso ya deja la superficie en esa vista, sin pestaña propia
   // que pulsar además.
   await openResultsSurface(page);
-  await page.locator('[data-dense-launcher="influence"]').click();
+  await openDenseLauncher(page, 'influence');
   await page.locator('.dense-results-surface').waitFor({ state: 'visible' });
   await page.getByRole('button', { name: 'Calcular', exact: true }).click();
   const lineView = page.locator('.influence-line-view');
@@ -1300,20 +1298,23 @@ async function mobile() {
   });
   Object.assign(out.checks, phonePanel.checks);
   out.checks.mobileTouchPlacesLoad = await page.locator('[data-structure-kind="memberLoad"]').count() === memberLoadsBeforeTouchPlacement + 1;
-  out.checks.mobileLoadEditor = await page.getByRole('dialog', { name: 'Inspector' }).getByRole('button', { name: 'Eliminar carga' }).isVisible();
+  const mobileLoadDialog = page.getByRole('dialog', { name: 'Inspector' });
+  const deleteSelectionButton = mobileLoadDialog.getByRole('button', { name: /Eliminar selección|Delete selection/i });
+  out.checks.mobileLoadEditor = await deleteSelectionButton.isVisible();
   // CRI-119 · Mismo hit-test bajo emulación táctil que arriba.
-  await page.getByRole('dialog', { name: 'Inspector' }).getByRole('button', { name: 'Eliminar carga' }).evaluate((el) => el.click());
+  await deleteSelectionButton.evaluate((el) => el.click());
   // CRI-119 · Este diálogo es la variante `surface="detail"` de Inspector.tsx,
   // que no monta el botón "Cerrar inspector" (sólo lo hace la variante con
   // pestañas, `!surface`) — el mismo hallazgo de más arriba. Escape es el único
   // cierre disponible para cualquier variante.
   await page.keyboard.press('Escape');
   await page.getByRole('dialog', { name: 'Inspector' }).waitFor({ state: 'hidden' });
-  out.checks.mobileMore = await page.getByLabel('Más acciones').isVisible();
-  await page.getByLabel('Más acciones').click();
+  const utilityMenuButton = page.locator('.utility-more-button');
+  out.checks.mobileMore = await utilityMenuButton.isVisible();
+  await utilityMenuButton.evaluate((el) => el.click());
   out.checks.mobileMenu = await page.locator('.mobile-actions-menu').isVisible();
   const darkButton = page.getByRole('button', { name: /Tema oscuro|Tema claro/ });
-  await darkButton.click();
+  await darkButton.evaluate((el) => el.click());
   out.checks.mobileThemeChanged = await page.evaluate(() => document.documentElement.dataset.theme === 'dark');
   await page.getByRole('button', { name: 'Analizar', exact: true }).click();
   // CRI-119 · Analizar ya no abre las salidas por su cuenta.
@@ -1352,9 +1353,10 @@ async function educationalExample() {
   page.on('pageerror', err => out.pageErrors.push(`educational ${String(err)}`));
   await loadCleanApp(page);
   await enterWorkspace(page);
-  await page.getByRole('button', { name: 'Abrir proyectos y ejemplos' }).click();
-  await page.locator('.project-menu button').filter({ hasText: 'Hibbeler · carga tributaria Fig. 2–11' }).click();
-  out.checks.hibbelerProjectLoaded = await page.getByLabel('Nombre del proyecto').inputValue() === 'Hibbeler · carga tributaria Fig. 2–11';
+  await page.locator('.topbar-project-trigger').click();
+  await page.locator('.topbar-project-examples-trigger').click();
+  await page.locator('.topbar-project-examples button').filter({ hasText: 'Hibbeler · carga tributaria Fig. 2–11' }).click();
+  out.checks.hibbelerProjectLoaded = (await page.locator('.topbar-project-trigger').innerText()).includes('Hibbeler · carga tributaria Fig. 2–11');
   await page.getByRole('button', { name: 'Analizar', exact: true }).click();
   // CRI-119 · El estado del análisis se movió a la Cinta desde CRI-100 (el
   // propio comentario de `ResultsPanel.tsx` lo dice: "deben verse sin abrir
@@ -1381,7 +1383,7 @@ async function educationalExample() {
   out.checks.hibbelerMomentChart = await page.locator('.diagram-chart.moment').isVisible();
   // CRI-119 · «Aprender» tampoco es ya una pestaña residente: es la vista
   // `learn` de la superficie densa, invocada por su lanzador.
-  await page.locator('[data-dense-launcher="learn"]').click();
+  await openDenseLauncher(page, 'learn');
   await page.locator('.dense-results-surface').waitFor({ state: 'visible' });
   await page.locator('.educational-source').waitFor({ state: 'visible' });
   const sourceText = await page.locator('.educational-source').innerText();

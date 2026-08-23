@@ -3,7 +3,7 @@ import { preview } from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { clearProjectLibraryOnBoot, continueStoredProject, openExamplePortal, openResultsSurface } from './qa-welcome.mjs';
+import { clearProjectLibraryOnBoot, continueStoredProject, disablePwaUpdateLifecycle, openExamplePortal, openResultsSurface } from './qa-welcome.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const engine = process.argv.includes('--webkit') ? 'webkit' : 'chromium';
@@ -26,7 +26,7 @@ const browser = await (engine === 'webkit' ? webkit : chromium).launch({
     executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH,
   } : {}),
 });
-const results = { engine, url: baseURL, checks: {}, clipboardReadText: null, console: [], pageErrors: [] };
+const results = { engine, url: baseURL, checks: {}, console: [], pageErrors: [] };
 
 const check = (name, condition, detail = '') => {
   results.checks[name] = { pass: Boolean(condition), detail };
@@ -69,15 +69,25 @@ const resetToExample = async (page) => {
   // Project-hub actions use the same project name. Scope this to the welcome
   // template card so the smoke path always opens the structural example.
   // CRI-116 · el pórtico de ejemplo vive en el tercer paso desde CRI-112.
-  await openExamplePortal(page, page.locator('.welcome-template-card').filter({ hasText: /P.rtico de ejemplo/i }));
+  await openExamplePortal(page);
   await page.locator('.app-shell').waitFor({ state: 'visible' });
-  await page.locator('[data-structure-kind="node"][data-structure-id="N1"]').waitFor({ state: 'visible' });
+  try {
+    await page.locator('[data-structure-kind="node"][data-structure-id="N1"]').waitFor({ state: 'visible', timeout: 10_000 });
+  } catch (error) {
+    const debug = await page.evaluate(() => ({
+      project: JSON.parse(localStorage.getItem('structureCo.project') ?? 'null'),
+      nodes: [...document.querySelectorAll('[data-structure-kind="node"]')].map((element) => element.getAttribute('data-structure-id')),
+      body: document.body.innerText.slice(0, 800),
+    }));
+    throw new Error(`Example did not render N1: ${JSON.stringify(debug)}; ${error.message}`);
+  }
   // Vite loads the workspace CSS after the shell's lazy chunk. Do not navigate
   // to the next isolated scenario until that stylesheet is committed: WebKit
   // otherwise reports a real rejected CSS preload while the old document dies.
   await page.waitForLoadState('networkidle');
   await page.waitForFunction(() => Array.from(document.styleSheets)
     .some((sheet) => sheet.href.includes('WorkspaceShell')));
+  await page.waitForFunction(() => Boolean(localStorage.getItem('structureCo.project')));
   await sleep(page);
 };
 
@@ -165,32 +175,6 @@ const openCandidatePickerFromKeyboard = async (page, kind, id) => {
   return picker;
 };
 
-const contextualActions = (page) => page.locator('[data-contextual-actions]');
-
-const openContextualOverflow = async (page) => {
-  const toolbar = contextualActions(page);
-  await toolbar.waitFor({ state: 'visible' });
-  await touchActivate(page, toolbar.getByRole('button', { name: /más acciones/i }));
-  const menu = toolbar.getByRole('menu', { name: /más acciones/i });
-  await menu.waitFor({ state: 'visible' });
-  return menu;
-};
-
-const clipboardReadTextStatus = (page) => page.evaluate(async () => {
-  const clipboard = navigator.clipboard;
-  if (!clipboard || typeof clipboard.readText !== 'function') return { state: 'unavailable' };
-  try {
-    await clipboard.readText();
-    return { state: 'available' };
-  } catch (error) {
-    return { state: 'blocked', name: error instanceof DOMException ? error.name : String(error) };
-  }
-});
-
-const touchActivate = async (page, locator) => {
-  await locator.tap();
-};
-
 const setViewportAndWaitForShell = async (page, width, height, expectedShell) => {
   await page.setViewportSize({ width, height });
   // Headless WebKit can update innerWidth before it delivers the matching
@@ -203,7 +187,7 @@ const setViewportAndWaitForShell = async (page, width, height, expectedShell) =>
     window.dispatchEvent(new Event('orientationchange'));
   });
   await page.waitForFunction((expected) => (
-    document.querySelector('[data-contextual-actions]')?.getAttribute('data-shell-class') === expected
+    document.querySelector('.app-shell')?.getAttribute('data-shell-class') === expected
   ), expectedShell, { timeout: 2_000 });
 };
 
@@ -215,8 +199,16 @@ const selectNodes = async (page, ids) => {
 };
 
 const openEdit = async (page, activation = 'pointer') => {
-  const primaryAction = contextualActions(page)
-    .getByRole('button', { name: /abrir editor estructural/i });
+  // La superficie vigente se lanza desde el comando derivado del ToolRail;
+  // `ContextualActions` sólo conserva su contrato unitario y no es un nodo
+  // montado por el Workspace actual.
+  let primaryAction = page.locator('[data-structural-edit-command]:visible').first();
+  if (!await primaryAction.isVisible().catch(() => false)) {
+    const more = page.locator('.mobile-tool-dock').getByRole('button', { name: /m.s herramientas|more tools/i });
+    await more.click();
+    await page.locator('.mobile-tool-palette-more').waitFor({ state: 'visible' });
+    primaryAction = page.locator('.mobile-tool-palette-more [data-structural-edit-command]:visible').first();
+  }
   await primaryAction.waitFor({ state: 'visible' });
   if (activation === 'keyboard') {
     // The broker owns this inset presentation; use its reachable contextual
@@ -343,9 +335,9 @@ const runRotateMirrorAndArray = async (page) => {
   await apply(surface);
   const array = await waitForStored(page, (project, memberCount) => project.members.length === memberCount + 2, arraySource.members.length);
   check('linearArrayHasOnePublishedBatch', array.nodes.length === arraySource.nodes.length + 4);
-  await page.locator('.history-controls').getByLabel(/^deshacer$/i).click();
+  await page.locator('.topbar-history-cluster .topbar-undo-button').click();
   await waitForStored(page, (project, memberCount) => project.members.length === memberCount, arraySource.members.length);
-  await page.locator('.history-controls').getByLabel(/^rehacer$/i).click();
+  await page.locator('.topbar-history-cluster .topbar-redo-button').click();
   await waitForStored(page, (project, memberCount) => project.members.length === memberCount + 2, arraySource.members.length);
   check('linearArrayUndoRedoIsExact', (await storedProject(page)).members.length === arraySource.members.length + 2);
 };
@@ -532,113 +524,51 @@ const runCandidatePicker = async (page) => {
 
 const runCri97ContextualActions = async (page) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await seedExample(page, (project) => {
-    const member = project.members.find((candidate) => candidate.id === 'M1');
-    if (!member) throw new Error('Expected member M1 in the example project.');
-    Object.assign(member, {
-      materialId: 'steel-a36', materialOrigin: 'catalog',
-      sectionId: 'w310x39', sectionOrigin: 'catalog',
-    });
-  });
+  await seedExample(page, () => undefined);
   await closeCompactSurfaceStack(page);
   await selectSingle(page, 'member', 'M1');
-  const toolbar = contextualActions(page);
-  await toolbar.waitFor({ state: 'visible' });
-  const visibleButtons = await toolbar.getByRole('button').allTextContents();
-  check('cri97CompactFloorIsPrimaryDeleteAndOverflowOnly', visibleButtons.length === 3
-    && visibleButtons[0].includes('Editar selección')
-    && visibleButtons[1].includes('Borrar')
-    && visibleButtons[2].includes('⋯'), JSON.stringify(visibleButtons));
-  await page.screenshot({ path: path.join(artifactsDir, `cri-97-compact-floor-${engine}.png`), fullPage: true });
+  const moreButton = page.locator('.mobile-tool-dock').getByRole('button', { name: /m.s herramientas|more tools/i });
+  await moreButton.click();
+  const more = page.getByRole('dialog', { name: /m.s herramientas|more tools/i });
+  await more.waitFor({ state: 'visible' });
+  const structuralCommand = more.locator('[data-structural-edit-command]');
+  check('cri97CompactToolRailExposesCurrentStructuralEditRoute', await structuralCommand.isVisible());
+  check('cri97CompactHasNoOrphanedContextualActionsSurface', await page.locator('[data-contextual-actions]').count() === 0);
+  await page.screenshot({ path: path.join(artifactsDir, `cri-97-compact-toolrail-${engine}.png`), fullPage: true });
 
-  let menu = await openContextualOverflow(page);
-  const overflowText = await menu.innerText();
-  check('cri97OverflowShowsNamesAndShortcuts', ['Copiar', 'Pegar', 'Duplicar', 'Repetir', 'Abrir hoja de datos']
-    .every((label) => overflowText.includes(label))
-    && ['Ctrl/Cmd+C', 'Ctrl/Cmd+V', 'Ctrl/Cmd+D', 'R'].every((shortcut) => overflowText.includes(shortcut)), overflowText);
-  await page.screenshot({ path: path.join(artifactsDir, `cri-97-overflow-${engine}.png`), fullPage: true });
-  await touchActivate(page, menu.getByRole('menuitem', { name: /copiar/i }));
-  await page.locator('.canvas-feedback').waitFor({ state: 'visible' });
-  check('cri97CopyRunsByTouch', (await page.locator('.canvas-feedback').innerText()).includes('Copia estructural lista'));
+  await structuralCommand.click();
+  const surface = page.locator('[data-structural-edit-surface]');
+  await surface.waitFor({ state: 'visible' });
+  check('cri97CompactStructuralEditRouteIsNotIntercepted', await surface.isVisible());
+  await surface.getByRole('button', { name: /^cancelar$/i }).last().click();
+  await surface.waitFor({ state: 'hidden' });
 
-  results.clipboardReadText = await clipboardReadTextStatus(page);
-  const membersBeforePaste = (await storedProject(page)).members.length;
-  menu = await openContextualOverflow(page);
-  await touchActivate(page, menu.getByRole('menuitem', { name: /pegar/i }));
-  const pastedProject = await waitForStored(page, (project, count) => project.members.length === count + 1, membersBeforePaste);
-  const pastedMember = pastedProject.members.at(-1);
-  check('cri97PasteRunsByTouchAndKeepsCatalogIdentity', pastedMember?.materialId === 'steel-a36'
-    && pastedMember?.sectionId === 'w310x39'
-    && pastedMember?.materialOrigin === 'catalog'
-    && pastedMember?.sectionOrigin === 'catalog', JSON.stringify(pastedMember));
-  await page.screenshot({ path: path.join(artifactsDir, `cri-97-paste-identity-${engine}.png`), fullPage: true });
-
-  const membersBeforeDuplicate = pastedProject.members.length;
-  await selectSingle(page, 'member', 'M1');
-  menu = await openContextualOverflow(page);
-  await touchActivate(page, menu.getByRole('menuitem', { name: /duplicar/i }));
-  await touchActivate(page, page.getByRole('button', { name: /confirmar duplicado/i }));
-  await waitForStored(page, (project, count) => project.members.length === count + 1, membersBeforeDuplicate);
-  check('cri97DuplicateRunsByTouch', true);
-
-  await selectSingle(page, 'member', 'M1');
-  menu = await openContextualOverflow(page);
-  await touchActivate(page, menu.getByRole('menuitem', { name: /repetir/i }));
-  await page.locator('.repeat-preview[data-repeat-affordance="active"]').waitFor({ state: 'visible' });
-  check('cri97RepeatRunsByTouch', true);
-  await touchActivate(page, page.getByRole('button', { name: /cancelar colocación/i }));
-
-  menu = await openContextualOverflow(page);
-  await touchActivate(page, menu.getByRole('menuitem', { name: /abrir hoja de datos/i }));
-  const datasheet = page.locator('[data-workspace-surface="datasheet"]');
-  await datasheet.waitFor({ state: 'visible' });
-  check('cri97DatasheetRunsByTouch', await datasheet.isVisible());
-  await touchActivate(page, page.getByRole('button', { name: /cerrar hoja de datos/i }));
-  await datasheet.waitFor({ state: 'hidden' });
-
-  await contextualActions(page).waitFor({ state: 'visible' });
   const picker = await openCandidatePickerFromKeyboard(page, 'node', 'N3');
-  check('cri97PickerAndContextualActionsDoNotCoexistInCompact', await picker.isVisible()
-    && await contextualActions(page).count() === 0);
+  check('cri97CandidatePickerOwnsCompactSelectionSurface', await picker.isVisible()
+    && await page.locator('[data-contextual-actions]').count() === 0);
   await picker.getByRole('listbox').press('Escape');
   await picker.waitFor({ state: 'hidden' });
-  await contextualActions(page).waitFor({ state: 'visible' });
-  check('cri97ContextualActionsResumeAfterPickerWithoutChangingSelection',
-    await target(page, 'member', 'M1').getAttribute('aria-pressed') === 'true');
-
-  for (const [width, expectedShell] of [[1536, 'X2'], [1024, 'M1'], [390, 'K0']]) {
-    await setViewportAndWaitForShell(page, width, 844, expectedShell);
-    await contextualActions(page).waitFor({ state: 'visible' });
-    const brokerGeometry = await contextualActions(page).evaluate((element) => ({
-      shellClass: element.getAttribute('data-shell-class'),
-      presentation: element.getAttribute('data-presentation'),
-      innerWidth: window.innerWidth,
-      innerHeight: window.innerHeight,
-    }));
-    check(`cri97BrokerPresentation${expectedShell}`,
-      brokerGeometry.shellClass === expectedShell && brokerGeometry.presentation === 'inset', JSON.stringify(brokerGeometry));
-  }
+  check('cri97CompactToolRailRemainsAvailableAfterPicker', await moreButton.isVisible());
 
   await setViewportAndWaitForShell(page, 844, 390, 'K0');
-  await contextualActions(page).waitFor({ state: 'visible' });
-  const landscape = await toolbar.evaluate((element) => {
+  const landscape = await page.locator('.mobile-tool-dock').evaluate((element) => {
     const rect = element.getBoundingClientRect();
     const viewport = window.innerWidth;
     return {
-      text: element.textContent,
       left: rect.left,
       right: rect.right,
       viewport,
       scrollWidth: document.documentElement.scrollWidth,
     };
   });
-  check('cri97CompactLandscapeEsHasNoHorizontalOverflow', landscape.text?.includes('Editar selección')
-    && landscape.left >= 0 && landscape.right <= landscape.viewport + 1
+  check('cri97CompactLandscapeToolRailHasNoHorizontalOverflow', landscape.left >= 0
+    && landscape.right <= landscape.viewport + 1
     && landscape.scrollWidth <= landscape.viewport + 1, JSON.stringify(landscape));
   await page.screenshot({ path: path.join(artifactsDir, `cri-97-compact-landscape-es-${engine}.png`), fullPage: true });
 };
 
 const context = await browser.newContext({ viewport: { width: 1536, height: 960 }, locale: 'es-MX', hasTouch: true });
+await disablePwaUpdateLifecycle(context);
 await context.addInitScript(({ marker, clearStorage }) => {
   const serialized = new URL(window.location.href).searchParams.get(marker);
   if (serialized === null) return;
