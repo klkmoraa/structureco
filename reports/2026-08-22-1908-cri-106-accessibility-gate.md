@@ -121,7 +121,9 @@ Se creó [CRI-123](https://linear.app/klkmoraa/issue/CRI-123/cri-106-vigente-run
 - Se añadió este reporte tracked.
 - Se generó instrumentación y evidencia ignorada en `reports/evidence/2026-08-22-cri-106-accessibility/`.
 - No hubo cambios en `src/`.
-- No se publicó `main` ni `gh-pages`.
+- Con autorización explícita posterior, `main` se publicó como `1419f21337962cb87405ee20ae04c396471983aa`.
+- El build generado desde ese snapshot se publicó en `gh-pages` como `23359baa7251437a3aa671961314f9fffa43e41c`, sin force push.
+- La URL servida `https://klkmoraa.github.io/structureco/` respondió HTTP 200 y referencia los assets actuales `index-PYDCmh8G.css` e `index-CiXyw_PA.js`.
 
 ## Estado y siguiente paso
 
