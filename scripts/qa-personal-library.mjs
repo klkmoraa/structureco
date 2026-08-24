@@ -91,16 +91,34 @@ try {
     const projectBeforeSave = await page.evaluate(() => localStorage.getItem('structureCo.project'));
     await createFavorite(page, { kind: 'pair', name: 'Par QA A992 + IPE' });
     await createFavorite(page, { kind: 'view', name: 'Vista QA' });
+    await page.getByRole('button', { name: 'Nueva sección' }).click();
+    await page.getByLabel('Nombre de la sección').fill('Rectangular QA 30 × 50');
+    await page.getByLabel('Ancho b (m)').fill('0.3');
+    await page.getByLabel('Peralte h (m)').fill('0.5');
+    const editorMetrics = await page.evaluate(() => ({
+      overflow: Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth),
+      smallTargets: [...document.querySelectorAll('.section-builder__editor button, .section-builder__editor input, .section-builder__editor select')]
+        .filter((element) => { const box = element.getBoundingClientRect(); return box.width > 0 && box.height > 0; })
+        .map((element) => { const box = element.getBoundingClientRect(); return { label: element.getAttribute('aria-label') || element.textContent?.trim(), width: Math.round(box.width), height: Math.round(box.height) }; })
+        .filter(({ width, height }) => width < 44 || height < 44),
+    }));
+    if (editorMetrics.overflow > 1) failures.push(`editorOverflow=${editorMetrics.overflow}`);
+    if (scenario.touch && editorMetrics.smallTargets.length) failures.push(`editorSmallTargets=${JSON.stringify(editorMetrics.smallTargets)}`);
+    await page.screenshot({ path: path.join(outDir, `${scenario.id}-section-editor.png`), fullPage: true });
+    await page.getByRole('button', { name: 'Guardar sección' }).click();
+    await page.getByRole('listitem', { name: /Rectangular QA 30 × 50/ }).waitFor({ state: 'visible' });
     const saveBoundary = await page.evaluate((before) => ({
       projectUnchanged: localStorage.getItem('structureCo.project') === before,
       library: JSON.parse(localStorage.getItem('structureCo.personal-library.v1') ?? '{}'),
+      sections: JSON.parse(localStorage.getItem('structureCo.personal-sections.v1') ?? '{}'),
     }), projectBeforeSave);
     if (!saveBoundary.projectUnchanged) failures.push('savingFavoriteMutatedProject');
     if (saveBoundary.library?.favorites?.length !== 2) failures.push(`savedFavorites=${saveBoundary.library?.favorites?.length ?? 0}`);
+    if (saveBoundary.sections?.sections?.length !== 1) failures.push(`savedSections=${saveBoundary.sections?.sections?.length ?? 0}`);
 
     const homeMetrics = await page.evaluate(() => ({
       overflow: Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth),
-      smallTargets: [...document.querySelectorAll('.personal-library button, .personal-library input, .personal-library select')]
+      smallTargets: [...document.querySelectorAll('.personal-library button, .personal-library input, .personal-library select, .section-builder button, .section-builder input:not([type="file"]), .section-builder select, .section-builder__import')]
         .filter((element) => { const box = element.getBoundingClientRect(); return box.width > 0 && box.height > 0; })
         .map((element) => { const box = element.getBoundingClientRect(); return { label: element.getAttribute('aria-label') || element.textContent?.trim(), width: Math.round(box.width), height: Math.round(box.height) }; })
         .filter(({ width, height }) => width < 44 || height < 44),
@@ -151,7 +169,7 @@ try {
     if (scenario.touch && workspaceMetrics.smallTargets.length) failures.push(`workspaceSmallTargets=${JSON.stringify(workspaceMetrics.smallTargets)}`);
     failures.push(...consoleErrors.map((error) => `console=${error}`));
     await page.screenshot({ path: path.join(outDir, `${scenario.id}-workspace.png`), fullPage: true });
-    report.scenarios.push({ ...scenario, homeMetrics, workspaceMetrics, saveBoundary: { projectUnchanged: saveBoundary.projectUnchanged, count: saveBoundary.library?.favorites?.length ?? 0 }, consoleErrors, failures });
+    report.scenarios.push({ ...scenario, editorMetrics, homeMetrics, workspaceMetrics, saveBoundary: { projectUnchanged: saveBoundary.projectUnchanged, favoriteCount: saveBoundary.library?.favorites?.length ?? 0, sectionCount: saveBoundary.sections?.sections?.length ?? 0 }, consoleErrors, failures });
     report.failures.push(...failures.map((failure) => `${scenario.id}: ${failure}`));
     await context.close();
   }

@@ -12,6 +12,7 @@ import {
   type PersonalFavoriteFilter,
 } from './personalLibrary';
 import { usePersonalLibrary, type LibraryOperationResult } from './usePersonalLibrary';
+import { SectionBuilder } from './SectionBuilder';
 import './personalLibrary.css';
 
 type Language = 'es' | 'en';
@@ -132,7 +133,7 @@ export const PersonalLibraryView = ({
   };
 
   const filters: PersonalFavoriteFilter[] = ['all', 'material', 'section', 'pair', 'view'];
-  return <section className="personal-library" aria-labelledby="personal-library-title">
+  return <div className="personal-library-shell"><section className="personal-library" aria-labelledby="personal-library-title">
     <header className="personal-library__header">
       <div><p>{copy.eyebrow}</p><h2 id="personal-library-title">{copy.title}</h2><span>{copy.body}</span></div>
       <button type="button" className="personal-library__create" onClick={() => setCreating((current) => !current)}>{creating ? <X size={16} aria-hidden="true" /> : null}{creating ? copy.close : copy.create}</button>
@@ -165,5 +166,5 @@ export const PersonalLibraryView = ({
         onRestore={() => setFeedback(feedbackFor(repository.restore(favorite.id), copy.restored, copy))}
       />)}
     </ul> : <div className="personal-library__empty" role="status"><strong>{query ? copy.noResults : copy.empty}</strong>{!query ? <span>{copy.emptyBody}</span> : null}</div>}
-  </section>;
+  </section><SectionBuilder language={language} units={units} storage={storage} /></div>;
 };
