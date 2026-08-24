@@ -42,6 +42,7 @@ documento que los cita.
 
 | Documento | Uso correcto |
 |---|---|
+| [Aula vNext · explicación anclada a resultados](superpowers/specs/2026-08-24-aula-vnext-result-anchored-design.md) | Diseño de producto para implementación futura; no describe una capacidad ya implementada. |
 | [Pre-RFC de IA y `CommandProposal`](architecture/structureco-fase-4-ai-command-proposal-pre-rfc.md) | Propuesta futura; no describe una capacidad implementada. |
 | [Brandbook heredado](../brand/README.md) | Procedencia de assets anteriores; no restringe el rediseño vigente. |
 | [Validación de Space 3D](../validation/space3d/README.md) | Procedimiento de oráculos que debe ejecutarse de nuevo al cambiar el área. |
