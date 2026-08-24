@@ -13,6 +13,7 @@ import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { ProjectModel, Selection, UnitSystemId } from '../../types';
 import { createFavorite, writePersonalLibrary } from '../library/personalLibrary';
+import { readCanvasViewSettings } from '../view/canvasViewSettings';
 import { Inspector } from './Inspector';
 
 const ADVANCED_STORAGE_KEY = 'structureCo.inspector.expanded.v1';
@@ -110,6 +111,7 @@ const InspectorHarness = ({ modal = false, onClose, onDesktopWidthChange, deskto
       <output aria-label="M1 origen material">{String((memberM1 as unknown as Record<string, unknown>)?.materialOrigin ?? '')}</output>
       <output aria-label="M1 sección ID">{String((memberM1 as unknown as Record<string, unknown>)?.sectionId ?? '')}</output>
       <output aria-label="M1 origen sección">{String((memberM1 as unknown as Record<string, unknown>)?.sectionOrigin ?? '')}</output>
+      <output aria-label="Estado de análisis">{analysis ? (analysis.success ? 'success' : 'failed') : 'none'}</output>
       <output aria-label="Issues de análisis">{analysis?.issues.map((issue) => issue.id).join(',') ?? ''}</output>
       <Inspector desktopWidth={desktopWidth} presentation={modal ? 'sheet' : 'dock'} onClose={onClose} onDesktopWidthChange={onDesktopWidthChange} mobileDetent={mobileDetent} onMobileDetentChange={onMobileDetentChange} />
     </div>
@@ -630,6 +632,27 @@ describe('Inspector preset selectors and load-case guidance', () => {
 });
 
 describe('Inspector editing safety and history', () => {
+  it('applies a favorite view without invalidating analysis or creating structural undo history', async () => {
+    const project = createInspectorProject();
+    const view = { ...readCanvasViewSettings(project), showGrid: false, showLoads: false, diagramScale: 2.5 };
+    const favorite = createFavorite([], { kind: 'view', name: 'Vista de revisión', theme: 'dark', view, unitsAtSave: 'kN-m' }, 'view-favorite', '2026-08-24T16:00:00.000Z')[0];
+    writePersonalLibrary(localStorage, [favorite]);
+    const user = userEvent.setup();
+    renderInspector(project);
+
+    await user.click(screen.getByRole('button', { name: 'Analizar fixture' }));
+    await waitFor(() => expect(screen.getByLabelText('Estado de análisis').textContent).toBe('success'));
+    await user.click(screen.getByRole('tab', { name: 'Vista' }));
+    expect((screen.getAllByRole('checkbox', { name: 'Cuadrícula' })[0] as HTMLInputElement).checked).toBe(true);
+
+    await user.click(screen.getByRole('button', { name: 'Aplicar vista' }));
+
+    expect((screen.getAllByRole('checkbox', { name: 'Cuadrícula' })[0] as HTMLInputElement).checked).toBe(false);
+    expect(screen.getByLabelText('Estado de análisis').textContent).toBe('success');
+    expect(screen.getByLabelText('Puede deshacer').textContent).toBe('false');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+  });
+
   it('does not mutate the project or create undo history on focus and blur alone', async () => {
     const user = userEvent.setup();
     renderInspector();

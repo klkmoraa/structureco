@@ -11,6 +11,7 @@ import { InspectorProperties } from './InspectorProperties';
 import { readCanvasViewSettings, withCanvasViewSettings } from '../view/canvasViewSettings';
 import { MAX_INSPECTOR_WIDTH, MIN_INSPECTOR_WIDTH, clampInspectorWidth, type InspectorDetent } from '../workspace/useWorkspaceLayoutPreferences';
 import type { SurfacePresentation, SurfaceStatus } from '../workspace/surfacePresentation';
+import { ViewFavoritesPanel } from '../library/ViewFavoritesPanel';
 
 const NumberField = ({
   label,
@@ -347,7 +348,8 @@ const AnalysisSetupPanel = ({ activeTool, onChooseTool, selectedCombinationId, s
 
 const DisplayPanel = ({ includeCalculationMode = true }: { includeCalculationMode?: boolean }) => {
   const { project, updateProjectView } = useProjectModel();
-  const { t } = useI18n();
+  const { language, t } = useI18n();
+  const { theme, setTheme } = useWorkspaceUI();
   const units = project.settings.units;
   const view = readCanvasViewSettings(project);
   const display = (value: number, quantity: UnitQuantity) => toDisplay(value, units, quantity);
@@ -361,6 +363,16 @@ const DisplayPanel = ({ includeCalculationMode = true }: { includeCalculationMod
         ? <div className="classroom-mode-card"><strong>{t('inspector.classroomEssentials')}</strong><span>{t('inspector.classroomEssentialsBody')}</span><small>{t('inspector.classroomRigidityWarning')}</small></div>
         : <div className="inspector-note"><CircleHelp size={17} /> {t('inspector.completeModeDescription')}</div>}
     </section> : null}
+    <ViewFavoritesPanel
+      language={language}
+      units={units}
+      theme={theme}
+      view={view}
+      onApply={(favorite) => {
+        setTheme(favorite.theme);
+        updateProjectView((draft) => withCanvasViewSettings(draft, favorite.view));
+      }}
+    />
     <section className="inspector-section">
       <h3>{t('inspector.canvas')}</h3>
       <label className="toggle-row"><span>{t('inspector.grid')}</span><input type="checkbox" checked={view.showGrid} onChange={(event) => setView({ showGrid: event.target.checked })} /></label>
