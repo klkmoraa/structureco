@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { clearProjectLibraryOnBoot, disablePwaUpdateLifecycle } from './scripts/qa-welcome.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const artifactsDir = path.join(root, 'qa-artifacts');
@@ -124,10 +125,9 @@ const waitForWorkspaceStylesheet = async (page) => {
 
 for (const deviceName of ['iPhone 13', 'iPad Pro 11']) {
   const context = await browser.newContext({ ...devices[deviceName], locale: 'es-MX' });
-  await context.addInitScript(() => {
-    localStorage.clear();
-    try { indexedDB.deleteDatabase('structureCo.projects'); } catch { /* noop */ }
-  });
+  await disablePwaUpdateLifecycle(context);
+  await clearProjectLibraryOnBoot(context);
+  await context.addInitScript(() => localStorage.clear());
   const page = await context.newPage();
   page.on('console', (message) => {
     if (message.type() === 'warning' && message.text().includes('preloaded using link preload')) return;
