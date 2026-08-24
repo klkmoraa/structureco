@@ -125,6 +125,7 @@ export const ContextualActions = ({
   return <section
     className="contextual-actions"
     data-contextual-actions
+    data-workspace-surface="contextualActions"
     data-presentation={presentation}
     data-shell-class={shellClass}
     role="toolbar"

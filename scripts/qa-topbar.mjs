@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import { preview } from 'vite';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { clearProjectLibraryOnBoot, openWelcomeStep } from './qa-welcome.mjs';
+import { clearProjectLibraryOnBoot, disablePwaUpdateLifecycle, openExamplePortal } from './qa-welcome.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const previewServer = await preview({ root, preview: { host: '127.0.0.1', port: 4177, strictPort: true }, logLevel: 'error' });
@@ -10,6 +10,7 @@ const browser = await chromium.launch(process.env.QA_LOCAL_CHROMIUM_PATH
   ? { headless: true, executablePath: process.env.QA_LOCAL_CHROMIUM_PATH }
   : { headless: true, channel: process.env.PLAYWRIGHT_CHANNEL ?? 'chrome' });
 const page = await browser.newPage({ viewport: { width: 1536, height: 960 }, deviceScaleFactor: 1 });
+await disablePwaUpdateLifecycle(page);
 const checkedWidths = [1024, 1100, 1180, 1280, 1366, 1440, 1536, 1920];
 const continuousWidths = Array.from({ length: 37 }, (_, index) => 1024 + index * 16);
 const breakpointBoundaryWidths = [1023, 1024, 1025, 1279, 1280, 1281, 1439, 1440, 1441, 1499, 1500, 1501, 1535, 1536, 1537];
@@ -47,11 +48,8 @@ async function enterWorkspace() {
   await page.goto('http://127.0.0.1:4177/', { waitUntil: 'networkidle' });
   const shell = page.locator('.app-shell');
   for (let attempt = 1; attempt <= 5; attempt += 1) {
-    await openWelcomeStep(page, 'Por dónde');
-    const example = page.locator('.welcome-template-card').filter({ hasText: /Pórtico de ejemplo|Example frame/i }).first();
     try {
-      await example.waitFor({ state: 'visible', timeout: 5_000 });
-      await example.evaluate((element) => element.click());
+      await openExamplePortal(page);
       await shell.waitFor({ state: 'visible', timeout: 5_000 });
       return;
     } catch (error) {

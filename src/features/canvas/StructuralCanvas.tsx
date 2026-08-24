@@ -46,7 +46,7 @@ import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { CanvasChrome } from './CanvasChrome';
 import { layoutSmartLabels, smartLabelDetailForScale, type SmartLabelCandidate } from './labelLayout';
 import { buildCanvasSelectionVisualState, selectionEnvelopeForPoints } from './selectionVisuals';
-import { onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
+import { emitWorkspaceCommand, onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
 import { CanvasGeometryLayer, type StructuralTarget } from './CanvasGeometryLayer';
 import {
   flexibleRatioFromGross,
@@ -62,6 +62,7 @@ import { CanvasInteractionLayer } from './CanvasInteractionLayer';
 import { CanvasMiniMap } from './CanvasMiniMap';
 import { CanvasTouchLoupe } from './CanvasTouchLoupe';
 import { CandidatePicker } from './CanvasCandidatePicker';
+import { ContextualActions, type ContextualActionAvailability, type ContextualActionId } from './ContextualActions';
 import {
   activeCandidate,
   candidateToSelection,
@@ -115,6 +116,16 @@ const LazyStructureGeneratorSurface = lazy(() =>
 import './phase2.css';
 
 type Camera = CanvasCamera;
+
+const CONTEXTUAL_ACTION_LABEL_KEYS: Record<ContextualActionId, TranslationKey> = {
+  copy: 'contextualActions.copy',
+  paste: 'contextualActions.paste',
+  duplicate: 'contextualActions.duplicate',
+  repeat: 'contextualActions.repeat',
+  delete: 'contextualActions.delete',
+  datasheet: 'contextualActions.datasheet',
+  structuralEdit: 'contextualActions.structuralEdit',
+};
 
 /** Shared empty list so the memoised snap candidates keep a stable identity. */
 const EMPTY_SNAP_CANDIDATES: SnapCandidate[] = [];
@@ -267,6 +278,7 @@ export const StructuralCanvas = ({
   const surfaceBroker = useContext(SurfacePresentationContext);
   const candidatePickerSurface = surfaceBroker?.stateFor('candidatePicker');
   const generatorSurface = surfaceBroker?.stateFor('generator');
+  const contextualActionsSurface = surfaceBroker?.stateFor('contextualActions');
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const coordinateReadoutRef = useRef<HTMLOutputElement>(null);
@@ -330,6 +342,33 @@ export const StructuralCanvas = ({
   const candidatePreview = candidatePicker ? activeCandidate(candidatePicker) : null;
   const repeatCandidate = useMemo(() => resolveRepeatRecipe(project, selection), [project, selection]);
   const editCapabilities = useMemo(() => structuralEditCapabilities(project, selection), [project, selection]);
+  const contextualActionAvailability = useMemo<ContextualActionAvailability>(() => ({
+    // Sólo se consulta el tipo vivo aquí; construir el snapshot completo de
+    // Copy durante cada render sería trabajo innecesario para modelos grandes.
+    copy: Boolean(selection && ['node', 'member', 'multi'].includes(selection.kind)),
+    // La lectura del portapapeles del sistema es asíncrona y no puede decidir
+    // si el comando debe existir. La acción permanece visible y explica si no
+    // hay una copia disponible al invocarla; la copia interna es el fallback.
+    paste: true,
+    duplicate: Boolean(selection && ['node', 'member', 'multi'].includes(selection.kind)),
+    repeat: Boolean(repeatCandidate) && !structuralEditDraft,
+    datasheet: Boolean(selection),
+    structuralEdit: editCapabilities.structural && !structuralEditDraft,
+  }), [editCapabilities.structural, project, repeatCandidate, selection, structuralEditDraft]);
+
+  // `contextualActions` es derivada de la selección viva: no conserva una
+  // segunda selección ni una preferencia propia. El broker sólo decide si la
+  // capa está activa o suspendida frente a una superficie que tape el lienzo.
+  // Durante una colocación (`memberStart` o una herramienta distinta de
+  // Select) la selección es parte del gesto en curso y el zócalo no debe
+  // competir visualmente con la entrada rápida ni con sus instrucciones.
+  useEffect(() => {
+    if (!surfaceBroker) return;
+    const intentOpen = surfaceBroker.stateFor('contextualActions').open;
+    const shouldOpen = Boolean(selection) && activeTool === 'select' && !memberStart;
+    if (shouldOpen && !intentOpen) surfaceBroker.openSurface('contextualActions');
+    else if (!shouldOpen && intentOpen) surfaceBroker.closeSurface('contextualActions');
+  }, [activeTool, memberStart, selection, surfaceBroker]);
   const structuralEditPreview = useMemo((): { prepared: PreparedStructuralEdit | null; error: string } => {
     if (!structuralEditDraft) return { prepared: null, error: '' };
     if (structuralEditDraft.sourceSnapshot !== structuralEditSnapshot(project)) {
@@ -1740,6 +1779,17 @@ export const StructuralCanvas = ({
   }, [cancelActiveInteraction, closeCandidatePicker, editCapabilities.structural, project, selection, setActiveTool, showCanvasFeedback, t]);
 
   useEffect(() => onWorkspaceCommand('open-structural-edit', () => startStructuralEdit('move')), [startStructuralEdit]);
+  const invokeContextualAction = useCallback((action: ContextualActionId) => {
+    switch (action) {
+      case 'copy': void copyStructuralSelection(); break;
+      case 'paste': void pasteStructuralSelection(); break;
+      case 'duplicate': startDuplicate(); break;
+      case 'repeat': activateRepeat(); break;
+      case 'delete': deleteSelection(); break;
+      case 'datasheet': emitWorkspaceCommand('open-datasheet'); break;
+      case 'structuralEdit': startStructuralEdit('move'); break;
+    }
+  }, [activateRepeat, copyStructuralSelection, deleteSelection, pasteStructuralSelection, startDuplicate, startStructuralEdit]);
   useEffect(() => onWorkspaceCommand('open-structure-generator', () => {
     if (surfaceBroker) surfaceBroker.openSurface('generator');
     else setStandaloneGeneratorOpen(true);
@@ -2521,6 +2571,26 @@ export const StructuralCanvas = ({
         onApply={() => { void confirmStructuralEdit(); }}
         onCancel={cancelStructuralEdit}
       />
+
+      {surfaceBroker ? <ContextualActions
+        selection={selection}
+        availability={contextualActionAvailability}
+        active={contextualActionsSurface?.status === 'active'
+          && activeTool === 'select'
+          && !memberStart
+          && !duplicateDraft
+          && !repeatRecipe
+          && !structuralEditDraft}
+        presentation={contextualActionsSurface?.presentation ?? 'inset'}
+        shellClass={surfaceBroker.shellClass}
+        ariaLabel={t('contextualActions.title')}
+        labelForAction={(action) => t(CONTEXTUAL_ACTION_LABEL_KEYS[action])}
+        accessibleLabelForAction={(action) => action === 'structuralEdit'
+          ? t('contextualActions.structuralEditAccessible')
+          : t(CONTEXTUAL_ACTION_LABEL_KEYS[action])}
+        overflowLabel={t('contextualActions.more')}
+        onInvoke={invokeContextualAction}
+      /> : null}
 
       <CanvasChrome
         modeLabel={t(toolLabelKeys[activeTool])}

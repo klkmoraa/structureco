@@ -113,25 +113,45 @@ export const openResultsSurface = async (page, { timeout = 15_000 } = {}) => {
   const panel = page.locator('.results-panel');
   if (await panel.isVisible().catch(() => false)) return panel;
 
-  const resultCommand = page.locator('[data-workspace-surface-command="open-results"]').last();
-  if (!await resultCommand.isVisible().catch(() => false)) {
-    const desktopLauncher = page.locator('.desktop-tool-list [data-workspace-panels-launcher]').first();
-    if (await desktopLauncher.isVisible().catch(() => false)) {
-      await desktopLauncher.locator('button').first().click();
+  // La composición vigente mantiene Resultados como lanzador persistente en
+  // TopBar (X2/M1) y lo lleva al menú de utilidades en K0. El selector de
+  // `data-workspace-surface-command` pertenecía al carril anterior y ya no
+  // representa una acción visible para la persona.
+  const currentLauncher = page.locator('.results-launcher').first();
+  if (await currentLauncher.isVisible().catch(() => false)) {
+    await currentLauncher.click({ timeout: 5_000 });
+  } else {
+    const utilities = page.locator('.utility-more-button').first();
+    if (await utilities.isVisible().catch(() => false)) {
+      await utilities.click({ timeout: 5_000 });
+      await page.locator('.topbar-utilities-panel:visible')
+        .getByRole('button', { name: /^Resultados$|^Results$/i })
+        .click({ timeout: 5_000 });
     } else {
-      const more = page.locator('.mobile-tool-dock').getByRole('button', { name: /^Más herramientas$|^More tools$/i }).first();
-      await more.click({ timeout: 5_000 });
-      const workspaceLauncher = page.locator('.mobile-tool-palette-more [data-workspace-panels-launcher]');
-      await workspaceLauncher.waitFor({ state: 'visible', timeout: 5_000 });
-      await workspaceLauncher.click({ timeout: 5_000 });
-      const workspacePalette = page.locator('.mobile-tool-palette-workspace');
-      await workspacePalette.waitFor({ state: 'visible', timeout: 5_000 });
-      await workspacePalette.getByRole('menuitem', { name: /^Resultados$|^Results$/i }).click({ timeout: 5_000 });
+      // Compatibilidad con una captura/build histórica que aún exponga el
+      // lanzador del carril; no es la ruta usada por la interfaz actual.
+      const resultCommand = page.locator('[data-workspace-surface-command="open-results"]').last();
+      if (!await resultCommand.isVisible().catch(() => false)) {
+        const desktopLauncher = page.locator('.desktop-tool-list [data-workspace-panels-launcher]').first();
+        if (await desktopLauncher.isVisible().catch(() => false)) {
+          await desktopLauncher.locator('button').first().click();
+        } else {
+          const more = page.locator('.mobile-tool-dock').getByRole('button', { name: /^Más herramientas$|^More tools$/i }).first();
+          await more.click({ timeout: 5_000 });
+          const workspaceLauncher = page.locator('.mobile-tool-palette-more [data-workspace-panels-launcher]');
+          await workspaceLauncher.waitFor({ state: 'visible', timeout: 5_000 });
+          await workspaceLauncher.click({ timeout: 5_000 });
+          const workspacePalette = page.locator('.mobile-tool-palette-workspace');
+          await workspacePalette.waitFor({ state: 'visible', timeout: 5_000 });
+          await workspacePalette.getByRole('menuitem', { name: /^Resultados$|^Results$/i }).click({ timeout: 5_000 });
+        }
+      }
+      if (await panel.isVisible().catch(() => false)) return panel;
+      await resultCommand.waitFor({ state: 'visible', timeout });
+      await resultCommand.click();
     }
   }
   if (await panel.isVisible().catch(() => false)) return panel;
-  await resultCommand.waitFor({ state: 'visible', timeout });
-  await resultCommand.click();
   await panel.waitFor({ state: 'visible', timeout });
   if ((await panel.getAttribute('class'))?.includes('mobile-collapsed')) {
     await panel.locator('.results-mobile-toggle').click({ timeout: 8_000 });

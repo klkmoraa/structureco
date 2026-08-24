@@ -30,10 +30,11 @@ const previewServer = await preview({
   logLevel: 'error',
 });
 const baseURL = 'http://127.0.0.1:4196/';
-const browser = await chromium.launch({
-  headless: true,
-  executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH ?? '/opt/pw-browsers/chromium',
-});
+const browser = await chromium.launch(
+  process.env.PLAYWRIGHT_EXECUTABLE_PATH
+    ? { headless: true, executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH }
+    : { headless: true, channel: process.env.PLAYWRIGHT_CHANNEL ?? 'chrome' },
+);
 
 const report = { checks: [], failures: [], measurements: {}, shots: [] };
 const check = (name, ok, detail) => {
@@ -94,7 +95,11 @@ const newPage = async (viewport) => {
 const enterShell = async (page) => {
   const shell = page.locator('.app-shell');
   if (await shell.isVisible().catch(() => false)) return;
-  for (const name of [/^nuevo proyecto/i, /ver otras formas de empezar/i, /ir a la mesa/i, /continuar proyecto/i]) {
+  // La Home vigente puede mostrar «Continuar proyecto» y «Nuevo proyecto» a
+  // la vez. Tras sembrar el modelo para este gate hay que continuar el que ya
+  // existe; pulsar «Nuevo proyecto» aquí reemplaza el fixture y deja la tabla
+  // sin las filas que el gate necesita medir.
+  for (const name of [/continuar proyecto/i, /^nuevo proyecto/i, /ver otras formas de empezar/i, /ir a la mesa/i]) {
     const button = page.getByRole('button', { name }).first();
     if (!await button.count()) continue;
     await button.click().catch(() => undefined);
