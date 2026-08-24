@@ -17,14 +17,14 @@ import {
 } from './surfacePresentation';
 
 const expectedTable: Record<'X2' | 'M1' | 'K0', Record<SurfaceId, SurfacePresentation>> = {
-  X2: { detail: 'dock', analysisSetup: 'dock', view: 'dock', results: 'dock', generator: 'floating', dense: 'drawer', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
-  M1: { detail: 'inset', analysisSetup: 'inset', view: 'inset', results: 'inset', generator: 'inset', dense: 'drawer', datasheet: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
-  K0: { detail: 'sheet', analysisSetup: 'sheet', view: 'sheet', results: 'sheet', generator: 'sheet', dense: 'fullscreen', datasheet: 'fullscreen', doctor: 'fullscreen', palette: 'sheet', candidatePicker: 'sheet', contextualActions: 'inset' },
+  X2: { detail: 'dock', analysisSetup: 'dock', view: 'dock', results: 'dock', generator: 'floating', dense: 'drawer', datasheet: 'drawer', bom: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
+  M1: { detail: 'inset', analysisSetup: 'inset', view: 'inset', results: 'inset', generator: 'inset', dense: 'drawer', datasheet: 'drawer', bom: 'drawer', doctor: 'drawer', palette: 'overlay', candidatePicker: 'floating', contextualActions: 'inset' },
+  K0: { detail: 'sheet', analysisSetup: 'sheet', view: 'sheet', results: 'sheet', generator: 'sheet', dense: 'fullscreen', datasheet: 'fullscreen', bom: 'fullscreen', doctor: 'fullscreen', palette: 'sheet', candidatePicker: 'sheet', contextualActions: 'inset' },
 };
 
 describe('surface presentation table', () => {
   it('is the literal X2/M1/K0 matrix for every broker-owned surface', () => {
-    expect(BROKER_SURFACE_IDS).toEqual(['detail', 'analysisSetup', 'view', 'results', 'generator', 'dense', 'datasheet', 'doctor', 'palette', 'candidatePicker', 'contextualActions']);
+    expect(BROKER_SURFACE_IDS).toEqual(['detail', 'analysisSetup', 'view', 'results', 'generator', 'dense', 'datasheet', 'bom', 'doctor', 'palette', 'candidatePicker', 'contextualActions']);
     expect(SURFACE_PRESENTATION_TABLE).toEqual(expectedTable);
 
     for (const shellClass of ['X2', 'M1', 'K0'] as const) {
@@ -158,6 +158,7 @@ describe('activity classes', () => {
       generator: 'tool',
       dense: 'tool',
       datasheet: 'tool',
+      bom: 'tool',
       doctor: 'tool',
       palette: 'layer',
       candidatePicker: 'layer',
@@ -168,6 +169,13 @@ describe('activity classes', () => {
     // `contextual-actions` es la única derivada: es la única superficie cuya
     // apertura no es un acto del usuario (CRI-97).
     expect(BROKER_SURFACE_IDS.filter((surface) => surfaceActivityClass(surface) === 'derived')).toEqual(['contextualActions']);
+  });
+
+  it('presents the BOM as one broker-owned tool: drawer in X2/M1 and fullscreen in K0', () => {
+    const state = openSurfaceIntent(createSurfaceBrokerState(), 'bom');
+    expect(resolveSurfaceActivity('X2', state).bom).toMatchObject({ status: 'active', presentation: 'drawer' });
+    expect(resolveSurfaceActivity('M1', state).bom).toMatchObject({ status: 'active', presentation: 'drawer' });
+    expect(resolveSurfaceActivity('K0', state).bom).toMatchObject({ status: 'active', presentation: 'fullscreen' });
   });
 
   it('K0 · contextual-actions no roba la actividad al Datasheet abierto en default', () => {

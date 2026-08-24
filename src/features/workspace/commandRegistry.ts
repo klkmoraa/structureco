@@ -24,6 +24,7 @@
 import type { ComponentType } from 'react';
 import {
   ChartNoAxesCombined,
+  ClipboardList,
   Download,
   Grid3x3,
   Layers3,
@@ -187,6 +188,15 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     iconFor: (ctx) => (ctx.theme === 'light' ? Moon : Sun),
     label: (ctx) => ctx.t(ctx.theme === 'light' ? 'theme.dark' : 'theme.light'),
     run: (ctx) => ctx.setTheme(ctx.theme === 'light' ? 'dark' : 'light'),
+  },
+  {
+    id: 'export:bom',
+    category: 'export',
+    icon: ClipboardList,
+    label: (ctx) => ctx.t('bom.title'),
+    hint: (ctx) => ctx.t('bom.description'),
+    deferredOpen: true,
+    run: () => emitWorkspaceCommand('open-structural-bom'),
   },
   {
     id: 'export:json',
@@ -364,7 +374,7 @@ export const buildCommands = (ctx: CommandContext): CommandListItem[] => [
 const TOPBAR_COMMAND_IDS = [
   'analysis:run', 'analysis:undo', 'analysis:redo', 'analysis:model-doctor',
   'tool:datasheet', 'view:theme',
-  'export:json', 'export:svg', 'export:png', 'export:print',
+  'export:bom', 'export:json', 'export:svg', 'export:png', 'export:print',
 ] as const;
 
 export type TopBarCommandId = (typeof TOPBAR_COMMAND_IDS)[number];

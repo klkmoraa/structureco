@@ -53,6 +53,14 @@ describe('bus de comandos del workspace', () => {
     for (const unsubscribe of off) unsubscribe();
   });
 
+  it('abre la BOM estructural por el bus tipado', () => {
+    const handler = vi.fn();
+    const unsubscribe = onWorkspaceCommand('open-structural-bom', handler);
+    emitWorkspaceCommand('open-structural-bom');
+    expect(handler).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
   it('admite varios suscriptores del mismo comando', () => {
     const first = vi.fn();
     const second = vi.fn();

@@ -37,6 +37,7 @@ documento que los cita.
 | [Datasheet estructural](architecture/structureco-datasheet.md) | Límites, edición y verificaciones del datasheet. |
 | [Índice elástico estimado](architecture/structureco-elastic-index.md) | Significado y límites del índice η. |
 | [Módulo de diseño normativo](architecture/structureco-design-module-rfc.md) | Contrato separado `AnalysisResult → DesignResult` y primer slice NTC Acero 2023. |
+| [BOM estructural](architecture/structureco-bom-contract.md) | Contrato reproducible de cuantificación geométrica, agrupación explícita y procedencia por barra. |
 | [Rediseño visual total](superpowers/specs/2026-08-22-structureco-total-visual-redesign.md) | Dirección de la interfaz y la experiencia actuales. |
 
 ## Referencias
@@ -69,6 +70,7 @@ Los planes de fases cerradas, sus especificaciones, reportes narrativos y captur
 | Comando | Qué comprueba o genera |
 |---|---|
 | `npm run qa:personal-library` | Verifica Biblioteca, aplicación estructural/visual, persistencia aislada, X2/M1/K0, targets táctiles y consola sobre la app construida. |
+| `npm run qa:structural-bom` | Verifica cuantificación, filtros, procedencia, exportación CSV y presentación X2/M1/K0 sobre la app construida. |
 | `npm run qa:shell-composition` | Verifica las composiciones X2/M1/K0, continuidad de selección/foco y ausencia de desborde horizontal en el shell construido. |
 | `npm run qa:results-cards` | Verifica la materia de las tarjetas de resultados, la superficie `dense` y el Datasheet plano en la app construida. |
 | `npm run assets:generate` | Regenera las miniaturas PNG transparentes de las escenas Three.js editables y valida el bundle antes de publicarlo. |

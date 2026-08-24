@@ -28,6 +28,7 @@ import type { AnalysisResult } from '../../types';
 const LazyCommandPalette = lazy(() => import('./CommandPalette').then((module) => ({ default: module.CommandPalette })));
 const LazyModelDoctor = lazy(() => import('../model-doctor/ModelDoctor').then((module) => ({ default: module.ModelDoctor })));
 const LazyDatasheet = lazy(() => import('../datasheet/DatasheetPanel').then((module) => ({ default: module.DatasheetPanel })));
+const LazyStructuralBom = lazy(() => import('../bom/StructuralBomPanel').then((module) => ({ default: module.StructuralBomPanel })));
 const LazyDenseResults = lazy(() => preloadDenseResultsSurface());
 
 type WorkspaceShellProps = { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string };
@@ -68,6 +69,7 @@ const WorkspaceBrokerContent = ({
   const dense = broker.stateFor('dense');
   const [denseView, setDenseView] = useState<DenseResultView>('reactions');
   const datasheet = broker.stateFor('datasheet');
+  const bom = broker.stateFor('bom');
   const doctor = broker.stateFor('doctor');
   const palette = broker.stateFor('palette');
 
@@ -93,7 +95,7 @@ const WorkspaceBrokerContent = ({
   }, [layout.inspectorDetent, setPreference]);
 
   useEffect(() => {
-    const canOpenPalette = datasheet.status !== 'active' && doctor.status !== 'active';
+    const canOpenPalette = datasheet.status !== 'active' && bom.status !== 'active' && doctor.status !== 'active';
     const subscriptions = [
       onWorkspaceCommand('open-command-palette', () => {
         // Ctrl/Cmd+K ya respeta esta exclusión; el lanzador visible debe pasar
@@ -103,6 +105,7 @@ const WorkspaceBrokerContent = ({
       }),
       onWorkspaceCommand('open-model-doctor', () => openSurface('doctor')),
       onWorkspaceCommand('open-datasheet', () => openSurface('datasheet')),
+      onWorkspaceCommand('open-structural-bom', () => openSurface('bom')),
       onWorkspaceCommand('open-results', (payload) => openSurface('results', payload?.trigger)),
       onWorkspaceCommand('toggle-results', (payload) => {
         if (results.open) closeSurface('results');
@@ -131,13 +134,13 @@ const WorkspaceBrokerContent = ({
       }),
     ];
     return () => subscriptions.forEach((unsubscribe) => unsubscribe());
-  }, [analysis, closeSurface, datasheet.status, doctor.status, openSurface, project.id, results.open, setResultTab]);
+  }, [analysis, bom.status, closeSurface, datasheet.status, doctor.status, openSurface, project.id, results.open, setResultTab]);
 
   useEffect(() => {
     setModelDoctorAcknowledgedIds(new Set());
     pendingModelDoctorNotificationIdRef.current = null;
     setPendingModelDoctorNotification(null);
-    (['generator', 'dense', 'datasheet', 'doctor', 'palette'] as const).forEach((surface) => closeSurface(surface));
+    (['generator', 'dense', 'datasheet', 'bom', 'doctor', 'palette'] as const).forEach((surface) => closeSurface(surface));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
@@ -183,13 +186,13 @@ const WorkspaceBrokerContent = ({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() !== 'k' || !(event.ctrlKey || event.metaKey) || event.altKey) return;
-      if (datasheet.status === 'active' || doctor.status === 'active') return;
+      if (datasheet.status === 'active' || bom.status === 'active' || doctor.status === 'active') return;
       event.preventDefault();
       toggleSurface('palette', document.activeElement instanceof HTMLElement ? document.activeElement : null);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [datasheet.status, doctor.status, toggleSurface]);
+  }, [bom.status, datasheet.status, doctor.status, toggleSurface]);
 
   // Ctrl/Cmd+Z and Ctrl/Cmd+Y drive the same undo/redo the history buttons use
   // (G-01 · CRI-103) — but never with focus in a text field, the Datasheet
@@ -267,17 +270,31 @@ const WorkspaceBrokerContent = ({
     if (open) openSurface('doctor');
     else closeSurface('doctor');
   }, [closeSurface, openSurface]);
+  const setBomOpen = useCallback((open: boolean) => {
+    if (open) openSurface('bom');
+    else {
+      // Los items de Exportar/Utilidades se desmontan al abrir la superficie.
+      // Devuelve el foco al launcher persistente de la composición vigente.
+      const stableLauncher = [...document.querySelectorAll<HTMLElement>('.topbar-export-trigger, .utility-more-button')]
+        .find((candidate) => candidate.getClientRects().length > 0);
+      closeSurface('bom');
+      if (stableLauncher) window.requestAnimationFrame(() => stableLauncher.focus({ preventScroll: true }));
+    }
+  }, [closeSurface, openSurface]);
   const setDenseOpen = useCallback((open: boolean) => {
     if (open) openSurface('dense');
     else closeSurface('dense');
   }, [closeSurface, openSurface]);
   const markDenseReady = useCallback((ready: boolean) => markSurfaceReady('dense', ready), [markSurfaceReady]);
   const markDatasheetReady = useCallback((ready: boolean) => markSurfaceReady('datasheet', ready), [markSurfaceReady]);
+  const markBomReady = useCallback((ready: boolean) => markSurfaceReady('bom', ready), [markSurfaceReady]);
   const markDoctorReady = useCallback((ready: boolean) => markSurfaceReady('doctor', ready), [markSurfaceReady]);
   // "Localizar" degrada a `peek`, nunca cierra (CRI-102 / D-11): mismo mecanismo
-  // para Datasheet y Doctor, porque es el mismo hueco en las dos superficies.
+  // para Datasheet, BOM y Doctor, porque es el mismo hueco en las tres superficies.
   const peekDatasheet = useCallback(() => setSurfaceExtent('datasheet', 'peek'), [setSurfaceExtent]);
   const restoreDatasheet = useCallback(() => setSurfaceExtent('datasheet', 'default'), [setSurfaceExtent]);
+  const peekBom = useCallback(() => setSurfaceExtent('bom', 'peek'), [setSurfaceExtent]);
+  const restoreBom = useCallback(() => setSurfaceExtent('bom', 'default'), [setSurfaceExtent]);
   const peekDoctor = useCallback(() => setSurfaceExtent('doctor', 'peek'), [setSurfaceExtent]);
   const restoreDoctor = useCallback(() => setSurfaceExtent('doctor', 'default'), [setSurfaceExtent]);
 
@@ -354,6 +371,15 @@ const WorkspaceBrokerContent = ({
         extent={datasheet.extent}
         onPeek={peekDatasheet}
         onRestore={restoreDatasheet}
+      /></Suspense> : null}
+      {broker.isRetained('bom') ? <Suspense fallback={null}><LazyStructuralBom
+        open={bom.status === 'active'}
+        onOpenChange={setBomOpen}
+        presentation={bom.presentation as 'drawer' | 'fullscreen'}
+        onSurfaceReady={markBomReady}
+        extent={bom.extent}
+        onPeek={peekBom}
+        onRestore={restoreBom}
       /></Suspense> : null}
       {broker.isRetained('doctor') ? <Suspense fallback={<span className="sr-only" role="status">{t('modelDoctor.loading')}</span>}><LazyModelDoctor
         open={doctor.status === 'active'}

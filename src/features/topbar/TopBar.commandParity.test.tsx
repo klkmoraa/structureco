@@ -149,6 +149,22 @@ describe('commandRegistry: TopBar and Palette resolve the same command (construc
       expect(buttonTheme.icon).toBe(paletteTheme.icon);
     }
   });
+
+  it('Structural BOM: export menu and Palette share one command and one broker event', () => {
+    const full = baseFullContext();
+    const topBarCtx = topBarContextFrom(full);
+    const paletteCommand = buildCommands(full).find((command) => command.id === 'export:bom')!;
+    const buttonCommand = resolveTopBarCommand('export:bom', topBarCtx);
+    const events: string[] = [];
+    const unsubscribe = onWorkspaceCommand('open-structural-bom', () => events.push('open-structural-bom'));
+
+    expect(buttonCommand.label).toBe(paletteCommand.label);
+    expect(buttonCommand.id).toBe(paletteCommand.id);
+    buttonCommand.run();
+    paletteCommand.run();
+    unsubscribe();
+    expect(events).toEqual(['open-structural-bom', 'open-structural-bom']);
+  });
 });
 
 const TopBarHarness = ({ children }: { children: React.ReactNode }) => (
@@ -217,8 +233,9 @@ describe('TopBar rendered live: shares real state with the Palette, not a parall
 describe('TopBar source: no second hand-written implementation of a registered command remains', () => {
   const source = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'TopBar.tsx'), 'utf8');
 
-  it('never emits open-datasheet, export-svg or export-png outside the shared registry', () => {
+  it('never emits open-datasheet, open-structural-bom, export-svg or export-png outside the shared registry', () => {
     expect(source).not.toContain("emitWorkspaceCommand('open-datasheet')");
+    expect(source).not.toContain("emitWorkspaceCommand('open-structural-bom')");
     expect(source).not.toContain("emitWorkspaceCommand('export-svg')");
     expect(source).not.toContain("emitWorkspaceCommand('export-png')");
   });

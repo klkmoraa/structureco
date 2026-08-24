@@ -365,6 +365,8 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
   const themeCommand = command('view:theme');
   const ThemeIcon = themeCommand.icon;
   const exportJsonCommand = command('export:json');
+  const structuralBomCommand = command('export:bom');
+  const StructuralBomIcon = structuralBomCommand.icon;
   const exportSvgCommand = command('export:svg');
   const exportPngCommand = command('export:png');
   const exportPrintCommand = command('export:print');
@@ -559,6 +561,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
             <AnimatePresence>
               {showExportMenu ? (
                 <m.div {...popoverMotionProps} className="popover export-menu" role="menu" aria-label={t('export.label')} onKeyDown={onMenuKeyDown}>
+                  <button role="menuitem" onClick={() => { structuralBomCommand.run(); setShowExportMenu(false); }}><StructuralBomIcon size={16} aria-hidden="true" /> {structuralBomCommand.label}</button>
                   <button role="menuitem" onClick={() => { exportJsonCommand.run(); setShowExportMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
                   <button role="menuitem" onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
                   <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
@@ -619,6 +622,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
                   </div> : null}
                   <div className="menu-section">
                     <div className="menu-section-title">{t('menu.sectionExport')}</div>
+                    <button onClick={() => { structuralBomCommand.run(); setShowMobileMenu(false); }}><StructuralBomIcon size={16} aria-hidden="true" /> {structuralBomCommand.label}</button>
                     <button onClick={() => { exportJsonCommand.run(); setShowMobileMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
                     <button onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
                     <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>

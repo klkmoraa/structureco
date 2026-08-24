@@ -56,6 +56,8 @@ export interface WorkspaceCommands {
    * shares the workspace selection, so it needs no payload of its own.
    */
   'open-datasheet': void;
+  /** Open the read-only, traceable geometric material takeoff. */
+  'open-structural-bom': void;
   /** Open the contextual structural-editing surface for the current selection. */
   'open-structural-edit': void;
   /**
