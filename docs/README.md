@@ -36,6 +36,7 @@ documento que los cita.
 | [Space 3D · S3D-1](architecture/structureco-space-3d-s3d1.md) | Contrato operativo del espacio 3D experimental. |
 | [Datasheet estructural](architecture/structureco-datasheet.md) | Límites, edición y verificaciones del datasheet. |
 | [Índice elástico estimado](architecture/structureco-elastic-index.md) | Significado y límites del índice η. |
+| [Módulo de diseño normativo](architecture/structureco-design-module-rfc.md) | Contrato separado `AnalysisResult → DesignResult` y primer slice NTC Acero 2023. |
 | [Rediseño visual total](superpowers/specs/2026-08-22-structureco-total-visual-redesign.md) | Dirección de la interfaz y la experiencia actuales. |
 
 ## Referencias
@@ -57,6 +58,7 @@ Los planes de fases cerradas, sus especificaciones, reportes narrativos y captur
 | Tema | Autoridad |
 |---|---|
 | Ingeniería 2D | `src/types.ts`, `src/engine/**`, `src/workers/**`, pruebas cercanas y `npm run verify:protected`. |
+| Diseño normativo | [RFC del módulo](architecture/structureco-design-module-rfc.md), `src/design/**` y pruebas cercanas; nunca el solver. |
 | Ingeniería 3D | [Space 3D · S3D-1](architecture/structureco-space-3d-s3d1.md), `src/space3d/**` y `npm run verify:space3d`. |
 | Interfaz | `src/design-system/**`, `src/features/**`, pruebas y QA ejecutables. |
 | Assets estructurales | `public/assets/structural/**`, sus contratos y `npm run verify:structural-assets`. |

@@ -5,8 +5,9 @@
  * componentes: que un resultado favorable y uno desfavorable salen con la misma
  * materia medida (fondo, borde y sombra calculados), que la fiabilidad se
  * distingue sin color, que una tabla dentro de una tarjeta va plana, que
- * `dense` se invoca y se cierra en las tres clases, y que el Datasheet NO se
- * cardificó.
+ * `dense` se invoca y se cierra en las tres clases, que DesignResult queda
+ * separado e inconcluso cuando no existe una combinación normativa trazable, y
+ * que el Datasheet NO se cardificó.
  *
  * Uso: npm run build && node scripts/qa-results-cards.mjs
  */
@@ -111,7 +112,7 @@ const forbiddenInDom = (page, phrases) => page.evaluate((list) => {
   const text = document.body.innerText;
   const hits = list.filter((phrase) => text.includes(phrase));
   if (/\d\s*%[^\n]{0,16}\bOK\b/i.test(text) || /\bOK\b[^\n]{0,16}\d\s*%/i.test(text)) hits.push('porcentaje con OK');
-  const controlled = [...document.querySelectorAll('.result-extreme-card, .numeric-quality-card, .elastic-demand')]
+  const controlled = [...document.querySelectorAll('.result-extreme-card, .numeric-quality-card, .elastic-demand, .ntc-design-card')]
     .filter((card) => /\bControlado\b/.test(card.textContent ?? ''));
   if (controlled.length) hits.push('Controlado');
   return hits;
@@ -158,6 +159,22 @@ for (const colorScheme of ['light', 'dark']) {
 
   const forbidden = await forbiddenInDom(page, FORBIDDEN);
   check(`copy prohibido ausente (${colorScheme})`, forbidden.length === 0, forbidden);
+
+  const design = await page.locator('[data-testid="ntc-steel-design-card"]').evaluate((node) => ({
+    resultKind: node.getAttribute('data-result-kind'),
+    status: node.getAttribute('data-status'),
+    text: node.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+    overflow: node.scrollWidth > node.clientWidth + 1,
+  }));
+  check(`DesignResult separado y fail-closed (${colorScheme})`,
+    design.resultKind === 'design'
+      && design.status === 'unavailable'
+      && /Diseño normativo separado/.test(design.text)
+      && /No concluyente/.test(design.text)
+      && !/Ratio del componente/.test(design.text)
+      && !design.overflow,
+    design);
+  await shoot(page.locator('[data-testid="ntc-steel-design-card"]'), `design-card-x2-${colorScheme === 'dark' ? 'night' : 'day'}`);
 
   const overflow = await horizontalOverflow(page);
   check(`sin overflow horizontal X2 (${colorScheme})`, overflow.scrollWidth <= overflow.innerWidth, overflow);
@@ -240,6 +257,17 @@ for (const [label, viewport] of Object.entries(CLASSES)) {
   const resident = await page.locator('[data-workspace-surface="dense"]').count();
   check(`dense no es residente en ${label}`, resident === 0, { resident });
 
+  const designBoundary = await page.locator('[data-testid="ntc-steel-design-card"]').evaluate((node) => ({
+    resultKind: node.getAttribute('data-result-kind'),
+    status: node.getAttribute('data-status'),
+    overflow: node.scrollWidth > node.clientWidth + 1,
+  }));
+  check(`DesignResult visible y sin desborde en ${label}`,
+    designBoundary.resultKind === 'design'
+      && ['unavailable', 'incomplete'].includes(designBoundary.status)
+      && !designBoundary.overflow,
+    designBoundary);
+
   const denseOverflow = page.locator('.results-dense-overflow__trigger').first();
   if (await denseOverflow.count()) await denseOverflow.click();
   const launcher = page.locator('[data-dense-launcher="reactions"]').first();
@@ -314,9 +342,19 @@ for (const [label, viewport] of Object.entries(CLASSES)) {
   check('EN en K0 · etiquetas de extremo y procedencia sin desbordar',
     clipping.length > 0 && clipping.every((entry) => !entry.labelOverflow && !entry.valueOverflow && !entry.provenanceOverflow && !entry.cardOverflow),
     clipping);
+  const englishDesign = await page.locator('[data-testid="ntc-steel-design-card"]').evaluate((node) => ({
+    text: node.textContent?.replace(/\s+/g, ' ').trim() ?? '',
+    overflow: node.scrollWidth > node.clientWidth + 1,
+  }));
+  check('EN en K0 · DesignResult separado, inconcluso y sin desbordar',
+    /Separate code design/.test(englishDesign.text)
+      && /Inconclusive/.test(englishDesign.text)
+      && !englishDesign.overflow,
+    englishDesign);
   const overflow = await horizontalOverflow(page);
   check('EN en K0 · sin overflow horizontal', overflow.scrollWidth <= overflow.innerWidth, overflow);
   await shoot(page, 'summary-k0-english');
+  await shoot(page.locator('[data-testid="ntc-steel-design-card"]'), 'design-card-k0-english');
   await page.close();
 }
 

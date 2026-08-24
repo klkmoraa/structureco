@@ -15,6 +15,7 @@ import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { NumericQualityCard } from './NumericQualityCard';
 import { ElasticDemandCard } from './ElasticDemandCard';
 import { ResultExtremeCard } from './ResultExtremeCard';
+import { NtcSteelDesignCard } from '../design/NtcSteelDesignCard';
 import type { ResultRef } from './provenance';
 
 const diagramTab: Record<DiagramQuantity, ResultTab> = { axial: 'axial', shear: 'shear', moment: 'moment' };
@@ -113,6 +114,7 @@ export const ResultSummary = () => {
     </header>
     <ElasticDemandCard />
     <NumericQualityCard analysis={analysis} />
+    <NtcSteelDesignCard />
     {analysis.pDelta ? <section className="p-delta-summary" aria-label={t('pdelta.summaryTitle')}>
       <strong>{t('pdelta.summaryTitle')} <span className="experimental-badge">{t('pdelta.experimental')}</span></strong>
       <span className={analysis.pDelta.converged ? 'is-resolved' : 'is-warning'}>{analysis.pDelta.converged ? t('pdelta.converged') : t('pdelta.notConverged')}</span>
