@@ -1407,7 +1407,11 @@
 .app-shell .results-panel [data-result-tab='summary'][aria-selected='true'] { color:var(--accent); }
 .app-shell .results-panel [data-result-tab='axial'][aria-selected='true'] { color:var(--axial); }
 .app-shell .results-panel [data-result-tab='shear'][aria-selected='true'] { color:var(--shear); }
-.app-shell .results-panel [data-result-tab='moment'][aria-selected='true'] { color:var(--moment); }
+.app-shell .results-panel [data-result-tab='moment'][aria-selected='true'] {
+  color:var(--text);
+  border-color:color-mix(in srgb,var(--moment) 38%,var(--sc-color-border));
+  box-shadow:inset 0 -3px 0 var(--moment),var(--sc-shadow-clay-pressed);
+}
 .app-shell .results-panel [data-result-tab='deformed'][aria-selected='true'] { color:var(--deformed); }
 
 .app-shell .results-panel [data-result-tab][aria-selected='true'] {

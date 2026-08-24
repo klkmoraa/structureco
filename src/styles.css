@@ -5735,4 +5735,3 @@ button:not(:disabled):active,.selection-card:active {
    Día y Noche. No se modifica ningún HEX del sistema. */
 .tool-group-heading { color:var(--muted); }
 .results-mode-control button[aria-pressed='true'] { color:var(--text); }
-.result-tabs button.active.moment { color:var(--text); }

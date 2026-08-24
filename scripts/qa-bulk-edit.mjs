@@ -3,7 +3,7 @@ import { preview } from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { clearProjectLibraryOnBoot, continueStoredProject, openExamplePortal } from './qa-welcome.mjs';
+import { clearProjectLibraryOnBoot, continueStoredProject, disablePwaUpdateLifecycle, openExamplePortal } from './qa-welcome.mjs';
 
 /**
  * QA de navegador de la edición múltiple.
@@ -54,6 +54,7 @@ const storedProject = (page) => page.evaluate(() => {
 
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 await clearProjectLibraryOnBoot(context);
+await disablePwaUpdateLifecycle(context);
 const page = await context.newPage();
 page.on('console', (message) => {
   if (message.type() === 'error') results.console.push(message.text());
@@ -70,8 +71,19 @@ const resetToExample = async () => {
   await page.reload({ waitUntil: 'networkidle' });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
   // CRI-116 · el pórtico de ejemplo vive en el tercer paso desde CRI-112.
-  await openExamplePortal(page, page.locator('.welcome-template-card').filter({ hasText: /P.rtico de ejemplo/i }));
-  await page.locator('.app-shell').waitFor({ state: 'visible' });
+  // La tarjeta puede necesitar un segundo clic cuando la bienvenida conserva
+  // el paso de plantillas montado después de abrir el proyecto. Es la misma
+  // ruta de recuperación que usan los QA del shell; sin ella el runner muere
+  // antes de ejercer una sola edición y reporta un falso fallo de producto.
+  const launcher = await openExamplePortal(page, page.locator('.welcome-template-card').filter({ hasText: /P.rtico de ejemplo/i }));
+  const shell = page.locator('.app-shell');
+  try {
+    await shell.waitFor({ state: 'visible', timeout: 15_000 });
+  } catch (error) {
+    if (!await page.getByTestId('welcome-screen').isVisible().catch(() => false)) throw error;
+    await launcher.click();
+    await shell.waitFor({ state: 'visible', timeout: 15_000 });
+  }
   await page.locator('[data-structure-kind="node"][data-structure-id="N1"]').waitFor({ state: 'visible' });
   await sleep(page);
 };
@@ -158,14 +170,24 @@ const memberPoint = async (project, id) => {
 };
 
 /**
- * En estrecho el Inspector vive en una bandeja: hay que abrirla para que el
- * panel exista en pantalla. Es el patrón propio de la aplicación, no un ajuste
- * de la prueba.
+ * El panel de edición múltiple vive dentro del Inspector: hay que abrirlo
+ * para que el panel exista en pantalla. En K0 se abre con su botón dedicado;
+ * en X2/M1 la misma acción está en el menú de utilidades. Es el patrón propio
+ * de la aplicación, no un ajuste de la prueba.
  */
 const openInspectorIfCollapsed = async () => {
   const toggle = page.locator('.mobile-inspector-toggle');
-  if (await toggle.count() === 0 || !(await toggle.isVisible())) return;
-  await toggle.click();
+  if (await toggle.isVisible().catch(() => false)) {
+    await toggle.click();
+    await sleep(page, 260);
+    return;
+  }
+
+  const utilities = page.locator('.utility-more-button');
+  if (!(await utilities.isVisible().catch(() => false))) return;
+  await utilities.click();
+  const inspectorAction = page.getByRole('button', { name: /mostrar inspector/i });
+  if (await inspectorAction.isVisible().catch(() => false)) await inspectorAction.click();
   await sleep(page, 260);
 };
 
@@ -304,7 +326,7 @@ const runMembers = async () => {
   );
 
   // Un solo Undo devuelve los dos miembros.
-  await page.locator('.history-controls').getByLabel(/^deshacer$/i).click();
+  await page.getByRole('button', { name: /^deshacer$/i }).click();
   const undone = await page.evaluate(async () => {
     for (let attempt = 0; attempt < 40; attempt += 1) {
       const value = JSON.parse(localStorage.getItem('structureCo.project'));
@@ -319,7 +341,7 @@ const runMembers = async () => {
     JSON.stringify(undone.members.slice(0, 2).map((member) => member.sectionId)),
   );
 
-  await page.locator('.history-controls').getByLabel(/^rehacer$/i).click();
+  await page.getByRole('button', { name: /^rehacer$/i }).click();
   const redone = await page.evaluate(async () => {
     for (let attempt = 0; attempt < 40; attempt += 1) {
       const value = JSON.parse(localStorage.getItem('structureCo.project'));
