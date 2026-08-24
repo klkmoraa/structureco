@@ -31,7 +31,12 @@ const pwaShellPlugin = () => ({
     const assets = files.map((file) => `./${file}`);
     const source = `const CACHE_NAME=${JSON.stringify(`structureco-shell-${release}`)};
 const SHELL=${JSON.stringify(assets)};
-self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL))));
+// An existing active worker means this is an update, not a first install. Activate
+// updates immediately so an old PWA client cannot keep serving an earlier CSS/JS
+// shell indefinitely. The first install still waits normally and avoids a reload
+// while the app is being added to the home screen.
+const HAS_ACTIVE_WORKER=Boolean(self.registration.active);
+self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>HAS_ACTIVE_WORKER?self.skipWaiting():undefined)));
 self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
 self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});
 self.addEventListener('fetch',event=>{

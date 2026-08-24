@@ -2153,7 +2153,19 @@ button:not(:disabled):active,.selection-card:active {
   .touch-gesture-hint { display:inline; }
   .canvas-result-legend { top:96px; width:calc(100% - 20px); }
   .canvas-feedback { top:96px; }
-  .canvas-hint { top:96px; }
+  /* `bottom` is set by the compact rule above. Leaving it active while this
+     later rule sets `top` stretches the absolutely positioned hint to the
+     entire canvas (Safari exposes the full stretched card). It is a single
+     instruction, so keep it a compact pill with one anchor only. */
+  .canvas-hint {
+    top:96px;
+    bottom:auto;
+    width:max-content;
+    max-width:calc(100% - 20px);
+    height:auto;
+    max-height:44px;
+    overflow:hidden;
+  }
 }
 
 /* Phase 3: session-only information layers ------------------------------- */
@@ -5716,3 +5728,11 @@ button:not(:disabled):active,.selection-card:active {
     padding: 9px 14px calc(9px + env(safe-area-inset-bottom));
   }
 }
+
+/* CRI-121 · lectura de estados que antes usaban una tinta técnica como texto.
+   La identidad de cada herramienta sigue en el subrayado/icono; la palabra
+   activa necesita la tinta de interfaz para conservar el piso tipográfico en
+   Día y Noche. No se modifica ningún HEX del sistema. */
+.tool-group-heading { color:var(--muted); }
+.results-mode-control button[aria-pressed='true'] { color:var(--text); }
+.result-tabs button.active.moment { color:var(--text); }

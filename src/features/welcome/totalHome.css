@@ -580,7 +580,9 @@
     display: block;
     width: 100%;
     max-width: 100%;
-    height: min(100%, 220px);
+    /* A definite box keeps WebKit from resolving the percentage height against
+       the grid's intrinsic row and rendering the transparent PNG off-frame. */
+    height: clamp(180px, 56vw, 220px);
     max-height: 220px;
     object-fit: contain;
     object-position: center;

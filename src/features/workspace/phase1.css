@@ -1217,6 +1217,14 @@
     }
   }
 
+  /* CRI-121 · el azul técnico original del botón Carga cae a 3.22:1 en
+     Noche. Se conserva el hue, pero se mezcla con la tinta de interfaz para
+     que el control siga siendo legible en ambos fondos y estados de tema. */
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-pointLoad {
+    --tool-color:color-mix(in srgb,var(--sc-color-tool-point-load) 70%,var(--sc-color-text-primary));
+    --sc-tool-color:color-mix(in srgb,var(--sc-color-tool-point-load) 70%,var(--sc-color-text-primary));
+  }
+
   .app-shell[data-shell-class='K0'] .mobile-tool-palette-workspace {
     max-width:min(392px,calc(100vw - 16px));
     margin-inline:auto;
