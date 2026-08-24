@@ -37,6 +37,23 @@
 
 .results-mobile-focus { display:none; min-height:36px; padding:0 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface-2); color:var(--accent); font-size:10px; font-weight:700; }
 .results-mobile-commandbar { display:none; flex:0 0 auto; justify-content:flex-end; padding:4px 10px; border-bottom:1px solid var(--border-soft); background:var(--surface); }
+.results-mobile-close {
+  width:44px;
+  min-width:44px;
+  height:44px;
+  min-height:44px;
+  display:inline-grid;
+  place-items:center;
+  flex:0 0 auto;
+  padding:0;
+  border:1px solid var(--border-soft);
+  border-radius:50%;
+  background:var(--surface-2);
+  color:var(--muted);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+.results-mobile-close:hover { color:var(--text); background:var(--surface-1); }
+.results-mobile-close:active { box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
 
 /* CRI-94: placement comes only from the broker's presentation attribute. */
 [data-workspace-surface][hidden] { display:none!important; }
@@ -964,7 +981,8 @@
 }
 
 .app-shell[data-shell-class='K0'] .results-panel .results-mobile-toggle,
-.app-shell[data-shell-class='K0'] .results-panel .results-mobile-focus {
+.app-shell[data-shell-class='K0'] .results-panel .results-mobile-focus,
+.app-shell[data-shell-class='K0'] .results-panel .results-mobile-close {
   min-width:44px;
   min-height:44px;
   border:1px solid var(--sc-color-border-soft);

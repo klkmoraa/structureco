@@ -589,7 +589,15 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
                   <div className="menu-section">
                     <div className="menu-section-title">{t('menu.sectionAnalysis')}</div>
                     <button onClick={() => { mobileMenuButtonRef.current?.focus({ preventScroll: true }); setShowMobileMenu(false); modelDoctorCommand.run(); }}><Wrench size={17} /> {modelDoctorCommand.label}</button>
-                    <button onClick={(event) => { emitWorkspaceCommand('toggle-results', { trigger: event.currentTarget }); setShowMobileMenu(false); }}><ChartNoAxesColumnIncreasing size={17} /> {t('results.outputs')}</button>
+                    <button onClick={(event) => {
+                      // El elemento del menú se desmonta al cerrar Utilidades. El
+                      // lanzador persistente es el único retorno de foco válido en
+                      // K0; sin él Safari deja el foco en body al cerrar la hoja.
+                      const trigger = mobileMenuButtonRef.current ?? event.currentTarget;
+                      emitWorkspaceCommand('toggle-results', { trigger });
+                      setShowMobileMenu(false);
+                      window.requestAnimationFrame(() => trigger.focus({ preventScroll: true }));
+                    }}><ChartNoAxesColumnIncreasing size={17} /> {t('results.outputs')}</button>
                     <button className="overflow-datasheet" onClick={() => { datasheetCommand.run(); setShowMobileMenu(false); }}><Sheet size={17} /> {datasheetCommand.label}</button>
                   </div>
                   <div className="menu-section">

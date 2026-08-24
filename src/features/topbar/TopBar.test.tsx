@@ -279,6 +279,22 @@ describe('TopBar information architecture', () => {
     unsubscribe();
   });
 
+  it('uses the persistent utilities trigger when Results is opened from the mobile menu', async () => {
+    const user = userEvent.setup();
+    const toggleResults = vi.fn();
+    const unsubscribe = onWorkspaceCommand('toggle-results', toggleResults);
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
+
+    const utilitiesButton = screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' });
+    await user.click(utilitiesButton);
+    const utilities = screen.getByRole('dialog', { name: 'Herramientas del espacio de trabajo' });
+    await user.click(within(utilities).getByRole('button', { name: 'Resultados' }));
+
+    expect(toggleResults).toHaveBeenCalledWith({ trigger: utilitiesButton });
+    await waitFor(() => expect(document.activeElement).toBe(utilitiesButton));
+    unsubscribe();
+  });
+
   it('announces local-first and offline states through a single accessible live region', async () => {
     const user = userEvent.setup();
     const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);

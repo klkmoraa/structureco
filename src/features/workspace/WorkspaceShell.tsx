@@ -93,8 +93,14 @@ const WorkspaceBrokerContent = ({
   }, [layout.inspectorDetent, setPreference]);
 
   useEffect(() => {
+    const canOpenPalette = datasheet.status !== 'active' && doctor.status !== 'active';
     const subscriptions = [
-      onWorkspaceCommand('open-command-palette', () => openSurface('palette')),
+      onWorkspaceCommand('open-command-palette', () => {
+        // Ctrl/Cmd+K ya respeta esta exclusión; el lanzador visible debe pasar
+        // por la misma autoridad para no montar una segunda capa sobre Doctor
+        // o Datasheet.
+        if (canOpenPalette) openSurface('palette');
+      }),
       onWorkspaceCommand('open-model-doctor', () => openSurface('doctor')),
       onWorkspaceCommand('open-datasheet', () => openSurface('datasheet')),
       onWorkspaceCommand('open-results', (payload) => openSurface('results', payload?.trigger)),
@@ -125,7 +131,7 @@ const WorkspaceBrokerContent = ({
       }),
     ];
     return () => subscriptions.forEach((unsubscribe) => unsubscribe());
-  }, [analysis, closeSurface, openSurface, project.id, results.open, setResultTab]);
+  }, [analysis, closeSurface, datasheet.status, doctor.status, openSurface, project.id, results.open, setResultTab]);
 
   useEffect(() => {
     setModelDoctorAcknowledgedIds(new Set());
@@ -232,7 +238,18 @@ const WorkspaceBrokerContent = ({
 
   const setResultsOpen = useCallback((open: boolean, trigger?: HTMLElement | null) => {
     if (open) openSurface('results', trigger);
-    else closeSurface('results');
+    else {
+      // En K0 el lanzador visible vive dentro de Utilidades y permanece
+      // conectado mientras la hoja se cierra. Es el fallback correcto cuando
+      // el cierre viene del propio panel y no trae el botón original.
+      const compactLauncher = document.querySelector<HTMLElement>('.utility-more-button');
+      closeSurface('results');
+      if (compactLauncher) {
+        window.requestAnimationFrame(() => {
+          if (compactLauncher.isConnected) compactLauncher.focus({ preventScroll: true });
+        });
+      }
+    }
   }, [closeSurface, openSurface]);
   const openDetail = useCallback((trigger?: HTMLElement | null) => {
     setPreference('inspectorCollapsed', false);

@@ -382,3 +382,33 @@
   .contextual-actions,
   .contextual-actions__overflow { animation: none; transition: none; }
 }
+
+/* Safari iOS puede conservar el ancla block-end de la regla histórica de la
+   pista aunque el breakpoint haya cambiado sólo `top`. La pista de destino es
+   una línea de estado, no una superficie; declarar la geometría final aquí,
+   después de las hojas globales, evita que vuelva a estirarse por todo el
+   canvas. */
+@media (max-width: 460px) {
+  .canvas-host .canvas-hint {
+    top:96px !important;
+    bottom:auto !important;
+    inset-block-end:auto !important;
+    width:max-content;
+    max-width:calc(100% - 20px);
+    height:auto !important;
+    min-height:44px;
+    max-height:44px;
+    overflow:hidden;
+  }
+}
+
+/* El primer contacto de colocación y el selector de coincidencias deben
+   conservar el mismo suelo táctil que el resto del editor en teléfonos. */
+@media (pointer: coarse) and (max-width: 1023px) {
+  .canvas-host .canvas-mode-badge.placing-load button,
+  .canvas-host .candidate-picker [role='option'],
+  .canvas-host .candidate-picker footer button {
+    min-width:44px;
+    min-height:44px;
+  }
+}

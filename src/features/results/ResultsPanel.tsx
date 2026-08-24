@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { AlertCircle, ChevronUp, CircleDotDashed, Eye, EyeOff, GripHorizontal, MoreHorizontal } from 'lucide-react';
+import { AlertCircle, ChevronUp, CircleDotDashed, Eye, EyeOff, GripHorizontal, MoreHorizontal, X } from 'lucide-react';
 import { useProject, type ResultTab } from '../../store/ProjectContext';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../../engine/diagram';
 import { resolveReliability } from '../../engine/reliability';
@@ -165,11 +165,15 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
     if (isMobile) setHeight((current) => Math.min(current, Math.min(330, getViewportHeightPx(panelRef.current) * 0.4)));
   }, [isMobile]);
   useEffect(() => {
-    if (isMobile && analysis && analysis !== previousAnalysisRef.current) {
+    // Si Resultados ya está activo, el lanzador original sigue siendo la
+    // autoridad de retorno. Reabrirlo con document.activeElement después de un
+    // análisis pisa ese objetivo —en K0 suele ser body porque Utilidades ya se
+    // desmontó— y rompe el cierre por teclado/táctil.
+    if (isMobile && status === 'active' && analysis && analysis !== previousAnalysisRef.current) {
       onOpenChange?.(true, document.activeElement instanceof HTMLElement ? document.activeElement : null);
     }
     previousAnalysisRef.current = analysis;
-  }, [analysis, isMobile, onOpenChange]);
+  }, [analysis, isMobile, onOpenChange, status]);
   useEffect(() => () => {
     if (resizeFrameRef.current !== null) window.cancelAnimationFrame(resizeFrameRef.current);
   }, []);
@@ -282,6 +286,13 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
           aria-pressed={panelMode === 'focused'}
           onClick={(event) => panelMode === 'focused' ? leaveFocusedMode() : choosePanelMode('focused', event.currentTarget)}
         >{panelMode === 'focused' ? t('results.modeExitFocus') : t('results.modeFocus')}</button>
+        <button
+          type="button"
+          className="results-mobile-close"
+          aria-label={t('toolbar.close')}
+          title={t('toolbar.close')}
+          onClick={closeMobileResults}
+        ><X size={18} aria-hidden="true" /></button>
       </div> : null}
       <button
         className="resize-handle"
