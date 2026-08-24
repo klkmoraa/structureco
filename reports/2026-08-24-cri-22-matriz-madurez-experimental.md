@@ -1,8 +1,8 @@
 # CRI-22 — matriz vigente de capacidades experimentales
 
-**Fecha:** 2026-08-24 11:01 CST  
-**Agente:** Codex  
-**Rama:** `codex/linear-queue-execution-20260824`  
+**Fecha:** 2026-08-24 11:01 CST
+**Agente:** Codex
+**Rama:** `codex/linear-queue-execution-20260824`
 **SHA auditado:** `74bb066e1fb1986475691e60c89c111f4e80e20e`
 
 ## Qué cambió
