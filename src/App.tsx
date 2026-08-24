@@ -28,14 +28,6 @@ type Space3DOrigin = 'workspace' | 'standalone';
 const AppShell = () => {
   const [screen, setScreen] = useState<AppScreen>('welcome');
   const [space3dOrigin, setSpace3DOrigin] = useState<Space3DOrigin>('standalone');
-  /**
-   * CRI-104 · el salto directo a la Mesa de quien ya tiene proyectos guardados
-   * se ofrece UNA vez por sesión. Después, volver a Inicio tiene que llevar de
-   * verdad a Inicio: si el salto se repitiera, el botón de Inicio dejaría de
-   * dar acceso a ejemplos, Aula, importación y recuperación. No se persiste
-   * nada — al recargar, la decisión vuelve a salir del repositorio.
-   */
-  const [directResumeAvailable, setDirectResumeAvailable] = useState(true);
   const { project, analysis } = useProject();
   const { t } = useI18n();
 
@@ -63,8 +55,6 @@ const AppShell = () => {
       onOpenWorkspace={() => navigate('workspace')}
       onOpenSpace3D={() => { setSpace3DOrigin('standalone'); navigate('space3d'); }}
       onPreloadWorkspace={() => { void loadWorkspaceShell(); }}
-      allowDirectResume={directResumeAvailable}
-      onDirectResume={() => setDirectResumeAvailable(false)}
     /></ClassroomSessionProvider>;
   }
 

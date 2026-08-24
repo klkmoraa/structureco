@@ -31,6 +31,10 @@ export const watchForPwaUpdates = async (
     waiting = worker;
     onUpdateAvailable(controller);
   };
+  // Register the listener before publishing an already waiting worker. The
+  // update path may activate it immediately, so installing this afterwards
+  // would miss `controllerchange` and leave the old bundle on screen.
+  container.addEventListener('controllerchange', onControllerChange);
   if (waiting) publish(waiting);
   registration.addEventListener('updatefound', () => {
     const installing = registration.installing;
@@ -39,6 +43,5 @@ export const watchForPwaUpdates = async (
       if (installing.state === 'installed' && container.controller) publish(installing);
     });
   });
-  container.addEventListener('controllerchange', onControllerChange);
   return controller;
 };

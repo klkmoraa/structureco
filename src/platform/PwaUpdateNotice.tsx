@@ -15,6 +15,11 @@ export const PwaUpdateNotice = () => {
     if (!('serviceWorker' in navigator) || import.meta.env.DEV) return;
     let reloading = false;
     void watchForPwaUpdates(navigator.serviceWorker, (next) => {
+      // A stale worker can keep an older hashed CSS/JS bundle alive on a phone
+      // after Pages has published the fix. Once this page is already controlled,
+      // activate the waiting worker immediately so the next render is coherent;
+      // first install still remains silent until a controller exists.
+      if (navigator.serviceWorker.controller) next.applyUpdate();
       setController(next);
       setDismissed(false);
     }, () => {
