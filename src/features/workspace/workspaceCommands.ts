@@ -58,6 +58,8 @@ export interface WorkspaceCommands {
   'open-datasheet': void;
   /** Open the read-only, traceable geometric material takeoff. */
   'open-structural-bom': void;
+  /** Open the explicit baseline-to-current revision comparison. */
+  'open-revision-comparison': void;
   /** Open the contextual structural-editing surface for the current selection. */
   'open-structural-edit': void;
   /**

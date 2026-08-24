@@ -199,6 +199,14 @@ describe('Results analytical center', () => {
     await user.click(screen.getByRole('tab', { name: 'Resumen' }));
     const summary = await screen.findByRole('region', { name: 'Resumen global de resultados' });
     expect(summary).toBeTruthy();
+    const revisionInvocations: Event[] = [];
+    const onRevisionComparison = (event: Event) => revisionInvocations.push(event);
+    window.addEventListener(workspaceCommandEventName('open-revision-comparison'), onRevisionComparison);
+    const revisionLauncher = within(summary).getByRole('button', { name: 'Comparar revisiones' });
+    await user.click(revisionLauncher);
+    expect(revisionInvocations).toHaveLength(1);
+    expect(revisionLauncher.classList.contains('results-revision-comparison-launcher')).toBe(true);
+    window.removeEventListener(workspaceCommandEventName('open-revision-comparison'), onRevisionComparison);
     const quality = screen.getByRole('region', { name: 'Calidad numérica' });
     expect(quality.textContent).toMatch(/Resultado numéricamente estable/);
     expect(quality.textContent).toMatch(/Condición κ₁/);

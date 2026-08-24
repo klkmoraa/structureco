@@ -27,6 +27,7 @@ import {
   ClipboardList,
   Download,
   Grid3x3,
+  GitCompareArrows,
   Layers3,
   LocateFixed,
   Moon,
@@ -197,6 +198,15 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     hint: (ctx) => ctx.t('bom.description'),
     deferredOpen: true,
     run: () => emitWorkspaceCommand('open-structural-bom'),
+  },
+  {
+    id: 'analysis:compare-revisions',
+    category: 'analysis',
+    icon: GitCompareArrows,
+    label: (ctx) => ctx.t('revision.title'),
+    hint: (ctx) => ctx.t('revision.description'),
+    deferredOpen: true,
+    run: () => emitWorkspaceCommand('open-revision-comparison'),
   },
   {
     id: 'export:json',

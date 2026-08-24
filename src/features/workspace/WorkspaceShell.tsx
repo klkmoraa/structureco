@@ -24,11 +24,13 @@ import './phase1.css';
 import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
 import { isOwnHistoryScope } from './commandRegistry';
 import type { AnalysisResult } from '../../types';
+import type { RevisionSnapshot } from '../revision-comparison/revisionComparison';
 
 const LazyCommandPalette = lazy(() => import('./CommandPalette').then((module) => ({ default: module.CommandPalette })));
 const LazyModelDoctor = lazy(() => import('../model-doctor/ModelDoctor').then((module) => ({ default: module.ModelDoctor })));
 const LazyDatasheet = lazy(() => import('../datasheet/DatasheetPanel').then((module) => ({ default: module.DatasheetPanel })));
 const LazyStructuralBom = lazy(() => import('../bom/StructuralBomPanel').then((module) => ({ default: module.StructuralBomPanel })));
+const LazyRevisionComparison = lazy(() => import('../revision-comparison/RevisionComparisonPanel').then((module) => ({ default: module.RevisionComparisonPanel })));
 const LazyDenseResults = lazy(() => preloadDenseResultsSurface());
 
 type WorkspaceShellProps = { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string };
@@ -51,6 +53,7 @@ const WorkspaceBrokerContent = ({
   layoutController: LayoutController;
 }) => {
   const [modelDoctorAcknowledgedIds, setModelDoctorAcknowledgedIds] = useState<Set<string>>(() => new Set());
+  const [revisionBaseline, setRevisionBaseline] = useState<RevisionSnapshot | null>(null);
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
   const { t } = useI18n();
   const { project, analysis, isAnalyzing, setActiveTool, setResultTab, analyze, undo, redo, canUndo, canRedo } = useProject();
@@ -70,6 +73,7 @@ const WorkspaceBrokerContent = ({
   const [denseView, setDenseView] = useState<DenseResultView>('reactions');
   const datasheet = broker.stateFor('datasheet');
   const bom = broker.stateFor('bom');
+  const comparison = broker.stateFor('comparison');
   const doctor = broker.stateFor('doctor');
   const palette = broker.stateFor('palette');
 
@@ -95,7 +99,7 @@ const WorkspaceBrokerContent = ({
   }, [layout.inspectorDetent, setPreference]);
 
   useEffect(() => {
-    const canOpenPalette = datasheet.status !== 'active' && bom.status !== 'active' && doctor.status !== 'active';
+    const canOpenPalette = datasheet.status !== 'active' && bom.status !== 'active' && comparison.status !== 'active' && doctor.status !== 'active';
     const subscriptions = [
       onWorkspaceCommand('open-command-palette', () => {
         // Ctrl/Cmd+K ya respeta esta exclusión; el lanzador visible debe pasar
@@ -106,6 +110,7 @@ const WorkspaceBrokerContent = ({
       onWorkspaceCommand('open-model-doctor', () => openSurface('doctor')),
       onWorkspaceCommand('open-datasheet', () => openSurface('datasheet')),
       onWorkspaceCommand('open-structural-bom', () => openSurface('bom')),
+      onWorkspaceCommand('open-revision-comparison', () => openSurface('comparison')),
       onWorkspaceCommand('open-results', (payload) => openSurface('results', payload?.trigger)),
       onWorkspaceCommand('toggle-results', (payload) => {
         if (results.open) closeSurface('results');
@@ -134,13 +139,13 @@ const WorkspaceBrokerContent = ({
       }),
     ];
     return () => subscriptions.forEach((unsubscribe) => unsubscribe());
-  }, [analysis, bom.status, closeSurface, datasheet.status, doctor.status, openSurface, project.id, results.open, setResultTab]);
+  }, [analysis, bom.status, closeSurface, comparison.status, datasheet.status, doctor.status, openSurface, project.id, results.open, setResultTab]);
 
   useEffect(() => {
     setModelDoctorAcknowledgedIds(new Set());
     pendingModelDoctorNotificationIdRef.current = null;
     setPendingModelDoctorNotification(null);
-    (['generator', 'dense', 'datasheet', 'bom', 'doctor', 'palette'] as const).forEach((surface) => closeSurface(surface));
+    (['generator', 'dense', 'datasheet', 'bom', 'comparison', 'doctor', 'palette'] as const).forEach((surface) => closeSurface(surface));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
@@ -186,13 +191,13 @@ const WorkspaceBrokerContent = ({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() !== 'k' || !(event.ctrlKey || event.metaKey) || event.altKey) return;
-      if (datasheet.status === 'active' || bom.status === 'active' || doctor.status === 'active') return;
+      if (datasheet.status === 'active' || bom.status === 'active' || comparison.status === 'active' || doctor.status === 'active') return;
       event.preventDefault();
       toggleSurface('palette', document.activeElement instanceof HTMLElement ? document.activeElement : null);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [bom.status, datasheet.status, doctor.status, toggleSurface]);
+  }, [bom.status, comparison.status, datasheet.status, doctor.status, toggleSurface]);
 
   // Ctrl/Cmd+Z and Ctrl/Cmd+Y drive the same undo/redo the history buttons use
   // (G-01 · CRI-103) — but never with focus in a text field, the Datasheet
@@ -281,6 +286,10 @@ const WorkspaceBrokerContent = ({
       if (stableLauncher) window.requestAnimationFrame(() => stableLauncher.focus({ preventScroll: true }));
     }
   }, [closeSurface, openSurface]);
+  const setComparisonOpen = useCallback((open: boolean) => {
+    if (open) openSurface('comparison');
+    else closeSurface('comparison');
+  }, [closeSurface, openSurface]);
   const setDenseOpen = useCallback((open: boolean) => {
     if (open) openSurface('dense');
     else closeSurface('dense');
@@ -288,6 +297,7 @@ const WorkspaceBrokerContent = ({
   const markDenseReady = useCallback((ready: boolean) => markSurfaceReady('dense', ready), [markSurfaceReady]);
   const markDatasheetReady = useCallback((ready: boolean) => markSurfaceReady('datasheet', ready), [markSurfaceReady]);
   const markBomReady = useCallback((ready: boolean) => markSurfaceReady('bom', ready), [markSurfaceReady]);
+  const markComparisonReady = useCallback((ready = true) => markSurfaceReady('comparison', ready), [markSurfaceReady]);
   const markDoctorReady = useCallback((ready: boolean) => markSurfaceReady('doctor', ready), [markSurfaceReady]);
   // "Localizar" degrada a `peek`, nunca cierra (CRI-102 / D-11): mismo mecanismo
   // para Datasheet, BOM y Doctor, porque es el mismo hueco en las tres superficies.
@@ -295,6 +305,8 @@ const WorkspaceBrokerContent = ({
   const restoreDatasheet = useCallback(() => setSurfaceExtent('datasheet', 'default'), [setSurfaceExtent]);
   const peekBom = useCallback(() => setSurfaceExtent('bom', 'peek'), [setSurfaceExtent]);
   const restoreBom = useCallback(() => setSurfaceExtent('bom', 'default'), [setSurfaceExtent]);
+  const peekComparison = useCallback(() => setSurfaceExtent('comparison', 'peek'), [setSurfaceExtent]);
+  const restoreComparison = useCallback(() => setSurfaceExtent('comparison', 'default'), [setSurfaceExtent]);
   const peekDoctor = useCallback(() => setSurfaceExtent('doctor', 'peek'), [setSurfaceExtent]);
   const restoreDoctor = useCallback(() => setSurfaceExtent('doctor', 'default'), [setSurfaceExtent]);
 
@@ -380,6 +392,17 @@ const WorkspaceBrokerContent = ({
         extent={bom.extent}
         onPeek={peekBom}
         onRestore={restoreBom}
+      /></Suspense> : null}
+      {broker.isRetained('comparison') ? <Suspense fallback={null}><LazyRevisionComparison
+        open={comparison.status === 'active'}
+        onOpenChange={setComparisonOpen}
+        presentation={comparison.presentation as 'drawer' | 'fullscreen'}
+        onSurfaceReady={markComparisonReady}
+        extent={comparison.extent}
+        onPeek={peekComparison}
+        onRestore={restoreComparison}
+        baseline={revisionBaseline}
+        onBaselineChange={setRevisionBaseline}
       /></Suspense> : null}
       {broker.isRetained('doctor') ? <Suspense fallback={<span className="sr-only" role="status">{t('modelDoctor.loading')}</span>}><LazyModelDoctor
         open={doctor.status === 'active'}

@@ -1,0 +1,66 @@
+.revision-comparison-surface { width: min(1180px, 100vw); }
+.revision-comparison { display: grid; gap: 14px; min-width: 0; }
+.revision-comparison__empty-state { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 18px; border: 1px solid var(--sc-color-border); border-radius: var(--sc-radius-lg); background: var(--sc-color-surface-2); }
+.revision-comparison__empty-state h3,
+.revision-comparison__empty-state p { margin: 0; }
+.revision-comparison__empty-state p { margin-top: 4px; color: var(--sc-color-text-secondary); }
+.revision-comparison__revisions { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.revision-comparison__revisions article { display: grid; gap: 3px; min-width: 0; padding: 12px 14px; border: 1px solid var(--sc-color-border); border-radius: var(--sc-radius-lg); background: var(--sc-color-surface-2); }
+.revision-comparison__revisions article > span,
+.revision-comparison__revisions article > small,
+.revision-comparison__summary span,
+.revision-comparison__filters label > span { color: var(--sc-color-text-muted); font-size: 0.72rem; }
+.revision-comparison__revisions article > strong { overflow: hidden; color: var(--sc-color-text-primary); text-overflow: ellipsis; white-space: nowrap; }
+.revision-comparison code { color: var(--sc-color-text-secondary); font: 0.72rem var(--sc-font-mono); }
+.revision-comparison__baseline-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.revision-comparison__summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.revision-comparison__summary > div { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--sc-color-border); border-radius: var(--sc-radius-md); background: var(--sc-color-surface-1); }
+.revision-comparison__summary strong { color: var(--sc-color-text-primary); font: 650 0.9rem var(--sc-font-mono); }
+.revision-comparison__summary [data-comparability='blocked'] strong { color: var(--sc-color-state-warning-foreground); }
+.revision-comparison__warnings { display: grid; gap: 6px; }
+.revision-comparison__warnings p { display: flex; align-items: start; gap: 7px; margin: 0; padding: 9px 11px; border-radius: var(--sc-radius-md); color: var(--sc-color-text-secondary); background: var(--sc-color-surface-2); }
+.revision-comparison__warnings p[data-severity='warning'] { color: var(--sc-color-state-warning-foreground); }
+.revision-comparison__warnings strong { display: block; color: var(--sc-color-text-primary); }
+.revision-comparison__filters { display: grid; grid-template-columns: 180px 210px minmax(220px, 1fr); gap: 10px; }
+.revision-comparison__filters label { display: grid; gap: 4px; }
+.revision-comparison__filters select,
+.revision-comparison__filters input { min-height: 42px; min-width: 0; padding: 0 11px; border: 1px solid var(--sc-color-border); border-radius: var(--sc-radius-md); color: var(--sc-color-text-primary); background: var(--sc-color-surface-1); }
+.revision-comparison__table-wrap { min-width: 0; overflow: auto; border: 1px solid var(--sc-color-border); border-radius: var(--sc-radius-lg); background: var(--sc-color-surface-1); }
+.revision-comparison table { width: 100%; min-width: 1050px; border-collapse: collapse; }
+.revision-comparison th,
+.revision-comparison td { padding: 9px 10px; border-bottom: 1px solid var(--sc-color-border); text-align: left; vertical-align: top; }
+.revision-comparison th { position: sticky; top: 0; z-index: 1; color: var(--sc-color-text-muted); background: var(--sc-color-surface-2); font-size: 0.68rem; text-transform: uppercase; }
+.revision-comparison tbody tr:last-child td { border-bottom: 0; }
+.revision-comparison td { max-width: 210px; color: var(--sc-color-text-secondary); font-size: 0.76rem; }
+.revision-comparison td > span { overflow-wrap: anywhere; }
+.revision-comparison td small,
+.revision-comparison td code { display: block; margin-top: 3px; overflow-wrap: anywhere; }
+.revision-comparison td button { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; margin-top: 5px; padding: 0 7px; border: 1px solid var(--sc-color-border); border-radius: var(--sc-radius-md); color: var(--sc-color-text-primary); background: var(--sc-color-surface-2); font: 650 0.72rem var(--sc-font-mono); cursor: pointer; }
+.revision-change-badge { display: inline-flex; padding: 3px 7px; border-radius: 999px; color: var(--sc-color-text-primary); background: var(--sc-color-surface-2); font-weight: 700; }
+.revision-change-badge--added { color: var(--sc-color-state-success-foreground); }
+.revision-change-badge--removed { color: var(--sc-color-state-error-foreground); }
+.revision-comparison__no-changes,
+.revision-comparison__calculating { margin: 0; padding: 16px; border-radius: var(--sc-radius-md); color: var(--sc-color-text-secondary); background: var(--sc-color-surface-2); }
+
+@media (max-width: 720px) {
+  .revision-comparison-surface { width: 100vw; }
+  .revision-comparison__empty-state { grid-template-columns: 1fr; }
+  .revision-comparison__empty-state > .sc-button { width: 100%; }
+  .revision-comparison__revisions { grid-template-columns: 1fr; }
+  .revision-comparison__revisions > svg { transform: rotate(90deg); justify-self: center; }
+  .revision-comparison__baseline-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .revision-comparison__summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .revision-comparison__summary > div { min-height: 58px; }
+  .revision-comparison__filters { grid-template-columns: 1fr; }
+  .revision-comparison__filters select,
+  .revision-comparison__filters input { min-height: 44px; }
+  .revision-comparison table { min-width: 0; }
+  .revision-comparison thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .revision-comparison tbody,
+  .revision-comparison tr,
+  .revision-comparison td { display: block; }
+  .revision-comparison tr { padding: 8px 10px; border-bottom: 1px solid var(--sc-color-border); }
+  .revision-comparison td { display: grid; grid-template-columns: minmax(90px, 0.42fr) minmax(0, 1fr); gap: 8px; max-width: none; padding: 6px 0; border: 0; }
+  .revision-comparison td::before { content: attr(data-label); color: var(--sc-color-text-muted); font: 0.68rem var(--sc-font-ui); text-transform: uppercase; }
+  .revision-comparison td button { min-height: 44px; }
+}

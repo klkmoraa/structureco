@@ -61,6 +61,14 @@ describe('bus de comandos del workspace', () => {
     unsubscribe();
   });
 
+  it('abre la comparación de revisiones por el bus tipado', () => {
+    const handler = vi.fn();
+    const unsubscribe = onWorkspaceCommand('open-revision-comparison', handler);
+    emitWorkspaceCommand('open-revision-comparison');
+    expect(handler).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
   it('admite varios suscriptores del mismo comando', () => {
     const first = vi.fn();
     const second = vi.fn();

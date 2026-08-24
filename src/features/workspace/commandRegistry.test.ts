@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest';
-import { isOwnHistoryScope } from './commandRegistry';
+import { describe, expect, it, vi } from 'vitest';
+import { createBlankProject } from '../../data/defaultProject';
+import { buildCommands, isOwnHistoryScope } from './commandRegistry';
+import { onWorkspaceCommand } from './workspaceCommands';
 
 /**
  * CRI-103 / G-01: the global Ctrl+Z / Ctrl+Y binding must stay silent inside
@@ -48,5 +50,37 @@ describe('isOwnHistoryScope', () => {
     expect(isOwnHistoryScope(svg)).toBe(false);
     expect(isOwnHistoryScope(document.body)).toBe(false);
     expect(isOwnHistoryScope(null)).toBe(false);
+  });
+});
+
+describe('revision comparison command', () => {
+  it('projects one deferred Palette command onto the typed workspace bus', () => {
+    const opened = vi.fn();
+    const unsubscribe = onWorkspaceCommand('open-revision-comparison', opened);
+    const commands = buildCommands({
+      t: (key) => key,
+      project: createBlankProject(),
+      hasAnalysis: false,
+      isAnalyzing: false,
+      canUndo: false,
+      canRedo: false,
+      classroomMode: false,
+      theme: 'light',
+      setActiveTool: vi.fn(),
+      setSelection: vi.fn(),
+      setResultTab: vi.fn(),
+      setTheme: vi.fn(),
+      updateProjectView: vi.fn(),
+      dispatchLayers: vi.fn(),
+      analyze: vi.fn(),
+      undo: vi.fn(),
+      redo: vi.fn(),
+    });
+    const command = commands.find((item) => item.id === 'analysis:compare-revisions');
+
+    expect(command).toMatchObject({ category: 'analysis', label: 'revision.title', disabled: false, deferredOpen: true });
+    command?.run();
+    expect(opened).toHaveBeenCalledTimes(1);
+    unsubscribe();
   });
 });
