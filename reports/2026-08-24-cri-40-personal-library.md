@@ -31,7 +31,7 @@ La biblioteca no es un catálogo normativo ni forma parte de `ProjectModel`. Gua
 |---|---|
 | Suite focal Vitest | PASS · 10 archivos, 119 pruebas. |
 | `npm.cmd run typecheck` | PASS. |
-| `npm.cmd run build` | PASS · 2644 módulos transformados. |
+| `npm.cmd run build` | PASS · 2645 módulos transformados. |
 | `npm.cmd run qa:personal-library` | PASS · X2 1440×900, M1 1100×768 y K0 390×844. |
 | Browser QA | 0 px de overflow en Home/Workspace; consola limpia; proyecto intacto al guardar; 2 favoritos persistidos; targets K0 ≥44 px. |
 | `npm.cmd run verify:protected` | PASS · 38 archivos protegidos intactos. |
