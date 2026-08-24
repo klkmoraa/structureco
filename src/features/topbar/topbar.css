@@ -281,7 +281,7 @@
 .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-zone { gap:5px; min-width:0; }
 .app-shell[data-shell-class='K0'] .topbar--atelier .brand-home-button { width:42px; height:42px; flex-basis:42px; border-radius:12px; }
 .app-shell[data-shell-class='K0'] .topbar--atelier .brand-home-button svg { width:25px; height:25px; }
-.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-trigger { width:min(100%, 112px); min-height:42px; padding:5px 7px 5px 9px; border-radius:12px; column-gap:4px; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-trigger { width:min(100%, 104px); min-height:42px; padding:5px 7px 5px 9px; border-radius:12px; column-gap:4px; }
 .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-trigger > span { display:none; }
 .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-trigger > strong { font-size:11px; }
 .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-utility-project-launcher { display:flex; align-items:center; gap:8px; width:100%; min-height:42px; margin-bottom:5px; }
@@ -289,8 +289,7 @@
 .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-analysis-wrap,
 .app-shell[data-shell-class='K0'] .topbar--atelier .datasheet-launcher,
 .app-shell[data-shell-class='K0'] .topbar--atelier .space3d-open-button,
-.app-shell[data-shell-class='K0'] .topbar--atelier .export-wrap,
-.app-shell[data-shell-class='K0'] .topbar--atelier .results-launcher { display:none; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .export-wrap { display:none; }
 .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions { gap:4px; }
 .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions .sc-icon-button { width:40px; min-width:40px; height:42px; min-height:42px; border-radius:12px; }
 .app-shell[data-shell-class='K0'] .topbar--atelier .analyze-button { min-width:84px; width:84px; height:42px; padding:0 8px; border-radius:12px; font-size:11px; }
@@ -310,6 +309,10 @@
 
 @media (max-width:374px) {
   .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-trigger { display:none; }
+}
+
+@media (min-width:375px) and (max-width:389px) {
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-trigger { width:min(100%, 90px); }
 }
 
 @media (pointer:coarse) {

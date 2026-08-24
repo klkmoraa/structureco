@@ -239,9 +239,9 @@ const WorkspaceBrokerContent = ({
   const setResultsOpen = useCallback((open: boolean, trigger?: HTMLElement | null) => {
     if (open) openSurface('results', trigger);
     else {
-      // En K0 el lanzador visible vive dentro de Utilidades y permanece
-      // conectado mientras la hoja se cierra. Es el fallback correcto cuando
-      // el cierre viene del propio panel y no trae el botón original.
+      // En K0 Utilidades sigue siendo un fallback persistente mientras la hoja
+      // se cierra. Es correcto cuando el cierre viene del propio panel y no
+      // trae el botón original que abrió Resultados.
       const compactLauncher = document.querySelector<HTMLElement>('.utility-more-button');
       closeSurface('results');
       if (compactLauncher) {

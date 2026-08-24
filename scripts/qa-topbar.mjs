@@ -23,7 +23,7 @@ const geometryWidths = [...new Set([...continuousWidths, ...checkedWidths, ...br
 // 320px, cuyo presupuesto ya no cierra una vez que cada control toca su
 // mínimo táctil de 44px (WCAG 2.5.5/2.5.8); forzar 320px significaría
 // romper ESE suelo de accesibilidad para cumplir este, un peor cambio.
-const compactWidths = [360, 390, 414, 460, 500, 600, 660, 700, 740, 800, 900, 1000, 1023];
+const compactWidths = [360, 375, 390, 414, 460, 500, 600, 660, 700, 740, 800, 900, 1000, 1023];
 // El peor caso declarado por el issue: landscape móvil, altura reducida.
 const landscapeSizes = [
   { width: 740, height: 360 },
@@ -79,6 +79,8 @@ async function readTopBarGeometry() {
     const accessibleName = (element) => (element?.getAttribute('aria-label') || element?.textContent || '').trim();
     const doctor = bar.querySelector('.model-doctor-launcher');
     const doctorStyle = doctor ? getComputedStyle(doctor) : null;
+    const results = bar.querySelector('.results-launcher');
+    const resultsStyle = results ? getComputedStyle(results) : null;
     const statusShell = bar.querySelector('.analysis-status-shell');
     const statusStyle = statusShell ? getComputedStyle(statusShell) : null;
     return {
@@ -89,6 +91,8 @@ async function readTopBarGeometry() {
       clientWidth: document.documentElement.clientWidth,
       doctorVisible: Boolean(doctor) && doctorStyle?.display !== 'none' && doctorStyle?.visibility !== 'hidden',
       doctorAccessibleName: accessibleName(doctor),
+      resultsVisible: Boolean(results) && resultsStyle?.display !== 'none' && resultsStyle?.visibility !== 'hidden',
+      resultsAccessibleName: accessibleName(results),
       statusVisible: Boolean(statusShell) && statusStyle?.display !== 'none' && statusStyle?.visibility !== 'hidden',
       statusAccessibleName: accessibleName(statusShell?.querySelector('[role="status"], button, div[aria-label]')),
     };
@@ -98,6 +102,8 @@ async function readTopBarGeometry() {
 function assertNeverDegrades(result, width, label) {
   if (!result.doctorVisible) throw new Error(`Model Doctor disappeared at ${width}px (${label})`);
   if (!result.doctorAccessibleName) throw new Error(`Model Doctor lost its accessible name at ${width}px (${label})`);
+  if (!result.resultsVisible) throw new Error(`Resultados disappeared at ${width}px (${label})`);
+  if (!result.resultsAccessibleName) throw new Error(`Resultados lost its accessible name at ${width}px (${label})`);
   if (!result.statusVisible) throw new Error(`Estado (AnalysisStatus) disappeared at ${width}px (${label})`);
   if (!result.statusAccessibleName) throw new Error(`Estado (AnalysisStatus) lost its accessible name at ${width}px (${label})`);
 }
@@ -149,8 +155,8 @@ try {
   await enterWorkspace();
   for (const width of geometryWidths) await assertTopBarGeometry(width);
 
-  // Suelo Compact (K0), ancho por ancho, con Estado y Doctor siempre vivos —
-  // esto es lo que protege el criterio de aceptación #2.
+  // Suelo Compact (K0), ancho por ancho, con Resultados, Estado y Doctor
+  // siempre vivos — el teléfono no debe esconder el acceso a los resultados.
   for (const width of compactWidths) {
     const result = await assertTopBarGeometry(width, 900);
     assertNeverDegrades(result, width, 'compact sweep, default name');
@@ -186,7 +192,7 @@ try {
   await page.waitForTimeout(220);
   if (!(await page.getByRole('button', { name: /herramientas del espacio de trabajo|workspace tools/i }).isVisible())) throw new Error('Mobile workspace utilities are no longer reachable');
 
-  console.log(`TopBar browser geometry passed: ${checkedWidths.join(', ')}px; breakpoints ${breakpointBoundaryWidths.join(', ')}px; continuous 1024-1600px; compact floor ${compactWidths.join(', ')}px; long ES/EN project name in portrait+landscape with Estado/Doctor always visible.`);
+  console.log(`TopBar browser geometry passed: ${checkedWidths.join(', ')}px; breakpoints ${breakpointBoundaryWidths.join(', ')}px; continuous 1024-1600px; compact floor ${compactWidths.join(', ')}px; long ES/EN project name in portrait+landscape with Resultados/Estado/Doctor always visible.`);
 } finally {
   await browser.close();
   await previewServer.close();

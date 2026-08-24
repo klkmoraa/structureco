@@ -591,8 +591,9 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
                     <button onClick={() => { mobileMenuButtonRef.current?.focus({ preventScroll: true }); setShowMobileMenu(false); modelDoctorCommand.run(); }}><Wrench size={17} /> {modelDoctorCommand.label}</button>
                     <button onClick={(event) => {
                       // El elemento del menú se desmonta al cerrar Utilidades. El
-                      // lanzador persistente es el único retorno de foco válido en
-                      // K0; sin él Safari deja el foco en body al cerrar la hoja.
+                      // Utilidades permanece montado mientras el menú se desmonta;
+                      // Safari necesita ese disparador estable para devolver el
+                      // foco al cerrar la hoja abierta desde este menú.
                       const trigger = mobileMenuButtonRef.current ?? event.currentTarget;
                       emitWorkspaceCommand('toggle-results', { trigger });
                       setShowMobileMenu(false);
