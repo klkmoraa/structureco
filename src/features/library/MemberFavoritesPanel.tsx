@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import type { ProjectCommand } from '../../commands/projectCommand';
-import { projectCommandSnapshot } from '../../commands/projectCommand';
 import { findStandardMaterial } from '../../data/standardMaterials';
 import { findStandardSection } from '../../data/standardSections';
 import type { MemberModel, ProjectModel, UnitSystemId } from '../../types';
 import type { LibraryOperationResult } from './usePersonalLibrary';
 import { usePersonalLibrary } from './usePersonalLibrary';
 import type { PersonalFavorite, PersonalFavoriteDraft } from './personalLibrary';
+import { buildMemberFavoriteCommand, isMemberFavoriteAvailable } from './memberFavoriteCommand';
 import './memberFavorites.css';
 
 type StructuralFavorite = Exclude<PersonalFavorite, { kind: 'view' }>;
@@ -29,60 +29,6 @@ const COPY = {
     storageError: 'Could not save on this device. The project was not changed.', conflict: 'An active favorite already uses that name.', invalid: 'Enter a valid name and keep an explicit catalog identity.', applyError: 'The favorite could not be applied. The project kept its previous state.',
   },
 } as const;
-
-const materialChanges = (materialId: string) => {
-  const material = findStandardMaterial(materialId);
-  return material ? {
-    materialId: material.id,
-    properties: { E: material.elasticModulus, G: material.shearModulus, density: material.density },
-  } : null;
-};
-
-const sectionChanges = (sectionId: string) => {
-  const section = findStandardSection(sectionId);
-  return section ? {
-    sectionId: section.id,
-    properties: { A: section.area, I: section.inertiaX },
-  } : null;
-};
-
-export const isMemberFavoriteAvailable = (favorite: StructuralFavorite) => {
-  if (favorite.kind === 'material') return Boolean(findStandardMaterial(favorite.materialId));
-  if (favorite.kind === 'section') return Boolean(findStandardSection(favorite.sectionId));
-  return Boolean(findStandardMaterial(favorite.materialId) && findStandardSection(favorite.sectionId));
-};
-
-export const buildMemberFavoriteCommand = (
-  project: ProjectModel,
-  member: MemberModel,
-  favorite: PersonalFavorite,
-): ProjectCommand | null => {
-  if (favorite.kind === 'view') return null;
-  if (favorite.kind === 'material') {
-    const material = materialChanges(favorite.materialId);
-    return material ? {
-      kind: 'member.material.apply', description: `Aplicar favorito ${favorite.name} a ${member.id}`,
-      memberId: member.id, ...material,
-    } : null;
-  }
-  if (favorite.kind === 'section') {
-    const section = sectionChanges(favorite.sectionId);
-    return section ? {
-      kind: 'member.section.apply', description: `Aplicar favorito ${favorite.name} a ${member.id}`,
-      memberId: member.id, ...section,
-    } : null;
-  }
-  const material = materialChanges(favorite.materialId);
-  const section = sectionChanges(favorite.sectionId);
-  if (!material || !section) return null;
-  return {
-    kind: 'selection.bulk.apply',
-    description: `Aplicar favorito ${favorite.name} a ${member.id}`,
-    entries: [{ memberIds: [member.id], changes: { material, section } }],
-    nodeEntries: [], nodalLoadEntries: [], memberLoadEntries: [],
-    sourceSnapshot: projectCommandSnapshot(project),
-  };
-};
 
 const feedbackFor = (result: LibraryOperationResult, copy: typeof COPY.es | typeof COPY.en) => result.ok
   ? { kind: 'status' as const, message: copy.saved }

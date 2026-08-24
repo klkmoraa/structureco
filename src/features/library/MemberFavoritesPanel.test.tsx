@@ -7,7 +7,8 @@ import { createDefaultProject } from '../../data/defaultProject';
 import { findStandardMaterial } from '../../data/standardMaterials';
 import { findStandardSection } from '../../data/standardSections';
 import { createFavorite, readPersonalLibrary, writePersonalLibrary } from './personalLibrary';
-import { buildMemberFavoriteCommand, MemberFavoritesPanel } from './MemberFavoritesPanel';
+import { buildMemberFavoriteCommand } from './memberFavoriteCommand';
+import { MemberFavoritesPanel } from './MemberFavoritesPanel';
 
 const NOW = '2026-08-24T15:00:00.000Z';
 

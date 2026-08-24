@@ -42,6 +42,7 @@ documento que los cita.
 
 | Documento | Uso correcto |
 |---|---|
+| [Biblioteca personal · contrato seguro](superpowers/specs/2026-08-24-personal-library-interaction-contract.md) | Contrato implementado para favoritos locales y aplicación explícita; el código y sus pruebas siguen siendo la autoridad operativa. |
 | [Aula vNext · explicación anclada a resultados](superpowers/specs/2026-08-24-aula-vnext-result-anchored-design.md) | Diseño de producto para implementación futura; no describe una capacidad ya implementada. |
 | [Pre-RFC de IA y `CommandProposal`](architecture/structureco-fase-4-ai-command-proposal-pre-rfc.md) | Propuesta futura; no describe una capacidad implementada. |
 | [Brandbook heredado](../brand/README.md) | Procedencia de assets anteriores; no restringe el rediseño vigente. |
@@ -65,6 +66,7 @@ Los planes de fases cerradas, sus especificaciones, reportes narrativos y captur
 
 | Comando | Qué comprueba o genera |
 |---|---|
+| `npm run qa:personal-library` | Verifica Biblioteca, aplicación estructural/visual, persistencia aislada, X2/M1/K0, targets táctiles y consola sobre la app construida. |
 | `npm run qa:shell-composition` | Verifica las composiciones X2/M1/K0, continuidad de selección/foco y ausencia de desborde horizontal en el shell construido. |
 | `npm run qa:results-cards` | Verifica la materia de las tarjetas de resultados, la superficie `dense` y el Datasheet plano en la app construida. |
 | `npm run assets:generate` | Regenera las miniaturas PNG transparentes de las escenas Three.js editables y valida el bundle antes de publicarlo. |
