@@ -468,7 +468,7 @@
   box-shadow:var(--sc-shadow-clay-xs);
 }
 
-.app-shell[data-shell-class='X2']:has(.results-panel[data-surface-status='active']) .tool-rail.is-floating-dock {
+.app-shell[data-shell-class='X2'][data-tool-dock-position='bottom']:has(.results-panel[data-surface-status='active']) .tool-rail.is-floating-dock {
   bottom:min(42dvh,350px);
 }
 
@@ -1337,6 +1337,27 @@
   flex-direction:row;
 }
 
+/* Esta regla debe quedar después del cierre de cascada X2: de otro modo el
+   selector genérico anterior revierte el riel izquierdo a una fila ancha. */
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock {
+  width:54px;
+  max-width:54px;
+  max-height:min(680px, calc(100dvh - 172px));
+  overflow-x:hidden;
+  overflow-y:auto;
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .desktop-tool-list,
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .tool-group-actions {
+  flex-direction:column;
+  align-items:center;
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .tool-button:hover:not(:disabled),
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .sc-popover__trigger:hover:not(:disabled) {
+  transform:translateX(6px) scale(1.08);
+}
+
 .app-shell[data-shell-class='X2'] .center-stage {
   margin:10px;
   border-radius:var(--sc-radius-panel);
@@ -1445,16 +1466,22 @@
   display:none;
 }
 
-.app-shell[data-shell-class='X2']:has(.contextual-actions):not(:has(.results-panel[data-surface-status='active'])) .tool-rail.is-floating-dock {
+.app-shell[data-shell-class='X2'][data-tool-dock-position='bottom']:has(.contextual-actions):not(:has(.results-panel[data-surface-status='active'])) .tool-rail.is-floating-dock {
   bottom:94px;
 }
 
 /* Generator ya contiene su propia salida y confirmación. Mientras está activo,
    el dock se repliega para que no compita por el mismo plano ni tape el pie. */
-.app-shell[data-shell-class='X2']:has(.structure-generator[data-surface-status='active']) .tool-rail.is-floating-dock {
+.app-shell[data-shell-class='X2'][data-tool-dock-position='bottom']:has(.structure-generator[data-surface-status='active']) .tool-rail.is-floating-dock {
   opacity:0;
   pointer-events:none;
   transform:translate(-50%,18px) scale(.96);
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left']:has(.structure-generator[data-surface-status='active']) .tool-rail.is-floating-dock {
+  opacity:0;
+  pointer-events:none;
+  transform:translateY(-50%) scale(.96);
 }
 
 /* M1 is the tablet-landscape composition: a slim edge rail and a narrower

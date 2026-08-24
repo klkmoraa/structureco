@@ -352,6 +352,23 @@ describe('structureCo app shell', () => {
     expect(screen.queryByText(/No se generaron resultados/i)).toBeNull();
   }, 15_000);
 
+  it('opens and closes Compact Results from the persistent top-bar control', async () => {
+    setViewport('phone');
+    const user = userEvent.setup();
+    await renderExampleApp(user);
+    const resultsLauncher = screen.getByRole('button', { name: 'Resultados' });
+
+    await user.click(resultsLauncher);
+    const results = await screen.findByRole('dialog', { name: /Resultados del análisis/i });
+    expect(results.getAttribute('data-surface-status')).toBe('active');
+    expect(resultsLauncher.getAttribute('aria-pressed')).toBe('true');
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(document.querySelector('.results-panel')).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(resultsLauncher));
+    expect(resultsLauncher.getAttribute('aria-pressed')).toBe('false');
+  }, 15_000);
+
   it('opens Model Doctor before analysis, isolates the workspace, and returns focus on Escape', async () => {
     const user = userEvent.setup();
     const { container } = await renderExampleApp(user);
@@ -479,7 +496,7 @@ describe('structureCo app shell', () => {
       .toBe(screen.getByRole('button', { name: 'Model Doctor' })));
   });
 
-  it('shows one Model Doctor toast for a new diagnosis and does not repeat it while unchanged', async () => {
+  it('only announces Model Doctor findings after an explicit analysis request', async () => {
     const user = userEvent.setup();
     const project = createDefaultProject();
     project.nodalLoads = [];
@@ -489,6 +506,15 @@ describe('structureCo app shell', () => {
     render(<App />);
     await openWorkspace(user);
 
+    // Un proyecto importado o editado puede tener hallazgos, pero abrir el
+    // workspace no debe interrumpirlo: el diagnóstico manual sigue disponible.
+    await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
+    const doctor = await screen.findByRole('dialog', { name: 'Model Doctor' });
+    expect(within(doctor).getByRole('article', { name: /sin cargas/i })).toBeTruthy();
+    expect(screen.queryByText('Model Doctor encontró problemas')).toBeNull();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: /^analizar$/i }));
     expect(await screen.findByText('Model Doctor encontró problemas')).toBeTruthy();
     expect(screen.getByText(/Abre Model Doctor para revisarlos/i)).toBeTruthy();
 

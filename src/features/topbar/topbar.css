@@ -289,7 +289,8 @@
 .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-analysis-wrap,
 .app-shell[data-shell-class='K0'] .topbar--atelier .datasheet-launcher,
 .app-shell[data-shell-class='K0'] .topbar--atelier .space3d-open-button,
-.app-shell[data-shell-class='K0'] .topbar--atelier .export-wrap { display:none; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .export-wrap,
+.app-shell[data-shell-class='K0'] .topbar--atelier .results-launcher { display:none; }
 .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions { gap:4px; }
 .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions .sc-icon-button { width:40px; min-width:40px; height:42px; min-height:42px; border-radius:12px; }
 .app-shell[data-shell-class='K0'] .topbar--atelier .analyze-button { min-width:84px; width:84px; height:42px; padding:0 8px; border-radius:12px; font-size:11px; }

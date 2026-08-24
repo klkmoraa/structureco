@@ -108,7 +108,10 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     label: (ctx) => ctx.t('analysis.run'),
     hint: (ctx) => ctx.t('palette.analyzeHint'),
     isEnabled: (ctx) => !ctx.isAnalyzing,
-    run: (ctx) => ctx.analyze(),
+    run: (ctx) => {
+      emitWorkspaceCommand('analysis-requested');
+      ctx.analyze();
+    },
   },
   {
     id: 'analysis:undo',
@@ -260,7 +263,7 @@ const resultTabCommands = (ctx: CommandContext): CommandListItem[] => PANEL_RESU
   disabled: !ctx.hasAnalysis,
   run: () => {
     ctx.setResultTab(tab.id);
-    emitWorkspaceCommand('open-results');
+    emitWorkspaceCommand('open-results', {});
   },
 }));
 

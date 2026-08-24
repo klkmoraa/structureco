@@ -61,6 +61,21 @@ const topBarContextFrom = (full: CommandContext): TopBarCommandContext => ({
 });
 
 describe('commandRegistry: TopBar and Palette resolve the same command (construction, not convention)', () => {
+  it('Analyze records one explicit analysis intent before both entry points run it', () => {
+    const analyze = vi.fn();
+    const full = baseFullContext({ analyze });
+    const topBarCtx = topBarContextFrom(full);
+    const requested = vi.fn();
+    const unsubscribe = onWorkspaceCommand('analysis-requested', requested);
+
+    resolveTopBarCommand('analysis:run', topBarCtx).run();
+    buildCommands(full).find((command) => command.id === 'analysis:run')!.run();
+
+    expect(requested).toHaveBeenCalledTimes(2);
+    expect(analyze).toHaveBeenCalledTimes(2);
+    unsubscribe();
+  });
+
   it('undo/redo: button and Palette share label, enabled state, and execution', () => {
     const undo = vi.fn();
     const redo = vi.fn();

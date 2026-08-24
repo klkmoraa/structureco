@@ -36,7 +36,7 @@ describe('bus de comandos del workspace', () => {
   it('deja de entregar tras darse de baja, sin dejar el listener colgado', () => {
     const handler = vi.fn();
     onWorkspaceCommand('open-results', handler)();
-    emitWorkspaceCommand('open-results');
+    emitWorkspaceCommand('open-results', {});
     expect(handler).not.toHaveBeenCalled();
   });
 

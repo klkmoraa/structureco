@@ -27,8 +27,12 @@ export interface WorkspaceCommands {
   'focus-object': FocusableSelection;
   /** Fit the whole model into the visible canvas. */
   'fit-canvas': void;
-  /** Request the Results surface; the presentation broker chooses its placement. */
-  'open-results': void;
+  /** Request the Results surface; the presentation broker chooses its placement and focus return. */
+  'open-results': { trigger?: HTMLElement | null };
+  /** Toggle the persistent Results control without giving the dock local state. */
+  'toggle-results': { trigger?: HTMLElement | null };
+  /** Mark a user-initiated analysis so post-analysis UI may react once. */
+  'analysis-requested': void;
   /** Open analysis cases, combinations and setup without selecting a placement tool. */
   'open-analysis-setup': void;
   /** Open canvas visibility and display settings. */

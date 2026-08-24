@@ -114,15 +114,13 @@ describe('ToolRail mobile action sheets', () => {
     unsubscribe();
   });
 
-  it('groups workspace panels behind one launcher without losing any route', async () => {
+  it('keeps setup and view behind one launcher while Results stays out of the dock', async () => {
     const user = userEvent.setup();
     const openAnalysisSetup = vi.fn();
     const openView = vi.fn();
-    const openResults = vi.fn();
     const unsubscribes = [
       onWorkspaceCommand('open-analysis-setup', openAnalysisSetup),
       onWorkspaceCommand('open-view-settings', openView),
-      onWorkspaceCommand('open-results', openResults),
     ];
     renderToolRail('X2');
 
@@ -136,12 +134,11 @@ describe('ToolRail mobile action sheets', () => {
     await user.click(within(panels).getByRole('menuitem', { name: /cargas de análisis/i }));
     await user.click(within(navigate).getByRole('button', { name: /abrir paneles de trabajo/i }));
     await user.click(within(screen.getByRole('dialog', { name: /paneles de trabajo/i })).getByRole('menuitem', { name: /^vista$/i }));
-    await user.click(within(navigate).getByRole('button', { name: /abrir paneles de trabajo/i }));
-    await user.click(within(screen.getByRole('dialog', { name: /paneles de trabajo/i })).getByRole('menuitem', { name: /^resultados$/i }));
 
     expect(openAnalysisSetup).toHaveBeenCalledOnce();
     expect(openView).toHaveBeenCalledOnce();
-    expect(openResults).toHaveBeenCalledOnce();
+    await user.click(within(navigate).getByRole('button', { name: /abrir paneles de trabajo/i }));
+    expect(within(screen.getByRole('dialog', { name: /paneles de trabajo/i })).queryByRole('menuitem', { name: /^resultados$/i })).toBeNull();
     unsubscribes.forEach((unsubscribe) => unsubscribe());
   });
 

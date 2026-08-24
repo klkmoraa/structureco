@@ -22,7 +22,6 @@ import {
   SlidersHorizontal,
   Scissors,
   Sigma,
-  ChartNoAxesColumnIncreasing,
   X,
   type LucideIcon,
 } from 'lucide-react';
@@ -229,16 +228,15 @@ const MobileCommandPaletteButton = ({ label, accessibleLabel, onOpen }: { label:
   <kbd>Ctrl K</kbd>
 </button>;
 
-type WorkspaceSurfaceCommand = 'open-analysis-setup' | 'open-view-settings' | 'open-results';
+type WorkspaceSurfaceCommand = 'open-analysis-setup' | 'open-view-settings';
 
 const WORKSPACE_SURFACE_ACTIONS: readonly {
   command: WorkspaceSurfaceCommand;
-  labelKey: 'inspector.analysisSetupLauncher' | 'inspector.viewTab' | 'results.outputs';
+  labelKey: 'inspector.analysisSetupLauncher' | 'inspector.viewTab';
   icon: LucideIcon;
 }[] = [
   { command: 'open-analysis-setup', labelKey: 'inspector.analysisSetupLauncher', icon: SlidersHorizontal },
   { command: 'open-view-settings', labelKey: 'inspector.viewTab', icon: Layers3 },
-  { command: 'open-results', labelKey: 'results.outputs', icon: ChartNoAxesColumnIncreasing },
 ];
 
 const WorkspacePanelsLauncher = ({ compact }: { compact: boolean }) => {

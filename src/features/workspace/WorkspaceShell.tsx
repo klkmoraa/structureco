@@ -23,6 +23,7 @@ import '../../design-system/components/ui.css';
 import './phase1.css';
 import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
 import { isOwnHistoryScope } from './commandRegistry';
+import type { AnalysisResult } from '../../types';
 
 const LazyCommandPalette = lazy(() => import('./CommandPalette').then((module) => ({ default: module.CommandPalette })));
 const LazyModelDoctor = lazy(() => import('../model-doctor/ModelDoctor').then((module) => ({ default: module.ModelDoctor })));
@@ -31,6 +32,12 @@ const LazyDenseResults = lazy(() => preloadDenseResultsSurface());
 
 type WorkspaceShellProps = { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string };
 type LayoutController = ReturnType<typeof useWorkspaceLayoutPreferences>;
+type PendingModelDoctorNotification = {
+  id: number;
+  projectId: string;
+  analysisAtRequest: AnalysisResult | null;
+  hasStarted: boolean;
+};
 
 const WorkspaceBrokerContent = ({
   onOpenHome,
@@ -44,9 +51,11 @@ const WorkspaceBrokerContent = ({
 }) => {
   const [modelDoctorAcknowledgedIds, setModelDoctorAcknowledgedIds] = useState<Set<string>>(() => new Set());
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
-  const modelDoctorToastRef = useRef<{ projectId: string; signature: string }>({ projectId, signature: '' });
   const { t } = useI18n();
-  const { project, analysis, setActiveTool, setResultTab, analyze, undo, redo, canUndo, canRedo } = useProject();
+  const { project, analysis, isAnalyzing, setActiveTool, setResultTab, analyze, undo, redo, canUndo, canRedo } = useProject();
+  const [pendingModelDoctorNotification, setPendingModelDoctorNotification] = useState<PendingModelDoctorNotification | null>(null);
+  const modelDoctorNotificationIdRef = useRef(0);
+  const pendingModelDoctorNotificationIdRef = useRef<number | null>(null);
   const { activeTool } = useWorkspaceUI();
   const { preferences: layout, setPreference, togglePreference } = layoutController;
   const { shellClass } = useShellComposition();
@@ -88,7 +97,17 @@ const WorkspaceBrokerContent = ({
       onWorkspaceCommand('open-command-palette', () => openSurface('palette')),
       onWorkspaceCommand('open-model-doctor', () => openSurface('doctor')),
       onWorkspaceCommand('open-datasheet', () => openSurface('datasheet')),
-      onWorkspaceCommand('open-results', () => openSurface('results')),
+      onWorkspaceCommand('open-results', (payload) => openSurface('results', payload?.trigger)),
+      onWorkspaceCommand('toggle-results', (payload) => {
+        if (results.open) closeSurface('results');
+        else openSurface('results', payload?.trigger);
+      }),
+      onWorkspaceCommand('analysis-requested', () => {
+        const id = modelDoctorNotificationIdRef.current + 1;
+        modelDoctorNotificationIdRef.current = id;
+        pendingModelDoctorNotificationIdRef.current = id;
+        setPendingModelDoctorNotification({ id, projectId: project.id, analysisAtRequest: analysis, hasStarted: false });
+      }),
       onWorkspaceCommand('open-analysis-setup', () => openSurface('analysisSetup')),
       onWorkspaceCommand('open-view-settings', () => openSurface('view')),
       /* `dense` es invocada: el lanzador viaja en el propio comando para que el
@@ -106,39 +125,54 @@ const WorkspaceBrokerContent = ({
       }),
     ];
     return () => subscriptions.forEach((unsubscribe) => unsubscribe());
-  }, [openSurface]);
+  }, [analysis, closeSurface, openSurface, project.id, results.open, setResultTab]);
 
   useEffect(() => {
     setModelDoctorAcknowledgedIds(new Set());
+    pendingModelDoctorNotificationIdRef.current = null;
+    setPendingModelDoctorNotification(null);
     (['generator', 'dense', 'datasheet', 'doctor', 'palette'] as const).forEach((surface) => closeSurface(surface));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   useEffect(() => {
+    const request = pendingModelDoctorNotification;
+    if (!request) return undefined;
+    if (request.projectId !== project.id) {
+      if (pendingModelDoctorNotificationIdRef.current === request.id) {
+        pendingModelDoctorNotificationIdRef.current = null;
+        setPendingModelDoctorNotification(null);
+      }
+      return undefined;
+    }
+    if (isAnalyzing) {
+      if (!request.hasStarted) {
+        setPendingModelDoctorNotification((current) => current?.id === request.id
+          ? { ...current, hasStarted: true }
+          : current);
+      }
+      return undefined;
+    }
+    if (!request.hasStarted || analysis === request.analysisAtRequest) return undefined;
+
     let current = true;
     void import('../model-doctor/modelDoctorDiagnostics').then(({ buildModelDoctorReport }) => {
-      if (!current) return;
+      if (!current || pendingModelDoctorNotificationIdRef.current !== request.id) return;
       const report = buildModelDoctorReport(project);
-      const signature = JSON.stringify(report.findings
-        .map((finding) => ({
-          id: finding.id,
-          severity: finding.severity,
-          affected: finding.affectedObjects.map((object) => `${object.kind}:${object.id}`).sort(),
-        }))
-        .sort((first, second) => first.id.localeCompare(second.id)));
-      const previous = modelDoctorToastRef.current.projectId === project.id
-        ? modelDoctorToastRef.current.signature
-        : '';
-      modelDoctorToastRef.current = { projectId: project.id, signature };
-      if (report.total === 0 || signature === previous) return;
-      emitWorkspaceCommand('show-toast', {
-        message: t('modelDoctor.toastTitle'),
-        description: t('modelDoctor.toastDescription'),
-        tone: 'warning',
-      });
+      if (report.total > 0) {
+        emitWorkspaceCommand('show-toast', {
+          message: t('modelDoctor.toastTitle'),
+          description: t('modelDoctor.toastDescription'),
+          tone: 'warning',
+        });
+      }
+      if (pendingModelDoctorNotificationIdRef.current === request.id) {
+        pendingModelDoctorNotificationIdRef.current = null;
+        setPendingModelDoctorNotification(null);
+      }
     });
     return () => { current = false; };
-  }, [project, t]);
+  }, [analysis, isAnalyzing, pendingModelDoctorNotification, project, t]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -242,6 +276,7 @@ const WorkspaceBrokerContent = ({
     topBar={<TopBar
       onOpenHome={onOpenHome}
       onOpenSpace3D={onOpenSpace3D}
+      resultsOpen={results.open}
       layoutActions={{
         inspectorCollapsed: !detail.open,
         fullCanvas: layout.fullCanvas,
@@ -267,7 +302,10 @@ const WorkspaceBrokerContent = ({
     />}
     toolRail={<ToolRail dockPosition={layout.toolDockPosition} onDockPositionChange={(position) => setPreference('toolDockPosition', position)} />}
     workspace={<>
-      {project.settings.calculationMode === 'classroom' ? <ClassroomGuide className="classroom-workspace-journey" project={project} analysis={analysis} onChooseTool={setActiveTool} onAnalyze={analyze} /> : null}
+      {project.settings.calculationMode === 'classroom' ? <ClassroomGuide className="classroom-workspace-journey" project={project} analysis={analysis} onChooseTool={setActiveTool} onAnalyze={() => {
+        emitWorkspaceCommand('analysis-requested');
+        analyze();
+      }} /> : null}
       <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => openDetail()} />
       {broker.isRetained('results') ? <ResultsPanel
         presentation={results.presentation as 'dock' | 'inset' | 'sheet'}

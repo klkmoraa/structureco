@@ -21,6 +21,40 @@ let baselineProject;
 const pageErrors = [];
 page.on('pageerror', (error) => pageErrors.push(error.message));
 
+const FOCUS_TIMEOUT_MS = 15_000;
+const stage = (label) => console.log(`[qa:model-doctor] ${label}`);
+const focusState = async () => page.evaluate(() => {
+  const active = document.activeElement;
+  return {
+    active: active instanceof HTMLElement
+      ? { tag: active.tagName, id: active.id || null, className: active.className || null, ariaLabel: active.getAttribute('aria-label') }
+      : null,
+    dialogs: [...document.querySelectorAll('[role="dialog"]')].map((dialog) => ({
+      label: dialog.getAttribute('aria-label'),
+      hidden: dialog.hidden,
+      ariaHidden: dialog.getAttribute('aria-hidden'),
+    })),
+  };
+});
+const waitForExactFocus = async (locator, label) => {
+  const target = await locator.elementHandle();
+  if (!target) throw new Error(`Focus target is not attached: ${label}`);
+  try {
+    await page.waitForFunction((element) => document.activeElement === element, target, { timeout: FOCUS_TIMEOUT_MS });
+  } catch (error) {
+    throw new Error(`Timed out waiting for exact focus on ${label}: ${JSON.stringify(await focusState())}`, { cause: error });
+  }
+};
+const waitForFocusWithin = async (locator, label) => {
+  const target = await locator.elementHandle();
+  if (!target) throw new Error(`Focus container is not attached: ${label}`);
+  try {
+    await page.waitForFunction((element) => element.contains(document.activeElement), target, { timeout: FOCUS_TIMEOUT_MS });
+  } catch (error) {
+    throw new Error(`Timed out waiting for focus within ${label}: ${JSON.stringify(await focusState())}`, { cause: error });
+  }
+};
+
 const contrastRatio = (locator, backgroundSelector) => locator.evaluate((element, selector) => {
   const parse = (value) => (value.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
   const luminance = (value) => {
@@ -180,6 +214,7 @@ const assertGeometry = async (viewport, expectedSide) => {
 };
 
 try {
+  stage('preparando espacio de trabajo');
   await page.goto(url, { waitUntil: 'networkidle' });
   // CRI-119 · Este runner heredaba almacenamiento ajeno (IndexedDB
   // `structureCo.projects` con un proyecto vacío de una corrida anterior). La
@@ -221,7 +256,8 @@ try {
   }
   await page.keyboard.press('Escape');
   await firstPhoneDoctor.waitFor({ state: 'hidden' });
-  await page.waitForFunction((element) => document.activeElement === element, await firstLauncher.elementHandle());
+  stage('verificando retorno de foco Compact');
+  await waitForExactFocus(firstLauncher, 'Compact Model Doctor launcher');
   await page.setViewportSize({ width: 1440, height: 900 });
 
   // HEALTHY: all clear, modal isolation and return to the persistent launcher.
@@ -234,7 +270,8 @@ try {
   if (await page.getByRole('dialog', { name: /paleta de comandos/i }).count()) throw new Error('Command Palette opened over Model Doctor');
   await page.keyboard.press('Escape');
   await healthy.waitFor({ state: 'hidden' });
-  await page.waitForFunction((element) => document.activeElement === element, await doctorLauncher.elementHandle());
+  stage('verificando retorno de foco desktop');
+  await waitForExactFocus(doctorLauncher, 'desktop Model Doctor launcher');
 
   // INVALID PROPERTY: critical, explanation and no invalid auto-repair action.
   await loadProject((project) => { project.members[0].E = 0; });
@@ -437,7 +474,8 @@ try {
   await page.keyboard.press('Enter');
   const keyboardDoctor = page.getByRole('dialog', { name: 'Model Doctor' });
   await keyboardDoctor.waitFor();
-  await page.waitForFunction((element) => element.contains(document.activeElement), await keyboardDoctor.elementHandle());
+  stage('verificando foco inicial por teclado');
+  await waitForFocusWithin(keyboardDoctor, 'keyboard Model Doctor dialog');
   const tabUntil = async (target, reverse = false) => {
     for (let index = 0; index < 40; index += 1) {
       if (await target.evaluate((element) => element === document.activeElement)) return;
@@ -462,7 +500,8 @@ try {
   await page.keyboard.press('Enter');
   await keyboardDoctor.getByRole('heading', { name: /revisi.n de la reparaci.n segura/i }).waitFor({ state: 'hidden' });
   const returnedPreviewAction = keyboardDoctor.getByRole('button', { name: /previsualizar reparaci/i }).first();
-  await page.waitForFunction((element) => document.activeElement === element, await returnedPreviewAction.elementHandle());
+  stage('verificando retorno desde previsualización');
+  await waitForExactFocus(returnedPreviewAction, 'preview repair action');
   const focusable = keyboardDoctor.locator('button:visible, [href]:visible, input:visible, select:visible, textarea:visible, [tabindex]:not([tabindex="-1"]):visible');
   const firstFocusable = focusable.first();
   const lastFocusable = focusable.last();

@@ -384,7 +384,10 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
         </div>
       </nav>
       <div id="results-content" className="results-body" role="tabpanel" aria-labelledby={`result-tab-${activeTab.id}`} aria-busy={isAnalyzing}>
-        {!analysis ? <EmptyResults onAnalyze={analyze} /> : null}
+        {!analysis ? <EmptyResults onAnalyze={() => {
+          emitWorkspaceCommand('analysis-requested');
+          analyze();
+        }} /> : null}
         {analysis && !analysis.success ? <FailedResults onOpenModelDoctor={() => emitWorkspaceCommand('open-model-doctor')} /> : null}
         {analysis?.success && activeTab.id === 'summary' ? <ResultSummary /> : null}
         {analysis?.success && ['axial', 'shear', 'moment'].includes(activeTab.id) ? <DiagramView type={activeTab.id as 'axial' | 'shear' | 'moment'} memberResult={memberResult} memberId={selectedMemberId ?? ''} isMobile={isMobile} mobileMetricsVisible={mobileMetricsVisible} /> : null}

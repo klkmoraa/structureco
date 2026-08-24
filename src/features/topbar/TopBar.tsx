@@ -3,6 +3,7 @@ import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import {
   Check,
   Box,
+  ChartNoAxesColumnIncreasing,
   ChevronDown,
   CloudOff,
   Copy,
@@ -59,7 +60,7 @@ export interface TopBarLayoutActions {
   onToggleFullCanvas: () => void;
 }
 
-export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHome?: () => void; onOpenSpace3D?: () => void; layoutActions?: TopBarLayoutActions }) => {
+export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen = false }: { onOpenHome?: () => void; onOpenSpace3D?: () => void; layoutActions?: TopBarLayoutActions; resultsOpen?: boolean }) => {
   // Split across the three focused contexts (CRI-100): `project`/`analysis` come
   // from the model/analysis contexts, and only `theme` is read off the UI context
   // here — `resultTab` and the diagram cursor live in that same context too but
@@ -588,6 +589,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
                   <div className="menu-section">
                     <div className="menu-section-title">{t('menu.sectionAnalysis')}</div>
                     <button onClick={() => { mobileMenuButtonRef.current?.focus({ preventScroll: true }); setShowMobileMenu(false); modelDoctorCommand.run(); }}><Wrench size={17} /> {modelDoctorCommand.label}</button>
+                    <button onClick={(event) => { emitWorkspaceCommand('toggle-results', { trigger: event.currentTarget }); setShowMobileMenu(false); }}><ChartNoAxesColumnIncreasing size={17} /> {t('results.outputs')}</button>
                     <button className="overflow-datasheet" onClick={() => { datasheetCommand.run(); setShowMobileMenu(false); }}><Sheet size={17} /> {datasheetCommand.label}</button>
                   </div>
                   <div className="menu-section">
@@ -637,6 +639,17 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions }: { onOpenHom
       </div>
 
       <div className="topbar-zone topbar-status-zone topbar-health-zone" data-topbar-zone="status" data-topbar-role="health">
+        <button
+          type="button"
+          className={`topbar-command-button results-launcher${resultsOpen ? ' is-active' : ''}`}
+          onClick={(event) => emitWorkspaceCommand('toggle-results', { trigger: event.currentTarget })}
+          aria-label={t('results.outputs')}
+          aria-pressed={resultsOpen}
+          title={t('results.outputs')}
+        >
+          <ChartNoAxesColumnIncreasing size={17} aria-hidden="true" />
+          <span>{t('results.outputs')}</span>
+        </button>
         <button
           type="button"
           className="topbar-command-button model-doctor-launcher"

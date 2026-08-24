@@ -40,6 +40,7 @@ const browser = await chromium.launch({
  * clase puede conceder menos lienzo que la composición de hoy a igual viewport.
  */
 const baselineOnly = process.argv.includes('--baseline');
+const dockLeftOnly = process.argv.includes('--dock-left-only');
 const report = { classes: [], sweep: {}, keyboard: {}, rotation: {}, overflow: [], failures: [] };
 const check = (name, ok, detail) => {
   if (baselineOnly) return;
@@ -97,6 +98,66 @@ const readShellState = (page) => page.evaluate(() => {
     innerWidth: window.innerWidth,
   };
 });
+
+// ---------------------------------------------------------------------------
+// Focal dock check: Results open + left dock must remain a narrow vertical rail.
+// This intentionally skips the full responsive sweep for a fast regression gate.
+// ---------------------------------------------------------------------------
+if (dockLeftOnly) {
+  const page = await newPage({ width: 1440, height: 900 });
+  await enterWorkspace(page);
+  const resultsLauncher = page.locator('.results-launcher');
+  await resultsLauncher.click();
+  await page.locator('.results-panel[data-surface-status="active"]').waitFor({ state: 'visible', timeout: 15_000 });
+
+  const moveLeft = page.getByRole('button', { name: /poner herramientas a la izquierda/i });
+  await moveLeft.click();
+  await page.waitForFunction(() => document.querySelector('.app-shell')?.getAttribute('data-tool-dock-position') === 'left', undefined, { timeout: 10_000 });
+  const dock = await page.evaluate(() => {
+    const shell = document.querySelector('.app-shell');
+    const rail = document.querySelector('.tool-rail');
+    const list = rail?.querySelector('.desktop-tool-list');
+    const groupActions = rail?.querySelector('.tool-group-actions');
+    if (!shell || !rail || !list || !groupActions) return null;
+    const rect = rail.getBoundingClientRect();
+    const railStyle = getComputedStyle(rail);
+    return {
+      position: shell.getAttribute('data-tool-dock-position'),
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+      renderedTop: Math.round(rect.top),
+      renderedBottom: Math.round(rect.bottom),
+      top: railStyle.top,
+      bottom: railStyle.bottom,
+      listDirection: getComputedStyle(list).flexDirection,
+      groupDirection: getComputedStyle(groupActions).flexDirection,
+      overflowY: railStyle.overflowY,
+      viewportHeight: window.innerHeight,
+      maxHeight: Math.min(680, window.innerHeight - 172),
+      overflow: document.documentElement.scrollWidth - window.innerWidth,
+    };
+  });
+  check('dock izquierdo conserva geometría vertical con Results activo', Boolean(dock)
+    && dock.position === 'left'
+    && dock.width <= 56
+    && dock.height <= dock.maxHeight + 1
+    && dock.renderedTop >= 52
+    && dock.renderedBottom <= dock.viewportHeight - 52
+    && dock.listDirection === 'column'
+    && dock.groupDirection === 'column'
+    && dock.overflow <= 1, dock);
+
+  await resultsLauncher.click();
+  await page.locator('.results-panel').waitFor({ state: 'detached', timeout: 10_000 });
+  const focusReturned = await resultsLauncher.evaluate((element) => document.activeElement === element);
+  check('Results cierra y devuelve foco al lanzador persistente', focusReturned, { focusReturned });
+
+  await page.close();
+  await browser.close();
+  await previewServer.close();
+  console.log(report.failures.length === 0 ? 'DOCK LEFT FOCAL PASS' : `DOCK LEFT FOCAL FAIL: ${report.failures.length}`);
+  process.exit(report.failures.length === 0 ? 0 : 1);
+}
 
 // ---------------------------------------------------------------------------
 // 1 · Las tres clases existen, y cada una conmuta densidad y riel
