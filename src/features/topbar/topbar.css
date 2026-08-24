@@ -320,6 +320,22 @@
   .topbar--atelier .analysis-status { min-height:44px; }
 }
 
+/* CRI-120 · las reglas K0 de 40/42px tienen más especificidad que el
+   contrato táctil genérico anterior. En un teléfono el área real también
+   debe medir 44px, sin ensanchar la misma cinta cuando se usa ratón. */
+@media (pointer:coarse) {
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-trigger {
+    min-height:var(--sc-size-target-touch);
+  }
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions :is(.sc-icon-button,.topbar-command-button),
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-health-zone .topbar-command-button {
+    width:var(--sc-size-target-touch);
+    min-width:var(--sc-size-target-touch);
+    height:var(--sc-size-target-touch);
+    min-height:var(--sc-size-target-touch);
+  }
+}
+
 @media (prefers-reduced-motion:reduce) {
   .topbar--atelier .topbar-project-trigger,
   .topbar--atelier .topbar-analysis-trigger,

@@ -1207,6 +1207,16 @@
     transform:var(--sc-clay-press-transform);
   }
 
+  /* CRI-120 · el estado hundido usa scale(.98), que reduce visualmente el
+     target activo de 44px a 43px en WebKit. Conservamos el desplazamiento de
+     presión, pero no reducimos el área tocable. */
+  @media (pointer:coarse) {
+    .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button:is(.active,.is-active),
+    .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button:active:not(:disabled) {
+      transform:translateY(2px);
+    }
+  }
+
   .app-shell[data-shell-class='K0'] .mobile-tool-palette-workspace {
     max-width:min(392px,calc(100vw - 16px));
     margin-inline:auto;
