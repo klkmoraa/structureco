@@ -3,6 +3,7 @@ import { preview } from 'vite';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { clearProjectLibraryOnBoot, disablePwaUpdateLifecycle, openWelcomeStep } from './qa-welcome.mjs';
+import { createStageWatchdog } from './qa-stage-watchdog.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const previewServer = await preview({ root, preview: { host: '127.0.0.1', port: 4183, strictPort: true }, logLevel: 'error' });
@@ -22,7 +23,19 @@ const pageErrors = [];
 page.on('pageerror', (error) => pageErrors.push(error.message));
 
 const FOCUS_TIMEOUT_MS = 15_000;
-const stage = (label) => console.log(`[qa:model-doctor] ${label}`);
+const STAGE_TIMEOUT_MS = 90_000;
+const startedAt = performance.now();
+const watchdog = createStageWatchdog({
+  timeoutMs: STAGE_TIMEOUT_MS,
+  onTimeout: ({ stage: stalledStage, timeoutMs }) => {
+    console.error(`[qa:model-doctor] TIMEOUT after ${timeoutMs}ms in stage "${stalledStage}". url=${page.url()} pageErrors=${JSON.stringify(pageErrors)}`);
+    process.exit(1);
+  },
+});
+const stage = (label) => {
+  watchdog.mark(label);
+  console.log(`[qa:model-doctor +${((performance.now() - startedAt) / 1000).toFixed(1)}s] ${label}`);
+};
 const focusState = async () => page.evaluate(() => {
   const active = document.activeElement;
   return {
@@ -181,6 +194,7 @@ const loadProject = async (mutate) => {
 };
 
 const assertGeometry = async (viewport, expectedSide) => {
+  stage(`geometría responsive ${viewport.width}x${viewport.height}`);
   await page.setViewportSize(viewport);
   await loadProject((project) => { project.members[0].E = 0; });
   const doctor = await openDoctor();
@@ -274,6 +288,7 @@ try {
   await waitForExactFocus(doctorLauncher, 'desktop Model Doctor launcher');
 
   // INVALID PROPERTY: critical, explanation and no invalid auto-repair action.
+  stage('caso propiedad inválida');
   await loadProject((project) => { project.members[0].E = 0; });
   const invalid = await openDoctor();
   await invalid.getByText(/1 crítico/).waitFor();
@@ -284,6 +299,7 @@ try {
   await page.keyboard.press('Escape');
 
   // EVIDENT NO GROUNDING: shared static solver diagnosis is available pre-analysis and is never auto-repaired.
+  stage('caso modelo sin restricciones');
   await loadProject((project) => {
     project.nodes = project.nodes.map((node) => ({ ...node, support: { type: 'none' } }));
   });
@@ -294,6 +310,7 @@ try {
   await page.keyboard.press('Escape');
 
   // DISCONNECTED TOPOLOGY: locate, inspect a non-mutating preview, apply, undo and redo.
+  stage('caso topología desconectada');
   await page.setViewportSize({ width: 1440, height: 900 });
   await loadProject((project) => {
     project.nodes.push({ id: 'QA-SPLIT', x: 3, y: 4, support: { type: 'fixed' } });
@@ -345,6 +362,7 @@ try {
   // the supported part of that contract: the finding offers a non-mutating
   // preview and the modal isolation remains active. The Vitest oracle covers
   // the rejected stale apply without mutation, history, or result invalidation.
+  stage('caso preview obsoleto');
   await loadProject((project) => {
     project.nodes.push({ id: 'QA-STALE', x: 3, y: 4, support: { type: 'fixed' } });
   });
@@ -376,6 +394,7 @@ try {
   await assertGeometry({ width: 400, height: 300 }, 'fullscreen');
 
   // Long content scrolls inside the phone sheet and every interactive target is touch-sized.
+  stage('caso contenido largo y targets táctiles');
   await page.setViewportSize({ width: 390, height: 844 });
   await loadProject((project) => {
     for (let index = 0; index < 18; index += 1) project.nodes.push({ id: `ISO-${index}`, x: 20 + index, y: 20 + index, support: { type: 'none' } });
@@ -394,6 +413,7 @@ try {
   await page.keyboard.press('Escape');
 
   // Phone bottom sheet consumes the device safe area in both body and sticky preview actions.
+  stage('caso safe area Compact');
   await loadProject((project) => {
     project.nodes.push({ id: 'QA-SAFE-AREA', x: 3, y: 4, support: { type: 'fixed' } });
   });
@@ -427,6 +447,7 @@ try {
   await page.keyboard.press('Escape');
 
   // Day/Night use different resolved surfaces and severity/acknowledged text remains AA.
+  stage('caso contraste Día/Noche');
   await page.setViewportSize({ width: 1440, height: 900 });
   await loadProject((project) => {
     project.nodes.push({ id: 'QA-CONTRAST', x: 20, y: 20, support: { type: 'none' } });
@@ -457,6 +478,7 @@ try {
   await page.keyboard.press('Escape');
 
   // Full keyboard path: Ctrl+K -> Doctor -> Tab -> Escape -> original launcher.
+  stage('caso ruta completa de teclado');
   await page.setViewportSize({ width: 1440, height: 900 });
   await loadProject((project) => {
     project.members[0].E = 0;
@@ -515,6 +537,7 @@ try {
   if (!(await analyze.evaluate((element) => element === document.activeElement))) throw new Error('Focus did not return through the keyboard launcher path');
 
   // Reduced-motion media is accepted and the feature-specific transitions collapse.
+  stage('caso movimiento reducido');
   await loadProject((project) => { project.members[0].E = 0; });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const reduced = await openDoctor();
@@ -526,6 +549,9 @@ try {
 
   console.log('Model Doctor browser QA passed: healthy, invalid property, topology preview/apply/undo/redo, stale preview, 6 responsive/zoom viewports, safe area, long-content scroll, touch targets, Day/Night AA contrast, keyboard preview/focus, reduced motion.');
 } finally {
+  stage('cerrando Chromium y servidor preview');
   await browser.close();
   await previewServer.close();
+  watchdog.clear();
+  console.log(`[qa:model-doctor +${((performance.now() - startedAt) / 1000).toFixed(1)}s] recursos cerrados`);
 }
