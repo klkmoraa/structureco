@@ -34,12 +34,12 @@ const renderHome = () => render(
 );
 
 describe('Home total redesign contract', () => {
-  it('exposes six real Home destinations without a decorative step rail', () => {
+  it('exposes seven real Home destinations without a decorative step rail', () => {
     const { container } = renderHome();
     const navigation = screen.getByRole('navigation', { name: 'Navegación principal' });
 
     expect(navigation).toBeTruthy();
-    for (const name of ['Inicio', 'Proyectos', 'Plantillas', 'Aula', 'Importar', 'Space 3D']) {
+    for (const name of ['Inicio', 'Proyectos', 'Plantillas', 'Biblioteca', 'Aula', 'Importar', 'Space 3D']) {
       expect(within(navigation).getByRole('button', { name })).toBeTruthy();
     }
     expect(container.querySelector('.welcome-steps')).toBeNull();
@@ -69,6 +69,17 @@ describe('Home total redesign contract', () => {
     expect(container.querySelector('[data-testid="home-secondary-actions"]')).toBeTruthy();
     expect(screen.queryByText(/Empieza en tres pasos/i)).toBeNull();
     expect(screen.queryByText(/Mesa/i)).toBeNull();
+  });
+
+  it('opens the personal library as its own Home destination', async () => {
+    const user = userEvent.setup();
+    renderHome();
+    const navigation = screen.getByRole('navigation', { name: 'Navegación principal' });
+
+    await user.click(within(navigation).getByRole('button', { name: 'Biblioteca' }));
+
+    expect(screen.getByRole('heading', { name: 'Biblioteca personal' })).toBeTruthy();
+    expect(screen.getByText(/No son un catálogo normativo/)).toBeTruthy();
   });
 
   it('closes mobile navigation with Escape and returns focus to its menu button', async () => {

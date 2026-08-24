@@ -241,16 +241,13 @@ const decodeFavorite = (raw: unknown): PersonalFavorite => {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Favorito inválido.');
   const value = raw as Record<string, unknown>;
   const base = decodeBase(value);
-  if (value.kind === 'material' && typeof value.materialId === 'string') {
-    if (!findStandardMaterial(value.materialId)) throw new Error('Material no disponible.');
+  if (value.kind === 'material' && typeof value.materialId === 'string' && value.materialId.trim()) {
     return { ...base, kind: 'material', materialId: value.materialId };
   }
-  if (value.kind === 'section' && typeof value.sectionId === 'string') {
-    if (!findStandardSection(value.sectionId)) throw new Error('Sección no disponible.');
+  if (value.kind === 'section' && typeof value.sectionId === 'string' && value.sectionId.trim()) {
     return { ...base, kind: 'section', sectionId: value.sectionId };
   }
-  if (value.kind === 'pair' && typeof value.materialId === 'string' && typeof value.sectionId === 'string') {
-    if (!findStandardMaterial(value.materialId) || !findStandardSection(value.sectionId)) throw new Error('Par no disponible.');
+  if (value.kind === 'pair' && typeof value.materialId === 'string' && value.materialId.trim() && typeof value.sectionId === 'string' && value.sectionId.trim()) {
     return { ...base, kind: 'pair', materialId: value.materialId, sectionId: value.sectionId };
   }
   if (value.kind === 'view' && (value.theme === 'light' || value.theme === 'dark')) {

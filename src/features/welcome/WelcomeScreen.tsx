@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Box, Folder, GraduationCap, Home, LayoutTemplate, Menu, Moon, Play, Settings, Sun, Upload } from 'lucide-react';
+import { ArrowRight, Box, Folder, GraduationCap, Home, LayoutTemplate, LibraryBig, Menu, Moon, Play, Settings, Sun, Upload } from 'lucide-react';
 import { m, useReducedMotion } from 'motion/react';
 import { createBlankProject, exampleProjects } from '../../data/defaultProject';
 import { useProject, useWorkspaceUI } from '../../store/ProjectContext';
@@ -16,6 +16,8 @@ import type { ThreeStructuralAssetId } from '../structural-assets/threeStructura
 import { resolveSessionHeroId } from './homeSession';
 import { IllustrationStudio } from '../structural-assets/studio/IllustrationStudio';
 import type { ClassroomExerciseTemplateId } from '../../education/exerciseTemplates';
+import { PersonalLibraryView } from '../library/PersonalLibraryView';
+import { readCanvasViewSettings } from '../view/canvasViewSettings';
 import './totalHome.css';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
@@ -30,11 +32,11 @@ interface WelcomeScreenProps {
   onDirectResume?: () => void;
 }
 
-type HomeView = 'home' | 'projects' | 'templates' | 'classroom' | 'import' | 'space3d';
+type HomeView = 'home' | 'projects' | 'templates' | 'library' | 'classroom' | 'import' | 'space3d';
 
 const copy = {
   es: {
-    navigation: 'Navegación principal', home: 'Inicio', projects: 'Proyectos', templates: 'Plantillas', classroom: 'Aula', import: 'Importar', space3d: 'Space 3D',
+    navigation: 'Navegación principal', home: 'Inicio', projects: 'Proyectos', templates: 'Plantillas', library: 'Biblioteca', classroom: 'Aula', import: 'Importar', space3d: 'Space 3D',
     settings: 'Ajustes', menu: 'Abrir navegación', closeMenu: 'Cerrar navegación', current: 'Proyecto abierto', continue: 'Continuar proyecto', create: 'Nuevo proyecto',
     recent: 'Proyectos recientes', viewAll: 'Ver todos', templatesTitle: 'Elige una estructura de partida', templatesBody: 'Abre un modelo preparado y adáptalo a tu caso.',
     projectsTitle: 'Tus proyectos', projectsBody: 'Abre, renombra o duplica el trabajo guardado en este dispositivo.',
@@ -45,7 +47,7 @@ const copy = {
     secondary: 'Accesos rápidos', local: 'Guardado local en este dispositivo',
   },
   en: {
-    navigation: 'Primary navigation', home: 'Home', projects: 'Projects', templates: 'Templates', classroom: 'Classroom', import: 'Import', space3d: 'Space 3D',
+    navigation: 'Primary navigation', home: 'Home', projects: 'Projects', templates: 'Templates', library: 'Library', classroom: 'Classroom', import: 'Import', space3d: 'Space 3D',
     settings: 'Settings', menu: 'Open navigation', closeMenu: 'Close navigation', current: 'Open project', continue: 'Continue project', create: 'New project',
     recent: 'Recent projects', viewAll: 'View all', templatesTitle: 'Choose a starting structure', templatesBody: 'Open a prepared model and adapt it to your case.',
     projectsTitle: 'Your projects', projectsBody: 'Open, rename, or duplicate work saved on this device.',
@@ -59,7 +61,7 @@ const copy = {
 
 const NAV_ITEMS: ReadonlyArray<{ id: HomeView; icon: typeof Home }> = [
   { id: 'home', icon: Home }, { id: 'projects', icon: Folder }, { id: 'templates', icon: LayoutTemplate },
-  { id: 'classroom', icon: GraduationCap }, { id: 'import', icon: Upload }, { id: 'space3d', icon: Box },
+  { id: 'library', icon: LibraryBig }, { id: 'classroom', icon: GraduationCap }, { id: 'import', icon: Upload }, { id: 'space3d', icon: Box },
 ];
 
 const HOME_HERO_IDS = STRUCTURAL_ASSET_IDS.filter((assetId) => assetId.startsWith('portal:'));
@@ -221,7 +223,8 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
   const content = view === 'home' ? dashboard
     : view === 'projects' ? <section className="sc-home-view"><header><p>{text.projects}</p><h2>{text.projectsTitle}</h2><span>{text.projectsBody}</span></header><Suspense fallback={<p role="status">{t('hub.loading')}</p>}><Phase2ProjectHub onOpenWorkspace={onOpenWorkspace} /></Suspense></section>
       : view === 'templates' ? templates
-        : view === 'classroom' ? classroomLanding
+        : view === 'library' ? <PersonalLibraryView language={language} units={project.settings.units} theme={theme} view={readCanvasViewSettings(project)} />
+          : view === 'classroom' ? classroomLanding
           : view === 'import' ? <section className="sc-home-view"><header><p>{text.import}</p><h2>{text.importTitle}</h2><span>{text.importBody}</span></header><div className="sc-home-import-grid"><button type="button" className="welcome-import-card" onClick={() => setImportCenterOpen(true)}><Upload size={20} /><strong>{t('welcome.import')}</strong><span>{t('welcome.importDescription')}</span></button><Suspense fallback={null}><Phase2DxfAction open={dxfImportOpen} onOpenChange={setDxfImportOpen} onOpenWorkspace={onOpenWorkspace} /></Suspense></div></section>
             : <section className="sc-home-space" aria-labelledby="home-space-title">
               <div className="sc-home-space__copy">

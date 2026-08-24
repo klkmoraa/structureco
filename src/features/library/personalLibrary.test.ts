@@ -87,6 +87,22 @@ describe('personal library boundary', () => {
     }
   });
 
+  it('preserves an explicit catalog id that becomes unavailable so the UI can report it', () => {
+    const unavailable = {
+      kind: 'pair',
+      id: 'fav-retired',
+      name: 'Par retirado',
+      materialId: 'catalog-material-retired',
+      sectionId: 'catalog-section-retired',
+      unitsAtSave: 'kN-m',
+      createdAt: NOW,
+      updatedAt: LATER,
+    };
+    localStorage.setItem(PERSONAL_LIBRARY_STORAGE_KEY, JSON.stringify({ schemaVersion: 1, favorites: [unavailable] }));
+
+    expect(readPersonalLibrary(localStorage)).toEqual([unavailable]);
+  });
+
   it('returns a non-fatal write failure and never touches project persistence', () => {
     const project = '{"protected":"project"}';
     const storage = {
