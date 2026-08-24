@@ -140,6 +140,8 @@
 
 .sc-home-content {
   width: min(100%, var(--home-max));
+  min-width: 0;
+  max-width: 100%;
   margin-inline: auto;
   padding: clamp(22px, 3.4vw, 52px);
   display: grid;
@@ -147,6 +149,7 @@
 }
 
 .sc-home-hero {
+  min-width: 0;
   min-height: 400px;
   display: grid;
   grid-template-columns: minmax(320px, .85fr) minmax(420px, 1.15fr);
@@ -192,6 +195,8 @@
 
 .sc-home-primary-buttons {
   width: min(100%, 410px);
+  min-width: 0;
+  max-width: 100%;
   margin-top: 31px;
   display: grid;
   grid-template-columns: 1.18fr 1fr;
@@ -520,7 +525,10 @@
   .sc-home-classroom-cases button > svg:first-child { width: 82px; height: 110px; }
 }
 
-@media (max-width: 760px) {
+/* iOS Safari/webviews can retain a wider layout viewport on a touch device.
+   Keep the compact home composition in that mode too; otherwise the desktop
+   hero becomes a horizontal slice even though the physical screen is narrow. */
+@media (max-width: 760px), (hover: none) and (pointer: coarse) and (max-width: 1023px) {
   .sc-home { display: block; }
   .sc-home-sidebar { display: none; }
   .sc-home-mobile-header {

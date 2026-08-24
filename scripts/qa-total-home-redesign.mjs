@@ -16,6 +16,10 @@ const scenarios = [
   { id: 'tablet-night', viewport: { width: 1024, height: 900 }, theme: 'dark', hasTouch: true },
   { id: 'mobile-day', viewport: { width: 390, height: 844 }, theme: 'light', hasTouch: true },
   { id: 'mobile-night', viewport: { width: 390, height: 844 }, theme: 'dark', hasTouch: true },
+  // iOS Safari/webviews can expose a wider layout viewport while the device is
+  // still a touch-first compact surface. The home must not fall back to the
+  // two-column desktop hero in that mode.
+  { id: 'ios-webview-night', viewport: { width: 980, height: 844 }, theme: 'dark', hasTouch: true, expectMobile: true },
 ];
 
 const report = { phase: 'total-home-redesign', generatedAt: new Date().toISOString(), scenarios: [], failures: [] };
@@ -107,8 +111,9 @@ try {
     if (metrics.quickActions !== 3) failures.push(`quickActions=${metrics.quickActions}`);
     if (metrics.recentLimit > 3) failures.push(`recentLimit=${metrics.recentLimit}`);
     if (metrics.oldStepRail || metrics.oldPortal) failures.push('legacyHomeSurfaceVisible');
-    if (scenario.viewport.width <= 760 && (!metrics.mobileHeader || metrics.sidebar)) failures.push('mobileCompositionMismatch');
-    if (scenario.viewport.width > 760 && (!metrics.sidebar || metrics.mobileHeader)) failures.push('desktopCompositionMismatch');
+    const expectedMobile = scenario.expectMobile ?? scenario.viewport.width <= 760;
+    if (expectedMobile && (!metrics.mobileHeader || metrics.sidebar)) failures.push('mobileCompositionMismatch');
+    if (!expectedMobile && (!metrics.sidebar || metrics.mobileHeader)) failures.push('desktopCompositionMismatch');
     if (scenario.hasTouch && metrics.smallTargets.length) failures.push(`smallTargets=${JSON.stringify(metrics.smallTargets)}`);
     if (metrics.translucent.length) failures.push(`backdropFilters=${metrics.translucent.length}`);
     if (metrics.primaryColor !== 'rgb(255, 255, 255)') failures.push(`primaryColor=${metrics.primaryColor}`);
