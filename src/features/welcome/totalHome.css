@@ -569,8 +569,22 @@
     grid-template-columns: 1fr;
     border-radius: 18px;
   }
-  .sc-home-hero-asset { grid-row: 1; min-height: 226px; padding: 12px 18px 0; }
-  .sc-home-hero-asset svg { max-height: 220px; }
+  .sc-home-hero-asset {
+    grid-row: 1;
+    min-height: 226px;
+    overflow: hidden;
+    padding: 12px 18px 0;
+  }
+  .sc-home-hero-asset svg,
+  .sc-home-hero-asset .three-structural-image {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: min(100%, 220px);
+    max-height: 220px;
+    object-fit: contain;
+    object-position: center;
+  }
   .sc-home-primary-actions { grid-row: 2; padding: 23px 18px 21px; }
   .sc-home-primary-actions h2 { font-size: clamp(29px, 9vw, 42px); }
   .sc-home-primary-buttons { width: 100%; margin-top: 22px; grid-template-columns: 1fr 1fr; }
