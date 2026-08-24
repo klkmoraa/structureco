@@ -1,3 +1,5 @@
+import { dirname, resolve } from 'node:path';
+
 /**
  * Política de capacidad de Space 3D.
  *
@@ -70,5 +72,14 @@ export const parseSpace3DCapacityReport = (stdout) => {
     throw new Error(`El marcador ${MARKER} no contenía JSON válido: ${error.message}`);
   }
 };
+
+/**
+ * Resuelve el CLI desde el grafo de módulos de quien ejecuta el gate. En un
+ * worktree `npm` puede encontrar las dependencias instaladas en el checkout
+ * principal aunque no exista `worktree/node_modules/vitest`; fijar esa ruta al
+ * ROOT del script hacía el gate falsamente no reproducible.
+ */
+export const resolveVitestCli = (resolveModule) =>
+  resolve(dirname(resolveModule('vitest/package.json')), 'vitest.mjs');
 
 export const SPACE3D_CAPACITY_MARKER = MARKER;

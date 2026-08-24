@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import test from 'node:test';
 import {
   SPACE3D_CAPACITY_POLICY,
   evaluateSpace3DCapacity,
   parseSpace3DCapacityReport,
+  resolveVitestCli,
 } from './space3d-capacity-policy.mjs';
 
 const step = (overrides = {}) => ({
@@ -93,4 +96,9 @@ test('extrae el informe del marcador impreso por vitest', () => {
 test('falla si el marcador no aparece o no es JSON', () => {
   assert.throws(() => parseSpace3DCapacityReport('sin marcador'), /SPACE3D_CAPACITY_JSON/);
   assert.throws(() => parseSpace3DCapacityReport('SPACE3D_CAPACITY_JSON={rota'), /JSON/);
+});
+
+test('resuelve el CLI de Vitest desde el grafo de módulos, incluso dentro de un worktree', () => {
+  const resolveModule = createRequire(import.meta.url).resolve;
+  assert.equal(existsSync(resolveVitestCli(resolveModule)), true);
 });

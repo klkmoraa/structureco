@@ -9,6 +9,7 @@
  * el problema con su modelo dentro.
  */
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -16,9 +17,11 @@ import {
   SPACE3D_CAPACITY_POLICY,
   evaluateSpace3DCapacity,
   parseSpace3DCapacityReport,
+  resolveVitestCli,
 } from './space3d-capacity-policy.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const resolveModule = createRequire(import.meta.url).resolve;
 
 const declaredLimits = () => {
   const source = readFileSync(resolve(ROOT, 'src/space3d/model/types.ts'), 'utf8');
@@ -34,7 +37,7 @@ const declaredLimits = () => {
 const stdout = execFileSync(
   process.execPath,
   [
-    resolve(ROOT, 'node_modules/vitest/vitest.mjs'),
+    resolveVitestCli(resolveModule),
     'run', 'src/space3d/engine/capacity.test.ts', '--maxWorkers=1', '--reporter=verbose',
   ],
   {
