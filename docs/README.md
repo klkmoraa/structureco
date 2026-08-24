@@ -13,6 +13,20 @@ código + pruebas + gates
 → historial en Git
 ```
 
+## Decisión sobre PDFs documentales
+
+StructureCo no mantiene una colección paralela de PDFs estáticos como fuente
+canónica. No hay PDFs documentales versionados, manifiesto, propietario ni
+pipeline de regeneración en el árbol operativo; crear ese paquete duplicaría
+el código, los gates y los documentos clasificados de este índice.
+
+Esta decisión no retira la memoria de cálculo PDF del producto. Los PDFs
+reimportables que genera la aplicación son artefactos de un proyecto y se rigen
+por el código de exportación/importación y sus pruebas; no sustituyen la
+documentación canónica del repositorio. Los PDFs externos enlazados desde una
+referencia conservan únicamente el carácter de fuente externa indicado por el
+documento que los cita.
+
 ## Documentos vigentes
 
 | Documento | Para qué sirve |
