@@ -11,11 +11,16 @@ reproducía el problema.
 ## Corrección
 
 - La composición compacta de Home también se activa para `hover: none` +
-  `pointer: coarse` hasta `1023px`, cubriendo el caso de Safari/webview táctil
-  que conserva un ancho de layout mayor.
+  `pointer: coarse` hasta `1023px`, además de `max-device-width: 760px`,
+  cubriendo el caso de Safari/webview táctil que conserva un ancho de layout
+  mayor (incluido el iPhone con layout `980/1024px`) sin convertir la tablet
+  de `1024px` en una composición móvil.
 - Se añadió `min-width: 0`/`max-width: 100%` a los contenedores flex/grid de la
   portada y a sus acciones primarias para impedir que el tamaño intrínseco de
   la ilustración o los botones fuerce overflow horizontal.
+- El registro del Service Worker usa una URL versionada (`rev=2026-08-24-home-viewport`)
+  para forzar la comprobación de la revisión nueva en instalaciones PWA que
+  conservaban la URL de worker anterior.
 - No se tocaron solver, ProjectModel, persistencia, import/export ni resultados
   numéricos.
 

@@ -18,12 +18,17 @@ export interface ServiceWorkerContainerPort {
 
 export interface PwaUpdateController { applyUpdate(): void }
 
+// A changed script URL forces an already-installed PWA to check the current
+// worker even when the browser still has the previous registration snapshot.
+// Bump this token with a release that must invalidate an old mobile shell.
+export const SERVICE_WORKER_URL = './sw.js?rev=2026-08-24-home-viewport';
+
 export const watchForPwaUpdates = async (
   container: ServiceWorkerContainerPort,
   onUpdateAvailable: (controller: PwaUpdateController) => void,
   onControllerChange: () => void = () => undefined,
 ): Promise<PwaUpdateController> => {
-  const registration = await container.register('./sw.js', { scope: './' });
+  const registration = await container.register(SERVICE_WORKER_URL, { scope: './' });
   let waiting = registration.waiting;
   const controller: PwaUpdateController = { applyUpdate: () => waiting?.postMessage({ type: 'SKIP_WAITING' }) };
   const publish = (worker: ServiceWorkerPort | null) => {

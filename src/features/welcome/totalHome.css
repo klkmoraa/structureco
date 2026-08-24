@@ -527,8 +527,10 @@
 
 /* iOS Safari/webviews can retain a wider layout viewport on a touch device.
    Keep the compact home composition in that mode too; otherwise the desktop
-   hero becomes a horizontal slice even though the physical screen is narrow. */
-@media (max-width: 760px), (hover: none) and (pointer: coarse) and (max-width: 1023px) {
+   hero becomes a horizontal slice even though the physical screen is narrow.
+   `device-width` covers the iPhone case when the webview reports 980/1024px
+   for layout while its physical CSS screen remains phone-sized. */
+@media (max-width: 760px), (max-device-width: 760px), (hover: none) and (pointer: coarse) and (max-width: 1023px) {
   .sc-home { display: block; }
   .sc-home-sidebar { display: none; }
   .sc-home-mobile-header {
