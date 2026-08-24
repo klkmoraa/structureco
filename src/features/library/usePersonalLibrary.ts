@@ -19,7 +19,7 @@ const classifyError = (error: unknown): LibraryOperationResult => {
   const message = error instanceof Error ? error.message : undefined;
   return {
     ok: false,
-    reason: message?.toLocaleLowerCase().includes('nombre') ? 'name-conflict' : 'invalid',
+    reason: message?.toLocaleLowerCase().includes('ya existe') ? 'name-conflict' : 'invalid',
     message,
   };
 };

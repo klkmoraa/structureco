@@ -41,6 +41,7 @@ import { formatInspectorValue } from './numericFormatting';
 import { SectionPresetSelector } from './SectionPresetSelector';
 import { SectionViewer2D } from './SectionViewer2D';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
+import { MemberFavoritesPanel } from '../library/MemberFavoritesPanel';
 import {
   InspectorAdvancedProperties,
   InspectorDerivedList,
@@ -556,6 +557,7 @@ export const InspectorProperties = () => {
           {selectedMember.type !== 'rigid' && !classroomMode ? <>
             <MaterialPresetSelector units={units} selectedId={selectedMember.materialId} origin={selectedMember.materialOrigin} onSelect={applyMaterialPreset} />
             <SectionPresetSelector units={units} selectedId={selectedMember.sectionId} origin={selectedMember.sectionOrigin} onSelect={applySectionPreset} />
+            <MemberFavoritesPanel project={project} member={selectedMember} language={language} units={units} executeProjectCommand={executeProjectCommand} />
             <PhysicalNumberField label="E" value={selectedMember.E} units={units} quantity="elasticModulus" resetKey={`${selectionKey}:E`} hint={t('inspector.domainValidatesE')} onCommit={(value) => updateMember('E', value)} />
             <PhysicalNumberField label="A" value={selectedMember.A} units={units} quantity="area" resetKey={`${selectionKey}:A`} hint={t('inspector.domainValidatesA')} onCommit={(value) => updateMember('A', value)} />
             <PhysicalNumberField label="I" value={selectedMember.I} units={units} quantity="inertia" resetKey={`${selectionKey}:I`} hint={selectedMember.type === 'frame' ? t('inspector.domainValidatesI') : t('inspector.inertiaCompatibilityHint')} onCommit={(value) => updateMember('I', value)} />

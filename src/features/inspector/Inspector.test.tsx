@@ -12,6 +12,7 @@ import { ProjectProvider } from '../../store/ProjectContext';
 import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { ProjectModel, Selection, UnitSystemId } from '../../types';
+import { createFavorite, writePersonalLibrary } from '../library/personalLibrary';
 import { Inspector } from './Inspector';
 
 const ADVANCED_STORAGE_KEY = 'structureCo.inspector.expanded.v1';
@@ -533,6 +534,27 @@ describe('Inspector preset selectors and load-case guidance', () => {
 
     await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M2' }));
     expect(sectionSelect().value).toBe('');
+  });
+
+  it('applies a saved material-section pair explicitly as one undoable Inspector action', async () => {
+    const favorite = createFavorite([], {
+      kind: 'pair', name: 'A992 + IPE 300', materialId: 'steel-a992', sectionId: 'ipe-300', unitsAtSave: 'kN-m',
+    }, 'inspector-favorite', '2026-08-24T15:00:00.000Z')[0];
+    writePersonalLibrary(localStorage, [favorite]);
+    const user = userEvent.setup();
+    renderInspector();
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+
+    expect(screen.getByLabelText('M1 material ID').textContent).toBe('');
+    expect(screen.getByLabelText('M1 sección ID').textContent).toBe('');
+    await user.click(screen.getByRole('button', { name: 'Aplicar favorito' }));
+
+    await waitFor(() => expect(screen.getByLabelText('M1 material ID').textContent).toBe('steel-a992'));
+    expect(screen.getByLabelText('M1 sección ID').textContent).toBe('ipe-300');
+    expect(screen.getByLabelText('Puede deshacer').textContent).toBe('true');
+    await user.click(screen.getByRole('button', { name: 'Deshacer fixture' }));
+    await waitFor(() => expect(screen.getByLabelText('M1 material ID').textContent).toBe(''));
+    expect(screen.getByLabelText('M1 sección ID').textContent).toBe('');
   });
 
   it('drops the preset label once the member stops matching the catalog values', async () => {
