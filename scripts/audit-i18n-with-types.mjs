@@ -23,8 +23,12 @@
  * proceso muerto por memoria— no nombra ninguna clave, y leer esa ausencia como
  * «ninguna tiene consumidor» recomendaría borrar el catálogo entero. Por eso un
  * fallo que no nombre ninguna candidata se reporta **sin concluir**, nunca como
- * prueba. Y la restauración se apoya en una copia en disco, no en un `finally`:
- * ante Ctrl+C el proceso termina sin ejecutarlo.
+ * prueba — y lo mismo cualquier final anormal del compilador (una señal, la
+ * salida truncada), porque un diagnóstico cortado a media lista no dice nada
+ * sobre las claves que no llegó a nombrar. Y la restauración se apoya en una
+ * copia en disco más un lock con el PID de su dueño, no en un `finally`: ante
+ * Ctrl+C el proceso termina sin ejecutarlo, y dos auditorías simultáneas no
+ * pueden pisarse la copia la una a la otra.
  *
  * Es lento (una compilación completa) y por eso no entra en `npm run verify`.
  * Se ejecuta a mano cuando el detector reporte cero huérfanas y aun así se
@@ -33,7 +37,7 @@
  * Uso: node scripts/audit-i18n-with-types.mjs
  */
 import { execFile } from 'node:child_process';
-import { copyFileSync, existsSync, rmSync } from 'node:fs';
+import { copyFileSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
@@ -59,6 +63,41 @@ const SELF_DETECTOR = path.join('scripts', 'check-i18n-usage.mjs');
  * siguiente ejecución la encuentra y restaura antes de hacer nada.
  */
 const BACKUP = path.join(ROOT, 'src', 'i18n', '.catalogs.audit-backup');
+
+/**
+ * El lock lleva el PID de quien lo tomó, no sólo su existencia.
+ *
+ * Sin esa marca, una segunda auditoría lanzada mientras la primera compila
+ * confundiría su copia viva con la de una corrida muerta: restauraría el
+ * catálogo bajo los pies del primer compilador —que entonces vería el catálogo
+ * completo, no encontraría ningún error y concluiría que TODAS las candidatas
+ * están muertas— y le borraría además su copia de recuperación.
+ */
+const LOCK = path.join(ROOT, 'src', 'i18n', '.catalogs.audit-lock');
+
+const processAlive = (pid) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code === 'EPERM';
+  }
+};
+
+/** `wx` falla si el archivo existe: la toma del lock es atómica. */
+const acquireLock = () => {
+  try {
+    writeFileSync(LOCK, String(process.pid), { flag: 'wx' });
+    return { ok: true };
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+    const owner = Number.parseInt(readFileSync(LOCK, 'utf8').trim(), 10);
+    if (Number.isInteger(owner) && processAlive(owner)) return { ok: false, owner };
+    return { ok: false, owner: null };
+  }
+};
+
+const releaseLock = () => rmSync(LOCK, { force: true });
 
 const restoreFromBackup = () => {
   if (!existsSync(BACKUP)) return false;
@@ -91,15 +130,78 @@ const withoutKeys = (source, doomed) => source
   })
   .join('\n');
 
-const typecheck = () => run(
-  process.execPath,
-  [path.join(ROOT, 'node_modules', 'typescript', 'bin', 'tsc'), '-b', '--noEmit'],
-  { cwd: ROOT },
-);
+/**
+ * Ejecuta el compilador y describe **cómo terminó**, no sólo qué imprimió.
+ *
+ * `tsc` sale 0 si compila, y 1 o 2 si encuentra errores de tipos —2 es el que
+ * usa el modo `-b` que corre aquí—: las tres son terminaciones completas.
+ * Cualquier otra cosa —una señal, un código fuera de ese conjunto, la salida
+ * truncada por `maxBuffer`— significa que el diagnóstico puede estar
+ * incompleto, y un diagnóstico incompleto no prueba nada sobre las claves que
+ * no aparecen en él.
+ */
+const typecheck = async () => {
+  try {
+    await run(
+      process.execPath,
+      [path.join(ROOT, 'node_modules', 'typescript', 'bin', 'tsc'), '-b', '--noEmit'],
+      { cwd: ROOT, maxBuffer: 64 * 1024 * 1024 },
+    );
+    return { complete: true, clean: true, output: '' };
+  } catch (error) {
+    const output = `${error.stdout ?? ''}${error.stderr ?? ''}`;
+    const truncated = error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER';
+    const complete = !truncated && !error.signal && (error.code === 1 || error.code === 2);
+    return { complete, clean: false, output, truncated, signal: error.signal ?? null, exitCode: error.code };
+  }
+};
+
+/**
+ * Reparte las candidatas entre vivas y muertas, o se declara sin concluir.
+ *
+ * Está aislada de la ejecución a propósito: es la única parte del script que
+ * decide algo, y `audit-i18n-with-types.test.mjs` la ejercita sin compilar.
+ */
+export const classifyCandidates = (candidates, result) => {
+  const mentions = (key) => result.output.includes(`"${key.slice(key.indexOf('.') + 1)}"`)
+    || result.output.includes(`"${key}"`);
+  const alive = candidates.filter(mentions);
+
+  // Una compilación limpia demuestra que ninguna candidata tiene consumidor.
+  if (result.clean) return { alive: [], dead: [...candidates] };
+
+  // Un final anormal puede haber cortado el diagnóstico a media lista, así que
+  // la ausencia de una clave en la salida no dice nada. Da igual que ya se
+  // hayan reconocido algunas: las que faltan siguen sin estar decididas.
+  if (!result.complete) {
+    const cause = result.truncated ? 'la salida del compilador se truncó'
+      : result.signal ? `el compilador terminó por la señal ${result.signal}`
+        : `el compilador salió con código ${result.exitCode}`;
+    return { inconclusive: `${cause}; el diagnóstico puede estar incompleto` };
+  }
+
+  // Terminación completa con errores, pero ninguno nombra una candidata:
+  // entonces el fallo es otro y tampoco prueba nada.
+  if (!alive.length) return { inconclusive: 'el compilador falló sin nombrar ninguna candidata' };
+
+  return { alive, dead: candidates.filter((key) => !alive.includes(key)) };
+};
 
 const main = async () => {
-  if (restoreFromBackup()) {
-    console.error('Se encontró una copia de una ejecución interrumpida; el catálogo se restauró. Vuelve a ejecutar.');
+  const lock = acquireLock();
+  if (!lock.ok && lock.owner !== null) {
+    console.error(`Ya hay una auditoría en curso (PID ${lock.owner}). Espera a que termine.`);
+    process.exitCode = 1;
+    return;
+  }
+  if (!lock.ok) {
+    // Lock huérfano: su dueño ya no existe, así que la corrida murió sin poder
+    // limpiar. Se repara el catálogo con su copia y se pide reintentar.
+    const repaired = restoreFromBackup();
+    releaseLock();
+    console.error(repaired
+      ? 'Una ejecución anterior murió a medias; el catálogo se restauró con su copia. Vuelve a ejecutar.'
+      : 'Se encontró el rastro de una ejecución anterior sin copia pendiente; se limpió. Vuelve a ejecutar.');
     process.exitCode = 1;
     return;
   }
@@ -126,49 +228,40 @@ const main = async () => {
   // demuestra nada sobre las claves: podría venir de un tsconfig roto, de una
   // dependencia ausente o de que al compilador lo mató el sistema por memoria.
   console.log('Comprobando que el árbol compila antes de tocar el catálogo…');
-  try {
-    await typecheck();
-  } catch (error) {
+  const baseline = await typecheck();
+  if (!baseline.clean) {
     console.error('El árbol no compila tal cual está; la auditoría no puede concluir nada.\n');
-    console.error(`${error.stdout ?? ''}${error.stderr ?? ''}`.trim().split('\n').slice(0, 20).join('\n'));
+    console.error(baseline.output.trim().split('\n').slice(0, 20).join('\n'));
+    releaseLock();
     process.exitCode = 1;
     return;
   }
 
   console.log(`${candidates.length} clave(s) viven sólo por una regla floja. Preguntando al compilador…\n`);
-  let output = '';
-  let compiled = false;
-  const onSignal = () => { restoreFromBackup(); process.exit(130); };
+  let result;
+  const onSignal = () => { restoreFromBackup(); releaseLock(); process.exit(130); };
   process.on('SIGINT', onSignal);
   process.on('SIGTERM', onSignal);
   try {
     copyFileSync(CATALOGS, BACKUP);
     await writeFile(CATALOGS, withoutKeys(original, new Set(candidates)), 'utf8');
-    await typecheck();
-    compiled = true;
-  } catch (error) {
-    output = `${error.stdout ?? ''}${error.stderr ?? ''}`;
+    result = await typecheck();
   } finally {
     restoreFromBackup();
+    releaseLock();
     process.off('SIGINT', onSignal);
     process.off('SIGTERM', onSignal);
   }
 
-  const mentions = (key) => output.includes(`"${key.slice(key.indexOf('.') + 1)}"`) || output.includes(`"${key}"`);
-  const alive = candidates.filter(mentions);
-
-  // Con el baseline en verde, la única explicación admisible de un fallo es que
-  // el compilador reclame una de las candidatas. Un error que no nombra ninguna
-  // significa que pasó otra cosa, y entonces la ausencia de diagnóstico no
-  // prueba que las demás estén muertas: la auditoría queda sin concluir.
-  if (!compiled && !alive.length) {
-    console.error('El compilador falló sin nombrar ninguna candidata; la auditoría no concluye.\n');
-    console.error(output.trim().split('\n').slice(0, 20).join('\n'));
+  const verdict = classifyCandidates(candidates, result);
+  if (verdict.inconclusive) {
+    console.error(`Auditoría sin concluir: ${verdict.inconclusive}.\n`);
+    console.error(result.output.trim().split('\n').slice(0, 20).join('\n'));
     process.exitCode = 1;
     return;
   }
 
-  const dead = candidates.filter((key) => !alive.includes(key));
+  const { alive, dead } = verdict;
 
   if (alive.length) {
     console.log(`Vivas según el compilador (${alive.length}):`);
@@ -185,4 +278,4 @@ const main = async () => {
   console.log('Todas las candidatas tienen consumidor: el compilador las reclama.');
 };
 
-await main();
+if (process.argv[1] && import.meta.url.endsWith(path.basename(process.argv[1]))) await main();
