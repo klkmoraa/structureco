@@ -11,8 +11,12 @@
  * compilador puede falsear.
  */
 import assert from 'node:assert/strict';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import process from 'node:process';
 import test from 'node:test';
-import { classifyCandidates } from './audit-i18n-with-types.mjs';
+import { classifyCandidates, LOCK, swapCatalogForAudit, withLock } from './audit-i18n-with-types.mjs';
 
 const CANDIDATES = ['bulk.summary.membersOne', 'bulk.scope.nodeOne', 'generator.section.geometry'];
 
@@ -80,4 +84,44 @@ test('reconoce la clave tanto por su forma corta como por la completa', () => {
     complete: true, clean: false, output: 'error: Argument of type \'"bulk.scope.nodeOne"\' is not assignable.',
   });
   assert.deepEqual(completa.alive, ['bulk.scope.nodeOne']);
+});
+
+test('el lock se suelta cuando la corrida acaba sin candidatas que someter', (t) => {
+  // La salida temprana que motiva esta regla: el catálogo no tiene ninguna
+  // clave que dependa de una regla floja, así que no hay nada que compilar.
+  // Es una corrida que termina BIEN, y aun así dejaba el lock en disco: la
+  // siguiente lo tomaba por huérfano de una corrida muerta y se negaba a
+  // arrancar pidiendo un reintento que no hacía falta.
+  if (existsSync(LOCK)) return t.skip('hay una auditoría real en curso');
+  t.after(() => rmSync(LOCK, { force: true }));
+  writeFileSync(LOCK, String(process.pid), { flag: 'wx' });
+  return withLock(() => undefined).then(() => {
+    assert.equal(existsSync(LOCK), false);
+  });
+});
+
+test('el lock se suelta también si la corrida lanza', async (t) => {
+  if (existsSync(LOCK)) return t.skip('hay una auditoría real en curso');
+  t.after(() => rmSync(LOCK, { force: true }));
+  writeFileSync(LOCK, String(process.pid), { flag: 'wx' });
+  await assert.rejects(withLock(() => { throw new Error('tsc no arrancó'); }), /tsc no arrancó/);
+  assert.equal(existsSync(LOCK), false);
+});
+
+test('la mutación del catálogo llega al disco antes de retornar', () => {
+  // Lo que se fija aquí es que no queda ninguna escritura en vuelo. Un
+  // manejador de SIGINT corre entre ticks: si la mutación fuese asíncrona,
+  // podría restaurar la copia y salir mientras la escritura original sigue
+  // pendiente, y ésta aterrizaría DESPUÉS, dejando en disco justo el catálogo
+  // mutilado del que la copia protege. Por eso se comprueba en el mismo tick.
+  const dir = mkdtempSync(path.join(tmpdir(), 'audit-i18n-'));
+  const file = path.join(dir, 'catalogs.ts');
+  const backup = path.join(dir, '.catalogs.audit-backup');
+  writeFileSync(file, 'original', 'utf8');
+
+  swapCatalogForAudit(file, backup, 'mutado');
+
+  assert.equal(readFileSync(file, 'utf8'), 'mutado');
+  assert.equal(readFileSync(backup, 'utf8'), 'original');
+  rmSync(dir, { recursive: true, force: true });
 });

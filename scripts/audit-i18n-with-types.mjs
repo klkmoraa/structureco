@@ -38,7 +38,7 @@
  */
 import { execFile } from 'node:child_process';
 import { copyFileSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { promisify } from 'node:util';
@@ -73,7 +73,7 @@ const BACKUP = path.join(ROOT, 'src', 'i18n', '.catalogs.audit-backup');
  * completo, no encontraría ningún error y concluiría que TODAS las candidatas
  * están muertas— y le borraría además su copia de recuperación.
  */
-const LOCK = path.join(ROOT, 'src', 'i18n', '.catalogs.audit-lock');
+export const LOCK = path.join(ROOT, 'src', 'i18n', '.catalogs.audit-lock');
 
 const processAlive = (pid) => {
   try {
@@ -104,6 +104,40 @@ const restoreFromBackup = () => {
   copyFileSync(BACKUP, CATALOGS);
   rmSync(BACKUP, { force: true });
   return true;
+};
+
+/**
+ * Corre `body` con el lock ya tomado y lo suelta pase lo que pase.
+ *
+ * Soltarlo a mano en cada salida no se sostiene: esta auditoría tiene varias
+ * —ninguna candidata, el baseline rojo, un veredicto sin concluir, una lectura
+ * que lanza— y basta olvidar una para que el lock sobreviva a una corrida que
+ * terminó bien. La siguiente lo encuentra, lo toma por huérfano de una corrida
+ * muerta y se niega a arrancar pidiendo un reintento que no hacía falta.
+ */
+export const withLock = async (body) => {
+  try {
+    return await body();
+  } finally {
+    releaseLock();
+  }
+};
+
+/**
+ * Deja el catálogo mutado y su copia en disco, de forma SÍNCRONA.
+ *
+ * Lo síncrono no es un detalle de estilo. La recuperación ante SIGINT/SIGTERM
+ * restaura la copia dentro del manejador, y un manejador de señal corre entre
+ * ticks: con una escritura asíncrona en vuelo, restauraría el catálogo y
+ * llamaría a `process.exit()` mientras la escritura original sigue pendiente,
+ * de modo que ésta podría aterrizar DESPUÉS de la restauración y dejar en disco
+ * justo el catálogo mutilado del que la copia debía proteger. Escribiendo aquí
+ * de forma síncrona no hay ninguna ventana en la que eso sea posible: cuando
+ * esta función retorna, disco y proceso dicen lo mismo.
+ */
+export const swapCatalogForAudit = (file, backup, contents) => {
+  copyFileSync(file, backup);
+  writeFileSync(file, contents, 'utf8');
 };
 
 const collect = async (relative) => {
@@ -187,25 +221,7 @@ export const classifyCandidates = (candidates, result) => {
   return { alive, dead: candidates.filter((key) => !alive.includes(key)) };
 };
 
-const main = async () => {
-  const lock = acquireLock();
-  if (!lock.ok && lock.owner !== null) {
-    console.error(`Ya hay una auditoría en curso (PID ${lock.owner}). Espera a que termine.`);
-    process.exitCode = 1;
-    return;
-  }
-  if (!lock.ok) {
-    // Lock huérfano: su dueño ya no existe, así que la corrida murió sin poder
-    // limpiar. Se repara el catálogo con su copia y se pide reintentar.
-    const repaired = restoreFromBackup();
-    releaseLock();
-    console.error(repaired
-      ? 'Una ejecución anterior murió a medias; el catálogo se restauró con su copia. Vuelve a ejecutar.'
-      : 'Se encontró el rastro de una ejecución anterior sin copia pendiente; se limpió. Vuelve a ejecutar.');
-    process.exitCode = 1;
-    return;
-  }
-
+const audit = async () => {
   const original = await readFile(CATALOGS, 'utf8');
   const keys = declaredKeys(original);
   const files = (await Promise.all(['src', 'scripts', 'qa.mjs', 'qa-webkit.mjs'].map(collect))).flat()
@@ -232,7 +248,6 @@ const main = async () => {
   if (!baseline.clean) {
     console.error('El árbol no compila tal cual está; la auditoría no puede concluir nada.\n');
     console.error(baseline.output.trim().split('\n').slice(0, 20).join('\n'));
-    releaseLock();
     process.exitCode = 1;
     return;
   }
@@ -243,12 +258,10 @@ const main = async () => {
   process.on('SIGINT', onSignal);
   process.on('SIGTERM', onSignal);
   try {
-    copyFileSync(CATALOGS, BACKUP);
-    await writeFile(CATALOGS, withoutKeys(original, new Set(candidates)), 'utf8');
+    swapCatalogForAudit(CATALOGS, BACKUP, withoutKeys(original, new Set(candidates)));
     result = await typecheck();
   } finally {
     restoreFromBackup();
-    releaseLock();
     process.off('SIGINT', onSignal);
     process.off('SIGTERM', onSignal);
   }
@@ -276,6 +289,30 @@ const main = async () => {
     return;
   }
   console.log('Todas las candidatas tienen consumidor: el compilador las reclama.');
+};
+
+const main = async () => {
+  const lock = acquireLock();
+  if (!lock.ok && lock.owner !== null) {
+    console.error(`Ya hay una auditoría en curso (PID ${lock.owner}). Espera a que termine.`);
+    process.exitCode = 1;
+    return;
+  }
+  if (!lock.ok) {
+    // Lock huérfano: su dueño ya no existe, así que la corrida murió sin poder
+    // limpiar. Se repara el catálogo con su copia y se pide reintentar.
+    const repaired = restoreFromBackup();
+    releaseLock();
+    console.error(repaired
+      ? 'Una ejecución anterior murió a medias; el catálogo se restauró con su copia. Vuelve a ejecutar.'
+      : 'Se encontró el rastro de una ejecución anterior sin copia pendiente; se limpió. Vuelve a ejecutar.');
+    process.exitCode = 1;
+    return;
+  }
+
+  // A partir de aquí el lock es nuestro, y sólo un `finally` que envuelva TODA
+  // la región garantiza que no sobreviva a la corrida.
+  await withLock(audit);
 };
 
 if (process.argv[1] && import.meta.url.endsWith(path.basename(process.argv[1]))) await main();
