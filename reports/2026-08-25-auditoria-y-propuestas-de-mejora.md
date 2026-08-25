@@ -16,7 +16,7 @@ oportunidades medibles, no opiniones de estilo. La primera evidencia fue que
 **`origin/main` estaba en rojo**: `npm test` reportaba 2 fallos deterministas,
 ambos de accesibilidad y ambos reproducibles sin navegador.
 
-Este reporte cubre dos cosas: lo que ya se corrigió en esta rama (cuatro
+Este reporte cubre dos cosas: lo que ya se corrigió en esta rama (seis
 commits, todo verificado) y lo que se propone como trabajo siguiente, con el
 número que lo justifica y sin implementarlo, porque cada propuesta abierta
 toca una decisión de producto o un contrato que no me corresponde cambiar
@@ -128,10 +128,22 @@ texto literal no aparece en ninguno y que ningún prefijo dinámico
 un falso positivo borra una etiqueta viva y la deja en blanco en producción,
 un falso negativo sólo conserva unos bytes.
 
-Con ese criterio había **139 claves muertas de 2174 (6.4 %)**, heredadas de
+Con ese criterio había **142 claves muertas de 2174 (6.5 %)**, heredadas de
 superficies rehechas: 56 de la bienvenida anterior, 24 de Resultados, 23 de
 Space 3D, 13 del Inspector. Retiradas de ambos catálogos, el chunk de entrada
-baja de 1 228.55 kB a 1 215.58 kB (−12.97 kB; −3.44 kB gzip).
+baja de 1 228.55 kB a 1 215.25 kB (−13.30 kB; −3.51 kB gzip).
+
+Las tres últimas —`project.openExamples`, `project.importError` y
+`analysis.statusOpenIssues`— sólo aparecieron tras acotar el detector en la
+revisión del PR: la primera versión dejaba que cualquier template literal
+donara prefijos, así que las rutas de procedencia de `revisionComparison.ts`
+mantenían vivos los espacios de nombres `project.` y `analysis.` enteros.
+Ahora un archivo sólo dona prefijos si participa de la traducción, y dentro de
+él se descarta el template que sea argumento de otra llamada. La regla
+contraria —restringirlo a las llamadas a `t`— habría marcado como muertas las
+194 claves `generator.*`, que se alcanzan a través de tipos y nunca como
+argumento literal. `scripts/check-i18n-usage.test.mjs` fija las dos
+direcciones, porque el agujero existía justamente por no tener prueba.
 
 ### 1.6 Dos gates que existían y no corrían
 
@@ -140,6 +152,12 @@ de los 80 PNG) estaban en `package.json` y en ningún workflow: sólo se
 ejecutaban a mano, justo los dos que pueden romperse al regenerar assets o al
 mover el límite de nudos. Añadidos al gate rápido: 20.3 s y 0.5 s medidos,
 sobre un techo de 15 minutos.
+
+El Gate completo tenía además una duplicación que ya había divergido: enumeraba
+el gate rápido en un bloque inline al que le faltaba `verify:perf`, y que se
+quedó corto otra vez al promover `verify:pwa` y `verify:i18n` —un candidato de
+release podía pasarlo con esos gates en rojo—. Ahora invoca `npm run verify`,
+que es la única definición y no puede desincronizarse de sí misma.
 
 ## Parte 2 · Propuestas abiertas, por prioridad
 
@@ -198,7 +216,7 @@ conscientemente una decisión registrada, y eso te toca a ti.
 
 **Evidencia.** `es` y `en` se declaran en el mismo módulo y `translate` los
 indexa de forma síncrona, así que ambos catálogos entran en el chunk eager.
-Calibrado con la medición de 1.5 (12.97 kB crudos y 3.44 kB gzip por 278
+Calibrado con la medición de 1.5 (13.30 kB crudos y 3.51 kB gzip por 284
 entradas), el idioma que el usuario **no** está usando pesa del orden de 25 kB
 gzip: ~6 % de los 404.7 kB de carga inicial.
 
