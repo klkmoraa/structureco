@@ -57,10 +57,15 @@ const HAS_ACTIVE_WORKER=Boolean(self.registration.active);
 // caches.open() creates the cache before addAll runs, and addAll is atomic: a
 // rejected install therefore leaves an EMPTY cache behind. Delete it, or the next
 // sweep would mistake it for the previous release and drop the real one.
+//
+// Only when WE created it, though. vite.config.ts leaves sw.js out of the release
+// digest, so an update that changes nothing but this worker reuses the active
+// CACHE_NAME and opens the cache the running release is serving from. Deleting
+// that on a failed addAll would destroy the live offline shell.
 self.addEventListener('install',event=>event.waitUntil(
-  caches.open(CACHE_NAME)
+  caches.has(CACHE_NAME).then(existed=>caches.open(CACHE_NAME)
     .then(cache=>cache.addAll(SHELL))
-    .catch(error=>caches.delete(CACHE_NAME).then(()=>{throw error;}))
+    .catch(error=>(existed?Promise.resolve():caches.delete(CACHE_NAME)).then(()=>{throw error;})))
     .then(()=>HAS_ACTIVE_WORKER?self.skipWaiting():undefined)
 ));
 // Each release opens its own cache (the name carries the build digest). Without a

@@ -9,7 +9,7 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { IS_TEST, declaredKeys, dynamicPrefixes } from './check-i18n-usage.mjs';
+import { IS_TEST, declaredKeys, dynamicPrefixes, isReferenced } from './check-i18n-usage.mjs';
 
 const withI18n = (body) => `import { useI18n } from '../../i18n/useI18n';\n${body}`;
 
@@ -21,6 +21,18 @@ test('el pajar excluye archivos de prueba', () => {
   assert.ok(IS_TEST.test('src/features/canvas/canvas.spec.tsx'));
   assert.ok(!IS_TEST.test('src/features/topbar/TopBar.tsx'));
   assert.ok(!IS_TEST.test('src/data/latest.ts'));
+});
+
+test('una clave sólo cuenta si aparece completa, no como prefijo de otra', () => {
+  // `includes` daba por viva toda clave que fuera prefijo de una referenciada:
+  // así sobrevivían `inspector.selection` dentro de `inspector.selectionSummary`
+  // y otras cinco.
+  assert.ok(!isReferenced("t('inspector.selectionSummary')", 'inspector.selection'));
+  assert.ok(!isReferenced("t('inspector.endConnectionsDescription')", 'inspector.end'));
+  assert.ok(!isReferenced("t('datasheet.error.notANumber')", 'datasheet.error'));
+  assert.ok(isReferenced("t('inspector.selection')", 'inspector.selection'));
+  assert.ok(isReferenced('{t("inspector.end")}', 'inspector.end'));
+  assert.ok(isReferenced('const k = `inspector.end`;', 'inspector.end'));
 });
 
 test('lee las claves del catálogo español y se detiene antes del inglés', () => {

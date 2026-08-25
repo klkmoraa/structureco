@@ -24,6 +24,7 @@ const createCacheStorage = (initialNames = [], { failAddAll = false, empty = [] 
   return {
     stores,
     async keys() { return [...stores.keys()]; },
+    async has(name) { return stores.has(name); },
     async delete(name) { return stores.delete(name); },
     async open(name) {
       if (!stores.has(name)) stores.set(name, new Map());
@@ -164,6 +165,21 @@ test('activate no toca cachés que no son del shell', async () => {
   // `vieja2` sobrevive por ser la anterior; `ajena` por no llevar el prefijo.
   assert.deepEqual((await caches.keys()).sort(), [cacheName, cacheNameFor('vieja2'), ajena].sort());
   assert.ok(cacheName.startsWith(CACHE_PREFIX));
+});
+
+test('un install fallido de la MISMA release conserva la caché ya poblada', async () => {
+  // `vite.config.ts` deja `sw.js` fuera del digest, así que una actualización que
+  // sólo cambia este worker reutiliza `CACHE_NAME` y abre la caché desde la que
+  // está sirviendo la release activa. Borrarla ante un `addAll` fallido destruiría
+  // el shell offline vivo.
+  const cacheName = cacheNameFor('misma');
+  const caches = createCacheStorage([cacheName], { failAddAll: true });
+  const { listeners } = loadWorker({ cacheName, caches, hasActiveWorker: true });
+  const event = createEvent();
+  listeners.get('install')(event);
+  await assert.rejects(event.settle(), /red caída/);
+  assert.deepEqual(await caches.keys(), [cacheName]);
+  assert.deepEqual([...caches.stores.get(cacheName).keys()], ['./index.html']);
 });
 
 test('un install fallido no deja su caché vacía atrás', async () => {

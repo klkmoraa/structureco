@@ -157,10 +157,10 @@ texto literal no aparece en ninguno y que ningún prefijo dinámico
 un falso positivo borra una etiqueta viva y la deja en blanco en producción,
 un falso negativo sólo conserva unos bytes.
 
-Con ese criterio había **143 claves muertas de 2174 (6.6 %)**, heredadas de
+Con ese criterio había **149 claves muertas de 2174 (6.9 %)**, heredadas de
 superficies rehechas: 56 de la bienvenida anterior, 24 de Resultados, 23 de
 Space 3D, 13 del Inspector. Retiradas de ambos catálogos, el chunk de entrada
-baja de 1 228.55 kB a 1 215.20 kB (−13.35 kB; −3.53 kB gzip).
+baja de 1 228.55 kB a 1 214.77 kB (−13.78 kB; −3.61 kB gzip).
 
 Las tres últimas —`project.openExamples`, `project.importError` y
 `analysis.statusOpenIssues`— sólo aparecieron tras acotar el detector en la
@@ -178,6 +178,15 @@ La última, `app.name`, salió al excluir las pruebas del pajar: la sostenía un
 fixture de `catalogs.test.ts` y ninguna superficie la usaba. Esa prueba deriva
 ahora su fixture del propio catálogo, para no volver a mantener viva una clave
 sólo por citarla.
+
+Las seis últimas salieron de cambiar `includes` por una comparación con
+delimitadores: una clave que es prefijo de otra referenciada —`inspector.selection`
+dentro de `inspector.selectionSummary`— pasaba por viva. Extraer literales de
+cadena y comparar por igualdad sería más estricto todavía, pero se midió sobre
+este árbol y da 725 falsos positivos, así que la frontera es el límite. Y la
+maquinaria del gate quedó fuera del pajar: este mismo módulo cita claves reales
+en sus comentarios, y mientras se escribía la corrección eso mantuvo vivas dos
+de las seis.
 
 ### 1.6 Dos gates que existían y no corrían
 
@@ -250,7 +259,7 @@ conscientemente una decisión registrada, y eso te toca a ti.
 
 **Evidencia.** `es` y `en` se declaran en el mismo módulo y `translate` los
 indexa de forma síncrona, así que ambos catálogos entran en el chunk eager.
-Calibrado con la medición de 1.5 (13.35 kB crudos y 3.53 kB gzip por 286
+Calibrado con la medición de 1.5 (13.78 kB crudos y 3.61 kB gzip por 298
 entradas), el idioma que el usuario **no** está usando pesa del orden de 25 kB
 gzip: ~6 % de los 404.7 kB de carga inicial.
 

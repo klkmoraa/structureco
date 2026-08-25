@@ -24,6 +24,17 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const CATALOGS = path.join('src', 'i18n', 'catalogs.ts');
 
 /**
+ * La maquinaria del propio gate no cuenta como consumidor.
+ *
+ * Este módulo cita claves reales en sus comentarios para explicar cada regla, y
+ * sus diagnósticos las imprimen. Escanearse a sí mismo bastaría para mantener
+ * viva cualquier clave con sólo nombrarla aquí — de hecho `inspector.selection`
+ * e `inspector.end` sobrevivieron exactamente así mientras se escribía esta
+ * corrección.
+ */
+const SELF = path.join('scripts', 'check-i18n-usage.mjs');
+
+/**
  * Las pruebas no cuentan como consumidor.
  *
  * El contrato del gate es alcanzabilidad **desde el producto**: una clave que
@@ -88,6 +99,26 @@ export const dynamicPrefixes = (source) => {
     .filter((prefix) => prefix?.includes('.'));
 };
 
+/**
+ * Una clave está referenciada sólo si aparece completa, no como prefijo de otra.
+ *
+ * `includes` daba por viva cualquier clave que fuera prefijo de una referenciada:
+ * `inspector.selection` sobrevivía dentro de `inspector.selectionSummary`, y con
+ * ella otras cinco. Los delimitadores excluyen los caracteres con los que puede
+ * continuar un identificador o una clave —letras, dígitos, `_`, `.`, `$` y `-`—
+ * de modo que `inspector.end` no se da por usada dentro de
+ * `inspector.endConnectionsDescription` ni `datasheet.error` dentro de
+ * `datasheet.error.notANumber`.
+ *
+ * Extraer literales de cadena y comparar por igualdad sería más estricto todavía,
+ * pero se midió sobre este árbol y produce 725 falsos positivos: la clave viaja
+ * en atributos JSX, argumentos y expresiones que ese recorte no reconoce. Un
+ * falso positivo aquí borra una etiqueta viva, así que la frontera es el límite.
+ */
+export const isReferenced = (haystack, key) => new RegExp(
+  `(?<![\\w.$-])${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w.$-])`,
+).test(haystack);
+
 const main = async () => {
   const catalogSource = await readFile(path.join(ROOT, CATALOGS), 'utf8');
   const keys = declaredKeys(catalogSource);
@@ -96,12 +127,12 @@ const main = async () => {
     process.exit(1);
   }
 
-  const files = (await Promise.all(SCANNED_ROOTS.map(collect))).flat().filter((file) => file !== CATALOGS && !IS_TEST.test(file));
+  const files = (await Promise.all(SCANNED_ROOTS.map(collect))).flat().filter((file) => file !== CATALOGS && file !== SELF && !IS_TEST.test(file));
   const sources = await Promise.all(files.map((file) => readFile(path.join(ROOT, file), 'utf8')));
   const haystack = sources.join('\n');
   const prefixes = [...new Set(sources.flatMap(dynamicPrefixes))];
 
-  const orphans = keys.filter((key) => !haystack.includes(key) && !prefixes.some((prefix) => key.startsWith(prefix)));
+  const orphans = keys.filter((key) => !isReferenced(haystack, key) && !prefixes.some((prefix) => key.startsWith(prefix)));
 
   if (process.argv.includes('--json')) {
     console.log(JSON.stringify({ declared: keys.length, scannedFiles: files.length, dynamicPrefixes: prefixes, orphans }, null, 2));
