@@ -39,13 +39,22 @@ jobs:
       - name: Instalar dependencias exactas
         run: npm ci
 
-      - name: Gate rápido (documentación, lint, tipos, frontera protegida, pruebas)
-        run: |
-          npm run lint
-          npm run verify:docs
-          npm run typecheck
-          npm run verify:protected
-          npm test
+      # El gate rápido se invoca, no se reescribe. La lista inline anterior ya
+      # había divergido —le faltaba `verify:perf`— y volvió a quedarse corta al
+      # promover `verify:pwa` y `verify:i18n`: un candidato de release podía
+      # pasar el Gate completo con esos gates en rojo. `npm run verify` es la
+      # única definición y no puede desincronizarse de sí misma.
+      - name: Comprobación de tipos
+        run: npm run typecheck
+
+      - name: Gate rápido completo
+        run: npm run verify
+
+      - name: Capacidad de Space 3D
+        run: npm run verify:space3d
+
+      - name: Contrato de assets estructurales
+        run: npm run verify:structural-assets
 
       - name: Instalar navegadores de Playwright
         run: npx playwright install --with-deps chromium webkit
