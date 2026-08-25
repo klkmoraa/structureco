@@ -279,6 +279,7 @@ export const StructuralCanvas = ({
   const candidatePickerSurface = surfaceBroker?.stateFor('candidatePicker');
   const generatorSurface = surfaceBroker?.stateFor('generator');
   const contextualActionsSurface = surfaceBroker?.stateFor('contextualActions');
+  const compactCanvasChrome = surfaceBroker?.shellClass === 'K0';
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const coordinateReadoutRef = useRef<HTMLOutputElement>(null);
@@ -365,10 +366,10 @@ export const StructuralCanvas = ({
   useEffect(() => {
     if (!surfaceBroker) return;
     const intentOpen = surfaceBroker.stateFor('contextualActions').open;
-    const shouldOpen = Boolean(selection) && activeTool === 'select' && !memberStart;
+    const shouldOpen = !compactCanvasChrome && Boolean(selection) && activeTool === 'select' && !memberStart;
     if (shouldOpen && !intentOpen) surfaceBroker.openSurface('contextualActions');
     else if (!shouldOpen && intentOpen) surfaceBroker.closeSurface('contextualActions');
-  }, [activeTool, memberStart, selection, surfaceBroker]);
+  }, [activeTool, compactCanvasChrome, memberStart, selection, surfaceBroker]);
   const structuralEditPreview = useMemo((): { prepared: PreparedStructuralEdit | null; error: string } => {
     if (!structuralEditDraft) return { prepared: null, error: '' };
     if (structuralEditDraft.sourceSnapshot !== structuralEditSnapshot(project)) {
@@ -1870,7 +1871,7 @@ export const StructuralCanvas = ({
       // which is where a screen reader's quick-nav browse mode intercepts
       // single letters — they must not fire, or they hijack that navigation.
       const canvasHasFocus = document.activeElement instanceof Node && Boolean(hostRef.current?.contains(document.activeElement));
-      if (key === 'r' && !command && !event.altKey && canvasHasFocus) {
+      if (key === 'r' && !command && !event.altKey && canvasHasFocus && !compactCanvasChrome) {
         if (!repeatCandidate) return;
         event.preventDefault();
         activateRepeat();
@@ -1931,7 +1932,7 @@ export const StructuralCanvas = ({
       window.removeEventListener('blur', cancelActiveInteraction);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [activateRepeat, cancelActiveInteraction, cancelStructuralEdit, candidatePicker, closeCandidatePicker, copyStructuralSelection, deleteSelection, duplicateDraft, pasteStructuralSelection, repeatCandidate, selection, setActiveTool, setSelection, startDuplicate, structuralEditDraft]);
+  }, [activateRepeat, cancelActiveInteraction, cancelStructuralEdit, candidatePicker, closeCandidatePicker, compactCanvasChrome, copyStructuralSelection, deleteSelection, duplicateDraft, pasteStructuralSelection, repeatCandidate, selection, setActiveTool, setSelection, startDuplicate, structuralEditDraft]);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -2548,13 +2549,11 @@ export const StructuralCanvas = ({
       /></Suspense> : null}
 
       <StructuralEditOverlay
-        // Contextual-actions owns the selection entry point. Once a structural
-        // draft starts, this overlay continues to own that in-progress intent.
-        // Never leave the legacy launcher visible or focusable beside the
-        // Compact floor (primary verb + Delete + overflow).
+        // El riel posee la entrada de edición para una selección viva. Una vez
+        // iniciado el borrador, este overlay conserva la intención en curso.
         available={Boolean(structuralEditDraft) || (editCapabilities.structural
           && !selection && !duplicateDraft && !repeatRecipe && !generatorOpen)}
-        repeatAvailable={Boolean(repeatCandidate) && !structuralEditDraft}
+        repeatAvailable={!compactCanvasChrome && Boolean(repeatCandidate) && !structuralEditDraft}
         draft={structuralEditDraft}
         capabilities={editCapabilities}
         prepared={structuralEditPreview.prepared}
@@ -2572,7 +2571,7 @@ export const StructuralCanvas = ({
         onCancel={cancelStructuralEdit}
       />
 
-      {surfaceBroker ? <ContextualActions
+      {surfaceBroker && !compactCanvasChrome ? <ContextualActions
         selection={selection}
         availability={contextualActionAvailability}
         active={contextualActionsSurface?.status === 'active'
@@ -2625,7 +2624,7 @@ export const StructuralCanvas = ({
       /> : null}
       {canvasFeedback ? <div className="canvas-feedback" role="alert">{canvasFeedback}</div> : null}
       <RepeatActionOverlay
-        available={Boolean(repeatCandidate) && !structuralEditDraft}
+        available={!compactCanvasChrome && Boolean(repeatCandidate) && !structuralEditDraft}
         active={Boolean(repeatRecipe)}
         actionLabel={t('canvas.repeatAction')}
         previewLabel={t('canvas.repeatPreview')}

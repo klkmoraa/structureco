@@ -41,10 +41,26 @@ describe('editor layer state', () => {
 
   it('applies a preset as a whole view instead of toggling one entry', () => {
     const results = editorLayerReducer(createEditorLayerState(), { type: 'preset', preset: 'results' });
-    expect(results).toMatchObject({ model: true, results: true, heatmap: true, loads: false, help: false });
+    expect(results).toMatchObject({ model: true, results: true, heatmap: false, loads: false, help: false });
 
     const clean = editorLayerReducer(results, { type: 'preset', preset: 'clean' });
     expect(clean).toMatchObject({ model: true, ids: false, labels: false, diagnostics: false, heatmap: false });
+  });
+
+  it('does not restore a demand map that predates explicit opt-in persistence', () => {
+    const restored = parseEditorLayerState(JSON.stringify({
+      model: true,
+      results: true,
+      heatmap: true,
+    }));
+
+    expect(restored.heatmap).toBe(false);
+    expect(parseEditorLayerState(JSON.stringify({
+      model: true,
+      results: true,
+      heatmap: true,
+      heatmapExplicit: true,
+    })).heatmap).toBe(true);
   });
 
   it('reports the preset that matches the current view, and none once the user diverges', () => {

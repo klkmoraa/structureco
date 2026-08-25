@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -6,6 +7,8 @@ import { createBlankProject } from '../../data/defaultProject';
 import { PROJECT_STORAGE_KEY } from '../../data/projectStorage';
 import { ProjectProvider } from '../../store/ProjectContext';
 import { WelcomeScreen } from './WelcomeScreen';
+
+const homeCss = readFileSync('src/features/welcome/totalHome.css', 'utf8');
 
 beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -34,6 +37,20 @@ const renderHome = () => render(
 );
 
 describe('Home total redesign contract', () => {
+  it('keeps compact Home options in the vertical reading flow instead of hidden horizontal carousels', () => {
+    const compactStart = homeCss.indexOf('@media (max-width: 760px)');
+    const compactEnd = homeCss.indexOf('@media (max-width: 340px)');
+    const compactCss = homeCss.slice(compactStart, compactEnd);
+
+    expect(compactStart).toBeGreaterThanOrEqual(0);
+    expect(compactEnd).toBeGreaterThan(compactStart);
+    expect(compactCss).toMatch(/\.sc-home-quick-row\s*{[^}]*display:\s*grid;/s);
+    expect(compactCss).toMatch(/\.sc-home \.sc-home-recents \.project-hub--recent \.project-hub__list\s*{[^}]*display:\s*grid;/s);
+    expect(compactCss).toMatch(/\.sc-home-template-grid\s*{[^}]*display:\s*grid;/s);
+    expect(compactCss).not.toMatch(/\.sc-home-(?:quick-row|template-grid)[^{]*{[^}]*overflow-x:\s*auto;/s);
+    expect(compactCss).not.toMatch(/\.project-hub__list\s*{[^}]*overflow-x:\s*auto;/s);
+  });
+
   it('exposes seven real Home destinations without a decorative step rail', () => {
     const { container } = renderHome();
     const navigation = screen.getByRole('navigation', { name: 'Navegación principal' });

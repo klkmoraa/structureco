@@ -56,7 +56,7 @@ const PortableImportCenter = lazy(() => import('../import-export/PortableImportC
 export interface TopBarLayoutActions {
   inspectorCollapsed: boolean;
   fullCanvas: boolean;
-  onToggleInspector: () => void;
+  onToggleInspector: (trigger?: HTMLElement | null) => void;
   onToggleFullCanvas: () => void;
 }
 
@@ -611,7 +611,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
                   </div>
                   {layoutActions ? <div className="menu-section overflow-layout-actions" role="group" aria-label={t('shell.viewLayout')}>
                     <div className="menu-section-title">{t('menu.sectionViews')}</div>
-                    <button onClick={() => { layoutActions.onToggleInspector(); setShowMobileMenu(false); }}>
+                    <button onClick={() => { layoutActions.onToggleInspector(mobileMenuButtonRef.current); setShowMobileMenu(false); }}>
                       {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? <PanelRightOpen size={17} /> : <PanelRightClose size={17} />}
                       {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? t('shell.showInspector') : t('shell.hideInspector')}
                     </button>
