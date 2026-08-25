@@ -69,6 +69,15 @@ const createEvent = (extra = {}) => {
   };
 };
 
+test('la fuente generada es JavaScript válido', () => {
+  // La fuente se construye con un template literal, así que un backtick o un
+  // `${` dentro de un comentario lo cierra a media línea y publica un worker
+  // roto. En el navegador eso sólo se nota cuando el registro falla; aquí
+  // `new vm.Script` lo rechaza al construirlo.
+  const source = createServiceWorkerSource({ cacheName: cacheNameFor('abc123'), assets: ['./index.html'] });
+  assert.doesNotThrow(() => new vm.Script(source));
+});
+
 test('install precachea el shell completo en la caché de esta release', async () => {
   const cacheName = cacheNameFor('abc123');
   const { listeners, caches } = loadWorker({ cacheName, assets: ['./index.html', './assets/app.js'] });
@@ -88,26 +97,61 @@ test('la primera instalación espera y una actualización toma el control', asyn
   }
 });
 
-test('activate borra las cachés de releases anteriores y conserva la vigente', async () => {
+test('activate borra las releases viejas y conserva la vigente y la anterior', async () => {
+  // La anterior se conserva a propósito: `install` hace `skipWaiting()`, así que
+  // este worker controla pestañas que siguen mostrando el documento previo y que
+  // aún pedirán chunks perezosos con el hash de esa release. Borrar su caché las
+  // dejaría sin ninguna fuente, porque el servidor ya sólo publica el build nuevo.
   const cacheName = cacheNameFor('nueva');
-  const caches = createCacheStorage([cacheNameFor('vieja1'), cacheNameFor('vieja2'), cacheName]);
+  const anterior = cacheNameFor('anterior');
+  // El orden de `keys()` es el de creación: `anterior` es la última que no es la vigente.
+  const caches = createCacheStorage([cacheNameFor('vieja1'), cacheNameFor('vieja2'), anterior, cacheName]);
   const { listeners, claimed } = loadWorker({ cacheName, caches });
   const event = createEvent();
   listeners.get('activate')(event);
   await event.settle();
-  assert.deepEqual(await caches.keys(), [cacheName]);
+  assert.deepEqual((await caches.keys()).sort(), [anterior, cacheName].sort());
   assert.equal(claimed.count, 1);
+});
+
+test('la caché conservada sigue sirviendo los chunks de la release anterior', async () => {
+  const cacheName = cacheNameFor('nueva');
+  const anterior = cacheNameFor('anterior');
+  const caches = createCacheStorage([anterior, cacheName]);
+  const chunkViejo = `${ORIGIN}/assets/WorkspaceShell-VIEJO.js`;
+  (await caches.open(anterior)).put(chunkViejo, { ok: true, deLaAnterior: true });
+  const { listeners } = loadWorker({ cacheName, caches });
+
+  const activate = createEvent();
+  listeners.get('activate')(activate);
+  await activate.settle();
+
+  const fetchEvent = createEvent({ request: { method: 'GET', url: chunkViejo, mode: 'cors' } });
+  listeners.get('fetch')(fetchEvent);
+  const [response] = await fetchEvent.settle();
+  assert.equal(response.deLaAnterior, true);
+});
+
+test('con una sola release instalada no se borra nada', async () => {
+  const cacheName = cacheNameFor('unica');
+  const caches = createCacheStorage([cacheName]);
+  const { listeners } = loadWorker({ cacheName, caches });
+  const event = createEvent();
+  listeners.get('activate')(event);
+  await event.settle();
+  assert.deepEqual(await caches.keys(), [cacheName]);
 });
 
 test('activate no toca cachés que no son del shell', async () => {
   const cacheName = cacheNameFor('nueva');
   const ajena = 'otra-app-v1';
-  const caches = createCacheStorage([ajena, cacheNameFor('vieja'), cacheName]);
+  const caches = createCacheStorage([ajena, cacheNameFor('vieja1'), cacheNameFor('vieja2'), cacheName]);
   const { listeners } = loadWorker({ cacheName, caches });
   const event = createEvent();
   listeners.get('activate')(event);
   await event.settle();
-  assert.deepEqual((await caches.keys()).sort(), [cacheName, ajena].sort());
+  // `vieja2` sobrevive por ser la anterior; `ajena` por no llevar el prefijo.
+  assert.deepEqual((await caches.keys()).sort(), [cacheName, cacheNameFor('vieja2'), ajena].sort());
   assert.ok(cacheName.startsWith(CACHE_PREFIX));
 });
 

@@ -71,8 +71,22 @@ anterior se borraba nunca**. Con `dist` en 13.95 MB, cada versión instalada
 dejaba ~14 MB muertos en el origen hasta que el navegador desalojaba el origen
 entero por cuota —incluida la caché vigente y el shell offline—.
 
-`activate` ahora borra las cachés `structureco-shell-*` que no son la vigente y
-deja intactas las ajenas al prefijo.
+`activate` ahora barre las cachés `structureco-shell-*` obsoletas y deja
+intactas las ajenas al prefijo — pero **conserva la release inmediatamente
+anterior**, y eso no es un descuido. `install` llama a `skipWaiting()` en una
+actualización, así que el worker nuevo controla pestañas que siguen mostrando
+el documento previo; ese documento pide chunks perezosos con el hash de *su*
+release —las superficies que `WorkspaceShell` importa bajo demanda— y esos
+archivos ya no están en el servidor. Borrar su caché las dejaría sin ninguna
+fuente y la superficie no cargaría. El `controllerchange` de `PwaUpdateNotice`
+recarga esas pestañas, pero no de forma instantánea y no sin red.
+
+Conservando dos generaciones el crecimiento queda acotado —28 MB en vez de
+ilimitado— y una pestaña abierta durante una actualización sigue resolviendo
+sus chunks, porque `caches.match` busca en todas las cachés del origen. Una
+pestaña que sobreviva a **dos** actualizaciones sin recargar sí pierde la suya:
+ése es el límite explícito de la política. Lo señaló la revisión de Codex sobre
+la primera versión de este cambio, que sí borraba todo salvo la vigente.
 
 De paso, la fuente del worker sale de `vite.config.ts` a
 `scripts/pwa-shell-source.mjs`. Era código de producción que corre en el

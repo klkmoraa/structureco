@@ -6,6 +6,30 @@
  * hasta ahora no tenía forma de probarse: `scripts/pwa-shell-source.test.mjs`
  * la evalúa contra un `self`/`caches` falso y comprueba install, activate y
  * fetch sin construir la aplicación.
+ *
+ * ## Por qué el barrido de cachés conserva la release anterior
+ *
+ * Cada release abre su propia caché porque el nombre lleva el digest del build.
+ * Sin barrido, el origen acumula una copia completa del shell (~14 MB) por cada
+ * versión instalada, hasta que el navegador desaloja el origen entero —incluida
+ * la caché vigente y el shell offline— por cuota.
+ *
+ * Pero el barrido no puede llegar hasta la vigente. `install` llama a
+ * `skipWaiting()` en una actualización, así que el worker nuevo toma el control
+ * de pestañas que siguen mostrando el documento anterior. Ese documento pide
+ * chunks perezosos con el hash de SU release —las superficies que
+ * `WorkspaceShell` importa bajo demanda— y esos archivos ya no están en el
+ * servidor, que publica sólo el build vigente. Borrar su caché las deja sin
+ * ninguna fuente y la superficie no carga. El `controllerchange` de
+ * `PwaUpdateNotice` recarga esas pestañas, pero no de forma instantánea y no si
+ * el dispositivo está sin red.
+ *
+ * Por eso se conserva la release inmediatamente anterior: el crecimiento queda
+ * acotado en dos generaciones en vez de ser ilimitado, y una pestaña abierta
+ * durante una actualización sigue encontrando sus chunks, porque `caches.match`
+ * busca en todas las cachés del origen y no sólo en la vigente. Una pestaña que
+ * sobreviva a DOS actualizaciones sin recargar sí pierde su caché; ese es el
+ * límite explícito de esta política.
  */
 
 /**
@@ -31,13 +55,18 @@ const SHELL=${JSON.stringify([...assets])};
 // while the app is being added to the home screen.
 const HAS_ACTIVE_WORKER=Boolean(self.registration.active);
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>HAS_ACTIVE_WORKER?self.skipWaiting():undefined)));
-// Cada release abre una caché nueva porque su nombre lleva el digest del build.
-// Sin este barrido las anteriores nunca se borran y el origen acumula una copia
-// completa del shell por cada versión instalada, hasta que el navegador desaloja
-// el origen entero —incluida la caché vigente— por cuota.
+// Each release opens its own cache (the name carries the build digest). Without a
+// sweep the origin accumulates one full copy of the shell per installed version.
+// The immediately previous release is deliberately kept alive: see the module
+// JSDoc in scripts/pwa-shell-source.mjs for why deleting it breaks open tabs.
 self.addEventListener('activate',event=>event.waitUntil(
   caches.keys()
-    .then(names=>Promise.all(names.filter(name=>name.startsWith(CACHE_PREFIX)&&name!==CACHE_NAME).map(name=>caches.delete(name))))
+    .then(names=>{
+      // keys() resolves in creation order, so the last entry that is not the
+      // current release is the immediately previous one.
+      const previous=names.filter(name=>name.startsWith(CACHE_PREFIX)&&name!==CACHE_NAME);
+      return Promise.all(previous.slice(0,-1).map(name=>caches.delete(name)));
+    })
     .then(()=>self.clients.claim())
 ));
 self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});
