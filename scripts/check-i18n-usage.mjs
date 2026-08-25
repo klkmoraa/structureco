@@ -29,6 +29,10 @@
  * regla del sufijo existe. Antes de retirar lo que este gate reporte, ejecuta
  * el typecheck: él es la autoridad y esto sólo el detector.
  *
+ * Y para la dirección contraria —lo que estas reglas dejan pasar— está
+ * `npm run audit:i18n`, que somete al compilador las claves que sólo sobreviven
+ * por una regla floja en vez de intentar afinar el regex una vez más.
+ *
  * Uso: node scripts/check-i18n-usage.mjs [--json]
  */
 import { readFile, readdir } from 'node:fs/promises';

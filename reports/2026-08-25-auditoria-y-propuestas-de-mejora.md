@@ -157,10 +157,10 @@ texto literal no aparece en ninguno y que ningún prefijo dinámico
 un falso positivo borra una etiqueta viva y la deja en blanco en producción,
 un falso negativo sólo conserva unos bytes.
 
-Con ese criterio había **159 claves muertas de 2174 (7.3 %)**, heredadas de
+Con ese criterio había **160 claves muertas de 2174 (7.4 %)**, heredadas de
 superficies rehechas: 56 de la bienvenida anterior, 24 de Resultados, 23 de
 Space 3D, 13 del Inspector. Retiradas de ambos catálogos, el chunk de entrada
-baja de 1 228.55 kB a 1 213.67 kB (−14.88 kB; −3.85 kB gzip).
+baja de 1 228.55 kB a 1 213.58 kB (−14.97 kB; −3.87 kB gzip).
 
 Las tres últimas —`project.openExamples`, `project.importError` y
 `analysis.statusOpenIssues`— sólo aparecieron tras acotar el detector en la
@@ -201,6 +201,17 @@ claves `…One` del resumen de edición múltiple y **`npm run typecheck` lo
 rechazó**. `TranslationKey` se deriva del catálogo, así que retirar una clave
 que alguna llamada todavía pide es un error de tipos, no un fallo silencioso.
 El typecheck es la autoridad de este gate; el detector sólo propone.
+
+Y para la dirección contraria —lo que las reglas flojas dejan pasar— la sexta
+ronda de revisión trajo un caso claro: la regla del sufijo se aplicaba a todo
+el catálogo, así que `bulk.command.descriptionOne` pasaba por viva sólo porque
+`command.description` sí se usa. En vez de afinar el regex una sexta vez, se
+añade `npm run audit:i18n`: retira de golpe las claves que sólo sobreviven por
+una regla floja, ejecuta `tsc` una vez, lee de los errores cuáles reclama el
+compilador y restaura el catálogo intacto. Sobre este árbol separa las 7 vivas
+de la 1 muerta sin adivinar nada. Es lento —una compilación completa— y por eso
+no entra en `npm run verify`: se ejecuta a mano cuando el detector reporte cero
+huérfanas y aun así se sospeche que una regla floja tapa algo.
 
 ### 1.6 Dos gates que existían y no corrían
 
