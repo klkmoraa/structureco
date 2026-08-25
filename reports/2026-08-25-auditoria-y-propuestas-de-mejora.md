@@ -88,6 +88,19 @@ pestaña que sobreviva a **dos** actualizaciones sin recargar sí pierde la suya
 ése es el límite explícito de la política. Lo señaló la revisión de Codex sobre
 la primera versión de este cambio, que sí borraba todo salvo la vigente.
 
+Conservar una segunda caché obliga a dos cosas más, ambas salidas de la misma
+revisión. Una caché vacía —la que deja un `install` cuyo `addAll` falló, porque
+`caches.open` la crea antes y `addAll` es atómico— no puede tomarse por la
+release anterior: el barrido la descarta y el `install` fallido la borra al
+salir. Y la release vigente tiene que responder **antes** que la conservada:
+`caches.match` global recorre las cachés en orden de creación, así que la
+anterior ganaba para toda URL estable que ambas contienen —`index.html`, el
+manifiesto, el favicon, las fuentes— y una navegación sin red habría servido la
+release anterior indefinidamente. Ese defecto era anterior a este PR y peor,
+porque sin barrido ganaba la caché *más vieja* de todas. Ahora se consulta
+primero la vigente y sólo se cae a las anteriores para lo que la vigente no
+tiene: los chunks con hash que una pestaña de esa release sigue pidiendo.
+
 De paso, la fuente del worker sale de `vite.config.ts` a
 `scripts/pwa-shell-source.mjs`. Era código de producción que corre en el
 navegador de cada usuario **sin una sola prueba**; ahora `npm run verify:pwa`

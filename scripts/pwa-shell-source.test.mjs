@@ -14,8 +14,13 @@ import { CACHE_PREFIX, cacheNameFor, createServiceWorkerSource } from './pwa-she
 const ORIGIN = 'https://structureco.test';
 
 /** Doble mínimo de CacheStorage: sólo lo que usa el worker. */
-const createCacheStorage = (initialNames = []) => {
-  const stores = new Map(initialNames.map((name) => [name, new Map()]));
+const createCacheStorage = (initialNames = [], { failAddAll = false, empty = [] } = {}) => {
+  // Una caché instalada tiene contenido; sólo las de un install fallido quedan
+  // vacías, y esa diferencia es justo lo que decide a quién conserva el barrido.
+  const stores = new Map(initialNames.map((name) => [
+    name,
+    new Map(empty.includes(name) ? [] : [['./index.html', { ok: true, from: name }]]),
+  ]));
   return {
     stores,
     async keys() { return [...stores.keys()]; },
@@ -24,9 +29,15 @@ const createCacheStorage = (initialNames = []) => {
       if (!stores.has(name)) stores.set(name, new Map());
       const store = stores.get(name);
       return {
-        async addAll(requests) { for (const request of requests) store.set(request, { ok: true }); },
+        // `addAll` es atómico por especificación: si una petición falla no se
+        // añade ninguna entrada, y la caché recién abierta queda vacía.
+        async addAll(requests) {
+          if (failAddAll) throw new Error('red caída a mitad de la instalación');
+          for (const request of requests) store.set(request, { ok: true });
+        },
         async put(request, response) { store.set(typeof request === 'string' ? request : request.url, response); },
         async match(request) { return store.get(typeof request === 'string' ? request : request.url); },
+        async keys() { return [...store.keys()]; },
       };
     },
     async match(request) {
@@ -41,7 +52,7 @@ const createCacheStorage = (initialNames = []) => {
  * Evalúa la fuente y devuelve los oyentes registrados junto con los dobles, de
  * modo que cada prueba dispare el evento que le interesa.
  */
-const loadWorker = ({ cacheName, assets = ['./index.html', './assets/app.js'], caches = createCacheStorage(), hasActiveWorker = false } = {}) => {
+const loadWorker = ({ cacheName, assets = ['./index.html', './assets/app.js'], caches = createCacheStorage(), hasActiveWorker = false, networkFails = false } = {}) => {
   const listeners = new Map();
   const claimed = { count: 0 };
   const skipped = { count: 0 };
@@ -52,7 +63,7 @@ const loadWorker = ({ cacheName, assets = ['./index.html', './assets/app.js'], c
     skipWaiting: () => { skipped.count += 1; },
     addEventListener: (type, listener) => listeners.set(type, listener),
   };
-  const context = vm.createContext({ self, caches, URL, fetch: async () => ({ ok: true }), Promise, Boolean, console });
+  const context = vm.createContext({ self, caches, URL, fetch: networkFails ? async () => { throw new Error('sin red'); } : async () => ({ ok: true }), Promise, Boolean, console });
   vm.runInContext(createServiceWorkerSource({ cacheName, assets }), context);
   return { listeners, caches, claimed, skipped };
 };
@@ -153,6 +164,51 @@ test('activate no toca cachés que no son del shell', async () => {
   // `vieja2` sobrevive por ser la anterior; `ajena` por no llevar el prefijo.
   assert.deepEqual((await caches.keys()).sort(), [cacheName, cacheNameFor('vieja2'), ajena].sort());
   assert.ok(cacheName.startsWith(CACHE_PREFIX));
+});
+
+test('un install fallido no deja su caché vacía atrás', async () => {
+  const cacheName = cacheNameFor('fallida');
+  const caches = createCacheStorage([], { failAddAll: true });
+  const { listeners, skipped } = loadWorker({ cacheName, caches, hasActiveWorker: true });
+  const event = createEvent();
+  listeners.get('install')(event);
+  await assert.rejects(event.settle(), /red caída/);
+  // La caché se retira y el install sigue fallando: el worker no debe activarse.
+  assert.deepEqual(await caches.keys(), []);
+  assert.equal(skipped.count, 0);
+});
+
+test('una caché vacía no cuenta como la release anterior', async () => {
+  // Si un install intermedio falló y su caché sobrevive —por ejemplo porque el
+  // navegador se cerró antes del `catch`—, tomarla por la anterior borraría la
+  // release real y dejaría sin chunks a las pestañas que siguen en ella.
+  const cacheName = cacheNameFor('nueva');
+  const real = cacheNameFor('anterior-real');
+  const fallida = cacheNameFor('install-fallido');
+  const caches = createCacheStorage([cacheNameFor('vieja'), real, fallida, cacheName], { empty: [fallida] });
+  const { listeners } = loadWorker({ cacheName, caches });
+  const event = createEvent();
+  listeners.get('activate')(event);
+  await event.settle();
+  assert.deepEqual((await caches.keys()).sort(), [cacheName, real].sort());
+});
+
+test('la release vigente responde antes que la conservada en una URL estable', async () => {
+  // `caches.match` global recorre las cachés en orden de CREACIÓN, así que la
+  // anterior —creada antes— ganaría para index.html, el manifiesto, el favicon y
+  // las fuentes, y una navegación sin red serviría la release anterior para siempre.
+  const cacheName = cacheNameFor('nueva');
+  const anterior = cacheNameFor('anterior');
+  const caches = createCacheStorage([anterior, cacheName]);
+  (await caches.open(anterior)).put('./index.html', { ok: true, from: 'anterior' });
+  (await caches.open(cacheName)).put('./index.html', { ok: true, from: 'nueva' });
+  const { listeners } = loadWorker({ cacheName, caches, networkFails: true });
+
+  const event = createEvent({ request: { method: 'GET', url: `${ORIGIN}/index.html`, mode: 'navigate' } });
+  listeners.get('fetch')(event);
+  // La navegación es network-first; el doble de `fetch` falla para forzar el respaldo.
+  const [response] = await event.settle();
+  assert.equal(response.from, 'nueva');
 });
 
 test('fetch ignora otros orígenes y los métodos que no son GET', () => {

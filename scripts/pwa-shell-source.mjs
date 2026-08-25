@@ -54,7 +54,15 @@ const SHELL=${JSON.stringify([...assets])};
 // shell indefinitely. The first install still waits normally and avoids a reload
 // while the app is being added to the home screen.
 const HAS_ACTIVE_WORKER=Boolean(self.registration.active);
-self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>HAS_ACTIVE_WORKER?self.skipWaiting():undefined)));
+// caches.open() creates the cache before addAll runs, and addAll is atomic: a
+// rejected install therefore leaves an EMPTY cache behind. Delete it, or the next
+// sweep would mistake it for the previous release and drop the real one.
+self.addEventListener('install',event=>event.waitUntil(
+  caches.open(CACHE_NAME)
+    .then(cache=>cache.addAll(SHELL))
+    .catch(error=>caches.delete(CACHE_NAME).then(()=>{throw error;}))
+    .then(()=>HAS_ACTIVE_WORKER?self.skipWaiting():undefined)
+));
 // Each release opens its own cache (the name carries the build digest). Without a
 // sweep the origin accumulates one full copy of the shell per installed version.
 // The immediately previous release is deliberately kept alive: see the module
@@ -62,14 +70,32 @@ self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).t
 self.addEventListener('activate',event=>event.waitUntil(
   caches.keys()
     .then(names=>{
-      // keys() resolves in creation order, so the last entry that is not the
-      // current release is the immediately previous one.
-      const previous=names.filter(name=>name.startsWith(CACHE_PREFIX)&&name!==CACHE_NAME);
-      return Promise.all(previous.slice(0,-1).map(name=>caches.delete(name)));
+      const shells=names.filter(name=>name.startsWith(CACHE_PREFIX)&&name!==CACHE_NAME);
+      // An empty cache is a release whose install never completed. It must not be
+      // taken for the previous release: doing so would delete the real one and
+      // strand the tabs still running it, which is the whole point of retaining one.
+      return Promise.all(shells.map(name=>caches.open(name)
+        .then(cache=>cache.keys())
+        .then(entries=>({name:name,filled:entries.length>0}))));
+    })
+    .then(inspected=>{
+      // keys() resolves in creation order, so the last filled entry is the
+      // previous COMPLETE release.
+      const keep=inspected.filter(entry=>entry.filled).pop();
+      return Promise.all(inspected.filter(entry=>entry!==keep).map(entry=>caches.delete(entry.name)));
     })
     .then(()=>self.clients.claim())
 ));
 self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});
+// The current release answers first. A bare caches.match() searches every cache of
+// the origin in CREATION order, so the retained previous release —created earlier—
+// would win for every stable URL it also holds: index.html, the manifest, the
+// favicon, the fonts. Offline navigation would then serve the previous release
+// forever. Older caches are still consulted, but only for what the current release
+// does not have: the hashed lazy chunks a tab from that release still asks for.
+const matchCache=request=>caches.open(CACHE_NAME)
+  .then(cache=>cache.match(request,{ignoreVary:true}))
+  .then(hit=>hit||caches.match(request,{ignoreVary:true}));
 self.addEventListener('fetch',event=>{
   const request=event.request;
   if(request.method!=='GET'||new URL(request.url).origin!==self.location.origin)return;
@@ -77,10 +103,10 @@ self.addEventListener('fetch',event=>{
     event.respondWith(fetch(request).then(response=>{
       if(response.ok)event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.put('./index.html',response.clone())));
       return response;
-    }).catch(async()=>await caches.match('./index.html',{ignoreVary:true})||await caches.match('./',{ignoreVary:true})));
+    }).catch(async()=>await matchCache('./index.html')||await matchCache('./')));
     return;
   }
-  event.respondWith(caches.match(request,{ignoreVary:true}).then(cached=>cached||fetch(request).then(response=>{
+  event.respondWith(matchCache(request).then(cached=>cached||fetch(request).then(response=>{
     if(response.ok)event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.put(request,response.clone())));
     return response;
   })));
