@@ -50,6 +50,9 @@ jobs:
       - name: Frontera matemática protegida
         run: npm run verify:protected
 
+      - name: Contrato del service worker
+        run: npm run verify:pwa
+
       - name: Pruebas deterministas
         run: npm test
 

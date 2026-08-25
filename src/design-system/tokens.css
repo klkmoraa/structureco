@@ -499,6 +499,13 @@
      selector al final de la hoja. */
   --sc-clay-press-transform: translateY(2px) scale(0.98);
 
+  /* CRI-120 · el mismo hundimiento sin el `scale(.98)`, para los controles cuyo
+     objetivo táctil ya está en el mínimo de 44px: encoger un 2 % los deja en
+     43px medidos en WebKit. Es un token y no un literal por la misma razón que
+     el anterior — `prefers-reduced-motion` tiene que poder anularlo — y sólo
+     debe usarse donde la reducción del área tocable esté demostrada. */
+  --sc-clay-press-transform-flat: translateY(2px);
+
   /* Arcilla teñida de marca: la única pieza que se rellena con el acento en
      lugar de con la superficie. Misma anatomía que el resto de la escala
      (sombra exterior abajo, luz interior arriba, sombra interior abajo), pero
@@ -875,6 +882,7 @@
        Neutralizar el token apaga el hundimiento en todos los controles clay a
        la vez, y el estado sigue leyéndose por la cavidad de la sombra. */
     --sc-clay-press-transform: none;
+    --sc-clay-press-transform-flat: none;
   }
 }
 

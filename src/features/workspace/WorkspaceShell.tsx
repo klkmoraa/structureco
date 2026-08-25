@@ -33,6 +33,29 @@ const LazyStructuralBom = lazy(() => import('../bom/StructuralBomPanel').then((m
 const LazyRevisionComparison = lazy(() => import('../revision-comparison/RevisionComparisonPanel').then((module) => ({ default: module.RevisionComparisonPanel })));
 const LazyDenseResults = lazy(() => preloadDenseResultsSurface());
 
+/**
+ * Respaldo de foco para el cierre de una superficie: enfoca el primer lanzador
+ * visible de `selector` **sólo** si nadie reclamó el foco.
+ *
+ * `SurfacePresentationProvider` ya devuelve el foco al disparador que abrió la
+ * superficie cuando ese disparador sigue montado, y lo hace en su propio
+ * `requestAnimationFrame`. Un respaldo incondicional se ejecuta después y le
+ * roba el foco a ese disparador: en K0 eso mandaba el foco a Utilidades aunque
+ * Resultados se hubiera abierto —y cerrado— desde su botón persistente de la
+ * barra. Encolar este cuadro después del bróker y comprobar `activeElement`
+ * conserva el respaldo para el caso que lo justifica —un item de menú que se
+ * desmonta con la hoja— sin pisar la restauración correcta.
+ */
+const focusStableLauncherIfUnclaimed = (selector: string): void => {
+  window.requestAnimationFrame(() => {
+    const active = document.activeElement;
+    if (active && active !== document.body) return;
+    const launcher = [...document.querySelectorAll<HTMLElement>(selector)]
+      .find((candidate) => candidate.isConnected && candidate.getClientRects().length > 0);
+    launcher?.focus({ preventScroll: true });
+  });
+};
+
 type WorkspaceShellProps = { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string };
 type LayoutController = ReturnType<typeof useWorkspaceLayoutPreferences>;
 type PendingModelDoctorNotification = {
@@ -247,16 +270,12 @@ const WorkspaceBrokerContent = ({
   const setResultsOpen = useCallback((open: boolean, trigger?: HTMLElement | null) => {
     if (open) openSurface('results', trigger);
     else {
-      // En K0 Utilidades sigue siendo un fallback persistente mientras la hoja
-      // se cierra. Es correcto cuando el cierre viene del propio panel y no
-      // trae el botón original que abrió Resultados.
-      const compactLauncher = document.querySelector<HTMLElement>('.utility-more-button');
       closeSurface('results');
-      if (compactLauncher) {
-        window.requestAnimationFrame(() => {
-          if (compactLauncher.isConnected) compactLauncher.focus({ preventScroll: true });
-        });
-      }
+      // En K0 Utilidades sigue siendo un lanzador persistente mientras la hoja
+      // se cierra. Es el respaldo correcto cuando el cierre viene del propio
+      // panel y el disparador original ya no está montado — nunca cuando el
+      // bróker sí pudo devolver el foco al botón que abrió Resultados.
+      focusStableLauncherIfUnclaimed('.utility-more-button');
     }
   }, [closeSurface, openSurface]);
   const openDetail = useCallback((trigger?: HTMLElement | null) => {
@@ -278,12 +297,11 @@ const WorkspaceBrokerContent = ({
   const setBomOpen = useCallback((open: boolean) => {
     if (open) openSurface('bom');
     else {
-      // Los items de Exportar/Utilidades se desmontan al abrir la superficie.
-      // Devuelve el foco al launcher persistente de la composición vigente.
-      const stableLauncher = [...document.querySelectorAll<HTMLElement>('.topbar-export-trigger, .utility-more-button')]
-        .find((candidate) => candidate.getClientRects().length > 0);
       closeSurface('bom');
-      if (stableLauncher) window.requestAnimationFrame(() => stableLauncher.focus({ preventScroll: true }));
+      // Los items de Exportar/Utilidades se desmontan al abrir la superficie:
+      // ahí el bróker no tiene a dónde devolver el foco y este lanzador
+      // persistente es el respaldo de la composición vigente.
+      focusStableLauncherIfUnclaimed('.topbar-export-trigger, .utility-more-button');
     }
   }, [closeSurface, openSurface]);
   const setComparisonOpen = useCallback((open: boolean) => {
