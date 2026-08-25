@@ -101,6 +101,14 @@ porque sin barrido ganaba la caché *más vieja* de todas. Ahora se consulta
 primero la vigente y sólo se cae a las anteriores para lo que la vigente no
 tiene: los chunks con hash que una pestaña de esa release sigue pidiendo.
 
+Y «la anterior» resultó ser la que se **activó** más recientemente, no la que se
+creó después. La diferencia aparece con un rollback: volver a publicar una
+release reutiliza su caché, y `caches.open` no mueve un nombre existente al
+final de `keys()`. Tras A → B → rollback a A → C, el orden de creación sigue
+siendo [A, B] mientras que la release que corren las pestañas abiertas es A;
+conservar «la última creada» habría guardado B y borrado A, justo a quien hay
+que proteger. Cada caché anota ahora su instante de activación.
+
 De paso, la fuente del worker sale de `vite.config.ts` a
 `scripts/pwa-shell-source.mjs`. Era código de producción que corre en el
 navegador de cada usuario **sin una sola prueba**; ahora `npm run verify:pwa`

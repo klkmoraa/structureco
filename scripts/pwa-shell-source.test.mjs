@@ -37,6 +37,8 @@ const createCacheStorage = (initialNames = [], { failAddAll = false, empty = [] 
           for (const request of requests) store.set(request, { ok: true });
         },
         async put(request, response) { store.set(typeof request === 'string' ? request : request.url, response); },
+        /** Sella la activación como haría el worker real, para las pruebas. */
+        stamp(value) { store.set('./__structureco-activated__', { async text() { return String(value); } }); },
         async match(request) { return store.get(typeof request === 'string' ? request : request.url); },
         async keys() { return [...store.keys()]; },
       };
@@ -64,7 +66,7 @@ const loadWorker = ({ cacheName, assets = ['./index.html', './assets/app.js'], c
     skipWaiting: () => { skipped.count += 1; },
     addEventListener: (type, listener) => listeners.set(type, listener),
   };
-  const context = vm.createContext({ self, caches, URL, fetch: networkFails ? async () => { throw new Error('sin red'); } : async () => ({ ok: true }), Promise, Boolean, console });
+  const context = vm.createContext({ self, caches, URL, Response: class { constructor(body) { this.body = body; } async text() { return String(this.body); } }, fetch: networkFails ? async () => { throw new Error('sin red'); } : async () => ({ ok: true }), Promise, Boolean, console });
   vm.runInContext(createServiceWorkerSource({ cacheName, assets }), context);
   return { listeners, caches, claimed, skipped };
 };
@@ -124,6 +126,37 @@ test('activate borra las releases viejas y conserva la vigente y la anterior', a
   await event.settle();
   assert.deepEqual((await caches.keys()).sort(), [anterior, cacheName].sort());
   assert.equal(claimed.count, 1);
+});
+
+test('tras un rollback conserva la release realmente activa, no la creada después', async () => {
+  // A → B → rollback a A → C. `caches.open('A')` en el rollback NO mueve A al
+  // final de `keys()`, así que el orden de creación sigue diciendo [A, B]
+  // mientras las pestañas abiertas corren A. Elegir «la última creada»
+  // conservaría B y borraría A, que es justo a quien hay que proteger.
+  const a = cacheNameFor('A');
+  const b = cacheNameFor('B');
+  const c = cacheNameFor('C');
+  const caches = createCacheStorage([a, b, c]);
+  (await caches.open(b)).stamp(1_000);
+  (await caches.open(a)).stamp(2_000); // el rollback la reactivó después que B
+  const { listeners } = loadWorker({ cacheName: c, caches });
+
+  const event = createEvent();
+  listeners.get('activate')(event);
+  await event.settle();
+
+  assert.deepEqual((await caches.keys()).sort(), [a, c].sort());
+});
+
+test('sella su propia activación para que la siguiente release sepa cuál era',  async () => {
+  const cacheName = cacheNameFor('nueva');
+  const caches = createCacheStorage([cacheName]);
+  const { listeners } = loadWorker({ cacheName, caches });
+  const event = createEvent();
+  listeners.get('activate')(event);
+  await event.settle();
+  const stamp = await (await caches.open(cacheName)).match('./__structureco-activated__');
+  assert.ok(Number(await stamp.text()) > 0);
 });
 
 test('la caché conservada sigue sirviendo los chunks de la release anterior', async () => {

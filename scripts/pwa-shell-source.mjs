@@ -30,6 +30,13 @@
  * busca en todas las cachés del origen y no sólo en la vigente. Una pestaña que
  * sobreviva a DOS actualizaciones sin recargar sí pierde su caché; ese es el
  * límite explícito de esta política.
+ *
+ * «La anterior» es la que se activó más recientemente, no la que se creó
+ * después. La diferencia importa en cuanto hay un rollback: volver a publicar
+ * una release reutiliza su caché, y `caches.open` no mueve un nombre existente
+ * al final de `keys()`. Tras A → B → rollback a A → C, el orden de creación
+ * sigue siendo [A, B] mientras que la release que corren las pestañas abiertas
+ * es A. Por eso cada caché anota su instante de activación.
  */
 
 /**
@@ -72,6 +79,12 @@ self.addEventListener('install',event=>event.waitUntil(
 // sweep the origin accumulates one full copy of the shell per installed version.
 // The immediately previous release is deliberately kept alive: see the module
 // JSDoc in scripts/pwa-shell-source.mjs for why deleting it breaks open tabs.
+// Each cache records WHEN it was activated, because creation order is not the
+// same thing. Rolling a release back reuses its existing cache: caches.open()
+// does not move an existing name to the end of keys(). After A -> B -> rollback
+// to A -> C, keys() still reads [A, B] while the release the open tabs actually
+// run is A. Picking the last created would keep B and delete A, stranding them.
+const ACTIVATED_AT='./__structureco-activated__';
 self.addEventListener('activate',event=>event.waitUntil(
   caches.keys()
     .then(names=>{
@@ -80,15 +93,19 @@ self.addEventListener('activate',event=>event.waitUntil(
       // taken for the previous release: doing so would delete the real one and
       // strand the tabs still running it, which is the whole point of retaining one.
       return Promise.all(shells.map(name=>caches.open(name)
-        .then(cache=>cache.keys())
-        .then(entries=>({name:name,filled:entries.length>0}))));
+        .then(cache=>Promise.all([cache.keys(),cache.match(ACTIVATED_AT)]))
+        .then(([entries,stamp])=>Promise.resolve(stamp?stamp.text():'0')
+          .then(text=>({name:name,filled:entries.length>0,activatedAt:Number(text)||0})))));
     })
     .then(inspected=>{
-      // keys() resolves in creation order, so the last filled entry is the
-      // previous COMPLETE release.
-      const keep=inspected.filter(entry=>entry.filled).pop();
+      // The previous release is the one activated most recently. Ties — every
+      // cache from before this worker shipped carries no stamp — fall back to
+      // creation order, which is the best guess available for them.
+      const keep=inspected.filter(entry=>entry.filled)
+        .reduce((best,entry)=>!best||entry.activatedAt>=best.activatedAt?entry:best,null);
       return Promise.all(inspected.filter(entry=>entry!==keep).map(entry=>caches.delete(entry.name)));
     })
+    .then(()=>caches.open(CACHE_NAME).then(cache=>cache.put(ACTIVATED_AT,new Response(String(Date.now())))))
     .then(()=>self.clients.claim())
 ));
 self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});
