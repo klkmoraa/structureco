@@ -50,8 +50,24 @@ jobs:
       - name: Frontera matemática protegida
         run: npm run verify:protected
 
+      - name: Contrato del service worker
+        run: npm run verify:pwa
+
+      - name: Catálogo de traducción sin claves muertas
+        run: npm run verify:i18n
+
       - name: Pruebas deterministas
         run: npm test
+
+      # `npm test` ya cubre las pruebas unitarias de Space 3D; lo que faltaba en
+      # el gate era la política de capacidad y el contrato de los 80 PNG
+      # estructurales, que hasta ahora sólo se ejecutaban a mano. Entre los dos
+      # añaden ~21 s a un gate con techo de 15 min.
+      - name: Capacidad de Space 3D
+        run: npm run verify:space3d
+
+      - name: Contrato de assets estructurales
+        run: npm run verify:structural-assets
 
       - name: Build de producción
         run: npm run build

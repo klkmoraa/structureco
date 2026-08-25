@@ -1538,21 +1538,47 @@ export const analyzeProject = (
     const b = Array(naug).fill(0);
     for (let i = 0; i < ndof; i += 1) {
       b[i] = F[i];
-      for (let j = 0; j < ndof; j += 1) A[i][j] = K[i][j];
+      const source = K[i];
+      const target = A[i];
+      for (let j = 0; j < ndof; j += 1) target[j] = source[j];
     }
     C.forEach((row, r) => {
       b[ndof + r] = constraintDefinitions[r].value;
+      const multiplierRow = A[ndof + r];
       for (let j = 0; j < ndof; j += 1) {
         A[j][ndof + r] = row[j];
-        A[ndof + r][j] = row[j];
+        multiplierRow[j] = row[j];
       }
     });
 
     // Symmetric diagonal equilibration preserves the symmetry of the saddle-point
     // system while reducing contrasts between translations, rotations and multipliers.
     // With x = D y: A x = b -> D A D y = D b.
-    const diagonalScale = A.map((row) => 1 / Math.sqrt(Math.max(...row.map(Math.abs), Number.MIN_VALUE)));
-    const scaledA = A.map((row, i) => row.map((value, j) => value * diagonalScale[i] * diagonalScale[j]));
+    //
+    // El escalado se aplica sobre `A` en vez de materializar una segunda matriz
+    // `naug x naug`: cada celda depende sólo de sí misma y de las dos escalas de
+    // su fila y su columna, así que hacerlo en el sitio produce exactamente los
+    // mismos productos en el mismo orden. `A` sin escalar no se vuelve a leer
+    // —K conserva la rigidez original para KU, equilibrio y la traza educativa—
+    // y CRI-25 midió que a 1000 miembros el ensamblado denso, no la
+    // factorización, es el 58.8 % del análisis y ~465 MiB de heap: una matriz
+    // densa menos viva a la vez es memoria y una pasada completa menos.
+    // `Math.max` acumulado reproduce el `Math.max(...row.map(Math.abs))`
+    // anterior valor a valor, NaN incluido, sin asignar una fila por fila ni
+    // depender del límite de argumentos del operador de propagación.
+    const diagonalScale = new Array<number>(naug);
+    for (let i = 0; i < naug; i += 1) {
+      const row = A[i];
+      let largest = Number.MIN_VALUE;
+      for (let j = 0; j < naug; j += 1) largest = Math.max(largest, Math.abs(row[j]));
+      diagonalScale[i] = 1 / Math.sqrt(largest);
+    }
+    const scaledA = A;
+    for (let i = 0; i < naug; i += 1) {
+      const row = scaledA[i];
+      const scaleI = diagonalScale[i];
+      for (let j = 0; j < naug; j += 1) row[j] = row[j] * scaleI * diagonalScale[j];
+    }
     const scaledB = b.map((value, i) => value * diagonalScale[i]);
     profileEnd('assembly', assemblyStart);
     let solved: ReturnType<typeof solveLinearSystem>;

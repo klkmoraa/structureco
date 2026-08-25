@@ -351,6 +351,10 @@ describe('CRI-105 · hundimiento y reduced-motion', () => {
 
   it('retira el hundimiento —y sólo el hundimiento— con reduced-motion', () => {
     expect(reducedMotionTokens.get('--sc-clay-press-transform')).toBe('none');
+    // La variante sin `scale` existe por CRI-120 (objetivo táctil de 44px) y es
+    // el otro token que un estado pulsado puede consumir; si no se anulara
+    // aquí, sería la misma fuga que persigue la prueba siguiente.
+    expect(reducedMotionTokens.get('--sc-clay-press-transform-flat')).toBe('none');
     // El relieve no se apaga: ningún token de materia se neutraliza aquí.
     for (const [name] of reducedMotionTokens) {
       expect(name.startsWith('--sc-shadow-'), `${name} no puede desaparecer con reduced-motion`).toBe(false);
@@ -373,7 +377,7 @@ describe('CRI-105 · hundimiento y reduced-motion', () => {
         // Un `:hover` que además filtra por estado elegido no es un pulsado.
         if (selector.includes(':hover')) continue;
         const declaration = body.match(/transform\s*:\s*([^;}]+)/)?.[1]?.trim() ?? '';
-        if (/var\(--sc-clay-press-transform\)/.test(declaration)) continue;
+        if (/var\(--sc-clay-press-transform(-flat)?\)/.test(declaration)) continue;
         if (declaration === 'none') continue;
         // Geometría, no hundimiento: `translateX` mueve el pulgar de un
         // interruptor y `scaleX` estira el subrayado de una pestaña hasta su

@@ -1227,11 +1227,14 @@
 
   /* CRI-120 · el estado hundido usa scale(.98), que reduce visualmente el
      target activo de 44px a 43px en WebKit. Conservamos el desplazamiento de
-     presión, pero no reducimos el área tocable. */
+     presión, pero no reducimos el área tocable. El desplazamiento viaja en su
+     propio token —no en un literal— para que `prefers-reduced-motion` lo siga
+     alcanzando: un `transform` literal en un estado pulsado sobrevive a la
+     preferencia y es exactamente lo que prohíbe CRI-105. */
   @media (pointer:coarse) {
     .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button:is(.active,.is-active),
     .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button:active:not(:disabled) {
-      transform:translateY(2px);
+      transform:var(--sc-clay-press-transform-flat);
     }
   }
 

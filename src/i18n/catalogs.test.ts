@@ -32,7 +32,11 @@ describe('i18n catalogs', () => {
   });
 
   it('interpolates named values without evaluating input', () => {
-    const key = 'app.name';
-    expect(translate('en', key, { unused: '<script>' })).toBe('structureCo');
+    // La fixture se deriva del propio catálogo en vez de fijar una clave del
+    // producto: citarla aquí la haría parecer viva para `verify:i18n` aunque
+    // ninguna superficie la use, que es como `app.name` sobrevivió hasta ahora.
+    const key = (Object.keys(es) as TranslationKey[]).find((candidate) => !catalogs.en[candidate].includes('{'));
+    expect(key, 'el catálogo debe declarar al menos una clave sin interpolación').toBeDefined();
+    expect(translate('en', key!, { unused: '<script>' })).toBe(catalogs.en[key!]);
   });
 });

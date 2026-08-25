@@ -3,6 +3,7 @@ import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { cacheNameFor, createServiceWorkerSource } from './scripts/pwa-shell-source.mjs';
 
 // Provenance stamped on exported documents must come from the package, never from a
 // literal someone has to remember to bump.
@@ -29,31 +30,7 @@ const pwaShellPlugin = () => ({
     }
     const release = digest.digest('hex').slice(0, 16);
     const assets = files.map((file) => `./${file}`);
-    const source = `const CACHE_NAME=${JSON.stringify(`structureco-shell-${release}`)};
-const SHELL=${JSON.stringify(assets)};
-// An existing active worker means this is an update, not a first install. Activate
-// updates immediately so an old PWA client cannot keep serving an earlier CSS/JS
-// shell indefinitely. The first install still waits normally and avoids a reload
-// while the app is being added to the home screen.
-const HAS_ACTIVE_WORKER=Boolean(self.registration.active);
-self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>HAS_ACTIVE_WORKER?self.skipWaiting():undefined)));
-self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
-self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting();});
-self.addEventListener('fetch',event=>{
-  const request=event.request;
-  if(request.method!=='GET'||new URL(request.url).origin!==self.location.origin)return;
-  if(request.mode==='navigate'){
-    event.respondWith(fetch(request).then(response=>{
-      if(response.ok)event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.put('./index.html',response.clone())));
-      return response;
-    }).catch(async()=>await caches.match('./index.html',{ignoreVary:true})||await caches.match('./',{ignoreVary:true})));
-    return;
-  }
-  event.respondWith(caches.match(request,{ignoreVary:true}).then(cached=>cached||fetch(request).then(response=>{
-    if(response.ok)event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.put(request,response.clone())));
-    return response;
-  })));
-});`;
+    const source = createServiceWorkerSource({ cacheName: cacheNameFor(release), assets });
     await writeFile(new URL('./dist/sw.js', import.meta.url), source, 'utf8');
   },
 });
