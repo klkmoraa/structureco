@@ -22,12 +22,19 @@ import process from 'node:process';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const CATALOGS = path.join('src', 'i18n', 'catalogs.ts');
+
 /**
- * Las fixtures de la prueba del propio detector citan prefijos (`role.`,
- * `generator.`) como datos. Si se escanearan, un espacio de nombres muerto
- * podría mantenerse vivo con sólo nombrarlo aquí.
+ * Las pruebas no cuentan como consumidor.
+ *
+ * El contrato del gate es alcanzabilidad **desde el producto**: una clave que
+ * sólo cita una prueba se sigue enviando en el chunk de entrada a cada usuario
+ * sin que nada la muestre. `app.name` vivía exactamente así, sostenida por una
+ * fixture de `catalogs.test.ts`. Excluirlas cubre también las fixtures de la
+ * prueba de este mismo detector, que citan prefijos (`role.`, `generator.`)
+ * como datos y mantendrían vivo cualquier espacio de nombres con sólo
+ * nombrarlo.
  */
-const SELF_TEST = path.join('scripts', 'check-i18n-usage.test.mjs');
+export const IS_TEST = /\.(test|spec)\.[cm]?[jt]sx?$/;
 const SCANNED_ROOTS = ['src', 'scripts', 'qa.mjs', 'qa-webkit.mjs'];
 const SCANNED_EXTENSIONS = /\.(ts|tsx|mjs|js)$/;
 
@@ -89,7 +96,7 @@ const main = async () => {
     process.exit(1);
   }
 
-  const files = (await Promise.all(SCANNED_ROOTS.map(collect))).flat().filter((file) => file !== CATALOGS && file !== SELF_TEST);
+  const files = (await Promise.all(SCANNED_ROOTS.map(collect))).flat().filter((file) => file !== CATALOGS && !IS_TEST.test(file));
   const sources = await Promise.all(files.map((file) => readFile(path.join(ROOT, file), 'utf8')));
   const haystack = sources.join('\n');
   const prefixes = [...new Set(sources.flatMap(dynamicPrefixes))];

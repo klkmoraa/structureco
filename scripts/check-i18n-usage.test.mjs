@@ -9,9 +9,19 @@
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { declaredKeys, dynamicPrefixes } from './check-i18n-usage.mjs';
+import { IS_TEST, declaredKeys, dynamicPrefixes } from './check-i18n-usage.mjs';
 
 const withI18n = (body) => `import { useI18n } from '../../i18n/useI18n';\n${body}`;
+
+test('el pajar excluye archivos de prueba', () => {
+  // El contrato es alcanzabilidad desde el producto: una clave que sólo cita
+  // una prueba se sigue enviando a cada usuario sin que nada la muestre.
+  assert.ok(IS_TEST.test('src/i18n/catalogs.test.ts'));
+  assert.ok(IS_TEST.test('scripts/check-i18n-usage.test.mjs'));
+  assert.ok(IS_TEST.test('src/features/canvas/canvas.spec.tsx'));
+  assert.ok(!IS_TEST.test('src/features/topbar/TopBar.tsx'));
+  assert.ok(!IS_TEST.test('src/data/latest.ts'));
+});
 
 test('lee las claves del catálogo español y se detiene antes del inglés', () => {
   const source = [

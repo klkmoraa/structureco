@@ -1,5 +1,4 @@
 export const es = {
-  'app.name': 'structureCo',
   'app.professionalNote': 'structureCo es una herramienta educativa y de apoyo. Verifica datos, unidades y resultados; no sustituye la revisión de un profesional responsable.',
   'welcome.import': 'Importar archivo',
   'welcome.importDescription': 'Revisa JSON, PDF o expedientes .structureco',
@@ -2052,7 +2051,6 @@ export type Language = 'es' | 'en';
 export type Catalog = Record<TranslationKey, string>;
 
 export const en: Catalog = {
-  'app.name': 'structureCo',
   'app.professionalNote': 'structureCo is an educational support tool. Verify inputs, units, and results; it does not replace review by the responsible professional.',
   'welcome.import': 'Import file',
   'welcome.importDescription': 'Review JSON, PDF, or .structureco packages',

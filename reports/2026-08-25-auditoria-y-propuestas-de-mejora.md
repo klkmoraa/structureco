@@ -136,16 +136,18 @@ está en la frontera protegida; el cambio está autorizado explícitamente.
 interpolen igual. Faltaba la dirección contraria —que lo declarado tenga
 todavía un consumidor— y sin ella el catálogo sólo podía crecer.
 
-`scripts/check-i18n-usage.mjs` recorre 593 archivos y reporta las claves cuyo
+`scripts/check-i18n-usage.mjs` recorre los 329 archivos de producción —las
+pruebas no cuentan como consumidor: una clave que sólo cita un test se sigue
+enviando a cada usuario sin que nada la muestre— y reporta las claves cuyo
 texto literal no aparece en ninguno y que ningún prefijo dinámico
 (`` t(`role.${role}`) ``) cubre. La segunda regla es deliberadamente generosa:
 un falso positivo borra una etiqueta viva y la deja en blanco en producción,
 un falso negativo sólo conserva unos bytes.
 
-Con ese criterio había **142 claves muertas de 2174 (6.5 %)**, heredadas de
+Con ese criterio había **143 claves muertas de 2174 (6.6 %)**, heredadas de
 superficies rehechas: 56 de la bienvenida anterior, 24 de Resultados, 23 de
 Space 3D, 13 del Inspector. Retiradas de ambos catálogos, el chunk de entrada
-baja de 1 228.55 kB a 1 215.25 kB (−13.30 kB; −3.51 kB gzip).
+baja de 1 228.55 kB a 1 215.20 kB (−13.35 kB; −3.53 kB gzip).
 
 Las tres últimas —`project.openExamples`, `project.importError` y
 `analysis.statusOpenIssues`— sólo aparecieron tras acotar el detector en la
@@ -158,6 +160,11 @@ contraria —restringirlo a las llamadas a `t`— habría marcado como muertas l
 194 claves `generator.*`, que se alcanzan a través de tipos y nunca como
 argumento literal. `scripts/check-i18n-usage.test.mjs` fija las dos
 direcciones, porque el agujero existía justamente por no tener prueba.
+
+La última, `app.name`, salió al excluir las pruebas del pajar: la sostenía una
+fixture de `catalogs.test.ts` y ninguna superficie la usaba. Esa prueba deriva
+ahora su fixture del propio catálogo, para no volver a mantener viva una clave
+sólo por citarla.
 
 ### 1.6 Dos gates que existían y no corrían
 
@@ -230,7 +237,7 @@ conscientemente una decisión registrada, y eso te toca a ti.
 
 **Evidencia.** `es` y `en` se declaran en el mismo módulo y `translate` los
 indexa de forma síncrona, así que ambos catálogos entran en el chunk eager.
-Calibrado con la medición de 1.5 (13.30 kB crudos y 3.51 kB gzip por 284
+Calibrado con la medición de 1.5 (13.35 kB crudos y 3.53 kB gzip por 286
 entradas), el idioma que el usuario **no** está usando pesa del orden de 25 kB
 gzip: ~6 % de los 404.7 kB de carga inicial.
 
