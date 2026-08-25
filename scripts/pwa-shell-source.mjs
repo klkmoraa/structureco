@@ -84,6 +84,10 @@ self.addEventListener('install',event=>event.waitUntil(
 // does not move an existing name to the end of keys(). After A -> B -> rollback
 // to A -> C, keys() still reads [A, B] while the release the open tabs actually
 // run is A. Picking the last created would keep B and delete A, stranding them.
+// During the rollout of the stamp itself the same trap has a second shape: a
+// rollback to a PRE-stamp release runs a worker that cannot stamp, so that cache
+// stays unstamped while a newer one outranks it. Unstamped caches therefore keep
+// one slot of their own until none are left.
 const ACTIVATED_AT='./__structureco-activated__';
 self.addEventListener('activate',event=>event.waitUntil(
   caches.keys()
@@ -98,12 +102,19 @@ self.addEventListener('activate',event=>event.waitUntil(
           .then(text=>({name:name,filled:entries.length>0,activatedAt:Number(text)||0})))));
     })
     .then(inspected=>{
-      // The previous release is the one activated most recently. Ties — every
-      // cache from before this worker shipped carries no stamp — fall back to
-      // creation order, which is the best guess available for them.
-      const keep=inspected.filter(entry=>entry.filled)
+      const filled=inspected.filter(entry=>entry.filled);
+      // The previous release is the one activated most recently, among those that
+      // carry a stamp.
+      const stamped=filled.filter(entry=>entry.activatedAt>0)
         .reduce((best,entry)=>!best||entry.activatedAt>=best.activatedAt?entry:best,null);
-      return Promise.all(inspected.filter(entry=>entry!==keep).map(entry=>caches.delete(entry.name)));
+      // An unstamped cache predates this scheme, and during the rollout it can be
+      // the one the open tabs are running: rolling back to such a release runs a
+      // worker that cannot stamp anything, so it stays at zero while a NEWER
+      // stamped cache outranks it. Keep the last created of them until they are
+      // gone — three generations at most while migrating, two from then on.
+      const legacy=filled.filter(entry=>entry.activatedAt===0).pop();
+      const keep=[stamped,legacy].filter(Boolean);
+      return Promise.all(inspected.filter(entry=>keep.indexOf(entry)<0).map(entry=>caches.delete(entry.name)));
     })
     .then(()=>caches.open(CACHE_NAME).then(cache=>cache.put(ACTIVATED_AT,new Response(String(Date.now())))))
     .then(()=>self.clients.claim())

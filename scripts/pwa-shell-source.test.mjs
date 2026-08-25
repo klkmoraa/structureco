@@ -148,6 +148,44 @@ test('tras un rollback conserva la release realmente activa, no la creada despu�
   assert.deepEqual((await caches.keys()).sort(), [a, c].sort());
 });
 
+test('durante la migración conserva la caché sin sello que puede ser la activa', async () => {
+  // El caso vive sólo en el estreno de este esquema: A es de un worker anterior
+  // al sello, B se sella al actualizar sobre ella, y el rollback a A corre otra
+  // vez el worker viejo, que no sabe sellar nada. A se queda a cero mientras B
+  // luce un sello más nuevo, así que elegir «el sello más reciente» conservaría
+  // B y borraría A — la release que corren de verdad las pestañas abiertas.
+  const a = cacheNameFor('A-heredada');
+  const b = cacheNameFor('B');
+  const c = cacheNameFor('C');
+  const caches = createCacheStorage([a, b, c]);
+  (await caches.open(b)).stamp(1_000); // A no puede sellarse: su worker es anterior
+  const { listeners } = loadWorker({ cacheName: c, caches });
+
+  const event = createEvent();
+  listeners.get('activate')(event);
+  await event.settle();
+
+  assert.deepEqual((await caches.keys()).sort(), [a, b, c].sort());
+});
+
+test('las cachés sin sello ocupan una sola plaza, no una cada una', async () => {
+  // El respaldo de migración no puede convertirse en la fuga que el barrido
+  // existe para cerrar: de las heredadas se conserva la última creada y nada más.
+  const vieja = cacheNameFor('heredada-vieja');
+  const reciente = cacheNameFor('heredada-reciente');
+  const b = cacheNameFor('B');
+  const c = cacheNameFor('C');
+  const caches = createCacheStorage([vieja, reciente, b, c]);
+  (await caches.open(b)).stamp(1_000);
+  const { listeners } = loadWorker({ cacheName: c, caches });
+
+  const event = createEvent();
+  listeners.get('activate')(event);
+  await event.settle();
+
+  assert.deepEqual((await caches.keys()).sort(), [reciente, b, c].sort());
+});
+
 test('sella su propia activación para que la siguiente release sepa cuál era',  async () => {
   const cacheName = cacheNameFor('nueva');
   const caches = createCacheStorage([cacheName]);
