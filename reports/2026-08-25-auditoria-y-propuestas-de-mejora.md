@@ -157,10 +157,10 @@ texto literal no aparece en ninguno y que ningún prefijo dinámico
 un falso positivo borra una etiqueta viva y la deja en blanco en producción,
 un falso negativo sólo conserva unos bytes.
 
-Con ese criterio había **149 claves muertas de 2174 (6.9 %)**, heredadas de
+Con ese criterio había **159 claves muertas de 2174 (7.3 %)**, heredadas de
 superficies rehechas: 56 de la bienvenida anterior, 24 de Resultados, 23 de
 Space 3D, 13 del Inspector. Retiradas de ambos catálogos, el chunk de entrada
-baja de 1 228.55 kB a 1 214.77 kB (−13.78 kB; −3.61 kB gzip).
+baja de 1 228.55 kB a 1 213.67 kB (−14.88 kB; −3.85 kB gzip).
 
 Las tres últimas —`project.openExamples`, `project.importError` y
 `analysis.statusOpenIssues`— sólo aparecieron tras acotar el detector en la
@@ -187,6 +187,20 @@ este árbol y da 725 falsos positivos, así que la frontera es el límite. Y la
 maquinaria del gate quedó fuera del pajar: este mismo módulo cita claves reales
 en sus comentarios, y mientras se escribía la corrección eso mantuvo vivas dos
 de las seis.
+
+**El límite del gate, y quién lo respalda.** Esto es una heurística textual, no
+un análisis de tipos, y no puede ser completa. Reconoce la clave literal, el
+prefijo terminal de `` t(`x.${y}`) ``, el prefijo de tipo que sólo antepone
+—`generator.` se **quita** y la llamada real usa la clave corta, así que dar por
+viva la familia entera aceptaba 94 claves sin comprobar ninguna— y el sufijo
+literal de `` t(`${plural}One`) ``. Cualquier otra forma de componer una clave
+se le escapa, y cuando se le escapa borra una etiqueta viva.
+
+Esa regla del sufijo existe porque pasó: el detector dio por muertas siete
+claves `…One` del resumen de edición múltiple y **`npm run typecheck` lo
+rechazó**. `TranslationKey` se deriva del catálogo, así que retirar una clave
+que alguna llamada todavía pide es un error de tipos, no un fallo silencioso.
+El typecheck es la autoridad de este gate; el detector sólo propone.
 
 ### 1.6 Dos gates que existían y no corrían
 
@@ -259,7 +273,7 @@ conscientemente una decisión registrada, y eso te toca a ti.
 
 **Evidencia.** `es` y `en` se declaran en el mismo módulo y `translate` los
 indexa de forma síncrona, así que ambos catálogos entran en el chunk eager.
-Calibrado con la medición de 1.5 (13.78 kB crudos y 3.61 kB gzip por 298
+Calibrado con la medición de 1.5 (14.88 kB crudos y 3.85 kB gzip por 318
 entradas), el idioma que el usuario **no** está usando pesa del orden de 25 kB
 gzip: ~6 % de los 404.7 kB de carga inicial.
 

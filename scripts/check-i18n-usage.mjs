@@ -10,9 +10,24 @@
  * contraria —que lo declarado siga teniendo un consumidor—.
  *
  * El análisis es deliberadamente conservador: una clave sólo se reporta si su
- * texto literal no aparece en ningún archivo Y ningún prefijo dinámico la
- * cubre. Un falso positivo borraría una etiqueta viva y la dejaría en blanco
+ * texto literal no aparece en ningún archivo Y ninguna forma dinámica la
+ * alcanza. Un falso positivo borraría una etiqueta viva y la dejaría en blanco
  * en producción; un falso negativo sólo conserva unos bytes de más.
+ *
+ * ## Su límite, y cuál es el respaldo
+ *
+ * Esto es una heurística textual, no un análisis de tipos, y no puede ser
+ * completa: reconoce la clave literal, el prefijo terminal de `` t(`x.${y}`) ``,
+ * el prefijo de tipo que sólo antepone, y el sufijo literal de
+ * `` t(`${x}One`) ``. Cualquier otra forma de componer una clave se le escapa,
+ * y cuando se le escapa **borra una etiqueta viva**.
+ *
+ * El respaldo que sí es sólido es `npm run typecheck`: `TranslationKey` se
+ * deriva del catálogo, así que retirar una clave que alguna llamada todavía
+ * pide es un error de tipos, no un fallo silencioso. Ese respaldo ya actuó una
+ * vez —las siete claves `…One` del resumen de edición múltiple— y por eso la
+ * regla del sufijo existe. Antes de retirar lo que este gate reporte, ejecuta
+ * el typecheck: él es la autoridad y esto sólo el detector.
  *
  * Uso: node scripts/check-i18n-usage.mjs [--json]
  */
@@ -83,21 +98,64 @@ const PARTICIPATES_IN_TRANSLATION = /\buseI18n\b|\busePhase2I18n\b|\bTranslation
  * `` t(`role.${role}`) ``. Cualquier clave que empiece por uno de ellos se
  * considera alcanzable: el script no intenta resolver la expresión.
  *
- * No basta con exigir que el template sea el argumento literal de `t(`: hay
- * claves que se alcanzan indirectamente a través de un tipo —el
- * `` Record<GeneratorSpacingField, `spacing.${…}`> `` del generador, o el
- * `` Key extends `generator.${…}` `` de su copy— y restringirlo a la llamada
- * directa marcaría como muertas 194 claves vivas. La regla es la contraria:
- * se descarta el template que sea argumento de **otra** llamada, porque eso ya
- * no es una clave (`` throw new Error(`properties.${key} …`) ``).
+ * Se distinguen dos clases, porque no significan lo mismo:
+ *
+ * - **Terminal** — el template es el argumento de `` t(`option.${id}.${value}`) ``.
+ *   Todo lo que sigue al prefijo se interpola en tiempo de ejecución, así que
+ *   el espacio de nombres entero es alcanzable y no hay más que comprobar.
+ * - **De tipo** — el template vive en una posición de tipo, como el
+ *   `` Key extends `generator.${infer Rest}` `` del copy del generador o el
+ *   `` Record<GeneratorSpacingField, `spacing.${…}`> `` de su panel. Ahí el
+ *   prefijo sólo se **antepone**: las llamadas reales usan la clave corta
+ *   (`t('section.placement')`), así que dar por viva toda la familia
+ *   `generator.*` acepta 94 claves sin comprobar ninguna. Se quita el prefijo
+ *   y se vuelve a comprobar lo que queda.
+ *
+ * Un template que sea argumento de **otra** llamada no cuenta en ninguna clase,
+ * porque eso ya no es una clave (`` throw new Error(`properties.${key} …`) ``).
  */
 export const dynamicPrefixes = (source) => {
-  if (!PARTICIPATES_IN_TRANSLATION.test(source)) return [];
-  return [...source.matchAll(/(\w*)\(\s*`([A-Za-z0-9_.]*?)\$\{|`([A-Za-z0-9_.]*?)\$\{/g)]
-    .filter((match) => match[1] === undefined || match[1] === '' || match[1] === 't')
-    .map((match) => match[2] ?? match[3])
-    .filter((prefix) => prefix?.includes('.'));
+  const terminal = [];
+  const stripping = [];
+  const suffixes = [];
+  if (!PARTICIPATES_IN_TRANSLATION.test(source)) return { terminal, stripping, suffixes };
+  for (const match of source.matchAll(/(\w*)\(\s*`([A-Za-z0-9_.]*?)\$\{|`([A-Za-z0-9_.]*?)\$\{/g)) {
+    const prefix = match[2] ?? match[3];
+    if (!prefix?.includes('.')) continue;
+    if (match[1] === 't') terminal.push(prefix);
+    else if (match[1] === undefined || match[1] === '') stripping.push(prefix);
+  }
+  // `` t(`${plural}One`) `` interpola al principio y concatena un sufijo literal:
+  // la clave `summary.membersOne` no aparece nunca entera y su prefijo tampoco es
+  // constante. Se recoge el sufijo para poder recortarlo y comprobar el resto.
+  for (const match of source.matchAll(/\bt\(\s*`\$\{[^`]*?\}([A-Za-z][A-Za-z0-9_]*)`/g)) suffixes.push(match[1]);
+  return { terminal, stripping, suffixes };
 };
+
+/**
+ * Una clave es alcanzable si aparece completa, si cae bajo un prefijo terminal,
+ * o si un prefijo de tipo la acorta hasta algo que sí lo es.
+ *
+ * La recursión existe porque una clave puede pasar por dos prefijos:
+ * `bulk.option.member.type.frame` pierde `bulk.` en el tipo del módulo de copy y
+ * lo que queda, `option.member.type.frame`, cae bajo el `` t(`option.${id}.${value}`) ``
+ * de `bulkEditPresentation.ts`. El tope de profundidad sólo evita que un prefijo
+ * degenerado haga girar la búsqueda.
+ */
+export const isReachable = (haystack, key, prefixes, depth = 0) => {
+  if (isReferenced(haystack, key)) return true;
+  if (prefixes.terminal.some((prefix) => key.startsWith(prefix))) return true;
+  if (depth >= MAX_PREFIX_DEPTH) return false;
+  if (prefixes.stripping.some((prefix) => (
+    key.startsWith(prefix) && prefix !== key && isReachable(haystack, key.slice(prefix.length), prefixes, depth + 1)
+  ))) return true;
+  return (prefixes.suffixes ?? []).some((suffix) => (
+    key.endsWith(suffix) && key !== suffix && isReachable(haystack, key.slice(0, -suffix.length), prefixes, depth + 1)
+  ));
+};
+
+/** Dos saltos cubren el caso real (`bulk.` y luego `option.`); el tercero es holgura. */
+const MAX_PREFIX_DEPTH = 3;
 
 /**
  * Una clave está referenciada sólo si aparece completa, no como prefijo de otra.
@@ -130,9 +188,14 @@ const main = async () => {
   const files = (await Promise.all(SCANNED_ROOTS.map(collect))).flat().filter((file) => file !== CATALOGS && file !== SELF && !IS_TEST.test(file));
   const sources = await Promise.all(files.map((file) => readFile(path.join(ROOT, file), 'utf8')));
   const haystack = sources.join('\n');
-  const prefixes = [...new Set(sources.flatMap(dynamicPrefixes))];
+  const collected = sources.map(dynamicPrefixes);
+  const prefixes = {
+    terminal: [...new Set(collected.flatMap((entry) => entry.terminal))],
+    stripping: [...new Set(collected.flatMap((entry) => entry.stripping))],
+    suffixes: [...new Set(collected.flatMap((entry) => entry.suffixes))],
+  };
 
-  const orphans = keys.filter((key) => !isReferenced(haystack, key) && !prefixes.some((prefix) => key.startsWith(prefix)));
+  const orphans = keys.filter((key) => !isReachable(haystack, key, prefixes));
 
   if (process.argv.includes('--json')) {
     console.log(JSON.stringify({ declared: keys.length, scannedFiles: files.length, dynamicPrefixes: prefixes, orphans }, null, 2));
@@ -147,7 +210,7 @@ const main = async () => {
     process.exit(1);
   }
 
-  console.log(`Catálogo i18n: ${keys.length} clave(s) declaradas, todas alcanzables desde ${files.length} archivo(s); ${prefixes.length} prefijo(s) dinámico(s) reconocido(s).`);
+  console.log(`Catálogo i18n: ${keys.length} clave(s) declaradas, todas alcanzables desde ${files.length} archivo(s); ${prefixes.terminal.length} prefijo(s) terminal(es), ${prefixes.stripping.length} de tipo y ${prefixes.suffixes.length} sufijo(s).`);
 };
 
 if (process.argv[1] && import.meta.url.endsWith(path.basename(process.argv[1]))) await main();
