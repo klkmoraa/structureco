@@ -99,6 +99,30 @@ const acquireLock = () => {
 
 const releaseLock = () => rmSync(LOCK, { force: true });
 
+/**
+ * Qué decirle a quien se encuentra el lock tomado por un proceso vivo.
+ *
+ * `processAlive` comprueba que el PID exista, y eso NO demuestra que sea el
+ * nuestro: si una auditoría muere sin handler (SIGKILL, corte de luz) y el
+ * sistema reutiliza ese número antes del siguiente intento, el lock parece de
+ * una corrida viva y la reparación —que sólo actúa sobre un lock huérfano— no
+ * llega a ejecutarse. El catálogo se queda intercambiado mientras ese proceso
+ * ajeno viva.
+ *
+ * Distinguir los dos casos de verdad exige algo que el PID no da: leer el
+ * instante de arranque del dueño (`/proc/<pid>/stat`, que no existe fuera de
+ * Linux), renovar el lock con un latido y un umbral, o sostenerlo con un
+ * descriptor que el sistema suelte solo —que Node no expone sin dependencia—.
+ * Ninguna es un ajuste; todas son un diseño. Lo que sí se puede hacer sin
+ * ninguna de ellas es no afirmar lo que no se sabe y decir cómo salir.
+ */
+export const busyLockMessage = (owner, swapped) => {
+  const lines = [`Ya hay una auditoría en curso (PID ${owner}). Espera a que termine.`];
+  if (swapped) lines.push(`El catálogo está intercambiado ahora mismo; su copia intacta está en ${path.relative(ROOT, BACKUP)}.`);
+  lines.push(`Si no hay ninguna corriendo, ese PID se reutilizó tras una muerte sin limpieza: borra ${path.relative(ROOT, LOCK)} y vuelve a ejecutar para que repare el catálogo.`);
+  return lines.join('\n');
+};
+
 const restoreFromBackup = () => {
   if (!existsSync(BACKUP)) return false;
   copyFileSync(BACKUP, CATALOGS);
@@ -294,7 +318,7 @@ const audit = async () => {
 const main = async () => {
   const lock = acquireLock();
   if (!lock.ok && lock.owner !== null) {
-    console.error(`Ya hay una auditoría en curso (PID ${lock.owner}). Espera a que termine.`);
+    console.error(busyLockMessage(lock.owner, existsSync(BACKUP)));
     process.exitCode = 1;
     return;
   }

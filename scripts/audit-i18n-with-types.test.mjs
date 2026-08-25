@@ -16,7 +16,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import test from 'node:test';
-import { classifyCandidates, LOCK, swapCatalogForAudit, withLock } from './audit-i18n-with-types.mjs';
+import { busyLockMessage, classifyCandidates, LOCK, swapCatalogForAudit, withLock } from './audit-i18n-with-types.mjs';
 
 const CANDIDATES = ['bulk.summary.membersOne', 'bulk.scope.nodeOne', 'generator.section.geometry'];
 
@@ -124,4 +124,21 @@ test('la mutación del catálogo llega al disco antes de retornar', () => {
   assert.equal(readFileSync(file, 'utf8'), 'mutado');
   assert.equal(readFileSync(backup, 'utf8'), 'original');
   rmSync(dir, { recursive: true, force: true });
+});
+
+test('el aviso de lock ocupado no afirma lo que el PID no demuestra', () => {
+  // Un PID vivo no prueba que sea el nuestro: el sistema puede haberlo
+  // reutilizado tras una muerte sin limpieza, y entonces la reparación —que
+  // sólo actúa sobre un lock huérfano— nunca llega. El aviso tiene que decir
+  // cómo salir de ahí, no dejar a quien lo lee esperando a nadie.
+  const mensaje = busyLockMessage(4578, false);
+  assert.match(mensaje, /PID 4578/);
+  assert.match(mensaje, /se reutilizó/);
+  assert.match(mensaje, /\.catalogs\.audit-lock/);
+});
+
+test('el aviso nombra la copia cuando el catálogo está intercambiado', () => {
+  const mensaje = busyLockMessage(4578, true);
+  assert.match(mensaje, /intercambiado/);
+  assert.match(mensaje, /\.catalogs\.audit-backup/);
 });
