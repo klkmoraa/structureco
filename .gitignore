@@ -54,3 +54,8 @@ structureco-sites/
 structureCo/
 structureCo-contexto-total-autocontenido-*/
 structureCo-documentacion-integral-*/
+
+# Copia temporal que `npm run audit:i18n` deja mientras interroga al compilador.
+# Sólo existe durante esa ejecución; si aparece en un diff es que una corrida
+# murió sin poder restaurar, y la siguiente la usará para reparar el catálogo.
+src/i18n/.catalogs.audit-backup
