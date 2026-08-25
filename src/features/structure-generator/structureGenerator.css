@@ -299,6 +299,10 @@
     position:sticky;
     top:0;
     z-index:2;
+    /* Al combinar grid + flex + overflow, WebKit puede resolver la altura
+       intrínseca del carrusel sólo con su padding. La reserva explícita
+       contiene los botones de 66 px y evita que invadan los parámetros. */
+    min-block-size:78px;
     gap:7px;
     margin:0 -2px;
     padding:4px 2px 8px;
