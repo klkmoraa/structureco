@@ -27,9 +27,7 @@ export interface PwaUpdateController {
 // A changed script URL forces an already-installed PWA to check the current
 // worker even when the browser still has the previous registration snapshot.
 // Bump this token with a release that must invalidate an old mobile shell.
-// This token is intentionally renewed for visual releases: installed mobile
-// shells must revalidate the service worker instead of holding an old canvas.
-export const SERVICE_WORKER_URL = './sw.js?rev=2026-08-25-canvas-direct-diagrams';
+export const SERVICE_WORKER_URL = './sw.js?rev=2026-08-24-home-viewport';
 
 export const watchForPwaUpdates = async (
   container: ServiceWorkerContainerPort,

@@ -581,9 +581,9 @@
   }
   .sc-home-hero-asset {
     grid-row: 1;
-    min-height: 184px;
+    min-height: 226px;
     overflow: hidden;
-    padding: 8px 16px 0;
+    padding: 12px 18px 0;
   }
   .sc-home-hero-asset svg,
   .sc-home-hero-asset .three-structural-image {
@@ -592,44 +592,47 @@
     max-width: 100%;
     /* A definite box keeps WebKit from resolving the percentage height against
        the grid's intrinsic row and rendering the transparent PNG off-frame. */
-    height: clamp(152px, 47vw, 184px);
-    max-height: 184px;
+    height: clamp(180px, 56vw, 220px);
+    max-height: 220px;
     object-fit: contain;
     object-position: center;
   }
-  .sc-home-primary-actions { grid-row: 2; padding: 20px 18px; }
-  .sc-home-primary-actions h2 { font-size: clamp(28px, 8vw, 38px); }
-  .sc-home-primary-buttons { width: 100%; margin-top: 20px; grid-template-columns: 1fr 1fr; }
+  .sc-home-primary-actions { grid-row: 2; padding: 23px 18px 21px; }
+  .sc-home-primary-actions h2 { font-size: clamp(29px, 9vw, 42px); }
+  .sc-home-primary-buttons { width: 100%; margin-top: 22px; grid-template-columns: 1fr 1fr; }
   .sc-home-continue,
   .sc-home-new { min-height: 48px; padding-inline: 10px; font-size: 11px; }
   .sc-home-quick-row {
-    margin-inline: 0;
-    padding-inline: 0;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-inline: -14px;
+    padding-inline: 14px;
+    display: flex;
     gap: 9px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
   }
-  .sc-home-quick-row > button {
-    min-width: 0;
-    min-height: 60px;
-    padding-inline: 10px;
-    justify-content: center;
-  }
-  .sc-home .sc-home-recents .project-hub--recent .project-hub__list {
-    margin-inline: 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: 1fr;
+  .sc-home-quick-row::-webkit-scrollbar { display: none; }
+  .sc-home-quick-row > button { min-width: 142px; min-height: 58px; scroll-snap-align: start; }
+  .sc-home-recents .project-hub__list {
+    margin-inline: -14px;
+    padding: 0 14px 8px;
+    display: flex;
     gap: 11px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
   }
-  .sc-home .sc-home-recents .project-hub--recent .project-hub__row { min-width: 0; width: 100%; }
+  .sc-home-recents .project-hub__list::-webkit-scrollbar { display: none; }
+  .sc-home-recents .project-hub__row { min-width: min(82vw, 310px); scroll-snap-align: start; }
   .sc-home-template-grid {
-    margin-inline: 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: 1fr;
+    margin-inline: -14px;
+    padding: 0 14px 9px;
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
   }
-  .sc-home-template-grid > button { min-width: 0; width: 100%; }
+  .sc-home-template-grid > button { min-width: min(82vw, 310px); scroll-snap-align: start; }
   .sc-home-import-grid { grid-template-columns: 1fr; }
   .sc-home-focused { min-height: calc(100dvh - 168px); padding: 30px 22px; border-radius: 18px; }
   .sc-home-space { min-height: 0; grid-template-columns: 1fr; border-radius: 18px; }
@@ -647,22 +650,25 @@
   .sc-home-classroom-hero > img,
   .sc-home-classroom-hero > svg { grid-row: 1; min-height: 225px; height: 225px; padding: 10px 14px 0; }
   .sc-home-classroom-cases > div {
-    margin-inline: 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: 1fr;
+    margin-inline: -14px;
+    padding: 0 14px 8px;
+    display: flex;
     gap: 10px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
   }
-  .sc-home-classroom-cases button { width: 100%; min-height: 142px; grid-template-columns: 105px minmax(0, 1fr) auto; }
+  .sc-home-classroom-cases > div::-webkit-scrollbar { display: none; }
+  .sc-home-classroom-cases button { flex: 0 0 min(84vw, 320px); min-height: 142px; grid-template-columns: 105px minmax(0, 1fr) auto; scroll-snap-align: start; }
   .sc-home-classroom-cases button > img,
   .sc-home-classroom-cases button > svg:first-child { width: 105px; height: 116px; }
   .sc-home-view > header h2,
   .sc-home-focused > header h2 { font-size: 30px; }
 }
 
-@media (max-width: 340px) {
+@media (max-width: 390px) {
   .sc-home-primary-buttons { grid-template-columns: 1fr; }
-  .sc-home-quick-row { grid-template-columns: 1fr; }
+  .sc-home-hero-asset { min-height: 205px; }
   .sc-home-wordmark strong { font-size: 16px; }
 }
 

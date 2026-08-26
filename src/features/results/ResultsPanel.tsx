@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from 'react';
-import { AlertCircle, ChevronUp, CircleDotDashed, GripHorizontal, MoreHorizontal, X } from 'lucide-react';
-import { useProject } from '../../store/ProjectContext';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { AlertCircle, ChevronUp, CircleDotDashed, Eye, EyeOff, GripHorizontal, MoreHorizontal, X } from 'lucide-react';
+import { useProject, type ResultTab } from '../../store/ProjectContext';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../../engine/diagram';
 import { resolveReliability } from '../../engine/reliability';
 import { buildDiagramEnvelope, evaluateEnvelopeAt } from '../../engine/envelope';
@@ -10,13 +10,14 @@ import type { DiagramQuantity, DiagramSegment, MemberResult } from '../../types'
 import { toDisplay, unitLabel } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import type { TranslationKey } from '../../i18n/catalogs';
+import { ResultSummary } from './ResultSummary';
 import { NumericQualityCard } from './NumericQualityCard';
 import { deriveClassroomProgress, type ClassroomProgressStepId } from '../../education/classroomProgress';
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import type { SurfacePresentation, SurfaceStatus } from '../workspace/surfacePresentation';
+import { ProvenanceCard } from './ProvenanceCard';
 import { ResultExtremeCard } from './ResultExtremeCard';
-import { summarizeAnalysisResults } from '../../engine/resultSummary';
 import type { ResultRef } from './provenance';
 import { DENSE_RESULT_VIEWS, preloadDenseResultsSurface, preloadInfluenceLineView, type DenseResultView } from './denseResults';
 
@@ -25,6 +26,14 @@ import { DENSE_RESULT_VIEWS, preloadDenseResultsSurface, preloadInfluenceLineVie
  * lecturas de diagrama del objeto activo. Reacciones, influencia y «Entender»
  * ya no son pestañas — son la superficie `dense`, que se invoca.
  */
+const tabs: Array<{ id: ResultTab; labelKey: TranslationKey; color?: string }> = [
+  { id: 'summary', labelKey: 'results.summary' },
+  { id: 'axial', labelKey: 'results.axial', color: 'axial' },
+  { id: 'shear', labelKey: 'results.shear', color: 'shear' },
+  { id: 'moment', labelKey: 'results.moment', color: 'moment' },
+  { id: 'deformed', labelKey: 'results.deformed' },
+];
+
 const denseViewLabelKey: Record<DenseResultView, TranslationKey> = {
   reactions: 'results.reactions',
   influence: 'results.influence',
@@ -69,19 +78,17 @@ export interface ResultsPanelProps {
   presentation?: Extract<SurfacePresentation, 'dock' | 'inset' | 'sheet'>;
   status?: SurfaceStatus;
   onOpenChange?: (open: boolean, trigger?: HTMLElement | null) => void;
-  /** Allows the focused panel tests to exercise its content without opening the dock. */
-  defaultDesktopExpanded?: boolean;
 }
 
-export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenChange, defaultDesktopExpanded = false }: ResultsPanelProps) => {
-  const { project, analysis, analyze, selection, isAnalyzing } = useProject();
+export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenChange }: ResultsPanelProps) => {
+  const { project, analysis, resultTab, setResultTab, analyze, selection, isAnalyzing, selectedCombinationId, resultCursor } = useProject();
   const { t } = useI18n();
   const isMobile = presentation === 'sheet';
   const [height, setHeight] = useState(() => isMobile ? Math.min(330, window.innerHeight * 0.4) : 285);
   const [drag, setDrag] = useState<{ y: number; height: number } | null>(null);
   const mobileExpanded = status === 'active';
   const [panelMode, setPanelMode] = useState<ResultsPanelMode>(readResultsMode);
-  const [desktopExpanded, setDesktopExpanded] = useState(defaultDesktopExpanded);
+  const [mobileMetricsVisible, setMobileMetricsVisible] = useState(true);
   const [denseMenuOpen, setDenseMenuOpen] = useState(false);
   const denseMenuId = useId();
   const denseTriggerRef = useRef<HTMLButtonElement>(null);
@@ -116,14 +123,47 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
     const first = analysis?.memberResults[0]?.memberId ?? project.members.find((member) => member.type !== 'rigid')?.id;
     return { memberId: first, label: t('results.contextGlobal') };
   }, [analysis?.memberResults, project.memberLoads, project.members, project.nodalLoads, selection, t]);
+  const selectedMemberId = resultContext.memberId;
+  const memberResult = selectedMemberId ? analysis?.memberResults.find((result) => result.memberId === selectedMemberId) : undefined;
+  const provenanceRef = useMemo<ResultRef | null>(() => {
+    if (!analysis?.success) return null;
+    const caseOrCombinationId = selectedCombinationId || project.loadCases.find((loadCase) => loadCase.active)?.id || project.loadCases[0]?.id || '—';
+    if (resultTab === 'axial' || resultTab === 'shear' || resultTab === 'moment') {
+      if (!memberResult) return null;
+      const storedStart = memberResult.diagram[0];
+      const cursor = resultCursor?.memberId === memberResult.memberId ? resultCursor : null;
+      const quantity = resultTab === 'axial' ? 'N' : resultTab === 'shear' ? 'V' : 'M';
+      return {
+        quantity,
+        entity: { kind: 'member', id: memberResult.memberId },
+        caseOrCombinationId,
+        signConvention: quantity === 'N' ? t('results.signAxial') : quantity === 'V' ? t('results.signShear') : t('results.signMoment'),
+        position: { x: cursor?.x ?? storedStart?.x ?? 0, side: cursor ? undefined : storedStart?.side },
+      };
+    }
+    if (resultTab === 'summary' || resultTab === 'reactions' || resultTab === 'deformed' || resultTab === 'learn') {
+      const nodeId = selection?.kind === 'node' ? selection.id : analysis.nodeResults[0]?.nodeId;
+      if (!nodeId) return null;
+      const reaction = resultTab === 'reactions';
+      return {
+        quantity: reaction ? 'R' : 'U',
+        entity: { kind: 'node', id: nodeId },
+        component: 'y',
+        caseOrCombinationId,
+        signConvention: t('results.signGlobalY'),
+      };
+    }
+    return null;
+  }, [analysis, memberResult, project.loadCases, resultCursor, resultTab, selectedCombinationId, selection, t]);
+  const availableTabs = tabs;
+  const activeTab = availableTabs.find((tab) => tab.id === resultTab) ?? availableTabs[0];
+  const mobileResultLabel = analysis
+    ? `${t(activeTab.labelKey)} · ${resultContext.label}`
+    : t('results.outputs');
   const closeMobileResults = useCallback(() => onOpenChange?.(false), [onOpenChange]);
   useEffect(() => {
     if (isMobile) setHeight((current) => Math.min(current, Math.min(330, getViewportHeightPx(panelRef.current) * 0.4)));
   }, [isMobile]);
-  useEffect(() => {
-    // Abrir Resultados revela el resumen disponible sin cambiar el lienzo.
-    if (!isMobile && status === 'active') setDesktopExpanded(true);
-  }, [isMobile, status]);
   useEffect(() => {
     // Si Resultados ya está activo, el lanzador original sigue siendo la
     // autoridad de retorno. Reabrirlo con document.activeElement después de un
@@ -195,7 +235,7 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
   return <>
     <section
       ref={panelRef}
-      className={`results-panel results-mode-${panelMode}${isMobile && !mobileExpanded ? ' mobile-collapsed' : ''}${!isMobile && !desktopExpanded ? ' desktop-collapsed' : ''}`}
+      className={`results-panel results-mode-${panelMode}${isMobile && !mobileExpanded ? ' mobile-collapsed' : ''}`}
       aria-label={t('results.panel')}
       role={isMobile ? 'dialog' : undefined}
       data-workspace-surface="results"
@@ -203,9 +243,10 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
       data-surface-status={status}
       hidden={status !== 'active'}
       data-results-mode={panelMode}
+      data-active-result-quantity={activeTab.id}
       data-canvas-interactive={phoneCanvasInteractive ? 'true' : undefined}
       tabIndex={-1}
-      style={{ height: isMobile && !mobileExpanded ? 54 : !isMobile && !desktopExpanded ? 56 : height }}
+      style={{ height: isMobile && !mobileExpanded ? 54 : height }}
       onKeyDown={(event) => {
         if (event.key === 'Escape' && panelMode === 'focused') {
           event.preventDefault();
@@ -225,23 +266,19 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
           onOpenChange?.(true, event.currentTarget);
         }
       }}>
-        <i aria-hidden="true" />
-        <strong>{t('results.outputs')}</strong>
+        <i className={activeTab.color ?? ''} aria-hidden="true" />
+        <strong>{mobileResultLabel}</strong>
         <ChevronUp className={`results-toggle-chevron${mobileExpanded ? ' expanded' : ''}`} size={19} />
       </button>
-      {!isMobile && !desktopExpanded ? <button
-        type="button"
-        className="results-desktop-toggle"
-        aria-expanded={false}
-        aria-controls="results-content"
-        onClick={() => setDesktopExpanded(true)}
-      >
-        <span>{t('results.center')}</span>
-        <strong>{resultContext.label}</strong>
-        <small>{t('results.summary')}</small>
-        <span className="results-desktop-toggle__action">{t('results.openDock')} <ChevronUp size={17} aria-hidden="true" /></span>
-      </button> : <>
       {isMobile && mobileExpanded ? <div className="results-mobile-commandbar">
+        {analysis?.success && activeTab.id !== 'summary' ? <button
+          type="button"
+          className="results-mobile-metrics-toggle"
+          aria-label={mobileMetricsVisible ? t('results.hideMetricCards') : t('results.showMetricCards')}
+          aria-controls="results-mobile-metrics"
+          aria-expanded={mobileMetricsVisible}
+          onClick={() => setMobileMetricsVisible((visible) => !visible)}
+        >{mobileMetricsVisible ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}</button> : null}
         <button
           type="button"
           className="results-mobile-focus"
@@ -290,128 +327,88 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
             onClick={(event) => panelMode === 'focused' && mode === 'focused' ? leaveFocusedMode() : choosePanelMode(mode, event.currentTarget)}
           >{mode === 'compact' ? t('results.modeCompact') : mode === 'expanded' ? t('results.modeExpanded') : panelMode === 'focused' ? t('results.modeExitFocus') : t('results.modeFocus')}</button>)}
         </div>
-        {!isMobile ? <button
-          type="button"
-          className="results-desktop-collapse"
-          aria-label={t('results.closeDock')}
-          aria-expanded={true}
-          aria-controls="results-content"
-          onClick={() => setDesktopExpanded(false)}
-        ><ChevronUp size={18} aria-hidden="true" /></button> : null}
       </header>
-      <div id="results-content" className="results-body results-overview-body" aria-busy={isAnalyzing}>
+      <nav className="result-tabs results-quantity-bar" role="tablist" aria-label={t('results.panel')} data-results-quantity-bar>
+        <div className="results-quantity-tabs" role="presentation">{availableTabs.map((tab) => {
+          const index = availableTabs.findIndex((item) => item.id === tab.id);
+          return <button id={`result-tab-${tab.id}`} key={tab.id} data-result-tab={tab.id} role="tab" aria-selected={activeTab.id === tab.id} aria-controls="results-content" tabIndex={activeTab.id === tab.id ? 0 : -1} className={`${activeTab.id === tab.id ? 'active' : ''} ${tab.color ?? ''}`} onClick={() => setResultTab(tab.id)} onKeyDown={(event) => {
+            let nextIndex = index;
+            if (event.key === 'ArrowLeft') nextIndex = (index - 1 + availableTabs.length) % availableTabs.length;
+            else if (event.key === 'ArrowRight') nextIndex = (index + 1) % availableTabs.length;
+            else if (event.key === 'Home') nextIndex = 0;
+            else if (event.key === 'End') nextIndex = availableTabs.length - 1;
+            else return;
+            event.preventDefault();
+            const next = availableTabs[nextIndex];
+            setResultTab(next.id);
+            window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-result-tab="${next.id}"]`)?.focus());
+          }}>{t(tab.labelKey)}</button>;
+        })}</div>
+        <div className="results-dense-overflow">
+          <button
+            ref={denseTriggerRef}
+            type="button"
+            className="results-dense-overflow__trigger"
+            aria-label={t('results.moreResults')}
+            aria-haspopup="menu"
+            aria-expanded={denseMenuOpen}
+            aria-controls={denseMenuId}
+            onClick={() => setDenseMenuOpen((open) => !open)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape' && denseMenuOpen) {
+                event.preventDefault();
+                setDenseMenuOpen(false);
+                return;
+              }
+              if (event.key !== 'ArrowDown') return;
+              event.preventDefault();
+              setDenseMenuOpen(true);
+              window.requestAnimationFrame(() => denseMenuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus());
+            }}
+          ><MoreHorizontal size={18} aria-hidden="true" /></button>
+          {denseMenuOpen ? <div
+            ref={denseMenuRef}
+            id={denseMenuId}
+            className="results-dense-overflow__menu"
+            role="menu"
+            aria-label={t('results.moreResults')}
+            onKeyDown={(event) => {
+              if (event.key !== 'Escape') return;
+              event.preventDefault();
+              setDenseMenuOpen(false);
+              denseTriggerRef.current?.focus();
+            }}
+          >
+            {DENSE_RESULT_VIEWS.map((view) => <button
+              key={view}
+              type="button"
+              role="menuitem"
+              data-dense-launcher={view}
+              onFocus={() => { void preloadDenseResultsSurface(); if (view === 'influence') void preloadInfluenceLineView(); }}
+              onPointerEnter={() => { void preloadDenseResultsSurface(); if (view === 'influence') void preloadInfluenceLineView(); }}
+              onClick={(event) => {
+                setDenseMenuOpen(false);
+                emitWorkspaceCommand('open-dense-results', { view, trigger: denseTriggerRef.current ?? event.currentTarget });
+              }}
+            >{t(denseViewLabelKey[view])}</button>)}
+          </div> : null}
+        </div>
+      </nav>
+      <div id="results-content" className="results-body" role="tabpanel" aria-labelledby={`result-tab-${activeTab.id}`} aria-busy={isAnalyzing}>
         {!analysis ? <EmptyResults onAnalyze={() => {
           emitWorkspaceCommand('analysis-requested');
           analyze();
         }} /> : null}
         {analysis && !analysis.success ? <FailedResults onOpenModelDoctor={() => emitWorkspaceCommand('open-model-doctor')} /> : null}
-        {analysis?.success ? <ResultsOverview
-          denseMenuOpen={denseMenuOpen}
-          denseMenuId={denseMenuId}
-          denseMenuRef={denseMenuRef}
-          denseTriggerRef={denseTriggerRef}
-          onToggleDenseMenu={() => setDenseMenuOpen((open) => !open)}
-          onCloseDenseMenu={() => setDenseMenuOpen(false)}
-        /> : null}
+        {analysis?.success && activeTab.id === 'summary' ? <ResultSummary /> : null}
+        {analysis?.success && ['axial', 'shear', 'moment'].includes(activeTab.id) ? <DiagramView type={activeTab.id as 'axial' | 'shear' | 'moment'} memberResult={memberResult} memberId={selectedMemberId ?? ''} isMobile={isMobile} mobileMetricsVisible={mobileMetricsVisible} /> : null}
+        {analysis?.success && activeTab.id === 'deformed' ? <DeformationView memberResult={memberResult} memberId={selectedMemberId ?? ''} isMobile={isMobile} mobileMetricsVisible={mobileMetricsVisible} /> : null}
+        {analysis?.success && provenanceRef ? <ProvenanceCard analysis={analysis} resultRef={provenanceRef} /> : null}
       </div>
-      </>}
     </section>
   </>;
 };
 
-const ResultsOverview = ({
-  denseMenuOpen,
-  denseMenuId,
-  denseMenuRef,
-  denseTriggerRef,
-  onToggleDenseMenu,
-  onCloseDenseMenu,
-}: {
-  denseMenuOpen: boolean;
-  denseMenuId: string;
-  denseMenuRef: RefObject<HTMLDivElement | null>;
-  denseTriggerRef: RefObject<HTMLButtonElement | null>;
-  onToggleDenseMenu: () => void;
-  onCloseDenseMenu: () => void;
-}) => {
-  const { project, analysis } = useProject();
-  const { t } = useI18n();
-  const summary = useMemo(() => analysis?.success ? summarizeAnalysisResults(analysis) : null, [analysis]);
-  if (!analysis?.success || !summary) return null;
-  const quantities = [
-    { id: 'axial' as const, symbol: 'N', label: t('results.axial'), unit: 'force' as const },
-    { id: 'shear' as const, symbol: 'V', label: t('results.shear'), unit: 'force' as const },
-    { id: 'moment' as const, symbol: 'M', label: t('results.moment'), unit: 'moment' as const },
-  ];
-  return <section className="results-overview" aria-label={t('results.summaryWorkspace')}>
-    <div className="results-overview__extremes" aria-label={t('results.mainValues')}>
-      {quantities.map((quantity) => {
-        const point = summary.diagrams[quantity.id]?.absolute;
-        const value = point ? toDisplay(point.value, project.settings.units, quantity.unit) : null;
-        return <div key={quantity.id} className={`results-overview__metric ${quantity.id}`}>
-          <span>{quantity.symbol} · {quantity.label}</span>
-          <strong>{value === null ? '—' : formatFixed(value, 2)} <small>{unitLabel(project.settings.units, quantity.unit)}</small></strong>
-          <small>{t('results.absoluteMaximum', { symbol: quantity.symbol })}</small>
-        </div>;
-      })}
-    </div>
-    <div className="results-overview__footer">
-      <span>{t('results.canvasReadingHint')}</span>
-      <div className="results-dense-overflow">
-        <button
-          ref={denseTriggerRef}
-          type="button"
-          className="results-dense-overflow__trigger"
-          aria-label={t('results.moreResults')}
-          aria-haspopup="menu"
-          aria-expanded={denseMenuOpen}
-          aria-controls={denseMenuId}
-          onClick={onToggleDenseMenu}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape' && denseMenuOpen) {
-              event.preventDefault();
-              onCloseDenseMenu();
-              return;
-            }
-            if (event.key !== 'ArrowDown') return;
-            event.preventDefault();
-            onToggleDenseMenu();
-            window.requestAnimationFrame(() => denseMenuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus());
-          }}
-        ><MoreHorizontal size={18} aria-hidden="true" /> {t('results.moreResults')}</button>
-        {denseMenuOpen ? <div
-          ref={denseMenuRef}
-          id={denseMenuId}
-          className="results-dense-overflow__menu"
-          role="menu"
-          aria-label={t('results.moreResults')}
-          onKeyDown={(event) => {
-            if (event.key !== 'Escape') return;
-            event.preventDefault();
-            onCloseDenseMenu();
-            denseTriggerRef.current?.focus();
-          }}
-        >
-          {DENSE_RESULT_VIEWS.map((view) => <button
-            key={view}
-            type="button"
-            role="menuitem"
-            data-dense-launcher={view}
-            onFocus={() => { void preloadDenseResultsSurface(); if (view === 'influence') void preloadInfluenceLineView(); }}
-            onPointerEnter={() => { void preloadDenseResultsSurface(); if (view === 'influence') void preloadInfluenceLineView(); }}
-            onClick={(event) => {
-              onCloseDenseMenu();
-              emitWorkspaceCommand('open-dense-results', { view, trigger: denseTriggerRef.current ?? event.currentTarget });
-            }}
-          >{t(denseViewLabelKey[view])}</button>)}
-        </div> : null}
-      </div>
-    </div>
-  </section>;
-};
-
-// These member-level views remain exported for advanced result routes. The
-// compact dock stays a summary; the normal reading remains on the canvas.
 const ResultMetricRail = ({ isMobile, visible, className, children }: { isMobile: boolean; visible: boolean; className: string; children: ReactNode }) => <div
   id={isMobile ? 'results-mobile-metrics' : undefined}
   data-testid={isMobile ? 'results-mobile-metrics' : undefined}
@@ -444,7 +441,7 @@ const FailedResults = ({ onOpenModelDoctor }: { onOpenModelDoctor: () => void })
   </div>;
 };
 
-export const DiagramView = ({ type, memberResult, memberId, isMobile, mobileMetricsVisible }: { type: DiagramQuantity; memberResult: MemberResult | undefined; memberId: string; isMobile: boolean; mobileMetricsVisible: boolean }) => {
+const DiagramView = ({ type, memberResult, memberId, isMobile, mobileMetricsVisible }: { type: DiagramQuantity; memberResult: MemberResult | undefined; memberId: string; isMobile: boolean; mobileMetricsVisible: boolean }) => {
   const { project, analysis, selectedCombinationId, setSelection, resultCursor, setResultCursor } = useProject();
   const { t } = useI18n();
   const [hoverX, setHoverX] = useState<number | null>(null);
@@ -635,7 +632,7 @@ export const DiagramView = ({ type, memberResult, memberId, isMobile, mobileMetr
   </div>;
 };
 
-export const DeformationView = ({ memberResult, memberId, isMobile, mobileMetricsVisible }: { memberResult: MemberResult | undefined; memberId: string; isMobile: boolean; mobileMetricsVisible: boolean }) => {
+const DeformationView = ({ memberResult, memberId, isMobile, mobileMetricsVisible }: { memberResult: MemberResult | undefined; memberId: string; isMobile: boolean; mobileMetricsVisible: boolean }) => {
   const { project, analysis, setSelection, resultCursor, setResultCursor } = useProject();
   const reliability = analysis ? resolveReliability(analysis).level : 'failed';
   const { t } = useI18n();

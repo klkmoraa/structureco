@@ -96,10 +96,6 @@ const openSummary = async (page) => {
   await page.waitForTimeout(900);
   await openResultsSurface(page);
   await page.waitForTimeout(400);
-  // En X2/M1 Resultados nace como dock discreto: abrir la barra es la misma
-  // intención explícita que activa la lectura completa, sin afectar K0.
-  const dockLauncher = page.getByRole('button', { name: /Abrir resultados|Open results/i });
-  if (await dockLauncher.waitFor({ state: 'visible', timeout: 6_000 }).then(() => true).catch(() => false)) await dockLauncher.click();
   const summaryTab = page.getByRole('tab', { name: /^(Resumen|Summary)$/ }).first();
   if (await summaryTab.count()) await summaryTab.click({ timeout: 8_000 }).catch(() => undefined);
   await page.locator('.result-extreme-card').first().waitFor({ state: 'visible', timeout: 20_000 });
@@ -363,51 +359,7 @@ for (const [label, viewport] of Object.entries(CLASSES)) {
 }
 
 // ---------------------------------------------------------------------------
-// 4 · Dock bajo demanda y tres escalas de diagrama en X2
-// ---------------------------------------------------------------------------
-{
-  const page = await newPage(CLASSES.X2);
-  await enterWorkspace(page);
-  await openSummary(page);
-  const panel = page.locator('.results-panel');
-  const collapse = page.getByRole('button', { name: /^(Cerrar resultados|Close results)$/i });
-  await collapse.click();
-  const collapsed = await panel.evaluate((node) => ({
-    collapsed: node.classList.contains('desktop-collapsed'),
-    height: node.getBoundingClientRect().height,
-    tabs: node.querySelectorAll('[role="tab"]').length,
-  }));
-  check('dock X2 · se colapsa a una barra bajo demanda', collapsed.collapsed && collapsed.height <= 58 && collapsed.tabs === 0, collapsed);
-  await shoot(panel, 'results-dock-collapsed-x2');
-
-  await page.getByRole('button', { name: /Abrir resultados|Open results/i }).click();
-  await page.getByRole('tab', { name: /^(Momento|Moment)$/i }).click();
-  await page.locator('.diagram-chart svg').waitFor({ state: 'visible', timeout: 10_000 });
-  const modeControl = page.locator('.results-mode-control');
-  const measureMode = async (name) => {
-    await modeControl.getByRole('button', { name }).click();
-    await page.waitForTimeout(180);
-    return panel.evaluate((node) => {
-      const svg = node.querySelector('.diagram-chart svg');
-      const panelBox = node.getBoundingClientRect();
-      const svgBox = svg?.getBoundingClientRect();
-      return { mode: node.getAttribute('data-results-mode'), panelHeight: panelBox.height, chartHeight: svgBox?.height ?? 0 };
-    });
-  };
-  const compact = await measureMode('Compacto');
-  check('Compacto X2 · el diagrama ya no es microscópico', compact.mode === 'compact' && compact.chartHeight >= 160, compact);
-  await shoot(panel, 'results-compact-x2');
-  const expanded = await measureMode('Expandido');
-  check('Expandido X2 · el diagrama conserva lectura amplia', expanded.mode === 'expanded' && expanded.chartHeight >= 210, expanded);
-  await shoot(panel, 'results-expanded-x2');
-  const focused = await measureMode('Enfocar');
-  check('Enfocar X2 · lectura amplia contenida', focused.mode === 'focused' && focused.chartHeight >= 248 && focused.panelHeight <= 522, focused);
-  await shoot(panel, 'results-focused-contained-x2');
-  await page.close();
-}
-
-// ---------------------------------------------------------------------------
-// 5 · El Datasheet NO se cardificó
+// 4 · El Datasheet NO se cardificó
 // ---------------------------------------------------------------------------
 {
   const page = await newPage(CLASSES.X2);

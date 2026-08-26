@@ -79,11 +79,10 @@ const WorkspaceBrokerContent = ({
   const [revisionBaseline, setRevisionBaseline] = useState<RevisionSnapshot | null>(null);
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
   const { t } = useI18n();
-  const { project, analysis, isAnalyzing, setActiveTool, setResultTab, analyze, undo, redo, canUndo, canRedo, updateProjectView } = useProject();
+  const { project, analysis, isAnalyzing, setActiveTool, setResultTab, analyze, undo, redo, canUndo, canRedo } = useProject();
   const [pendingModelDoctorNotification, setPendingModelDoctorNotification] = useState<PendingModelDoctorNotification | null>(null);
   const modelDoctorNotificationIdRef = useRef(0);
   const pendingModelDoctorNotificationIdRef = useRef<number | null>(null);
-  const directCanvasAnalysisRequestedRef = useRef(false);
   const { activeTool } = useWorkspaceUI();
   const { preferences: layout, setPreference, togglePreference } = layoutController;
   const { shellClass } = useShellComposition();
@@ -102,29 +101,6 @@ const WorkspaceBrokerContent = ({
   const palette = broker.stateFor('palette');
 
   useEffect(() => persistEditorLayerState(editorLayers), [editorLayers]);
-
-  useEffect(() => {
-    if (isAnalyzing) {
-      directCanvasAnalysisRequestedRef.current = true;
-      return;
-    }
-    if (!directCanvasAnalysisRequestedRef.current) return;
-    directCanvasAnalysisRequestedRef.current = false;
-    if (!analysis?.success) return;
-
-    // Analizar deja la respuesta donde se dibuja el modelo: no abre otra hoja
-    // ni una página de resultados. Es una lectura directa y despejada debajo
-    // de las barras, con las cargas aún visibles.
-    setResultTab('moment');
-    dispatchEditorLayers({ type: 'set', layer: 'results', visible: true });
-    dispatchEditorLayers({ type: 'set', layer: 'loads', visible: true });
-    dispatchEditorLayers({ type: 'set', layer: 'labels', visible: false });
-    updateProjectView((draft) => ({
-      ...draft,
-      settings: { ...draft.settings, diagramSide: 'negative', showResultValues: false },
-    }));
-    closeSurface('results');
-  }, [analysis, closeSurface, isAnalyzing, setResultTab, updateProjectView]);
 
   useEffect(() => {
     const normalizeDetent = () => {
@@ -368,10 +344,10 @@ const WorkspaceBrokerContent = ({
       layoutActions={{
         inspectorCollapsed: !detail.open,
         fullCanvas: layout.fullCanvas,
-        onToggleInspector: (trigger) => {
+        onToggleInspector: () => {
           if (layout.fullCanvas) setPreference('fullCanvas', false);
           if (detail.open) closeDetail();
-          else openDetail(trigger);
+          else openDetail();
         },
         onToggleFullCanvas: () => {
           if (!layout.fullCanvas) {
@@ -463,7 +439,7 @@ const WorkspaceBrokerContent = ({
       {broker.isRetained('analysisSetup') ? <Inspector surface="analysisSetup" className={analysisSetup.presentation === 'sheet' && analysisSetup.status === 'active' ? 'mobile-open' : ''} presentation={analysisSetup.presentation as 'dock' | 'inset' | 'sheet'} status={analysisSetup.status} onClose={() => closeSurface('analysisSetup')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} activeTool={activeTool} onActiveToolChange={setActiveTool} /> : null}
       {broker.isRetained('view') ? <Inspector surface="view" className={view.presentation === 'sheet' && view.status === 'active' ? 'mobile-open' : ''} presentation={view.presentation as 'dock' | 'inset' | 'sheet'} status={view.status} onClose={() => closeSurface('view')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} /> : null}
     </div>}
-    floatingActions={shellClass === 'K0' ? undefined : <div className="workspace-surface-launcher">
+    floatingActions={<div className="workspace-surface-launcher">
       <button className="mobile-inspector-toggle" onClick={(event) => openDetail(event.currentTarget)} aria-label={t('inspector.open')} aria-expanded={detail.status === 'active'} aria-controls="workspace-detail"><SlidersHorizontal size={20} /></button>
     </div>}
     footer={<div className="professional-note">{t('app.professionalNote')}</div>}

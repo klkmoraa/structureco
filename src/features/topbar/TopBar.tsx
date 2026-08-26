@@ -56,7 +56,7 @@ const PortableImportCenter = lazy(() => import('../import-export/PortableImportC
 export interface TopBarLayoutActions {
   inspectorCollapsed: boolean;
   fullCanvas: boolean;
-  onToggleInspector: (trigger?: HTMLElement | null) => void;
+  onToggleInspector: () => void;
   onToggleFullCanvas: () => void;
 }
 
@@ -523,17 +523,6 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
             </m.div> : null}
           </AnimatePresence>
         </div>
-        <button
-          type="button"
-          className={`topbar-command-button results-launcher results-launcher--near-case${resultsOpen ? ' is-active' : ''}`}
-          onClick={(event) => emitWorkspaceCommand('toggle-results', { trigger: event.currentTarget })}
-          aria-label={t('results.outputs')}
-          aria-pressed={resultsOpen}
-          title={t('results.outputs')}
-        >
-          <ChartNoAxesColumnIncreasing size={17} aria-hidden="true" />
-          <span>{t('results.outputs')}</span>
-        </button>
         <div className="topbar-primary-actions" data-topbar-role="primary">
           <div className="topbar-history-cluster" role="group" aria-label={t('history.label')}>
             <IconButton
@@ -622,7 +611,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
                   </div>
                   {layoutActions ? <div className="menu-section overflow-layout-actions" role="group" aria-label={t('shell.viewLayout')}>
                     <div className="menu-section-title">{t('menu.sectionViews')}</div>
-                    <button onClick={() => { layoutActions.onToggleInspector(mobileMenuButtonRef.current); setShowMobileMenu(false); }}>
+                    <button onClick={() => { layoutActions.onToggleInspector(); setShowMobileMenu(false); }}>
                       {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? <PanelRightOpen size={17} /> : <PanelRightClose size={17} />}
                       {layoutActions.inspectorCollapsed || layoutActions.fullCanvas ? t('shell.showInspector') : t('shell.hideInspector')}
                     </button>
@@ -663,6 +652,17 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
       </div>
 
       <div className="topbar-zone topbar-status-zone topbar-health-zone" data-topbar-zone="status" data-topbar-role="health">
+        <button
+          type="button"
+          className={`topbar-command-button results-launcher${resultsOpen ? ' is-active' : ''}`}
+          onClick={(event) => emitWorkspaceCommand('toggle-results', { trigger: event.currentTarget })}
+          aria-label={t('results.outputs')}
+          aria-pressed={resultsOpen}
+          title={t('results.outputs')}
+        >
+          <ChartNoAxesColumnIncreasing size={17} aria-hidden="true" />
+          <span>{t('results.outputs')}</span>
+        </button>
         <button
           type="button"
           className="topbar-command-button model-doctor-launcher"

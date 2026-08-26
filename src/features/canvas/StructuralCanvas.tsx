@@ -279,7 +279,6 @@ export const StructuralCanvas = ({
   const candidatePickerSurface = surfaceBroker?.stateFor('candidatePicker');
   const generatorSurface = surfaceBroker?.stateFor('generator');
   const contextualActionsSurface = surfaceBroker?.stateFor('contextualActions');
-  const compactCanvasChrome = surfaceBroker?.shellClass === 'K0';
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const coordinateReadoutRef = useRef<HTMLOutputElement>(null);
@@ -366,10 +365,10 @@ export const StructuralCanvas = ({
   useEffect(() => {
     if (!surfaceBroker) return;
     const intentOpen = surfaceBroker.stateFor('contextualActions').open;
-    const shouldOpen = !compactCanvasChrome && Boolean(selection) && activeTool === 'select' && !memberStart;
+    const shouldOpen = Boolean(selection) && activeTool === 'select' && !memberStart;
     if (shouldOpen && !intentOpen) surfaceBroker.openSurface('contextualActions');
     else if (!shouldOpen && intentOpen) surfaceBroker.closeSurface('contextualActions');
-  }, [activeTool, compactCanvasChrome, memberStart, selection, surfaceBroker]);
+  }, [activeTool, memberStart, selection, surfaceBroker]);
   const structuralEditPreview = useMemo((): { prepared: PreparedStructuralEdit | null; error: string } => {
     if (!structuralEditDraft) return { prepared: null, error: '' };
     if (structuralEditDraft.sourceSnapshot !== structuralEditSnapshot(project)) {
@@ -1871,7 +1870,7 @@ export const StructuralCanvas = ({
       // which is where a screen reader's quick-nav browse mode intercepts
       // single letters — they must not fire, or they hijack that navigation.
       const canvasHasFocus = document.activeElement instanceof Node && Boolean(hostRef.current?.contains(document.activeElement));
-      if (key === 'r' && !command && !event.altKey && canvasHasFocus && !compactCanvasChrome) {
+      if (key === 'r' && !command && !event.altKey && canvasHasFocus) {
         if (!repeatCandidate) return;
         event.preventDefault();
         activateRepeat();
@@ -1932,7 +1931,7 @@ export const StructuralCanvas = ({
       window.removeEventListener('blur', cancelActiveInteraction);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [activateRepeat, cancelActiveInteraction, cancelStructuralEdit, candidatePicker, closeCandidatePicker, compactCanvasChrome, copyStructuralSelection, deleteSelection, duplicateDraft, pasteStructuralSelection, repeatCandidate, selection, setActiveTool, setSelection, startDuplicate, structuralEditDraft]);
+  }, [activateRepeat, cancelActiveInteraction, cancelStructuralEdit, candidatePicker, closeCandidatePicker, copyStructuralSelection, deleteSelection, duplicateDraft, pasteStructuralSelection, repeatCandidate, selection, setActiveTool, setSelection, startDuplicate, structuralEditDraft]);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -2074,7 +2073,7 @@ export const StructuralCanvas = ({
         const uy = -load.fy / magnitude;
         smartLabelCandidates.push({
           id: `nodal-load:${load.id}`,
-          text: `${formatFixed(toDisplay(magnitude, units, 'force'), 2)} ${forceLabel}`,
+          text: `P = ${formatFixed(toDisplay(magnitude, units, 'force'), 2)} ${forceLabel}`,
           anchor: { x: point.x - ux * 62, y: point.y - uy * 62 - 5 },
           priority: selected ? 0 : 1,
           tone: selected ? 'selection' : 'force',
@@ -2084,7 +2083,7 @@ export const StructuralCanvas = ({
       } else if (Math.abs(load.mz) > 1e-9) {
         smartLabelCandidates.push({
           id: `nodal-moment:${load.id}`,
-          text: `${formatFixed(toDisplay(load.mz, units, 'moment'), 2)} ${momentLabel}`,
+          text: `M = ${formatFixed(toDisplay(load.mz, units, 'moment'), 2)} ${momentLabel}`,
           anchor: { x: point.x, y: point.y - 38 },
           priority: selected ? 0 : 1,
           tone: selected ? 'selection' : 'moment',
@@ -2119,7 +2118,7 @@ export const StructuralCanvas = ({
         const uy = -gy / magnitude;
         smartLabelCandidates.push({
           id: `member-point-load:${load.id}`,
-          text: `${formatFixed(toDisplay(magnitude, units, 'force'), 2)} ${forceLabel}`,
+          text: `P = ${formatFixed(toDisplay(magnitude, units, 'force'), 2)} ${forceLabel}`,
           anchor: { x: base.x - ux * 60, y: base.y - uy * 60 - 5 },
           priority,
           tone,
@@ -2130,7 +2129,7 @@ export const StructuralCanvas = ({
         const base = stationOf(load.position ?? 0.5);
         smartLabelCandidates.push({
           id: `member-moment:${load.id}`,
-          text: `${formatFixed(toDisplay(load.moment ?? 0, units, 'moment'), 2)} ${momentLabel}`,
+          text: `M = ${formatFixed(toDisplay(load.moment ?? 0, units, 'moment'), 2)} ${momentLabel}`,
           anchor: { x: base.x, y: base.y - 38 },
           priority,
           tone,
@@ -2153,7 +2152,7 @@ export const StructuralCanvas = ({
         const average = (startMagnitude + endMagnitude) / 2;
         smartLabelCandidates.push({
           id: `distributed-load:${load.id}`,
-          text: `${formatFixed(toDisplay(average, units, 'distributedForce'), 2)} ${distributedLabel}`,
+          text: `w = ${formatFixed(toDisplay(average, units, 'distributedForce'), 2)} ${distributedLabel}`,
           anchor: { x: base.x - ux * (arrowLength + 9), y: base.y - uy * (arrowLength + 9) - 5 },
           priority,
           tone,
@@ -2549,11 +2548,13 @@ export const StructuralCanvas = ({
       /></Suspense> : null}
 
       <StructuralEditOverlay
-        // El riel posee la entrada de edición para una selección viva. Una vez
-        // iniciado el borrador, este overlay conserva la intención en curso.
+        // Contextual-actions owns the selection entry point. Once a structural
+        // draft starts, this overlay continues to own that in-progress intent.
+        // Never leave the legacy launcher visible or focusable beside the
+        // Compact floor (primary verb + Delete + overflow).
         available={Boolean(structuralEditDraft) || (editCapabilities.structural
           && !selection && !duplicateDraft && !repeatRecipe && !generatorOpen)}
-        repeatAvailable={!compactCanvasChrome && Boolean(repeatCandidate) && !structuralEditDraft}
+        repeatAvailable={Boolean(repeatCandidate) && !structuralEditDraft}
         draft={structuralEditDraft}
         capabilities={editCapabilities}
         prepared={structuralEditPreview.prepared}
@@ -2571,7 +2572,7 @@ export const StructuralCanvas = ({
         onCancel={cancelStructuralEdit}
       />
 
-      {surfaceBroker && !compactCanvasChrome ? <ContextualActions
+      {surfaceBroker ? <ContextualActions
         selection={selection}
         availability={contextualActionAvailability}
         active={contextualActionsSurface?.status === 'active'
@@ -2609,13 +2610,13 @@ export const StructuralCanvas = ({
         onZoomOut={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1 / 1.15))}
         onFit={fitModel}
       />
-      {project.members.length >= 12 || project.nodes.length >= 16 ? <CanvasMiniMap
+      <CanvasMiniMap
         nodes={project.nodes}
         members={project.members}
         viewport={minimapViewport}
         label={t('canvas.minimap')}
         onFit={fitModel}
-      /> : null}
+      />
       {touchLoupe ? <CanvasTouchLoupe
         {...touchLoupe}
         lengthLabel={lengthLabel}
@@ -2624,7 +2625,7 @@ export const StructuralCanvas = ({
       /> : null}
       {canvasFeedback ? <div className="canvas-feedback" role="alert">{canvasFeedback}</div> : null}
       <RepeatActionOverlay
-        available={!compactCanvasChrome && Boolean(repeatCandidate) && !structuralEditDraft}
+        available={Boolean(repeatCandidate) && !structuralEditDraft}
         active={Boolean(repeatRecipe)}
         actionLabel={t('canvas.repeatAction')}
         previewLabel={t('canvas.repeatPreview')}

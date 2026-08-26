@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { SERVICE_WORKER_URL, watchForPwaUpdates, type ServiceWorkerContainerPort, type ServiceWorkerRegistrationPort, type ServiceWorkerPort } from './pwaLifecycle';
+import { watchForPwaUpdates, type ServiceWorkerContainerPort, type ServiceWorkerRegistrationPort, type ServiceWorkerPort } from './pwaLifecycle';
 
 class FakeWorker implements ServiceWorkerPort {
   state = 'installed';
@@ -34,10 +34,6 @@ class FakeContainer implements ServiceWorkerContainerPort {
 }
 
 describe('PWA update lifecycle', () => {
-  it('uses a release-specific service-worker URL so installed shells revalidate direct canvas diagrams', () => {
-    expect(SERVICE_WORKER_URL).toContain('canvas-direct-diagrams');
-  });
-
   it('surfaces an already waiting update and activates it only on request', async () => {
     const registration = new FakeRegistration();
     const waiting = new FakeWorker();

@@ -63,16 +63,9 @@ describe('CanvasLayers', () => {
     const shear = screen.getByRole('button', { name: 'Cortante' });
     const results = screen.getByRole('switch', { name: /resultados.*diagramas/i });
     const heatmap = screen.getByRole('button', { name: 'Mapa de demanda' });
-    const resultsPreset = document.querySelector<HTMLButtonElement>('[data-layer-preset="results"]');
 
     // Off by default: the `results` fixture in this suite has no analysis to show.
     expect(axial.getAttribute('aria-pressed')).toBe('false');
-
-    // La vista Resultados no toma la decisión de colorear el modelo: el mapa
-    // conserva su control explícito dentro de esta misma superficie.
-    expect(resultsPreset).not.toBeNull();
-    await user.click(resultsPreset!);
-    expect(heatmap.getAttribute('aria-pressed')).toBe('false');
 
     await user.click(shear);
     expect(shear.getAttribute('aria-pressed')).toBe('true');

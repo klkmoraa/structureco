@@ -385,14 +385,8 @@ const runResponsive = async (page) => {
   const compact = await page.evaluate(() => {
     const element = document.querySelector('[data-structure-generator-surface]');
     const rect = element.getBoundingClientRect();
-    const families = element.querySelector('.structure-generator__families').getBoundingClientRect();
-    const firstFamily = element.querySelector('.structure-generator__families > button').getBoundingClientRect();
-    const parameters = element.querySelector('.structure-generator__parameter-stage').getBoundingClientRect();
     return {
       rect: { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right },
-      families: { top: families.top, bottom: families.bottom, height: families.height },
-      firstFamily: { top: firstFamily.top, bottom: firstFamily.bottom, height: firstFamily.height },
-      parameters: { top: parameters.top },
       viewport: { width: window.innerWidth, height: window.innerHeight },
       noPageOverflow: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
       // Un cuarto largo de la pantalla para el lienzo: por debajo de eso la
@@ -405,13 +399,6 @@ const runResponsive = async (page) => {
     JSON.stringify(compact));
   check('compactTrayLeavesThePreviewVisibleAbove',
     compact.canvasHeightAbove >= compact.viewport.height * 0.28,
-    JSON.stringify(compact));
-  check('compactFamilyOptionsStayInsideTheirShelf',
-    compact.firstFamily.top >= compact.families.top - 1
-      && compact.firstFamily.bottom <= compact.families.bottom + 1,
-    JSON.stringify(compact));
-  check('compactFamilyOptionsDoNotOverlapParameters',
-    compact.firstFamily.bottom <= compact.parameters.top + 1,
     JSON.stringify(compact));
 
   const undersized = await surface(page).locator('button:visible, input:visible, select:visible').evaluateAll((elements) => elements
