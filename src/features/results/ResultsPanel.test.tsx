@@ -491,84 +491,28 @@ describe('Results analytical center', () => {
     expect(document.activeElement).not.toBe(screen.getByRole('button', { name: /Resumen ·/ }));
   }, 10_000);
 
-  it.skip('legacy prediction gate retired by Aula vNext', async () => {
+  it('keeps Aula free of the retired hypothesis gate after switching presentation modes', async () => {
     const user = userEvent.setup();
-    const project = createSimpleBeamExercise();
-    renderResults(project);
+    renderResults(createSimpleBeamExercise());
 
-    expect(screen.getByRole('heading', { name: 'Tu hipótesis antes del cálculo' })).toBeTruthy();
-    const momentTab = screen.getByRole('tab', { name: 'M' });
-    momentTab.focus();
-    await user.keyboard('{Home}');
-    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'N' }));
-    await user.keyboard('{End}');
-    expect(document.activeElement).toBe(momentTab);
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Signo esperado' }), 'negative');
-    const magnitude = screen.getByRole('spinbutton', { name: 'Magnitud estimada' });
-    expect(document.getElementById(magnitude.getAttribute('aria-describedby') ?? '')?.textContent).toBe('kN·m');
-    await user.type(magnitude, '12.5');
-    expect(screen.getByLabelText('Predicciones base').textContent).toBe('{"M1":{"moment":12.5}}');
-
-    await user.click(screen.getByRole('button', { name: 'Unidades N-mm' }));
-    expect((screen.getByRole('spinbutton', { name: 'Magnitud estimada' }) as HTMLInputElement).value).toBe('12500000');
-    expect(screen.getByLabelText('Predicciones base').textContent).toBe('{"M1":{"moment":12.5}}');
-
-    await user.click(screen.getByRole('button', { name: /continuar al análisis/i }));
-    const firstGateHeading = await screen.findByRole('heading', { name: /el análisis terminó/i }, { timeout: 5000 });
-    await waitFor(() => expect(document.activeElement).toBe(firstGateHeading));
-    await user.click(screen.getByRole('button', { name: 'Editar predicción' }));
-    expect(await screen.findByRole('heading', { name: 'Tu hipótesis antes del cálculo' })).toBeTruthy();
-    expect((screen.getByRole('spinbutton', { name: 'Magnitud estimada' }) as HTMLInputElement).value).toBe('12500000');
-    await user.click(screen.getByRole('button', { name: /continuar al análisis/i }));
-    expect(await screen.findByRole('heading', { name: /el análisis terminó/i }, { timeout: 5000 })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Revelar y comparar' }));
-    const summary = await screen.findByRole('region', { name: 'Resumen global de resultados' });
-    await waitFor(() => expect(document.activeElement).toBe(summary));
-    expect(screen.getByText('Tu predicción frente al resultado')).toBeTruthy();
-    expect(screen.getByText(/Signo esperado: Negativo/)).toBeTruthy();
-    expect(screen.getByLabelText('Estado del modelo').textContent).toBe('2:1:1:true');
-
+    expect(screen.queryByRole('heading', { name: /hipótesis antes del cálculo/i })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Modo completo test' }));
     await user.click(screen.getByRole('button', { name: 'Modo aula test' }));
-    expect(screen.getByLabelText('Estado del modelo').textContent).toBe('2:1:1:true');
-    expect(screen.getByLabelText('Predicciones base').textContent).toBe('{"M1":{"moment":12.5}}');
-    expect(screen.getByText('Tu predicción frente al resultado')).toBeTruthy();
-  }, 10_000);
 
-  it.skip('legacy English prediction gate retired by Aula vNext', async () => {
+    expect(screen.queryByRole('heading', { name: /hipótesis antes del cálculo/i })).toBeNull();
+    expect(screen.getByLabelText('Predicciones base').textContent).toBe('{}');
+  });
+
+  it('keeps the current Aula contract in English without restoring legacy predictions', async () => {
     const user = userEvent.setup();
     const project = createSimpleBeamExercise();
     project.settings.language = 'en';
     renderResults(project);
 
-    expect(screen.getByRole('heading', { name: 'Your hypothesis before solving' })).toBeTruthy();
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Expected sign' }), 'positive');
-    await user.click(screen.getByRole('button', { name: 'Continue to analysis' }));
-    expect(await screen.findByRole('heading', { name: 'Analysis is complete. Decide when to view the solution.' }, { timeout: 5000 })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Reveal and compare' }));
-    expect(await screen.findByText('Your prediction compared with the result')).toBeTruthy();
-    expect(screen.getByText('Global summary')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Compare cases' })).toBeTruthy();
-    expect(screen.queryByText('Resumen global')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Hide results' })).toBeTruthy();
-  }, 10_000);
-
-  it.skip('legacy failed-analysis prediction gate retired by Aula vNext', async () => {
-    const user = userEvent.setup();
-    const project = createSimpleBeamExercise();
-    project.settings.calculationMode = 'complete';
-    project.nodes.push(
-      { id: 'N3', x: 0, y: 3, support: { type: 'none' } },
-      { id: 'N4', x: 3, y: 3, support: { type: 'none' } },
-    );
-    project.members.push({ ...project.members[0], id: 'M2', i: 'N3', j: 'N4' });
-    renderResults(project);
-
-    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
-    expect(await screen.findByText('Estructura inestable o mecanismo', {}, { timeout: 5000 })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Modo aula test' }));
-    expect(await screen.findByRole('heading', { name: 'Tu hipótesis antes del cálculo' })).toBeTruthy();
-    expect(screen.queryByText('Estructura inestable o mecanismo')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Analyze structure' }));
+    await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+    expect(screen.queryByRole('heading', { name: /hypothesis before solving/i })).toBeNull();
+    expect(screen.getByLabelText('Predicciones base').textContent).toBe('{}');
   }, 10_000);
 
   it('shows analysis and the same result families in Aula without using legacy predictions', async () => {
