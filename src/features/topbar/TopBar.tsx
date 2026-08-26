@@ -523,6 +523,17 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
             </m.div> : null}
           </AnimatePresence>
         </div>
+        <button
+          type="button"
+          className={`topbar-command-button results-launcher results-launcher--near-case${resultsOpen ? ' is-active' : ''}`}
+          onClick={(event) => emitWorkspaceCommand('toggle-results', { trigger: event.currentTarget })}
+          aria-label={t('results.outputs')}
+          aria-pressed={resultsOpen}
+          title={t('results.outputs')}
+        >
+          <ChartNoAxesColumnIncreasing size={17} aria-hidden="true" />
+          <span>{t('results.outputs')}</span>
+        </button>
         <div className="topbar-primary-actions" data-topbar-role="primary">
           <div className="topbar-history-cluster" role="group" aria-label={t('history.label')}>
             <IconButton
@@ -652,17 +663,6 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
       </div>
 
       <div className="topbar-zone topbar-status-zone topbar-health-zone" data-topbar-zone="status" data-topbar-role="health">
-        <button
-          type="button"
-          className={`topbar-command-button results-launcher${resultsOpen ? ' is-active' : ''}`}
-          onClick={(event) => emitWorkspaceCommand('toggle-results', { trigger: event.currentTarget })}
-          aria-label={t('results.outputs')}
-          aria-pressed={resultsOpen}
-          title={t('results.outputs')}
-        >
-          <ChartNoAxesColumnIncreasing size={17} aria-hidden="true" />
-          <span>{t('results.outputs')}</span>
-        </button>
         <button
           type="button"
           className="topbar-command-button model-doctor-launcher"

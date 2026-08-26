@@ -2074,7 +2074,7 @@ export const StructuralCanvas = ({
         const uy = -load.fy / magnitude;
         smartLabelCandidates.push({
           id: `nodal-load:${load.id}`,
-          text: `P = ${formatFixed(toDisplay(magnitude, units, 'force'), 2)} ${forceLabel}`,
+          text: `${formatFixed(toDisplay(magnitude, units, 'force'), 2)} ${forceLabel}`,
           anchor: { x: point.x - ux * 62, y: point.y - uy * 62 - 5 },
           priority: selected ? 0 : 1,
           tone: selected ? 'selection' : 'force',
@@ -2084,7 +2084,7 @@ export const StructuralCanvas = ({
       } else if (Math.abs(load.mz) > 1e-9) {
         smartLabelCandidates.push({
           id: `nodal-moment:${load.id}`,
-          text: `M = ${formatFixed(toDisplay(load.mz, units, 'moment'), 2)} ${momentLabel}`,
+          text: `${formatFixed(toDisplay(load.mz, units, 'moment'), 2)} ${momentLabel}`,
           anchor: { x: point.x, y: point.y - 38 },
           priority: selected ? 0 : 1,
           tone: selected ? 'selection' : 'moment',
@@ -2119,7 +2119,7 @@ export const StructuralCanvas = ({
         const uy = -gy / magnitude;
         smartLabelCandidates.push({
           id: `member-point-load:${load.id}`,
-          text: `P = ${formatFixed(toDisplay(magnitude, units, 'force'), 2)} ${forceLabel}`,
+          text: `${formatFixed(toDisplay(magnitude, units, 'force'), 2)} ${forceLabel}`,
           anchor: { x: base.x - ux * 60, y: base.y - uy * 60 - 5 },
           priority,
           tone,
@@ -2130,7 +2130,7 @@ export const StructuralCanvas = ({
         const base = stationOf(load.position ?? 0.5);
         smartLabelCandidates.push({
           id: `member-moment:${load.id}`,
-          text: `M = ${formatFixed(toDisplay(load.moment ?? 0, units, 'moment'), 2)} ${momentLabel}`,
+          text: `${formatFixed(toDisplay(load.moment ?? 0, units, 'moment'), 2)} ${momentLabel}`,
           anchor: { x: base.x, y: base.y - 38 },
           priority,
           tone,
@@ -2153,7 +2153,7 @@ export const StructuralCanvas = ({
         const average = (startMagnitude + endMagnitude) / 2;
         smartLabelCandidates.push({
           id: `distributed-load:${load.id}`,
-          text: `w = ${formatFixed(toDisplay(average, units, 'distributedForce'), 2)} ${distributedLabel}`,
+          text: `${formatFixed(toDisplay(average, units, 'distributedForce'), 2)} ${distributedLabel}`,
           anchor: { x: base.x - ux * (arrowLength + 9), y: base.y - uy * (arrowLength + 9) - 5 },
           priority,
           tone,
@@ -2609,13 +2609,13 @@ export const StructuralCanvas = ({
         onZoomOut={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1 / 1.15))}
         onFit={fitModel}
       />
-      <CanvasMiniMap
+      {project.members.length >= 12 || project.nodes.length >= 16 ? <CanvasMiniMap
         nodes={project.nodes}
         members={project.members}
         viewport={minimapViewport}
         label={t('canvas.minimap')}
         onFit={fitModel}
-      />
+      /> : null}
       {touchLoupe ? <CanvasTouchLoupe
         {...touchLoupe}
         lengthLabel={lengthLabel}

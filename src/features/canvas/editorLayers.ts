@@ -41,11 +41,13 @@ export type EditorLayerAction =
 export const DEFAULT_EDITOR_LAYERS: Readonly<EditorLayerState> = Object.freeze({
   model: true,
   loads: true,
-  dimensions: true,
-  ids: true,
-  results: true,
+  // El lienzo abre para modelar: las cargas permanecen verificables, pero las
+  // cotas, IDs y resultados se piden cuando hacen falta.
+  dimensions: false,
+  ids: false,
+  results: false,
   labels: true,
-  help: true,
+  help: false,
   diagnostics: true,
   // El mapa de calor reinterpreta el color de las barras: se pide, no se hereda.
   heatmap: false,
