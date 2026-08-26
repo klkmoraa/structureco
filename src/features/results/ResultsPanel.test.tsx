@@ -49,7 +49,7 @@ const ResultsHarness = () => {
     <output aria-label="Selección actual">{selectionLabel}</output>
     <output aria-label="Cursor de resultados">{resultCursor ? `${resultCursor.memberId}:${resultCursor.x}:${resultCursor.pinned}` : 'none'}</output>
     <ClassroomDiagnostics />
-    <ResultsPanel presentation={presentation} status={open ? 'active' : 'closed'} onOpenChange={setOpen} />
+    <ResultsPanel presentation={presentation} status={open ? 'active' : 'closed'} onOpenChange={setOpen} defaultDesktopExpanded />
   </ClassroomSessionProvider>;
 };
 
@@ -91,6 +91,24 @@ afterEach(() => {
 });
 
 describe('Results analytical center', () => {
+  it('keeps the desktop dock out of the canvas until the user requests it', async () => {
+    const user = userEvent.setup();
+    const project = createHibbelerStyleDiagramPractice();
+    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+    render(<ProjectProvider><ResultsPanel presentation="dock" status="active" /></ProjectProvider>);
+
+    const panel = screen.getByRole('region', { name: 'Resultados del análisis' });
+    const launcher = screen.getByRole('button', { name: /abrir resultados/i });
+    expect(panel.classList.contains('desktop-collapsed')).toBe(true);
+    expect(screen.queryByRole('tablist')).toBeNull();
+
+    await user.click(launcher);
+    expect(panel.classList.contains('desktop-collapsed')).toBe(false);
+    expect(screen.getByRole('tablist')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Cerrar resultados' }));
+    expect(panel.classList.contains('desktop-collapsed')).toBe(true);
+  });
+
   it('uses one quantity bar, mirrors the active quantity, and keeps dense views in one overflow', async () => {
     const user = userEvent.setup();
     renderResults();
