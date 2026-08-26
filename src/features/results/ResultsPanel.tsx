@@ -20,7 +20,6 @@ import { ProvenanceCard } from './ProvenanceCard';
 import { ResultExtremeCard } from './ResultExtremeCard';
 import type { ResultRef } from './provenance';
 import { DENSE_RESULT_VIEWS, preloadDenseResultsSurface, preloadInfluenceLineView, type DenseResultView } from './denseResults';
-import { DiagramSheet } from './DiagramSheet';
 
 /**
  * Lo que queda residente en el panel tras CRI-101: el resumen en tarjetas y las
@@ -94,7 +93,6 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
   const [desktopExpanded, setDesktopExpanded] = useState(defaultDesktopExpanded);
   const [mobileMetricsVisible, setMobileMetricsVisible] = useState(true);
   const [denseMenuOpen, setDenseMenuOpen] = useState(false);
-  const [diagramSheetOpen, setDiagramSheetOpen] = useState(false);
   const denseMenuId = useId();
   const denseTriggerRef = useRef<HTMLButtonElement>(null);
   const denseMenuRef = useRef<HTMLDivElement>(null);
@@ -353,7 +351,6 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
           onClick={() => setDesktopExpanded(false)}
         ><ChevronUp size={18} aria-hidden="true" /></button> : null}
       </header>
-      {analysis?.success ? <div className="results-sheet-launcher"><button type="button" onClick={() => setDiagramSheetOpen(true)}>{t('results.diagramSheet')}</button></div> : null}
       <nav className="result-tabs results-quantity-bar" role="tablist" aria-label={t('results.panel')} data-results-quantity-bar>
         <div className="results-quantity-tabs" role="presentation">{availableTabs.map((tab) => {
           const index = availableTabs.findIndex((item) => item.id === tab.id);
@@ -433,7 +430,6 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
       </div>
       </>}
     </section>
-    {diagramSheetOpen && analysis?.success ? <DiagramSheet project={project} analysis={analysis} onClose={() => setDiagramSheetOpen(false)} /> : null}
   </>;
 };
 
