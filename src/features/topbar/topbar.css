@@ -85,6 +85,8 @@
 .topbar--atelier .topbar-utilities-wrap,
 .topbar--atelier .export-wrap { position:relative; }
 .topbar--atelier .topbar-analysis-wrap { min-width:0; flex:1 1 auto; }
+.topbar--atelier .results-launcher--near-case { flex:0 0 auto; }
+.topbar--atelier .results-launcher--near-case[aria-pressed='true'] { color:var(--accent); border-color:color-mix(in srgb,var(--accent) 48%,var(--sc-color-border)); background:color-mix(in srgb,var(--accent) 11%,var(--sc-color-surface-elevated)); }
 .topbar--atelier .topbar-analysis-trigger {
   grid-template-columns:auto minmax(0, 1fr) auto;
   width:100%;

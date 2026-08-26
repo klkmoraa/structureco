@@ -2701,6 +2701,41 @@ button:not(:disabled):active,.selection-card:active {
   .results-panel { transition:none!important; }
 }
 
+/* El dock queda disponible sin competir con el lienzo. Su resumen no duplica
+   resultados: sólo devuelve al usuario a la lectura que ya estaba activa. */
+.results-desktop-toggle { display:none; }
+.results-desktop-collapse { flex:0 0 auto; width:36px; min-width:36px; min-height:36px; padding:0; border:0; border-radius:9px; background:transparent; color:var(--muted); display:grid; place-items:center; cursor:pointer; }
+.results-desktop-collapse:hover { background:var(--surface-2); color:var(--text); }
+.results-panel.desktop-collapsed { min-height:56px; max-height:56px; overflow:hidden; }
+.results-panel.desktop-collapsed .results-desktop-toggle { width:100%; min-height:56px; padding:7px 20px; border:0; background:color-mix(in srgb,var(--surface) 96%,var(--accent-soft)); color:var(--text); display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"eyebrow action" "context action"; align-items:center; column-gap:16px; text-align:left; cursor:pointer; }
+.results-desktop-toggle>span:first-child { grid-area:eyebrow; color:var(--muted); font-size:9px!important; font-weight:750; letter-spacing:.06em; text-transform:uppercase; }
+.results-desktop-toggle>strong { grid-area:context; min-width:0; overflow:hidden; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
+.results-desktop-toggle>small { display:none; }
+.results-desktop-toggle__action { grid-area:action; display:inline-flex; align-items:center; gap:6px; color:var(--accent); font-size:10px!important; font-weight:750; white-space:nowrap; }
+.results-desktop-toggle__action svg { transform:rotate(180deg); }
+
+/* La franja de extremos tiene una sola lectura horizontal. Deja el gráfico en
+   su propio renglón y evita que las tarjetas se conviertan en una columna. */
+.result-metric-rail { grid-column:1/-1; min-width:0; margin:12px 18px 0; }
+.result-extreme-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.diagram-result-layout,.deformation-result-layout { grid-template-rows:auto minmax(0,1fr); }
+.results-panel.results-mode-compact .result-metric-rail { margin:8px 14px 0; }
+.results-panel.results-mode-compact .result-extreme-grid { gap:6px; }
+.results-panel.results-mode-compact .result-extreme-card,.results-panel.results-mode-compact .diagram-cursor-metric { min-height:52px; padding:7px 8px; }
+.results-panel.results-mode-compact .diagram-chart { grid-column:1/-1; padding:8px 14px 10px; }
+.results-panel.results-mode-compact .diagram-chart svg { height:164px; }
+.results-panel.results-mode-expanded .diagram-chart svg { height:216px; }
+@media (min-width:1024px) {
+  .results-panel.results-mode-focused { height:min(52dvh,520px)!important; max-height:min(52dvh,520px); }
+  .results-panel.results-mode-focused .result-metric-rail { margin-top:12px; }
+  .results-panel.results-mode-focused .diagram-chart { flex:0 0 auto; }
+  .results-panel.results-mode-focused .diagram-chart svg { flex:0 0 auto; height:clamp(248px,31dvh,320px); min-height:0; }
+}
+
+@media (max-width:700px) {
+  .result-extreme-grid { grid-template-columns:1fr; }
+}
+
 /* .results-mode-control and .result-tabs set their own height/min-height per
    breakpoint above; on a coarse pointer that can leave them under 44px (e.g.
    the 30px mode buttons at >=1024px, reachable on an iPad or a touchscreen
@@ -5728,6 +5763,22 @@ button:not(:disabled):active,.selection-card:active {
     padding: 9px 14px calc(9px + env(safe-area-inset-bottom));
   }
 }
+
+/* En reposo la retícula orienta sin competir con la estructura; la interacción
+   existente sigue reforzando snap y selección cuando se necesitan. */
+.grid-lines { opacity:.46; }
+
+/* Lámina: el modelo y las curvas tienen un lienzo ancho común. Nunca se
+   comprime para móvil; el propio plano se recorre con el gesto nativo. */
+.results-sheet-launcher { display:flex; justify-content:flex-end; padding:0 14px 7px; }
+.results-sheet-launcher button,.diagram-sheet-choices button { min-height:32px; padding:0 10px; border:var(--sc-clay-edge); border-radius:9px; background:var(--sc-color-surface-elevated); color:var(--text); font:700 11px var(--sc-font-sans); cursor:pointer; }
+.results-sheet-launcher button { color:var(--accent); }
+.diagram-sheet { position:fixed; z-index:calc(var(--sc-z-modal) + 2); inset:var(--sc-visual-viewport-top,0px) 0 var(--sc-visual-viewport-bottom,0px); display:grid; grid-template-rows:auto auto minmax(0,1fr); background:var(--sc-color-bg-canvas); color:var(--text); }
+.diagram-sheet-header { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid var(--sc-color-border); background:var(--sc-color-surface-1); }
+.diagram-sheet-header div { display:grid; gap:2px; }.diagram-sheet-header span { color:var(--accent); font:800 9px var(--sc-font-mono); letter-spacing:.1em; }.diagram-sheet-header strong { font-size:16px; }.diagram-sheet-header small { color:var(--subtle); font-size:11px; }
+.diagram-sheet-header button { width:38px; height:38px; display:grid; place-items:center; border:var(--sc-clay-edge); border-radius:11px; background:var(--sc-color-surface-elevated); color:var(--text); }
+.diagram-sheet-choices { display:flex; gap:7px; padding:9px 20px; overflow-x:auto; border-bottom:1px solid var(--sc-color-border-soft); background:var(--sc-color-surface-1); }.diagram-sheet-choices button { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }.diagram-sheet-choices button.active { color:var(--accent); border-color:color-mix(in srgb,var(--accent) 50%,var(--sc-color-border)); }
+.diagram-sheet-scroll { overflow:auto; overscroll-behavior:contain; touch-action:pan-x pan-y pinch-zoom; padding:18px; }.diagram-sheet-canvas { width:max-content; min-width:1080px; display:grid; grid-template-columns:380px 700px; gap:20px; align-items:start; }.diagram-sheet-model { position:sticky; left:0; top:0; padding:12px; border:var(--sc-clay-edge); border-radius:14px; background:var(--sc-color-surface-1); box-shadow:var(--sc-shadow-clay-xs); }.diagram-sheet-model header,.diagram-sheet-row header { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:8px; }.diagram-sheet-model header span,.diagram-sheet-row header span { color:var(--subtle); font:800 9px var(--sc-font-mono); letter-spacing:.08em; text-transform:uppercase; }.diagram-sheet-model header strong,.diagram-sheet-row header strong { font:700 12px var(--sc-font-mono); }.diagram-sheet-model svg,.diagram-sheet-row svg { display:block; width:100%; background:var(--sc-color-bg-canvas); border-radius:9px; }.diagram-sheet-model-grid line { stroke:var(--sc-color-canvas-grid); stroke-width:1; opacity:.48; }.diagram-sheet-model-members line,.diagram-sheet-member { stroke:var(--sc-color-canvas-member); stroke-width:2; }.diagram-sheet-model-nodes circle { fill:var(--sc-color-bg-canvas); stroke:var(--sc-color-canvas-member); stroke-width:2; }.diagram-sheet-model-nodes path { fill:var(--sc-color-canvas-member); }.diagram-sheet-diagrams { display:grid; gap:14px; }.diagram-sheet-row { padding:12px; border:var(--sc-clay-edge); border-radius:14px; background:var(--sc-color-surface-1); box-shadow:var(--sc-shadow-clay-xs); }.diagram-sheet-baseline { stroke:var(--sc-color-border-strong); stroke-width:1; stroke-dasharray:4 4; }.diagram-sheet-curve { fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }.diagram-sheet-row.axial .diagram-sheet-curve { stroke:var(--axial); }.diagram-sheet-row.shear .diagram-sheet-curve { stroke:var(--shear); }.diagram-sheet-row.moment .diagram-sheet-curve { stroke:var(--moment); }.diagram-sheet-row.deformed .diagram-sheet-curve { stroke:var(--deformed); }
 
 /* CRI-121 · lectura de estados que antes usaban una tinta técnica como texto.
    La identidad de cada herramienta sigue en el subrayado/icono; la palabra

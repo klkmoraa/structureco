@@ -7,15 +7,15 @@ import {
 } from './editorLayers';
 
 describe('editor layer state', () => {
-  it('starts with every presentation layer visible except the heatmap', () => {
+  it('starts with a focused modelling view: model and simple loads only', () => {
     expect(createEditorLayerState()).toEqual({
       model: true,
       loads: true,
-      dimensions: true,
-      ids: true,
-      results: true,
+      dimensions: false,
+      ids: false,
+      results: false,
       labels: true,
-      help: true,
+      help: false,
       diagnostics: true,
       // El mapa de calor reinterpreta el color del dibujo técnico: se pide, no se hereda.
       heatmap: false,
@@ -41,10 +41,26 @@ describe('editor layer state', () => {
 
   it('applies a preset as a whole view instead of toggling one entry', () => {
     const results = editorLayerReducer(createEditorLayerState(), { type: 'preset', preset: 'results' });
-    expect(results).toMatchObject({ model: true, results: true, heatmap: true, loads: false, help: false });
+    expect(results).toMatchObject({ model: true, results: true, heatmap: false, loads: false, help: false });
 
     const clean = editorLayerReducer(results, { type: 'preset', preset: 'clean' });
     expect(clean).toMatchObject({ model: true, ids: false, labels: false, diagnostics: false, heatmap: false });
+  });
+
+  it('does not restore a demand map that predates explicit opt-in persistence', () => {
+    const restored = parseEditorLayerState(JSON.stringify({
+      model: true,
+      results: false,
+      heatmap: true,
+    }));
+
+    expect(restored.heatmap).toBe(false);
+    expect(parseEditorLayerState(JSON.stringify({
+      model: true,
+      results: false,
+      heatmap: true,
+      heatmapExplicit: true,
+    })).heatmap).toBe(true);
   });
 
   it('reports the preset that matches the current view, and none once the user diverges', () => {
@@ -60,7 +76,7 @@ describe('editor layer state', () => {
       model: true,
       loads: false,
       labels: true,
-      results: true,
+      results: false,
     });
   });
 });

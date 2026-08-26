@@ -693,6 +693,26 @@ describe('structureCo app shell', () => {
     expect(within(preview).getByRole('button', { name: /cancelar colocación/i })).toBeTruthy();
   });
 
+  it('keeps Compact free of duplicate selection, repeat, and anonymous floating controls', async () => {
+    setViewport('phone');
+    const user = userEvent.setup();
+    const { container } = await renderExampleApp(user);
+    const member = container.querySelector('.member-object');
+    expect(member).toBeTruthy();
+
+    await user.click(member!);
+
+    expect(container.querySelector('[data-contextual-actions]')).toBeNull();
+    expect(container.querySelector('[data-repeat-affordance]')).toBeNull();
+    expect(container.querySelector('.mobile-inspector-toggle')).toBeNull();
+
+    const more = within(container.querySelector('.mobile-tool-dock') as HTMLElement)
+      .getByRole('button', { name: /más herramientas/i });
+    await user.click(more);
+    const palette = await screen.findByRole('dialog', { name: /más herramientas/i });
+    expect(within(palette).getByRole('menuitem', { name: /editar selección/i })).toBeTruthy();
+  });
+
   it('exposes canvas shortcuts and selects structural objects from the keyboard', async () => {
     const user = userEvent.setup();
     const { container } = await renderExampleApp(user);
@@ -922,15 +942,18 @@ describe('structureCo app shell', () => {
     await user.click(member!);
     const before = container.querySelectorAll('.member-object').length;
 
-    // 1 · La hoja del Inspector convive: no aísla el fondo.
-    fireEvent.click(container.querySelector('.mobile-inspector-toggle')!);
+    // 1 · En Compact el Inspector tiene una ruta con nombre en Utilidades;
+    // no depende de un botón flotante que se pierda debajo del dock.
+    const utilities = screen.getByRole('button', { name: /herramientas del espacio de trabajo/i });
+    await user.click(utilities);
+    await user.click(screen.getByRole('button', { name: /mostrar inspector/i }));
     await screen.findByRole('dialog', { name: /inspector/i });
     expect(shell.inert).toBeFalsy();
     expect(shell.hasAttribute('aria-hidden')).toBe(false);
 
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog', { name: /inspector/i })).toBeNull());
-    await waitFor(() => expect(document.activeElement).toBe(container.querySelector('.mobile-inspector-toggle')));
+    await waitFor(() => expect(document.activeElement).toBe(utilities));
     expect(container.querySelectorAll('.member-object')).toHaveLength(before);
 
     // 2 · Bajo una superficie MODAL el fondo sí queda aislado y el atajo del

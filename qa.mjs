@@ -417,7 +417,14 @@ async function openInspectorFromSelection(page) {
   await selectFirstInspectorMember(page);
   const panel = page.locator('.inspector-panel');
   if (!(await panel.evaluate((element) => element.classList.contains('mobile-open')))) {
-    await page.getByLabel('Abrir inspector').click();
+    const floatingToggle = page.getByLabel('Abrir inspector');
+    if (await floatingToggle.isVisible().catch(() => false)) {
+      await floatingToggle.click();
+    } else {
+      const utilities = page.locator('.utility-more-button');
+      await utilities.click();
+      await page.getByRole('button', { name: /mostrar inspector/i }).click();
+    }
   }
   await page.locator('.inspector-panel.mobile-open').waitFor({ state: 'visible' });
 }
@@ -1332,8 +1339,9 @@ async function mobile() {
   // Inspector.
   await page.locator('.results-panel').press('Escape');
   await page.locator('.results-panel').waitFor({ state: 'hidden' });
-  // CRI-119 · Mismo hit-test bajo emulación táctil que arriba.
-  await page.getByLabel('Abrir inspector').evaluate((el) => el.click());
+  // En Compact el Inspector se abre desde una ruta con nombre en Utilidades;
+  // no existe un lanzador flotante que pueda quedar debajo del dock.
+  await openInspectorFromSelection(page);
   out.checks.mobileInspector = await page.locator('.inspector-panel.mobile-open').isVisible();
   // CRI-119 · `surface="detail"` fuerza la pestaña "Inspector"
   // (`forcedTab` en `Inspector.tsx`) y por eso NO monta el `tablist` — no hay

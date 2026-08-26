@@ -534,6 +534,8 @@ const runCri97ContextualActions = async (page) => {
   const structuralCommand = more.locator('[data-structural-edit-command]');
   check('cri97CompactToolRailExposesCurrentStructuralEditRoute', await structuralCommand.isVisible());
   check('cri97CompactHasNoOrphanedContextualActionsSurface', await page.locator('[data-contextual-actions]').count() === 0);
+  check('compactSelectionHasNoRepeatAffordance', await page.locator('[data-repeat-affordance]').count() === 0);
+  check('compactHasNoAnonymousFloatingInspectorButton', await page.locator('.mobile-inspector-toggle').count() === 0);
   await page.screenshot({ path: path.join(artifactsDir, `cri-97-compact-toolrail-${engine}.png`), fullPage: true });
 
   await structuralCommand.click();

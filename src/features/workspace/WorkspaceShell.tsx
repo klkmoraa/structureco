@@ -344,10 +344,10 @@ const WorkspaceBrokerContent = ({
       layoutActions={{
         inspectorCollapsed: !detail.open,
         fullCanvas: layout.fullCanvas,
-        onToggleInspector: () => {
+        onToggleInspector: (trigger) => {
           if (layout.fullCanvas) setPreference('fullCanvas', false);
           if (detail.open) closeDetail();
-          else openDetail();
+          else openDetail(trigger);
         },
         onToggleFullCanvas: () => {
           if (!layout.fullCanvas) {
@@ -439,7 +439,7 @@ const WorkspaceBrokerContent = ({
       {broker.isRetained('analysisSetup') ? <Inspector surface="analysisSetup" className={analysisSetup.presentation === 'sheet' && analysisSetup.status === 'active' ? 'mobile-open' : ''} presentation={analysisSetup.presentation as 'dock' | 'inset' | 'sheet'} status={analysisSetup.status} onClose={() => closeSurface('analysisSetup')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} activeTool={activeTool} onActiveToolChange={setActiveTool} /> : null}
       {broker.isRetained('view') ? <Inspector surface="view" className={view.presentation === 'sheet' && view.status === 'active' ? 'mobile-open' : ''} presentation={view.presentation as 'dock' | 'inset' | 'sheet'} status={view.status} onClose={() => closeSurface('view')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} /> : null}
     </div>}
-    floatingActions={<div className="workspace-surface-launcher">
+    floatingActions={shellClass === 'K0' ? undefined : <div className="workspace-surface-launcher">
       <button className="mobile-inspector-toggle" onClick={(event) => openDetail(event.currentTarget)} aria-label={t('inspector.open')} aria-expanded={detail.status === 'active'} aria-controls="workspace-detail"><SlidersHorizontal size={20} /></button>
     </div>}
     footer={<div className="professional-note">{t('app.professionalNote')}</div>}

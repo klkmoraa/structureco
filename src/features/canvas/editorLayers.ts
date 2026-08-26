@@ -41,11 +41,13 @@ export type EditorLayerAction =
 export const DEFAULT_EDITOR_LAYERS: Readonly<EditorLayerState> = Object.freeze({
   model: true,
   loads: true,
-  dimensions: true,
-  ids: true,
-  results: true,
+  // El lienzo abre para modelar: las cargas permanecen verificables, pero las
+  // cotas, IDs y resultados se piden cuando hacen falta.
+  dimensions: false,
+  ids: false,
+  results: false,
   labels: true,
-  help: true,
+  help: false,
   diagnostics: true,
   // El mapa de calor reinterpreta el color de las barras: se pide, no se hereda.
   heatmap: false,
@@ -63,7 +65,9 @@ export const EDITOR_LAYER_PRESETS: Readonly<Record<EditorLayerPresetId, Readonly
   }),
   results: Object.freeze({
     model: true, loads: false, dimensions: false, ids: true,
-    results: true, labels: true, help: false, diagnostics: true, heatmap: true,
+    // Resultados y mapa son lecturas independientes: el mapa sólo se enciende
+    // desde su control explícito en Capas.
+    results: true, labels: true, help: false, diagnostics: true, heatmap: false,
   }),
   clean: Object.freeze({
     model: true, loads: false, dimensions: true, ids: false,
@@ -96,11 +100,18 @@ export const createEditorLayerState = (): EditorLayerState => ({ ...DEFAULT_EDIT
 export const parseEditorLayerState = (serialized: string | null): EditorLayerState => {
   if (!serialized) return createEditorLayerState();
   try {
-    const parsed = JSON.parse(serialized) as Partial<EditorLayerState> | null;
+    const parsed = JSON.parse(serialized) as (Partial<EditorLayerState> & { heatmapExplicit?: boolean }) | null;
     if (!parsed || typeof parsed !== 'object') return createEditorLayerState();
     return Object.fromEntries(EDITOR_LAYER_IDS.map((id) => [
       id,
-      id === 'model' ? true : typeof parsed[id] === 'boolean' ? parsed[id] : DEFAULT_EDITOR_LAYERS[id],
+      id === 'model'
+        ? true
+        : id === 'heatmap'
+          // Los estados v1 podían quedar encendidos por el preset Resultados.
+          // Sólo restauramos el mapa cuando una versión nueva registró que
+          // hubo una activación explícita.
+          ? parsed.heatmap === true && parsed.heatmapExplicit === true
+          : typeof parsed[id] === 'boolean' ? parsed[id] : DEFAULT_EDITOR_LAYERS[id],
     ])) as EditorLayerState;
   } catch {
     return createEditorLayerState();
@@ -119,7 +130,11 @@ export const createPersistedEditorLayerState = (): EditorLayerState => {
 export const persistEditorLayerState = (state: EditorLayerState): void => {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(EDITOR_LAYER_STORAGE_KEY, JSON.stringify({ ...state, model: true }));
+    window.localStorage.setItem(EDITOR_LAYER_STORAGE_KEY, JSON.stringify({
+      ...state,
+      model: true,
+      heatmapExplicit: state.heatmap,
+    }));
   } catch {
     // Layer choices are optional presentation state and never block editing.
   }

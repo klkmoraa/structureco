@@ -20,6 +20,7 @@ import { ProvenanceCard } from './ProvenanceCard';
 import { ResultExtremeCard } from './ResultExtremeCard';
 import type { ResultRef } from './provenance';
 import { DENSE_RESULT_VIEWS, preloadDenseResultsSurface, preloadInfluenceLineView, type DenseResultView } from './denseResults';
+import { DiagramSheet } from './DiagramSheet';
 
 /**
  * Lo que queda residente en el panel tras CRI-101: el resumen en tarjetas y las
@@ -78,9 +79,11 @@ export interface ResultsPanelProps {
   presentation?: Extract<SurfacePresentation, 'dock' | 'inset' | 'sheet'>;
   status?: SurfaceStatus;
   onOpenChange?: (open: boolean, trigger?: HTMLElement | null) => void;
+  /** Allows the focused panel tests to exercise its content without opening the dock. */
+  defaultDesktopExpanded?: boolean;
 }
 
-export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenChange }: ResultsPanelProps) => {
+export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenChange, defaultDesktopExpanded = false }: ResultsPanelProps) => {
   const { project, analysis, resultTab, setResultTab, analyze, selection, isAnalyzing, selectedCombinationId, resultCursor } = useProject();
   const { t } = useI18n();
   const isMobile = presentation === 'sheet';
@@ -88,8 +91,10 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
   const [drag, setDrag] = useState<{ y: number; height: number } | null>(null);
   const mobileExpanded = status === 'active';
   const [panelMode, setPanelMode] = useState<ResultsPanelMode>(readResultsMode);
+  const [desktopExpanded, setDesktopExpanded] = useState(defaultDesktopExpanded);
   const [mobileMetricsVisible, setMobileMetricsVisible] = useState(true);
   const [denseMenuOpen, setDenseMenuOpen] = useState(false);
+  const [diagramSheetOpen, setDiagramSheetOpen] = useState(false);
   const denseMenuId = useId();
   const denseTriggerRef = useRef<HTMLButtonElement>(null);
   const denseMenuRef = useRef<HTMLDivElement>(null);
@@ -235,7 +240,7 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
   return <>
     <section
       ref={panelRef}
-      className={`results-panel results-mode-${panelMode}${isMobile && !mobileExpanded ? ' mobile-collapsed' : ''}`}
+      className={`results-panel results-mode-${panelMode}${isMobile && !mobileExpanded ? ' mobile-collapsed' : ''}${!isMobile && !desktopExpanded ? ' desktop-collapsed' : ''}`}
       aria-label={t('results.panel')}
       role={isMobile ? 'dialog' : undefined}
       data-workspace-surface="results"
@@ -246,7 +251,7 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
       data-active-result-quantity={activeTab.id}
       data-canvas-interactive={phoneCanvasInteractive ? 'true' : undefined}
       tabIndex={-1}
-      style={{ height: isMobile && !mobileExpanded ? 54 : height }}
+      style={{ height: isMobile && !mobileExpanded ? 54 : !isMobile && !desktopExpanded ? 56 : height }}
       onKeyDown={(event) => {
         if (event.key === 'Escape' && panelMode === 'focused') {
           event.preventDefault();
@@ -270,6 +275,18 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
         <strong>{mobileResultLabel}</strong>
         <ChevronUp className={`results-toggle-chevron${mobileExpanded ? ' expanded' : ''}`} size={19} />
       </button>
+      {!isMobile && !desktopExpanded ? <button
+        type="button"
+        className="results-desktop-toggle"
+        aria-expanded={false}
+        aria-controls="results-content"
+        onClick={() => setDesktopExpanded(true)}
+      >
+        <span>{t('results.center')}</span>
+        <strong>{resultContext.label}</strong>
+        <small>{t(activeTab.labelKey)}</small>
+        <span className="results-desktop-toggle__action">{t('results.openDock')} <ChevronUp size={17} aria-hidden="true" /></span>
+      </button> : <>
       {isMobile && mobileExpanded ? <div className="results-mobile-commandbar">
         {analysis?.success && activeTab.id !== 'summary' ? <button
           type="button"
@@ -327,7 +344,16 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
             onClick={(event) => panelMode === 'focused' && mode === 'focused' ? leaveFocusedMode() : choosePanelMode(mode, event.currentTarget)}
           >{mode === 'compact' ? t('results.modeCompact') : mode === 'expanded' ? t('results.modeExpanded') : panelMode === 'focused' ? t('results.modeExitFocus') : t('results.modeFocus')}</button>)}
         </div>
+        {!isMobile ? <button
+          type="button"
+          className="results-desktop-collapse"
+          aria-label={t('results.closeDock')}
+          aria-expanded={true}
+          aria-controls="results-content"
+          onClick={() => setDesktopExpanded(false)}
+        ><ChevronUp size={18} aria-hidden="true" /></button> : null}
       </header>
+      {analysis?.success ? <div className="results-sheet-launcher"><button type="button" onClick={() => setDiagramSheetOpen(true)}>{t('results.diagramSheet')}</button></div> : null}
       <nav className="result-tabs results-quantity-bar" role="tablist" aria-label={t('results.panel')} data-results-quantity-bar>
         <div className="results-quantity-tabs" role="presentation">{availableTabs.map((tab) => {
           const index = availableTabs.findIndex((item) => item.id === tab.id);
@@ -405,7 +431,9 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
         {analysis?.success && activeTab.id === 'deformed' ? <DeformationView memberResult={memberResult} memberId={selectedMemberId ?? ''} isMobile={isMobile} mobileMetricsVisible={mobileMetricsVisible} /> : null}
         {analysis?.success && provenanceRef ? <ProvenanceCard analysis={analysis} resultRef={provenanceRef} /> : null}
       </div>
+      </>}
     </section>
+    {diagramSheetOpen && analysis?.success ? <DiagramSheet project={project} analysis={analysis} onClose={() => setDiagramSheetOpen(false)} /> : null}
   </>;
 };
 
