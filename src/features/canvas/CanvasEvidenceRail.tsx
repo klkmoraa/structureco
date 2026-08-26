@@ -10,15 +10,18 @@ export const CanvasEvidenceRail = ({
   dispatch,
   resultTab,
   setResultTab,
+  visible,
 }: {
   layers: EditorLayerState;
   dispatch: Dispatch<EditorLayerAction>;
   resultTab: ResultTab;
   setResultTab: (tab: ResultTab) => void;
+  visible: boolean;
 }) => {
   const { t } = useI18n();
+  if (!visible) return null;
   return <div className="canvas-evidence-rail" role="group" aria-label={t('canvas.evidenceLayers')} data-canvas-chrome="evidence">
-    {EVIDENCE_LAYERS.map(({ id, labelKey }) => <button
+    {EVIDENCE_LAYERS.filter(({ id }) => id !== 'heatmap').map(({ id, labelKey }) => <button
       key={id}
       type="button"
       className={`canvas-evidence-layer canvas-evidence-layer--${id}`}

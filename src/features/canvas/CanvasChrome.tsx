@@ -17,6 +17,7 @@ export interface CanvasChromeProps {
   dispatchLayers: Dispatch<EditorLayerAction>;
   resultTab: ResultTab;
   setResultTab: (tab: ResultTab) => void;
+  analysisAvailable: boolean;
   snapEnabled: boolean;
   gridEnabled: boolean;
   coordinateReadoutRef: RefObject<HTMLOutputElement | null>;
@@ -37,6 +38,7 @@ export const CanvasChrome = ({
   dispatchLayers,
   resultTab,
   setResultTab,
+  analysisAvailable,
   snapEnabled,
   gridEnabled,
   coordinateReadoutRef,
@@ -63,7 +65,7 @@ export const CanvasChrome = ({
       {placementInstruction ? <IconButton size="sm" label={t('canvas.cancelPlacement')} onClick={onCancelPlacement}><X size={14} /></IconButton> : null}
     </div>
     <CanvasLayers layers={layers} dispatch={dispatchLayers} />
-    <CanvasEvidenceRail layers={layers} dispatch={dispatchLayers} resultTab={resultTab} setResultTab={setResultTab} />
+    <CanvasEvidenceRail layers={layers} dispatch={dispatchLayers} resultTab={resultTab} setResultTab={setResultTab} visible={analysisAvailable} />
     <div className="canvas-view-chips" role="status" aria-label={t('canvas.viewStatus')} data-canvas-chrome="view-status">
       <span className={snapEnabled ? 'active' : ''}>{snapEnabled ? t('canvas.snapOn') : t('canvas.snapOff')}</span>
       <span className={gridEnabled ? 'active' : ''}>{gridEnabled ? t('canvas.gridOn') : t('canvas.gridOff')}</span>

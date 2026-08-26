@@ -4000,15 +4000,16 @@ button:not(:disabled):active,.selection-card:active {
 .canvas-evidence-rail {
   position:absolute;
   z-index:8;
-  top:60px;
-  left:12px;
-  right:68px;
+  top:8px;
+  left:8px;
+  right:8px;
   display:flex;
   align-items:center;
   gap:5px;
-  max-width:max-content;
+  max-width:none;
   min-width:0;
-  padding:4px;
+  justify-content:center;
+  padding:3px;
   overflow-x:auto;
   overscroll-behavior-x:contain;
   scrollbar-width:none;
@@ -4020,14 +4021,14 @@ button:not(:disabled):active,.selection-card:active {
 .canvas-evidence-rail::-webkit-scrollbar { display:none; }
 .canvas-evidence-layer {
   min-width:max-content;
-  min-height:34px;
-  padding:0 11px;
+  min-height:30px;
+  padding:0 8px;
   border:1px solid var(--sc-color-border-soft);
   border-radius:9px;
   background:var(--sc-color-surface-elevated);
   color:var(--sc-color-text-secondary);
   font:inherit;
-  font-size:11px;
+  font-size:10px;
   font-weight:700;
   cursor:pointer;
   transition:var(--sc-transition-control);
@@ -4038,14 +4039,15 @@ button:not(:disabled):active,.selection-card:active {
 .canvas-evidence-layer--shear[aria-pressed='true'] { color:var(--shear); border-color:color-mix(in srgb,var(--shear) 46%,var(--sc-color-border-soft)); }
 .canvas-evidence-layer--moment[aria-pressed='true'] { color:var(--moment); border-color:color-mix(in srgb,var(--moment) 46%,var(--sc-color-border-soft)); }
 .canvas-evidence-layer--deformed[aria-pressed='true'] { color:var(--deformed); border-color:color-mix(in srgb,var(--deformed) 46%,var(--sc-color-border-soft)); }
+.canvas-host:has(.canvas-evidence-rail) .canvas-mode-badge:not(.placing-load) { display:none; }
 
 @media (max-width:1023px) {
-  .canvas-evidence-rail { top:116px; left:max(10px,env(safe-area-inset-left)); right:max(64px,calc(env(safe-area-inset-right) + 64px)); max-width:calc(100% - 84px); }
-  .canvas-evidence-layer { min-height:40px; padding-inline:12px; }
+  .canvas-evidence-rail { top:8px; left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right)); max-width:none; }
+  .canvas-evidence-layer { min-height:30px; padding-inline:8px; }
 }
 
 @media (max-width:460px) {
-  .canvas-evidence-rail { top:112px; left:8px; right:60px; max-width:calc(100% - 68px); }
+  .canvas-evidence-rail { top:8px; left:8px; right:8px; max-width:none; }
 }
 
 /* --- Presets de capas ------------------------------------------------- */

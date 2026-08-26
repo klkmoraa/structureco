@@ -269,7 +269,13 @@
   min-height: 112px;
   padding: 9px;
 }
-.project-hub--recent .project-hub__actions { position: absolute; right: 8px; bottom: 8px; }
+.project-hub--recent .project-hub__actions {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+}
 .project-hub--recent .project-hub__open {
   width: 34px;
   min-height: 34px;
@@ -305,7 +311,13 @@
   }
   .project-hub__preview { min-height: 82px; }
   .project-hub__identity { align-self: start; padding-top: 7px; padding-right: 34px; }
-  .project-hub__actions { position: absolute; right: 8px; bottom: 8px; }
+  .project-hub__actions {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    bottom: auto;
+    transform: translateY(-50%);
+  }
   .project-hub__open { min-height: 34px; padding: 0 10px; }
   .project-hub__menu > button { width: 34px; min-height: 34px; }
   .project-hub__menu > div {

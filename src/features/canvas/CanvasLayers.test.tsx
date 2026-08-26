@@ -11,7 +11,7 @@ import { useReducer, useState } from 'react';
 const Harness = () => {
   const [layers, dispatch] = useReducer(editorLayerReducer, undefined, createEditorLayerState);
   const [resultTab, setResultTab] = useState<ResultTab>('moment');
-  return <><CanvasLayers layers={layers} dispatch={dispatch} /><CanvasEvidenceRail layers={layers} dispatch={dispatch} resultTab={resultTab} setResultTab={setResultTab} /></>;
+  return <><CanvasLayers layers={layers} dispatch={dispatch} /><CanvasEvidenceRail layers={layers} dispatch={dispatch} resultTab={resultTab} setResultTab={setResultTab} visible /></>;
 };
 
 beforeAll(() => {
@@ -60,7 +60,8 @@ describe('CanvasLayers', () => {
     render(<ProjectProvider><Harness /></ProjectProvider>);
     const axial = screen.getByRole('button', { name: 'Axial' });
     const shear = screen.getByRole('button', { name: 'Cortante' });
-    const heatmap = screen.getByRole('button', { name: 'Mapa de demanda' });
+    expect(screen.getByRole('group', { name: 'Evidencia' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Mapa de demanda' })).toBeNull();
 
     // Off by default: the `results` fixture in this suite has no analysis to show.
     expect(axial.getAttribute('aria-pressed')).toBe('false');
@@ -73,8 +74,10 @@ describe('CanvasLayers', () => {
     await user.click(shear);
     expect(shear.getAttribute('aria-pressed')).toBe('false');
 
-    expect(heatmap.getAttribute('aria-pressed')).toBe('false');
+    await user.click(screen.getByRole('button', { name: /capas de información/i }));
+    const heatmap = screen.getByRole('switch', { name: /mapa de demanda/i });
+    expect(heatmap.getAttribute('aria-checked')).toBe('false');
     await user.click(heatmap);
-    expect(heatmap.getAttribute('aria-pressed')).toBe('true');
+    expect(heatmap.getAttribute('aria-checked')).toBe('true');
   });
 });

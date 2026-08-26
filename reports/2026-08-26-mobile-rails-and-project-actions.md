@@ -9,6 +9,11 @@
   para que sus acciones no se recorten fuera de la tarjeta.
 - Los botones de abrir y `⋯` fijan la línea y la caja del SVG, manteniendo sus
   iconos centrados dentro de los controles circulares.
+- Las acciones de cada tarjeta reciente se centran verticalmente; dejan de
+  quedar pegadas al borde inferior. El riel del canvas conserva sólo Axial,
+  Cortante, Momento y Deformada, como la referencia; Mapa de demanda sigue
+  accesible mediante su interruptor en Capas. La fila queda compacta en el
+  borde superior del canvas y sólo aparece después de un análisis exitoso.
 - N, V, M, Deformada y Mapa de demanda se movieron del panel de capas a un
   riel horizontal directamente sobre el canvas. Conservan el mismo estado de
   presentación: no modifican el modelo ni abren Resultados.

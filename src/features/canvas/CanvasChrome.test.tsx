@@ -27,6 +27,7 @@ describe('CanvasChrome', () => {
       dispatchLayers={dispatchLayers}
       resultTab="moment"
       setResultTab={vi.fn()}
+      analysisAvailable={false}
       snapEnabled
       gridEnabled={false}
       coordinateReadoutRef={coordinateReadoutRef}
@@ -39,6 +40,7 @@ describe('CanvasChrome', () => {
     /></ProjectProvider>);
 
     expect(container.querySelectorAll('[data-canvas-chrome]')).toHaveLength(5);
+    expect(screen.queryByRole('group', { name: 'Evidencia' })).toBeNull();
     expect(screen.getByText('Elige un nodo')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Cancelar colocación' })).toBeTruthy();
     expect(container.querySelector('.canvas-mode-badge')?.classList.contains('placing-load')).toBe(true);

@@ -2599,6 +2599,7 @@ export const StructuralCanvas = ({
         dispatchLayers={dispatchLayers}
         resultTab={resultTab}
         setResultTab={setResultTab}
+        analysisAvailable={analysis?.success === true}
         snapEnabled={view.snap}
         gridEnabled={view.showGrid}
         coordinateReadoutRef={coordinateReadoutRef}
