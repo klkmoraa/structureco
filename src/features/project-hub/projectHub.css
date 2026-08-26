@@ -151,6 +151,10 @@
   align-items: center;
   gap: 7px;
 }
+.project-hub__actions > button,
+.project-hub__menu > button { line-height: 1; }
+.project-hub__actions svg,
+.project-hub__menu svg { display: block; flex: 0 0 auto; }
 
 .project-hub__open,
 .project-hub__identity button,
@@ -215,6 +219,8 @@
   border-radius: var(--sc-radius-xs);
   box-shadow: none;
 }
+.project-hub__menu .project-hub__delete { color: var(--sc-color-state-error-foreground); }
+.project-hub__menu .project-hub__delete:hover { background: color-mix(in srgb, var(--sc-color-state-error) 10%, transparent); }
 
 .project-hub__open:hover,
 .project-hub__identity button:hover,
@@ -302,7 +308,12 @@
   .project-hub__actions { position: absolute; right: 8px; bottom: 8px; }
   .project-hub__open { min-height: 34px; padding: 0 10px; }
   .project-hub__menu > button { width: 34px; min-height: 34px; }
-  .project-hub__menu > div { bottom: calc(100% + 7px); top: auto; }
+  .project-hub__menu > div {
+    right: 0;
+    bottom: calc(100% + 7px);
+    top: auto;
+    width: min(190px, calc(100vw - 24px));
+  }
   .project-hub__identity form { grid-column: 1 / -1; grid-template-columns: 1fr auto; }
   .project-hub__identity form label { grid-column: 1 / -1; }
   .project-hub--recent { padding: 0; }

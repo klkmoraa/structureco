@@ -35,6 +35,7 @@ export interface ProjectRepository {
   saveProject(project: ProjectModel, expectedRevision?: number): Promise<StoredProjectRecord>;
   renameProject(id: string, name: string): Promise<StoredProjectRecord>;
   duplicateProject(id: string, name: string): Promise<StoredProjectRecord>;
+  deleteProject(id: string): Promise<void>;
   createRecovery(project: ProjectModel, reason: RecoveryRecord['reason']): Promise<RecoveryRecord>;
   listRecoveries(projectId?: string): Promise<RecoveryRecord[]>;
   restoreRecovery(id: string): Promise<StoredProjectRecord>;
@@ -109,6 +110,10 @@ export class InMemoryProjectRepository implements ProjectRepository {
     const record = await this.openProject(id);
     if (!record) throw new Error(`No existe el proyecto ${id}.`);
     return this.saveProject({ ...structuredClone(record.project), id: createId(), name });
+  }
+
+  async deleteProject(id: string) {
+    if (!this.projects.delete(id)) throw new Error(`No existe el proyecto ${id}.`);
   }
 
   async createRecovery(project: ProjectModel, reason: RecoveryRecord['reason']) {
@@ -219,6 +224,20 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     const record = await this.openProject(id);
     if (!record) throw new Error(`No existe el proyecto ${id}.`);
     return this.saveProject({ ...structuredClone(record.project), id: createId(), name });
+  }
+
+  async deleteProject(id: string) {
+    const database = await this.database();
+    const transaction = database.transaction(PROJECTS_STORE, 'readwrite');
+    const done = transactionDone(transaction);
+    const store = transaction.objectStore(PROJECTS_STORE);
+    const existing = await requestResult(store.get(id) as IDBRequest<StoredProjectRecord | undefined>);
+    if (!existing) {
+      await done;
+      throw new Error(`No existe el proyecto ${id}.`);
+    }
+    store.delete(id);
+    await done;
   }
 
   async createRecovery(project: ProjectModel, reason: RecoveryRecord['reason']) {

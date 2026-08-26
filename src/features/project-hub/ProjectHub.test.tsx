@@ -64,4 +64,19 @@ describe('ProjectHub', () => {
     expect(screen.getByRole('button', { name: 'Más acciones para Pórtico compacto' })).toBeTruthy();
     expect(document.querySelectorAll('.project-hub__menu')).toHaveLength(1);
   });
+
+  it('removes a project only after the user confirms the destructive action', async () => {
+    const repository = new InMemoryProjectRepository();
+    await repository.saveProject({ ...createDefaultProject(), name: 'Proyecto temporal' });
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<ProjectProvider><ProjectHub repository={repository} onOpen={() => undefined} /></ProjectProvider>);
+
+    await screen.findByText('Proyecto temporal');
+    await userEvent.click(screen.getByRole('button', { name: 'Más acciones para Proyecto temporal' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Eliminar Proyecto temporal' }));
+
+    expect(confirm).toHaveBeenCalledOnce();
+    await waitFor(() => expect(screen.queryByText('Proyecto temporal')).toBeNull());
+    expect(await repository.listProjects()).toHaveLength(0);
+  });
 });

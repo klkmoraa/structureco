@@ -109,7 +109,7 @@ describe('Results analytical center', () => {
     expect(panel.classList.contains('desktop-collapsed')).toBe(true);
   });
 
-  it('uses one quantity bar, mirrors the active quantity, and keeps dense views in one overflow', async () => {
+  it('uses one quantity rail and keeps dense views beside the result quantities', async () => {
     const user = userEvent.setup();
     renderResults();
 
@@ -122,18 +122,12 @@ describe('Results analytical center', () => {
     await user.click(within(quantityBar!).getByRole('tab', { name: 'Cortante' }));
     expect(panel.getAttribute('data-active-result-quantity')).toBe('shear');
 
-    expect(panel.querySelector('.results-dense-launchers')).toBeNull();
-    const overflow = within(panel).getByRole('button', { name: 'Más resultados' });
-    await user.click(overflow);
-    const menu = screen.getByRole('menu', { name: 'Más resultados' });
-    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+    const denseRail = within(quantityBar!).getByRole('group', { name: 'Secciones de resultados' });
+    expect(within(denseRail).getAllByRole('button').map((item) => item.textContent)).toEqual([
       'Reacciones',
       'Influencia',
       'Aprender',
     ]);
-    await user.keyboard('{Escape}');
-    expect(screen.queryByRole('menu', { name: 'Más resultados' })).toBeNull();
-    expect(document.activeElement).toBe(overflow);
   });
 
   it('localizes the empty classroom next step in English', () => {
@@ -152,7 +146,7 @@ describe('Results analytical center', () => {
     const invocations: Array<{ view: string; trigger: string | null }> = [];
     const listener = (event: Event) => {
       const detail = (event as CustomEvent<{ view: string; trigger?: HTMLElement | null }>).detail;
-      invocations.push({ view: detail.view, trigger: detail.trigger?.getAttribute('aria-label') ?? null });
+      invocations.push({ view: detail.view, trigger: detail.trigger?.textContent ?? null });
     };
     window.addEventListener(workspaceCommandEventName('open-dense-results'), listener);
     renderResults();
@@ -164,16 +158,15 @@ describe('Results analytical center', () => {
       expect(screen.queryByRole('tab', { name })).toBeNull();
     }
     const openDenseView = async (name: 'Reacciones' | 'Influencia') => {
-      await user.click(screen.getByRole('button', { name: 'Más resultados' }));
-      await user.click(within(screen.getByRole('menu', { name: 'Más resultados' })).getByRole('menuitem', { name }));
+      await user.click(within(screen.getByRole('group', { name: 'Secciones de resultados' })).getByRole('button', { name }));
     };
     await openDenseView('Reacciones');
     await openDenseView('Influencia');
 
     // El lanzador viaja en el comando: es a donde el broker devuelve el foco.
     expect(invocations).toEqual([
-      { view: 'reactions', trigger: 'Más resultados' },
-      { view: 'influence', trigger: 'Más resultados' },
+      { view: 'reactions', trigger: 'Reacciones' },
+      { view: 'influence', trigger: 'Influencia' },
     ]);
     window.removeEventListener(workspaceCommandEventName('open-dense-results'), listener);
   }, 10_000);
@@ -318,12 +311,10 @@ describe('Results analytical center', () => {
     expect(screen.getByText('Analysis center')).toBeTruthy();
     expect(screen.getByRole('tablist', { name: 'Analysis results' })).toBeTruthy();
     expect(screen.queryByRole('tab', { name: 'Issues' })).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'More results' }));
-    const denseLaunchers = screen.getByRole('menu', { name: 'More results' });
+    const denseLaunchers = screen.getByRole('group', { name: 'Result sections' });
     for (const view of ['Reactions', 'Influence', 'Learn']) {
-      expect(within(denseLaunchers).getByRole('menuitem', { name: view })).toBeTruthy();
+      expect(within(denseLaunchers).getByRole('button', { name: view })).toBeTruthy();
     }
-    await user.click(screen.getByRole('button', { name: 'More results' }));
     expect(screen.getByRole('group', { name: 'Results panel size' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Compact' })).toBeTruthy();
     // State and reliability moved to the TopBar's AnalysisStatus in CRI-100;
@@ -525,22 +516,19 @@ describe('Results analytical center', () => {
     await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
     expect(screen.getByRole('tab', { name: 'Deformada' })).toBeTruthy();
     // Aula conserva las mismas cantidades y las vistas densas en el mismo
-    // overflow: mismo análisis y ninguna arquitectura paralela.
-    await user.click(screen.getByRole('button', { name: 'Más resultados' }));
-    let denseMenu = screen.getByRole('menu', { name: 'Más resultados' });
+    // riel: mismo análisis y ninguna arquitectura paralela.
+    let denseMenu = screen.getByRole('group', { name: 'Secciones de resultados' });
     for (const view of ['Reacciones', 'Influencia', 'Aprender']) {
-      expect(within(denseMenu).getByRole('menuitem', { name: view })).toBeTruthy();
+      expect(within(denseMenu).getByRole('button', { name: view })).toBeTruthy();
     }
-    await user.click(screen.getByRole('button', { name: 'Más resultados' }));
     expect(screen.getByLabelText('Predicciones base').textContent).toBe('{}');
 
     const modelState = screen.getByLabelText('Estado del modelo').textContent;
     await user.click(screen.getByRole('button', { name: 'Modo completo test' }));
     await user.click(screen.getByRole('button', { name: 'Modo aula test' }));
     expect(screen.getByLabelText('Estado del modelo').textContent).toBe(modelState);
-    await user.click(screen.getByRole('button', { name: 'Más resultados' }));
-    denseMenu = screen.getByRole('menu', { name: 'Más resultados' });
-    expect(within(denseMenu).getByRole('menuitem', { name: 'Aprender' })).toBeTruthy();
+    denseMenu = screen.getByRole('group', { name: 'Secciones de resultados' });
+    expect(within(denseMenu).getByRole('button', { name: 'Aprender' })).toBeTruthy();
   }, 10_000);
 
   it('keeps a failed analysis visible when switching into Aula', async () => {

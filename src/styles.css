@@ -3995,6 +3995,59 @@ button:not(:disabled):active,.selection-card:active {
   transform:var(--sc-clay-press-transform);
 }
 
+/* Evidencia es un riel del dibujo: elegir una opción enciende sólo la capa
+   sobre el canvas y no obliga a abrir el panel de capas. */
+.canvas-evidence-rail {
+  position:absolute;
+  z-index:8;
+  top:60px;
+  left:12px;
+  right:68px;
+  display:flex;
+  align-items:center;
+  gap:5px;
+  max-width:max-content;
+  min-width:0;
+  padding:4px;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  scrollbar-width:none;
+  border:var(--sc-clay-edge);
+  border-radius:13px;
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+.canvas-evidence-rail::-webkit-scrollbar { display:none; }
+.canvas-evidence-layer {
+  min-width:max-content;
+  min-height:34px;
+  padding:0 11px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:9px;
+  background:var(--sc-color-surface-elevated);
+  color:var(--sc-color-text-secondary);
+  font:inherit;
+  font-size:11px;
+  font-weight:700;
+  cursor:pointer;
+  transition:var(--sc-transition-control);
+}
+.canvas-evidence-layer:hover { color:var(--sc-color-text-primary); box-shadow:var(--sc-shadow-clay-xs); transform:translateY(-1px); }
+.canvas-evidence-layer[aria-pressed='true'] { color:var(--accent); border-color:color-mix(in srgb,var(--accent) 42%,var(--sc-color-border-soft)); background:var(--sc-color-surface-inset); box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
+.canvas-evidence-layer--axial[aria-pressed='true'] { color:var(--axial); border-color:color-mix(in srgb,var(--axial) 46%,var(--sc-color-border-soft)); }
+.canvas-evidence-layer--shear[aria-pressed='true'] { color:var(--shear); border-color:color-mix(in srgb,var(--shear) 46%,var(--sc-color-border-soft)); }
+.canvas-evidence-layer--moment[aria-pressed='true'] { color:var(--moment); border-color:color-mix(in srgb,var(--moment) 46%,var(--sc-color-border-soft)); }
+.canvas-evidence-layer--deformed[aria-pressed='true'] { color:var(--deformed); border-color:color-mix(in srgb,var(--deformed) 46%,var(--sc-color-border-soft)); }
+
+@media (max-width:1023px) {
+  .canvas-evidence-rail { top:116px; left:max(10px,env(safe-area-inset-left)); right:max(64px,calc(env(safe-area-inset-right) + 64px)); max-width:calc(100% - 84px); }
+  .canvas-evidence-layer { min-height:40px; padding-inline:12px; }
+}
+
+@media (max-width:460px) {
+  .canvas-evidence-rail { top:112px; left:8px; right:60px; max-width:calc(100% - 68px); }
+}
+
 /* --- Presets de capas ------------------------------------------------- */
 .canvas-layer-presets {
   display:flex;

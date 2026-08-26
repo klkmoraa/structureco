@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Copy, FolderOpen, MoreHorizontal, Pencil, RotateCcw } from 'lucide-react';
+import { Copy, FolderOpen, MoreHorizontal, Pencil, RotateCcw, Trash2 } from 'lucide-react';
 import { usePhase2I18n } from '../../i18n/usePhase2I18n';
 import { useI18n } from '../../i18n/useI18n';
 import { useWorkspaceUI } from '../../store/ProjectContext';
@@ -139,6 +139,17 @@ export const ProjectHub = ({
     }
   };
 
+  const remove = async (record: StoredProjectRecord) => {
+    if (!activeRepository || !window.confirm(t('hub.deleteConfirm', { name: record.name }))) return;
+    try {
+      await activeRepository.deleteProject(record.id);
+      setOpenMenuId(null);
+      await refresh();
+    } catch {
+      setError(t('hub.unavailable'));
+    }
+  };
+
   const restore = async (recovery: RecoveryRecord) => {
     if (!activeRepository) return;
     try {
@@ -187,6 +198,7 @@ export const ProjectHub = ({
             {openMenuId === record.id ? <div>
               <button type="button" aria-label={t('hub.renameAction', { name: record.name })} onClick={() => { setOpenMenuId(null); setEditing({ id: record.id, name: record.name }); }}><Pencil size={15} />{t('hub.rename')}</button>
               <button type="button" aria-label={t('hub.duplicateAction', { name: record.name })} onClick={() => { setOpenMenuId(null); void duplicate(record); }}><Copy size={15} />{t('hub.duplicate')}</button>
+              <button type="button" className="project-hub__delete" aria-label={t('hub.deleteAction', { name: record.name })} onClick={() => void remove(record)}><Trash2 size={15} />{t('hub.delete')}</button>
             </div> : null}
           </div>
         </div>

@@ -4,13 +4,14 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { ProjectProvider, type ResultTab } from '../../store/ProjectContext';
 import { CanvasLayers } from './CanvasLayers';
+import { CanvasEvidenceRail } from './CanvasEvidenceRail';
 import { createEditorLayerState, editorLayerReducer } from './editorLayers';
 import { useReducer, useState } from 'react';
 
 const Harness = () => {
   const [layers, dispatch] = useReducer(editorLayerReducer, undefined, createEditorLayerState);
   const [resultTab, setResultTab] = useState<ResultTab>('moment');
-  return <CanvasLayers layers={layers} dispatch={dispatch} resultTab={resultTab} setResultTab={setResultTab} />;
+  return <><CanvasLayers layers={layers} dispatch={dispatch} /><CanvasEvidenceRail layers={layers} dispatch={dispatch} resultTab={resultTab} setResultTab={setResultTab} /></>;
 };
 
 beforeAll(() => {
@@ -57,27 +58,16 @@ describe('CanvasLayers', () => {
   it('turns evidence into a canvas layer instead of a panel (CRI-100)', async () => {
     const user = userEvent.setup();
     render(<ProjectProvider><Harness /></ProjectProvider>);
-    await user.click(screen.getByRole('button', { name: /capas de información/i }));
-
     const axial = screen.getByRole('button', { name: 'Axial' });
     const shear = screen.getByRole('button', { name: 'Cortante' });
-    const results = screen.getByRole('switch', { name: /resultados.*diagramas/i });
     const heatmap = screen.getByRole('button', { name: 'Mapa de demanda' });
-    const resultsPreset = document.querySelector<HTMLButtonElement>('[data-layer-preset="results"]');
 
     // Off by default: the `results` fixture in this suite has no analysis to show.
     expect(axial.getAttribute('aria-pressed')).toBe('false');
 
-    // La vista Resultados no toma la decisión de colorear el modelo: el mapa
-    // conserva su control explícito dentro de esta misma superficie.
-    expect(resultsPreset).not.toBeNull();
-    await user.click(resultsPreset!);
-    expect(heatmap.getAttribute('aria-pressed')).toBe('false');
-
     await user.click(shear);
     expect(shear.getAttribute('aria-pressed')).toBe('true');
     expect(axial.getAttribute('aria-pressed')).toBe('false');
-    expect(results.getAttribute('aria-checked')).toBe('true');
 
     // Picking the same evidence again turns the layer off, same as any toggle.
     await user.click(shear);

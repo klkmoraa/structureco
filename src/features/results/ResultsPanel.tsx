@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { AlertCircle, ChevronUp, CircleDotDashed, Eye, EyeOff, GripHorizontal, MoreHorizontal, X } from 'lucide-react';
+import { AlertCircle, ChevronUp, CircleDotDashed, Eye, EyeOff, GripHorizontal, X } from 'lucide-react';
 import { useProject, type ResultTab } from '../../store/ProjectContext';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../../engine/diagram';
 import { resolveReliability } from '../../engine/reliability';
@@ -92,10 +92,6 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
   const [panelMode, setPanelMode] = useState<ResultsPanelMode>(readResultsMode);
   const [desktopExpanded, setDesktopExpanded] = useState(defaultDesktopExpanded);
   const [mobileMetricsVisible, setMobileMetricsVisible] = useState(true);
-  const [denseMenuOpen, setDenseMenuOpen] = useState(false);
-  const denseMenuId = useId();
-  const denseTriggerRef = useRef<HTMLButtonElement>(null);
-  const denseMenuRef = useRef<HTMLDivElement>(null);
   const previousAnalysisRef = useRef(analysis);
   const resizeFrameRef = useRef<number | null>(null);
   const pendingHeightRef = useRef<number | null>(null);
@@ -351,8 +347,8 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
           onClick={() => setDesktopExpanded(false)}
         ><ChevronUp size={18} aria-hidden="true" /></button> : null}
       </header>
-      <nav className="result-tabs results-quantity-bar" role="tablist" aria-label={t('results.panel')} data-results-quantity-bar>
-        <div className="results-quantity-tabs" role="presentation">{availableTabs.map((tab) => {
+      <nav className="result-tabs results-quantity-bar" aria-label={t('results.panel')} data-results-quantity-bar>
+        <div className="results-quantity-tabs" role="tablist" aria-label={t('results.panel')}>{availableTabs.map((tab) => {
           const index = availableTabs.findIndex((item) => item.id === tab.id);
           return <button id={`result-tab-${tab.id}`} key={tab.id} data-result-tab={tab.id} role="tab" aria-selected={activeTab.id === tab.id} aria-controls="results-content" tabIndex={activeTab.id === tab.id ? 0 : -1} className={`${activeTab.id === tab.id ? 'active' : ''} ${tab.color ?? ''}`} onClick={() => setResultTab(tab.id)} onKeyDown={(event) => {
             let nextIndex = index;
@@ -367,54 +363,16 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
             window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-result-tab="${next.id}"]`)?.focus());
           }}>{t(tab.labelKey)}</button>;
         })}</div>
-        <div className="results-dense-overflow">
-          <button
-            ref={denseTriggerRef}
+        <div className="results-dense-rail" role="group" aria-label={t('results.denseViews')}>
+          {DENSE_RESULT_VIEWS.map((view) => <button
+            key={view}
             type="button"
-            className="results-dense-overflow__trigger"
-            aria-label={t('results.moreResults')}
-            aria-haspopup="menu"
-            aria-expanded={denseMenuOpen}
-            aria-controls={denseMenuId}
-            onClick={() => setDenseMenuOpen((open) => !open)}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape' && denseMenuOpen) {
-                event.preventDefault();
-                setDenseMenuOpen(false);
-                return;
-              }
-              if (event.key !== 'ArrowDown') return;
-              event.preventDefault();
-              setDenseMenuOpen(true);
-              window.requestAnimationFrame(() => denseMenuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus());
-            }}
-          ><MoreHorizontal size={18} aria-hidden="true" /></button>
-          {denseMenuOpen ? <div
-            ref={denseMenuRef}
-            id={denseMenuId}
-            className="results-dense-overflow__menu"
-            role="menu"
-            aria-label={t('results.moreResults')}
-            onKeyDown={(event) => {
-              if (event.key !== 'Escape') return;
-              event.preventDefault();
-              setDenseMenuOpen(false);
-              denseTriggerRef.current?.focus();
-            }}
-          >
-            {DENSE_RESULT_VIEWS.map((view) => <button
-              key={view}
-              type="button"
-              role="menuitem"
-              data-dense-launcher={view}
-              onFocus={() => { void preloadDenseResultsSurface(); if (view === 'influence') void preloadInfluenceLineView(); }}
-              onPointerEnter={() => { void preloadDenseResultsSurface(); if (view === 'influence') void preloadInfluenceLineView(); }}
-              onClick={(event) => {
-                setDenseMenuOpen(false);
-                emitWorkspaceCommand('open-dense-results', { view, trigger: denseTriggerRef.current ?? event.currentTarget });
-              }}
-            >{t(denseViewLabelKey[view])}</button>)}
-          </div> : null}
+            className="results-dense-rail__action"
+            data-dense-launcher={view}
+            onFocus={() => { void preloadDenseResultsSurface(); if (view === 'influence') void preloadInfluenceLineView(); }}
+            onPointerEnter={() => { void preloadDenseResultsSurface(); if (view === 'influence') void preloadInfluenceLineView(); }}
+            onClick={(event) => emitWorkspaceCommand('open-dense-results', { view, trigger: event.currentTarget })}
+          >{t(denseViewLabelKey[view])}</button>)}
         </div>
       </nav>
       <div id="results-content" className="results-body" role="tabpanel" aria-labelledby={`result-tab-${activeTab.id}`} aria-busy={isAnalyzing}>

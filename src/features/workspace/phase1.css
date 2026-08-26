@@ -409,6 +409,44 @@
   gap:4px;
 }
 
+.app-shell .results-panel .results-dense-rail {
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+
+.app-shell .results-panel .results-dense-rail__action {
+  min-width:max-content;
+  min-height:40px;
+  height:40px;
+  padding:0 10px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:11px;
+  background:var(--sc-color-surface-1);
+  color:var(--sc-color-text-secondary);
+  box-shadow:var(--sc-shadow-clay-xs);
+  font:inherit;
+  font-size:11px;
+  font-weight:700;
+  white-space:nowrap;
+  cursor:pointer;
+  transition:var(--sc-transition-control);
+}
+
+.app-shell .results-panel .results-dense-rail__action:hover,
+.app-shell .results-panel .results-dense-rail__action:focus-visible {
+  color:var(--sc-color-text-primary);
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-clay-sm);
+  transform:translateY(-1px);
+}
+
+.app-shell .results-panel .results-dense-rail__action:active {
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
 .app-shell[data-shell-class='X2'] .results-panel .results-quantity-bar button {
   min-width:0;
   min-height:40px;
@@ -1456,19 +1494,19 @@
   align-items:center;
   gap:4px;
   padding:4px;
-  overflow:visible;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  scrollbar-width:none;
 }
+.app-shell[data-shell-class='K0'] .results-panel [data-results-quantity-bar]::-webkit-scrollbar { display:none; }
 
 .app-shell[data-shell-class='K0'] .results-panel .results-quantity-tabs {
-  min-width:0;
-  flex:1 1 auto;
+  min-width:max-content;
+  flex:0 0 auto;
   display:flex;
   align-items:center;
   gap:4px;
-  overflow-x:auto;
-  overscroll-behavior-x:contain;
   scroll-snap-type:x proximity;
-  scrollbar-width:none;
 }
 
 .app-shell[data-shell-class='K0'] .results-panel .results-quantity-tabs::-webkit-scrollbar {
@@ -1485,6 +1523,20 @@
   scroll-snap-align:center;
   border-radius:11px;
   font-size:10px;
+}
+
+.app-shell[data-shell-class='K0'] .results-panel .results-dense-rail {
+  flex:0 0 auto;
+  scroll-snap-align:center;
+}
+
+.app-shell[data-shell-class='K0'] .results-panel .results-dense-rail__action {
+  min-width:92px;
+  height:42px;
+  min-height:42px;
+  padding:0 8px;
+  font-size:10px;
+  scroll-snap-align:center;
 }
 
 .app-shell[data-shell-class='K0'] .results-panel .results-dense-overflow__trigger {
