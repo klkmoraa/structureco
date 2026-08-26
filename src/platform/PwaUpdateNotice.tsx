@@ -14,7 +14,14 @@ export const PwaUpdateNotice = () => {
   useEffect(() => {
     if (!('serviceWorker' in navigator) || import.meta.env.DEV) return;
     let reloading = false;
+    let disposed = false;
+    let lifecycle: PwaUpdateController | null = null;
     void watchForPwaUpdates(navigator.serviceWorker, (next) => {
+      if (disposed) {
+        next.dispose();
+        return;
+      }
+      lifecycle = next;
       // A stale worker can keep an older hashed CSS/JS bundle alive on a phone
       // after Pages has published the fix. Once this page is already controlled,
       // activate the waiting worker immediately so the next render is coherent;
@@ -26,7 +33,14 @@ export const PwaUpdateNotice = () => {
       if (reloading) return;
       reloading = true;
       window.location.reload();
+    }).then((next) => {
+      if (disposed) next.dispose();
+      else lifecycle = next;
     });
+    return () => {
+      disposed = true;
+      lifecycle?.dispose();
+    };
   }, []);
 
   if (!controller || dismissed) return null;
