@@ -5764,21 +5764,9 @@ button:not(:disabled):active,.selection-card:active {
   }
 }
 
-/* En reposo la retícula orienta sin competir con la estructura; la interacción
-   existente sigue reforzando snap y selección cuando se necesitan. */
-.grid-lines { opacity:.46; }
-
-/* Lámina: el modelo y las curvas tienen un lienzo ancho común. Nunca se
-   comprime para móvil; el propio plano se recorre con el gesto nativo. */
-.results-sheet-launcher { display:flex; justify-content:flex-end; padding:0 14px 7px; }
-.results-sheet-launcher button,.diagram-sheet-choices button { min-height:32px; padding:0 10px; border:var(--sc-clay-edge); border-radius:9px; background:var(--sc-color-surface-elevated); color:var(--text); font:700 11px var(--sc-font-sans); cursor:pointer; }
-.results-sheet-launcher button { color:var(--accent); }
-.diagram-sheet { position:fixed; z-index:calc(var(--sc-z-modal) + 2); inset:var(--sc-visual-viewport-top,0px) 0 var(--sc-visual-viewport-bottom,0px); display:grid; grid-template-rows:auto auto minmax(0,1fr); background:var(--sc-color-bg-canvas); color:var(--text); }
-.diagram-sheet-header { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-bottom:1px solid var(--sc-color-border); background:var(--sc-color-surface-1); }
-.diagram-sheet-header div { display:grid; gap:2px; }.diagram-sheet-header span { color:var(--accent); font:800 9px var(--sc-font-mono); letter-spacing:.1em; }.diagram-sheet-header strong { font-size:16px; }.diagram-sheet-header small { color:var(--subtle); font-size:11px; }
-.diagram-sheet-header button { width:38px; height:38px; display:grid; place-items:center; border:var(--sc-clay-edge); border-radius:11px; background:var(--sc-color-surface-elevated); color:var(--text); }
-.diagram-sheet-choices { display:flex; gap:7px; padding:9px 20px; overflow-x:auto; border-bottom:1px solid var(--sc-color-border-soft); background:var(--sc-color-surface-1); }.diagram-sheet-choices button { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }.diagram-sheet-choices button.active { color:var(--accent); border-color:color-mix(in srgb,var(--accent) 50%,var(--sc-color-border)); }
-.diagram-sheet-scroll { overflow:auto; overscroll-behavior:contain; touch-action:pan-x pan-y pinch-zoom; padding:18px; }.diagram-sheet-canvas { width:max-content; min-width:1080px; display:grid; grid-template-columns:380px 700px; gap:20px; align-items:start; }.diagram-sheet-model { position:sticky; left:0; top:0; padding:12px; border:var(--sc-clay-edge); border-radius:14px; background:var(--sc-color-surface-1); box-shadow:var(--sc-shadow-clay-xs); }.diagram-sheet-model header,.diagram-sheet-row header { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:8px; }.diagram-sheet-model header span,.diagram-sheet-row header span { color:var(--subtle); font:800 9px var(--sc-font-mono); letter-spacing:.08em; text-transform:uppercase; }.diagram-sheet-model header strong,.diagram-sheet-row header strong { font:700 12px var(--sc-font-mono); }.diagram-sheet-model svg,.diagram-sheet-row svg { display:block; width:100%; background:var(--sc-color-bg-canvas); border-radius:9px; }.diagram-sheet-model-grid line { stroke:var(--sc-color-canvas-grid); stroke-width:1; opacity:.48; }.diagram-sheet-model-members line,.diagram-sheet-member { stroke:var(--sc-color-canvas-member); stroke-width:2; }.diagram-sheet-model-nodes circle { fill:var(--sc-color-bg-canvas); stroke:var(--sc-color-canvas-member); stroke-width:2; }.diagram-sheet-model-nodes path { fill:var(--sc-color-canvas-member); }.diagram-sheet-diagrams { display:grid; gap:14px; }.diagram-sheet-row { padding:12px; border:var(--sc-clay-edge); border-radius:14px; background:var(--sc-color-surface-1); box-shadow:var(--sc-shadow-clay-xs); }.diagram-sheet-baseline { stroke:var(--sc-color-border-strong); stroke-width:1; stroke-dasharray:4 4; }.diagram-sheet-curve { fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }.diagram-sheet-row.axial .diagram-sheet-curve { stroke:var(--axial); }.diagram-sheet-row.shear .diagram-sheet-curve { stroke:var(--shear); }.diagram-sheet-row.moment .diagram-sheet-curve { stroke:var(--moment); }.diagram-sheet-row.deformed .diagram-sheet-curve { stroke:var(--deformed); }
+/* En reposo la retícula orienta sin competir con el modelo. Snap y selección
+   conservan su refuerzo propio durante la interacción. */
+.grid-lines { opacity:.29; }
 
 /* CRI-121 · lectura de estados que antes usaban una tinta técnica como texto.
    La identidad de cada herramienta sigue en el subrayado/icono; la palabra

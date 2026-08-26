@@ -79,10 +79,11 @@ const WorkspaceBrokerContent = ({
   const [revisionBaseline, setRevisionBaseline] = useState<RevisionSnapshot | null>(null);
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
   const { t } = useI18n();
-  const { project, analysis, isAnalyzing, setActiveTool, setResultTab, analyze, undo, redo, canUndo, canRedo } = useProject();
+  const { project, analysis, isAnalyzing, setActiveTool, setResultTab, analyze, undo, redo, canUndo, canRedo, updateProjectView } = useProject();
   const [pendingModelDoctorNotification, setPendingModelDoctorNotification] = useState<PendingModelDoctorNotification | null>(null);
   const modelDoctorNotificationIdRef = useRef(0);
   const pendingModelDoctorNotificationIdRef = useRef<number | null>(null);
+  const directCanvasAnalysisRequestedRef = useRef(false);
   const { activeTool } = useWorkspaceUI();
   const { preferences: layout, setPreference, togglePreference } = layoutController;
   const { shellClass } = useShellComposition();
@@ -101,6 +102,29 @@ const WorkspaceBrokerContent = ({
   const palette = broker.stateFor('palette');
 
   useEffect(() => persistEditorLayerState(editorLayers), [editorLayers]);
+
+  useEffect(() => {
+    if (isAnalyzing) {
+      directCanvasAnalysisRequestedRef.current = true;
+      return;
+    }
+    if (!directCanvasAnalysisRequestedRef.current) return;
+    directCanvasAnalysisRequestedRef.current = false;
+    if (!analysis?.success) return;
+
+    // Analizar deja la respuesta donde se dibuja el modelo: no abre otra hoja
+    // ni una página de resultados. Es una lectura directa y despejada debajo
+    // de las barras, con las cargas aún visibles.
+    setResultTab('moment');
+    dispatchEditorLayers({ type: 'set', layer: 'results', visible: true });
+    dispatchEditorLayers({ type: 'set', layer: 'loads', visible: true });
+    dispatchEditorLayers({ type: 'set', layer: 'labels', visible: false });
+    updateProjectView((draft) => ({
+      ...draft,
+      settings: { ...draft.settings, diagramSide: 'negative', showResultValues: false },
+    }));
+    closeSurface('results');
+  }, [analysis, closeSurface, isAnalyzing, setResultTab, updateProjectView]);
 
   useEffect(() => {
     const normalizeDetent = () => {

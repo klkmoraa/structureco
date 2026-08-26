@@ -35,7 +35,7 @@ const project = {
   nodes: [node('N1', 0), node('N2', 6)],
   members: [member],
   nodalLoads: [], memberLoads: [],
-  settings: { units: 'kN-m', language: 'es', showResultOverlay: true, diagramSide: 'positive', diagramScale: 1, diagramScaleMode: 'common' },
+  settings: { units: 'kN-m', language: 'es', showResultOverlay: true, showResultValues: true, diagramSide: 'positive', diagramScale: 1, diagramScaleMode: 'common' },
 } as unknown as ProjectModel;
 
 const analysis = { success: true, memberResults: [result], nodeResults: [] } as unknown as AnalysisResult;
@@ -110,6 +110,12 @@ describe('CanvasResultLayer critical M/V stamps', () => {
   it('stays quiet while the result overlay is off', () => {
     const hidden = { ...project, settings: { ...project.settings, showResultOverlay: false } };
     renderLayer('moment', { project: hidden });
+    expect(stamps()).toHaveLength(0);
+  });
+
+  it('keeps direct canvas reading clean when result values are hidden', () => {
+    const clean = { ...project, settings: { ...project.settings, showResultValues: false } };
+    renderLayer('moment', { project: clean });
     expect(stamps()).toHaveLength(0);
   });
 

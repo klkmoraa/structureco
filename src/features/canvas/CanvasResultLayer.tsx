@@ -223,7 +223,7 @@ const CanvasResultLayerImpl = ({
    * tabla; ahora está donde ocurre.
    */
   const renderCriticalPoints = () => {
-    if (!resultsAllowed || !analysis?.success || !view.showResultOverlay) return null;
+    if (!resultsAllowed || !analysis?.success || !view.showResultOverlay || !view.showResultValues) return null;
     if (resultTab !== 'shear' && resultTab !== 'moment') return null;
     const key = resultTab as DiagramQuantity;
     const symbol = key === 'shear' ? 'V' : 'M';
