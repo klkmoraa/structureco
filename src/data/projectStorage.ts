@@ -23,7 +23,9 @@ const parseProject = (serialized: string): ProjectModel =>
 /**
  * Loads the primary project and falls back to the last validated backup. A
  * malformed primary payload is copied verbatim to a recovery slot before the
- * app continues, so importing a damaged file never destroys forensic data.
+ * app continues, so a damaged local write never destroys forensic data. The
+ * recovery flag is true only when that validated backup was actually loaded;
+ * returning the starter model is reported separately through the message.
  */
 export const loadProjectFromStorage = (storage: StorageLike): StoredProjectLoad => {
   const primary = storage.getItem(PROJECT_STORAGE_KEY);
@@ -58,7 +60,7 @@ export const loadProjectFromStorage = (storage: StorageLike): StoredProjectLoad 
   return { project: createBlankProject(), recoveredFromBackup: false };
 };
 
-/** Saves only normalized v3 data and rotates the previous valid primary copy. */
+/** Saves normalized current-schema data and rotates the previous valid primary copy. */
 export const saveProjectToStorage = (storage: StorageLike, project: ProjectModel): void => {
   const normalized = normalizeProject(project);
   const serialized = JSON.stringify(normalized);

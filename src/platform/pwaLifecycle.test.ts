@@ -4,27 +4,33 @@ import { watchForPwaUpdates, type ServiceWorkerContainerPort, type ServiceWorker
 class FakeWorker implements ServiceWorkerPort {
   state = 'installed';
   postMessage = vi.fn();
-  private listener: (() => void) | null = null;
-  addEventListener(_type: 'statechange', listener: () => void) { this.listener = listener; }
-  change(state: string) { this.state = state; this.listener?.(); }
+  private readonly listeners = new Set<() => void>();
+  addEventListener(_type: 'statechange', listener: () => void) { this.listeners.add(listener); }
+  removeEventListener(_type: 'statechange', listener: () => void) { this.listeners.delete(listener); }
+  change(state: string) { this.state = state; for (const listener of this.listeners) listener(); }
+  listenerCount() { return this.listeners.size; }
 }
 
 class FakeRegistration implements ServiceWorkerRegistrationPort {
   installing: ServiceWorkerPort | null = null;
   waiting: ServiceWorkerPort | null = null;
-  private listener: (() => void) | null = null;
-  addEventListener(_type: 'updatefound', listener: () => void) { this.listener = listener; }
-  updateFound(worker: ServiceWorkerPort) { this.installing = worker; this.listener?.(); }
+  private readonly listeners = new Set<() => void>();
+  addEventListener(_type: 'updatefound', listener: () => void) { this.listeners.add(listener); }
+  removeEventListener(_type: 'updatefound', listener: () => void) { this.listeners.delete(listener); }
+  updateFound(worker: ServiceWorkerPort) { this.installing = worker; for (const listener of this.listeners) listener(); }
+  listenerCount() { return this.listeners.size; }
 }
 
 class FakeContainer implements ServiceWorkerContainerPort {
   controller: object | null = {};
   private readonly registration: FakeRegistration;
-  private listener: (() => void) | null = null;
+  private readonly listeners = new Set<() => void>();
   constructor(registration: FakeRegistration) { this.registration = registration; }
   async register() { return this.registration; }
-  addEventListener(_type: 'controllerchange', listener: () => void) { this.listener = listener; }
-  changeController() { this.listener?.(); }
+  addEventListener(_type: 'controllerchange', listener: () => void) { this.listeners.add(listener); }
+  removeEventListener(_type: 'controllerchange', listener: () => void) { this.listeners.delete(listener); }
+  changeController() { for (const listener of this.listeners) listener(); }
+  listenerCount() { return this.listeners.size; }
 }
 
 describe('PWA update lifecycle', () => {
@@ -51,5 +57,32 @@ describe('PWA update lifecycle', () => {
     registration.updateFound(installing);
     installing.change('installed');
     expect(available).toHaveBeenCalledTimes(1);
+    expect(installing.listenerCount()).toBe(0);
+  });
+
+  it('cleans every listener and makes the controller inert after disposal', async () => {
+    const registration = new FakeRegistration();
+    const waiting = new FakeWorker();
+    registration.waiting = waiting;
+    const container = new FakeContainer(registration);
+    const available = vi.fn();
+    const onControllerChange = vi.fn();
+    const controller = await watchForPwaUpdates(container, available, onControllerChange);
+
+    expect(container.listenerCount()).toBe(1);
+    expect(registration.listenerCount()).toBe(1);
+    controller.dispose();
+    controller.dispose();
+    expect(container.listenerCount()).toBe(0);
+    expect(registration.listenerCount()).toBe(0);
+
+    container.changeController();
+    const installing = new FakeWorker();
+    registration.updateFound(installing);
+    installing.change('installed');
+    controller.applyUpdate();
+    expect(onControllerChange).not.toHaveBeenCalled();
+    expect(available).toHaveBeenCalledTimes(1);
+    expect(waiting.postMessage).not.toHaveBeenCalled();
   });
 });

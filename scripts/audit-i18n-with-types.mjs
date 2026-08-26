@@ -75,6 +75,13 @@ const BACKUP = path.join(ROOT, 'src', 'i18n', '.catalogs.audit-backup');
  */
 export const LOCK = path.join(ROOT, 'src', 'i18n', '.catalogs.audit-lock');
 
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** TypeScript prints string literals in diagnostics with one of these quotes. */
+const diagnosticMentions = (output, literal) => new RegExp(
+  "[\"'`]" + escapeRegExp(literal) + "[\"'`]",
+).test(output);
+
 const processAlive = (pid) => {
   try {
     process.kill(pid, 0);
@@ -117,9 +124,10 @@ const releaseLock = () => rmSync(LOCK, { force: true });
  * ninguna de ellas es no afirmar lo que no se sabe y decir cómo salir.
  */
 export const busyLockMessage = (owner, swapped) => {
-  const lines = [`Ya hay una auditoría en curso (PID ${owner}). Espera a que termine.`];
+  const lockPath = path.relative(ROOT, LOCK);
+  const lines = [`No se puede iniciar otra auditoría: el lock ${lockPath} contiene el PID ${owner}.`];
   if (swapped) lines.push(`El catálogo está intercambiado ahora mismo; su copia intacta está en ${path.relative(ROOT, BACKUP)}.`);
-  lines.push(`Si no hay ninguna corriendo, ese PID se reutilizó tras una muerte sin limpieza: borra ${path.relative(ROOT, LOCK)} y vuelve a ejecutar para que repare el catálogo.`);
+  lines.push(`Un PID existente no demuestra que la auditoría siga viva. Si no hay ninguna corriendo, borra ${lockPath} y vuelve a ejecutar para que repare el catálogo.`);
   return lines.join('\n');
 };
 
@@ -221,8 +229,10 @@ const typecheck = async () => {
  * decide algo, y `audit-i18n-with-types.test.mjs` la ejercita sin compilar.
  */
 export const classifyCandidates = (candidates, result) => {
-  const mentions = (key) => result.output.includes(`"${key.slice(key.indexOf('.') + 1)}"`)
-    || result.output.includes(`"${key}"`);
+  const mentions = (key) => {
+    const shortKey = key.replace(/^[^.]+\./, '');
+    return diagnosticMentions(result.output, shortKey) || diagnosticMentions(result.output, key);
+  };
   const alive = candidates.filter(mentions);
 
   // Una compilación limpia demuestra que ninguna candidata tiene consumidor.

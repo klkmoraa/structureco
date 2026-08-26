@@ -86,6 +86,16 @@ test('reconoce la clave tanto por su forma corta como por la completa', () => {
   assert.deepEqual(completa.alive, ['bulk.scope.nodeOne']);
 });
 
+test('no confunde una clave parecida con la que reclama el compilador', () => {
+  const verdict = classifyCandidates(['bulk.scope.nodeOne'], {
+    complete: true,
+    clean: false,
+    output: diagnosticFor('scope.nodeOneExtra'),
+  });
+  assert.ok(verdict.inconclusive);
+  assert.equal(verdict.dead, undefined);
+});
+
 test('el lock se suelta cuando la corrida acaba sin candidatas que someter', (t) => {
   // La salida temprana que motiva esta regla: el catálogo no tiene ninguna
   // clave que dependa de una regla floja, así que no hay nada que compilar.
@@ -133,7 +143,7 @@ test('el aviso de lock ocupado no afirma lo que el PID no demuestra', () => {
   // cómo salir de ahí, no dejar a quien lo lee esperando a nadie.
   const mensaje = busyLockMessage(4578, false);
   assert.match(mensaje, /PID 4578/);
-  assert.match(mensaje, /se reutilizó/);
+  assert.match(mensaje, /no demuestra/);
   assert.match(mensaje, /\.catalogs\.audit-lock/);
 });
 
