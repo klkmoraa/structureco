@@ -327,7 +327,6 @@ npx --prefix prototypes/cri-11-harness tsc -b --force
 # 3 · el recorrido de Fase A/B sigue en verde (sin regresión)
 npm --prefix prototypes/cri-11-harness run build
 npm --prefix prototypes/cri-11-harness run smoke                        # 41/41
-git checkout -- reports/evidence/2026-08-15-cri-11-fase-b/              # revertir capturas regeneradas
 
 # 4 · la validación de Fase C, ejecutada de verdad
 node prototypes/cri-11-harness/scripts/validate.mjs                     # 36/36
@@ -336,7 +335,6 @@ node prototypes/cri-11-harness/scripts/validate.mjs                     # 36/36
 # 5 · preview aislado
 npm --prefix prototypes/cri-11-harness run build:artifact
 node prototypes/cri-11-harness/scripts/verify-artifact.mjs              # desktop + móvil, 0 errores
-git checkout -- reports/evidence/2026-08-15-cri-11-fase-a/              # revertir capturas regeneradas
 
 # 6 · producción intacta
 git diff --stat HEAD -- src/ package.json vite.config.ts index.html brand/ docs/   # vacío
@@ -348,9 +346,9 @@ git diff --stat HEAD -- src/ package.json vite.config.ts index.html brand/ docs/
   y la carpeta nueva `reports/evidence/2026-08-16-cri-11-fase-c/`.
 - `git diff --stat HEAD -- src/ package.json vite.config.ts index.html brand/ docs/`
   vacío — cero cambios en producción.
-- Las capturas de Fase A y Fase B que `verify-artifact.mjs`/`smoke.mjs`
-  regeneraron al volver a correrlas se revirtieron a su estado commiteado —
-  ni Fase A ni Fase B se rehicieron, ni siquiera en sus píxeles de evidencia.
+- Las capturas de Fase A, B y C son salidas locales ignoradas. Los comandos
+  anteriores las regeneran bajo `reports/evidence/`; sus versiones históricas
+  permanecen consultables en Git y no se vuelven a añadir al índice.
 - No se copió el solver ni se implementó un segundo análisis.
 - No se tocó `Space3D` ni se diseñó Aula vNext.
 - No se cambió la dirección visual, `Welcome` ni la paleta de colores.

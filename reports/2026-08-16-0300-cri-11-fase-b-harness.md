@@ -208,6 +208,10 @@ el propio archivo lo explica.
 fallos**, evidencia en `reports/evidence/2026-08-15-cri-11-fase-b/` (18
 capturas + `smoke-report.md`). Cubre, además de todo lo de Fase A:
 
+La carpeta es una salida local ignorada: se regenera con
+`npm --prefix prototypes/cri-11-harness run build && npm --prefix
+prototypes/cri-11-harness run smoke`. La ejecución histórica permanece en Git.
+
 ```
 … → Deshacer/Rehacer sobre cambio de sección → Palette ejecuta "Resolver"
 → Palette navega por ID → herramienta Nodo crea nudo real → Datasheet lo
@@ -253,10 +257,8 @@ git diff --stat HEAD -- src/ package.json vite.config.ts index.html brand/ docs/
 - `git status --short` sólo muestra archivos bajo `prototypes/cri-11-harness/`
   y la carpeta nueva `reports/evidence/2026-08-15-cri-11-fase-b/`.
 - `git diff --stat HEAD -- src/ package.json brand/ docs/` está vacío.
-- Las capturas de `reports/evidence/2026-08-15-cri-11-fase-a/` que un script
-  antiguo regeneró por accidente (antes de retargetear `smoke.mjs` a su
-  carpeta de Fase B) se revirtieron a su estado commiteado — Fase A no se
-  rehizo, ni siquiera en sus píxeles de evidencia.
+- Las capturas históricas de Fase A se consultan en Git; cualquier salida que
+  los scripts regeneren bajo `reports/evidence/` es local e ignorada.
 - No se copió el solver ni se implementó un segundo análisis.
 - No se tocó `Space3D` fuera de su condición experimental declarada, ni se
   diseñó Aula vNext.

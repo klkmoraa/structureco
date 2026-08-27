@@ -67,6 +67,22 @@ cualquier hosting que sirva HTML estático o con el flujo de Artifact.
 `reports/evidence/2026-08-15-cri-11-fase-a/` y sale con código 1 si hay un solo
 error de consola o una aserción incumplida.
 
+## Regenerar la evidencia local
+
+Las salidas bajo `reports/evidence/` son temporales y están ignoradas por Git.
+Con las dependencias y Chromium de Playwright instalados, se regeneran así:
+
+```bash
+npm --prefix prototypes/cri-11-harness run build
+npm --prefix prototypes/cri-11-harness run smoke       # Fase B: capturas + smoke-report.md
+npm --prefix prototypes/cri-11-harness run validate    # Fase C: capturas + métricas + reporte
+npm --prefix prototypes/cri-11-harness run build:artifact
+npm --prefix prototypes/cri-11-harness run verify:artifact  # Fase A: las cuatro capturas artifact-*
+```
+
+Las capturas históricas retiradas del árbol operativo siguen disponibles en
+los commits que las contenían. No se deben añadir de nuevo al índice.
+
 ## Ejes del harness
 
 Ninguno requiere reescribir el escenario ni recargar la página — ése es el gate

@@ -124,6 +124,8 @@ como conclusión normativa.
   y sin regresiones en dense, foco o Datasheet.
 - Captura focal K0:
   `reports/evidence/2026-08-17-cri-101-results-cards-dense/design-card-k0-english.png`.
+  Esa captura no forma parte del árbol operativo; su versión histórica se
+  consulta en Git y no debe volver a añadirse al índice.
 
 `verify:protected` detectó que la baseline todavía no registraba dos módulos
 ya publicados por CRI-43 y CRI-44. Se auditó el diff protegido contra

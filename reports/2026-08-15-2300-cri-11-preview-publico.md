@@ -56,6 +56,11 @@ Verificado con capturas antes/después en
 el marco pasó de invisible/inalcanzable a visible, legible y clicable en
 390×844 real.
 
+Esas capturas ya no viven en el árbol operativo: se regeneran con
+`npm --prefix prototypes/cri-11-harness run build:artifact` y
+`npm --prefix prototypes/cri-11-harness run verify:artifact`; la versión
+histórica permanece consultable en Git.
+
 ## Por qué
 
 El encargo pedía verificar explícitamente que cargara en desktop **y** móvil.

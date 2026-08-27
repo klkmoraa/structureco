@@ -78,6 +78,10 @@ Dos añadidos que CRI-9 no tenía, ambos declarados:
 `npm --prefix prototypes/cri-11-harness run smoke` conduce el recorrido en
 Chromium real y falla ante un solo error de consola. **26 comprobaciones, 0
 fallos.** La evidencia queda en `reports/evidence/2026-08-15-cri-11-fase-a/`.
+La evidencia histórica se conserva en Git; el subconjunto `artifact-*` puede
+regenerarse localmente con `npm --prefix prototypes/cri-11-harness run
+build:artifact` y `npm --prefix prototypes/cri-11-harness run
+verify:artifact`, sin volver a añadirlo al índice.
 
 ```
 Welcome → Continuar proyecto → Workspace → seleccionar M2 → cambiar sección
@@ -161,7 +165,7 @@ un comportamiento que el producto real no tiene.
 | `prototypes/cri-11-harness/src/app/*.tsx` + `prototype.css` | Nueve superficies y su vestimenta |
 | `prototypes/cri-11-harness/src/harness/*` | El laboratorio |
 | `prototypes/cri-11-harness/scripts/smoke.mjs` | Recorrido en Chromium con gate de consola |
-| `reports/evidence/2026-08-15-cri-11-fase-a/**` | 13 capturas + resumen de la ejecución |
+| `reports/evidence/2026-08-15-cri-11-fase-a/**` | Evidencia histórica retirada del árbol; el subconjunto `artifact-*` es regenerable |
 
 **Cero archivos de producción.** `git status` sólo muestra dos directorios nuevos
 sin seguimiento; `git diff -- src/ package.json vite.config.ts index.html scripts/ docs/ brand/`
