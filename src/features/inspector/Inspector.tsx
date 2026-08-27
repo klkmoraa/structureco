@@ -12,6 +12,7 @@ import { readCanvasViewSettings, withCanvasViewSettings } from '../view/canvasVi
 import { MAX_INSPECTOR_WIDTH, MIN_INSPECTOR_WIDTH, clampInspectorWidth, type InspectorDetent } from '../workspace/useWorkspaceLayoutPreferences';
 import type { SurfacePresentation, SurfaceStatus } from '../workspace/surfacePresentation';
 import { ViewFavoritesPanel } from '../library/ViewFavoritesPanel';
+import './inspector.css';
 
 const NumberField = ({
   label,

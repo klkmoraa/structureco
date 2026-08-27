@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const workspaceCss = readFileSync(new URL('../workspace/phase1.css', import.meta.url), 'utf8');
-const globalCss = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+const resultsCss = readFileSync(new URL('./results.css', import.meta.url), 'utf8');
 
 describe('Clay Results Phase 3 presentation contract', () => {
   const phase = workspaceCss.slice(workspaceCss.indexOf('CLAY RESULTS · FASE 3'));
@@ -30,6 +30,6 @@ describe('Clay Results Phase 3 presentation contract', () => {
 
   it('keeps K0 result actions within the touch target contract', () => {
     expect(phase).toMatch(/data-shell-class='K0'[\s\S]*\.results-mobile-toggle,[\s\S]*\.results-mobile-focus[\s\S]*min-height:44px/);
-    expect(globalCss).toContain('.results-panel');
+    expect(resultsCss).toContain('.results-panel');
   });
 });

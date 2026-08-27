@@ -24,9 +24,12 @@ const tokensCss = readCss(new URL('./tokens.css', import.meta.url));
 const materialCss = readCss(new URL('./material.css', import.meta.url));
 const uiCss = readCss(new URL('./components/ui.css', import.meta.url));
 const stylesCss = readCss(new URL('../styles.css', import.meta.url));
+const inspectorCss = readCss(new URL('../features/inspector/inspector.css', import.meta.url));
 const labCss = readCss(new URL('./lab/componentLab.css', import.meta.url));
 const featureCss = [
   '../features/datasheet/datasheet.css',
+  '../features/inspector/inspector.css',
+  '../features/results/results.css',
   '../features/model-doctor/modelDoctor.css',
   '../features/project-hub/projectHub.css',
   '../features/canvas/phase2.css',
@@ -431,7 +434,7 @@ describe('CRI-105 · planitud técnica', () => {
     expect(raised).not.toContain('.inspector-summary');
     // Y `styles.css` tampoco puede devolvérsela por especificidad: la regla
     // `.inspector-panel .inspector-summary` (0,2,0) gana a la de materia (0,1,0).
-    const insidePanel = stylesCss.match(/\.inspector-panel \.inspector-summary \{[^}]*\}/)?.[0] ?? '';
+    const insidePanel = inspectorCss.match(/\.inspector-panel \.inspector-summary \{[^}]*\}/)?.[0] ?? '';
     expect(insidePanel, 'la regla existe y es la que decide').not.toBe('');
     expect(insidePanel).toContain('box-shadow:none');
     expect(insidePanel).not.toContain('--sc-clay-edge');

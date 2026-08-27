@@ -20,6 +20,7 @@ import { ProvenanceCard } from './ProvenanceCard';
 import { ResultExtremeCard } from './ResultExtremeCard';
 import type { ResultRef } from './provenance';
 import { DENSE_RESULT_VIEWS, preloadDenseResultsSurface, preloadInfluenceLineView, type DenseResultView } from './denseResults';
+import './results.css';
 
 /**
  * Lo que queda residente en el panel tras CRI-101: el resumen en tarjetas y las
