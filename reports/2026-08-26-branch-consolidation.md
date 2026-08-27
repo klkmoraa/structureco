@@ -34,3 +34,15 @@ trató como rama de publicación independiente y no se modificó.
 La validación final se ejecuta sobre `main` y se comprueba por separado contra
 `gh-pages`; las ramas remotas se eliminan sólo después de verificar que todos
 los heads integrados son alcanzables desde `main`.
+
+## Resultado final
+
+- `main` remoto: `2b633fbedc3cd207624a418ba76cbfef7c1779e3`.
+- `gh-pages` remoto: `22eb152463b0442ef120f60a8a27cceb552bacb7` sin cambios.
+- Se eliminaron 51 ramas remotas; la API de GitHub y `git ls-remote` confirman
+  que sólo quedan `main` y `gh-pages`.
+- El PR #10 quedó reconocido como integrado; el PR #9 quedó cerrado al borrar
+  su head, con su contenido recuperado ya presente en `main` mediante el merge
+  de su cadena de commits.
+- El checkout local queda limpio, alineado con `origin/main`, y conserva sólo
+  la rama local `main`.
