@@ -1,6 +1,10 @@
 # structureCo — Colección de 10 Videos Motion Graphics
 
-**Clasificación:** `REFERENCE`
+**Clasificación:** `HISTORICAL`
+
+> **HISTORICAL** — Brief de la campaña HyperFrames entregada en agosto de
+> 2026. Sus fuentes se retiraron del árbol operativo; la decisión vigente y el
+> inventario están en [README.md](README.md).
 
 Documentación de preproducción para la campaña de marca. Fuente de verdad visual: `src/design-system/tokens.css` (tema Noche por defecto) y las capturas en `docs/design-review/final/` y `docs/ux-redesign/evidence/`.
 

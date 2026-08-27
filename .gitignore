@@ -60,12 +60,3 @@ structureCo-documentacion-integral-*/
 # murió sin poder restaurar, y la siguiente la usará para reparar el catálogo.
 src/i18n/.catalogs.audit-backup
 src/i18n/.catalogs.audit-lock
-
-# HyperFrames motion-graphics campaign (motion/*)
-.claude/skills/
-motion/*/node_modules/
-motion/*/snapshots/
-motion/*/*.mp4
-motion/*/*.webm
-motion/*/.hyperframes/
-motion/*/work-*/

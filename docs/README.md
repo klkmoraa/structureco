@@ -40,6 +40,7 @@ documento que los cita.
 | [BOM estructural](architecture/structureco-bom-contract.md) | Contrato reproducible de cuantificación geométrica, agrupación explícita y procedencia por barra. |
 | [Comparación de revisiones](architecture/structureco-revision-comparison-contract.md) | Identidad de snapshot, diff explícito y gate fail-closed para deltas de resultado. |
 | [Rediseño visual total](superpowers/specs/2026-08-22-structureco-total-visual-redesign.md) | Dirección de la interfaz y la experiencia actuales. |
+| [Pipeline de motion graphics](motion-graphics/README.md) | Inventario, clasificación y operación canónica de las piezas audiovisuales. |
 
 ## Referencias
 
@@ -65,6 +66,7 @@ Los planes de fases cerradas, sus especificaciones, reportes narrativos y captur
 | Interfaz | `src/design-system/**`, `src/features/**`, pruebas y QA ejecutables. |
 | Assets estructurales | `public/assets/structural/**`, sus contratos y `npm run verify:structural-assets`. |
 | Identidad visual | [Rediseño visual total](superpowers/specs/2026-08-22-structureco-total-visual-redesign.md), código y referencias aprobadas. |
+| Motion graphics | [Pipeline e inventario](motion-graphics/README.md), `video/**` y scripts raíz `video:*`. |
 
 ## Oráculos y generación
 
