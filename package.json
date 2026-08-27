@@ -23,6 +23,7 @@
     "verify:space3d": "vitest run src/space3d src/features/space3d --maxWorkers=1 --pool=threads --no-file-parallelism && node --test scripts/check-space3d-capacity.test.mjs && node scripts/check-space3d-capacity.mjs",
     "verify": "npm run lint && npm run verify:docs && npm run verify:protected && npm run verify:pwa && npm run verify:i18n && npm test && npm run build && npm run verify:perf",
     "qa": "npm run build && node qa.mjs",
+    "qa:captures": "node capturas.mjs",
     "qa:topbar": "npm run build && node scripts/qa-topbar.mjs",
     "qa:model-doctor": "npm run build && node scripts/qa-model-doctor.mjs",
     "qa:model-doctor-peek": "npm run build && node scripts/qa-model-doctor-peek.mjs",
