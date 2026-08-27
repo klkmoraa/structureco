@@ -1,5 +1,7 @@
 # Icon System v3 — pulido de construcción y centrado óptico verificado
 
+**Clasificación:** `AUDIT/TEMPORARY` · handoff abierto verificable
+
 **Fecha:** 2026-08-12 21:13 UTC
 **Agente:** Claude Code
 **Rama:** claude/structureco-icon-system-6th5bd

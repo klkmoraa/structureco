@@ -39,6 +39,7 @@ documento que los cita.
 | [Módulo de diseño normativo](architecture/structureco-design-module-rfc.md) | Contrato separado `AnalysisResult → DesignResult` y primer slice NTC Acero 2023. |
 | [BOM estructural](architecture/structureco-bom-contract.md) | Contrato reproducible de cuantificación geométrica, agrupación explícita y procedencia por barra. |
 | [Comparación de revisiones](architecture/structureco-revision-comparison-contract.md) | Identidad de snapshot, diff explícito y gate fail-closed para deltas de resultado. |
+| [Fronteras de análisis futuro](architecture/future-analysis-boundaries.md) | Decisiones de alcance y precondiciones para buckling, dinámica, superficies, no linealidad y promoción de S3D-1. |
 | [Rediseño visual total](superpowers/specs/2026-08-22-structureco-total-visual-redesign.md) | Dirección de la interfaz y la experiencia actuales. |
 
 ## Referencias
@@ -53,7 +54,7 @@ documento que los cita.
 
 ## Historial y reportes
 
-Los planes de fases cerradas, sus especificaciones, reportes narrativos y capturas de QA ya no viven en el árbol operativo: se recuperan desde el historial de Git cuando haga falta trazabilidad. La carpeta [reports](../reports/README.md) conserva sólo el handoff de trabajo actual; las capturas regenerables están ignoradas.
+Los reportes narrativos y capturas de QA de fases cerradas ya no viven en el árbol operativo: se recuperan desde el historial de Git cuando haga falta trazabilidad. Los planes y especificaciones que aún funcionan como referencia se clasifican en este índice. La carpeta [reports](../reports/README.md) conserva sólo handoffs con trabajo abierto verificable y el reporte transitorio de su consolidación; las capturas regenerables están ignoradas.
 
 ## Fuentes por tema
 

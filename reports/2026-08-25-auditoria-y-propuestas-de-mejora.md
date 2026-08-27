@@ -1,5 +1,7 @@
 # 2026-08-25 — Auditoría del árbol vigente y propuestas de mejora
 
+**Clasificación:** `AUDIT/TEMPORARY` · handoff abierto verificable
+
 **Fecha:** 2026-08-25
 **Agente:** Claude
 **Rama:** `claude/propuestas-mejora-mp8bhq`
