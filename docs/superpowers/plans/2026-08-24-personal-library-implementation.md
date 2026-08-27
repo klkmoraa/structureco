@@ -132,7 +132,7 @@ executeProjectCommand({
 - Create: `scripts/qa-personal-library.mjs`
 - Modify: `package.json`
 - Modify: `docs/README.md`
-- Create: `reports/2026-08-24-cri-40-personal-library.md`
+- Do not create a permanent phase report; preserve closure evidence in Git history
 
 **Interfaces:**
 - Produces `qa:personal-library` evidence across Home and Workspace.

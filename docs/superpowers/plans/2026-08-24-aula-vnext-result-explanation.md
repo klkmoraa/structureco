@@ -45,7 +45,7 @@ This plan implements slices AULA-A1 through AULA-A8 from `docs/superpowers/specs
 | `src/styles.css` | Existing visual grammar, X2/M1/K0 reflow and 44 px touch targets |
 | `scripts/qa-aula-explanation.mjs` | Browser oracle for composition, themes, keyboard, reflow and stale state |
 | `package.json` | `qa:aula-explanation` command only; no dependency changes |
-| `reports/2026-08-24-aula-vnext-result-explanation.md` | Closure evidence and explicit protected-boundary statement |
+| Git history | Closure evidence and explicit protected-boundary statement; no permanent phase report |
 
 ---
 
@@ -523,7 +523,7 @@ git commit -m "feat(aula): verify results with lazy trace"
 - Modify: `package.json`
 - Modify: `src/styles.css`
 - Modify: focused component tests found during browser QA
-- Create: `reports/2026-08-24-aula-vnext-result-explanation.md`
+- Do not create a permanent phase report; preserve closure evidence in Git history
 
 **Interfaces:**
 - Consumes: the complete A1–A7 flow.
@@ -572,10 +572,10 @@ Expected: every command exits 0; Chromium/WebKit evidence contains no console/pa
 
 - [ ] **Step 5: Write report, verify it and commit**
 
-The report must state implemented slices, exact commands/outcomes, X2/M1/K0 and Day/Night/ES/EN coverage, source SHA, and explicit non-changes to solver, `ProjectModel`, persistence and formats.
+The closure commit must state implemented slices, exact commands/outcomes, X2/M1/K0 and Day/Night/ES/EN coverage, source SHA, and explicit non-changes to solver, `ProjectModel`, persistence and formats.
 
 ```powershell
-git add scripts/qa-aula-explanation.mjs package.json src/styles.css src/features/results src/features/workspace src/i18n/catalogs.ts reports/2026-08-24-aula-vnext-result-explanation.md
+git add scripts/qa-aula-explanation.mjs package.json src/styles.css src/features/results src/features/workspace src/i18n/catalogs.ts
 git commit -m "feat(aula): complete result-first explanation"
 ```
 
