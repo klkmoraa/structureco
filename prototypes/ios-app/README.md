@@ -26,10 +26,12 @@ Capturas de todas las pantallas (requiere el dev server arriba):
 node prototypes/ios-app/scripts/screenshots.mjs
 ```
 
-Deja los PNG en `prototypes/ios-app/screenshots/` y sale con código 1 si hubo
-algún error de consola durante el recorrido. También verifica el arrastre y
-snap de la hoja inferior, controles táctiles de 44 pt, scroll de las pantallas
-largas y ausencia de desbordamiento horizontal en el workspace landscape.
+El script crea, si hace falta, `prototypes/ios-app/screenshots/` y deja allí
+los PNG como artefactos locales: las capturas no se versionan. Sale con código
+1 si hubo algún error de consola durante el recorrido. También verifica el
+arrastre y snap de la hoja inferior, controles táctiles de 44 pt, scroll de las
+pantallas largas y ausencia de desbordamiento horizontal en el workspace
+landscape.
 
 ## Flujo
 

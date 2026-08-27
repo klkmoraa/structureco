@@ -49,6 +49,8 @@ structureco-sites/
 /structureco-sites-test-publish/
 /validation/topbar-repeat-before/
 /validation/topbar-repeat-after/
+/validation/cri-91/evidence/
+/prototypes/ios-app/screenshots/
 *.tar.gz
 *.json.manifest
 *.part-*

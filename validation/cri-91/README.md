@@ -61,7 +61,14 @@ Veredictos: **success MOVED** de `#2F9A2A` a `#2D7C36` para conservar separació
 
 ## Evidencia visual
 
-Las capturas reproducibles están en `validation/cri-91/evidence/`:
+Las capturas reproducibles se generan localmente con:
+
+```bash
+node validation/cri-91/cri91-visual-qa.mjs
+```
+
+El comando crea, si hace falta, `validation/cri-91/evidence/` y guarda allí
+los siguientes PNG. Son artefactos locales de QA y no se versionan:
 
 - `brandbook-day-expanded.png` y `brandbook-night-expanded.png` — Brandbook legible en ambos temas.
 - `brandbook-compact-color.png` — composición Compact sin overflow.
