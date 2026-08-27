@@ -6,6 +6,8 @@ import { ProjectProvider } from './store/ProjectContext';
 import { useProject } from './store/ProjectContext';
 import { ClassroomSessionProvider } from './store/ClassroomSessionContext';
 import { useI18n } from './i18n/useI18n';
+import './design-system/tokens.css';
+import './design-system/fonts.css';
 import './styles.css';
 import './design-system/material.css';
 
