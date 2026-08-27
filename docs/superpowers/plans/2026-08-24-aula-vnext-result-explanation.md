@@ -579,7 +579,7 @@ git add scripts/qa-aula-explanation.mjs package.json src/styles.css src/features
 git commit -m "feat(aula): complete result-first explanation"
 ```
 
-After the commit, re-run `git status --short`, inspect the exact diff against the integration base, push without force, fast-forward `main` only if the remote SHA still matches the reviewed base, and verify source `main` separately from any authorized `gh-pages` publication.
+After the commit, re-run `git status --short` and inspect the exact diff against the integration base. Only with explicit user approval, push without force, fast-forward `main` only if the remote SHA still matches the reviewed base, and verify source `main` separately from any authorized `gh-pages` publication.
 
 ## Self-review record
 
