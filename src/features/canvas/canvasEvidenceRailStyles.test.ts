@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const styles = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+const styles = readFileSync(new URL('./phase2.css', import.meta.url), 'utf8');
 
 describe('canvas evidence rail styles', () => {
   it('preserves the shared touch target on any coarse pointer', () => {

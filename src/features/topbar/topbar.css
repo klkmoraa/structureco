@@ -1,3 +1,527 @@
+/* Documento y contexto comparten el espacio que queda tras las acciones.
+   Así sus pistas se contraen juntas antes de invadirse; las acciones conservan
+   su ancho intrínseco y todos los controles permanecen accesibles. */
+.topbar { height: var(--topbar-h); flex: 0 0 var(--topbar-h); display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) max-content; align-items: center; gap: var(--sc-space-4); padding: 0 var(--sc-layout-gutter); border-bottom-width: 0; position: relative; z-index: var(--sc-z-topbar); }
+.topbar-zone,.brand-block,.top-actions,.history-controls { display:flex; align-items:center; min-width:0; }
+.brand-block { justify-self:start; gap: var(--sc-space-3); position: relative; max-width:100%; }
+/* `actions` es la única naturaleza «acción global»: aloja el contexto de
+   análisis (D-09, viaja junto a la acción que gobierna) y los comandos. El
+   contexto cede ancho primero; los comandos conservan el suyo (CRI-95). */
+.topbar-actions-zone { justify-self:stretch; min-width:0; gap:var(--sc-space-3); flex-wrap:nowrap; }
+.topbar-context-zone { display:flex; align-items:center; flex:1 1 auto; gap:var(--sc-space-1); min-width:0; }
+/* Los selectores ceden ancho antes de que nada se salga de su celda. */
+.topbar-context-zone .compact-select { flex:0 1 auto; min-width:0; }
+.topbar-command-cluster { display:flex; align-items:center; flex:0 0 auto; gap:var(--sc-space-1); min-width:max-content; margin-left:auto; }
+/* `status` es la tercera naturaleza: persistencia, Model Doctor y Estado del
+   análisis. Nunca cede su ancho — es la última en degradar (CRI-95). */
+.topbar-status-zone { justify-self:end; min-width:max-content; flex-wrap:nowrap; gap:var(--sc-space-2); }
+.brand-mark { width: 34px; height:34px; display:grid; place-items:center; color:var(--accent); text-align: center; }
+.brand-home-button { overflow:visible; border:0; padding:0; background:transparent; color:inherit; cursor:pointer; border-radius:var(--sc-radius-sm); }.brand-home-button:hover,.brand-home-button:focus-visible { background:transparent; transform:translateY(-1px); }
+.document-identity { display:grid; min-width:0; gap:1px; }
+.project-name { display: flex; align-items: center; gap: 2px; min-width: 0; border-radius: var(--sc-radius-sm); }
+.project-name:focus-within { background: var(--surface-2); }
+.project-name input { border: 0; background: transparent; width: min(260px, 22vw); min-width:72px; height:24px; padding:0 var(--sc-space-1); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--sc-font-size-control); font-weight:650; outline:0; }
+.project-menu-toggle { border: 0; color: inherit; background: transparent; display: grid; place-items: center; width: var(--sc-control-height-md); height: var(--sc-control-height-md); padding: 0; border-radius: var(--sc-radius-sm); cursor: pointer; }
+.project-menu-toggle:hover, .project-menu-toggle:focus-visible { background: var(--surface-2); }
+.analysis-status-shell { display:flex; min-width:0; }
+.analysis-status {
+  --analysis-status-color:var(--accent);
+  height:var(--sc-control-height-md);
+  min-width:var(--sc-control-height-md);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:var(--sc-space-2);
+  padding:0 var(--sc-space-3);
+  border:1px solid color-mix(in srgb,var(--analysis-status-color) 34%,var(--border));
+  border-radius:999px;
+  background:color-mix(in srgb,var(--analysis-status-color) 8%,var(--surface));
+  color:var(--analysis-status-color);
+  font-size:var(--sc-font-size-label);
+  font-weight:700;
+  line-height:var(--sc-line-height-control);
+  white-space:nowrap;
+}
+button.analysis-status { cursor:pointer; }
+button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-status-color) 14%,var(--surface)); }
+.analysis-status.is-ready { --analysis-status-color:var(--accent); }
+.analysis-status.is-calculating { --analysis-status-color:var(--sc-color-state-info); }
+.analysis-status.is-resolved { --analysis-status-color:var(--success); }
+.analysis-status.is-stale,.analysis-status.is-warning { --analysis-status-color:var(--sc-color-state-warning-foreground); }
+.analysis-status.is-error { --analysis-status-color:var(--sc-color-state-error-foreground); }
+.analysis-status-label { display:none; }
+/* Fiabilidad es una línea propia junto al estado, nunca un color aplicado sobre
+   su valor (contrato protegido, CRI-100): texto y color propios, con la misma
+   degradación icon-only que `.analysis-status-label` bajo 1500px. */
+.analysis-reliability-line { --reliability-color:var(--muted); display:inline-flex; align-items:center; gap:4px; min-width:0; font-size:var(--sc-font-size-label); font-weight:650; white-space:nowrap; color:var(--reliability-color); }
+.analysis-reliability-line[data-analysis-reliability="reliable"] { --reliability-color:var(--success); }
+.analysis-reliability-line[data-analysis-reliability="limited"] { --reliability-color:var(--sc-color-state-warning-foreground); }
+.analysis-reliability-line[data-analysis-reliability="unreliable"],
+.analysis-reliability-line[data-analysis-reliability="failed"] { --reliability-color:var(--sc-color-state-error-foreground); }
+/* Bajo 1500px sólo queda el punto de color + el disparador de la causa
+   gobernante (icon-only, igual que `.analysis-status-label`): el texto sigue
+   presente para lectores de pantalla vía `aria-label` del grupo. */
+.analysis-reliability-dot { width:8px; height:8px; border-radius:999px; background:currentColor; flex:0 0 auto; }
+.analysis-reliability-label,
+.analysis-reliability-value { display:none; }
+.analysis-reliability-line button { display:inline-flex; color:inherit; background:transparent; border:0; padding:0; cursor:pointer; }
+.icon-button { width: var(--sc-control-height-md); height: var(--sc-control-height-md); border: 0; background: transparent; border-radius: var(--sc-radius-md); display: inline-grid; place-items: center; color:var(--muted); }
+.icon-button:hover:not(:disabled) { background:var(--surface-2); color:var(--text); }
+.autosave-state { position:relative; display: inline-flex; align-items: center; gap:var(--sc-space-1); flex:0 0 auto; min-height:var(--sc-control-height-md); padding-left:var(--sc-space-3); border-left:1px solid var(--border-soft); border-radius:var(--sc-radius-sm); font-size:var(--sc-font-size-label); color:var(--subtle); }
+.autosave-state.has-issue { color:var(--warning); }
+.autosave-state:focus-visible { outline:var(--sc-focus-ring-width) solid var(--focus); outline-offset:var(--sc-focus-ring-offset); }
+.autosave-state__description { position:absolute; z-index:30; top:calc(100% + 7px); left:8px; width:min(280px,76vw); padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface); box-shadow:var(--sc-shadow-popover); color:var(--text); font-size:var(--sc-font-size-label); font-weight:500; line-height:1.45; opacity:0; visibility:hidden; transform:translateY(-3px); pointer-events:none; transition:opacity var(--motion-fast) var(--ease-native),transform var(--motion-fast) var(--ease-native),visibility var(--motion-fast) var(--ease-native); }
+.autosave-state:hover .autosave-state__description,.autosave-state:focus .autosave-state__description { opacity:1; visibility:visible; transform:translateY(0); }
+.analyze-button { border: 0; color: var(--accent-foreground); background: var(--accent-fill); width:148px; min-width:148px; height: var(--sc-control-height-touch); padding: 0 var(--sc-space-5); border-radius: var(--sc-radius-md); display: flex; align-items: center; justify-content:center; gap:var(--sc-space-2); font-weight:700; }
+.analyze-button > .sc-button__label { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.analyze-button:hover:not(:disabled) { background:var(--accent-hover); transform:translateY(-1px); }
+.analyze-button:not(:disabled):active { transform:var(--sc-clay-press-transform); transition-duration:var(--sc-motion-press); }
+.project-menu { left: 46px; top: 48px; width: 310px; }
+.portable-export-error { padding:8px 10px; border-radius:8px; background:color-mix(in srgb,var(--error) 9%,var(--surface)); color:var(--error); font-size:9px; line-height:1.35; }
+.portable-export-error.desktop { position:absolute; z-index:45; right:18px; top:calc(100% + 6px); width:min(300px,calc(100vw - 24px)); border:1px solid color-mix(in srgb,var(--error) 30%,var(--border)); box-shadow:var(--shadow); }
+.menu-copy { display: flex; flex-direction: column; gap: 2px; }
+.menu-copy small { color: var(--muted); font-size: var(--sc-font-size-label); line-height: 1.4; }
+
+.mobile-actions-wrap { display:block; position: relative; }
+.mobile-actions-menu { right: 0; top: calc(100% + var(--sc-space-2)); width: min(320px, calc(100vw - 20px)); }
+.mobile-menu-field { display: grid; grid-template-columns: 1fr 1.3fr; align-items: center; gap: 10px; padding: 8px 10px; font-size: var(--sc-font-size-control); font-weight:550; color: var(--text); }
+.mobile-menu-field select { width: 100%; min-height:var(--sc-control-height-touch); border: 1px solid var(--border); border-radius: 7px; background: var(--surface); padding: 8px; font-weight:550; color:var(--text); transition:background var(--sc-motion-fast) var(--sc-ease-standard), border-color var(--sc-motion-fast) var(--sc-ease-standard); cursor:pointer; }
+.mobile-menu-field select:hover { background: var(--surface-2); }
+.mobile-menu-field select:focus-visible { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
+.pdelta-advanced-details { border:1px solid var(--border-soft); border-radius:9px; background:var(--surface-2); margin:4px; overflow:hidden; }
+.pdelta-advanced-details summary { padding:10px; font-size:var(--sc-font-size-control); color:var(--text); font-weight:600; cursor:pointer; user-select:none; }
+.pdelta-advanced-details summary:hover { background:color-mix(in srgb, var(--text) 4%, transparent); }
+.pdelta-advanced-content { padding:4px 0 8px 0; border-top:1px solid var(--border-soft); background:var(--surface); }
+.pdelta-advanced-content input[type="number"] { width:100%; min-height:var(--sc-control-height-touch); border:1px solid var(--border); border-radius:7px; background:var(--surface-2); padding:8px; color:var(--text); font-variant-numeric:tabular-nums; }
+.pdelta-advanced-content .mobile-menu-field { padding:6px 10px; }
+.mobile-history-actions { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:4px; border-bottom:1px solid var(--border-soft); margin-bottom:4px; }
+.mobile-history-actions button { justify-content:center; border:1px solid var(--border-soft); }
+.menu-section { display:flex; flex-direction:column; gap:2px; padding:8px 4px; border-bottom:1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.mobile-history-actions + .menu-section { padding-top:4px; }
+.menu-section:last-of-type { border-bottom:none; padding-bottom:4px; }
+.menu-section-title { font-size:10px; font-weight:800; color:var(--text); opacity:0.6; text-transform:uppercase; letter-spacing:0.1em; padding:8px 12px 6px; margin-bottom:2px; }
+.mobile-history-actions.overflow-history,.overflow-case,.overflow-mode { display:none; }
+
+@media (max-width:1439px) {
+  .topbar { grid-template-columns:minmax(0,1fr) minmax(0,1fr) max-content; gap:var(--sc-space-3); }
+  .topbar-context-zone .topbar-context-control--units,.export-wrap { display:none; }
+}
+
+@media (max-width: 1279px) {
+  :root { --toolbar-w: var(--sc-layout-rail-compact); --inspector-w: var(--sc-layout-inspector-compact); }
+  .tool-button { grid-template-columns: 1fr; justify-items:center; min-height:52px; padding:5px; }
+  .tool-button > span:not(.sc-tool-button__icon),.tool-button kbd,.selection-tip span { display:none; }
+  .selection-tip { justify-content:center; }
+  .topbar { grid-template-columns:minmax(0,1fr) minmax(0,1fr) max-content; gap:var(--sc-space-2); }
+  .history-controls { display:none; }
+  .analyze-button { width:124px; min-width:124px; }
+  .mobile-history-actions.overflow-history { display:grid; }
+  .overflow-case { display:grid; }
+  .topbar-context-zone .topbar-context-control--scenario { display:none; }
+}
+
+/* Sub-umbral de teléfono dentro de Compact (PHONE_CEILING_PX, propiedad de
+   este archivo — ver `shellComposition.ts`). Orden de degradación (CRI-95):
+   persistencia ya se fue a icono-only en K0; Datasheet es lo siguiente en
+   cederle sitio al nombre del proyecto y a la zona `status` protegida. Las
+   tres capacidades siguen enteras en «Más acciones», ninguna queda huérfana.
+   Selector compuesto (0,2,0): `.sc-icon-button` vive en ui.css y su
+   `display:inline-grid` (0,1,0) gana por orden de bundling si no se supera
+   su especificidad, no sólo por orden de cascada. */
+@media (max-width: 700px) {
+  .topbar .datasheet-launcher,.topbar .space3d-open-button,.topbar .export-wrap { display:none; }
+}
+
+@media (pointer:coarse) {
+  .topbar .icon-button,
+  .topbar .project-menu-toggle,
+  .topbar .compact-select,
+  .topbar .analyze-button,
+  .popover button,
+  .mobile-history-actions button { min-width:var(--sc-control-height-touch); min-height:var(--sc-control-height-touch); }
+  .project-name input { min-height:var(--sc-control-height-touch); }
+  .number-control,.select-field select { min-height:var(--sc-control-height-touch); }
+  .desktop-gesture-hint { display:none; }
+  .touch-gesture-hint { display:inline; }
+  .member-hit { stroke-width:44; }
+  .load-hit { stroke-width:44!important; }
+  .node-object .node-hit { r:22px; }
+  .candidate-picker [role='option'],.candidate-picker footer button { min-height:44px; }
+  .canvas-controls button { width:44px; height:44px; }
+}
+
+/* La contramarca del logotipo se lee sobre el relleno de acento: en Noche ese
+   relleno es verde brillante, así que la tinta tiene que oscurecerse con él. */
+.welcome-brand svg,.brand-mark svg { display:block; color:var(--accent); --brand-mark-ink:var(--accent-foreground); }
+
+@media (max-width:1023px) {
+  .brand-mark,.brand-mark svg { width:30px; height:30px; }
+  .inspector-panel { height:min(78dvh,700px); border-radius:20px 20px 0 0; }
+  /* Sin `backdrop-filter`: 2px de desenfoque no se ven y sí cuestan una capa de
+     composición sobre el lienzo. El velo lo hace el scrim. */
+  .mobile-inspector-backdrop { background:var(--sc-color-overlay-soft); }
+  .empty-results,.failed-results { margin:10px; min-height:calc(100% - 20px); }
+}
+
+@media (min-width:1500px) {
+  .analysis-status-label { display:inline; }
+  .analysis-reliability-label,
+  .analysis-reliability-value { display:inline; }
+}
+.analyze-button:not(:disabled):active { transform:var(--sc-clay-press-transform); }
+.analyze-button.analyzing { box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 12%,transparent); }
+.project-menu { transform-origin:top left; }
+
+@media (max-width:360px) {
+  .brand-block { gap:5px; }
+  .project-name { min-width:0; padding-inline:2px; }
+  .project-name input { min-width:0; width:min(84px,26vw); }
+  .top-actions { gap:2px; }
+}
+
+@media (min-width:361px) and (max-width:460px) {
+  .project-name input { width:min(100px,26vw); }
+}
+.overflow-layout-actions { display:grid; gap:2px; padding-block:4px; border-block:1px solid var(--border-soft); }
+.overflow-layout-actions button { justify-content:flex-start; }
+
+/* ========================================================================
+   AG-015 · Capa de materia
+   Lo que la bienvenida estrena, el espacio de trabajo lo hereda: canto de
+   1px y halo de marca sólo donde hay una acción. No introduce color nuevo
+   ni cambia una sola medida de layout — sube el acabado de superficies que
+   ya existían.
+   Lo que esta capa vestía de los componentes `.sc-*` (acción primaria,
+   segmentados, teclas del rail) se mudó a `design-system/components/ui.css`,
+   que es quien los posee: se cargaba después que `styles.css` y por eso hacía
+   falta la clase extra (`.sc-button.sc-button--primary`) para ganar la
+   cascada. Declarada en su sitio, la duplicación desaparece.
+   ===================================================================== */
+
+/* Analizando: el anillo de foco marca que la acción sigue en curso. Es el
+   único estado del botón primario que no describe el Design System, porque
+   `.analyzing` es de esta pantalla y no del componente. */
+.analyze-button.analyzing { box-shadow:var(--sc-ring-focus), var(--sc-ring-inset); }
+
+.topbar,
+.toolbar,
+.inspector-panel,
+.results-panel {
+  background:var(--sc-color-surface-1);
+  border-color:var(--sc-color-border);
+  box-shadow:var(--sc-shadow-clay-sm);
+}
+.topbar { border-bottom:1px solid var(--sc-color-border); box-shadow:var(--sc-shadow-clay-xs); }
+
+.brand-mark { color:var(--accent); }
+.compact-select,
+.project-name input {
+  font-family:var(--sc-font-mono);
+  font-size:11px;
+}
+
+.theme-toggle,
+.topbar button:not(.analyze-button):not(.sc-button--primary) {
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+/* --- TopBar: arcilla real, no una sombra suelta sobre fondo transparente ---
+   La regla de arriba sólo pone la sombra de reposo; sin una superficie
+   propia detrás (estos controles traían background:transparent, herencia
+   del diseño plano previo) la sombra flotaba sin nada que elevar. Aquí se
+   les da cuerpo y los tres estados de la materia: reposo elevado, hover más
+   elevado, pulsado/abierto rehundido — igual que el resto del sistema. */
+.brand-home-button { background:var(--sc-color-surface-1); transition:var(--sc-transition-control); }
+.brand-home-button:hover,
+.brand-home-button:focus-visible { background:var(--sc-color-surface-elevated); box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1.5px); }
+.brand-home-button:active { background:var(--sc-color-surface-inset); box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
+
+.project-menu-toggle { background:var(--sc-color-surface-1); transition:var(--sc-transition-control); }
+.project-menu-toggle:hover,
+.project-menu-toggle:focus-visible { background:var(--sc-color-surface-elevated); box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1px); }
+.project-menu-toggle:active,
+.project-menu-toggle[aria-expanded='true'] { background:var(--sc-color-surface-inset); box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
+
+.autosave-state { background:var(--sc-color-surface-1); box-shadow:var(--sc-shadow-clay-xs); transition:var(--sc-transition-control); }
+.autosave-state:hover { background:var(--sc-color-surface-elevated); box-shadow:var(--sc-shadow-clay-sm); }
+
+/* El selector genérico de arriba congela la sombra en `xs` en todo estado
+   porque su combinación de :not() lo hace más específico que
+   `.sc-icon-button:hover`/`:active`. Se restaura aquí la profundidad. */
+.topbar .sc-icon-button:not(:disabled):hover { box-shadow:var(--sc-shadow-clay-sm); }
+.topbar .sc-icon-button:not(:disabled):active,
+.topbar .sc-icon-button[aria-expanded='true']:not(:disabled) { box-shadow:var(--sc-shadow-clay-pressed); }
+
+.topbar-context-zone .compact-select { background:var(--sc-color-surface-1); box-shadow:var(--sc-shadow-clay-xs); }
+.topbar-context-zone .compact-select:hover { background:var(--sc-color-surface-elevated); box-shadow:var(--sc-shadow-clay-sm); }
+.topbar-context-zone .compact-select:focus-visible { background:var(--sc-color-surface-inset); box-shadow:var(--sc-shadow-clay-pressed), 0 0 0 var(--sc-focus-ring-width) color-mix(in srgb, var(--focus) 34%, transparent); }
+
+/* Workspace: barras, navegación y chrome del lienzo --------------------- */
+.topbar,
+.toolbar,
+.inspector-panel,
+.results-panel {
+  background:var(--surface);
+  border-color:var(--border);
+  box-shadow:none;
+}
+.topbar { background:color-mix(in srgb,var(--surface) 92%,transparent); box-shadow:0 1px 0 color-mix(in srgb,var(--sc-color-surface-elevated) 72%,transparent); }
+.topbar [data-topbar-cluster] { min-height:calc(var(--sc-control-height-md) + 10px); padding:5px; border:1px solid color-mix(in srgb,var(--border) 66%,transparent); border-radius:var(--sc-radius-lg); background:color-mix(in srgb,var(--sc-color-surface-1) 86%,transparent); box-shadow:var(--sc-shadow-clay-pressed); }
+.topbar [data-topbar-cluster='document'] { padding-inline:5px 8px; }
+.topbar [data-topbar-cluster='context'] { gap:4px; padding-inline:5px; }
+.topbar [data-topbar-cluster='actions'] { gap:5px; padding-inline:5px; }
+.topbar [data-topbar-cluster='status'] { gap:8px; padding-inline:6px; }
+.topbar [data-topbar-cluster] .autosave-state { border-left:0; }
+.topbar-context-control { min-width:0; display:grid; gap:1px; padding:3px 4px; border-radius:var(--sc-radius-sm); color:var(--subtle); cursor:pointer; }
+.topbar-context-control > span { padding-inline:7px; overflow:hidden; color:var(--subtle); font-family:var(--sc-font-mono); font-size:8px; font-weight:750; letter-spacing:.065em; line-height:1; text-overflow:ellipsis; text-transform:uppercase; white-space:nowrap; }
+.topbar .topbar-context-control .compact-select { width:100%; height:30px; min-height:30px; padding:0 26px 0 8px; border:1px solid color-mix(in srgb,var(--border) 72%,transparent); background:var(--sc-color-surface-1); box-shadow:var(--sc-shadow-clay-xs); font-size:11px; font-weight:650; }
+.topbar .topbar-context-control .compact-select:hover { background:var(--sc-color-surface-elevated); box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1px); }
+/* El foco es un anillo y sólo un anillo (V-14). Antes hundía el control con
+   la cavidad clay y lo desplazaba 1px: enfocar un selector no es pulsarlo, y
+   el hundimiento borraba la diferencia entre "puedo escribir aquí" y "lo estoy
+   pulsando". El canto y el relieve del control no cambian al enfocarlo. */
+.topbar .topbar-context-control .compact-select:focus-visible { box-shadow:var(--sc-shadow-clay-xs),var(--sc-ring-focus); }
+.topbar-context-control--scenario { background:color-mix(in srgb,var(--accent) 7%,transparent); }
+.topbar-context-control--scenario > span { color:var(--accent); }
+.topbar-context-control--scenario .compact-select { border-color:color-mix(in srgb,var(--accent) 28%,var(--border)); }
+
+.topbar .compact-select,
+.topbar .project-name input,
+.number-control,
+.select-field select,
+.inspector-numeric-field__control,
+.diagram-cursor-readout {
+  background:var(--sc-color-surface-2);
+  border:0;
+  box-shadow:var(--sc-shadow-clay-pressed);
+}
+.topbar .compact-select:hover,
+.topbar .project-name input:hover { box-shadow:var(--sc-shadow-clay-pressed); }
+.topbar :is(.icon-button,.project-menu-toggle,.brand-home-button):hover:not(:disabled),
+.canvas-controls button:hover { background:var(--sc-color-surface-2); color:var(--text); }
+.topbar :is(.icon-button,.project-menu-toggle,.brand-home-button):active:not(:disabled),
+.canvas-controls button:active { box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
+.analysis-status { box-shadow:var(--sc-shadow-clay-xs); transition:transform var(--sc-motion-press) var(--sc-ease-press), box-shadow var(--sc-motion-control) var(--sc-ease-standard), background var(--sc-motion-control) var(--sc-ease-standard); }
+.analysis-status:active { transform:var(--sc-clay-press-transform); box-shadow:var(--sc-shadow-clay-pressed); }
+
+/* La marca es el ancla de la cabecera, no un icono auxiliar. Gana presencia
+   en escritorio sin reducir objetivos táctiles ni sacrificar el título del
+   proyecto en móvil. */
+@media (min-width:701px) {
+  .brand-mark,
+  .brand-mark svg { width:46px; height:46px; }
+  .brand-block { gap:10px; }
+  .top-divider { height:46px; }
+}
+
+/* --- TopBar: disparador de la paleta ----------------------------------- */
+.topbar-command-button {
+  min-height:var(--sc-control-height-sm);
+  padding:0 10px;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-pill);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  color:var(--muted);
+  font-size:var(--sc-font-size-technical);
+  cursor:pointer;
+  transition:var(--sc-transition-control);
+}
+.topbar-command-button:hover { color:var(--text); box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1.5px); }
+.topbar-command-button:active { box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
+.topbar-command-button kbd {
+  padding:1px 5px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  color:var(--subtle);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+}
+/* Por debajo de 1536px el ancho de la zona de acciones es el recurso escaso:
+   el botón se contrae a icono y devuelve ~80px a la barra. */
+@media (max-width:1536px) {
+  .topbar-command-button { width:var(--sc-control-height-sm); padding:0; justify-content:center; }
+  .topbar-command-button span,
+  .topbar-command-button kbd { display:none; }
+}
+/* CRI-115 · LEDGER-06. Contraído a icono el botón hereda `--sc-control-height-sm`
+   (36px) y medía 36x36 en K0 — por debajo del piso táctil. Model Doctor es uno de
+   los dos elementos que D-14/CRI-95 protege de degradar nunca en Compact, así que
+   su target no puede ser el que primero cede. Sólo con puntero grueso: con ratón
+   el botón compacto sigue siendo legítimo y la Cinta no pierde los ~8px. */
+@media (pointer:coarse) {
+  .topbar-command-button { min-width: var(--sc-size-target-touch); min-height: var(--sc-size-target-touch); }
+}
+@media (pointer:coarse) and (max-width:1536px) {
+  .topbar-command-button { width: var(--sc-size-target-touch); }
+}
+
+/* Model Doctor vive en la zona `status`: nunca desaparece en Compact, ni
+   siquiera en el suelo protegido de la Cinta (D-14 · CRI-95). Antes de este
+   slice `.topbar-command-button` se ocultaba entero por debajo de 1023px y
+   sólo quedaba accesible desde «Más acciones» — exactamente la regresión que
+   el issue existe para cerrar. El icono ya viene forzado arriba; aquí no se
+   retira nada. */
+
+/* --- Paleta de comandos ------------------------------------------------ */
+.command-palette-backdrop {
+  position:fixed;
+  inset:0;
+  z-index:var(--sc-z-modal);
+  display:grid;
+  justify-items:center;
+  align-items:start;
+  padding:max(64px,env(safe-area-inset-top)) 16px 16px;
+  background:var(--sc-color-overlay-soft);
+}
+.command-palette {
+  width:min(760px,100%);
+  max-height:min(78vh,680px);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  border:var(--sc-clay-edge);
+  border-radius:var(--sc-radius-modal);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-modal);
+}
+.command-palette-head {
+  min-height:58px;
+  padding:9px 10px 9px 14px;
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr) 36px;
+  align-items:center;
+  gap:10px;
+  border-bottom:1px solid var(--border-soft);
+  background:var(--sc-color-surface-elevated);
+}
+.command-palette-head__icon,
+.command-palette-close {
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border:var(--sc-clay-edge);
+  border-radius:11px;
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+.command-palette-head__icon { color:var(--accent); box-shadow:var(--sc-shadow-clay-pressed); }
+.command-palette-head > div { min-width:0; display:grid; gap:1px; }
+.command-palette-head > div > span { color:var(--accent); font-family:var(--sc-font-mono); font-size:9px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+.command-palette-close { color:var(--muted); cursor:pointer; transition:var(--sc-transition-control); }
+.command-palette-close:hover { color:var(--text); transform:translateY(-1px); box-shadow:var(--sc-shadow-clay-sm); }
+.command-palette-close:active { transform:var(--sc-clay-press-transform); box-shadow:var(--sc-shadow-clay-pressed); }
+.command-palette-close:focus-visible { outline:none; box-shadow:var(--sc-shadow-clay-xs),var(--sc-ring-focus); }
+.command-palette-title {
+  margin:0;
+  color:var(--text);
+  font-family:var(--sc-font-ui);
+  font-size:14px;
+  font-weight:760;
+  letter-spacing:-.01em;
+}
+.command-palette-search {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:12px 14px;
+  border-bottom:1px solid var(--border-soft);
+  color:var(--muted);
+}
+.command-palette-search input {
+  flex:1;
+  min-width:0;
+  min-height:var(--sc-control-height-md);
+  padding:0 12px;
+  border:0;
+  border-radius:var(--sc-radius-sm);
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  color:var(--text);
+  font-size:var(--sc-font-size-body);
+}
+.command-palette-search input:focus-visible { outline:none; box-shadow:var(--sc-shadow-clay-pressed),var(--sc-ring-focus); }
+.command-palette-search kbd {
+  padding:2px 7px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  color:var(--subtle);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+}
+.command-palette-list { flex:1; min-height:0; overflow-y:auto; padding:10px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-content:start; gap:10px; }
+.command-palette-empty { margin:16px 8px; color:var(--muted); font-size:var(--sc-font-size-technical); }
+.command-palette-group { min-width:0; padding:7px; border:1px solid var(--border-soft); border-radius:var(--sc-radius-card); background:var(--sc-color-surface-2); }
+.command-palette-group + .command-palette-group { margin-top:0; }
+.command-palette-group h3 {
+  margin:0 0 4px;
+  padding:0 8px;
+  color:var(--subtle);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+  font-weight:700;
+  letter-spacing:var(--sc-tracking-eyebrow);
+  text-transform:uppercase;
+}
+.command-palette-item {
+  width:100%;
+  min-height:40px;
+  padding:6px 10px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  border:1px solid transparent;
+  border-radius:var(--sc-radius-sm);
+  background:transparent;
+  color:var(--text);
+  text-align:left;
+  cursor:pointer;
+  transition:background var(--sc-motion-fast) var(--sc-ease-standard), box-shadow var(--sc-motion-fast) var(--sc-ease-standard);
+}
+.command-palette-item svg { flex:0 0 auto; color:var(--muted); }
+.command-palette-item.is-active {
+  border-color:color-mix(in srgb,var(--accent) 24%,var(--border));
+  background:var(--sc-color-surface-inset);
+  box-shadow:var(--sc-shadow-clay-pressed);
+}
+.command-palette-item.is-active svg { color:var(--accent); }
+.command-palette-item:disabled { opacity:.45; cursor:not-allowed; }
+.command-palette-label { flex:1; min-width:0; display:grid; gap:1px; }
+.command-palette-label strong { font-size:var(--sc-font-size-body); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.command-palette-label small { color:var(--subtle); font-size:var(--sc-font-size-caption); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.command-palette-item kbd {
+  flex:0 0 auto;
+  padding:2px 7px;
+  border-radius:var(--sc-radius-xs);
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  color:var(--subtle);
+  font-family:var(--sc-font-mono);
+  font-size:var(--sc-font-size-caption);
+}
+.command-palette-footer {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 14px;
+  border-top:1px solid var(--border-soft);
+  color:var(--subtle);
+  font-size:var(--sc-font-size-caption);
+}
+@media (max-width:640px) {
+  .command-palette-backdrop { padding-top:max(24px,env(safe-area-inset-top)); }
+  .command-palette { max-height:82vh; }
+  .command-palette-list { grid-template-columns:1fr; padding:8px; }
+  .command-palette-head { min-height:54px; }
+  .command-palette-footer { display:none; }
+}
 /*
  * Top Bar · fase 6
  *
@@ -550,3 +1074,8 @@
   clip:rect(0 0 0 0);
   white-space:nowrap;
 }
+
+.top-divider { width: 1px; height: 34px; background: var(--border); }
+.brand-name { color:var(--muted); font-size:var(--sc-font-size-label); font-weight:780; line-height:1; letter-spacing:-.025em; }
+.top-actions { gap: var(--sc-space-2); }
+.combination-select { width:clamp(150px,15vw,230px); max-width:230px; }
