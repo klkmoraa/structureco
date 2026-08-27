@@ -46,3 +46,18 @@ los heads integrados son alcanzables desde `main`.
   de su cadena de commits.
 - El checkout local queda limpio, alineado con `origin/main`, y conserva sólo
   la rama local `main`.
+
+## Gates después de publicar
+
+Pasaron localmente `lint`, `typecheck`, `verify:docs`, `verify:protected`,
+`verify:pwa`, `verify:i18n`, `verify:space3d`, `verify:structural-assets`,
+`build`, `verify:perf` y `validate:ci`. El Gate rápido remoto ejecutó los
+mismos pasos hasta `Pruebas deterministas`, donde conservó los 10 fallos ya
+documentados en la recuperación previa: ocho en `src/App.test.tsx`, uno en
+`src/features/topbar/TopBar.test.tsx` y un timeout en
+`src/features/structural-assets/threeStructuralRender.test.ts`.
+
+La comparación `git diff origin/main...HEAD` confirma que las fuentes y
+pruebas de App, Results y TopBar no forman parte de esta consolidación. El
+timeout tampoco se reproduce en `verify:structural-assets`; queda registrado
+como deuda preexistente, no como una regresión atribuible a estas ramas.
