@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>structureCo — Modo Aula</title>
+    <script src="vendor/gsap.min.js"></script>
+    <style>
+      :root {
+        --bg: #060b09;
+        --app-bg: #08110e;
+        --surface-1: #101915;
+        --surface-2: #16231d;
+        --border: #2c3539;
+        --member: #f1f5f4;
+        --accent: #39d4a2;
+        --text-primary: #f2f7f4;
+        --text-secondary: #b8c8c0;
+        --text-muted: #91a299;
+        --load: #ff7d66;
+        --shear: #78dc94;
+        --moment: #ff79ac;
+        --reaction: #9baaff;
+        --dimension: #ffd56a;
+        --aula: #9a83f0;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--app-bg);
+      }
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--app-bg);
+      }
+      .clip {
+        position: absolute;
+        inset: 0;
+      }
+      .bg-plate {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse 1250px 820px at 50% 48%, #0b1512 0%, var(--app-bg) 66%);
+      }
+
+      /* --- Modo Aula header + stepper (mirrors the real classroom bar) --- */
+      .aula-bar {
+        position: absolute;
+        left: 150px;
+        top: 78px;
+        width: 1620px;
+        background: var(--surface-1);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 20px 28px 24px;
+        opacity: 0;
+      }
+      .aula-eyebrow {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--aula);
+      }
+      .aula-title {
+        font-size: 30px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-top: 5px;
+      }
+      .progress-rail {
+        position: relative;
+        height: 3px;
+        background: var(--border);
+        border-radius: 2px;
+        margin: 18px 0 20px;
+      }
+      .progress-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 100%;
+        background: var(--aula);
+        border-radius: 2px;
+        transform: scaleX(0);
+        transform-origin: 0 50%;
+      }
+      .steps {
+        display: flex;
+        justify-content: space-between;
+      }
+      .step {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+      }
+      .step .num {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 2px solid var(--border);
+        display: grid;
+        place-items: center;
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--text-muted);
+        flex: none;
+      }
+      .step .lbl {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-muted);
+      }
+      .step.done .num {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .step.done .lbl {
+        color: var(--text-secondary);
+      }
+      .step.now .num {
+        border-color: var(--aula);
+        background: var(--aula);
+        color: #171121;
+      }
+      .step.now .lbl {
+        color: var(--text-primary);
+        font-weight: 700;
+      }
+
+      /* --- canvas --- */
+      .canvas-zone {
+        position: absolute;
+        left: 0;
+        top: 300px;
+        width: 1920px;
+        height: 560px;
+      }
+      .canvas-zone svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .member {
+        fill: none;
+        stroke: var(--member);
+        stroke-width: 4.5;
+        stroke-linecap: round;
+      }
+      .node {
+        fill: var(--bg);
+        stroke: var(--accent);
+        stroke-width: 3.5;
+      }
+      .support {
+        fill: none;
+        stroke: var(--text-secondary);
+        stroke-width: 2.5;
+      }
+      .load-arrow {
+        stroke: var(--load);
+        stroke-width: 4;
+        fill: none;
+        stroke-linecap: round;
+      }
+      .reaction-arrow {
+        stroke: var(--reaction);
+        stroke-width: 4;
+        fill: none;
+        stroke-linecap: round;
+      }
+      .leader {
+        stroke: var(--aula);
+        stroke-width: 1.6;
+        fill: none;
+        opacity: 0.85;
+      }
+      .hl-dot {
+        fill: none;
+        stroke-width: 2;
+        opacity: 0;
+      }
+
+      /* --- teaching cards --- */
+      .card {
+        position: absolute;
+        width: 380px;
+        background: var(--surface-1);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--aula);
+        border-radius: 12px;
+        padding: 17px 20px;
+        opacity: 0;
+      }
+      .card .k {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--aula);
+      }
+      .card .t {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-top: 7px;
+        line-height: 1.25;
+      }
+      .card .d {
+        font-size: 18px;
+        color: var(--text-secondary);
+        margin-top: 8px;
+        line-height: 1.45;
+      }
+      .card .v {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 21px;
+        font-weight: 700;
+        margin-top: 10px;
+      }
+
+      /* --- copy --- */
+      .beat {
+        position: absolute;
+        left: 360px;
+        top: 926px;
+        width: 1200px;
+        text-align: center;
+        font-size: 58px;
+        font-weight: 780;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+        opacity: 0;
+      }
+      .closing {
+        position: absolute;
+        left: 210px;
+        top: 476px;
+        width: 1500px;
+        text-align: center;
+        opacity: 0;
+      }
+      .closing .kicker {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: var(--aula);
+      }
+      .closing .title {
+        font-size: 62px;
+        font-weight: 800;
+        letter-spacing: -0.022em;
+        color: var(--text-primary);
+        margin-top: 16px;
+        line-height: 1.18;
+      }
+      .scrim {
+        position: absolute;
+        inset: 0;
+        background: #040706;
+        opacity: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-width="1920"
+      data-height="1080"
+      data-duration="30"
+    >
+      <section id="scene" class="clip" data-start="0" data-duration="30" data-track-index="1">
+        <div class="bg-plate"></div>
+
+        <div class="aula-bar" id="aulaBar">
+          <div class="aula-eyebrow">Modo Aula</div>
+          <div class="aula-title">Recorrido de análisis</div>
+          <div class="progress-rail"><div class="progress-fill" id="progFill"></div></div>
+          <div class="steps">
+            <div class="step" id="st1"><span class="num">1</span><span class="lbl">Construye</span></div>
+            <div class="step" id="st2"><span class="num">2</span><span class="lbl">Define</span></div>
+            <div class="step" id="st3"><span class="num">3</span><span class="lbl">Predice</span></div>
+            <div class="step" id="st4"><span class="num">4</span><span class="lbl">Analiza</span></div>
+            <div class="step" id="st5"><span class="num">5</span><span class="lbl">Compara</span></div>
+            <div class="step" id="st6"><span class="num">6</span><span class="lbl">Concluye</span></div>
+          </div>
+        </div>
+
+        <div class="canvas-zone">
+          <svg viewBox="0 0 1920 560" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="gp" width="56" height="56" patternUnits="userSpaceOnUse">
+                <path d="M 56 0 L 0 0 0 56" fill="none" stroke="#202a2b" stroke-width="1" />
+              </pattern>
+            </defs>
+            <rect id="gridRect" width="1920" height="560" fill="url(#gp)" opacity="0" />
+
+            <!-- simply supported beam -->
+            <path id="beam" class="member" d="M 700 250 L 1220 250" />
+            <path id="s1" class="support" d="M 700 250 L 676 292 L 724 292 Z M 668 300 L 732 300" />
+            <path id="s2" class="support" d="M 1220 250 L 1196 292 L 1244 292 Z M 1188 300 L 1252 300" />
+
+            <!-- point load -->
+            <g id="loadGroup" opacity="0">
+              <path class="load-arrow" d="M 960 128 L 960 226" />
+              <path class="load-arrow" d="M 948 212 L 960 232 L 972 212" />
+            </g>
+
+            <!-- reactions -->
+            <g id="reactGroup" opacity="0">
+              <path class="reaction-arrow" d="M 700 372 L 700 300" />
+              <path class="reaction-arrow" d="M 689 314 L 700 296 L 711 314" />
+              <path class="reaction-arrow" d="M 1220 372 L 1220 300" />
+              <path class="reaction-arrow" d="M 1209 314 L 1220 296 L 1231 314" />
+            </g>
+
+            <!-- shear diagram -->
+            <g id="shearGroup" opacity="0">
+              <line x1="700" y1="420" x2="1220" y2="420" stroke="#2c3539" stroke-width="1.5" />
+              <path id="shearPath" fill="none" stroke="#78dc94" stroke-width="3" d="M 700 388 L 960 388 L 960 452 L 1220 452" />
+            </g>
+
+            <!-- moment diagram -->
+            <g id="momGroup" opacity="0">
+              <line x1="700" y1="500" x2="1220" y2="500" stroke="#2c3539" stroke-width="1.5" />
+              <path id="momPath" fill="none" stroke="#ff79ac" stroke-width="3.5" d="M 700 500 L 960 552 L 1220 500" />
+              <circle id="peakDot" cx="960" cy="552" r="8" fill="#ffd56a" opacity="0" />
+            </g>
+
+            <circle class="node" cx="700" cy="250" r="9" />
+            <circle class="node" cx="1220" cy="250" r="9" />
+
+            <!-- leader lines connect each card to its element -->
+            <path id="ld1" class="leader" d="M 960 176 L 700 176" opacity="0" />
+            <path id="ld2" class="leader" d="M 700 296 L 470 340" opacity="0" />
+            <path id="ld3" class="leader" d="M 1030 400 L 1290 380" opacity="0" />
+            <path id="ld4" class="leader" d="M 890 528 L 630 508" opacity="0" />
+            <path id="ld5" class="leader" d="M 960 552 L 1250 540" opacity="0" />
+          </svg>
+        </div>
+
+        <!-- teaching cards -->
+        <div class="card" id="c1" style="left: 268px; top: 388px">
+          <div class="k">Carga</div>
+          <div class="t">Qué representa una carga</div>
+          <div class="d">La acción externa aplicada sobre el elemento, con magnitud, dirección y punto de aplicación.</div>
+          <div class="v" style="color: var(--load)">P = 40.00 kN</div>
+        </div>
+
+        <div class="card" id="c2" style="left: 148px; top: 616px">
+          <div class="k">Reacciones</div>
+          <div class="t">Cómo se identifican las reacciones</div>
+          <div class="d">Las fuerzas que los apoyos devuelven para mantener el equilibrio del sistema.</div>
+          <div class="v" style="color: var(--reaction)">R = 20.00 kN</div>
+        </div>
+
+        <div class="card" id="c3" style="left: 1300px; top: 596px">
+          <div class="k">Cortante</div>
+          <div class="t">Qué significa el cortante</div>
+          <div class="d">La fuerza interna transversal en cada sección; cambia de signo bajo la carga puntual.</div>
+          <div class="v" style="color: var(--shear)">V máx = 20.00 kN</div>
+        </div>
+
+        <div class="card" id="c4" style="left: 250px; top: 700px">
+          <div class="k">Momento</div>
+          <div class="t">Qué representa el momento</div>
+          <div class="d">El efecto de flexión acumulado a lo largo del elemento, máximo bajo la carga.</div>
+          <div class="v" style="color: var(--moment)">M = 80.00 kN·m</div>
+        </div>
+
+        <div class="card" id="c5" style="left: 1300px; top: 730px">
+          <div class="k">Valor máximo</div>
+          <div class="t">Dónde aparece el valor máximo</div>
+          <div class="d">En el punto donde el cortante cruza por cero: el pico del diagrama de momento.</div>
+          <div class="v" style="color: var(--dimension)">x = 4.000 m</div>
+        </div>
+
+        <div class="beat" id="beat1">No solo obtengas resultados.</div>
+        <div class="beat" id="beat2">Entiende por qué ocurren.</div>
+
+        <div class="scrim" id="scrim"></div>
+        <div class="closing" id="closing">
+          <div class="kicker">Modo Aula</div>
+          <div class="title">Aprende directamente sobre el modelo.</div>
+        </div>
+      </section>
+
+      <audio id="bed" src="assets/bed.mp3" data-start="0" data-duration="30" data-track-index="10" data-volume="0.9"></audio>
+      <audio id="sfx-open" src="assets/impact-bass-2.mp3" data-start="0.50" data-duration="2.59" data-track-index="17" data-volume="0.30"></audio>
+      <audio id="sfx-bar" src="assets/whoosh-short.mp3" data-start="0.60" data-duration="0.57" data-track-index="11" data-volume="0.42"></audio>
+      <audio id="sfx-c1" src="assets/click-soft.mp3" data-start="4.60" data-duration="0.36" data-track-index="12" data-volume="0.44"></audio>
+      <audio id="sfx-c2" src="assets/click-soft.mp3" data-start="8.60" data-duration="0.36" data-track-index="12" data-volume="0.44"></audio>
+      <audio id="sfx-c3" src="assets/click-soft.mp3" data-start="12.60" data-duration="0.36" data-track-index="12" data-volume="0.44"></audio>
+      <audio id="sfx-c4" src="assets/click-soft.mp3" data-start="16.60" data-duration="0.36" data-track-index="12" data-volume="0.44"></audio>
+      <audio id="sfx-c5" src="assets/ping.mp3" data-start="20.60" data-duration="1.32" data-track-index="13" data-volume="0.40"></audio>
+      <audio id="sfx-close" src="assets/chime.mp3" data-start="27.20" data-duration="2.50" data-track-index="14" data-volume="0.28"></audio>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      function prep(id) {
+        const el = document.getElementById(id);
+        const len = el.getTotalLength();
+        el.style.strokeDasharray = `${len}`;
+        el.style.strokeDashoffset = `${len}`;
+      }
+      ["beam", "s1", "s2", "shearPath", "momPath", "ld1", "ld2", "ld3", "ld4", "ld5"].forEach(prep);
+
+      // ---------- 0–4s · the classroom frame ----------
+      tl.to("#gridRect", { opacity: 0.42, duration: 1.2, ease: "power2.out" }, 0.3);
+      tl.fromTo("#aulaBar", { opacity: 0, y: -28 }, { opacity: 1, y: 0, duration: 0.9, ease: "power3.out" }, 0.6);
+      tl.to("#beam", { strokeDashoffset: 0, duration: 1.0, ease: "power2.out" }, 1.4);
+      tl.to("#s1", { strokeDashoffset: 0, duration: 0.5, ease: "power2.out" }, 2.1);
+      tl.to("#s2", { strokeDashoffset: 0, duration: 0.5, ease: "power2.out" }, 2.1);
+      tl.to("#progFill", { scaleX: 1 / 6, duration: 0.8, ease: "power2.inOut" }, 1.6);
+
+      // step state advances with the lesson — deterministic class swaps on the timeline
+      function setStep(at, doneIds, nowId, progress) {
+        doneIds.forEach((id) => {
+          tl.set(`#${id}`, { className: "step done" }, at);
+        });
+        if (nowId) tl.set(`#${nowId}`, { className: "step now" }, at);
+        tl.to("#progFill", { scaleX: progress, duration: 0.7, ease: "power2.inOut" }, at);
+      }
+
+      // ---------- card beats: each card ties to one element ----------
+      // 4.6s · load
+      setStep(4.4, ["st1"], "st2", 2 / 6);
+      tl.to("#loadGroup", { opacity: 1, duration: 0.6, ease: "power3.out" }, 4.4);
+      tl.to("#ld1", { opacity: 1, strokeDashoffset: 0, duration: 0.6, ease: "power2.out" }, 4.6);
+      tl.fromTo("#c1", { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 4.8);
+
+      // 8.6s · reactions
+      setStep(8.4, ["st1", "st2"], "st3", 3 / 6);
+      tl.to("#c1", { opacity: 0, duration: 0.5, ease: "power2.in" }, 8.2);
+      tl.to("#ld1", { opacity: 0, duration: 0.4, ease: "power2.in" }, 8.2);
+      tl.to("#reactGroup", { opacity: 1, duration: 0.6, ease: "power3.out" }, 8.4);
+      tl.to("#ld2", { opacity: 1, strokeDashoffset: 0, duration: 0.6, ease: "power2.out" }, 8.6);
+      tl.fromTo("#c2", { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 8.8);
+
+      // 12.6s · shear
+      setStep(12.4, ["st1", "st2", "st3"], "st4", 4 / 6);
+      tl.to("#c2", { opacity: 0, duration: 0.5, ease: "power2.in" }, 12.2);
+      tl.to("#ld2", { opacity: 0, duration: 0.4, ease: "power2.in" }, 12.2);
+      tl.to("#shearGroup", { opacity: 1, duration: 0.5, ease: "power2.out" }, 12.4);
+      tl.to("#shearPath", { strokeDashoffset: 0, duration: 1.2, ease: "power2.out" }, 12.4);
+      tl.to("#ld3", { opacity: 1, strokeDashoffset: 0, duration: 0.6, ease: "power2.out" }, 12.6);
+      tl.fromTo("#c3", { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 12.8);
+
+      // 16.6s · moment
+      setStep(16.4, ["st1", "st2", "st3", "st4"], "st5", 5 / 6);
+      tl.to("#c3", { opacity: 0, duration: 0.5, ease: "power2.in" }, 16.2);
+      tl.to("#ld3", { opacity: 0, duration: 0.4, ease: "power2.in" }, 16.2);
+      tl.to("#momGroup", { opacity: 1, duration: 0.5, ease: "power2.out" }, 16.4);
+      tl.to("#momPath", { strokeDashoffset: 0, duration: 1.3, ease: "power2.out" }, 16.4);
+      tl.to("#ld4", { opacity: 1, strokeDashoffset: 0, duration: 0.6, ease: "power2.out" }, 16.6);
+      tl.fromTo("#c4", { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 16.8);
+
+      // 20.6s · the maximum
+      setStep(20.4, ["st1", "st2", "st3", "st4", "st5"], "st6", 1);
+      tl.to("#c4", { opacity: 0, duration: 0.5, ease: "power2.in" }, 20.2);
+      tl.to("#ld4", { opacity: 0, duration: 0.4, ease: "power2.in" }, 20.2);
+      tl.fromTo("#peakDot", { opacity: 0, scale: 0 }, { opacity: 1, scale: 1, duration: 0.5, ease: "power3.out" }, 20.5);
+      tl.to("#ld5", { opacity: 1, strokeDashoffset: 0, duration: 0.6, ease: "power2.out" }, 20.6);
+      tl.fromTo("#c5", { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 20.8);
+
+      // ---------- 24–27s · the message ----------
+      tl.to("#c5", { opacity: 0, duration: 0.6, ease: "power2.in" }, 24.2);
+      tl.to("#ld5", { opacity: 0, duration: 0.5, ease: "power2.in" }, 24.2);
+      tl.to("#beat1", { opacity: 1, duration: 0.7, ease: "power3.out" }, 24.9);
+      tl.to("#beat1", { opacity: 0, duration: 0.5, ease: "power2.in" }, 26.0);
+      tl.to("#beat2", { opacity: 1, duration: 0.7, ease: "power3.out" }, 26.4);
+      tl.to("#beat2", { opacity: 0, duration: 0.5, ease: "power2.in" }, 27.3);
+
+      // ---------- 27.2–30s · close ----------
+      tl.to("#scrim", { opacity: 0.96, duration: 1.2, ease: "power2.inOut" }, 27.0);
+      tl.to("#aulaBar, .canvas-zone", { opacity: 0, duration: 1.2, ease: "power2.inOut" }, 27.0);
+      tl.to("#closing", { opacity: 1, duration: 1.0, ease: "power3.out" }, 27.6);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
