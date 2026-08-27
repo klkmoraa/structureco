@@ -24,12 +24,16 @@ Verificaciones posteriores:
 
 La cuenta contiene tres Sites relacionados con StructureCo, pero no comparten
 el repositorio de GitHub. El Site que coincide por nombre con este producto es
-`StructureCo Structural Workspace`, con fuente Vinext independiente y una sola
-versión existente (`d9936a623b70b93b07d0e5dd82da6faa184163b6`).
+`StructureCo Structural Workspace`.
 
-Se validó la build Vinext del Workspace y su prueba de metadata. Sites reconoció
-el commit fuente vigente como la versión existente y la publicó de forma
-idempotente en producción:
+Se corrigió la divergencia del prototipo: la fuente del Workspace ahora carga la
+publicación canónica del software de GitHub Pages en un contenedor a pantalla
+completa, con enlace de respaldo. Así ambas URLs ejecutan el mismo bundle, la
+misma PWA y la misma fuente de verdad, sin mantener una segunda implementación.
+
+La build Vinext y la prueba de metadata pasaron. Sites guardó la corrección como
+la versión 2, asociada al commit fuente `4dc6d94dafcdbf9a97bc78163a72d6c30b7054c7`,
+y la publicó en producción:
 
 - URL: `https://structureco-workspace.crisdlm302.chatgpt.site`.
 - Estado del despliegue: `succeeded`.
