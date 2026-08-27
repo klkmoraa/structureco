@@ -1,9 +1,10 @@
 // Captura individual de cada elemento/componente de la UI de structureCo, en tema
-// claro y oscuro, y empaqueta el resultado en capturas.zip.
+// claro y oscuro, y empaqueta el resultado en
+// qa-artifacts/capturas/capturas.zip.
 //
 // Uso:
 //   npm run dev            (en otra terminal, deja el servidor corriendo en :5173)
-//   node capturas.mjs
+//   npm run qa:captures
 //
 // Variables opcionales:
 //   BASE_URL   URL del servidor local (por defecto http://localhost:5173)
@@ -16,8 +17,9 @@ import { execFileSync } from 'node:child_process';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const baseURL = process.env.BASE_URL ?? 'http://localhost:5173';
-const outDir = path.join(root, 'capturas');
-const zipPath = path.join(root, 'capturas.zip');
+const artifactsDir = path.join(root, 'qa-artifacts', 'capturas');
+const outDir = path.join(artifactsDir, 'png');
+const zipPath = path.join(artifactsDir, 'capturas.zip');
 
 fs.rmSync(outDir, { recursive: true, force: true });
 fs.mkdirSync(outDir, { recursive: true });
@@ -253,7 +255,7 @@ async function main() {
   }
 
   fs.rmSync(outDir, { recursive: true, force: true });
-  console.log(`\ncapturas.zip listo en ${zipPath}`);
+  console.log(`\nArchivo de capturas listo en ${zipPath}`);
 }
 
 main().catch((err) => {
