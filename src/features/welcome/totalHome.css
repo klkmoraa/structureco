@@ -681,3 +681,120 @@
   .sc-home-topline select,
   .sc-home-topline button { min-width: 44px; height: 44px; }
 }
+
+
+/* Legacy-named classes still rendered by the current Home and its DXF action. */
+.welcome-launcher-arrow { grid-area:arrow; justify-self:end; align-self:center; color:var(--subtle); transition:transform var(--sc-motion-control) var(--sc-ease-standard), color var(--sc-motion-control) var(--sc-ease-standard); }
+.welcome-import-card {
+  display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:14px;
+  padding:15px 18px; border-radius:var(--sc-radius-lg);
+  background:var(--sc-gradient-clay);
+  border:1.5px dashed color-mix(in srgb, var(--accent) 38%, var(--border));
+  box-shadow:var(--sc-shadow-clay-sm);
+  text-align:left; cursor:pointer; width:100%;
+  transition:var(--sc-transition-control);
+}
+.welcome-import-card:hover {
+  border-color:var(--accent);
+  box-shadow:var(--sc-shadow-clay-lg);
+  transform:translateY(-2px);
+}
+.welcome-import-card:not(:disabled):active {
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+.welcome-import-card:focus-visible {
+  outline:var(--sc-focus-ring-width) solid var(--sc-color-focus);
+  outline-offset:var(--sc-focus-ring-offset);
+}
+.welcome-import-card:hover .welcome-launcher-arrow { color:var(--accent); transform:translateX(4px); }
+.welcome-import-icon { width:40px; height:40px; border-radius:var(--sc-radius-md); display:grid; place-items:center; background:color-mix(in srgb, var(--accent) 12%, var(--surface)); color:var(--accent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent); }
+.welcome-import-text { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.welcome-import-text strong { font-size:14px; font-weight:750; color:var(--text); }
+.welcome-import-text small { font-size:11.5px; color:var(--muted); line-height:1.35; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+@media (prefers-reduced-motion:reduce) {
+  .welcome-import-card { transition:none; } }
+@media (prefers-reduced-motion:reduce) {
+  .welcome-import-card:hover { transform:none; } }
+@media (prefers-reduced-motion:reduce) {
+  .welcome-import-card:not(:disabled):active { transform:none; } }
+@media (prefers-reduced-motion: reduce) {
+  .welcome-import-card { transition: none; } }
+
+.welcome-import-card {
+  background:var(--sc-color-surface-1);
+  border:var(--sc-clay-edge);
+  box-shadow:var(--sc-shadow-clay-sm);
+}
+.welcome-import-card { border-radius:var(--sc-radius-md); }
+
+.welcome-import-card:hover {
+  border-color:var(--sc-color-border-strong);
+  box-shadow:var(--sc-shadow-clay-md);
+  transform:translateY(-2px);
+}
+
+.welcome-import-card:not(:disabled):active {
+  background:var(--sc-color-surface-2);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.welcome-import-icon {
+  border:0;
+  box-shadow:var(--sc-shadow-clay-xs);
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .welcome-import-card { transition:none; } }
+
+@media (prefers-reduced-motion:reduce) {
+  .welcome-import-card:not(:disabled):active { transform:none; } }
+
+.welcome-import-card {
+  border:1px solid color-mix(in srgb,var(--border) 72%,white);
+  box-shadow:var(--sc-shadow-clay-sm);
+  transition:transform var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard), border-color var(--sc-motion-control) var(--sc-ease-standard), background var(--sc-motion-control) var(--sc-ease-standard);
+}
+
+.welcome-import-card:hover {
+  border-color:var(--sc-color-border-strong);
+  box-shadow:var(--sc-shadow-clay-md);
+  transform:translateY(-3px);
+}
+.welcome-import-card:active {
+  background:var(--sc-color-surface-pressed);
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.welcome-import-card {
+  background:var(--surface);
+  border:1.5px dashed var(--border);
+}
+.welcome-import-card .welcome-import-icon { background:var(--sc-color-surface-2); box-shadow:var(--sc-shadow-clay-pressed); }
+@media (max-width:1023px) {
+  .welcome-import-card:hover { transform:none; } }
+@media (prefers-reduced-motion:reduce) {
+  .welcome-import-card { transition:none!important; } }
+@media (prefers-reduced-motion:reduce) {
+  .welcome-import-card:hover { transform:none; } }
+.welcome-cycle-glyph {
+  grid-area: glyph;
+  width: 100%;
+  height: 62px;
+  border-radius: var(--sc-radius-sm);
+  background: var(--sc-color-bg-canvas);
+  box-shadow: inset 0 0 0 1px var(--border-soft);
+}
+
+.welcome-cycle-grid path { stroke: var(--sc-color-canvas-grid); stroke-width: 1; fill: none; }
+.welcome-cycle-member { stroke: var(--sc-color-canvas-member); stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.welcome-cycle-node circle { fill: var(--sc-color-bg-canvas); stroke: var(--sc-color-canvas-member); stroke-width: 2; }
+.welcome-cycle-load path { stroke: var(--sc-color-technical-distributed); stroke-width: 1.6; fill: none; }
+.welcome-cycle-load-line { stroke: var(--sc-color-technical-distributed); stroke-width: 1.6; fill: none; }
+.welcome-cycle-load-head path { fill: var(--sc-color-technical-distributed); stroke: none; }
+.welcome-cycle-support path { fill: var(--sc-color-canvas-member); stroke: none; }
+.welcome-cycle-axis { stroke: var(--sc-color-border-strong); stroke-width: 1; fill: none; }
+.welcome-cycle-diagram { stroke: var(--sc-color-technical-moment); stroke-width: 2; fill: none; stroke-linecap: round; }
+.welcome-cycle-diagram-area { fill: color-mix(in srgb, var(--sc-color-technical-moment) 16%, transparent); stroke: none; }

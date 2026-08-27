@@ -1,6 +1,3 @@
-@import './design-system/tokens.css';
-@import './design-system/fonts.css';
-
 :root {
   font-family: var(--sc-font-ui);
   color: var(--sc-color-text-primary);
@@ -40,157 +37,23 @@ button:disabled { cursor: not-allowed; opacity: .62; }
 }
 
 .app-shell { height: 100%; height: 100dvh; background: var(--app-bg); color: var(--text); display: flex; flex-direction: column; }
-/* Pantalla de bienvenida · "Mesa de dibujo" (AG-015) ------------------------
-   El suelo es papel de delineante: retícula fina de 24px, retícula mayor de
-   96px encima, y sobre ambas dos auroras de marca que sólo existen en la
-   parte alta de la página. El resto de la pantalla es disciplina: superficie
-   sólida, canto de 1px y una sola pieza con voz propia (la figura del hero). */
-.welcome-screen {
-  --welcome-grid-fine: color-mix(in srgb, var(--border) 30%, transparent);
-  --welcome-grid-major: color-mix(in srgb, var(--border) 62%, transparent);
-  /* CRI-112 · En Noche el mismo porcentaje desaparece: el canto va contra un
-     suelo casi negro y el 30 % lo deja por debajo del umbral de percepción,
-     así que la mesa técnica se perdía justo donde más falta hace para que las
-     piezas se apoyen en algo. Se sube la mezcla, no el token: `--welcome-grid-*`
-     son variables locales de esta pantalla y siguen derivando de `--border`,
-     sin un solo HEX nuevo. */
-  height:100%; min-height:0;
-  overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:auto;
-  -webkit-overflow-scrolling:touch; touch-action:pan-y;
-  display:flex; flex-direction:column;
-  color:var(--text);
-  background-color:var(--app-bg);
-  background-image:
-    radial-gradient(118% 80% at 8% -14%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 62%),
-    radial-gradient(96% 64% at 98% -8%, color-mix(in srgb, var(--brand-secondary) 18%, transparent), transparent 58%),
-    linear-gradient(var(--welcome-grid-major) 1px, transparent 1px),
-    linear-gradient(90deg, var(--welcome-grid-major) 1px, transparent 1px),
-    linear-gradient(var(--welcome-grid-fine) 1px, transparent 1px),
-    linear-gradient(90deg, var(--welcome-grid-fine) 1px, transparent 1px);
-  background-size: 100% 760px, 100% 580px, 96px 96px, 96px 96px, 24px 24px, 24px 24px;
-  background-repeat: no-repeat, no-repeat, repeat, repeat, repeat, repeat;
-}
-[data-theme='dark'] .welcome-screen {
-  --welcome-grid-fine: color-mix(in srgb, var(--border) 62%, transparent);
-  --welcome-grid-major: color-mix(in srgb, var(--border) 100%, transparent);
-}
 /* Barra a sangre completa con el contenido alineado a la columna de lectura:
    el vidrio necesita cruzar toda la ventana o el corte delata el truco. */
-.welcome-header {
-  position:sticky; top:0; z-index:var(--sc-z-sticky);
-  min-height:74px;
-  padding-inline:max(24px, calc((100% - var(--sc-layout-reading)) / 2));
-  display:flex; justify-content:space-between; align-items:center; gap:var(--sc-space-4);
-  border-bottom:1px solid color-mix(in srgb, var(--border) 58%, transparent);
-}
-.welcome-brand { display:flex; align-items:center; gap:11px; font-size:19px; letter-spacing:var(--sc-tracking-tight); color:var(--accent); }
-.welcome-brand svg { flex:0 0 auto; --brand-mark-ink:var(--accent-foreground); }
 /* Sin `gap`: el nombre es una sola palabra y el hueco entre el `span` y el
    nodo de texto lo partía en "structure Co". */
-.welcome-brand strong { display:flex; align-items:center; font-family:var(--sc-font-display); font-weight:550; }
-.welcome-brand strong span { color:var(--text); font-weight:800; }
-.welcome-version-tag { font-size:11px; font-weight:750; padding:2px 9px; border-radius:var(--sc-radius-pill); color:var(--accent); background:color-mix(in srgb, var(--accent) 11%, var(--surface)); border:1px solid color-mix(in srgb, var(--accent) 24%, transparent); letter-spacing:0; }
-
-/* Tema e idioma, alcanzables desde el inicio: en escritorio, junto a la marca;
-   en móvil, dentro del drawer (ver `.welcome-header-menu` más abajo). Los dos
-   controles comparten el mismo tratamiento visual clay que el resto del ciclo 1. */
-.welcome-header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--sc-space-2);
-}
-
-.welcome-header-desktop-only { display: flex; align-items: center; gap: var(--sc-space-2); }
-
-.welcome-header-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: var(--sc-size-target-touch);
-  min-height: var(--sc-size-target-touch);
-  border: var(--sc-clay-edge);
-  border-radius: var(--sc-radius-pill);
-  background: var(--sc-gradient-clay);
-  box-shadow: var(--sc-shadow-clay-sm);
-  color: var(--sc-color-text-secondary);
-  transition: var(--sc-transition-control);
-}
-
-.welcome-header-icon:hover { color: var(--sc-color-text-primary); box-shadow: var(--sc-shadow-clay-md); }
-.welcome-header-icon:active { box-shadow: var(--sc-shadow-clay-pressed); transform: var(--sc-clay-press-transform); }
-
-/* Misma especificidad que `.welcome-header-icon` (0,1,0): tiene que ganar por
-   orden de aparición, así que esta regla va *después* de ese bloque. Antes
-   estaba antes, y `display:inline-flex` de `.welcome-header-icon` ganaba por
-   ser la declaración más tardía — el botón se veía en escritorio pese al
-   `display:none` de aquí. La media query de abajo reafirma `inline-flex` en
-   móvil por el mismo motivo: misma especificidad, aparece después. Protegido
-   por `verifyWelcomeHeaderResponsive` en `qa.mjs` (probado en Chromium real:
-   invertir el orden reproduce el defecto y tira `welcomeHeaderMenuHiddenDesktop`). */
-.welcome-header-menu { display: none; }
-
-.welcome-header-language select {
-  min-height: var(--sc-size-target-touch);
-  padding: 0 var(--sc-space-3);
-  border: var(--sc-clay-edge);
-  border-radius: var(--sc-radius-pill);
-  background: var(--sc-gradient-clay);
-  box-shadow: var(--sc-shadow-clay-sm);
-  color: var(--sc-color-text-secondary);
-  transition: var(--sc-transition-control);
-}
-
-.welcome-header-language select:hover { color: var(--sc-color-text-primary); box-shadow: var(--sc-shadow-clay-md); }
-
-.welcome-menu-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sc-space-3);
-  align-items: stretch;
-}
-/* `align-self: flex-start`, no `width`/`justify-content`/`gap`: ese trío estaba
-   escrito para un botón icono+texto que el JSX nunca tuvo (el botón sólo
-   lleva el icono; el texto vive en `aria-label`, no en el DOM visible), así
-   que estirarlo a `width:100%` dejaba un icono de 18px pegado al borde
-   izquierdo de una píldora vacía. Sin `align-self` heredaría `stretch` de
-   `.welcome-menu-body` igualmente; con él, vuelve a su tamaño natural de
-   44×44 y mantiene el icono centrado, igual que en la cabecera de escritorio. */
-.welcome-menu-body .welcome-header-icon { align-self: flex-start; }
-.welcome-menu-body .welcome-header-language select { width: 100%; }
-
-@media (max-width: 767px) {
-  .welcome-header-desktop-only { display: none; }
-  .welcome-header-menu { display: inline-flex; }
-}
-.welcome-content {
-  width:min(var(--sc-layout-reading), calc(100% - 48px));
-  margin:0 auto;
-  padding:clamp(48px,7vh,86px) 0 clamp(44px,6vh,72px);
-  display:flex; flex-direction:column;
-  gap:clamp(40px,6vh,72px);
-}
 /* Entrada de las secciones: en CSS a propósito. Es una animación de montaje, y las
    capacidades de `motion` se cargan tras el primer pintado (ver `motionFeatures.ts`),
    así que conducirla desde JS dejaría las secciones invisibles hasta que llegaran. */
-.welcome-panel, .welcome-intro { animation:sc-fade-up var(--sc-motion-reveal) var(--sc-ease-enter) both; }
-.welcome-panel { animation-delay:70ms; }
 @keyframes sc-fade-up { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
 /* Se anula por completo, no solo la duración: el token reducido deja la duración en
    0.001ms pero conserva el retardo escalonado, y con `fill: both` eso mantiene la sección
    en su estado inicial (invisible) durante ese retardo. */
-@media (prefers-reduced-motion: reduce) {
-  .welcome-panel, .welcome-intro { animation:none; }
-}
 
 /* Chips de método, ahora dentro de la etapa "Cómo trabajas". Sin materia
    propia: son texto etiquetado dentro de un panel, no siete tarjetas. */
-.welcome-features-highlights { list-style:none; display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 0; padding:0; }
-.welcome-highlight-item { display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:650; color:var(--muted); padding:6px 12px; border-radius:var(--sc-radius-pill); }
-.welcome-highlight-item svg { color:var(--accent); flex:0 0 auto; }
 
 /* Figura de firma: pórtico clay isométrico generado por código
    (`StructuralPortalHero`), en la misma codificación de color del lienzo. */
-.welcome-portal { position:relative; display:grid; place-items:center; min-width:0; perspective:1100px; }
 /* Pórtico clay. El sombreado por cara llega como `--face-shade` (0 sombra,
    1 luz) y se aplica con `brightness`, de modo que un solo token de material
    produce sus tres caras y el tema no necesita duplicar valores.
@@ -231,130 +94,27 @@ button:disabled { cursor: not-allowed; opacity: .62; }
   filter: blur(14px);
 }
 
-/* Inclinación con el puntero: 2° como máximo, conducida por el contenedor.
-   No rota sola, no hay parallax, y en táctil no existe (`perspective` vive
-   en la declaración única de `.welcome-portal`, arriba).
-
-   Sin `transition` en la regla base a propósito: `--tilt-x`/`--tilt-y` se
-   reescriben en cada `pointermove` (ver `StructuralPortalHero.tsx`), así que
-   una transición aquí haría que el pórtico persiga al cursor con un retardo
-   visible en vez de seguirlo. La transición sólo se activa con la clase
-   `.portal-hero--returning`, que el componente añade en `pointerleave` para
-   suavizar el regreso a cero y quita en el siguiente `pointermove`
-   (`handlePointerMove`, no hay listener de `pointerenter`) para que el
-   rastreo vuelva a ser instantáneo. */
-@media (hover: hover) and (pointer: fine) {
-  .welcome-portal .portal-hero {
-    transform: rotateX(calc(var(--tilt-y, 0) * 2deg)) rotateY(calc(var(--tilt-x, 0) * 2deg));
-  }
-  .welcome-portal .portal-hero.portal-hero--returning {
-    transition: transform var(--sc-motion-standard) var(--sc-ease-standard);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .welcome-portal .portal-hero { transform: none; }
-}
-
 /* Los tres puntos de entrada, en fila y con el mismo peso visual: ninguno es
    un "botón secundario". El acento de cada uno lo pone su color de dominio
    (marca / Aula / neutro), no su tamaño. */
-.welcome-hero-launcher { --launcher-accent:var(--accent); display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
-.welcome-launcher-card {
-  --launcher-accent:var(--accent);
-  position:relative; overflow:hidden; width:100%;
-  display:grid; grid-template-columns:auto minmax(0,1fr);
-  grid-template-areas:"icon arrow" "info info";
-  align-items:start; gap:18px 12px;
-  padding:20px; border-radius:var(--sc-radius-xl); text-align:left; cursor:pointer;
-  background:var(--sc-gradient-clay); border:var(--sc-clay-edge);
-  box-shadow:var(--sc-shadow-clay-sm);
-  transition:var(--sc-transition-control);
-}
-.welcome-launcher-card::before { content:''; position:absolute; inset:0 0 auto; height:56%; background:var(--sc-gradient-sheen); pointer-events:none; }
 /* La elevación sube en hover y se hunde en press; el borde acompaña siempre a
    la sombra para que el estado no dependa sólo de ella. El color de dominio
    (marca / Aula / info) vive en el icono, no en el fondo de la tarjeta. */
-.welcome-launcher-card:hover {
-  border-color:var(--sc-color-border-strong);
-  box-shadow:var(--sc-shadow-clay-lg);
-  transform:translateY(-2px);
-}
 /* `:not(:disabled)` no cambia a qué botones aplica (ninguno de los tres se
    deshabilita) — está para ganar en especificidad (0,3,0) a la regla global
    `button:not(:disabled):active { transform:scale(.975) }` (0,2,1, en la
    sección "Green Frame"), que si no se lleva el `transform` por delante y
    deja a esta tarjeta encogiéndose en vez de hundirse. Mismo patrón que ya
    usa `.analyze-button:not(:disabled):active` en este archivo. */
-.welcome-launcher-card:not(:disabled):active {
-  box-shadow:var(--sc-shadow-clay-pressed);
-  transform:var(--sc-clay-press-transform);
-}
-.welcome-launcher-card:focus-visible {
-  outline:var(--sc-focus-ring-width) solid var(--sc-color-focus);
-  outline-offset:var(--sc-focus-ring-offset);
-}
-.welcome-launcher-card--classroom { --launcher-accent:var(--sc-color-aula); }
-.welcome-launcher-card--recent { --launcher-accent:var(--sc-color-text-link); }
 /* Space 3D es dominio estructural propio, no una vista previa: su acento es el
    cian de trazo de la marca, la segunda dimensión del dibujo técnico. */
-.welcome-launcher-card--space3d { --launcher-accent:var(--sc-color-brand-secondary); }
 /* Contenedores de icono: aquí viven el azul y el lavanda de la referencia,
    sobre un icono en el tono medido de cada dominio. */
-.welcome-launcher-icon {
-  grid-area:icon;
-  display:inline-flex; align-items:center; justify-content:center;
-  width:52px; height:52px;
-  border-radius:var(--sc-radius-lg);
-  border:var(--sc-clay-edge);
-  box-shadow:var(--sc-shadow-clay-sm);
-  background:var(--sc-color-action-subtle);
-  color:var(--sc-color-action-ink);
-}
-.welcome-launcher-card--classroom .welcome-launcher-icon {
-  background:var(--sc-color-accent-violet-soft);
-  color:var(--sc-color-aula);
-}
-.welcome-launcher-card--recent .welcome-launcher-icon {
-  background:var(--sc-color-accent-blue-soft);
-  color:var(--sc-color-text-link);
-}
-.welcome-launcher-card--space3d .welcome-launcher-icon { background:color-mix(in srgb,var(--sc-color-brand-secondary) 16%,var(--surface)); color:var(--sc-color-brand-secondary); }
-.welcome-launcher-info { grid-area:info; display:flex; flex-direction:column; gap:5px; min-width:0; }
-.welcome-launcher-header { display:flex; align-items:center; gap:10px; justify-content:space-between; }
-.welcome-launcher-header strong { font-size:16px; font-weight:750; color:var(--text); letter-spacing:var(--sc-tracking-tight); }
-.welcome-launcher-header small { color:var(--subtle); font-size:11px; font-weight:650; text-transform:uppercase; letter-spacing:var(--sc-tracking-eyebrow); }
-.welcome-launcher-info small { color:var(--muted); font-size:12px; line-height:1.45; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-.welcome-launcher-info strong { font-size:16px; font-weight:750; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.welcome-pill-badge { font-size:10px; font-weight:750; padding:3px 9px; border-radius:var(--sc-radius-pill); background:color-mix(in srgb, var(--accent) 14%, transparent); color:var(--accent); white-space:nowrap; }
-.welcome-pill-badge--aula { background:color-mix(in srgb, var(--sc-color-aula) 14%, transparent); color:var(--sc-color-aula); }
-.welcome-pill-badge--experimental { background:color-mix(in srgb,var(--sc-color-state-warning) 15%,transparent); color:var(--sc-color-state-warning-foreground); }
-.welcome-project-stats { font-size:11px; font-weight:650; color:var(--muted); background:var(--surface-2); padding:2px 8px; border-radius:var(--sc-radius-xs); white-space:nowrap; font-variant-numeric:var(--sc-numeric-variant); }
-.welcome-launcher-arrow { grid-area:arrow; justify-self:end; align-self:center; color:var(--subtle); transition:transform var(--sc-motion-control) var(--sc-ease-standard), color var(--sc-motion-control) var(--sc-ease-standard); }
-.welcome-launcher-card:hover .welcome-launcher-arrow { color:var(--launcher-accent); transform:translateX(4px); }
-
-.welcome-showcase { display:flex; flex-direction:column; gap:18px; }
-.welcome-showcase-header { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:14px; }
-.welcome-showcase-header h2 { margin:0; font-family:var(--sc-font-display); font-size:var(--sc-font-size-display-md); font-weight:750; letter-spacing:var(--sc-tracking-tight); }
-.welcome-showcase-sub { margin:4px 0 0; font-size:13px; color:var(--muted); }
-.welcome-filter-tabs { display:inline-flex; gap:3px; padding:4px; border-radius:var(--sc-radius-lg); width:fit-content; }
-.welcome-filter-tab { border:0; padding:7px 14px; border-radius:var(--sc-radius-md); font-size:12px; font-weight:650; color:var(--muted); background:transparent; cursor:pointer; }
-.welcome-filter-tab:hover { color:var(--text); }
-.welcome-filter-tab.active { background:var(--sc-color-surface-inset); color:var(--accent); font-weight:750; box-shadow:var(--sc-shadow-clay-pressed); }
 
 /* Zona de importación: sigue siendo de trazo discontinuo porque eso es lo que
    dice "aquí se suelta un archivo"; lo que cambia es la materia (clay), no el
    trazo. El vidrio sale: un fondo clay al 96% de opacidad no deja pasar nada
    que el desenfoque tenga sentido en mostrar. */
-.welcome-import-card {
-  display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:14px;
-  padding:15px 18px; border-radius:var(--sc-radius-lg);
-  background:var(--sc-gradient-clay);
-  border:1.5px dashed color-mix(in srgb, var(--accent) 38%, var(--border));
-  box-shadow:var(--sc-shadow-clay-sm);
-  text-align:left; cursor:pointer; width:100%;
-  transition:var(--sc-transition-control);
-}
 /* `border-color:var(--accent)` a proposito, no `--sc-color-border-strong`
    (el neutro que usan las otras dos tarjetas): esta es la unica de las tres
    con un borde de color en reposo (discontinuo, acento diluido al 38%), y
@@ -362,29 +122,10 @@ button:disabled { cursor: not-allowed; opacity: .62; }
    justo al apuntarla — al reves de lo que pide un target interactivo. Acento
    a maxima intensidad en vez de diluido comunica "sueltalo aqui" con mas
    fuerza, no menos. */
-.welcome-import-card:hover {
-  border-color:var(--accent);
-  box-shadow:var(--sc-shadow-clay-lg);
-  transform:translateY(-2px);
-}
-.welcome-import-card:not(:disabled):active {
-  box-shadow:var(--sc-shadow-clay-pressed);
-  transform:var(--sc-clay-press-transform);
-}
-.welcome-import-card:focus-visible {
-  outline:var(--sc-focus-ring-width) solid var(--sc-color-focus);
-  outline-offset:var(--sc-focus-ring-offset);
-}
-.welcome-import-card:hover .welcome-launcher-arrow { color:var(--accent); transform:translateX(4px); }
-.welcome-import-icon { width:40px; height:40px; border-radius:var(--sc-radius-md); display:grid; place-items:center; background:color-mix(in srgb, var(--accent) 12%, var(--surface)); color:var(--accent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent); }
-.welcome-import-text { display:flex; flex-direction:column; gap:2px; min-width:0; }
-.welcome-import-text strong { font-size:14px; font-weight:750; color:var(--text); }
-.welcome-import-text small { font-size:11.5px; color:var(--muted); line-height:1.35; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 /* CRI-112 · seis ejemplos en 232 px entraban de cinco en cinco y dejaban uno
    huérfano en la segunda fila. Con una pista mínima mayor caben tres por fila
    y las dos filas quedan completas, sin cambiar nada del contenido. */
-.welcome-templates-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%, 336px), 1fr)); gap:12px; }
 /* A diferencia de las otras dos tarjetas, ésta sigue siendo `m.button` con
    `layout` (el reflow de `AnimatePresence` del filtro de plantillas, ver
    `WelcomeScreen.tsx`): `motion` sigue escribiendo `transform` inline sobre
@@ -396,73 +137,10 @@ button:disabled { cursor: not-allowed; opacity: .62; }
    (comprobado en `qa.mjs`, `verifyWelcomeClayMaterial`). El borde y la
    sombra sí cambian con el estado, así que sigue sin depender sólo de la
    sombra. */
-.welcome-template-card {
-  position:relative; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between;
-  padding:16px; border-radius:var(--sc-radius-lg); text-align:left; gap:14px; cursor:pointer; min-height:142px;
-  background:var(--sc-gradient-clay); border:var(--sc-clay-edge);
-  box-shadow:var(--sc-shadow-clay-sm);
-  transition:var(--sc-transition-control-no-transform);
-}
-.welcome-template-card::before { content:''; position:absolute; inset:0 0 auto; height:50%; background:var(--sc-gradient-sheen); pointer-events:none; }
-.welcome-template-card:hover {
-  border-color:var(--sc-color-border-strong);
-  box-shadow:var(--sc-shadow-clay-lg);
-}
-/* Sin `transform` y sin depender sólo del `box-shadow`: con ratón, `:hover`
-   ya deja el borde en `--sc-color-border-strong`, así que si `:active` sólo
-   cambiara la sombra no habría ningún delta frente a "sigo encima, sin
-   pulsar" — y con teclado (Enter, sin `:hover`) el borde de reposo tampoco
-   se movería. Un tercer color de borde, distinto de ambos, garantiza que
-   pulsar cambie algo que `motion` no toca.
-
-   Medido en Chromium real (vite preview + Playwright, mousedown sostenido
-   sobre `.welcome-template-card`), no supuesto: con `layout` activo, `motion`
-   escribe `style="transform: none"` inline sobre este nodo de forma
-   permanente — en reposo, en `:hover` y en `:active` por igual — y ese
-   inline gana siempre sobre cualquier `transform` de CSS, incluido
-   `button:not(:disabled):active { transform:scale(.975) }` (styles.css más
-   abajo). `border-color` sí es libre: no lo toca `motion`, y el valor medido
-   en `:active` es `--sc-color-action-primary` tal cual se declara aquí. */
-.welcome-template-card:active {
-  box-shadow:var(--sc-shadow-clay-pressed);
-  border-color:var(--sc-color-action-edge);
-}
-.welcome-template-card:focus-visible {
-  outline:var(--sc-focus-ring-width) solid var(--sc-color-focus);
-  outline-offset:var(--sc-focus-ring-offset);
-}
-.welcome-template-top { display:flex; align-items:center; justify-content:space-between; }
-.welcome-category-badge { font-size:10px; font-weight:750; padding:3px 8px; border-radius:var(--sc-radius-xs); text-transform:uppercase; letter-spacing:.06em; }
-.welcome-badge--academic { background:color-mix(in srgb, var(--sc-color-state-warning) 14%, transparent); color:var(--sc-color-state-warning-foreground); }
-.welcome-badge--truss { background:color-mix(in srgb, var(--sc-color-info) 14%, transparent); color:var(--sc-color-info); }
-.welcome-badge--beam { background:color-mix(in srgb, var(--sc-color-technical-distributed) 14%, transparent); color:var(--sc-color-technical-distributed); }
-.welcome-badge--frame { background:color-mix(in srgb, var(--accent) 14%, transparent); color:var(--accent); }
-.welcome-template-icon { color:var(--subtle); transition:color var(--sc-motion-control) var(--sc-ease-standard); }
-.welcome-template-card:hover .welcome-template-icon { color:var(--accent); }
-.welcome-template-body { display:flex; flex-direction:column; gap:5px; }
-.welcome-template-body strong { font-size:14px; font-weight:750; color:var(--text); line-height:1.3; letter-spacing:var(--sc-tracking-tight); }
-.welcome-template-body small { font-size:11.5px; color:var(--muted); line-height:1.45; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-.welcome-template-footer { display:flex; align-items:center; justify-content:space-between; font-size:12px; font-weight:650; color:var(--subtle); transition:color var(--sc-motion-control) var(--sc-ease-standard); border-top:1px solid var(--border-soft); padding-top:10px; margin-top:auto; }
-.welcome-template-card:hover .welcome-template-footer { color:var(--accent); }
-.welcome-template-card:hover .welcome-template-footer svg { transform:translateX(3px); }
-.welcome-template-footer svg { transition:transform var(--sc-motion-control) var(--sc-ease-standard); }
 
 /* Los tres pasos son una secuencia real (modelar → cargar → analizar), así
    que el carril que une los ordinales dice algo verdadero del contenido. */
-.welcome-workflow { padding:28px; border-radius:var(--sc-radius-2xl); }
-.welcome-workflow-header { display:flex; align-items:center; gap:10px; color:var(--accent); margin-bottom:24px; }
-.welcome-workflow-header h2 { margin:0; font-family:var(--sc-font-display); font-size:16px; font-weight:750; color:var(--text); letter-spacing:var(--sc-tracking-tight); }
-.welcome-workflow-steps { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(3, 1fr); gap:28px; }
-.welcome-workflow-step { position:relative; display:grid; gap:12px; }
-.welcome-workflow-step:not(:last-child)::after { content:''; position:absolute; top:16px; left:44px; right:-28px; height:1px; background:linear-gradient(90deg, color-mix(in srgb, var(--accent) 42%, transparent), color-mix(in srgb, var(--border) 70%, transparent)); }
 /* Pasos numerados: círculos clay, coherentes con los del Modo Aula. */
-.welcome-step-num { width:32px; height:32px; border-radius:var(--sc-radius-pill); display:grid; place-items:center; background:var(--sc-gradient-clay); color:var(--sc-color-action-ink); font-weight:800; font-size:13px; border:var(--sc-clay-edge); box-shadow:var(--sc-shadow-clay-xs); font-variant-numeric:var(--sc-numeric-variant); }
-.welcome-step-content { display:flex; flex-direction:column; gap:4px; }
-.welcome-step-content strong { font-size:14px; font-weight:750; color:var(--text); }
-.welcome-step-content p { margin:0; font-size:12px; color:var(--muted); line-height:1.5; }
-
-.welcome-footer { margin-top:auto; min-height:40px; padding:9px 18px; display:flex; justify-content:center; align-items:center; gap:7px; color:var(--subtle); text-align:center; font-size:11px; }
-.welcome-footer svg { color:var(--accent); flex:0 0 auto; }
 /* Documento y contexto comparten el espacio que queda tras las acciones.
    Así sus pistas se contraen juntas antes de invadirse; las acciones conservan
    su ancho intrínseco y todos los controles permanecen accesibles. */
@@ -1060,18 +738,9 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .canvas-controls { bottom:calc(82px + env(safe-area-inset-bottom)); }
   .canvas-controls button { width:var(--sc-control-height-touch); height:var(--sc-control-height-touch); }
   .canvas-status { bottom:calc(80px + env(safe-area-inset-bottom)); }
-  .welcome-header { min-height:64px; padding-inline:max(20px,env(safe-area-inset-left)) max(20px,env(safe-area-inset-right)); }
-  .welcome-brand { font-size:18px; }
-  .welcome-content { width:min(100% - 36px,760px); padding:44px 0 36px; gap:36px; }
   /* Con una sola columna la figura pasa de compañera del titular a remate de
      la sección: se centra, se acota y cede el ancho al texto. */
   .portal-hero { max-width:400px; }
-  .welcome-hero-launcher { grid-template-columns:1fr; }
-  .welcome-launcher-card { grid-template-columns:auto minmax(0,1fr) auto; grid-template-areas:"icon info arrow"; align-items:center; gap:14px; padding:16px 18px; }
-  .welcome-workflow { padding:24px 20px; }
-  .welcome-workflow-steps { gap:22px; }
-  .welcome-workflow-step:not(:last-child)::after { right:-22px; }
-  .welcome-footer { padding-bottom:calc(9px + env(safe-area-inset-bottom)); }
 }
 
 @media print {
@@ -1137,11 +806,6 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
   .learning-steps{padding:8px}.learning-toolbar{position:static}.learning-content{padding:0 12px 12px}.learning-steps summary{grid-template-columns:24px 1fr auto;padding:11px 9px}.equation-block{overflow-x:auto;white-space:nowrap}
   .assertion-row { grid-template-columns:20px 1fr; }
   .assertion-errors { grid-column:2; text-align:left; }
-  .welcome-content { width:calc(100% - 32px); padding:32px 0 26px; gap:30px; }
-  .welcome-launcher-card { padding:14px 16px; border-radius:var(--sc-radius-lg); }
-  .welcome-templates-grid { grid-template-columns:1fr; }
-  .welcome-workflow { padding:22px 18px; }
-  .welcome-footer { font-size:10px; }
   .load-tool-grid { gap:6px; }.load-tool-grid button { min-height:72px; padding:8px; }
 }
 
@@ -1328,8 +992,7 @@ body { font-size:var(--sc-font-size-body); line-height:var(--sc-line-height-body
 button, input, select, textarea { letter-spacing:var(--sc-tracking-control); }
 .equation-block,.matrix-view table { font-family:var(--sc-font-mono); }
 .import-dropzone { transition:border-color var(--motion-control) var(--ease-native),background-color var(--motion-control) var(--ease-native),transform var(--motion-control) var(--ease-native); }
-button, .icon-button, .tool-button, .compact-select, .number-control, .selection-card,
-.welcome-filter-tab {
+button, .icon-button, .tool-button, .compact-select, .number-control, .selection-card {
   transition:var(--sc-transition-control);
 }
 :where(button, input, select, textarea, summary):focus-visible {
@@ -1338,14 +1001,12 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 
 /* La contramarca del logotipo se lee sobre el relleno de acento: en Noche ese
    relleno es verde brillante, así que la tinta tiene que oscurecerse con él. */
-.welcome-brand svg,.brand-mark svg { display:block; color:var(--accent); --brand-mark-ink:var(--accent-foreground); }
+.brand-mark svg { display:block; color:var(--accent); --brand-mark-ink:var(--accent-foreground); }
 
-.empty-results button,.failed-results button,.import-button-primary,
-.import-dropzone button {
+.empty-results button,.failed-results button,.import-button-primary,.import-dropzone button {
   color:var(--accent-foreground);
 }
-.empty-results button:hover,.failed-results button:hover,
-.import-button-primary:hover,.import-dropzone button:hover { background:var(--accent-hover); }
+.empty-results button:hover,.failed-results button:hover,.import-button-primary:hover,.import-dropzone button:hover { background:var(--accent-hover); }
 .selection-tip { font-size:var(--sc-font-size-label); }
 
 .toolbar { border-color:var(--border-soft); }
@@ -1479,15 +1140,12 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 }
 
 @media (prefers-reduced-motion:reduce) {
-  button, .icon-button, .tool-button, .compact-select, .number-control, .selection-card,
-  .welcome-launcher-card, .welcome-import-card, .welcome-template-card, .welcome-filter-tab { transition:none; }
+  button, .icon-button, .tool-button, .compact-select, .number-control, .selection-card { transition:none; }
   /* `:not(:disabled)` en las tres variantes de `:active`, mismo motivo que en
      sus reglas base: sin él, (0,2,0) pierde contra la regla global
      `button:not(:disabled):active { transform:scale(.975) }` (0,2,1) — el
      desplazamiento quedaba anulado sólo en apariencia, `scale` seguía
      colándose bajo movimiento reducido. */
-  .welcome-launcher-card:hover, .welcome-import-card:hover, .welcome-template-card:hover,
-  .welcome-launcher-card:not(:disabled):active, .welcome-import-card:not(:disabled):active, .welcome-template-card:not(:disabled):active { transform:none; }
 }
 
 /* Mobile v2 --------------------------------------------------------------- */
@@ -1677,19 +1335,8 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 }
 
 @media (max-width:700px) {
-  .welcome-header {
-    min-height:calc(58px + env(safe-area-inset-top));
-    padding:env(safe-area-inset-top) max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left));
-  }
-  .welcome-content { width:calc(100% - 32px); padding:28px 0 26px; gap:32px; }
-  .welcome-features-highlights { margin-top:20px; }
   .portal-hero { max-width:340px; }
-  .welcome-showcase-header { align-items:flex-start; flex-direction:column; }
-  .welcome-workflow { padding:24px 18px; border-radius:var(--sc-radius-xl); }
-  .welcome-workflow-steps { grid-template-columns:1fr; gap:18px; }
   /* En columna el carril horizontal no une nada: se retira en vez de girar. */
-  .welcome-workflow-step:not(:last-child)::after { display:none; }
-  .welcome-footer { min-height:44px; padding:8px max(16px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left)); }
 }
 
 @media (pointer:coarse) {
@@ -1741,14 +1388,13 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 
 html { -webkit-tap-highlight-color:transparent; }
 #root { overflow:clip; }
-.welcome-base { display:contents; }
 .canvas-host { contain:layout paint; }
 .toolbar { contain:layout style; }
 .inspector-panel { contain:layout paint style; }
 /* El menú de vistas densas sale del borde superior del panel compacto. La
    contención de pintura lo recortaba y dejaba sólo «Reacciones» visible. */
 .results-panel { contain:layout style; }
-.welcome-screen,.app-shell,.topbar,.toolbar,.inspector-panel,.results-panel,.professional-note {
+.app-shell,.topbar,.toolbar,.inspector-panel,.results-panel,.professional-note {
   transition:var(--sc-transition-theme);
 }
 
@@ -1839,17 +1485,11 @@ button:not(:disabled):active,.selection-card:active {
   font-size:var(--sc-font-size-technical)!important;
 }
 
-.results-panel :is(button,input,select),
-.inspector-panel :is(button,input,select),
-.quick-entry-bar :is(button,input,select),
-.import-center-dialog :is(button,input,select) {
+.results-panel :is(button,input,select),.inspector-panel :is(button,input,select),.quick-entry-bar :is(button,input,select),.import-center-dialog :is(button,input,select) {
   font-size:var(--sc-font-size-control)!important;
 }
 
-.results-panel :is(small,p,dt,dd,span,td,th,caption,code),
-.inspector-panel :is(small,p,label,span),
-.quick-entry-bar :is(small,span,strong),
-.import-center-dialog :is(small,p) {
+.results-panel :is(small,p,dt,dd,span,td,th,caption,code),.inspector-panel :is(small,p,label,span),.quick-entry-bar :is(small,span,strong),.import-center-dialog :is(small,p) {
   font-size:var(--sc-font-size-label)!important;
   line-height:1.4;
 }
@@ -1864,12 +1504,7 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 @media (pointer:coarse) {
-  .results-panel :is(button,input,select),
-  .inspector-panel :is(button,input,select),
-  .quick-entry-bar button,
-  .import-center-dialog button,
-  .canvas-hint button,
-  .mobile-inspector-toggle {
+  .results-panel :is(button,input,select),.inspector-panel :is(button,input,select),.quick-entry-bar button,.import-center-dialog button,.canvas-hint button,.mobile-inspector-toggle {
     min-width:var(--sc-control-height-touch);
     min-height:var(--sc-control-height-touch);
   }
@@ -1914,20 +1549,15 @@ button:not(:disabled):active,.selection-card:active {
 }
 .tool-button svg { color:var(--tool-color); }
 /* Reposo/hover/activo: gramática `.sc-tool-button` de `ui.css` (CRI-98). */
-:is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-select,
-:is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-pan { --tool-color:var(--sc-color-tool-navigation); }
-:is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-node,
-:is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-member,
-:is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-support,
-:is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-split { --tool-color:var(--sc-color-tool-structure); }
+:is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-select,:is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-pan { --tool-color:var(--sc-color-tool-navigation); }
+:is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-node,:is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-member,:is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-support,:is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-split { --tool-color:var(--sc-color-tool-structure); }
 :is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-pointLoad { --tool-color:var(--sc-color-tool-point-load); }
 :is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-distributedLoad { --tool-color:var(--sc-color-tool-distributed-load); }
 :is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-moment { --tool-color:var(--sc-color-tool-moment); }
 :is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-dimension { --tool-color:var(--sc-color-tool-dimension); }
 :is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-cut { --tool-color:var(--sc-color-tool-cut); }
 :is(.tool-button,.mobile-palette-tool,.load-tool-grid button).tool-delete { --tool-color:var(--sc-color-tool-destructive); }
-:is(.tool-button,.mobile-palette-tool,.load-tool-grid button):disabled svg,
-:is(.tool-button,.mobile-palette-tool,.load-tool-grid button):disabled .mobile-palette-icon { color:var(--tool-color); }
+:is(.tool-button,.mobile-palette-tool,.load-tool-grid button):disabled svg,:is(.tool-button,.mobile-palette-tool,.load-tool-grid button):disabled .mobile-palette-icon { color:var(--tool-color); }
 .tool-node,.tool-pointLoad,.tool-dimension { margin-top:0; }
 .desktop-advanced-toggle { margin-top:2px; }
 .selection-tip { padding:8px 9px; }
@@ -1964,7 +1594,9 @@ button:not(:disabled):active,.selection-card:active {
   }
   .tool-button > span:not(.sc-tool-button__icon),.tool-button kbd { display:none; }
   .tool-button.active,
-  .tool-node.active,.tool-pointLoad.active,.tool-dimension.active {
+  .tool-node.active,
+  .tool-pointLoad.active,
+  .tool-dimension.active {
     box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 24%,var(--border));
   }
   .selection-tip { justify-content:center; }
@@ -3076,27 +2708,21 @@ button:not(:disabled):active,.selection-card:active {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--sc-color-border-strong) 72%, transparent) transparent;
 }
-.inspector-scroll::-webkit-scrollbar, .results-body::-webkit-scrollbar,
-.table-wrap::-webkit-scrollbar, .matrix-scroll::-webkit-scrollbar,
-.sc-modal-surface__body::-webkit-scrollbar { width: 8px; height: 8px; }
-.inspector-scroll::-webkit-scrollbar-thumb, .results-body::-webkit-scrollbar-thumb,
-.table-wrap::-webkit-scrollbar-thumb, .matrix-scroll::-webkit-scrollbar-thumb,
-.sc-modal-surface__body::-webkit-scrollbar-thumb {
+.inspector-scroll::-webkit-scrollbar, .results-body::-webkit-scrollbar, .table-wrap::-webkit-scrollbar, .matrix-scroll::-webkit-scrollbar, .sc-modal-surface__body::-webkit-scrollbar { width: 8px; height: 8px; }
+.inspector-scroll::-webkit-scrollbar-thumb, .results-body::-webkit-scrollbar-thumb, .table-wrap::-webkit-scrollbar-thumb, .matrix-scroll::-webkit-scrollbar-thumb, .sc-modal-surface__body::-webkit-scrollbar-thumb {
   border-radius: 8px;
   background: color-mix(in srgb, var(--sc-color-border-strong) 72%, transparent);
 }
 
 /* Cambio de tema Día/Noche con transición coordinada de superficies. */
-.app-shell, .topbar, .toolbar, .inspector-panel, .results-panel,
-.center-stage, .welcome-screen, .professional-note {
+.app-shell, .topbar, .toolbar, .inspector-panel, .results-panel, .center-stage, .professional-note {
   transition: var(--sc-transition-theme);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .inspector-tabs button::after, .result-tabs button::after { transition: none; }
-  .tool-button, .welcome-launcher-card, .welcome-import-card, .welcome-template-card, .welcome-filter-tab, .segmented-control button { transition: none; }
-  .app-shell, .topbar, .toolbar, .inspector-panel, .results-panel,
-  .center-stage, .welcome-screen, .professional-note { transition: none; }
+  .tool-button, .segmented-control button { transition: none; }
+  .app-shell, .topbar, .toolbar, .inspector-panel, .results-panel, .center-stage, .professional-note { transition: none; }
 }
 
 .sc-toast-container { position:fixed; z-index:var(--sc-z-toast); bottom:calc(24px + env(safe-area-inset-bottom)); right:calc(24px + env(safe-area-inset-right)); display:flex; flex-direction:column; gap:10px; pointer-events:none; max-width:calc(100vw - 32px); width:360px; }
@@ -3137,7 +2763,6 @@ button:not(:disabled):active,.selection-card:active {
   /* Los filtros de la vitrina medían 29px y quedaban fuera del suelo táctil
      que el resto de la app respeta. Sube el alto, no el tipo: la fila sigue
      leyéndose como un control segmentado y no como tres botones. */
-  .welcome-filter-tab { min-height:var(--sc-size-target-touch); }
 }
 
 /* ========================================================================
@@ -3146,97 +2771,8 @@ button:not(:disabled):active,.selection-card:active {
    marfil cálido, luz desde arriba-izquierda y profundidad corta direccional.
    ===================================================================== */
 
-.app-shell,
-.welcome-screen {
+.app-shell {
   background:var(--app-bg);
-}
-
-.welcome-screen {
-  --welcome-grid-fine:color-mix(in srgb, var(--border) 30%, transparent);
-  --welcome-grid-major:color-mix(in srgb, var(--border) 56%, transparent);
-  background-image:
-    linear-gradient(var(--welcome-grid-major) 1px, transparent 1px),
-    linear-gradient(90deg, var(--welcome-grid-major) 1px, transparent 1px),
-    linear-gradient(var(--welcome-grid-fine) 1px, transparent 1px),
-    linear-gradient(90deg, var(--welcome-grid-fine) 1px, transparent 1px);
-  background-size:96px 96px,96px 96px,24px 24px,24px 24px;
-  background-repeat:repeat;
-}
-
-.welcome-header {
-  min-height:64px;
-  background:var(--app-bg);
-  border-bottom:1px solid color-mix(in srgb, var(--border) 55%, transparent);
-  box-shadow:0 1px 0 color-mix(in srgb, var(--sc-color-surface-elevated) 72%, transparent);
-}
-
-.welcome-brand,
-.welcome-brand strong { font-family:var(--sc-font-display); font-weight:700; }
-.welcome-brand { font-size:19px; }
-.welcome-brand strong span { font-weight:700; }
-.welcome-version-tag,
-.welcome-pill-badge,
-.welcome-category-badge,
-.welcome-project-stats,
-.welcome-filter-tab {
-  font-family:var(--sc-font-mono);
-  font-weight:500;
-  letter-spacing:.04em;
-}
-
-.welcome-highlight-item {
-  background:var(--sc-color-surface-2);
-  border:0;
-  box-shadow:var(--sc-shadow-clay-xs);
-}
-
-.welcome-launcher-card,
-.welcome-import-card,
-.welcome-template-card,
-.welcome-workflow,
-.welcome-filter-tabs {
-  background:var(--sc-color-surface-1);
-  border:var(--sc-clay-edge);
-  box-shadow:var(--sc-shadow-clay-sm);
-}
-
-.welcome-launcher-card::before,
-.welcome-template-card::before { display:none; }
-
-.welcome-launcher-card,
-.welcome-template-card { border-radius:var(--sc-radius-md); }
-.welcome-import-card { border-radius:var(--sc-radius-md); }
-.welcome-workflow { border-radius:var(--sc-radius-lg); }
-
-.welcome-launcher-card:hover,
-.welcome-import-card:hover,
-.welcome-template-card:hover {
-  border-color:var(--sc-color-border-strong);
-  box-shadow:var(--sc-shadow-clay-md);
-  transform:translateY(-2px);
-}
-
-.welcome-launcher-card:not(:disabled):active,
-.welcome-import-card:not(:disabled):active,
-.welcome-template-card:active {
-  background:var(--sc-color-surface-2);
-  box-shadow:var(--sc-shadow-clay-pressed);
-  transform:var(--sc-clay-press-transform);
-}
-.welcome-template-card:active { border-color:var(--accent); }
-
-.welcome-launcher-icon,
-.welcome-import-icon {
-  border:0;
-  box-shadow:var(--sc-shadow-clay-xs);
-}
-
-.welcome-filter-tabs { padding:3px; border-radius:var(--sc-radius-sm); }
-.welcome-filter-tab { border-radius:10px; }
-.welcome-filter-tab.active {
-  color:var(--accent);
-  background:var(--sc-color-surface-2);
-  box-shadow:var(--sc-shadow-clay-pressed);
 }
 
 .topbar,
@@ -3349,15 +2885,9 @@ button:not(:disabled):active,.selection-card:active {
 .popover button:active { background:var(--sc-color-surface-2); box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
 
 @media (prefers-reduced-motion:reduce) {
-  .welcome-launcher-card,
-  .welcome-import-card,
-  .welcome-template-card,
   .tool-button,
   .analyze-button,
   .sc-button.sc-button--primary { transition:none; }
-  .welcome-launcher-card:not(:disabled):active,
-  .welcome-import-card:not(:disabled):active,
-  .welcome-template-card:active { transform:none; }
 }
 
 @media print {
@@ -3373,84 +2903,6 @@ button:not(:disabled):active,.selection-card:active {
    ===================================================================== */
 
 /* Bienvenida ------------------------------------------------------------- */
-.welcome-screen {
-  background:var(--app-bg);
-  background-image:none;
-}
-
-.welcome-header {
-  min-height:64px;
-  background:color-mix(in srgb,var(--app-bg) 92%,transparent);
-  border-bottom:1px solid color-mix(in srgb,var(--border) 65%,transparent);
-  box-shadow:none;
-}
-
-.welcome-highlight-item { color:var(--text); background:var(--surface); box-shadow:var(--sc-shadow-clay-xs); }
-.welcome-highlight-item svg { color:var(--accent); }
-
-.welcome-launcher-card,
-.welcome-import-card,
-.welcome-template-card {
-  border:1px solid color-mix(in srgb,var(--border) 72%,white);
-  box-shadow:var(--sc-shadow-clay-sm);
-  transition:transform var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard), border-color var(--sc-motion-control) var(--sc-ease-standard), background var(--sc-motion-control) var(--sc-ease-standard);
-}
-.welcome-launcher-card { background:linear-gradient(155deg,color-mix(in srgb,var(--accent) 8%,var(--surface)) 0%,var(--surface) 65%); }
-.welcome-launcher-card--classroom { background:linear-gradient(155deg,color-mix(in srgb,var(--sc-color-aula) 10%,var(--surface)) 0%,var(--surface) 65%); }
-.welcome-launcher-card--recent { background:var(--surface); }
-.welcome-launcher-card::before,
-.welcome-template-card::before { display:none; }
-
-.welcome-launcher-card:hover,
-.welcome-import-card:hover,
-.welcome-template-card:hover {
-  border-color:var(--sc-color-border-strong);
-  box-shadow:var(--sc-shadow-clay-md);
-  transform:translateY(-3px);
-}
-.welcome-launcher-card:active,
-.welcome-import-card:active,
-.welcome-template-card:active {
-  background:var(--sc-color-surface-pressed);
-  box-shadow:var(--sc-shadow-clay-pressed);
-  transform:var(--sc-clay-press-transform);
-}
-.welcome-template-card:active { border-color:var(--sc-color-action-primary)!important; }
-.welcome-launcher-icon { background: var(--accent-fill); color:var(--accent-foreground); box-shadow:var(--sc-shadow-clay-xs); }
-.welcome-launcher-card--classroom .welcome-launcher-icon { background:var(--sc-color-aula-solid); color:var(--sc-color-aula-foreground); }
-.welcome-launcher-card--recent .welcome-launcher-icon { background:var(--axial); color:var(--sc-color-on-signal); }
-.welcome-launcher-card--space3d .welcome-launcher-icon { background:var(--sc-color-brand-secondary); color:var(--sc-color-on-signal); }
-.welcome-launcher-card:hover .welcome-launcher-arrow,
-.welcome-template-card:hover .welcome-template-footer svg { color:var(--accent); transform:translateX(4px); }
-
-.welcome-filter-tabs {
-  background:var(--sc-color-surface-2);
-  border:0;
-  border-radius:var(--sc-radius-pill);
-  box-shadow:var(--sc-shadow-clay-pressed);
-}
-.welcome-filter-tab { border-radius:var(--sc-radius-pill); transition:background var(--sc-motion-control) var(--sc-ease-standard), color var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard); }
-.welcome-filter-tab.active { color:var(--accent); background:var(--surface); box-shadow:var(--sc-shadow-clay-xs); }
-
-.welcome-import-card {
-  background:var(--surface);
-  border:1.5px dashed var(--border);
-}
-.welcome-import-card .welcome-import-icon { background:var(--sc-color-surface-2); box-shadow:var(--sc-shadow-clay-pressed); }
-
-.welcome-template-card { background:var(--surface); }
-.welcome-template-card:hover { border-color:var(--sc-color-border-strong); }
-.welcome-template-footer { color:var(--accent); }
-.welcome-template-footer svg { transition:transform var(--sc-motion-control) var(--sc-ease-standard), color var(--sc-motion-control) var(--sc-ease-standard); }
-
-.welcome-workflow {
-  background:var(--sc-color-surface-2);
-  border:0;
-  box-shadow:var(--sc-shadow-clay-pressed);
-}
-.welcome-step-num { background:var(--surface); color:var(--accent); border:0; box-shadow:var(--sc-shadow-clay-xs); }
-.welcome-workflow-step:not(:last-child)::after { background:var(--border); }
-.welcome-footer { background:transparent; border:0; border-top:1px solid var(--border); box-shadow:none; }
 
 /* Workspace: barras, navegación y chrome del lienzo --------------------- */
 .topbar,
@@ -3499,19 +2951,13 @@ button:not(:disabled):active,.selection-card:active {
 .topbar .compact-select:hover,
 .topbar .project-name input:hover { box-shadow:var(--sc-shadow-clay-pressed); }
 
-.topbar :is(.icon-button,.project-menu-toggle,.brand-home-button,.welcome-header-icon),
-.canvas-controls,
-.canvas-mode-badge,
-.canvas-view-chips span,
-.canvas-status {
+.topbar :is(.icon-button,.project-menu-toggle,.brand-home-button),.canvas-controls,.canvas-mode-badge,.canvas-view-chips span,.canvas-status {
   background:var(--surface);
   border:1px solid color-mix(in srgb,var(--border) 72%,white);
   box-shadow:var(--sc-shadow-clay-xs);
 }
-.topbar :is(.icon-button,.project-menu-toggle,.brand-home-button):hover:not(:disabled),
-.canvas-controls button:hover { background:var(--sc-color-surface-2); color:var(--text); }
-.topbar :is(.icon-button,.project-menu-toggle,.brand-home-button):active:not(:disabled),
-.canvas-controls button:active { box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
+.topbar :is(.icon-button,.project-menu-toggle,.brand-home-button):hover:not(:disabled),.canvas-controls button:hover { background:var(--sc-color-surface-2); color:var(--text); }
+.topbar :is(.icon-button,.project-menu-toggle,.brand-home-button):active:not(:disabled),.canvas-controls button:active { box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
 
 /* La geometría de la tecla es de esta pantalla; su relieve lo declara
    `.sc-tool-button` en `ui.css`, que es el componente que la dibuja. */
@@ -3617,9 +3063,6 @@ button:not(:disabled):active,.selection-card:active {
 
 @media (max-width:1023px) {
   .sc-icon-button.experimental-3d-button { display:none; }
-  .welcome-launcher-card:hover,
-  .welcome-import-card:hover,
-  .welcome-template-card:hover { transform:none; }
   .mobile-tool-palette,
   .inspector-panel.mobile-open { border-radius:var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
 }
@@ -3648,11 +3091,7 @@ button:not(:disabled):active,.selection-card:active {
   background:var(--sc-color-surface-elevated);
   border-color:var(--sc-color-border);
 }
-:root[data-theme='dark'] .topbar :is(.icon-button,.project-menu-toggle,.brand-home-button,.welcome-header-icon),
-:root[data-theme='dark'] .canvas-controls,
-:root[data-theme='dark'] .canvas-mode-badge,
-:root[data-theme='dark'] .canvas-view-chips span,
-:root[data-theme='dark'] .canvas-status {
+:root[data-theme='dark'] .topbar :is(.icon-button,.project-menu-toggle,.brand-home-button),:root[data-theme='dark'] .canvas-controls,:root[data-theme='dark'] .canvas-mode-badge,:root[data-theme='dark'] .canvas-view-chips span,:root[data-theme='dark'] .canvas-status {
   background:var(--sc-color-surface-elevated);
   border-color:var(--sc-color-border);
 }
@@ -3780,10 +3219,6 @@ button:not(:disabled):active,.selection-card:active {
 }
 
 @media (prefers-reduced-motion:reduce) {
-  .welcome-launcher-card,
-  .welcome-import-card,
-  .welcome-template-card,
-  .welcome-template-footer svg,
   .tool-button,
   .mobile-tool-dock .tool-button.active svg,
   .toggle-row input[type='checkbox'],
@@ -3793,9 +3228,6 @@ button:not(:disabled):active,.selection-card:active {
   .popover button,
   .analysis-status { transition:none!important; }
   #workspace-canvas .canvas-layer-panel { animation:none; }
-  .welcome-launcher-card:hover,
-  .welcome-import-card:hover,
-  .welcome-template-card:hover,
   .tool-button:hover:not(:disabled),
   .tool-button:active:not(:disabled) { transform:none; }
 }
@@ -5105,153 +4537,18 @@ button:not(:disabled):active,.selection-card:active {
    ===================================================================== */
 
 /* --- Cabecera: wordmark y UNA línea. Nada más compite arriba ------------- */
-.welcome-brand-block { display:flex; flex-direction:column; gap:2px; min-width:0; }
-.welcome-brand { margin:0; font-size:19px; }
-.welcome-brand-line {
-  margin:0;
-  color:var(--muted);
-  font-size:12.5px;
-  font-weight:550;
-  line-height:1.35;
-  text-wrap:pretty;
-}
-
-/* ==========================================================================
-   CRI-112 · Dirección A — "carril y bandas"
-   --------------------------------------------------------------------------
-   El marco único desaparece. La pantalla ES la mesa, y encima se apoyan
-   piezas: el carril de puertas a la izquierda y las bandas de trabajo a la
-   derecha. Esa es toda la diferencia entre "una caja con zonas dentro" y
-   "objetos sobre una superficie" — y es lo que devuelve a la vista la retícula
-   de papel que `.welcome-screen` ya pintaba y que el marco anterior tapaba al
-   92 % del viewport.
-
-   Reglas de composición que gobiernan todo lo de abajo:
-
-   · El aire NO es uniforme. Dentro de un grupo es corto; entre grupos es
-     largo. Antes eran 22/20/20/25 px y por eso nada agrupaba: sólo separaba.
-   · La densidad es distinta por dispositivo. En X2 el aire va entre grupos;
-     en K0 los márgenes se cierran (41 px de gutter sobre 390 de pantalla eran
-     el 21 % del ancho útil).
-   · Ni un token nuevo. Radios, canto, sombras y luz salen tal cual de
-     CRI-105; lo que cambia es qué es objeto, qué es fondo y cómo se agrupan.
-   ========================================================================== */
-
-.welcome-stage {
-  width: min(1320px, calc(100% - clamp(28px, 4vw, 72px)));
-  margin: 0 auto;
-  padding: clamp(18px, 2.6vh, 32px) 0 clamp(26px, 3.6vh, 44px);
-  display: grid;
-  grid-template-columns: clamp(198px, 17vw, 240px) minmax(0, 1fr);
-  grid-template-areas:
-    "rail work"
-    "hub  hub";
-  align-items: start;
-  column-gap: clamp(18px, 1.8vw, 30px);
-  row-gap: clamp(16px, 2.2vh, 26px);
-}
-.welcome-gate-rail { grid-area: rail; }
-.welcome-work { grid-area: work; }
-.welcome-stage > .project-hub,
-.welcome-hub-band { grid-area: hub; }
 /* Etapas 2 y 3: el carril no se pinta —allí las puertas SON el contenido— y
    la mesa entera queda para el trabajo. */
-.welcome-screen:not([data-welcome-step='welcome']) .welcome-stage {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "work";
-}
 
 /* --- Carril de puertas ---------------------------------------------------
    Pieza propia apoyada en la mesa, no una zona dentro de una caja. Es
    pegajoso porque acompaña: las puertas siguen alcanzables mientras se lee la
    biblioteca. */
-.welcome-gate-rail {
-  /* Se pega justo debajo de la cabecera pegajosa de la bienvenida. El alto de
-     esa cabecera no es un token del sistema —es propio de esta pantalla—, así
-     que vive como variable local y no como token global inventado. */
-  --welcome-rail-offset: 78px;
-  position: sticky;
-  top: var(--welcome-rail-offset);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px;
-  border: var(--sc-clay-edge);
-  border-radius: var(--sc-radius-xl);
-  background: var(--sc-gradient-clay);
-  box-shadow: var(--sc-shadow-clay-md);
-}
-.welcome-gate {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  column-gap: 10px;
-  row-gap: 0;
-  width: 100%;
-  min-height: 44px;
-  padding: 9px 10px;
-  border: 1px solid transparent;
-  border-radius: var(--sc-radius-md);
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 650;
-  text-align: left;
-  cursor: pointer;
-  transition: var(--sc-transition-control);
-}
-.welcome-gate:hover {
-  background: var(--surface-2);
-  border-color: var(--border-soft);
-}
-.welcome-gate:active {
-  box-shadow: var(--sc-shadow-clay-pressed);
-  transform: var(--sc-clay-press-transform);
-}
-.welcome-gate:focus-visible {
-  outline: var(--sc-focus-ring-width) solid var(--sc-color-focus);
-  outline-offset: var(--sc-focus-ring-offset);
-}
 /* Color de dominio SÓLO cuando el dominio es distinto: la menta es el camino
    propio de StructureCo, y un color diferente significa que vas a otro sitio
    (Aula, Space 3D, archivo). No es variedad decorativa. */
-.welcome-gate-icon {
-  width: 30px; height: 30px;
-  display: grid; place-items: center;
-  border-radius: var(--sc-radius-sm);
-  background: color-mix(in srgb, var(--accent) 13%, var(--surface));
-  color: var(--accent);
-  flex: 0 0 auto;
-}
-.welcome-gate--classroom .welcome-gate-icon {
-  background: color-mix(in srgb, var(--sc-color-aula) 15%, var(--surface));
-  color: var(--sc-color-aula);
-}
-.welcome-gate--space3d .welcome-gate-icon {
-  background: color-mix(in srgb, var(--sc-color-brand-secondary) 15%, var(--surface));
-  color: var(--sc-color-brand-secondary);
-}
-.welcome-gate--file .welcome-gate-icon {
-  background: var(--surface-2);
-  color: var(--muted);
-  box-shadow: inset 0 0 0 1px var(--border);
-}
-.welcome-gate-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* La advertencia de experimental viaja con la puerta y nunca la recorta el
    `text-overflow` del nombre: vive fuera de la etiqueta. */
-.welcome-gate-badge {
-  grid-column: 2 / -1;
-  justify-self: start;
-  margin-top: 1px;
-  font-size: 9px; font-weight: 750;
-  letter-spacing: var(--sc-tracking-eyebrow);
-  text-transform: uppercase;
-  padding: 2px 7px;
-  border-radius: var(--sc-radius-pill);
-  background: color-mix(in srgb, var(--sc-color-state-warning) 15%, transparent);
-  color: var(--sc-color-state-warning-foreground);
-}
 
 /* --- Área de trabajo -----------------------------------------------------
    Rejilla de dos columnas: contenido a la izquierda y la pieza clay cerrando
@@ -5259,50 +4556,17 @@ button:not(:disabled):active,.selection-card:active {
    carril de progreso y las acciones—, que es exactamente el hueco en L que
    antes quedaba vacío (457 px en la fila del rail + 766 px en la del
    subtítulo). La biblioteca cruza las dos columnas por debajo. */
-.welcome-work {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(292px, 30vw, 470px);
-  grid-template-areas:
-    "steps  portal"
-    "body   portal"
-    "tail   portal";
-  column-gap: clamp(16px, 1.8vw, 28px);
-  row-gap: clamp(14px, 1.8vh, 22px);
-  align-items: start;
-}
-.welcome-screen:not([data-welcome-step='welcome']) .welcome-work {
-  grid-template-areas:
-    "steps  portal"
-    "body   body"
-    "tail   tail";
-  row-gap: clamp(16px, 2.2vh, 24px);
-}
-.welcome-steps { grid-area: steps; align-self: center; }
-.welcome-portal { grid-area: portal; }
-.welcome-panel { grid-area: body; }
-.welcome-panel-nav { grid-area: tail; }
 /* `display:contents` para que las acciones y la biblioteca sean celdas de la
    rejilla del área de trabajo: la biblioteca necesita las dos columnas y las
    acciones sólo la izquierda, y con un contenedor intermedio no podrían
    repartirse así. */
-.welcome-panel--work { display: contents; }
-.welcome-work-actions { grid-area: body; }
 
 /* --- Pieza clay ---------------------------------------------------------
    Fuerte, pero acotada a su esquina: llena el borde derecho de la cabecera y
    no invade el ancho del trabajo (CRI-104 §4 sigue vigente — una esquina, no
    medio héroe). El encuadre lo calcula el propio componente desde el bounding
    box real, así que la altura de aquí no puede descuadrar la figura. */
-.welcome-portal { justify-self: end; align-self: start; width: 100%; }
-.welcome-portal .portal-hero {
-  width: 100%;
-  max-width: 100%;
-  height: clamp(228px, 31vh, 348px);
-}
 /* En las etapas 2 y 3 el contenido es denso y manda él: la pieza se contiene. */
-.welcome-screen:not([data-welcome-step='welcome']) .welcome-portal .portal-hero {
-  height: clamp(128px, 17vh, 196px);
-}
 
 /* --- Carril de progreso -------------------------------------------------
    Cuatro nodos unidos por un carril de avance. El ancho lo fijan los nodos,
@@ -5311,71 +4575,15 @@ button:not(:disabled):active,.selection-card:active {
 
    El nodo 4 es la Mesa: un nodo del recorrido, pero el que saca de esta
    pantalla — por eso lleva materia propia y un signo de salida. */
-.welcome-steps ol {
-  list-style: none; margin: 0; padding: 0;
-  display: flex; align-items: center; flex-wrap: nowrap;
-  gap: 0;
-}
-.welcome-steps li { display: flex; align-items: center; min-width: 0; }
-.welcome-steps li + li { flex: 1 1 auto; }
 /* El carril: una línea continua entre nodos, dibujada por el propio elemento
    para que no haya un pseudo-elemento suelto que mantener sincronizado. */
-.welcome-steps li + li::before {
-  content: '';
-  flex: 1 1 auto;
-  min-width: 12px;
-  height: 1px;
-  background: var(--border);
-  margin: 0 2px;
-}
-.welcome-step {
-  display: inline-flex; align-items: center; gap: 8px;
-  min-height: 40px; padding: 7px 12px;
-  border: 1px solid transparent; border-radius: var(--sc-radius-pill);
-  background: transparent; color: var(--muted);
-  font: inherit; font-size: 13px; font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: var(--sc-transition-control);
-}
-.welcome-step-index {
-  width: 22px; height: 22px; flex: 0 0 auto;
-  display: grid; place-items: center;
-  border: 1px solid var(--border-soft); border-radius: var(--sc-radius-pill);
-  background: var(--surface-2); color: var(--muted);
-  font-family: var(--sc-font-mono); font-size: 11px; font-weight: 700;
-  font-variant-numeric: var(--sc-numeric-variant);
-  transition: var(--sc-transition-control);
-}
-.welcome-step:hover { color: var(--text); border-color: var(--border); }
-.welcome-step.active {
-  color: var(--accent-on-soft); font-weight: 750;
-  background: var(--accent-soft);
-  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
-}
-.welcome-step.active .welcome-step-index { background: var(--accent-fill); color: var(--accent-foreground); border-color: transparent; }
-.welcome-step--table {
-  color: var(--text);
-  border: var(--sc-clay-edge);
-  background: var(--sc-gradient-clay);
-  box-shadow: var(--sc-shadow-clay-xs);
-}
-.welcome-step--table:hover { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 52%, var(--border)); }
-.welcome-step--table:active { box-shadow: var(--sc-shadow-clay-pressed); transform: var(--sc-clay-press-transform); }
-.welcome-step-exit { color: var(--accent); flex: 0 0 auto; }
-.welcome-step:focus-visible {
-  outline: var(--sc-focus-ring-width) solid var(--sc-color-focus);
-  outline-offset: var(--sc-focus-ring-offset);
-}
 
 /* --- Panel del paso ------------------------------------------------------ */
-.welcome-panel { display: flex; flex-direction: column; gap: clamp(14px, 2vh, 22px); }
 /* El carril de progreso ya nombra la etapa activa. El titular de display que
    lo repetía era la banda con peor relación entre espacio ocupado e
    información aportada de la pantalla: su párrafo medía 434 px dentro de una
    fila de 1200. El encabezado sigue en el árbol accesible (`sr-only` en el
    JSX), sólo deja de ocupar la vista. */
-.welcome-panel-head p { margin: 0; }
 
 /* --- Continuar: la pieza dominante --------------------------------------
    Escalón de materia PROPIO. El defecto medido sobre `main` era que esta
@@ -5384,118 +4592,21 @@ button:not(:disabled):active,.selection-card:active {
    que no había nada que percibir: sólo su canto menta la separaba. Ahora se
    apoya sobre la mesa, no dentro de una caja de su mismo material, y su
    sombra es un escalón por encima del resto de piezas. */
-.welcome-work-actions { display: flex; flex-direction: column; gap: 12px; }
-.welcome-resume-card {
-  display: flex; flex-direction: column; justify-content: center; gap: 12px;
-  width: 100%; padding: clamp(20px, 2.6vw, 30px);
-  border: var(--sc-clay-edge); border-radius: var(--sc-radius-xl);
-  border-color: color-mix(in srgb, var(--accent) 46%, var(--border));
-  background: var(--sc-gradient-clay);
-  box-shadow: var(--sc-shadow-clay-lg);
-  text-align: left; cursor: pointer;
-  transition: var(--sc-transition-control);
-}
-.welcome-resume-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-.welcome-resume-card:active { box-shadow: var(--sc-shadow-clay-pressed); transform: var(--sc-clay-press-transform); }
-.welcome-resume-card:focus-visible {
-  outline: var(--sc-focus-ring-width) solid var(--sc-color-focus);
-  outline-offset: var(--sc-focus-ring-offset);
-}
-.welcome-resume-eyebrow {
-  color: var(--accent);
-  font-family: var(--sc-font-mono); font-size: 11px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: var(--sc-tracking-eyebrow);
-}
-.welcome-resume-name {
-  font-family: var(--sc-font-display);
-  font-size: clamp(1.35rem, 1.05rem + 1vw, 2rem);
-  font-weight: 750; line-height: 1.14; color: var(--text);
-  overflow-wrap: anywhere;
-}
-.welcome-resume-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
-.welcome-resume-go { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-size: 13px; font-weight: 750; }
-.welcome-resume-card:hover .welcome-resume-go svg { transform: translateX(3px); }
-.welcome-resume-go svg { transition: transform var(--sc-motion-control) var(--sc-ease-standard); }
-.welcome-project-stats {
-  font-size: 11px; font-weight: 650; color: var(--muted);
-  background: var(--surface-2); padding: 3px 9px;
-  border-radius: var(--sc-radius-xs); white-space: nowrap;
-  font-variant-numeric: var(--sc-numeric-variant);
-}
 /* Rama vacía de la placa adaptativa: un modelo recién creado no tiene medida
    que enseñar, y una fila de ceros en la pieza mayor de la pantalla no
    informa de nada. No es un dato distinto — es la ausencia de dato, dicha. */
-.welcome-resume-invite { font-size: 12px; font-weight: 600; color: var(--muted); }
 
 /* --- Nuevo proyecto: secundario claro, pero táctil ----------------------- */
-.welcome-new-card {
-  box-shadow: var(--sc-shadow-clay-sm);
-}
 
 /* --- Puertas en fila dentro de las etapas 2 y 3 -------------------------- */
-.welcome-work-actions .welcome-launcher-card,
-.welcome-track-options .welcome-launcher-card,
-.welcome-start-grid .welcome-launcher-card {
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas: "icon info arrow";
-  align-items: center;
-  gap: 14px;
-  padding: 15px 18px;
-  border-radius: var(--sc-radius-lg);
-}
-.welcome-work-actions .welcome-launcher-icon,
-.welcome-track-options .welcome-launcher-icon,
-.welcome-start-grid .welcome-launcher-icon { width: 42px; height: 42px; border-radius: var(--sc-radius-md); }
-.welcome-start-grid,
-.welcome-track-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.welcome-start-grid .welcome-import-card .welcome-launcher-arrow { grid-area: auto; align-self: center; }
-.welcome-start-grid > *:last-child:nth-child(odd) { grid-column: 1 / -1; }
-.welcome-track-card[aria-pressed='true'] {
-  border-color: var(--accent);
-  box-shadow: var(--sc-shadow-clay-md);
-}
-.welcome-track-card .welcome-pill-badge,
-.welcome-launcher-card--space3d .welcome-pill-badge { grid-area: arrow; align-self: center; justify-self: end; }
-.welcome-launcher-card--space3d .welcome-launcher-arrow { display: none; }
-.welcome-launcher-info strong { font-size: 15px; }
-.welcome-launcher-info small { font-size: 12px; }
-.welcome-start-grid .welcome-import-card { padding: 15px 18px; border-radius: var(--sc-radius-lg); }
 
 /* --- Navegación entre pasos --------------------------------------------- */
-.welcome-panel-nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
-.welcome-panel-nav--forward { justify-content: flex-end; }
-.welcome-back-link,
-.welcome-forward-link {
-  display: inline-flex; align-items: center; gap: 8px;
-  min-height: 40px; padding: 10px 18px;
-  border: 1px solid var(--border); border-radius: var(--sc-radius-pill);
-  background: var(--surface); color: var(--text);
-  font: inherit; font-size: 13px; font-weight: 650;
-  cursor: pointer;
-  transition: var(--sc-transition-control);
-}
-.welcome-forward-link { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
-.welcome-back-link:hover,
-.welcome-forward-link:hover { box-shadow: var(--sc-shadow-clay-sm); }
-.welcome-back-link:focus-visible,
-.welcome-forward-link:focus-visible {
-  outline: var(--sc-focus-ring-width) solid var(--sc-color-focus);
-  outline-offset: var(--sc-focus-ring-offset);
-}
 
 /* --- Ciclo de trabajo (etapa 2) ----------------------------------------- */
-.welcome-workflow { padding: 0; border: 0; background: transparent; box-shadow: none; }
-.welcome-workflow h3 {
-  margin: 0 0 16px;
-  font-family: var(--sc-font-display); font-size: 15px; font-weight: 750;
-  color: var(--text); letter-spacing: var(--sc-tracking-tight);
-}
 
 /* --- Vitrina de ejemplos ------------------------------------------------- */
-.welcome-showcase-header h3 { margin: 0; font-family: var(--sc-font-display); font-size: 16px; font-weight: 750; letter-spacing: var(--sc-tracking-tight); }
 
 /* --- Pie: una nota, no una superficie ----------------------------------- */
-.welcome-footer { background: transparent; box-shadow: none; }
 
 /* --- Acabado clay de la pieza ilustrativa -------------------------------
    El filtro se engancha AQUÍ, no en el atributo `filter` del SVG, y ése es
@@ -5514,17 +4625,6 @@ button:not(:disabled):active,.selection-card:active {
   .portal-hero__body { filter: none; }
 }
 
-@media (prefers-reduced-motion:reduce) {
-  .welcome-resume-card,
-  .welcome-resume-card:hover,
-  .welcome-resume-card:active,
-  .welcome-gate,
-  .welcome-step,
-  .welcome-back-link,
-  .welcome-forward-link { transition: none; transform: none; }
-  .welcome-resume-card:hover .welcome-resume-go svg { transform: none; }
-}
-
 /* --- Compact (K0) -------------------------------------------------------
    Aquí la densidad se invierte respecto a X2: el aire se cierra. Los gutters
    bajaban del 21 % del ancho de pantalla (41 px sobre 390) y eso es ancho
@@ -5532,49 +4632,12 @@ button:not(:disabled):active,.selection-card:active {
    columna, así que se convierte en la rejilla de puertas — misma función,
    forma propia del dispositivo, no escritorio apilado. */
 @media (max-width:1023px) {
-  .welcome-stage {
-    width: calc(100% - 36px);
-    padding: 14px 0 22px;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "work" "rail" "hub";
-    row-gap: 18px;
-  }
-  .welcome-work {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "steps" "portal" "body" "hub" "tail";
-    row-gap: clamp(18px, 2.6vh, 26px);
-  }
-  .welcome-screen:not([data-welcome-step='welcome']) .welcome-work {
-    grid-template-areas: "steps" "portal" "body" "tail";
-  }
   /* Banda propia: el pórtico deja de compartir fila con el carril de pasos,
      que es lo que hoy parte el carril en tres filas. */
-  .welcome-portal { justify-self: center; }
-  .welcome-portal .portal-hero { height: clamp(84px, 10vh, 104px); }
-  .welcome-screen:not([data-welcome-step='welcome']) .welcome-portal .portal-hero { height: clamp(88px, 11vh, 112px); }
   /* El carril de puertas pasa a rejilla: cuatro/cinco piezas iguales. */
-  .welcome-gate-rail {
-    position: static;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-  .welcome-gate { min-height: var(--sc-size-target-touch); align-items: start; padding: 10px; }
-  .welcome-gate .welcome-gate-label {
-    white-space: normal;
-    overflow: visible;
-    text-overflow: clip;
-    line-height: 1.25;
-    align-self: center;
-  }
-  .welcome-track-options,
-  .welcome-start-grid { grid-template-columns: 1fr; }
-  .welcome-resume-name { font-size: 1.3rem; }
 }
 
 @media (max-width:700px) {
-  .welcome-brand-line { font-size: 12px; }
-  .welcome-stage { width: calc(100% - 32px); }
   /* Una sola fila garantizada: el ancho lo fijan los nodos, y las etiquetas
      inactivas ceden. La activa conserva su nombre completo, y todas conservan
      su nombre accesible — sólo cambia lo que se pinta.
@@ -5585,57 +4648,19 @@ button:not(:disabled):active,.selection-card:active {
      que debe seguir anunciándose (mismo recorte que `.sr-only`): fuera de la
      vista y fuera del flujo, así que la fila única sigue intacta, pero dentro del
      árbol accesible. */
-  .welcome-step { padding: 6px 8px; font-size: 12px; gap: 6px; }
-  .welcome-step .welcome-step-label {
-    position: absolute; width: 1px; height: 1px;
-    padding: 0; margin: -1px; overflow: hidden;
-    clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
-  }
-  .welcome-step.active .welcome-step-label,
-  .welcome-step--table .welcome-step-label {
-    position: static; width: auto; height: auto;
-    margin: 0; overflow: visible; clip: auto; border: 0;
-  }
-  .welcome-steps li + li::before { min-width: 6px; }
-  .welcome-panel-nav { justify-content: stretch; }
-  .welcome-back-link,
-  .welcome-forward-link { flex: 1 1 auto; justify-content: center; }
 }
 
 /* Compact apaisado y bajo: 390 px de alto no dan para una banda ilustrativa,
    pero sí sobra ancho. La pieza vuelve a la columna derecha —usa el ancho, que
    es lo que hay— en vez de gastar altura, que es lo que falta. */
-@media (max-width:1023px) and (orientation:landscape) and (max-height:600px) {
-  .welcome-stage { padding-top: 10px; row-gap: 14px; }
-  .welcome-work {
-    grid-template-columns: minmax(0, 1fr) clamp(150px, 22vw, 210px);
-    grid-template-areas:
-      "steps  steps"
-      "body   portal"
-      "tail   portal";
-    row-gap: 12px;
-  }
-  .welcome-screen:not([data-welcome-step='welcome']) .welcome-work {
-    grid-template-areas: "steps steps" "body portal" "tail tail";
-  }
-  .welcome-portal .portal-hero { height: clamp(96px, 26vh, 140px); }
-  .welcome-gate-rail { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .welcome-resume-name { font-size: 1.2rem; }
-  .welcome-panel { gap: 14px; }
-}
 
 @media (pointer:coarse) {
-  .welcome-step,
-  .welcome-gate,
-  .welcome-back-link,
-  .welcome-forward-link { min-height: var(--sc-size-target-touch); }
   /* CRI-115 · LEDGER-06. El piso táctil ya estaba puesto de alto pero no de
      ancho: en K0 los nodos 2 y 3 esconden su etiqueta (regla de 700px), se
      quedan sólo con el índice y medían 40x44. Los nodos 1 y 4 llevan texto y
      ya pasaban de largo, así que un mínimo no les cambia nada — la fila única
      que fijó CRI-112 se conserva porque el carril reparte con `flex` y sólo
      crecen los dos que estaban por debajo del piso. */
-  .welcome-step { min-width: var(--sc-size-target-touch); justify-content: center; }
 }
 
 /* --- Ciclo de trabajo ilustrado (etapa 2) -------------------------------
@@ -5643,49 +4668,8 @@ button:not(:disabled):active,.selection-card:active {
    gramática PLANA a propósito: representan el trabajo de ingeniería, y ésa es
    la mitad del producto que no se viste de arcilla. Sin filtro, sin volumen,
    sin sombra — sólo trazo y área, la misma codificación que el lienzo. */
-.welcome-workflow-steps {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-  gap: 14px;
-  list-style: none; margin: 0; padding: 0;
-}
-.welcome-workflow-step {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas: "glyph glyph" "num content";
-  align-items: start;
-  gap: 10px 12px;
-  padding: 14px 16px 16px;
-  border: var(--sc-clay-edge);
-  border-radius: var(--sc-radius-lg);
-  background: var(--sc-gradient-clay);
-  box-shadow: var(--sc-shadow-clay-xs);
-}
 /* La línea que unía los pasos desaparece: ahora son piezas, y una línea
    cruzando piezas separadas sólo funcionaba cuando eran columnas de texto. */
-.welcome-workflow-step:not(:last-child)::after { display: none; }
-.welcome-cycle-glyph {
-  grid-area: glyph;
-  width: 100%;
-  height: 62px;
-  border-radius: var(--sc-radius-sm);
-  background: var(--sc-color-bg-canvas);
-  box-shadow: inset 0 0 0 1px var(--border-soft);
-}
-.welcome-workflow-step .welcome-step-num { grid-area: num; }
-.welcome-workflow-step .welcome-step-content { grid-area: content; }
-
-.welcome-cycle-grid path { stroke: var(--sc-color-canvas-grid); stroke-width: 1; fill: none; }
-.welcome-cycle-member { stroke: var(--sc-color-canvas-member); stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-.welcome-cycle-node circle { fill: var(--sc-color-bg-canvas); stroke: var(--sc-color-canvas-member); stroke-width: 2; }
-.welcome-cycle-load path,
-.welcome-cycle-load-line { stroke: var(--sc-color-technical-distributed); stroke-width: 1.6; fill: none; }
-.welcome-cycle-load-head path { fill: var(--sc-color-technical-distributed); stroke: none; }
-.welcome-cycle-support path { fill: var(--sc-color-canvas-member); stroke: none; }
-.welcome-cycle-axis { stroke: var(--sc-color-border-strong); stroke-width: 1; fill: none; }
-.welcome-cycle-diagram { stroke: var(--sc-color-technical-moment); stroke-width: 2; fill: none; stroke-linecap: round; }
-.welcome-cycle-diagram-area { fill: color-mix(in srgb, var(--sc-color-technical-moment) 16%, transparent); stroke: none; }
 
 /* Import Center · tres decisiones visibles sobre seis estados internos. */
 .import-center-backdrop {
