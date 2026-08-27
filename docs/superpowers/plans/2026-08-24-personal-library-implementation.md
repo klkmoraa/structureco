@@ -153,7 +153,7 @@ git diff --check
 ```
 
 - [ ] Write the report with exact PASS/FAIL evidence, source SHA and protected-boundary statement; index the interaction contract under References in `docs/README.md`.
-- [ ] Review explicit paths, commit `feat(library): deliver safe personal favorites`, push the execution branch, fast-forward `main` only if its remote base still matches, and verify `main`/`gh-pages` separately.
+- [ ] Review explicit paths and commit `feat(library): deliver safe personal favorites`. Only with explicit user approval, push the execution branch, fast-forward `main` only if its remote base still matches, and verify `main`/`gh-pages` separately.
 
 ## Self-review record
 
