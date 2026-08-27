@@ -4050,6 +4050,16 @@ button:not(:disabled):active,.selection-card:active {
   .canvas-evidence-rail { top:8px; left:8px; right:8px; max-width:none; }
 }
 
+/* El riel compacto no debe encoger también el área táctil. En pantallas
+   táctiles 30 px hacía que N/V/M/Deformada fueran difíciles de accionar y
+   contradecía el contrato de controles del resto del workspace. */
+@media (pointer:coarse) {
+  .canvas-evidence-layer {
+    min-height:var(--sc-control-height-touch);
+    padding-inline:10px;
+  }
+}
+
 /* --- Presets de capas ------------------------------------------------- */
 .canvas-layer-presets {
   display:flex;
