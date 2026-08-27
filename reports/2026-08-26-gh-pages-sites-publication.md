@@ -27,7 +27,10 @@ el repositorio de GitHub. El Site que coincide por nombre con este producto es
 `StructureCo Structural Workspace`, con fuente Vinext independiente y una sola
 versión existente (`d9936a623b70b93b07d0e5dd82da6faa184163b6`).
 
-No se creó una versión idéntica ni se reemplazó esa fuente con el árbol Vite de
-GitHub: serían arquitecturas distintas y no hay una instrucción explícita para
-convertir el Site o elegir entre Workspace, Landing y Brandbook. Landing y
-Brandbook quedaron intactos.
+Se validó la build Vinext del Workspace y su prueba de metadata. Sites reconoció
+el commit fuente vigente como la versión existente y la publicó de forma
+idempotente en producción:
+
+- URL: `https://structureco-workspace.crisdlm302.chatgpt.site`.
+- Estado del despliegue: `succeeded`.
+- Landing y Brandbook quedaron intactos.
