@@ -6,12 +6,18 @@ import { describe, expect, it } from 'vitest';
 const styles = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
 
 describe('canvas evidence rail styles', () => {
-  it('preserves the shared touch target on coarse pointers', () => {
+  it('preserves the shared touch target on any coarse pointer', () => {
     const coarsePointerRules = styles.slice(styles.indexOf('/* El riel compacto no debe encoger'));
     const blockEnd = coarsePointerRules.indexOf('/* --- Presets de capas');
 
     expect(coarsePointerRules.slice(0, blockEnd)).toMatch(
-      /@media \(pointer:coarse\)[\s\S]*?\.canvas-evidence-layer\s*\{[\s\S]*?min-height:var\(--sc-control-height-touch\)/,
+      /@media \(any-pointer:coarse\)[\s\S]*?\.canvas-evidence-layer\s*\{[\s\S]*?min-height:var\(--sc-control-height-touch\)/,
+    );
+    expect(coarsePointerRules.slice(0, blockEnd)).toMatch(
+      /\.canvas-evidence-layer\[aria-pressed='true'\]\s*\{[\s\S]*?transform:var\(--sc-clay-press-transform-flat\)/,
+    );
+    expect(styles).toMatch(
+      /@media \(max-width:700px\) and \(any-pointer:coarse\)[\s\S]*?\.canvas-host:has\(\.canvas-evidence-rail\) \.canvas-result-legend\s*\{[\s\S]*?top:68px/,
     );
   });
 });

@@ -1,5 +1,7 @@
 # structureCo — Colección de 10 Videos Motion Graphics
 
+**Clasificación:** `REFERENCE`
+
 Documentación de preproducción para la campaña de marca. Fuente de verdad visual: `src/design-system/tokens.css` (tema Noche por defecto) y las capturas en `docs/design-review/final/` y `docs/ux-redesign/evidence/`.
 
 ## Sistema visual compartido (aplica a los 10 videos)

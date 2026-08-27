@@ -31,7 +31,21 @@ export const DetailSurface = () => {
   const essential = state.axes.mode === 'essential';
   const spanish = state.axes.locale === 'es-MX';
 
-  if (state.selection.length === 0) {
+  const bulk = state.selection.length > 1;
+  const primary = state.selection[state.selection.length - 1];
+  const member = !bulk && primary?.kind === 'member' ? model.members.find((item) => item.id === primary.id) : undefined;
+  const node = !bulk && primary?.kind === 'node' ? model.nodes.find((item) => item.id === primary.id) : undefined;
+
+  const [posX, setPosX] = useState('');
+  const [posY, setPosY] = useState('');
+  useEffect(() => {
+    if (node) {
+      setPosX(node.x.toFixed(2));
+      setPosY(node.y.toFixed(2));
+    }
+  }, [node?.id, node?.x, node?.y]);
+
+  if (!primary) {
     return (
       <section className="pt-detail" data-composition={composition} aria-label={t('detail.title')}>
         <p className="pt-detail__empty">{t('detail.empty')}</p>
@@ -39,10 +53,6 @@ export const DetailSurface = () => {
     );
   }
 
-  const bulk = state.selection.length > 1;
-  const primary = state.selection[state.selection.length - 1];
-  const member = !bulk && primary.kind === 'member' ? model.members.find((item) => item.id === primary.id) : undefined;
-  const node = !bulk && primary.kind === 'node' ? model.nodes.find((item) => item.id === primary.id) : undefined;
   const result = state.analysis.result;
   const memberResult = member && result ? result.members[member.id] : undefined;
   const showAll = !essential || state.showAllProperties;
@@ -57,15 +67,6 @@ export const DetailSurface = () => {
   const nodeJ = member ? model.nodes.find((item) => item.id === member.j) : undefined;
   const length = nodeI && nodeJ ? Math.hypot(nodeJ.x - nodeI.x, nodeJ.y - nodeI.y) : 0;
   const activeSupport = node ? ((state.draft?.value as SupportKind | undefined) ?? node.support) : null;
-
-  const [posX, setPosX] = useState('');
-  const [posY, setPosY] = useState('');
-  useEffect(() => {
-    if (node) {
-      setPosX(node.x.toFixed(2));
-      setPosY(node.y.toFixed(2));
-    }
-  }, [node?.id, node?.x, node?.y]);
 
   const openSectionDraft = (targetIds: string[], value: string) => {
     const original: Record<string, string> = {};
