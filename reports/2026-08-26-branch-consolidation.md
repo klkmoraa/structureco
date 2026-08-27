@@ -37,7 +37,8 @@ los heads integrados son alcanzables desde `main`.
 
 ## Resultado final
 
-- `main` remoto: `2b633fbedc3cd207624a418ba76cbfef7c1779e3`.
+- Commit de integración funcional: `2b633fbedc3cd207624a418ba76cbfef7c1779e3`;
+  el reporte y sus resultados de gates se publicaron después en `main`.
 - `gh-pages` remoto: `22eb152463b0442ef120f60a8a27cceb552bacb7` sin cambios.
 - Se eliminaron 51 ramas remotas; la API de GitHub y `git ls-remote` confirman
   que sólo quedan `main` y `gh-pages`.
