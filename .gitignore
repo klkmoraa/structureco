@@ -69,3 +69,5 @@ motion/*/*.mp4
 motion/*/*.webm
 motion/*/.hyperframes/
 motion/*/work-*/
+# Generated from motion/hyperframes.template.json by the motion preparation scripts.
+motion/*/hyperframes.json
