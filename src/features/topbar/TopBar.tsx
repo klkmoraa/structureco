@@ -40,9 +40,7 @@ import { presentExample } from '../welcome/examplePresentation';
 import { APP_VERSION } from '../../appVersion';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { resolveTopBarCommand, type TopBarCommandContext } from '../workspace/commandRegistry';
-import { DEFAULT_PDELTA_CONFIG } from '../../engine/pDelta';
-import type { TranslationKey } from '../../i18n/catalogs';
-import type { PDeltaConfig } from '../../types';
+import { PDeltaAdvancedConfig, TopBarHistoryControls } from './TopBarControlGroups';
 import './topbar.css';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
@@ -535,24 +533,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
           <span>{t('results.outputs')}</span>
         </button>
         <div className="topbar-primary-actions" data-topbar-role="primary">
-          <div className="topbar-history-cluster" role="group" aria-label={t('history.label')}>
-            <IconButton
-              variant="secondary"
-              className="icon-button topbar-undo-button"
-              label={undoCommand.label}
-              title={undoCommand.hint}
-              onClick={undoCommand.run}
-              disabled={undoCommand.disabled}
-            ><Undo2 size={18} /></IconButton>
-            <IconButton
-              variant="secondary"
-              className="icon-button topbar-redo-button"
-              label={redoCommand.label}
-              title={redoCommand.hint}
-              onClick={redoCommand.run}
-              disabled={redoCommand.disabled}
-            ><Redo2 size={18} /></IconButton>
-          </div>
+          <TopBarHistoryControls label={t('history.label')} undoCommand={undoCommand} redoCommand={redoCommand} />
           <IconButton
             variant="secondary"
             className="icon-button datasheet-launcher"
@@ -703,45 +684,5 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
         }}
       /></Suspense> : null}
     </header>
-  );
-};
-
-const PDELTA_FIELDS: Array<{ key: keyof PDeltaConfig; labelKey: TranslationKey; step?: number }> = [
-  { key: 'maxLoadSteps', labelKey: 'pdelta.maxLoadSteps', step: 1 },
-  { key: 'maxIterationsPerStep', labelKey: 'pdelta.maxIterationsPerStep', step: 1 },
-  { key: 'equilibriumTolerance', labelKey: 'pdelta.equilibriumTolerance' },
-  { key: 'displacementTolerance', labelKey: 'pdelta.displacementTolerance' },
-  { key: 'stepReductionFactor', labelKey: 'pdelta.stepReductionFactor' },
-  { key: 'minimumStep', labelKey: 'pdelta.minimumStep' },
-];
-
-const PDeltaAdvancedConfig = () => {
-  const { project, updateProjectAnalysisSettings } = useProjectModel();
-  const { t } = useI18n();
-  const config = { ...DEFAULT_PDELTA_CONFIG, ...project.settings.pDeltaConfig };
-  const setField = (key: keyof PDeltaConfig, value: number) => {
-    if (!Number.isFinite(value)) return;
-    updateProjectAnalysisSettings((settings) => ({
-      ...settings,
-      pDeltaConfig: { ...settings.pDeltaConfig, [key]: value },
-    }));
-  };
-  return (
-    <details className="pdelta-advanced-details">
-      <summary>{t('pdelta.advancedConfig')}</summary>
-      <div className="pdelta-advanced-content">
-        {PDELTA_FIELDS.map(({ key, labelKey, step }) => (
-          <label className="mobile-menu-field" key={key}>
-            <span>{t(labelKey)}</span>
-            <input
-              type="number"
-              value={config[key]}
-              step={step ?? 'any'}
-              onChange={(event) => setField(key, event.target.valueAsNumber)}
-            />
-          </label>
-        ))}
-      </div>
-    </details>
   );
 };

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type Ref } from 'react';
+import { lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type Ref } from 'react';
 import { X } from 'lucide-react';
 import { useProject } from '../../store/ProjectContext';
 import type { DiagramPoint, DiagramQuantity, MemberModel, NodeModel, Selection, Tool } from '../../types';
@@ -105,6 +105,8 @@ import { StructuralEditOverlay } from './StructuralEditOverlay';
 import { CanvasStructuralEditPreviewLayer } from './CanvasStructuralEditPreviewLayer';
 import { CanvasStructureGeneratorLayer } from './CanvasStructureGeneratorLayer';
 import type { StructureGenerationGhost } from '../../data/generators/generatorGhost';
+import { GlobalAxes, SmartLabelLayer } from './CanvasVisualOverlays';
+import { useStableCanvasEvent } from './useStableCanvasEvent';
 
 /**
  * El generador y su núcleo determinista sólo pesan cuando se abre: nadie paga su
@@ -132,18 +134,6 @@ const EMPTY_SNAP_CANDIDATES: SnapCandidate[] = [];
 
 /** Same empty set for an inactive edit, so pointer preview does not churn props. */
 const EMPTY_STRUCTURAL_EDIT_NODE_IDS: ReadonlySet<string> = new Set();
-
-/**
- * Canvas geometry is memoised and must keep its event props stable while the
- * transient edit ghost advances every animation frame. The ref is synchronised
- * before paint, so events always dispatch to the latest canvas state without
- * making both heavyweight geometry layers render for a preview-only update.
- */
-const useStableCanvasEvent = <Args extends unknown[], Result>(callback: (...args: Args) => Result) => {
-  const callbackRef = useRef(callback);
-  useLayoutEffect(() => { callbackRef.current = callback; }, [callback]);
-  return useCallback((...args: Args) => callbackRef.current(...args), []);
-};
 
 /** `id` del grupo que la lupa táctil clona con `<use>` para ampliar la escena. */
 const CANVAS_SCENE_ID = 'canvas-scene-root';
@@ -2253,17 +2243,7 @@ export const StructuralCanvas = ({
     units,
     view,
   ]);
-  const smartLabelLayer = useMemo(() => <g className="smart-label-layer" data-label-detail={smartLabelDetailForScale(camera.scale)} aria-hidden="true">
-    {placedSmartLabels.map((label) => {
-      const centerX = label.rect.x + label.rect.width / 2;
-      const centerY = label.rect.y + label.rect.height / 2;
-      return <g key={label.id} className={`smart-label priority-${label.priority} tone-${label.tone ?? 'neutral'}`} data-smart-label={label.id} data-label-priority={label.priority}>
-        {label.leader ? <line className="smart-label-leader" x1={label.anchor.x} y1={label.anchor.y} x2={centerX} y2={centerY} /> : null}
-        <rect x={label.rect.x} y={label.rect.y} width={label.rect.width} height={label.rect.height} rx="6" />
-        <text x={label.rect.x + 8} y={label.rect.y + 15}>{label.text}</text>
-      </g>;
-    })}
-  </g>, [camera.scale, placedSmartLabels]);
+  const smartLabelLayer = <SmartLabelLayer labels={placedSmartLabels} detail={smartLabelDetailForScale(camera.scale)} />;
   const multiSelectionPoints = selectionVisualState.kind === 'multi' ? [
     ...selectionVisualState.nodeIds.flatMap((nodeId) => {
       const node = nodeMap.get(nodeId);
@@ -2499,15 +2479,7 @@ export const StructuralCanvas = ({
 
         {smartLabelLayer}
 
-        <g className="global-axes" transform={`translate(42 ${size.height - 45})`}>
-          <line x1="0" y1="0" x2="58" y2="0" markerEnd="url(#axis-x)" />
-          <line x1="0" y1="0" x2="0" y2="-58" markerEnd="url(#axis-y)" />
-          <defs>
-            <marker id="axis-x" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10Z" fill="var(--moment)" /></marker>
-            <marker id="axis-y" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10Z" fill="var(--shear)" /></marker>
-          </defs>
-          <text x="65" y="5" className="axis-x-label">X</text><text x="-5" y="-66" className="axis-y-label">Y</text>
-        </g>
+        <GlobalAxes canvasHeight={size.height} />
         </g>
       </svg>
 
