@@ -17,11 +17,13 @@ const renderOverlay = ({
   error = '',
   pointerArmed = false,
   repeatAvailable = false,
+  capabilities = { structural: true, align: true, distribute: true },
 }: {
   draft?: StructuralEditDraft | null;
   error?: string;
   pointerArmed?: boolean;
   repeatAvailable?: boolean;
+  capabilities?: { structural: boolean; align: boolean; distribute: boolean };
 } = {}) => {
   const project = createDefaultProject();
   const selection = { kind: 'node' as const, id: project.nodes[0].id };
@@ -44,7 +46,7 @@ const renderOverlay = ({
       available
       repeatAvailable={repeatAvailable}
       draft={current}
-      capabilities={{ structural: true, align: true, distribute: true }}
+      capabilities={capabilities}
       prepared={prepared}
       error={error}
       pointerArmed={pointerArmed}
@@ -88,6 +90,17 @@ describe('StructuralEditOverlay', () => {
     expect(callbacks.onDraftChange).toHaveBeenCalledWith(expect.objectContaining({
       fields: expect.objectContaining({ mirrorMode: 'copy' }),
     }));
+  });
+
+  it('keeps operations self-describing and states the concise multi-selection requirement', () => {
+    const project = createDefaultProject();
+    const draft = createStructuralEditDraft(project, { kind: 'node', id: project.nodes[0].id }, 'move');
+    renderOverlay({ draft, capabilities: { structural: true, align: false, distribute: false } });
+
+    expect(screen.queryByText(/desplaza la selección con/i)).toBeNull();
+    expect(screen.getByText(/requieren 2\+ elementos/i)).toBeTruthy();
+    expect(screen.getByRole('radio', { name: /alinear/i }).getAttribute('disabled')).not.toBeNull();
+    expect(screen.getByRole('radio', { name: /distribuir/i }).getAttribute('disabled')).not.toBeNull();
   });
 
   it('publishes numeric changes, explicit pointer mode and accessible invalid feedback', async () => {

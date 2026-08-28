@@ -100,6 +100,12 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .mobile-history-actions + .menu-section { padding-top:4px; }
 .menu-section:last-of-type { border-bottom:none; padding-bottom:4px; }
 .menu-section-title { font-size:10px; font-weight:800; color:var(--text); opacity:0.6; text-transform:uppercase; letter-spacing:0.1em; padding:8px 12px 6px; margin-bottom:2px; }
+.topbar-dock-preference { display:grid; gap:5px; padding:10px; margin:4px; border:1px solid var(--border-soft); border-radius:10px; background:var(--surface-2); }
+.topbar-dock-preference > span { color:var(--text); font-size:var(--sc-font-size-control); font-weight:650; }
+.topbar-dock-preference > small { color:var(--muted); font-size:var(--sc-font-size-label); line-height:1.35; }
+.topbar-dock-preference > div { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+.topbar-dock-preference > div > button { justify-content:center; min-height:38px; padding:8px; border:1px solid var(--border-soft); background:var(--surface); }
+.topbar-dock-preference > div > button[aria-pressed='true'] { border-color:color-mix(in srgb,var(--accent) 55%,var(--border)); background:color-mix(in srgb,var(--accent) 11%,var(--surface)); color:var(--accent); }
 .mobile-history-actions.overflow-history,.overflow-case,.overflow-mode { display:none; }
 
 @media (max-width:1439px) {

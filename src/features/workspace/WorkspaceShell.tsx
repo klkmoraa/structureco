@@ -103,6 +103,7 @@ const WorkspaceBrokerContent = ({
   const comparison = broker.stateFor('comparison');
   const doctor = broker.stateFor('doctor');
   const palette = broker.stateFor('palette');
+  const inspectorOpen = detail.open || analysisSetup.open || view.open;
   const resultsWereOpenRef = useRef(results.open);
 
   useEffect(() => persistEditorLayerState(editorLayers), [editorLayers]);
@@ -385,7 +386,7 @@ const WorkspaceBrokerContent = ({
     projectId={projectId}
     skipLabel={t('shell.skipToCanvas')}
     shellClass={shellClass}
-    inspectorCollapsed={!detail.open}
+    inspectorCollapsed={!inspectorOpen}
     inspectorCompact={detail.open && layout.inspectorCompact}
     inspectorWidth={layout.inspectorWidth}
     toolDockPosition={layout.toolDockPosition}
@@ -395,11 +396,14 @@ const WorkspaceBrokerContent = ({
       onOpenSpace3D={onOpenSpace3D}
       resultsOpen={results.open}
       layoutActions={{
-        inspectorCollapsed: !detail.open,
+        inspectorCollapsed: !inspectorOpen,
         fullCanvas: layout.fullCanvas,
+        toolDockPosition: layout.toolDockPosition,
         onToggleInspector: (trigger) => {
           if (layout.fullCanvas) setPreference('fullCanvas', false);
           if (detail.open) closeDetail();
+          else if (analysisSetup.open) closeSurface('analysisSetup');
+          else if (view.open) closeSurface('view');
           else openDetail(trigger);
         },
         onToggleFullCanvas: () => {
@@ -415,9 +419,12 @@ const WorkspaceBrokerContent = ({
           }
           togglePreference('fullCanvas');
         },
+        onToolDockPositionChange: (position) => setPreference('toolDockPosition', position),
+        onOpenAnalysisSetup: () => openSurface('analysisSetup'),
+        onOpenViewSettings: () => openSurface('view'),
       }}
     />}
-    toolRail={<ToolRail dockPosition={layout.toolDockPosition} onDockPositionChange={(position) => setPreference('toolDockPosition', position)} />}
+    toolRail={<ToolRail />}
     workspace={<>
       {project.settings.calculationMode === 'classroom' ? <ClassroomGuide className="classroom-workspace-journey" project={project} analysis={analysis} onChooseTool={setActiveTool} onAnalyze={() => {
         emitWorkspaceCommand('analysis-requested');

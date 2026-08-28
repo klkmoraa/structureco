@@ -691,13 +691,14 @@ describe('structureCo app shell', () => {
     await waitFor(() => expect(container.querySelectorAll('.member-object').length).toBe(initial + 2));
   });
 
-  it('presents repeat as an accessible contextual canvas action', async () => {
+  it('keeps selection actions in the Inspector while repeat remains accessible', async () => {
     const user = userEvent.setup();
     const { container } = await renderExampleApp(user);
     const member = container.querySelector('.member-object');
     expect(member).toBeTruthy();
 
     await user.click(member!);
+    expect(container.querySelector('[data-contextual-actions]')).toBeNull();
     const repeat = screen.getByRole('button', { name: /repetir/i });
     expect(repeat.getAttribute('data-repeat-affordance')).toBe('available');
     expect(repeat.getAttribute('aria-keyshortcuts')).toBe('R');
@@ -725,7 +726,10 @@ describe('structureCo app shell', () => {
       .getByRole('button', { name: /más herramientas/i });
     await user.click(more);
     const palette = await screen.findByRole('dialog', { name: /más herramientas/i });
-    expect(within(palette).getByRole('menuitem', { name: /editar selección/i })).toBeTruthy();
+    await user.click(within(palette).getByRole('menuitem', { name: /editar selección/i }));
+
+    await waitFor(() => expect(document.querySelector('[data-structural-edit-surface]')).toBeTruthy());
+    expect(document.activeElement).toBe(screen.getByLabelText('ΔX'));
   });
 
   it('exposes canvas shortcuts and selects structural objects from the keyboard', async () => {

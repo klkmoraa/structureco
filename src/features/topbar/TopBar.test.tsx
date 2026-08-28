@@ -417,11 +417,18 @@ describe('TopBar information architecture', () => {
     const user = userEvent.setup();
     const onToggleInspector = vi.fn();
     const onToggleFullCanvas = vi.fn();
+    const onToolDockPositionChange = vi.fn();
+    const onOpenAnalysisSetup = vi.fn();
+    const onOpenViewSettings = vi.fn();
     render(<TopBarHarness><TopBar layoutActions={{
       inspectorCollapsed: false,
       fullCanvas: false,
+      toolDockPosition: 'bottom',
       onToggleInspector,
       onToggleFullCanvas,
+      onToolDockPositionChange,
+      onOpenAnalysisSetup,
+      onOpenViewSettings,
     }} /></TopBarHarness>);
 
     await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
@@ -436,5 +443,15 @@ describe('TopBar information architecture', () => {
     // decide la clase de composición, así que su conmutador ya no existe.
     await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
     expect(screen.queryByRole('button', { name: 'Contraer herramientas' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Cargas de análisis' }));
+    expect(onOpenAnalysisSetup).toHaveBeenCalledOnce();
+
+    await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
+    await user.click(screen.getByRole('button', { name: 'Vista' }));
+    expect(onOpenViewSettings).toHaveBeenCalledOnce();
+
+    await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
+    await user.click(screen.getByRole('button', { name: 'Izquierda' }));
+    expect(onToolDockPositionChange).toHaveBeenCalledWith('left');
   });
 });

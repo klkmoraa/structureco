@@ -17,8 +17,8 @@ export const es = {
   ...esInterchange,
   // Adiciones locales conservadas durante la extracción modular.
   'canvas.keyboardEditAlternative': 'Con un objeto seleccionado, pulsa F2 para editarlo con campos numéricos en lugar de arrastrarlo',
-  'canvas.structuralEditConnectedHelp': 'Los campos numéricos son una alternativa al arrastre; los miembros incidentes permanecen conectados y acompañan a sus nodos.',
-  'canvas.structuralEditDescription': 'Vista previa local · campos numéricos, una confirmación y un deshacer',
+  'canvas.structuralEditConnectedHelp': 'Los miembros incidentes permanecen conectados y acompañan a sus nodos.',
+  'canvas.structuralEditDescription': 'Vista previa local · una confirmación y un deshacer',
   'generator.support.detail.fixed': 'Restringe Ux, Uy y Rz en cada nudo de apoyo candidato.',
   'generator.support.detail.none': 'No restringe GDL. Completa los apoyos antes de analizar.',
   'generator.support.detail.pin': 'Restringe Ux y Uy en cada nudo de apoyo candidato.',
@@ -65,8 +65,8 @@ export const en: Catalog = {
   ...enInterchange,
   // Local additions retained during the modular extraction.
   'canvas.keyboardEditAlternative': 'With an object selected, press F2 to edit it with numeric fields instead of dragging it',
-  'canvas.structuralEditConnectedHelp': 'Numeric fields are an alternative to dragging; incident members remain connected and follow their nodes.',
-  'canvas.structuralEditDescription': 'Local preview · numeric fields, one confirmation, one undo',
+  'canvas.structuralEditConnectedHelp': 'Incident members stay connected and follow their nodes.',
+  'canvas.structuralEditDescription': 'Local preview · one confirmation and one undo',
   'generator.support.detail.fixed': 'Restrains Ux, Uy, and Rz at every candidate support node.',
   'generator.support.detail.none': 'It restrains no degrees of freedom. Complete supports before analysis.',
   'generator.support.detail.pin': 'Restrains Ux and Uy at every candidate support node.',

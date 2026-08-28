@@ -905,10 +905,6 @@
   box-shadow:var(--sc-shadow-clay-xs);
 }
 
-.app-shell[data-shell-class='X2'][data-tool-dock-position='bottom']:has(.results-panel[data-surface-status='active']) .tool-rail.is-floating-dock {
-  bottom:min(42dvh,350px);
-}
-
 /* ========================================================================
    CLAY WORKSPACE · FASE 2
    El shell conserva sus autoridades X2/M1/K0 y el broker conserva dock,
@@ -1666,20 +1662,6 @@
     --sc-tool-color:color-mix(in srgb,var(--sc-color-tool-point-load) 70%,var(--sc-color-text-primary));
   }
 
-  .app-shell[data-shell-class='K0'] .mobile-tool-palette-workspace {
-    max-width:min(392px,calc(100vw - 16px));
-    margin-inline:auto;
-  }
-
-  .app-shell[data-shell-class='K0'] .mobile-tool-palette-workspace .mobile-tool-palette-list {
-    gap:5px;
-  }
-
-  .app-shell[data-shell-class='K0'] .mobile-tool-palette-workspace .mobile-palette-tool {
-    min-height:52px;
-    font-size:11px;
-  }
-
   .app-shell[data-shell-class='K0'] .results-panel .results-mobile-commandbar {
     align-items:center;
     gap:6px;
@@ -1772,28 +1754,6 @@
   }
 }
 
-@media (max-width:1023px) and (orientation:landscape) and (max-height:600px) {
-  .app-shell[data-shell-class='K0'] .mobile-tool-dock {
-    width:52px;
-    min-width:52px;
-    max-width:none;
-    display:grid;
-    grid-template-columns:1fr;
-    align-items:stretch;
-    align-content:center;
-    gap:2px;
-    overflow:visible;
-  }
-
-  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button {
-    width:44px;
-    min-width:44px;
-    height:48px;
-    min-height:48px;
-    justify-self:center;
-  }
-}
-
 @media (prefers-reduced-motion:reduce) {
   .app-shell .tool-rail-surface-launcher .sc-popover__trigger,
   .app-shell .tool-rail-surface-launcher__menu button,
@@ -1816,6 +1776,84 @@
 
 .app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .desktop-tool-list {
   flex-direction:row;
+}
+
+/* El dock ya no flota sobre el diagrama: ocupa una franja propia del shell.
+   De este modo el Centro analítico puede crecer sin empujarlo ni quedar debajo
+   de sus pestañas, y la geometría conserva todo el rectángulo del lienzo. */
+.app-shell[data-shell-class='X2'][data-tool-dock-position='bottom'] .workspace {
+  grid-template-columns:minmax(0,1fr) var(--inspector-w);
+  grid-template-rows:minmax(0,1fr) auto;
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='bottom'][data-inspector-collapsed='true'] .workspace,
+.app-shell[data-shell-class='X2'][data-tool-dock-position='bottom'][data-full-canvas='true'] .workspace {
+  grid-template-columns:minmax(0,1fr);
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='bottom'] .center-stage {
+  grid-column:1;
+  grid-row:1;
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='bottom'] .inspector-panel[data-surface-presentation='dock'] {
+  grid-column:2;
+  grid-row:1 / span 2;
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='bottom'] .tool-rail.is-floating-dock {
+  position:relative;
+  z-index:10;
+  grid-column:1;
+  grid-row:2;
+  place-self:center;
+  left:auto;
+  right:auto;
+  bottom:auto;
+  width:max-content;
+  max-width:calc(100% - 20px);
+  margin:0 10px 10px;
+  transform:none;
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .workspace {
+  grid-template-columns:64px minmax(0,1fr) var(--inspector-w);
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'][data-inspector-collapsed='true'] .workspace,
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'][data-full-canvas='true'] .workspace {
+  grid-template-columns:64px minmax(0,1fr);
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .center-stage {
+  grid-column:2;
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .inspector-panel[data-surface-presentation='dock'] {
+  grid-column:3;
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock {
+  position:relative;
+  z-index:10;
+  grid-column:1;
+  grid-row:1;
+  place-self:stretch center;
+  top:auto;
+  right:auto;
+  bottom:auto;
+  left:auto;
+  width:54px;
+  max-width:54px;
+  max-height:calc(100% - 20px);
+  margin:10px 0 10px 10px;
+  transform:none;
+}
+
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .desktop-tool-list,
+.app-shell[data-shell-class='X2'][data-tool-dock-position='left'] .tool-rail.is-floating-dock .tool-group-actions {
+  flex-direction:column;
+  align-items:center;
 }
 
 /* Esta regla debe quedar después del cierre de cascada X2: de otro modo el
@@ -1965,10 +2003,6 @@
   display:none;
 }
 
-.app-shell[data-shell-class='X2'][data-tool-dock-position='bottom']:has(.contextual-actions):not(:has(.results-panel[data-surface-status='active'])) .tool-rail.is-floating-dock {
-  bottom:94px;
-}
-
 /* Generator ya contiene su propia salida y confirmación. Mientras está activo,
    el dock se repliega para que no compita por el mismo plano ni tape el pie. */
 .app-shell[data-shell-class='X2'][data-tool-dock-position='bottom']:has(.structure-generator[data-surface-status='active']) .tool-rail.is-floating-dock {
@@ -1987,11 +2021,6 @@
    inspector inset leave a useful drawing field instead of a squeezed desktop. */
 .app-shell[data-shell-class='M1'] .inspector-panel[data-surface-presentation='inset'] {
   width:min(360px,38vw) !important;
-}
-
-.app-shell[data-shell-class='M1']:has(.inspector-panel[data-surface-presentation='inset'][data-surface-status='active']) .contextual-actions {
-  left:32%;
-  width:min(440px,calc(64% - 24px));
 }
 
 .classroom-journey { --classroom-color:var(--sc-color-aula); --classroom-solid:var(--sc-color-aula-solid); flex:0 0 auto; display:grid; gap:7px; padding:10px 14px; border:1px solid color-mix(in srgb,var(--classroom-color) 30%,var(--border)); border-radius:12px; background:color-mix(in srgb,var(--classroom-color) 5%,var(--surface)); color:var(--text); }

@@ -1,5 +1,6 @@
 import { Move, MousePointer2, X } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
+import { createPortal } from 'react-dom';
 import type { PreparedStructuralEdit } from '../../data/structuralEditing';
 import { Button, Field, IconButton, SegmentedControl } from '../../design-system/components/controls';
 import { UnitField } from '../../design-system/components/editor';
@@ -94,7 +95,7 @@ export const StructuralEditOverlay = ({
     onCancel();
   };
 
-  return <Surface
+  return createPortal(<Surface
     as="section"
     level="floating"
     className={`structural-edit-surface${repeatAvailable ? ' structural-edit-offset-for-repeat' : ''}`}
@@ -118,6 +119,7 @@ export const StructuralEditOverlay = ({
         onValueChange={(value) => onKindChange(value as StructuralEditKind)}
         size="sm"
       />
+      {!capabilities.align || !capabilities.distribute ? <p className="structural-edit-capability-note" role="status">{t('canvas.structuralEditMultipleRequired')}</p> : null}
 
       <div className="structural-edit-fields">
         {draft.kind === 'move' ? <>
@@ -222,5 +224,5 @@ export const StructuralEditOverlay = ({
         <Button variant="secondary" size="touch" onClick={onCancel}>{t('canvas.structuralEditCancel')}</Button>
       </footer>
     </form>
-  </Surface>;
+  </Surface>, document.body);
 };

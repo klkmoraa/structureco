@@ -15,13 +15,16 @@ import {
   Maximize2,
   Minimize2,
   MoreHorizontal,
+  PanelBottom,
   PanelRightClose,
   PanelRightOpen,
+  PanelLeft,
   Play,
   Redo2,
   Save,
   Sheet,
   SlidersHorizontal,
+  Layers3,
   Undo2,
   Wrench,
 } from 'lucide-react';
@@ -41,6 +44,7 @@ import { APP_VERSION } from '../../appVersion';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { resolveTopBarCommand, type TopBarCommandContext } from '../workspace/commandRegistry';
 import { PDeltaAdvancedConfig, TopBarHistoryControls } from './TopBarControlGroups';
+import type { ToolDockPosition } from '../workspace/useWorkspaceLayoutPreferences';
 import './topbar.css';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
@@ -54,8 +58,12 @@ const PortableImportCenter = lazy(() => import('../import-export/PortableImportC
 export interface TopBarLayoutActions {
   inspectorCollapsed: boolean;
   fullCanvas: boolean;
+  toolDockPosition: ToolDockPosition;
   onToggleInspector: (trigger?: HTMLElement | null) => void;
   onToggleFullCanvas: () => void;
+  onToolDockPositionChange: (position: ToolDockPosition) => void;
+  onOpenAnalysisSetup: () => void;
+  onOpenViewSettings: () => void;
 }
 
 export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen = false }: { onOpenHome?: () => void; onOpenSpace3D?: () => void; layoutActions?: TopBarLayoutActions; resultsOpen?: boolean }) => {
@@ -595,6 +603,19 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
                       window.requestAnimationFrame(() => trigger.focus({ preventScroll: true }));
                     }}><ChartNoAxesColumnIncreasing size={17} /> {t('results.outputs')}</button>
                     <button className="overflow-datasheet" onClick={() => { datasheetCommand.run(); setShowMobileMenu(false); }}><Sheet size={17} /> {datasheetCommand.label}</button>
+                  </div>
+                  <div className="menu-section topbar-workspace-section">
+                    <div className="menu-section-title">{t('menu.sectionWorkspace')}</div>
+                    <button onClick={() => { layoutActions?.onOpenAnalysisSetup(); setShowMobileMenu(false); }}><SlidersHorizontal size={17} /> {t('inspector.analysisSetupLauncher')}</button>
+                    <button onClick={() => { layoutActions?.onOpenViewSettings(); setShowMobileMenu(false); }}><Layers3 size={17} /> {t('inspector.viewTab')}</button>
+                    {layoutActions ? <div className="topbar-dock-preference" role="group" aria-label={t('toolbar.dockPosition')}>
+                      <span>{t('toolbar.dockPosition')}</span>
+                      <small>{t('toolbar.dockPositionDescription')}</small>
+                      <div>
+                        <button type="button" aria-pressed={layoutActions.toolDockPosition === 'bottom'} onClick={() => layoutActions.onToolDockPositionChange('bottom')}><PanelBottom size={16} /> {t('toolbar.dockBottom')}</button>
+                        <button type="button" aria-pressed={layoutActions.toolDockPosition === 'left'} onClick={() => layoutActions.onToolDockPositionChange('left')}><PanelLeft size={16} /> {t('toolbar.dockLeft')}</button>
+                      </div>
+                    </div> : null}
                   </div>
                   <div className="menu-section">
                     <div className="menu-section-title">{t('menu.sectionPreferences')}</div>

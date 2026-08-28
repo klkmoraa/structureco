@@ -5,7 +5,6 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { ProjectProvider, useProject } from '../../store/ProjectContext';
 import { onWorkspaceCommand } from '../workspace/workspaceCommands';
 import { ShellCompositionContext } from '../workspace/useShellComposition';
-import type { ToolDockPosition } from '../workspace/useWorkspaceLayoutPreferences';
 import type { ShellClass } from '../workspace/shellComposition';
 import { ToolRail } from './ToolRail';
 
@@ -21,10 +20,10 @@ const SelectionSetter = () => {
 
 /** La forma del riel la decide `shellClass` (CRI-98): se fija explícito por
  * prueba en vez de depender del viewport por defecto de jsdom. */
-const renderToolRail = (shellClass: ShellClass = 'X2', dockProps: { dockPosition?: ToolDockPosition; onDockPositionChange?: (position: ToolDockPosition) => void } = {}) => render(
+const renderToolRail = (shellClass: ShellClass = 'X2') => render(
   <ShellCompositionContext.Provider value={{ shellClass, phone: shellClass === 'K0' }}>
     <ProjectProvider>
-      <ToolRail {...dockProps} />
+      <ToolRail />
       <ActiveToolStatus />
     </ProjectProvider>
   </ShellCompositionContext.Provider>,
@@ -41,13 +40,20 @@ beforeEach(() => localStorage.clear());
 afterEach(() => cleanup());
 
 describe('ToolRail mobile action sheets', () => {
-  it('offers an explicit bottom/left placement control for the desktop dock', async () => {
-    const user = userEvent.setup();
-    const onDockPositionChange = vi.fn();
-    renderToolRail('X2', { dockPosition: 'bottom', onDockPositionChange });
+  it('keeps workspace settings and dock placement out of the modeling dock', () => {
+    renderToolRail('K0');
+    expect(screen.queryByRole('button', { name: /paneles de trabajo/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /poner herramientas/i })).toBeNull();
+  });
 
-    await user.click(screen.getByRole('button', { name: 'Poner herramientas a la izquierda' }));
-    expect(onDockPositionChange).toHaveBeenCalledWith('left');
+  it('keeps the phone dock to six direct destinations and routes the rest through sheets', () => {
+    const { container } = renderToolRail('K0');
+    const dock = container.querySelector<HTMLElement>('.mobile-tool-dock');
+
+    expect(dock).toBeTruthy();
+    expect(within(dock as HTMLElement).getAllByRole('button')).toHaveLength(6);
+    expect(within(dock as HTMLElement).getByRole('button', { name: /herramientas de carga/i })).toBeTruthy();
+    expect(within(dock as HTMLElement).getByRole('button', { name: /más herramientas/i })).toBeTruthy();
   });
 
   it('renders the X2 rail as a four-group floating dock with each registered tool exactly once', () => {
@@ -80,9 +86,8 @@ describe('ToolRail mobile action sheets', () => {
   it('offers an explicit compact desktop rail without changing tool identity', () => {
     const { container } = renderToolRail('M1');
     expect(container.querySelector('[data-tool-rail="compact"]')).toBeTruthy();
-    // Doce herramientas del registro, Generar y Buscar: el lanzador de
-    // Paneles es un popover accesible separado y Cargas/Vista/Resultados ya
-    // no consumen tres claves del riel.
+    // Doce herramientas del registro, Generar y Buscar. Las superficies de
+    // trabajo viven en Ajustes, no consumen una posición del riel.
     expect(container.querySelectorAll('.desktop-tool-list .sc-tool-button.is-compact')).toHaveLength(14);
     expect(container.querySelector('[data-tool-id="pointLoad"]')?.getAttribute('aria-keyshortcuts')).toBe('P');
     expect(container.querySelector('[data-tool-id="delete"]')?.getAttribute('aria-keyshortcuts')).toBe('Delete Backspace');
@@ -91,7 +96,7 @@ describe('ToolRail mobile action sheets', () => {
   it('groups every desktop tool in the four desktop intentions without losing actions', () => {
     renderToolRail();
 
-    expect(within(screen.getByRole('group', { name: /navegar/i })).getAllByRole('button')).toHaveLength(4);
+    expect(within(screen.getByRole('group', { name: /navegar/i })).getAllByRole('button')).toHaveLength(3);
     // Nudo, barra y apoyo, más el generador de estructuras.
     expect(within(screen.getByRole('group', { name: /^crear$/i })).getAllByRole('button')).toHaveLength(4);
     expect(within(screen.getByRole('group', { name: /^cargas$/i })).getAllByRole('button')).toHaveLength(3);
@@ -111,69 +116,6 @@ describe('ToolRail mobile action sheets', () => {
     await user.click(commandSearch);
 
     expect(openPalette).toHaveBeenCalledOnce();
-    unsubscribe();
-  });
-
-  it('keeps setup and view behind one launcher while Results stays out of the dock', async () => {
-    const user = userEvent.setup();
-    const openAnalysisSetup = vi.fn();
-    const openView = vi.fn();
-    const unsubscribes = [
-      onWorkspaceCommand('open-analysis-setup', openAnalysisSetup),
-      onWorkspaceCommand('open-view-settings', openView),
-    ];
-    renderToolRail('X2');
-
-    const navigate = screen.getByRole('group', { name: /navegar/i });
-    expect(within(navigate).queryByRole('button', { name: /cargas de análisis/i })).toBeNull();
-    expect(within(navigate).queryByRole('button', { name: /^vista$/i })).toBeNull();
-    expect(within(navigate).queryByRole('button', { name: /^resultados$/i })).toBeNull();
-    await user.click(within(navigate).getByRole('button', { name: /abrir paneles de trabajo/i }));
-
-    const panels = screen.getByRole('dialog', { name: /paneles de trabajo/i });
-    await user.click(within(panels).getByRole('menuitem', { name: /cargas de análisis/i }));
-    await user.click(within(navigate).getByRole('button', { name: /abrir paneles de trabajo/i }));
-    await user.click(within(screen.getByRole('dialog', { name: /paneles de trabajo/i })).getByRole('menuitem', { name: /^vista$/i }));
-
-    expect(openAnalysisSetup).toHaveBeenCalledOnce();
-    expect(openView).toHaveBeenCalledOnce();
-    await user.click(within(navigate).getByRole('button', { name: /abrir paneles de trabajo/i }));
-    expect(within(screen.getByRole('dialog', { name: /paneles de trabajo/i })).queryByRole('menuitem', { name: /^resultados$/i })).toBeNull();
-    unsubscribes.forEach((unsubscribe) => unsubscribe());
-  });
-
-  it('closes the workspace panels menu from its own clear action', async () => {
-    const user = userEvent.setup();
-    renderToolRail('X2');
-
-    const navigate = screen.getByRole('group', { name: /navegar/i });
-    await user.click(within(navigate).getByRole('button', { name: /abrir paneles de trabajo/i }));
-    const panels = screen.getByRole('dialog', { name: /paneles de trabajo/i });
-    await user.click(within(panels).getByRole('menuitem', { name: /cerrar paneles/i }));
-
-    expect(screen.queryByRole('dialog', { name: /paneles de trabajo/i })).toBeNull();
-  });
-
-  it('reaches workspace surfaces from a Paneles sheet in K0 without native floating buttons', async () => {
-    const user = userEvent.setup();
-    const openView = vi.fn();
-    const unsubscribe = onWorkspaceCommand('open-view-settings', openView);
-    render(
-      <ShellCompositionContext.Provider value={{ shellClass: 'K0', phone: true }}>
-        <ProjectProvider><div className="app-shell"><ToolRail /></div></ProjectProvider>
-      </ShellCompositionContext.Provider>,
-    );
-
-    await user.click(screen.getByRole('button', { name: /más herramientas/i }));
-    const menu = screen.getByRole('menu', { name: /más herramientas/i });
-    expect(within(menu).queryByRole('menuitem', { name: /cargas de análisis/i })).toBeNull();
-    expect(within(menu).queryByRole('menuitem', { name: /^resultados$/i })).toBeNull();
-    await user.click(within(menu).getByRole('menuitem', { name: /paneles de trabajo/i }));
-    const panels = screen.getByRole('menu', { name: /paneles de trabajo/i });
-    await user.click(within(panels).getByRole('menuitem', { name: /^vista$/i }));
-
-    await waitFor(() => expect(openView).toHaveBeenCalledOnce());
-    expect(document.querySelector('.mobile-tool-palette-more')).toBeNull();
     unsubscribe();
   });
 
@@ -218,7 +160,7 @@ describe('ToolRail mobile action sheets', () => {
     const openGenerator = vi.fn();
     const unsubscribe = onWorkspaceCommand('open-structure-generator', openGenerator);
     render(
-      <ShellCompositionContext.Provider value={{ shellClass: 'X2', phone: false }}>
+      <ShellCompositionContext.Provider value={{ shellClass: 'K0', phone: true }}>
         <ProjectProvider>
           <div className="app-shell"><ToolRail /></div>
         </ProjectProvider>
@@ -243,7 +185,7 @@ describe('ToolRail mobile action sheets', () => {
 
   it('opens the portaled load sheet and selects a point load', async () => {
     const user = userEvent.setup();
-    const { container } = renderToolRail();
+    const { container } = renderToolRail('K0');
     const loadButton = screen.getByRole('button', { name: /herramientas de carga/i });
 
     await user.click(loadButton);
@@ -264,7 +206,7 @@ describe('ToolRail mobile action sheets', () => {
 
   it('returns focus when the touch sheet closes through its backdrop', async () => {
     const user = userEvent.setup();
-    renderToolRail();
+    renderToolRail('K0');
     const moreButton = [...document.querySelectorAll<HTMLButtonElement>('.mobile-tool-group')].at(-1) as HTMLButtonElement;
     await user.click(moreButton);
     expect(screen.getByRole('dialog', { name: /herramientas/i })).toBeTruthy();
@@ -279,7 +221,7 @@ describe('ToolRail mobile action sheets', () => {
 
   it('shows every additional tool and returns focus to Más after Escape', async () => {
     const user = userEvent.setup();
-    renderToolRail();
+    renderToolRail('K0');
     const moreButton = screen.getByRole('button', { name: /más herramientas/i });
 
     await user.click(moreButton);
@@ -315,7 +257,7 @@ describe('ToolRail mobile action sheets', () => {
     const user = userEvent.setup();
     const openPalette = vi.fn();
     const unsubscribe = onWorkspaceCommand('open-command-palette', openPalette);
-    renderToolRail();
+    renderToolRail('K0');
     const moreButton = screen.getByRole('button', { name: /más herramientas/i });
     await user.click(moreButton);
 
@@ -334,7 +276,7 @@ describe('ToolRail mobile action sheets', () => {
     const openEditor = vi.fn();
     const unsubscribe = onWorkspaceCommand('open-structural-edit', openEditor);
     render(
-      <ShellCompositionContext.Provider value={{ shellClass: 'X2', phone: false }}>
+      <ShellCompositionContext.Provider value={{ shellClass: 'K0', phone: true }}>
         <ProjectProvider>
           <div className="app-shell"><ToolRail /><SelectionSetter /></div>
         </ProjectProvider>

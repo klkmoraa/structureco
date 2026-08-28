@@ -36,4 +36,10 @@ describe('Clay Workspace Phase 2 presentation contract', () => {
   it('keeps ephemeral canvas feedback from blocking consecutive structural edits', () => {
     expect(canvasCss).toMatch(/\.canvas-feedback\s*\{[^}]*pointer-events:\s*none/s);
   });
+
+  it('keeps the Compact dock horizontal in every landscape mobile width', () => {
+    const compactLandscape = canvasCss.slice(canvasCss.lastIndexOf('@media (max-width:1023px) and (orientation:landscape)'));
+    expect(compactLandscape).toContain('.workspace { grid-template-columns:1fr; grid-template-rows:minmax(0,1fr) auto; }');
+    expect(compactLandscape).toContain('.mobile-tool-dock { grid-template-columns:repeat(6,minmax(0,1fr));');
+  });
 });
