@@ -64,6 +64,10 @@ describe('ProjectHub', () => {
     expect(screen.getAllByRole('button', { name: /Abrir Pórtico compacto/ })).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Más acciones para Pórtico compacto' })).toBeTruthy();
     expect(document.querySelectorAll('.project-hub__menu')).toHaveLength(1);
+    await userEvent.click(screen.getByRole('button', { name: 'Más acciones para Pórtico compacto' }));
+    const panel = document.querySelector('.project-hub__menu-panel');
+    expect(panel?.parentElement).toBe(document.querySelector('.project-hub__row'));
+    expect(panel?.contains(screen.getByRole('button', { name: 'Eliminar Pórtico compacto' }))).toBe(true);
   });
 
   it('removes a project only after the user confirms the destructive action', async () => {

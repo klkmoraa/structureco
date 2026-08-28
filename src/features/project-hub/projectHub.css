@@ -202,11 +202,11 @@
    the destructive action on touch layouts. */
 .project-hub__row:has(.project-hub__menu.is-open) { z-index: 3; }
 
-.project-hub__menu > div {
+.project-hub__menu-panel {
   position: absolute;
   z-index: 8;
-  top: calc(100% + 7px);
-  right: 0;
+  top: calc(50% + 25px);
+  right: 12px;
   width: 158px;
   display: grid;
   gap: 4px;
@@ -217,26 +217,26 @@
   box-shadow: var(--sc-shadow-sheet);
 }
 
-.project-hub__menu button {
+.project-hub__menu-panel button {
   width: 100%;
   justify-content: flex-start;
   border: 0;
   border-radius: var(--sc-radius-xs);
   box-shadow: none;
 }
-.project-hub__menu .project-hub__delete { color: var(--sc-color-state-error-foreground); }
-.project-hub__menu .project-hub__delete:hover { background: color-mix(in srgb, var(--sc-color-state-error) 10%, transparent); }
+.project-hub__menu-panel .project-hub__delete { color: var(--sc-color-state-error-foreground); }
+.project-hub__menu-panel .project-hub__delete:hover { background: color-mix(in srgb, var(--sc-color-state-error) 10%, transparent); }
 
 .project-hub__open:hover,
 .project-hub__identity button:hover,
 .project-hub__menu > button:hover,
-.project-hub__menu button:hover,
+.project-hub__menu-panel button:hover,
 .project-hub__recoveries button:hover { transform: translateY(-1.5px); }
 
 .project-hub__open:active,
 .project-hub__identity button:active,
 .project-hub__menu > button:active,
-.project-hub__menu button:active,
+.project-hub__menu-panel button:active,
 .project-hub__recoveries button:active {
   background: var(--sc-color-surface-inset);
   box-shadow: var(--sc-shadow-clay-pressed);
@@ -357,11 +357,13 @@
   }
   .project-hub__open { min-height: 34px; padding: 0 10px; }
   .project-hub__menu > button { width: 34px; min-height: 34px; }
-  .project-hub__menu > div {
-    right: 0;
-    bottom: calc(100% + 7px);
-    top: auto;
-    width: min(190px, calc(100vw - 24px));
+  /* A mobile menu is part of its card, rather than a popover above it. This
+     prevents the first recent project from being covered or clipped. */
+  .project-hub__menu-panel {
+    position: static;
+    grid-column: 1 / -1;
+    width: auto;
+    margin-top: 2px;
   }
   .project-hub--recent .project-hub__open,
   .project-hub--recent .project-hub__menu > button {
@@ -385,7 +387,7 @@
   .project-hub__open,
   .project-hub__identity button,
   .project-hub__menu > button,
-  .project-hub__menu button,
+  .project-hub__menu-panel button,
   .project-hub__recoveries button { min-height: 44px; }
   .project-hub__menu > button { width: 44px; }
 }
@@ -397,5 +399,5 @@
   .project-hub__open,
   .project-hub__identity button,
   .project-hub__menu > button,
-  .project-hub__menu button { transition: none; transform: none !important; }
+  .project-hub__menu-panel button { transition: none; transform: none !important; }
 }

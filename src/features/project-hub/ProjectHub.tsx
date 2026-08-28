@@ -325,13 +325,13 @@ export const ProjectHub = ({
           <button className="project-hub__open" type="button" aria-label={t('hub.openLabel', { name: record.name })} onClick={() => onOpen(record)}><FolderOpen size={16} />{t('hub.open')}</button>
           <div className={`project-hub__menu${openMenuId === record.id ? ' is-open' : ''}`}>
             <button type="button" aria-expanded={openMenuId === record.id} aria-label={t('hub.moreActions', { name: record.name })} onClick={() => setOpenMenuId((current) => current === record.id ? null : record.id)}><MoreHorizontal size={18} /></button>
-            {openMenuId === record.id ? <div>
-              <button type="button" aria-label={t('hub.renameAction', { name: record.name })} onClick={() => { setOpenMenuId(null); setEditing({ id: record.id, name: record.name }); }}><Pencil size={15} />{t('hub.rename')}</button>
-              <button type="button" aria-label={t('hub.duplicateAction', { name: record.name })} onClick={() => { setOpenMenuId(null); void duplicate(record); }}><Copy size={15} />{t('hub.duplicate')}</button>
-              <button type="button" className="project-hub__delete" aria-label={t('hub.deleteAction', { name: record.name })} onClick={() => void remove(record)}><Trash2 size={15} />{t('hub.delete')}</button>
-            </div> : null}
           </div>
         </div>
+        {openMenuId === record.id ? <div className="project-hub__menu-panel">
+          <button type="button" aria-label={t('hub.renameAction', { name: record.name })} onClick={() => { setOpenMenuId(null); setEditing({ id: record.id, name: record.name }); }}><Pencil size={15} />{t('hub.rename')}</button>
+          <button type="button" aria-label={t('hub.duplicateAction', { name: record.name })} onClick={() => { setOpenMenuId(null); void duplicate(record); }}><Copy size={15} />{t('hub.duplicate')}</button>
+          <button type="button" className="project-hub__delete" aria-label={t('hub.deleteAction', { name: record.name })} onClick={() => void remove(record)}><Trash2 size={15} />{t('hub.delete')}</button>
+        </div> : null}
       </article>)}
     </div> : null}
     {recoveries.length ? <section className="project-hub__recoveries" aria-labelledby="recoveries-title">
