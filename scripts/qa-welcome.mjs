@@ -94,9 +94,9 @@ export const openExamplePortal = async (page, locator) => {
 export const continueStoredProject = async (page, { timeout = 20_000 } = {}) => {
   const shell = page.locator('.app-shell');
   if (await shell.waitFor({ state: 'visible', timeout }).then(() => true, () => false)) return;
-  await page.getByTestId('welcome-screen').waitFor({ state: 'visible' });
-  await page.getByRole('button', { name: /continuar proyecto|continue project/i }).click();
-  await shell.waitFor({ state: 'visible' });
+  await page.getByTestId('welcome-screen').waitFor({ state: 'visible', timeout });
+  await page.getByRole('button', { name: /continuar proyecto|continue project/i }).click({ timeout });
+  await shell.waitFor({ state: 'visible', timeout });
 };
 
 /**

@@ -37,7 +37,7 @@ const summarizeLibrary = (library) => ({
 });
 
 const openWorkspace = async (page, stored = false) => {
-  await page.goto('http://127.0.0.1:4194/', { waitUntil: 'networkidle' });
+  await page.goto('http://127.0.0.1:4194/', { waitUntil: 'domcontentloaded', timeout: 20_000 });
   if (stored) await continueStoredProject(page);
   else {
     await page.getByTestId('welcome-screen').waitFor({ state: 'visible', timeout: 20_000 });
@@ -166,7 +166,7 @@ try {
   disablePwaUpdateLifecycle(migrationContext);
   await migrationContext.addInitScript((serialized) => localStorage.setItem('structureCo.project', serialized), JSON.stringify(historical));
   const migrationPage = await migrationContext.newPage();
-  await migrationPage.goto('http://127.0.0.1:4194/', { waitUntil: 'networkidle' });
+  await migrationPage.goto('http://127.0.0.1:4194/', { waitUntil: 'domcontentloaded', timeout: 20_000 });
   await continueStoredProject(migrationPage);
   const migrated = await waitForLibrary(migrationPage, (library) => library.projects.some((record) => record.id === historical.id));
   const migratedRecord = migrated.projects.find((record) => record.id === historical.id);
@@ -191,7 +191,7 @@ try {
   await waitForLibrary(installer, (library) => library.projects.some((record) => record.name === 'Proyecto disponible sin red'));
   await installer.close({ runBeforeUnload: false });
   const offlinePage = await offlineContext.newPage();
-  await offlinePage.goto('http://127.0.0.1:4194/', { waitUntil: 'networkidle' });
+  await offlinePage.goto('http://127.0.0.1:4194/', { waitUntil: 'domcontentloaded', timeout: 20_000 });
   await offlinePage.waitForFunction(() => navigator.serviceWorker?.controller !== null, undefined, { timeout: 20_000 });
   await continueStoredProject(offlinePage);
   await offlineContext.setOffline(true);
