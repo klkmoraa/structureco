@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { resolveStructuralAssetUrl, ThreeStructuralImage } from './ThreeStructuralImage';
+import { ThreeStructuralImage } from './ThreeStructuralImage';
+import { resolveStructuralAssetUrl } from './structuralAssetUrl';
 
 afterEach(cleanup);
 

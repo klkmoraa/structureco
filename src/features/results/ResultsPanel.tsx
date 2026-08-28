@@ -23,6 +23,7 @@ import type { ResultRef } from './provenance';
 import { DENSE_RESULT_VIEWS, preloadDenseResultsSurface, preloadInfluenceLineView, type DenseResultView } from './denseResults';
 import { reliabilityLevelLabelKey } from './reliabilityCopy';
 import { formatResultNumber } from './resultFormatting';
+import './results.css';
 
 /**
  * Lo que queda residente en el panel tras CRI-101: el resumen en tarjetas y las

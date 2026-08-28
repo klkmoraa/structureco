@@ -18,7 +18,7 @@ const loadSpace3DWorkspace = () => import('./features/space3d/Space3DWorkspace')
 const Space3DWorkspace = lazy(loadSpace3DWorkspace);
 const PwaUpdateNotice = lazy(() => import('./platform/PwaUpdateNotice').then((module) => ({ default: module.PwaUpdateNotice })));
 
-export type AppScreen = 'welcome' | 'workspace' | 'space3d';
+type AppScreen = 'welcome' | 'workspace' | 'space3d';
 
 /**
  * De dónde se abrió Space 3D. Desde la mesa 2D se abre el proyecto actual

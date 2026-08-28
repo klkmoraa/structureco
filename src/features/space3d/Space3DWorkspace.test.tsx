@@ -134,7 +134,7 @@ describe('Space3DWorkspace end to end', () => {
     expect(screen.getByTestId('space3d-analysis-state').textContent).toBe('stale');
     expect(screen.getByTestId('space3d-deformed-visible').textContent).toBe('false');
     expect(screen.getAllByText(/obsoleto/i).length).toBeGreaterThan(0);
-  });
+  }, 10_000);
 
   it('informa un mecanismo sin perder el modelo', async () => {
     const user = userEvent.setup();

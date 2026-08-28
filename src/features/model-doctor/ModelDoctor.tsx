@@ -534,5 +534,3 @@ export const ModelDoctor = ({
     </>}</>}
   </Drawer>;
 };
-
-export default ModelDoctor;

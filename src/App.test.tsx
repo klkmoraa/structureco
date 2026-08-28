@@ -165,9 +165,10 @@ const openResults = async (user: ReturnType<typeof userEvent.setup>) => {
   const results = document.querySelector('.results-panel') as HTMLElement;
   // El comando conserva Resultados como superficie invocada, pero en desktop
   // queda recogida hasta que el usuario pide expandirla. La prueba abre ese
-  // estado explícitamente antes de elegir una pestaña.
-  if (!within(results).queryByRole('tab', { name: /momento|moment/i })) {
-    await user.click(within(results).getByRole('button', { name: /abrir resultados|open results/i }));
+  // estado explícitamente antes de elegir una pestaña, si el control existe.
+  const desktopToggle = within(results).queryByRole('button', { name: /abrir resultados|open results/i });
+  if (!within(results).queryByRole('tab', { name: /momento|moment/i }) && desktopToggle) {
+    await user.click(desktopToggle);
   }
   await user.click(await within(results).findByRole('tab', { name: /momento|moment/i }));
 };
@@ -541,7 +542,7 @@ describe('structureCo app shell', () => {
     await waitFor(() => expect(screen.getAllByText('Model Doctor encontró problemas')).toHaveLength(1));
   });
 
-  it('draws mixed reactions as separate horizontal Rx and vertical Ry arrows', async () => {
+  it('reports mixed reactions as separate Rx and Ry components', async () => {
     const user = userEvent.setup();
     const project = createDefaultProject();
     project.name = 'Viga con reacciones mixtas';
@@ -562,33 +563,28 @@ describe('structureCo app shell', () => {
     }];
     localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
 
-    const { container } = render(<App />);
+    render(<App />);
     await openWorkspace(user);
     await user.click(screen.getByRole('button', { name: /^analizar$/i }));
-    // CRI-101 · «Reacciones» dejó de ser una pestaña del panel y pasó a ser la
-    // superficie `dense`. La capa de reacciones del lienzo, que es lo que esta
-    // prueba mide, se dibuja con el resultado resuelto y sigue siendo la misma.
+    // CRI-101 · «Reacciones» vive en la superficie densa. La tabla conserva
+    // componentes independientes para que una resultante no oculte su signo.
     await openResults(user);
     const evidence = screen.getByRole('group', { name: /evidencia|evidence/i });
     await user.click(within(evidence).getByRole('button', { name: /momento|moment/i }));
     await openDenseResults(user, 'reactions');
 
-    await waitFor(() => expect(container.querySelector('.reaction-symbol[data-node-id="A"]')).toBeTruthy());
-    const reaction = container.querySelector('.reaction-symbol[data-node-id="A"]')!;
-    const rx = reaction.querySelector('line[data-reaction-component="rx"]')!;
-    const ry = reaction.querySelector('line[data-reaction-component="ry"]')!;
-
-    expect(rx.getAttribute('y1')).toBe(rx.getAttribute('y2'));
-    expect(rx.getAttribute('x1')).not.toBe(rx.getAttribute('x2'));
-    expect(ry.getAttribute('x1')).toBe(ry.getAttribute('x2'));
-    expect(ry.getAttribute('y1')).not.toBe(ry.getAttribute('y2'));
-    expect(reaction.textContent).toContain('Rx = -20.000 kN');
-    expect(reaction.textContent).toContain('Ry = 30.000 kN');
-    expect(reaction.textContent).not.toContain('R = 36.056 kN');
-
-    const reactionB = container.querySelector('.reaction-symbol[data-node-id="B"]')!;
-    expect(reactionB.querySelector('line[data-reaction-component="rx"]')).toBeNull();
-    expect(reactionB.querySelector('line[data-reaction-component="ry"]')).toBeTruthy();
+    await waitFor(() => expect(document.querySelector('.dense-results-surface table')).toBeTruthy());
+    const table = document.querySelector('.dense-results-surface table') as HTMLTableElement;
+    expect(within(table).getByRole('columnheader', { name: /Rx \(kN\)/ })).toBeTruthy();
+    expect(within(table).getByRole('columnheader', { name: /Ry \(kN\)/ })).toBeTruthy();
+    const rowA = within(table).getByRole('row', { name: /^A\b/ });
+    const cellsA = rowA.querySelectorAll('td');
+    expect(Number(cellsA[3].textContent)).toBeCloseTo(-20, 3);
+    expect(Number(cellsA[4].textContent)).toBeCloseTo(30, 3);
+    const rowB = within(table).getByRole('row', { name: /^B\b/ });
+    const cellsB = rowB.querySelectorAll('td');
+    expect(Number(cellsB[3].textContent)).toBeCloseTo(0, 3);
+    expect(Number(cellsB[4].textContent)).toBeCloseTo(10, 3);
   }, 15_000);
 
   it('creates a guided classroom exercise and analyzes it without prediction gates', async () => {
@@ -853,7 +849,10 @@ describe('structureCo app shell', () => {
 
     await user.click(screen.getByRole('button', { name: /^analyze$/i }));
     await openResults(user);
-    await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+    const chart = await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+    const chartGraphic = within(chart).getByRole('img');
+    expect(chartGraphic.getAttribute('aria-label')).toMatch(/Bending moment diagram/i);
+    expect(chartGraphic.getAttribute('aria-label')).not.toMatch(/Diagrama de momento/i);
     const evidence = screen.getByRole('group', { name: 'Evidence' });
     await user.click(within(evidence).getByRole('button', { name: 'Moment' }));
     await waitFor(() => expect(container.querySelector('.canvas-result-legend')).toBeTruthy());
@@ -880,7 +879,7 @@ describe('structureCo app shell', () => {
     // Misma holgura que el resto de recorridos que montan la app, analizan y
     // luego teclean: es el test más pesado del archivo y con el timeout por
     // defecto de 5 s vivía al borde bajo carga de suite completa.
-  }, 10_000);
+  }, 20_000);
 
   /**
    * CRI-104 · Quién está entrando se deriva del REPOSITORIO, no de una

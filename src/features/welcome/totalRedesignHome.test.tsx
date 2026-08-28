@@ -9,6 +9,7 @@ import { ProjectProvider } from '../../store/ProjectContext';
 import { WelcomeScreen } from './WelcomeScreen';
 
 const homeCss = readFileSync('src/features/welcome/totalHome.css', 'utf8');
+const globalCss = readFileSync('src/styles.css', 'utf8');
 
 beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -37,6 +38,11 @@ const renderHome = () => render(
 );
 
 describe('Home total redesign contract', () => {
+  it('keeps retired welcome selectors out of the global stylesheet', () => {
+    expect(globalCss).not.toMatch(/\.welcome-[a-z0-9_-]+/i);
+    expect(homeCss).not.toMatch(/\.(?:welcome-screen|welcome-header|welcome-workflow)(?:[^a-z0-9_-]|$)/i);
+  });
+
   it('keeps compact Home options in the vertical reading flow instead of hidden horizontal carousels', () => {
     const compactStart = homeCss.indexOf('@media (max-width: 760px)');
     const compactEnd = homeCss.indexOf('@media (max-width: 340px)');

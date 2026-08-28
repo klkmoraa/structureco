@@ -41,6 +41,7 @@ import process from 'node:process';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const CATALOGS = path.join('src', 'i18n', 'catalogs.ts');
+const CATALOG_DOMAIN_DIR = path.join('src', 'i18n', 'catalogs');
 
 /**
  * La maquinaria del propio gate no cuenta como consumidor.
@@ -182,14 +183,19 @@ export const isReferenced = (haystack, key) => new RegExp(
 ).test(haystack);
 
 const main = async () => {
-  const catalogSource = await readFile(path.join(ROOT, CATALOGS), 'utf8');
+  const catalogDomainFiles = (await readdir(path.join(ROOT, CATALOG_DOMAIN_DIR)))
+    .filter((file) => file.startsWith('es-') && file.endsWith('.ts'))
+    .sort();
+  const catalogSource = catalogDomainFiles.length
+    ? (await Promise.all(catalogDomainFiles.map((file) => readFile(path.join(ROOT, CATALOG_DOMAIN_DIR, file), 'utf8')))).join('\n')
+    : await readFile(path.join(ROOT, CATALOGS), 'utf8');
   const keys = declaredKeys(catalogSource);
   if (!keys.length) {
     console.error(`No se pudo leer ninguna clave de ${CATALOGS}; el formato del catálogo cambió.`);
     process.exit(1);
   }
 
-  const files = (await Promise.all(SCANNED_ROOTS.map(collect))).flat().filter((file) => file !== CATALOGS && file !== SELF && !IS_TEST.test(file));
+  const files = (await Promise.all(SCANNED_ROOTS.map(collect))).flat().filter((file) => file !== CATALOGS && !file.startsWith(`${CATALOG_DOMAIN_DIR}${path.sep}`) && file !== SELF && !IS_TEST.test(file));
   const sources = await Promise.all(files.map((file) => readFile(path.join(ROOT, file), 'utf8')));
   const haystack = sources.join('\n');
   const collected = sources.map(dynamicPrefixes);

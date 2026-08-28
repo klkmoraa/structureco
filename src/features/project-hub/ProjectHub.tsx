@@ -370,5 +370,3 @@ export const ProjectHub = ({
     </section> : null}
   </section>;
 };
-
-export default ProjectHub;

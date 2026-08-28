@@ -263,7 +263,7 @@ describe('TopBar information architecture', () => {
     unsubscribe();
   });
 
-  it('opens Results from its own persistent top-bar control', async () => {
+  it('opens Results from its persistent control beside the analysis case', async () => {
     const user = userEvent.setup();
     const toggleResults = vi.fn();
     const unsubscribe = onWorkspaceCommand('toggle-results', toggleResults);

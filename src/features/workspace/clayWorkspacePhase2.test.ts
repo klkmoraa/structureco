@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const css = readFileSync(new URL('./phase1.css', import.meta.url), 'utf8');
-const globalCss = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+const canvasCss = readFileSync(new URL('../canvas/phase2.css', import.meta.url), 'utf8');
 
 describe('Clay Workspace Phase 2 presentation contract', () => {
   it('binds the three real experiences to the existing shell classes', () => {
@@ -34,6 +34,6 @@ describe('Clay Workspace Phase 2 presentation contract', () => {
   });
 
   it('keeps ephemeral canvas feedback from blocking consecutive structural edits', () => {
-    expect(globalCss).toMatch(/\.canvas-feedback\s*\{[^}]*pointer-events:\s*none/s);
+    expect(canvasCss).toMatch(/\.canvas-feedback\s*\{[^}]*pointer-events:\s*none/s);
   });
 });
