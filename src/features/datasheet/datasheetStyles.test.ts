@@ -56,7 +56,8 @@ const stackedRowTracks = (block: string): readonly string[] => {
   const rule = block.slice(block.indexOf('.datasheet-layout'));
   const declaration = /grid-template-rows:\s*([^;]+);/.exec(rule);
   if (!declaration) return [];
-  // `minmax(0, 1fr) fit-content(25%)` → ['minmax(0, 1fr)', 'fit-content(25%)'].
+  // `minmax(240px, 1fr) minmax(260px, 40%)` keeps both mobile
+  // panes reachable without turning the whole drawer into a third scroll area.
   return declaration[1].trim().match(/(?:[a-z-]+\([^)]*\)|[^\s]+)/g) ?? [];
 };
 
@@ -146,20 +147,21 @@ describe('datasheet styles', () => {
     const tracks = stackedRowTracks(narrow);
     expect(tracks, 'la rejilla y el panel se apilan en dos filas').toHaveLength(2);
 
-    // La rejilla va primera y toma el espacio libre.
-    expect(tracks[0]).toMatch(/^minmax\(0,\s*1fr\)$/);
+    // La rejilla conserva un alto útil antes de que el contexto reciba el suyo.
+    expect(tracks[0]).toMatch(/^minmax\(\d+px,\s*1fr\)$/);
 
     // Y la del panel está ACOTADA. `auto` —o cualquier pista sin tope— deja que
     // el contenido del panel se coma el presupuesto entero y la rejilla se
     // resuelva a 0.
     expect(tracks[1], 'la fila del panel contextual no puede ser ilimitada').not.toBe('auto');
     expect(tracks[1], 'la fila del panel contextual no puede ser ilimitada').not.toBe('max-content');
-    const capped = /^fit-content\((\d+)%\)$/.exec(tracks[1]);
+    const capped = /(\d+)%/.exec(tracks[1]);
     expect(capped, `pista sin tope proporcional: ${tracks[1]}`).not.toBeNull();
 
     // El tope deja a la rejilla la mayoría de la altura, no un resto simbólico.
     expect(Number(capped?.[1])).toBeLessThanOrEqual(40);
     expect(Number(capped?.[1])).toBeGreaterThan(0);
+    expect(narrow).toMatch(/\.datasheet-layout\s*\{[^}]*overflow:\s*hidden/);
   });
 
   it('keeps the contextual panel present and scrollable instead of hiding it', () => {

@@ -479,6 +479,12 @@
   .inspector-panel.mobile-open[data-mobile-detent='compact'] { height:min(35dvh,320px); }
   .inspector-panel.mobile-open[data-mobile-detent='medium'] { height:min(55dvh,540px); }
   .inspector-panel.mobile-open[data-mobile-detent='large'] { height:min(85dvh,780px,calc(var(--sc-visual-viewport-height,100dvh) - 76px)); }
+  /* The Inspector owns the lower interaction plane while its sheet is open.
+     Keeping the canvas dock there blocks the Inspector's last controls. */
+  .app-shell:has(.inspector-panel.mobile-open[data-surface-presentation='sheet']) .tool-rail {
+    opacity:0;
+    pointer-events:none;
+  }
   .repeat-action-control { right:max(10px,env(safe-area-inset-right)); bottom:calc(76px + env(safe-area-inset-bottom)); min-height:44px; }
   .repeat-preview { top:calc(var(--canvas-safe-top) + 8px); }
   .results-panel.results-mode-focused { position:fixed; inset:var(--sc-visual-viewport-top,0px) 0 var(--sc-visual-viewport-bottom,0px); width:100%; height:var(--sc-visual-viewport-height,100dvh)!important; min-height:0; max-height:none; z-index:calc(var(--sc-z-modal) + 1); border-radius:0; }

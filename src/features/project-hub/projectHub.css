@@ -197,6 +197,11 @@
   transform: translateY(1px);
 }
 
+/* The action menu belongs above later cards as well as above its own row.
+   Without a row stacking level, a following recent-project card can paint over
+   the destructive action on touch layouts. */
+.project-hub__row:has(.project-hub__menu.is-open) { z-index: 3; }
+
 .project-hub__menu > div {
   position: absolute;
   z-index: 8;
@@ -338,7 +343,11 @@
     padding: 9px;
   }
   .project-hub__preview { min-height: 82px; }
+  /* Recent cards keep two icon actions at the trailing edge. Reserve their
+     complete footprint so a long project name truncates before, never behind,
+     either control. */
   .project-hub__identity { align-self: start; padding-top: 7px; padding-right: 34px; }
+  .project-hub--recent .project-hub__identity { padding-right: 98px; }
   .project-hub__actions {
     position: absolute;
     right: 8px;
@@ -354,10 +363,21 @@
     top: auto;
     width: min(190px, calc(100vw - 24px));
   }
+  .project-hub--recent .project-hub__open,
+  .project-hub--recent .project-hub__menu > button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+  }
+  .project-hub--recent .project-hub__open { gap: 0; }
+  .project-hub--recent .project-hub__menu > button { justify-content: center; }
   .project-hub__identity form { grid-column: 1 / -1; grid-template-columns: 1fr auto; }
   .project-hub__identity form label { grid-column: 1 / -1; }
   .project-hub--recent { padding: 0; }
   .project-hub--recent .project-hub__row { min-width: min(310px, 86vw); }
+  .project-hub__recovery-actions button { min-height: 44px; }
   .project-hub__recovery-versions { grid-template-columns: 1fr; }
 }
 

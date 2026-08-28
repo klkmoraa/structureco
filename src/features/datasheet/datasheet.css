@@ -813,15 +813,24 @@
   */
   .datasheet-layout {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) fit-content(25%);
-    overflow-y: auto;
+    /* Each pane has one explicit, useful scroll region. The former outer
+       scroll plus the card scroll left the member details as a tiny, hard to
+       reach rectangle below the grid on phones. */
+    grid-template-rows: minmax(240px, 1fr) minmax(260px, 40%);
+    overflow: hidden;
   }
 
-  .datasheet-context { padding:var(--sc-space-3) 0 0; border-left:0; border-top:1px solid var(--sc-color-border-soft); }
+  .datasheet-context {
+    min-height: 0;
+    padding:var(--sc-space-3) 0 0;
+    border-left:0;
+    border-top:1px solid var(--sc-color-border-soft);
+  }
 
   .datasheet-context__body {
     flex-direction: row;
     overflow-x: auto;
+    overflow-y: auto;
   }
 
   .datasheet-card {
@@ -830,6 +839,8 @@
 }
 
 @media (max-width: 700px) {
+  .datasheet-layout { grid-template-rows: minmax(230px, .9fr) minmax(280px, 1.1fr); }
+
   .datasheet-entity button,
   .datasheet-chip,
   .datasheet-focus-action,
