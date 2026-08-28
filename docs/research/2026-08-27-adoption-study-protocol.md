@@ -1,5 +1,7 @@
 # Protocolo de investigación de adopción — CRI-125
 
+**Clasificación:** `AUDIT/TEMPORARY`
+
 ## Decisión que informará
 
 Determinar si la ruta de primer análisis, el plan de reparación de Model Doctor y el centro de resultados reducen fricción real para estudiantes e ingenieros. Este protocolo no valida la implementación por sí solo: ningún hallazgo se considera observado hasta que una sesión registrada lo respalde.

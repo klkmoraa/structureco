@@ -50,8 +50,7 @@ Space 3D permanece aislado bajo `src/space3d/**` y `src/features/space3d/**`. El
 ## Documentos de arquitectura
 
 - `CANONICAL`: [Space 3D · S3D-1](structureco-space-3d-s3d1.md), [módulo de diseño normativo](structureco-design-module-rfc.md), [BOM estructural](structureco-bom-contract.md), [comparación de revisiones](structureco-revision-comparison-contract.md) e [identidad de materiales y secciones en Model v6](structureco-member-identity-v6.md).
-- `PROPOSED`: [paquete de revisión local-first](structureco-review-package-rfc.md); requiere aprobación antes de cualquier formato o interfaz nuevos.
-- `REFERENCE`: [fronteras para capacidades de análisis futuras](future-analysis-boundaries.md) y [pre-RFC de IA mediante `CommandProposal`](structureco-fase-4-ai-command-proposal-pre-rfc.md).
+- `REFERENCE`: [paquete de revisión local-first](structureco-review-package-rfc.md), [fronteras para capacidades de análisis futuras](future-analysis-boundaries.md) y [pre-RFC de IA mediante `CommandProposal`](structureco-fase-4-ai-command-proposal-pre-rfc.md). El paquete de revisión requiere aprobación antes de cualquier formato o interfaz nuevos.
 
 Las decisiones históricas retiradas del árbol operativo permanecen recuperables en Git.
 

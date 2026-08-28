@@ -1,5 +1,7 @@
 # Métricas de producto locales
 
+**Clasificación:** `CANONICAL`
+
 ## Propósito y límites
 
 Este contrato mide el recorrido hasta el primer resultado entendido sin enviar

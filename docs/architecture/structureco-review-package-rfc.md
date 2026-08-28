@@ -1,6 +1,6 @@
 # RFC — paquete de revisión local-first
 
-**Clasificación:** `PROPOSED`
+**Clasificación:** `REFERENCE`
 **Estado:** preparado para aprobación de producto y seguridad; no autoriza implementación.
 **Issue:** CRI-133
 
