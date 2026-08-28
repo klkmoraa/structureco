@@ -17,6 +17,7 @@ __pycache__/
 
 # Tooling interno de agentes/skills (no forma parte del producto)
 .agents/
+.claude/
 .superpowers/
 .playwright/
 .playwright-cli/
@@ -49,8 +50,6 @@ structureco-sites/
 /structureco-sites-test-publish/
 /validation/topbar-repeat-before/
 /validation/topbar-repeat-after/
-/validation/cri-91/evidence/
-/prototypes/ios-app/screenshots/
 *.tar.gz
 *.json.manifest
 *.part-*
@@ -63,14 +62,3 @@ structureCo-documentacion-integral-*/
 # murió sin poder restaurar, y la siguiente la usará para reparar el catálogo.
 src/i18n/.catalogs.audit-backup
 src/i18n/.catalogs.audit-lock
-
-# HyperFrames motion-graphics campaign (motion/*)
-.claude/skills/
-motion/*/node_modules/
-motion/*/snapshots/
-motion/*/*.mp4
-motion/*/*.webm
-motion/*/.hyperframes/
-motion/*/work-*/
-# Generated from motion/hyperframes.template.json by the motion preparation scripts.
-motion/*/hyperframes.json

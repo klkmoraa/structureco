@@ -544,5 +544,3 @@ export const DatasheetPanel = ({
     </div>
   </Drawer>;
 };
-
-export default DatasheetPanel;

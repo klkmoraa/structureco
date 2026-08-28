@@ -11,12 +11,14 @@ const REQUIRED_FILES = [
   'docs/README.md',
   'docs/architecture/README.md',
   'docs/architecture/structureco-space-3d-s3d1.md',
+  'docs/product/visual-direction.md',
   'reports/README.md',
 ];
 const REQUIRED_CANONICAL = new Set([
   'docs/README.md',
   'docs/architecture/README.md',
   'docs/architecture/structureco-space-3d-s3d1.md',
+  'docs/product/visual-direction.md',
 ]);
 
 const relativePath = (root, target) => path.relative(root, target).replaceAll(path.sep, '/');

@@ -62,7 +62,8 @@ import { CanvasInteractionLayer } from './CanvasInteractionLayer';
 import { CanvasMiniMap } from './CanvasMiniMap';
 import { CanvasTouchLoupe } from './CanvasTouchLoupe';
 import { CandidatePicker } from './CanvasCandidatePicker';
-import { ContextualActions, type ContextualActionAvailability, type ContextualActionId } from './ContextualActions';
+import { ContextualActions } from './ContextualActions';
+import { type ContextualActionAvailability, type ContextualActionId } from './contextualActionModel';
 import {
   activeCandidate,
   candidateToSelection,
@@ -345,7 +346,7 @@ export const StructuralCanvas = ({
     repeat: Boolean(repeatCandidate) && !structuralEditDraft,
     datasheet: Boolean(selection),
     structuralEdit: editCapabilities.structural && !structuralEditDraft,
-  }), [editCapabilities.structural, project, repeatCandidate, selection, structuralEditDraft]);
+  }), [editCapabilities.structural, repeatCandidate, selection, structuralEditDraft]);
 
   // `contextualActions` es derivada de la selección viva: no conserva una
   // segunda selección ni una preferencia propia. El broker sólo decide si la

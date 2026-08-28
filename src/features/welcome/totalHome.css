@@ -779,22 +779,3 @@
   .welcome-import-card { transition:none!important; } }
 @media (prefers-reduced-motion:reduce) {
   .welcome-import-card:hover { transform:none; } }
-.welcome-cycle-glyph {
-  grid-area: glyph;
-  width: 100%;
-  height: 62px;
-  border-radius: var(--sc-radius-sm);
-  background: var(--sc-color-bg-canvas);
-  box-shadow: inset 0 0 0 1px var(--border-soft);
-}
-
-.welcome-cycle-grid path { stroke: var(--sc-color-canvas-grid); stroke-width: 1; fill: none; }
-.welcome-cycle-member { stroke: var(--sc-color-canvas-member); stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-.welcome-cycle-node circle { fill: var(--sc-color-bg-canvas); stroke: var(--sc-color-canvas-member); stroke-width: 2; }
-.welcome-cycle-load path { stroke: var(--sc-color-technical-distributed); stroke-width: 1.6; fill: none; }
-.welcome-cycle-load-line { stroke: var(--sc-color-technical-distributed); stroke-width: 1.6; fill: none; }
-.welcome-cycle-load-head path { fill: var(--sc-color-technical-distributed); stroke: none; }
-.welcome-cycle-support path { fill: var(--sc-color-canvas-member); stroke: none; }
-.welcome-cycle-axis { stroke: var(--sc-color-border-strong); stroke-width: 1; fill: none; }
-.welcome-cycle-diagram { stroke: var(--sc-color-technical-moment); stroke-width: 2; fill: none; stroke-linecap: round; }
-.welcome-cycle-diagram-area { fill: color-mix(in srgb, var(--sc-color-technical-moment) 16%, transparent); stroke: none; }
