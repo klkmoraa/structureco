@@ -102,5 +102,3 @@ export const DatasheetEditorPanel = ({
     </footer> : null}
   </aside>;
 };
-
-export default DatasheetEditorPanel;

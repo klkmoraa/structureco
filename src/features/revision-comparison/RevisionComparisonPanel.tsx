@@ -273,5 +273,3 @@ export const RevisionComparisonPanel = ({
     </div>
   </Drawer>;
 };
-
-export default RevisionComparisonPanel;

@@ -21,6 +21,7 @@ test('acepta un árbol documental clasificado y con enlaces relativos válidos',
     write(root, 'docs/README.md', '# Documentación\n\n**Clasificación:** `CANONICAL`\n\n[Arquitectura](architecture/README.md)\n');
     write(root, 'docs/architecture/README.md', '# Arquitectura\n\n**Clasificación:** `CANONICAL`\n\n[Producto](../../README.md)\n');
     write(root, 'docs/architecture/structureco-space-3d-s3d1.md', '# Space 3D\n\n**Clasificación:** `CANONICAL`\n');
+    write(root, 'docs/product/visual-direction.md', '# Dirección visual\n\n**Clasificación:** `CANONICAL`\n');
     write(root, 'docs/historico.md', '# Documento anterior\n\n> **HISTORICAL** — Conservado como registro.\n\n**Clasificación:** `HISTORICAL`\n\nSustituido por el [índice](README.md).\n');
     write(root, 'reports/README.md', '# Reportes\n\n**Clasificación del directorio:** `AUDIT/TEMPORARY`\n');
 

@@ -180,5 +180,3 @@ export const StructureGeneratorSurface = ({
     {...(className ? { className } : {})}
   />;
 };
-
-export default StructureGeneratorSurface;

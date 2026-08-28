@@ -5,10 +5,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Selection } from '../../types';
 import {
   ContextualActions,
+} from './ContextualActions';
+import {
   resolveContextualActionModel,
   type ContextualActionAvailability,
   type ContextualActionId,
-} from './ContextualActions';
+} from './contextualActionModel';
 
 afterEach(cleanup);
 

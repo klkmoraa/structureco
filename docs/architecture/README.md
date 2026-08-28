@@ -51,6 +51,7 @@ Space 3D permanece aislado bajo `src/space3d/**` y `src/features/space3d/**`. El
 
 - `CANONICAL`: [Space 3D · S3D-1](structureco-space-3d-s3d1.md), [módulo de diseño normativo](structureco-design-module-rfc.md), [BOM estructural](structureco-bom-contract.md), [comparación de revisiones](structureco-revision-comparison-contract.md) e [identidad de materiales y secciones en Model v6](structureco-member-identity-v6.md).
 - `REFERENCE`: [fronteras para capacidades de análisis futuras](future-analysis-boundaries.md) y [pre-RFC de IA mediante `CommandProposal`](structureco-fase-4-ai-command-proposal-pre-rfc.md).
-- `HISTORICAL`: [pre-RFC original hacia 3D](structureco-fase-4-3d-pre-rfc.md) y [gates de Fase 4](structureco-fase-4-gates.md).
+
+Las decisiones históricas retiradas del árbol operativo permanecen recuperables en Git.
 
 Para clasificación completa, validación, identidad visual y política de reportes, vuelve al [índice documental](../README.md).

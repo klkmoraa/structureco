@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StructuralIllustration } from './StructuralIllustration';
-import type { StructuralRenderTheme } from './threePortalAssets';
 import type { ThreeStructuralAssetId } from './threeStructuralRender';
+import { resolveStructuralAssetUrl } from './structuralAssetUrl';
 import './threeStructuralImage.css';
 
 interface ThreeStructuralImageProps {
@@ -11,16 +11,6 @@ interface ThreeStructuralImageProps {
   className?: string;
   eager?: boolean;
 }
-
-export const resolveStructuralAssetUrl = (
-  assetId: ThreeStructuralAssetId,
-  theme: StructuralRenderTheme,
-  baseUrl = import.meta.env.BASE_URL,
-) => {
-  const [family, variant] = assetId.split(':');
-  const base = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
-  return `${base}assets/structural/${theme}/${family}/${variant}.png`;
-};
 
 export function ThreeStructuralImage({ assetId, theme, alt = '', className = '', eager = false }: ThreeStructuralImageProps) {
   const [failed, setFailed] = useState(false);

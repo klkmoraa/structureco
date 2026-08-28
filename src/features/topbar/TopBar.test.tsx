@@ -263,14 +263,14 @@ describe('TopBar information architecture', () => {
     unsubscribe();
   });
 
-  it('opens Results from its own persistent top-bar control', async () => {
+  it('opens Results from its persistent control beside the analysis case', async () => {
     const user = userEvent.setup();
     const toggleResults = vi.fn();
     const unsubscribe = onWorkspaceCommand('toggle-results', toggleResults);
     const { container } = render(<TopBarHarness><TopBar /></TopBarHarness>);
 
-    const status = container.querySelector<HTMLElement>('[data-topbar-zone="status"]')!;
-    const results = within(status).getByRole('button', { name: 'Resultados' });
+    const actions = container.querySelector<HTMLElement>('[data-topbar-zone="actions"]')!;
+    const results = within(actions).getByRole('button', { name: 'Resultados' });
     expect(results.classList.contains('topbar-command-button')).toBe(true);
     expect(results.classList.contains('results-launcher')).toBe(true);
     await user.click(results);

@@ -216,5 +216,3 @@ export const ProjectHub = ({
     </details> : null}
   </section>;
 };
-
-export default ProjectHub;

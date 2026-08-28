@@ -4,6 +4,10 @@ StructureCo es una aplicación web local-first para modelar, analizar y explicar
 
 La autoridad del repositorio sigue este orden: código, pruebas y gates ejecutables → documentación canónica → referencias → documentación histórica y evidencia de auditoría. El [índice canónico de documentación](docs/README.md) detalla esa jerarquía.
 
+## Alcance del repositorio
+
+El árbol operativo contiene la aplicación que se compila y publica, sus pruebas, scripts de QA, oráculos estructurales, activos consumidos, configuración de CI y documentación vigente. Prototipos cerrados, campañas audiovisuales, evidencia regenerable, configuraciones personales de agentes y reportes concluidos se recuperan desde el historial de Git y no se mantienen junto al producto.
+
 ## Capacidades actuales
 
 | Área | Estado | Alcance comprobable |

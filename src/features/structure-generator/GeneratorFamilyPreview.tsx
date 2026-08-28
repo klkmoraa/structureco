@@ -30,5 +30,3 @@ export const GeneratorFamilyPreview = ({ family }: { family: GeneratorKind }) =>
     </> : null}
   </svg>;
 };
-
-export default GeneratorFamilyPreview;
