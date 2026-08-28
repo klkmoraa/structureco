@@ -81,15 +81,21 @@ const readShellState = (page) => page.evaluate(() => {
   const shell = document.querySelector('.app-shell');
   const cell = document.querySelector('.results-table td, .results-table th');
   const rail = document.querySelector('.tool-rail');
+  const workspace = document.querySelector('.workspace');
+  const stage = document.querySelector('.center-stage');
+  const toolbar = document.querySelector('.toolbar');
   return {
     shellClass: shell?.dataset.shellClass ?? null,
     toolRailCompact: shell?.dataset.toolRailCompact ?? null,
     densityRow: getComputedStyle(shell).getPropertyValue('--sc-density-row').trim(),
     railDataAttr: rail?.dataset.toolRail ?? null,
     railWidth: rail ? Math.round(rail.getBoundingClientRect().width) : null,
+    workspaceWidth: workspace ? Math.round(workspace.getBoundingClientRect().width) : null,
+    workspaceGridColumns: workspace ? getComputedStyle(workspace).gridTemplateColumns : null,
+    stageWidth: stage ? Math.round(stage.getBoundingClientRect().width) : null,
+    toolbarWidth: toolbar ? Math.round(toolbar.getBoundingClientRect().width) : null,
     cellHeight: cell ? Math.round(cell.getBoundingClientRect().height) : null,
     canvasArea: (() => {
-      const stage = document.querySelector('.center-stage');
       if (!stage) return null;
       const box = stage.getBoundingClientRect();
       return Math.round(box.width * box.height);
@@ -218,6 +224,25 @@ for (const testCase of CLASS_CASES) {
   check(`riel ${testCase.label}`, (state.toolRailCompact === 'true') === (testCase.expected !== 'X2'), { toolRailCompact: state.toolRailCompact });
   if (testCase.expected === 'M1') {
     check(`riel M1 ocupa sólo su token compacto ${testCase.label}`, state.railWidth !== null && state.railWidth <= 80, { railWidth: state.railWidth });
+  }
+  if (testCase.expected === 'K0') {
+    const compactWidths = {
+      viewport: state.innerWidth,
+      workspace: state.workspaceWidth,
+      stage: state.stageWidth,
+      toolbar: state.toolbarWidth,
+      columns: state.workspaceGridColumns,
+    };
+    check(
+      `workspace K0 conserva todo el ancho ${testCase.label}`,
+      state.workspaceWidth !== null
+        && state.stageWidth !== null
+        && state.toolbarWidth !== null
+        && Math.abs(state.workspaceWidth - state.innerWidth) <= 1
+        && Math.abs(state.stageWidth - state.innerWidth) <= 1
+        && Math.abs(state.toolbarWidth - state.innerWidth) <= 1,
+      compactWidths,
+    );
   }
   // Cero overflow horizontal en ninguna clase.
   const overflow = state.docScrollWidth - state.innerWidth;

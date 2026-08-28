@@ -14,6 +14,10 @@ describe('Clay Workspace Phase 2 presentation contract', () => {
     expect(css).toContain(".app-shell[data-shell-class='K0'] .center-stage");
   });
 
+  it('owns the Compact workspace grid after lazy CSS loading', () => {
+    expect(css).toMatch(/\.app-shell\[data-shell-class='K0'\] \.workspace \{[^}]*grid-template-columns:minmax\(0,1fr\);[^}]*grid-template-rows:minmax\(0,1fr\) auto;/s);
+  });
+
   it('gives rail tools physical raised, hover and pressed states', () => {
     expect(css).toMatch(/\.app-shell \.tool-rail \.tool-button \{[^}]*var\(--sc-shadow-clay-xs\)/s);
     expect(css).toMatch(/\.app-shell \.tool-rail \.tool-button:hover:not\(:disabled\) \{[^}]*translateY\(-2px\)/s);
