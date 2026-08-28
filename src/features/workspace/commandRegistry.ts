@@ -81,6 +81,12 @@ export interface CommandDefinition {
   iconFor?: (ctx: CommandContext) => CommandIcon;
   label: (ctx: CommandContext) => string;
   hint?: (ctx: CommandContext) => string | undefined;
+  /** Synonyms are searchable, but are never shown as the command's title. */
+  aliases?: (ctx: CommandContext) => readonly string[];
+  /** A compact, human-readable destination or consequence for the palette. */
+  route?: (ctx: CommandContext) => string | undefined;
+  /** Require an explicit review step before an irreversible browser effect. */
+  requiresConfirmation?: boolean;
   /** Displayed shortcut hint (e.g. `"Ctrl Z"`). Purely presentational unless a live key binding also names this id. */
   shortcut?: string;
   isEnabled?: (ctx: CommandContext) => boolean;
@@ -94,10 +100,12 @@ export interface CommandDefinition {
   run: (ctx: CommandContext) => void;
 }
 
-export interface CommandListItem extends Omit<CommandDefinition, 'icon' | 'iconFor' | 'label' | 'hint' | 'isEnabled' | 'run'> {
+export interface CommandListItem extends Omit<CommandDefinition, 'icon' | 'iconFor' | 'label' | 'hint' | 'aliases' | 'route' | 'isEnabled' | 'run'> {
   icon: CommandIcon;
   label: string;
   hint?: string;
+  aliases?: readonly string[];
+  route?: string;
   disabled: boolean;
   run: () => void;
 }
@@ -109,6 +117,8 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     icon: Play,
     label: (ctx) => ctx.t('analysis.run'),
     hint: (ctx) => ctx.t('palette.analyzeHint'),
+    aliases: () => ['calcular', 'resolver', 'run', 'solve'],
+    route: () => 'Análisis',
     isEnabled: (ctx) => !ctx.isAnalyzing,
     run: (ctx) => {
       emitWorkspaceCommand('analysis-requested');
@@ -140,8 +150,20 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     // Product name, not translated in either language today (matches the TopBar button).
     label: () => 'Model Doctor',
     hint: (ctx) => ctx.t('palette.modelDoctorHint'),
+    aliases: () => ['diagnóstico', 'diagnostico', 'validar', 'errores', 'diagnostics', 'validation'],
+    route: () => 'Análisis › Model Doctor',
     deferredOpen: true,
     run: () => emitWorkspaceCommand('open-model-doctor'),
+  },
+  {
+    id: 'analysis:first-analysis-guide',
+    category: 'analysis',
+    icon: Play,
+    label: (ctx) => ctx.project.settings.language === 'en' ? 'First analysis guide' : 'Guía del primer análisis',
+    hint: (ctx) => ctx.project.settings.language === 'en' ? 'Choose a safe route from a blank model to analysis' : 'Elige una ruta segura desde un modelo vacío hasta el análisis',
+    aliases: () => ['ayuda', 'primer resultado', 'first result', 'help', 'onboarding'],
+    route: () => 'Análisis › Primer análisis',
+    run: () => emitWorkspaceCommand('open-first-analysis-guide'),
   },
   {
     id: 'tool:datasheet',
@@ -149,6 +171,8 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     icon: Sheet,
     label: (ctx) => ctx.t('datasheet.title'),
     hint: (ctx) => ctx.t('datasheet.description'),
+    aliases: () => ['tabla', 'hoja de datos', 'sheet', 'table'],
+    route: () => 'Herramientas › Tabla de datos',
     deferredOpen: true,
     run: () => emitWorkspaceCommand('open-datasheet'),
   },
@@ -158,6 +182,8 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     icon: Grid3x3,
     label: (ctx) => ctx.t('generator.launcher'),
     hint: (ctx) => ctx.t('generator.paletteHint'),
+    aliases: () => ['generar', 'plantilla', 'template', 'generate'],
+    route: () => 'Herramientas › Generador',
     deferredOpen: true,
     run: () => emitWorkspaceCommand('open-structure-generator'),
   },
@@ -196,6 +222,8 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     icon: ClipboardList,
     label: (ctx) => ctx.t('bom.title'),
     hint: (ctx) => ctx.t('bom.description'),
+    aliases: () => ['materiales', 'cantidades', 'informe', 'report', 'takeoff'],
+    route: () => 'Exportar › Materiales',
     deferredOpen: true,
     run: () => emitWorkspaceCommand('open-structural-bom'),
   },
@@ -213,6 +241,10 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     category: 'export',
     icon: Download,
     label: (ctx) => ctx.t('export.projectJson'),
+    hint: () => 'Descarga una copia JSON del proyecto actual',
+    aliases: () => ['exportar', 'guardar', 'descargar', 'download', 'backup'],
+    route: () => 'Exportar › Archivo JSON',
+    requiresConfirmation: true,
     run: (ctx) => {
       exportProjectJson(ctx.project);
       emitWorkspaceCommand('show-toast', { message: ctx.t('export.completed'), description: ctx.project.name, tone: 'success' });
@@ -223,6 +255,10 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     category: 'export',
     icon: Download,
     label: (ctx) => ctx.t('export.imageSvg'),
+    hint: () => 'Descarga un dibujo vectorial SVG',
+    aliases: () => ['exportar', 'imagen', 'vector', 'download'],
+    route: () => 'Exportar › Imagen SVG',
+    requiresConfirmation: true,
     run: (ctx) => {
       emitWorkspaceCommand('export-svg');
       emitWorkspaceCommand('show-toast', { message: ctx.t('export.completed'), tone: 'success' });
@@ -233,6 +269,10 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     category: 'export',
     icon: Download,
     label: (ctx) => ctx.t('export.imagePng'),
+    hint: () => 'Descarga una imagen PNG del lienzo',
+    aliases: () => ['exportar', 'imagen', 'captura', 'download'],
+    route: () => 'Exportar › Imagen PNG',
+    requiresConfirmation: true,
     run: (ctx) => {
       emitWorkspaceCommand('export-png');
       emitWorkspaceCommand('show-toast', { message: ctx.t('export.completed'), tone: 'success' });
@@ -243,6 +283,10 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     category: 'export',
     icon: Download,
     label: (ctx) => ctx.t('export.print'),
+    hint: () => 'Abre el diálogo del sistema para imprimir o guardar como PDF',
+    aliases: () => ['exportar', 'informe', 'pdf', 'imprimir', 'print', 'report'],
+    route: () => 'Exportar › PDF o impresión',
+    requiresConfirmation: true,
     run: () => window.print(),
   },
 ];
@@ -344,6 +388,8 @@ const projectStatic = (ctx: CommandContext): CommandListItem[] => STATIC_COMMAND
   icon: command.iconFor ? command.iconFor(ctx) : command.icon,
   label: command.label(ctx),
   hint: command.hint?.(ctx),
+  aliases: command.aliases?.(ctx),
+  route: command.route?.(ctx),
   disabled: command.isEnabled ? !command.isEnabled(ctx) : false,
   run: () => command.run(ctx),
 }));

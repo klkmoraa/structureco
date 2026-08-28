@@ -7,6 +7,7 @@ import { createDefaultProject } from '../../data/defaultProject';
 import { PROJECT_STORAGE_KEY } from '../../data/projectStorage';
 import { ProjectProvider } from '../../store/ProjectContext';
 import { useProjectModel } from '../../store/ProjectModelContext';
+import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { ProjectModel } from '../../types';
 import { onWorkspaceCommand } from '../workspace/workspaceCommands';
 import { ModelDoctor } from './ModelDoctor';
@@ -41,10 +42,12 @@ const renderDoctor = (project: ProjectModel, initiallyOpen = true, buildReport =
     const [open, setOpen] = useState(initiallyOpen);
     const [acknowledgedIds, setAcknowledgedIds] = useState<Set<string>>(() => new Set());
     const { project: currentProject, canUndo, canRedo, updateProject, undo, redo } = useProjectModel();
+    const { activeTool } = useWorkspaceUI();
     return <>
       <output aria-label="doctor-project-snapshot">{JSON.stringify(currentProject)}</output>
       <output aria-label="doctor-can-undo">{String(canUndo)}</output>
       <output aria-label="doctor-can-redo">{String(canRedo)}</output>
+      <output aria-label="doctor-active-tool">{activeTool}</output>
       <button type="button" onClick={() => setOpen(true)}>Abrir Model Doctor</button>
       <button type="button" onClick={() => updateProject((draft) => ({ ...draft, name: `${draft.name} editado` }))}>Editar proyecto cerrado</button>
       <button type="button" onClick={undo}>Deshacer reparación test</button>
@@ -86,15 +89,35 @@ describe('ModelDoctor surface', () => {
     expect(within(dialog).getAllByText(/No encontramos problemas en la geometría/i)).toHaveLength(1);
   });
 
-  it('shows an evident absence of grounding as a non-repairable critical before analysis', async () => {
+  it('maps an absence of supports to its actual cause and a safe contextual repair route', async () => {
+    const user = userEvent.setup();
     const project = createDefaultProject();
     project.nodes = project.nodes.map((node) => ({ ...node, support: { type: 'none' } }));
     renderDoctor(project);
 
-    const finding = (await screen.findAllByRole('article')).find((article) => article.textContent?.includes('Estructura sin restricciones'))!;
+    const original = screen.getByLabelText('doctor-project-snapshot').textContent;
+    const finding = (await screen.findAllByRole('article')).find((article) => article.textContent?.includes('El modelo no tiene apoyos'))!;
     expect(finding).toBeTruthy();
     expect(finding.getAttribute('aria-labelledby')?.split(/\s+/).map((id) => document.getElementById(id)?.textContent).join(' ')).toMatch(/crítico/i);
     expect(within(finding).queryByRole('button', { name: /previsualizar reparaci/i })).toBeNull();
+    expect(within(finding).getByText(/ningún nudo tiene una restricción de apoyo/i)).toBeTruthy();
+
+    const action = within(finding).getByRole('button', { name: /añadir apoyos/i });
+    await user.click(action);
+    expect(await screen.findByRole('heading', { name: /antes de añadir apoyos/i })).toBeTruthy();
+    expect(screen.getByLabelText('doctor-project-snapshot').textContent).toBe(original);
+    expect(screen.getByLabelText('doctor-can-undo').textContent).toBe('false');
+    await waitFor(() => expect(document.activeElement).toBe(document.querySelector('.model-doctor-preview__back')));
+
+    await user.click(screen.getAllByRole('button', { name: /volver al doctor del modelo/i })[0]);
+    const returnedFinding = (await screen.findAllByRole('article')).find((article) => article.textContent?.includes('El modelo no tiene apoyos'))!;
+    const returnedAction = within(returnedFinding).getByRole('button', { name: /añadir apoyos/i });
+    await waitFor(() => expect(document.activeElement).toBe(returnedAction));
+
+    await user.click(returnedAction);
+    await user.click(screen.getByRole('button', { name: /abrir herramienta apoyo/i }));
+    expect(screen.getByLabelText('doctor-active-tool').textContent).toBe('support');
+    expect(screen.queryByRole('dialog', { name: 'Model Doctor' })).toBeNull();
   });
 
   it('summarizes severity and filters findings without hiding acknowledged criticals', async () => {

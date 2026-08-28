@@ -163,7 +163,13 @@ const openResults = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.click(within(palette).getByRole('option', { name: /resultados: resumen|results: summary/i }));
   await waitFor(() => expect(document.querySelector('.results-panel')).toBeTruthy());
   const results = document.querySelector('.results-panel') as HTMLElement;
-  await user.click(within(results).getByRole('tab', { name: /momento|moment/i }));
+  // El comando conserva Resultados como superficie invocada, pero en desktop
+  // queda recogida hasta que el usuario pide expandirla. La prueba abre ese
+  // estado explícitamente antes de elegir una pestaña.
+  if (!within(results).queryByRole('tab', { name: /momento|moment/i })) {
+    await user.click(within(results).getByRole('button', { name: /abrir resultados|open results/i }));
+  }
+  await user.click(await within(results).findByRole('tab', { name: /momento|moment/i }));
 };
 
 /**
@@ -177,9 +183,11 @@ const openDenseResults = async (user: ReturnType<typeof userEvent.setup>, view: 
     learn: /aprender|learn/i,
   };
   const results = document.querySelector('.results-panel') as HTMLElement;
-  await user.click(within(results).getByRole('button', { name: /más resultados|more results/i }));
-  const menu = await screen.findByRole('menu', { name: /más resultados|more results/i });
-  await user.click(within(menu).getByRole('menuitem', { name: labels[view] }));
+  // CRI-130 deja los tres destinos de lectura directamente en la barra de
+  // cantidades: no hay un segundo menú que oculte Reacciones, Influencia o
+  // Aprender. El selector se mantiene acotado al panel para no confundirlos
+  // con la copia de la superficie densa una vez abierta.
+  await user.click(within(results).getByRole('button', { name: labels[view] }));
   await waitFor(() => expect(document.querySelector('.dense-results-surface')).toBeTruthy(), { timeout: 5000 });
 };
 
@@ -193,6 +201,11 @@ const focusCanvas = (canvas: HTMLElement) => {
   expect(canvas.contains(document.activeElement)).toBe(true);
 };
 
+const confirmSpace3DEntry = async (user: ReturnType<typeof userEvent.setup>) => {
+  const dialog = await screen.findByRole('dialog', { name: /abrir space 3d experimental|open experimental space 3d/i });
+  await user.click(within(dialog).getByRole('button', { name: /abrir space 3d|open space 3d/i }));
+};
+
 describe('structureCo app shell', () => {
   it('reaches Space 3D from the workspace top bar and keeps no other 3D surface', async () => {
     const user = userEvent.setup();
@@ -203,6 +216,7 @@ describe('structureCo app shell', () => {
     expect(screen.queryByRole('button', { name: /experimental 3d/i })).toBeNull();
 
     await user.click(screen.getByRole('button', { name: /abrir space 3d/i }));
+    await confirmSpace3DEntry(user);
     expect(await screen.findByRole('button', { name: 'Editor 2D' }, { timeout: 10_000 })).toBeTruthy();
 
     await user.click(screen.getByRole('button', { name: 'Editor 2D' }));
@@ -220,6 +234,7 @@ describe('structureCo app shell', () => {
     // como experimental. Sigue existiendo; lo que cambió es por dónde se llega.
     await navigateHome(user, 'space3d');
     await user.click(screen.getByRole('button', { name: /abrir space 3d|open space 3d/i }));
+    await confirmSpace3DEntry(user);
     expect(await screen.findByRole('button', { name: /^analizar$/i }, { timeout: 10_000 })).toBeTruthy();
     expect(document.querySelector('.space3d-screen')).not.toBeNull();
 
@@ -232,6 +247,7 @@ describe('structureCo app shell', () => {
     await screen.findByTestId('welcome-screen');
     await navigateHome(user, 'space3d');
     await user.click(await screen.findByRole('button', { name: /abrir space 3d|open space 3d/i }));
+    await confirmSpace3DEntry(user);
     await user.click(await screen.findByRole('button', { name: 'Inicio' }));
     expect(await screen.findByTestId('welcome-screen')).toBeTruthy();
   }, 40_000);
@@ -244,6 +260,7 @@ describe('structureCo app shell', () => {
 
     await navigateHome(user, 'space3d');
     await user.click(screen.getByRole('button', { name: /abrir space 3d|open space 3d/i }));
+    await confirmSpace3DEntry(user);
     await screen.findByRole('button', { name: /^analizar$/i }, { timeout: 10_000 });
     await waitFor(() => expect(localStorage.getItem('structureco:space3d:v1')).toBeTruthy(), { timeout: 10_000 });
 
@@ -552,6 +569,8 @@ describe('structureCo app shell', () => {
     // superficie `dense`. La capa de reacciones del lienzo, que es lo que esta
     // prueba mide, se dibuja con el resultado resuelto y sigue siendo la misma.
     await openResults(user);
+    const evidence = screen.getByRole('group', { name: /evidencia|evidence/i });
+    await user.click(within(evidence).getByRole('button', { name: /momento|moment/i }));
     await openDenseResults(user, 'reactions');
 
     await waitFor(() => expect(container.querySelector('.reaction-symbol[data-node-id="A"]')).toBeTruthy());
@@ -835,6 +854,9 @@ describe('structureCo app shell', () => {
     await user.click(screen.getByRole('button', { name: /^analyze$/i }));
     await openResults(user);
     await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+    const evidence = screen.getByRole('group', { name: 'Evidence' });
+    await user.click(within(evidence).getByRole('button', { name: 'Moment' }));
+    await waitFor(() => expect(container.querySelector('.canvas-result-legend')).toBeTruthy());
     expect(container.querySelector('.canvas-result-legend')?.getAttribute('aria-label')).toBe('Diagram convention');
     expect(container.querySelector('.canvas-result-legend')?.textContent).toContain('Exact curve');
     expect(container.querySelector('.canvas-result-legend')?.textContent).not.toMatch(/Curva exacta|por miembro|común/);

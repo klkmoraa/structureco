@@ -59,6 +59,30 @@ describe('ProjectRepository', () => {
     expect((await repository.listRecoveries(project.id))[0]?.project.name).toBe('Cambio local');
   });
 
+  it('creates a manual backup before a recovery replaces the saved revision', async () => {
+    const repository = new InMemoryProjectRepository();
+    const saved = { ...createDefaultProject(), name: 'Versión guardada', nodes: [], members: [], nodalLoads: [], memberLoads: [], memberInitialEffects: [], prescribedDisplacements: [] };
+    await repository.saveProject(saved);
+    const recovery = await repository.createRecovery({ ...createDefaultProject(), id: saved.id, name: 'Edición recuperada' }, 'conflict');
+
+    await repository.restoreRecovery(recovery.id);
+
+    expect((await repository.openProject(saved.id))?.project.name).toBe('Edición recuperada');
+    expect((await repository.listRecoveries(saved.id)).some((record) => record.reason === 'manual' && record.project.name === 'Versión guardada')).toBe(true);
+    expect((await repository.listRecoveries(saved.id)).some((record) => record.id === recovery.id)).toBe(false);
+  });
+
+  it('returns projects and recoveries from one library snapshot', async () => {
+    const repository = new InMemoryProjectRepository();
+    const project = await repository.saveProject(createDefaultProject());
+    const recovery = await repository.createRecovery({ ...project.project, name: 'Edición protegida' }, 'conflict');
+
+    expect(await repository.listLibrary()).toMatchObject({
+      projects: [expect.objectContaining({ id: project.id })],
+      recoveries: [expect.objectContaining({ id: recovery.id, projectId: project.id })],
+    });
+  });
+
   it('does not overwrite IndexedDB when the legacy source has the same id and different content', async () => {
     const repository = new InMemoryProjectRepository();
     const stored = { ...createDefaultProject(), name: 'Revisión IndexedDB' };

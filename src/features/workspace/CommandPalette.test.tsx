@@ -136,13 +136,38 @@ describe('CommandPalette', () => {
     expect(within(list).getByRole('option', { name: /analizar/i })).toBeTruthy();
   });
 
+  it('finds bilingual export and diagnosis aliases while showing the destination', async () => {
+    const user = userEvent.setup();
+    renderPalette();
+
+    await user.type(screen.getByRole('combobox'), 'pdf');
+    expect(screen.getByRole('option', { name: /Imprimir.*Exportar.*PDF/i })).toBeTruthy();
+
+    await user.clear(screen.getByRole('combobox'));
+    await user.type(screen.getByRole('combobox'), 'diagnostico');
+    expect(screen.getByRole('option', { name: /Model Doctor.*Análisis/i })).toBeTruthy();
+  });
+
+  it('asks for an explicit review before the palette can start a download', async () => {
+    const user = userEvent.setup();
+    renderPalette();
+
+    await user.type(screen.getByRole('combobox'), 'guardar');
+    await user.click(screen.getByRole('option', { name: /Proyecto JSON.*Archivo JSON/i }));
+    expect(screen.getByRole('heading', { name: 'Revisar acción' })).toBeTruthy();
+    expect(screen.getByText(/descargar un archivo/i)).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Continuar' })));
+    await user.click(screen.getByRole('button', { name: 'Volver a la paleta' }));
+    expect(screen.getByRole('combobox')).toBeTruthy();
+  });
+
   it('reports when nothing matches instead of showing an empty list', async () => {
     const user = userEvent.setup();
     renderPalette();
 
     await user.type(screen.getByRole('combobox'), 'zzzzzz');
 
-    expect(screen.getByText(/ningún comando coincide/i)).toBeTruthy();
+    expect(screen.getAllByText(/ningún comando coincide/i)).not.toHaveLength(0);
   });
 
   it('walks the list with the arrow keys and runs the highlighted command with Enter', async () => {

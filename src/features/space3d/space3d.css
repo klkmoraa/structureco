@@ -178,6 +178,13 @@
 
 .space3d-tray--layers { color: var(--sc-color-text-secondary); padding-inline-start: var(--sc-space-3); }
 .space3d-tray--run { margin-inline-start: auto; }
+.space3d-run-blocked {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--sc-color-state-warning-foreground);
+  font-size: var(--sc-font-size-caption);
+  line-height: var(--sc-line-height-compact);
+}
 
 .space3d-tool,
 .space3d-button {
@@ -986,6 +993,8 @@
 .space3d-issue-line { margin: var(--sc-space-1) 0 0; padding-inline-start: var(--sc-space-4); display: flex; flex-direction: column; gap: 2px; }
 .space3d-issue-line code { font-family: var(--sc-font-mono); font-size: var(--sc-font-size-caption); }
 .space3d-issues em { font-style: normal; color: var(--sc-color-text-muted); font-family: var(--sc-font-mono); font-size: var(--sc-font-size-caption); }
+.space3d-issue-copy { flex: 1 1 min(36rem, 100%); }
+.space3d-bridge-complete { margin-inline-start: auto; min-block-size: 32px; }
 
 .space3d-empty {
   padding: var(--sc-space-4);

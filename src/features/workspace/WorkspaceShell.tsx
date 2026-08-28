@@ -6,6 +6,7 @@ import { StructuralCanvas } from '../canvas/StructuralCanvas';
 import { ToolRail } from '../canvas/ToolRail';
 import { TopBar } from '../topbar/TopBar';
 import { ClassroomGuide } from '../classroom/ClassroomGuide';
+import { FirstAnalysisGuide } from './FirstAnalysisGuide';
 import { ToastNotification } from './ToastNotification';
 import { useI18n } from '../../i18n/useI18n';
 import { useProject } from '../../store/ProjectContext';
@@ -16,7 +17,7 @@ import { ShellCompositionProvider } from './ShellCompositionProvider';
 import { SurfacePresentationProvider } from './SurfacePresentationProvider';
 import { useShellComposition } from './useShellComposition';
 import { useSurfacePresentation } from './useSurfacePresentation';
-import { normalizeInspectorDetent, useWorkspaceLayoutPreferences } from './useWorkspaceLayoutPreferences';
+import { nextAvailableInspectorDetent, normalizeInspectorDetent, useWorkspaceLayoutPreferences } from './useWorkspaceLayoutPreferences';
 import { preloadDenseResultsSurface, type DenseResultView } from '../results/denseResults';
 import type { SurfaceId } from './surfacePresentation';
 import '../../design-system/components/ui.css';
@@ -56,7 +57,7 @@ const focusStableLauncherIfUnclaimed = (selector: string): void => {
   });
 };
 
-type WorkspaceShellProps = { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string };
+type WorkspaceShellProps = { onOpenHome: () => void; onOpenHomeTemplates: () => void; onOpenSpace3D: () => void; projectId: string };
 type LayoutController = ReturnType<typeof useWorkspaceLayoutPreferences>;
 type PendingModelDoctorNotification = {
   id: number;
@@ -67,6 +68,7 @@ type PendingModelDoctorNotification = {
 
 const WorkspaceBrokerContent = ({
   onOpenHome,
+  onOpenHomeTemplates,
   onOpenSpace3D,
   projectId,
   shellRef,
@@ -76,6 +78,7 @@ const WorkspaceBrokerContent = ({
   layoutController: LayoutController;
 }) => {
   const [modelDoctorAcknowledgedIds, setModelDoctorAcknowledgedIds] = useState<Set<string>>(() => new Set());
+  const [firstAnalysisGuideOpen, setFirstAnalysisGuideOpen] = useState(() => window.sessionStorage.getItem('structureco:first-analysis-guide.active') === '1');
   const [revisionBaseline, setRevisionBaseline] = useState<RevisionSnapshot | null>(null);
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
   const { t } = useI18n();
@@ -83,6 +86,7 @@ const WorkspaceBrokerContent = ({
   const [pendingModelDoctorNotification, setPendingModelDoctorNotification] = useState<PendingModelDoctorNotification | null>(null);
   const modelDoctorNotificationIdRef = useRef(0);
   const pendingModelDoctorNotificationIdRef = useRef<number | null>(null);
+  const reportedAnalysisRef = useRef<AnalysisResult | null>(null);
   const { activeTool } = useWorkspaceUI();
   const { preferences: layout, setPreference, togglePreference } = layoutController;
   const { shellClass } = useShellComposition();
@@ -99,6 +103,7 @@ const WorkspaceBrokerContent = ({
   const comparison = broker.stateFor('comparison');
   const doctor = broker.stateFor('doctor');
   const palette = broker.stateFor('palette');
+  const resultsWereOpenRef = useRef(results.open);
 
   useEffect(() => persistEditorLayerState(editorLayers), [editorLayers]);
 
@@ -121,6 +126,14 @@ const WorkspaceBrokerContent = ({
     };
   }, [layout.inspectorDetent, setPreference]);
 
+  const cycleInspectorDetent = useCallback((direction: 1 | -1) => {
+    const next = nextAvailableInspectorDetent(layout.inspectorDetent, direction, {
+      width: window.innerWidth,
+      height: window.visualViewport?.height ?? window.innerHeight,
+    });
+    if (next !== layout.inspectorDetent) setPreference('inspectorDetent', next);
+  }, [layout.inspectorDetent, setPreference]);
+
   useEffect(() => {
     const canOpenPalette = datasheet.status !== 'active' && bom.status !== 'active' && comparison.status !== 'active' && doctor.status !== 'active';
     const subscriptions = [
@@ -129,6 +142,10 @@ const WorkspaceBrokerContent = ({
         // por la misma autoridad para no montar una segunda capa sobre Doctor
         // o Datasheet.
         if (canOpenPalette) openSurface('palette');
+      }),
+      onWorkspaceCommand('open-first-analysis-guide', () => {
+        window.sessionStorage.setItem('structureco:first-analysis-guide.active', '1');
+        setFirstAnalysisGuideOpen(true);
       }),
       onWorkspaceCommand('open-model-doctor', () => openSurface('doctor')),
       onWorkspaceCommand('open-datasheet', () => openSurface('datasheet')),
@@ -171,6 +188,39 @@ const WorkspaceBrokerContent = ({
     (['generator', 'dense', 'datasheet', 'bom', 'comparison', 'doctor', 'palette'] as const).forEach((surface) => closeSurface(surface));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
+
+  useEffect(() => {
+    if (project.nodes.length === 0 && project.members.length === 0 && !analysis?.success) {
+      window.sessionStorage.setItem('structureco:first-analysis-guide.active', '1');
+      setFirstAnalysisGuideOpen(true);
+    }
+    if (analysis?.success) {
+      window.sessionStorage.removeItem('structureco:first-analysis-guide.active');
+      setFirstAnalysisGuideOpen(false);
+    }
+  }, [analysis?.success, project.members.length, project.nodes.length]);
+
+  // Al terminar una corrida válida, Resultados aparece en su modo cerrado:
+  // cabe junto al lienzo pero ya responde resultado, caso, actualidad y valor
+  // gobernante. No mueve el foco ni despliega el inspector; abrir el detalle
+  // sigue siendo una elección explícita de la persona.
+  useEffect(() => {
+    if (analysis?.success && analysis !== reportedAnalysisRef.current) {
+      setResultTab('summary');
+      openSurface('results');
+    }
+    reportedAnalysisRef.current = analysis;
+  }, [analysis, openSurface, setResultTab]);
+
+  // Abrir Resultados no debe dejar al lado una ficha de edición completa.
+  // La transición se produce una vez por apertura: si después la persona
+  // elige editar, esa decisión explícita no se vuelve a sobrescribir.
+  useEffect(() => {
+    if (results.open && !resultsWereOpenRef.current && detail.open) {
+      setPreference('inspectorCompact', true);
+    }
+    resultsWereOpenRef.current = results.open;
+  }, [detail.open, results.open, setPreference]);
 
   useEffect(() => {
     const request = pendingModelDoctorNotification;
@@ -280,11 +330,13 @@ const WorkspaceBrokerContent = ({
   }, [closeSurface, openSurface]);
   const openDetail = useCallback((trigger?: HTMLElement | null) => {
     setPreference('inspectorCollapsed', false);
+    setPreference('inspectorCompact', false);
     openSurface('detail', trigger);
   }, [openSurface, setPreference]);
   const closeDetail = useCallback(() => {
     closeSurface('detail');
     setPreference('inspectorCollapsed', true);
+    setPreference('inspectorCompact', false);
   }, [closeSurface, setPreference]);
   const setDatasheetOpen = useCallback((open: boolean) => {
     if (open) openSurface('datasheet');
@@ -334,6 +386,7 @@ const WorkspaceBrokerContent = ({
     skipLabel={t('shell.skipToCanvas')}
     shellClass={shellClass}
     inspectorCollapsed={!detail.open}
+    inspectorCompact={detail.open && layout.inspectorCompact}
     inspectorWidth={layout.inspectorWidth}
     toolDockPosition={layout.toolDockPosition}
     fullCanvas={layout.fullCanvas}
@@ -370,6 +423,16 @@ const WorkspaceBrokerContent = ({
         emitWorkspaceCommand('analysis-requested');
         analyze();
       }} /> : null}
+      {project.settings.calculationMode !== 'classroom' && firstAnalysisGuideOpen && !analysis?.success ? <FirstAnalysisGuide
+        project={project}
+        analysis={analysis}
+        onOpenTemplates={onOpenHomeTemplates}
+        onOpenGenerator={() => emitWorkspaceCommand('open-structure-generator')}
+        onChooseTool={setActiveTool}
+        onOpenDoctor={() => openSurface('doctor')}
+        onAnalyze={() => { emitWorkspaceCommand('analysis-requested'); analyze(); }}
+        onDismiss={() => { window.sessionStorage.removeItem('structureco:first-analysis-guide.active'); setFirstAnalysisGuideOpen(false); }}
+      /> : null}
       <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => openDetail()} />
       {broker.isRetained('results') ? <ResultsPanel
         presentation={results.presentation as 'dock' | 'inset' | 'sheet'}
@@ -435,9 +498,9 @@ const WorkspaceBrokerContent = ({
       /></Suspense> : null}
     </>}
     inspector={<div className="workspace-surfaces" data-workspace-right-slot>
-      {broker.isRetained('detail') ? <Inspector surface="detail" className={detail.presentation === 'sheet' && detail.status === 'active' ? 'mobile-open' : ''} desktopWidth={layout.inspectorWidth} presentation={detail.presentation as 'dock' | 'inset' | 'sheet'} status={detail.status} onClose={closeDetail} onDesktopWidthChange={(width) => setPreference('inspectorWidth', width)} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} /> : null}
-      {broker.isRetained('analysisSetup') ? <Inspector surface="analysisSetup" className={analysisSetup.presentation === 'sheet' && analysisSetup.status === 'active' ? 'mobile-open' : ''} presentation={analysisSetup.presentation as 'dock' | 'inset' | 'sheet'} status={analysisSetup.status} onClose={() => closeSurface('analysisSetup')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} activeTool={activeTool} onActiveToolChange={setActiveTool} /> : null}
-      {broker.isRetained('view') ? <Inspector surface="view" className={view.presentation === 'sheet' && view.status === 'active' ? 'mobile-open' : ''} presentation={view.presentation as 'dock' | 'inset' | 'sheet'} status={view.status} onClose={() => closeSurface('view')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} /> : null}
+      {broker.isRetained('detail') ? <Inspector surface="detail" className={detail.presentation === 'sheet' && detail.status === 'active' ? 'mobile-open' : ''} desktopWidth={layout.inspectorWidth} presentation={detail.presentation as 'dock' | 'inset' | 'sheet'} status={detail.status} onClose={closeDetail} compact={detail.presentation !== 'sheet' && layout.inspectorCompact} onExpand={() => setPreference('inspectorCompact', false)} onDesktopWidthChange={(width) => setPreference('inspectorWidth', width)} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} onMobileDetentCycle={cycleInspectorDetent} /> : null}
+      {broker.isRetained('analysisSetup') ? <Inspector surface="analysisSetup" className={analysisSetup.presentation === 'sheet' && analysisSetup.status === 'active' ? 'mobile-open' : ''} presentation={analysisSetup.presentation as 'dock' | 'inset' | 'sheet'} status={analysisSetup.status} onClose={() => closeSurface('analysisSetup')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} onMobileDetentCycle={cycleInspectorDetent} activeTool={activeTool} onActiveToolChange={setActiveTool} /> : null}
+      {broker.isRetained('view') ? <Inspector surface="view" className={view.presentation === 'sheet' && view.status === 'active' ? 'mobile-open' : ''} presentation={view.presentation as 'dock' | 'inset' | 'sheet'} status={view.status} onClose={() => closeSurface('view')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} onMobileDetentCycle={cycleInspectorDetent} /> : null}
     </div>}
     floatingActions={shellClass === 'K0' ? undefined : <div className="workspace-surface-launcher">
       <button className="mobile-inspector-toggle" onClick={(event) => openDetail(event.currentTarget)} aria-label={t('inspector.open')} aria-expanded={detail.status === 'active'} aria-controls="workspace-detail"><SlidersHorizontal size={20} /></button>

@@ -37,10 +37,10 @@ const renderWelcome = (language: 'es' | 'en' = 'es') => {
 };
 
 describe('WelcomeScreen · arquitectura nueva', () => {
-  it('expone siete destinos claros y elimina el carril de onboarding', () => {
+  it('expone destinos claros y elimina el carril de onboarding', () => {
     const { container } = renderWelcome();
     const navigation = screen.getByRole('navigation', { name: 'Navegación principal' });
-    ['Inicio', 'Proyectos', 'Plantillas', 'Biblioteca', 'Aula', 'Importar', 'Space 3D'].forEach((name) => {
+    ['Inicio', 'Proyectos', 'Plantillas', 'Biblioteca', 'Estudio de ilustraciones', 'Aula', 'Importar', 'Space 3D'].forEach((name) => {
       expect(within(navigation).getByRole('button', { name })).toBeTruthy();
     });
     expect(container.querySelector('.welcome-steps')).toBeNull();

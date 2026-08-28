@@ -19,6 +19,7 @@ export interface AppShellLayoutProps {
    */
   shellClass?: ShellClass;
   inspectorCollapsed?: boolean;
+  inspectorCompact?: boolean;
   fullCanvas?: boolean;
   inspectorWidth?: number;
   toolDockPosition?: ToolDockPosition;
@@ -42,6 +43,7 @@ export function AppShellLayout({
   floatingActions,
   shellClass = 'X2',
   inspectorCollapsed = false,
+  inspectorCompact = false,
   fullCanvas = false,
   inspectorWidth,
   toolDockPosition = 'bottom',
@@ -53,6 +55,7 @@ export function AppShellLayout({
     data-project-id={projectId}
     data-shell-class={shellClass}
     data-inspector-collapsed={inspectorCollapsed || undefined}
+    data-inspector-compact={inspectorCompact || undefined}
     data-full-canvas={fullCanvas || undefined}
     data-tool-rail-compact={isToolRailCompact(shellClass) || undefined}
     data-tool-dock-position={toolDockPosition}

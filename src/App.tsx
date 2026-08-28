@@ -1,11 +1,12 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import { BrandMark } from './features/topbar/BrandMark';
-import { WelcomeScreen } from './features/welcome/WelcomeScreen';
+import { WelcomeScreen, type HomeView } from './features/welcome/WelcomeScreen';
 import { ProjectProvider } from './store/ProjectContext';
 import { useProject } from './store/ProjectContext';
 import { ClassroomSessionProvider } from './store/ClassroomSessionContext';
 import { useI18n } from './i18n/useI18n';
+import { Space3DEntryDialog, type Space3DEntryOrigin } from './features/space3d/Space3DEntryDialog';
 import './styles.css';
 import './design-system/material.css';
 
@@ -23,11 +24,13 @@ export type AppScreen = 'welcome' | 'workspace' | 'space3d';
  * De dónde se abrió Space 3D. Desde la mesa 2D se abre el proyecto actual
  * convertido al dominio espacial; desde Inicio, un modelo espacial propio.
  */
-type Space3DOrigin = 'workspace' | 'standalone';
+type Space3DOrigin = Space3DEntryOrigin;
 
 const AppShell = () => {
   const [screen, setScreen] = useState<AppScreen>('welcome');
+  const [welcomeInitialView, setWelcomeInitialView] = useState<HomeView>('home');
   const [space3dOrigin, setSpace3DOrigin] = useState<Space3DOrigin>('standalone');
+  const [space3DEntryOrigin, setSpace3DEntryOrigin] = useState<Space3DEntryOrigin | null>(null);
   const { project, analysis } = useProject();
   const { t } = useI18n();
 
@@ -46,16 +49,32 @@ const AppShell = () => {
     return () => window.clearTimeout(handle);
   }, []);
 
-  const navigate = (next: AppScreen) => {
+  const navigate = (next: AppScreen, view: HomeView = 'home') => {
+    if (next === 'welcome') setWelcomeInitialView(view);
     setScreen(next);
   };
+  const requestSpace3D = (origin: Space3DEntryOrigin) => setSpace3DEntryOrigin(origin);
+  const proceedToSpace3D = () => {
+    if (!space3DEntryOrigin) return;
+    setSpace3DOrigin(space3DEntryOrigin);
+    setSpace3DEntryOrigin(null);
+    navigate('space3d');
+  };
+  const space3DEntry = space3DEntryOrigin ? <Space3DEntryDialog
+    language={project.settings.language}
+    origin={space3DEntryOrigin}
+    projectName={project.name}
+    onCancel={() => setSpace3DEntryOrigin(null)}
+    onProceed={proceedToSpace3D}
+  /> : null;
 
   if (screen === 'welcome') {
-    return <ClassroomSessionProvider projectId={project.id} analysisAvailable={analysis?.success === true}><WelcomeScreen
+    return <><ClassroomSessionProvider projectId={project.id} analysisAvailable={analysis?.success === true}><WelcomeScreen
       onOpenWorkspace={() => navigate('workspace')}
-      onOpenSpace3D={() => { setSpace3DOrigin('standalone'); navigate('space3d'); }}
+      onOpenSpace3D={() => requestSpace3D('standalone')}
       onPreloadWorkspace={() => { void loadWorkspaceShell(); }}
-    /></ClassroomSessionProvider>;
+      initialView={welcomeInitialView}
+    /></ClassroomSessionProvider>{space3DEntry}</>;
   }
 
   if (screen === 'space3d') {
@@ -75,8 +94,8 @@ const AppShell = () => {
 
   return <ClassroomSessionProvider projectId={project.id} analysisAvailable={analysis?.success === true}>
     <Suspense fallback={<div className="workspace-loading" role="status" aria-label={t('workspace.loading')}><BrandMark size={42} /><LoaderCircle className="spin" size={22} /></div>}>
-      <WorkspaceShell projectId={project.id} onOpenHome={() => navigate('welcome')} onOpenSpace3D={() => { setSpace3DOrigin('workspace'); navigate('space3d'); }} />
-    </Suspense>
+      <WorkspaceShell projectId={project.id} onOpenHome={() => navigate('welcome')} onOpenHomeTemplates={() => navigate('welcome', 'templates')} onOpenSpace3D={() => requestSpace3D('workspace')} />
+    </Suspense>{space3DEntry}
   </ClassroomSessionProvider>;
 };
 

@@ -78,7 +78,7 @@ const selections: Array<{ label: string; value: Selection }> = [
   },
 ];
 
-const InspectorHarness = ({ modal = false, onClose, onDesktopWidthChange, desktopWidth, mobileDetent, onMobileDetentChange }: { modal?: boolean; onClose?: () => void; onDesktopWidthChange?: (width: number) => void; desktopWidth?: number; mobileDetent?: 'compact' | 'medium' | 'large'; onMobileDetentChange?: (detent: 'compact' | 'medium' | 'large') => void }) => {
+const InspectorHarness = ({ modal = false, onClose, compact, onExpand, surface, onDesktopWidthChange, desktopWidth, mobileDetent, onMobileDetentChange, onMobileDetentCycle }: { modal?: boolean; onClose?: () => void; compact?: boolean; onExpand?: () => void; surface?: 'detail'; onDesktopWidthChange?: (width: number) => void; desktopWidth?: number; mobileDetent?: 'compact' | 'medium' | 'large'; onMobileDetentChange?: (detent: 'compact' | 'medium' | 'large') => void; onMobileDetentCycle?: (direction: 1 | -1) => void }) => {
   const { project, canUndo, canRedo, undo, redo, updateProjectView } = useProjectModel();
   const { analysis, analyze } = useProjectAnalysis();
   const { selection, setSelection } = useWorkspaceUI();
@@ -113,14 +113,14 @@ const InspectorHarness = ({ modal = false, onClose, onDesktopWidthChange, deskto
       <output aria-label="M1 origen sección">{String((memberM1 as unknown as Record<string, unknown>)?.sectionOrigin ?? '')}</output>
       <output aria-label="Estado de análisis">{analysis ? (analysis.success ? 'success' : 'failed') : 'none'}</output>
       <output aria-label="Issues de análisis">{analysis?.issues.map((issue) => issue.id).join(',') ?? ''}</output>
-      <Inspector desktopWidth={desktopWidth} presentation={modal ? 'sheet' : 'dock'} onClose={onClose} onDesktopWidthChange={onDesktopWidthChange} mobileDetent={mobileDetent} onMobileDetentChange={onMobileDetentChange} />
+      <Inspector surface={surface} compact={compact} onExpand={onExpand} desktopWidth={desktopWidth} presentation={modal ? 'sheet' : 'dock'} onClose={onClose} onDesktopWidthChange={onDesktopWidthChange} mobileDetent={mobileDetent} onMobileDetentChange={onMobileDetentChange} onMobileDetentCycle={onMobileDetentCycle} />
     </div>
   </ClassroomSessionProvider>;
 };
 
 const renderInspector = (
   project: ProjectModel = createInspectorProject(),
-  props: { modal?: boolean; onClose?: () => void; onDesktopWidthChange?: (width: number) => void; desktopWidth?: number; mobileDetent?: 'compact' | 'medium' | 'large'; onMobileDetentChange?: (detent: 'compact' | 'medium' | 'large') => void } = {},
+  props: { modal?: boolean; onClose?: () => void; compact?: boolean; onExpand?: () => void; surface?: 'detail'; onDesktopWidthChange?: (width: number) => void; desktopWidth?: number; mobileDetent?: 'compact' | 'medium' | 'large'; onMobileDetentChange?: (detent: 'compact' | 'medium' | 'large') => void; onMobileDetentCycle?: (direction: 1 | -1) => void } = {},
 ) => {
   localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
   return render(<ProjectProvider><InspectorHarness {...props} /></ProjectProvider>);
@@ -209,6 +209,11 @@ describe('Inspector selection variants', () => {
     expect(screen.getByRole('region', { name: 'Selection summary' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Loads' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'View' })).toBeTruthy();
+    await user.click(screen.getByRole('tab', { name: 'Loads' }));
+    expect(screen.getByText('Variable')).toBeTruthy();
+    expect(screen.getByText('Permanent')).toBeTruthy();
+    expect(screen.queryByText('variable')).toBeNull();
+    expect(screen.queryByText('permanent')).toBeNull();
 
     await user.click(screen.getByRole('tab', { name: 'Loads' }));
     expect(screen.getByRole('heading', { name: 'Add a load' })).toBeTruthy();
@@ -772,6 +777,20 @@ describe('Inspector editing safety and history', () => {
 });
 
 describe('Inspector advanced, locked, and validation states', () => {
+  it('keeps a compact detail Inspector contextual and exposes explicit edit and close controls', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onExpand = vi.fn();
+    renderInspector(createInspectorProject(), { surface: 'detail', compact: true, onClose, onExpand });
+
+    const inspector = screen.getByRole('complementary', { name: 'Inspector' });
+    expect(inspector.dataset.inspectorCompact).toBe('true');
+    await user.click(screen.getByRole('button', { name: 'Editar todo' }));
+    expect(onExpand).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole('button', { name: 'Cerrar inspector' }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it('persists advanced-property accordion state in localStorage across remounts', async () => {
     const user = userEvent.setup();
     const first = renderInspector();
@@ -916,6 +935,15 @@ describe('Inspector advanced, locked, and validation states', () => {
     await user.click(handle);
     expect(onMobileDetentChange).toHaveBeenCalledWith('large');
     expect(screen.getByLabelText('Puede deshacer').textContent).toBe('false');
+  });
+
+  it('delegates a sheet-height cycle when the workspace selects the available detent', async () => {
+    const user = userEvent.setup();
+    const onMobileDetentCycle = vi.fn();
+    renderInspector(createInspectorProject(), { modal: true, mobileDetent: 'medium', onMobileDetentCycle });
+
+    await user.click(screen.getByRole('button', { name: 'Altura del Inspector: Media' }));
+    expect(onMobileDetentCycle).toHaveBeenCalledWith(1);
   });
 
   it('keeps native tab order through closed details because a sheet is not a focus trap', async () => {

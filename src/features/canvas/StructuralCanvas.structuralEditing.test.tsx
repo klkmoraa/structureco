@@ -104,6 +104,27 @@ describe('StructuralCanvas advanced editing integration', () => {
     await waitFor(() => expect(document.activeElement).toBe(deltaX));
   });
 
+  it('opens the numeric drag alternative with F2 from a focused selected object', async () => {
+    const user = userEvent.setup();
+    renderCanvas();
+    const canvas = screen.getByRole('application', { name: /área de trabajo estructural/i });
+    const node = document.querySelector<SVGGElement>('[data-structure-kind="node"][data-structure-id="N1"]');
+    if (!node) throw new Error('The default fixture must contain N1.');
+
+    await user.click(screen.getByRole('button', { name: 'select-N1' }));
+    await waitFor(() => expect(screen.getByLabelText('selection-model').textContent).toContain('N1'));
+    node.focus();
+    expect(document.activeElement).toBe(node);
+
+    await user.keyboard('{F2}');
+    const surface = await screen.findByRole('region', { name: /edición estructural/i });
+    const deltaX = within(surface).getByLabelText('ΔX');
+    await waitFor(() => expect(document.activeElement).toBe(deltaX));
+    expect(canvas.getAttribute('aria-keyshortcuts')).toContain('F2');
+    expect(canvas.getAttribute('aria-describedby')).toBe('canvas-interaction-description');
+    expect(document.getElementById('canvas-interaction-description')?.textContent).toMatch(/F2.*campos numéricos/i);
+  });
+
   it('uses pointer Move with grid snap while keeping ProjectModel unchanged until Apply', async () => {
     const user = userEvent.setup();
     renderCanvas();

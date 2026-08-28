@@ -5,8 +5,9 @@ import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from 
 import { resolveReliability } from '../../engine/reliability';
 import { buildDiagramEnvelope, evaluateEnvelopeAt } from '../../engine/envelope';
 import { analysisSignature } from '../../engine/projectSignature';
+import { summarizeAnalysisResults } from '../../engine/resultSummary';
 import { useScenarioAnalysis } from '../../engine/useScenarioAnalysis';
-import type { DiagramQuantity, DiagramSegment, MemberResult } from '../../types';
+import type { CriticalKind, DiagramQuantity, DiagramSegment, MemberResult } from '../../types';
 import { toDisplay, unitLabel } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import type { TranslationKey } from '../../i18n/catalogs';
@@ -20,6 +21,8 @@ import { ProvenanceCard } from './ProvenanceCard';
 import { ResultExtremeCard } from './ResultExtremeCard';
 import type { ResultRef } from './provenance';
 import { DENSE_RESULT_VIEWS, preloadDenseResultsSurface, preloadInfluenceLineView, type DenseResultView } from './denseResults';
+import { reliabilityLevelLabelKey } from './reliabilityCopy';
+import { formatResultNumber } from './resultFormatting';
 
 /**
  * Lo que queda residente en el panel tras CRI-101: el resumen en tarjetas y las
@@ -33,6 +36,67 @@ const tabs: Array<{ id: ResultTab; labelKey: TranslationKey; color?: string }> =
   { id: 'moment', labelKey: 'results.moment', color: 'moment' },
   { id: 'deformed', labelKey: 'results.deformed' },
 ];
+
+type CriticalLegendPoint = {
+  kind: CriticalKind;
+  x: number;
+  value: number;
+  side?: 'left' | 'right' | 'continuous';
+};
+
+const criticalKindLabelKey: Record<CriticalKind, TranslationKey> = {
+  maximum: 'results.criticalMaximum',
+  minimum: 'results.criticalMinimum',
+  jump: 'results.criticalJump',
+  zero: 'results.criticalZero',
+  end: 'results.criticalEnd',
+};
+
+/**
+ * The graph keeps only spatial marks. Exact labels live immediately below it,
+ * where they cannot collide with a curve, tick, or one another. The buttons
+ * are also a keyboard/touch equivalent of pointing at a critical station.
+ */
+const CriticalPointLegend = ({
+  points,
+  length,
+  unit,
+  formatPosition,
+  formatValue,
+  pinnedX,
+  onPin,
+}: {
+  points: readonly CriticalLegendPoint[];
+  length: number;
+  unit: string;
+  formatPosition: (x: number) => string;
+  formatValue: (value: number) => string;
+  pinnedX: number | null;
+  onPin: (x: number) => void;
+}) => {
+  const { t } = useI18n();
+  const visible = points.slice(0, 8);
+  if (visible.length === 0) return null;
+  return <section className="diagram-critical-legend" aria-label={t('results.criticalPoints')}>
+    <span>{t('results.criticalPoints')}</span>
+    <div>{visible.map((point, index) => {
+      const label = t(criticalKindLabelKey[point.kind]);
+      const position = `x ${formatPosition(point.x)}`;
+      const detail = `${label} · ${position} · ${formatValue(point.value)} ${unit}`;
+      const pinned = pinnedX !== null && Math.abs(pinnedX - point.x) <= Math.max(length, 1) * 1e-8;
+      return <button
+        type="button"
+        key={`${point.kind}-${point.side ?? 'continuous'}-${point.x}-${index}`}
+        className={`diagram-critical-legend__point is-${point.kind}`}
+        aria-pressed={pinned}
+        aria-label={pinned ? t('results.unpinCriticalPoint', { point: detail }) : t('results.pinCriticalPoint', { point: detail })}
+        onClick={() => onPin(point.x)}
+      >
+        <span>{label}</span><strong>{formatValue(point.value)} {unit}</strong><small>{position}</small>
+      </button>;
+    })}</div>
+  </section>;
+};
 
 const denseViewLabelKey: Record<DenseResultView, TranslationKey> = {
   reactions: 'results.reactions',
@@ -156,6 +220,45 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
   }, [analysis, memberResult, project.loadCases, resultCursor, resultTab, selectedCombinationId, selection, t]);
   const availableTabs = tabs;
   const activeTab = availableTabs.find((tab) => tab.id === resultTab) ?? availableTabs[0];
+  /**
+   * La bandeja cerrada no repite el Centro analítico: da la decisión de diez
+   * segundos que sigue a Analizar. El extremo se vuelve a derivar de la
+   * respuesta existente; no hay una segunda fuente para valores o fiabilidad.
+   */
+  const collapsedSummary = useMemo(() => {
+    const targetId = selectedCombinationId || project.loadCases.find((item) => item.active)?.id || project.loadCases[0]?.id || '—';
+    const target = project.combinations.find((item) => item.id === targetId)?.name
+      ?? project.loadCases.find((item) => item.id === targetId)?.name
+      ?? targetId;
+    if (!analysis?.success) return {
+      title: analysis ? t('results.compactUnresolved') : t('results.compactWaiting'),
+      detail: t('results.compactForTarget', { target }),
+    };
+    const summary = summarizeAnalysisResults(analysis);
+    const governing = (['moment', 'shear', 'axial'] as const)
+      .map((quantity) => ({
+        quantity,
+        extreme: summary.diagrams[quantity]?.absolute,
+        symbol: quantity === 'moment' ? 'M' : quantity === 'shear' ? 'V' : 'N',
+        unit: quantity === 'moment' ? 'moment' as const : 'force' as const,
+      }))
+      .find((item) => item.extreme);
+    const reliability = resolveReliability(analysis).level;
+    return {
+      title: governing?.extreme
+        ? t('results.compactGoverning', {
+          symbol: governing.symbol,
+          value: formatResultNumber(toDisplay(governing.extreme.value, project.settings.units, governing.unit)),
+          unit: unitLabel(project.settings.units, governing.unit),
+          member: governing.extreme.memberId,
+        })
+        : t('results.compactNoGoverning'),
+      detail: t('results.compactResolvedDetail', {
+        target,
+        reliability: t(reliabilityLevelLabelKey[reliability]),
+      }),
+    };
+  }, [analysis, project.combinations, project.loadCases, project.settings.units, selectedCombinationId, t]);
   const mobileResultLabel = analysis
     ? `${t(activeTab.labelKey)} · ${resultContext.label}`
     : t('results.outputs');
@@ -277,8 +380,8 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
         onClick={() => setDesktopExpanded(true)}
       >
         <span>{t('results.center')}</span>
-        <strong>{resultContext.label}</strong>
-        <small>{t(activeTab.labelKey)}</small>
+        <strong data-testid="results-collapsed-governing">{collapsedSummary.title}</strong>
+        <small data-testid="results-collapsed-status">{collapsedSummary.detail}</small>
         <span className="results-desktop-toggle__action">{t('results.openDock')} <ChevronUp size={17} aria-hidden="true" /></span>
       </button> : <>
       {isMobile && mobileExpanded ? <div className="results-mobile-commandbar">
@@ -608,9 +711,9 @@ const DiagramView = ({ type, memberResult, memberId, isMobile, mobileMetricsVisi
       <path className={`chart-fill ${envelopeMode ? 'muted' : ''}`} d={fillCommands.join(' ')} />
       <path className={`chart-line ${envelopeMode ? 'muted' : ''}`} d={lineCommands.join(' ')} fill="none" />
       {envelopeMode && envelope ? <><path className="envelope-line minimum" d={envelopePath('minimum')} fill="none" /><path className="envelope-line maximum" d={envelopePath('maximum')} fill="none" /></> : null}
-      {displayCritical.map((point, index) => <g className={`chart-critical ${point.kind}`} key={`${point.kind}-${point.side}-${point.x}-${index}`}><circle cx={sx(point.x)} cy={sy(point.value)} r={point.kind === 'zero' ? 4 : 3.2} /><text x={sx(point.x)} y={sy(point.value) + (point.value >= 0 ? -8 : 14)} textAnchor={point.x < L * .08 ? 'start' : point.x > L * .92 ? 'end' : 'middle'}>{point.kind === 'zero' ? '0' : formatFixed(displayValue(point.value), 2)}</text></g>)}
+      {displayCritical.map((point, index) => <g className={`chart-critical ${point.kind}`} key={`${point.kind}-${point.side}-${point.x}-${index}`}><title>{`${t(criticalKindLabelKey[point.kind])} · x ${formatFixed(toDisplay(point.x, units, 'length'), 2)} ${lengthUnit} · ${formatFixed(displayValue(point.value), 2)} ${unit}`}</title><circle cx={sx(point.x)} cy={sy(point.value)} r={point.kind === 'zero' ? 4 : 3.2} /></g>)}
       {cursorPoint ? <g className={`chart-hover ${pinnedX === null ? '' : 'pinned'}`}><line x1={sx(cursorPoint.x)} y1="16" x2={sx(cursorPoint.x)} y2={height - 18} /><circle cx={sx(cursorPoint.x)} cy={sy(cursorPoint[type])} r="4" /></g> : null}
-    </svg>{cursorPoint ? <div className={`diagram-cursor-readout ${cursorJump || envelopeCursorJump ? 'at-jump' : ''}`} role={pinnedX !== null ? 'status' : undefined} aria-live={pinnedX !== null ? 'polite' : undefined} aria-atomic={pinnedX !== null ? true : undefined}><span className="cursor-position"><b>x</b>{formatFixed(toDisplay(cursorPoint.x, units, 'length'), 3)} {unitLabel(units, 'length')}</span>{envelopeCursor ? <><span className="envelope-min"><b>{t('results.minimum')}</b>{formatFixed(displayValue(envelopeCursor.minimum), 3)} {unit}</span><span className="envelope-max"><b>{t('results.maximum')}</b>{formatFixed(displayValue(envelopeCursor.maximum), 3)} {unit}</span><small>{envelopeCursor.minimumScenario} → {envelopeCursor.maximumScenario}</small>{envelopeCursorJump && envelopeCursorLeft && envelopeCursorRight ? <><small>{t('results.envelopeDiscontinuityReading', { quantity: t('results.minimum'), left: formatFixed(displayValue(envelopeCursorLeft.minimum), 3), right: formatFixed(displayValue(envelopeCursorRight.minimum), 3), unit })}</small><small>{t('results.envelopeDiscontinuityReading', { quantity: t('results.maximum'), left: formatFixed(displayValue(envelopeCursorLeft.maximum), 3), right: formatFixed(displayValue(envelopeCursorRight.maximum), 3), unit })}</small></> : null}</> : <><span className="axial-text"><b>N</b>{formatFixed(toDisplay(cursorPoint.axial, units, 'force'), 3)} {unitLabel(units, 'force')}</span><span className="shear-text"><b>V</b>{formatFixed(toDisplay(cursorPoint.shear, units, 'force'), 3)} {unitLabel(units, 'force')}</span><span className="moment-text"><b>M</b>{formatFixed(toDisplay(cursorPoint.moment, units, 'moment'), 3)} {unitLabel(units, 'moment')}</span>{cursorJump && cursorLeft && cursorRight ? <small>{t('results.discontinuityReading', { left: formatFixed(displayValue(cursorLeft[type]), 3), right: formatFixed(displayValue(cursorRight[type]), 3), unit })}</small> : null}</>}</div> : <div className="diagram-cursor-placeholder">{t('results.exactDiagramCursor')}</div>}</div>
+    </svg><CriticalPointLegend points={displayCritical} length={L} unit={unit} formatPosition={(x) => `${formatFixed(toDisplay(x, units, 'length'), 2)} ${lengthUnit}`} formatValue={(value) => formatFixed(displayValue(value), 2)} pinnedX={pinnedX} onPin={pinAt} />{cursorPoint ? <div className={`diagram-cursor-readout ${cursorJump || envelopeCursorJump ? 'at-jump' : ''}`} role={pinnedX !== null ? 'status' : undefined} aria-live={pinnedX !== null ? 'polite' : undefined} aria-atomic={pinnedX !== null ? true : undefined}><span className="cursor-position"><b>x</b>{formatFixed(toDisplay(cursorPoint.x, units, 'length'), 3)} {unitLabel(units, 'length')}</span>{envelopeCursor ? <><span className="envelope-min"><b>{t('results.minimum')}</b>{formatFixed(displayValue(envelopeCursor.minimum), 3)} {unit}</span><span className="envelope-max"><b>{t('results.maximum')}</b>{formatFixed(displayValue(envelopeCursor.maximum), 3)} {unit}</span><small>{envelopeCursor.minimumScenario} → {envelopeCursor.maximumScenario}</small>{envelopeCursorJump && envelopeCursorLeft && envelopeCursorRight ? <><small>{t('results.envelopeDiscontinuityReading', { quantity: t('results.minimum'), left: formatFixed(displayValue(envelopeCursorLeft.minimum), 3), right: formatFixed(displayValue(envelopeCursorRight.minimum), 3), unit })}</small><small>{t('results.envelopeDiscontinuityReading', { quantity: t('results.maximum'), left: formatFixed(displayValue(envelopeCursorLeft.maximum), 3), right: formatFixed(displayValue(envelopeCursorRight.maximum), 3), unit })}</small></> : null}</> : <><span className="axial-text"><b>N</b>{formatFixed(toDisplay(cursorPoint.axial, units, 'force'), 3)} {unitLabel(units, 'force')}</span><span className="shear-text"><b>V</b>{formatFixed(toDisplay(cursorPoint.shear, units, 'force'), 3)} {unitLabel(units, 'force')}</span><span className="moment-text"><b>M</b>{formatFixed(toDisplay(cursorPoint.moment, units, 'moment'), 3)} {unitLabel(units, 'moment')}</span>{cursorJump && cursorLeft && cursorRight ? <small>{t('results.discontinuityReading', { left: formatFixed(displayValue(cursorLeft[type]), 3), right: formatFixed(displayValue(cursorRight[type]), 3), unit })}</small> : null}</>}</div> : <div className="diagram-cursor-placeholder">{t('results.exactDiagramCursor')}</div>}</div>
   </div>;
 };
 
@@ -701,9 +804,10 @@ const DeformationView = ({ memberResult, memberId, isMobile, mobileMetricsVisibl
         <title>{responseAriaLabel}</title><desc>{t('results.chartKeyboardHelp')}</desc>
         <line className="chart-axis" x1="0" y1={baseline} x2={width} y2={baseline} />
         <path className="chart-line" d={line} fill="none" />
-        {critical.filter((point) => point.kind === 'maximum' || point.kind === 'minimum' || point.kind === 'zero').slice(0, 16).map((point, index) => <g className={`chart-critical ${point.kind}`} key={`${point.kind}-${point.x}-${index}`}><circle cx={sx(point.x)} cy={sy(point.value)} r="3.2" /><text x={sx(point.x)} y={sy(point.value) + (point.value >= 0 ? -8 : 14)} textAnchor={point.x < L * .08 ? 'start' : point.x > L * .92 ? 'end' : 'middle'}>{point.kind === 'zero' ? '0' : formatScientific(displayValue(point.value), 2)}</text></g>)}
+        {critical.filter((point) => point.kind === 'maximum' || point.kind === 'minimum' || point.kind === 'zero').slice(0, 16).map((point, index) => <g className={`chart-critical ${point.kind}`} key={`${point.kind}-${point.x}-${index}`}><title>{`${t(criticalKindLabelKey[point.kind])} · x ${formatFixed(toDisplay(point.x, units, 'length'), 2)} ${unitLabel(units, 'length')} · ${formatScientific(displayValue(point.value), 2)} ${unit}`}</title><circle cx={sx(point.x)} cy={sy(point.value)} r="3.2" /></g>)}
         {cursor ? <g className={`chart-hover ${pinnedX === null ? '' : 'pinned'}`}><line x1={sx(cursor.x)} y1="16" x2={sx(cursor.x)} y2={height - 18} /><circle cx={sx(cursor.x)} cy={sy(cursor[quantity])} r="4" /></g> : null}
       </svg>
+      <CriticalPointLegend points={critical.filter((point) => point.kind === 'maximum' || point.kind === 'minimum' || point.kind === 'zero')} length={L} unit={unit} formatPosition={(x) => `${formatFixed(toDisplay(x, units, 'length'), 2)} ${unitLabel(units, 'length')}`} formatValue={(value) => formatScientific(displayValue(value), 2)} pinnedX={pinnedX} onPin={pinAt} />
       {cursor ? <div className="diagram-cursor-readout" role={pinnedX !== null ? 'status' : undefined} aria-live={pinnedX !== null ? 'polite' : undefined} aria-atomic={pinnedX !== null ? true : undefined}><span className="cursor-position"><b>x</b>{formatFixed(toDisplay(cursor.x, units, 'length'), 3)} {unitLabel(units, 'length')}</span><span><b>u</b>{formatScientific(toDisplay(cursor.u, units, 'length'), 4)} {unitLabel(units, 'length')}</span><span><b>v</b>{formatScientific(toDisplay(cursor.v, units, 'length'), 4)} {unitLabel(units, 'length')}</span><span><b>θ</b>{formatScientific(cursor.theta, 4)} rad</span></div> : <div className="diagram-cursor-placeholder">{t('results.exactDeformationCursor')}</div>}
     </div>
   </div>;

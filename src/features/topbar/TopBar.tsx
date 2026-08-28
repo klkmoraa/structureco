@@ -642,7 +642,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
                     <button onClick={() => { exportPngCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportPngCommand.label}</button>
                     <button onClick={() => { exportPrintCommand.run(); setShowMobileMenu(false); }}>{exportPrintCommand.label}</button>
                   </div>
-                  <div className={`mobile-storage-state ${storageHasError || storageState === 'offline' ? 'error' : ''}`} data-storage-state={storageState}>{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}<span><strong>{storageLabel}</strong><small>{storageDescription}</small></span></div>
+                  <div className={`mobile-storage-state ${storageHasError || storageState === 'offline' ? 'error' : ''}`} data-storage-state={storageState}>{storageHasError || storageState === 'offline' ? <CloudOff size={14} aria-hidden="true" /> : <Check size={14} aria-hidden="true" />}<span><strong>{storageLabel}</strong><small>{storageDescription}</small></span>{storageState === 'conflict' && onOpenHome ? <button type="button" onClick={() => { onOpenHome(); setShowMobileMenu(false); }}>{phase2T('storage.resolveConflict')}</button> : null}</div>
                   {exportError ? <div className="portable-export-error" role="alert">{exportError}</div> : null}
                 </m.div>
               ) : null}
@@ -690,6 +690,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
           <span className="autosave-state__label">{storageLabel}</span>
           <span className="sr-only">{storageDescription}</span>
         </div>
+        {storageState === 'conflict' && onOpenHome ? <button type="button" className="topbar-conflict-resolver" onClick={onOpenHome}>{phase2T('storage.resolveConflict')}</button> : null}
       </div>
       {exportError && showExportMenu ? <div className="portable-export-error desktop" role="alert">{exportError}</div> : null}
       {importCenterOpen ? <Suspense fallback={null}><PortableImportCenter

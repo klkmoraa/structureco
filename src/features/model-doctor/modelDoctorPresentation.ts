@@ -1,11 +1,28 @@
 import type { Language } from '../../i18n/catalogs';
+import type { Tool } from '../../types';
 import type { ModelDoctorCategory, ModelDoctorFinding } from './modelDoctorDiagnostics';
+
+export interface ContextualModelDoctorRepair {
+  tool: Tool;
+  actionLabel: string;
+  previewTitle: string;
+  previewDescription: string;
+  steps: readonly string[];
+  beginLabel: string;
+  returnLabel: string;
+}
 
 export interface PresentedModelDoctorFinding {
   title: string;
   explanation: string;
   whyItMatters: string;
   suggestedAction: string;
+  /**
+   * A guided, non-mutating route to a tool. It is deliberately separate from
+   * topology repair: the Doctor must never choose a support's type or place it
+   * on the user's behalf.
+   */
+  contextualRepair?: ContextualModelDoctorRepair;
 }
 
 const englishImpact: Record<ModelDoctorCategory, string> = {
@@ -27,6 +44,34 @@ const englishAction: Record<ModelDoctorCategory, string> = {
   references: 'Assign the reference to an object that exists in the model.',
   configuration: 'Review the indicated configuration before continuing.',
 };
+
+const noSupportsRepair = (language: Language | undefined): ContextualModelDoctorRepair => language === 'en'
+  ? {
+    tool: 'support',
+    actionLabel: 'Add supports',
+    previewTitle: 'Before adding supports',
+    previewDescription: 'StructureCo will open the Support tool, but will not choose the support type or location for you.',
+    steps: [
+      'Choose the node that represents each physical support.',
+      'Click the node and review the support type before continuing.',
+      'Return to Model Doctor to validate the modeled restraint again.',
+    ],
+    beginLabel: 'Open Support tool',
+    returnLabel: 'Return to Model Doctor',
+  }
+  : {
+    tool: 'support',
+    actionLabel: 'Añadir apoyos',
+    previewTitle: 'Antes de añadir apoyos',
+    previewDescription: 'StructureCo abrirá la herramienta Apoyo, pero no elegirá por ti el tipo ni la posición de cada apoyo.',
+    steps: [
+      'Elige el nudo que representa cada apoyo físico.',
+      'Toca el nudo y revisa el tipo de apoyo antes de continuar.',
+      'Vuelve al Doctor del modelo para validar de nuevo la restricción modelada.',
+    ],
+    beginLabel: 'Abrir herramienta Apoyo',
+    returnLabel: 'Volver al Doctor del modelo',
+  };
 
 const ids = (finding: ModelDoctorFinding): string[] => finding.affectedObjects.map((object) => object.id);
 const subject = (finding: ModelDoctorFinding): string => ids(finding).join(' and ') || finding.sourceIssueId;
@@ -82,17 +127,35 @@ const englishSpecific = (finding: ModelDoctorFinding): Pick<PresentedModelDoctor
 };
 
 export const presentModelDoctorFinding = (finding: ModelDoctorFinding, language: Language | undefined): PresentedModelDoctorFinding => {
-  if (language !== 'en') return {
-    title: finding.title,
-    explanation: finding.explanation,
-    whyItMatters: finding.whyItMatters,
-    suggestedAction: finding.suggestedAction,
-  };
+  if (language !== 'en') {
+    if (finding.sourceIssueId === 'no-supports') return {
+      title: 'El modelo no tiene apoyos',
+      explanation: 'Ningún nudo tiene una restricción de apoyo ni un resorte positivo conectado a tierra. Por eso el modelo puede desplazarse como un cuerpo rígido.',
+      whyItMatters: 'Sin apoyos conectados a tierra, el cálculo no puede distinguir la deformación estructural de un movimiento global del modelo.',
+      suggestedAction: 'Añade los apoyos que representen las condiciones físicas del problema. La aplicación no elegirá su tipo ni su posición automáticamente.',
+      contextualRepair: noSupportsRepair(language),
+    };
+    return {
+      title: finding.title,
+      explanation: finding.explanation,
+      whyItMatters: finding.whyItMatters,
+      suggestedAction: finding.suggestedAction,
+    };
+  }
   const specific = englishSpecific(finding);
   const whyItMatters = finding.sourceIssueId.startsWith('near-node-')
     ? 'They can look like one joint while transferring forces through different connectivity.'
     : finding.sourceIssueId.startsWith('node-on-member-')
       ? 'The support, load, or imposed displacement will not participate as the drawing suggests until a real joint exists.'
-      : englishImpact[finding.category];
+      : finding.sourceIssueId === 'no-supports'
+        ? 'Without grounding restraints, the solver cannot distinguish structural deformation from a global movement of the model.'
+        : englishImpact[finding.category];
+  if (finding.sourceIssueId === 'no-supports') return {
+    title: 'The model has no supports',
+    explanation: 'No node has a support restraint or a positive nodal spring connected to ground, so the model can move as a rigid body.',
+    whyItMatters,
+    suggestedAction: 'Add the supports that represent the problem’s physical boundary conditions. StructureCo will not choose their type or position automatically.',
+    contextualRepair: noSupportsRepair(language),
+  };
   return { ...specific, whyItMatters, suggestedAction: englishAction[finding.category] };
 };

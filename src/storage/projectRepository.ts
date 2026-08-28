@@ -9,6 +9,8 @@ const DATABASE_VERSION = 1;
 const PROJECTS_STORE = 'projects';
 const RECOVERIES_STORE = 'recoveries';
 const META_STORE = 'meta';
+/** Cross-tab notification only; project data remains in IndexedDB. */
+export const PROJECT_LIBRARY_CHANGE_KEY = 'structureCo.project-library.changed';
 
 export interface StoredProjectRecord {
   id: string;
@@ -29,9 +31,16 @@ export interface RecoveryRecord {
   project: ProjectModel;
 }
 
+export interface ProjectLibrarySnapshot {
+  projects: StoredProjectRecord[];
+  recoveries: RecoveryRecord[];
+}
+
 export interface ProjectRepository {
   listProjects(): Promise<StoredProjectRecord[]>;
   openProject(id: string): Promise<StoredProjectRecord | null>;
+  /** Reads the library in one snapshot so a conflict cannot pair stale sides. */
+  listLibrary(): Promise<ProjectLibrarySnapshot>;
   saveProject(project: ProjectModel, expectedRevision?: number): Promise<StoredProjectRecord>;
   renameProject(id: string, name: string): Promise<StoredProjectRecord>;
   duplicateProject(id: string, name: string): Promise<StoredProjectRecord>;
@@ -39,6 +48,8 @@ export interface ProjectRepository {
   createRecovery(project: ProjectModel, reason: RecoveryRecord['reason']): Promise<RecoveryRecord>;
   listRecoveries(projectId?: string): Promise<RecoveryRecord[]>;
   restoreRecovery(id: string): Promise<StoredProjectRecord>;
+  duplicateRecovery(id: string, name: string): Promise<StoredProjectRecord>;
+  deleteRecovery(id: string): Promise<void>;
   getMeta(key: string): Promise<string | null>;
   setMeta(key: string, value: string): Promise<void>;
 }
@@ -85,19 +96,42 @@ export class InMemoryProjectRepository implements ProjectRepository {
   private readonly projects = new Map<string, StoredProjectRecord>();
   private readonly recoveries = new Map<string, RecoveryRecord>();
   private readonly meta = new Map<string, string>();
+  private writeChain: Promise<void> = Promise.resolve();
+
+  private async write<T>(operation: () => Promise<T>): Promise<T> {
+    const previous = this.writeChain;
+    let release: () => void = () => undefined;
+    const current = new Promise<void>((resolve) => { release = resolve; });
+    this.writeChain = previous.then(() => current, () => current);
+    await previous.catch(() => undefined);
+    try {
+      return await operation();
+    } finally {
+      release();
+    }
+  }
 
   async listProjects() { return [...this.projects.values()].map((record) => structuredClone(record)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)); }
   async openProject(id: string) { return this.projects.has(id) ? structuredClone(this.projects.get(id)!) : null; }
+  async listLibrary() {
+    return {
+      projects: await this.listProjects(),
+      recoveries: await this.listRecoveries(),
+    };
+  }
 
   async saveProject(project: ProjectModel, expectedRevision?: number) {
-    const existing = this.projects.get(project.id);
-    if (expectedRevision !== undefined && existing?.revision !== expectedRevision) {
-      await this.createRecovery(project, 'conflict');
-      throw new RepositoryConflictError(project.id);
-    }
-    const record = await projectRecord(project, (existing?.revision ?? 0) + 1);
-    this.projects.set(record.id, structuredClone(record));
-    return structuredClone(record);
+    return this.write(async () => {
+      const existing = this.projects.get(project.id);
+      if (expectedRevision !== undefined && existing?.revision !== expectedRevision) {
+        const recovery = await recoveryRecord(project, 'conflict');
+        this.recoveries.set(recovery.id, structuredClone(recovery));
+        throw new RepositoryConflictError(project.id);
+      }
+      const record = await projectRecord(project, (existing?.revision ?? 0) + 1);
+      this.projects.set(record.id, structuredClone(record));
+      return structuredClone(record);
+    });
   }
 
   async renameProject(id: string, name: string) {
@@ -117,9 +151,11 @@ export class InMemoryProjectRepository implements ProjectRepository {
   }
 
   async createRecovery(project: ProjectModel, reason: RecoveryRecord['reason']) {
-    const record = await recoveryRecord(project, reason);
-    this.recoveries.set(record.id, structuredClone(record));
-    return structuredClone(record);
+    return this.write(async () => {
+      const record = await recoveryRecord(project, reason);
+      this.recoveries.set(record.id, structuredClone(record));
+      return structuredClone(record);
+    });
   }
 
   async listRecoveries(projectId?: string) {
@@ -130,10 +166,29 @@ export class InMemoryProjectRepository implements ProjectRepository {
   }
 
   async restoreRecovery(id: string) {
+    return this.write(async () => {
+      const recovery = this.recoveries.get(id);
+      if (!recovery) throw new Error(`No existe la recuperación ${id}.`);
+      const current = this.projects.get(recovery.projectId);
+      const restored = await projectRecord(recovery.project, (current?.revision ?? 0) + 1);
+      const backup = current ? await recoveryRecord(current.project, 'manual') : null;
+      if (backup) this.recoveries.set(backup.id, structuredClone(backup));
+      this.projects.set(restored.id, structuredClone(restored));
+      // La recuperación ya es la versión guardada; dejarla como conflicto
+      // pendiente volvería a presentar dos versiones después de decidir.
+      this.recoveries.delete(id);
+      return structuredClone(restored);
+    });
+  }
+
+  async duplicateRecovery(id: string, name: string) {
     const recovery = this.recoveries.get(id);
     if (!recovery) throw new Error(`No existe la recuperación ${id}.`);
-    const current = this.projects.get(recovery.projectId);
-    return this.saveProject(recovery.project, current?.revision);
+    return this.saveProject({ ...structuredClone(recovery.project), id: createId(), name });
+  }
+
+  async deleteRecovery(id: string) {
+    if (!this.recoveries.delete(id)) throw new Error(`No existe la recuperación ${id}.`);
   }
 
   async getMeta(key: string) { return this.meta.get(key) ?? null; }
@@ -188,6 +243,20 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     const record = await requestResult(transaction.objectStore(PROJECTS_STORE).get(id) as IDBRequest<StoredProjectRecord | undefined>);
     await done;
     return record ? structuredClone(record) : null;
+  }
+
+  async listLibrary(): Promise<ProjectLibrarySnapshot> {
+    const database = await this.database();
+    const transaction = database.transaction([PROJECTS_STORE, RECOVERIES_STORE], 'readonly');
+    const done = transactionDone(transaction);
+    const projectRequest = transaction.objectStore(PROJECTS_STORE).getAll() as IDBRequest<StoredProjectRecord[]>;
+    const recoveryRequest = transaction.objectStore(RECOVERIES_STORE).getAll() as IDBRequest<RecoveryRecord[]>;
+    const [projects, recoveries] = await Promise.all([requestResult(projectRequest), requestResult(recoveryRequest)]);
+    await done;
+    return {
+      projects: projects.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+      recoveries: recoveries.sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    };
   }
 
   async saveProject(project: ProjectModel, expectedRevision?: number) {
@@ -263,8 +332,58 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     const recoveries = await this.listRecoveries();
     const recovery = recoveries.find((record) => record.id === id);
     if (!recovery) throw new Error(`No existe la recuperación ${id}.`);
-    const current = await this.openProject(recovery.projectId);
-    return this.saveProject(recovery.project, current?.revision);
+    // Hashing uses Web Crypto and may yield; compute it before opening the
+    // read/write transaction so IndexedDB never auto-closes a half-finished
+    // transaction. The live recovery is fetched again below before commit.
+    const normalized = normalizeProject(recovery.project);
+    const checksum = await projectChecksum(normalized);
+    const database = await this.database();
+    const transaction = database.transaction([PROJECTS_STORE, RECOVERIES_STORE], 'readwrite');
+    const done = transactionDone(transaction);
+    const projectStore = transaction.objectStore(PROJECTS_STORE);
+    const recoveryStore = transaction.objectStore(RECOVERIES_STORE);
+    const liveRecovery = await requestResult(recoveryStore.get(id) as IDBRequest<RecoveryRecord | undefined>);
+    if (!liveRecovery) {
+      await done;
+      throw new Error(`No existe la recuperación ${id}.`);
+    }
+    const current = await requestResult(projectStore.get(liveRecovery.projectId) as IDBRequest<StoredProjectRecord | undefined>);
+    const now = new Date().toISOString();
+    if (current) {
+      recoveryStore.put({
+        id: createId(), projectId: current.id, reason: 'manual', createdAt: now,
+        checksum: current.checksum, project: structuredClone(current.project),
+      } satisfies RecoveryRecord);
+    }
+    const restored: StoredProjectRecord = {
+      id: normalized.id, name: normalized.name, schemaVersion: normalized.schemaVersion,
+      revision: (current?.revision ?? 0) + 1, updatedAt: now, checksum, project: normalized,
+    };
+    projectStore.put(restored);
+    recoveryStore.delete(id);
+    await done;
+    return structuredClone(restored);
+  }
+
+  async duplicateRecovery(id: string, name: string) {
+    const recoveries = await this.listRecoveries();
+    const recovery = recoveries.find((record) => record.id === id);
+    if (!recovery) throw new Error(`No existe la recuperación ${id}.`);
+    return this.saveProject({ ...structuredClone(recovery.project), id: createId(), name });
+  }
+
+  async deleteRecovery(id: string) {
+    const database = await this.database();
+    const transaction = database.transaction(RECOVERIES_STORE, 'readwrite');
+    const done = transactionDone(transaction);
+    const store = transaction.objectStore(RECOVERIES_STORE);
+    const existing = await requestResult(store.get(id) as IDBRequest<RecoveryRecord | undefined>);
+    if (!existing) {
+      await done;
+      throw new Error(`No existe la recuperación ${id}.`);
+    }
+    store.delete(id);
+    await done;
   }
 
   async getMeta(key: string) {

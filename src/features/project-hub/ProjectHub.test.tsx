@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultProject } from '../../data/defaultProject';
 import { ProjectProvider } from '../../store/ProjectContext';
 import { InMemoryProjectRepository } from '../../storage/projectRepository';
+import { getLocalMetrics, setLocalMetricsOptIn } from '../../analytics/localMetrics';
 import { ProjectHub } from './ProjectHub';
 
 beforeEach(() => localStorage.clear());
@@ -78,5 +79,50 @@ describe('ProjectHub', () => {
     expect(confirm).toHaveBeenCalledOnce();
     await waitFor(() => expect(screen.queryByText('Proyecto temporal')).toBeNull());
     expect(await repository.listProjects()).toHaveLength(0);
+  });
+
+  it('compares a conflict, previews it read-only, and backs up the saved version before recovery', async () => {
+    const repository = new InMemoryProjectRepository();
+    const saved = { ...createDefaultProject(), name: 'Versión guardada', nodes: [], members: [], nodalLoads: [], memberLoads: [], memberInitialEffects: [], prescribedDisplacements: [] };
+    await repository.saveProject(saved);
+    await repository.createRecovery({ ...createDefaultProject(), id: saved.id, name: 'Edición recuperada' }, 'conflict');
+    const onOpen = vi.fn();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<ProjectProvider><ProjectHub repository={repository} onOpen={onOpen} /></ProjectProvider>);
+
+    expect(await screen.findByText('Conflicto de versiones')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Abrir Versión guardada' })).toBeNull();
+    expect(document.querySelector('[data-recovery-version="saved"]')?.textContent).toContain('0 barras · 0 nudos');
+    expect(document.querySelector('[data-recovery-version="recovered"]')?.textContent).toContain('3 barras · 4 nudos');
+    expect(document.querySelector('[data-recovery-version="saved"] time')?.getAttribute('dateTime')).toBeTruthy();
+    expect(document.querySelector('[data-recovery-version="recovered"] time')?.getAttribute('dateTime')).toBeTruthy();
+    expect(screen.getByText('Diferencia: 3 barras · 4 nudos · 3 cargas.')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Ver edición en solo lectura' }));
+    expect(screen.getByText('Vista previa de solo lectura')).toBeTruthy();
+    expect(document.querySelector('[data-recovery-readonly] svg')).toBeTruthy();
+    expect(screen.getByText(/Sólo lectura: esta vista no modifica ni guarda la recuperación/)).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Usar edición recuperada' }));
+
+    await waitFor(() => expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'Edición recuperada' })));
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('copia de seguridad'));
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('Diferencia: 3 barras · 4 nudos · 3 cargas.'));
+    expect((await repository.listRecoveries(saved.id)).some((record) => record.reason === 'manual' && record.project.name === 'Versión guardada')).toBe(true);
+  });
+
+  it('keeps the saved side only after showing consequences and records the opt-in decision', async () => {
+    const repository = new InMemoryProjectRepository();
+    const saved = { ...createDefaultProject(), name: 'Guardada', nodes: [], members: [], nodalLoads: [], memberLoads: [], memberInitialEffects: [], prescribedDisplacements: [] };
+    await repository.saveProject(saved);
+    const recovery = await repository.createRecovery({ ...createDefaultProject(), id: saved.id, name: 'Recuperada' }, 'conflict');
+    setLocalMetricsOptIn(window.localStorage, true);
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<ProjectProvider><ProjectHub repository={repository} onOpen={() => undefined} /></ProjectProvider>);
+
+    await screen.findByText('Conflicto de versiones');
+    await userEvent.click(screen.getByRole('button', { name: 'Conservar versión guardada' }));
+
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('La edición recuperada no se podrá restaurar después.'));
+    await waitFor(() => expect(repository.listRecoveries(saved.id)).resolves.not.toContainEqual(expect.objectContaining({ id: recovery.id })));
+    await waitFor(() => expect(getLocalMetrics(window.localStorage).events).toContainEqual(expect.objectContaining({ name: 'recovery_decision', code: 'keep-saved', entityDelta: 10 })));
   });
 });

@@ -48,4 +48,32 @@ describe('presentModelDoctorFinding', () => {
       explanation: expect.stringMatching(/N4.*not a finite number/i),
     });
   });
+
+  it('distinguishes missing supports from an incompatible or disconnected support and offers a guided repair', () => {
+    const presented = presentModelDoctorFinding(finding('no-supports', 'supports'), 'en');
+    expect(presented).toMatchObject({
+      title: 'The model has no supports',
+      explanation: expect.stringMatching(/no node has a support restraint/i),
+      suggestedAction: expect.stringMatching(/will not choose their type or position automatically/i),
+      contextualRepair: {
+        tool: 'support',
+        actionLabel: 'Add supports',
+        beginLabel: 'Open Support tool',
+      },
+    });
+    expect(presented.explanation).not.toMatch(/incompatible|disconnected/i);
+  });
+
+  it('uses the same precise cause and a non-automatic support route in Spanish', () => {
+    const presented = presentModelDoctorFinding(finding('no-supports', 'supports'), 'es');
+    expect(presented).toMatchObject({
+      title: 'El modelo no tiene apoyos',
+      explanation: expect.stringMatching(/ningún nudo tiene una restricción de apoyo/i),
+      contextualRepair: {
+        tool: 'support',
+        actionLabel: 'Añadir apoyos',
+      },
+    });
+    expect(presented.suggestedAction).toMatch(/no elegirá su tipo ni su posición automáticamente/i);
+  });
 });

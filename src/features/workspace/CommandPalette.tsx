@@ -6,6 +6,7 @@ import { useProject } from '../../store/ProjectContext';
 import { buildCommands, type CommandCategory, type CommandContext, type CommandListItem } from './commandRegistry';
 import type { EditorLayerAction } from '../canvas/editorLayers';
 import type { SurfacePresentation } from './surfacePresentation';
+import { recordLocalMetric } from '../../analytics/localMetrics';
 
 export interface CommandPaletteProps {
   open: boolean;
@@ -25,7 +26,7 @@ const GROUP_LABEL_KEYS: Record<CommandCategory, TranslationKey> = {
 
 const GROUP_ORDER: readonly CommandCategory[] = ['analysis', 'tools', 'navigate', 'results', 'view', 'export'];
 
-/** Coincidencia por subcadena sobre etiqueta y pista, sin acentos ni mayúsculas. */
+/** Coincidencia por subcadena sobre etiqueta, pista y sinónimos, sin acentos ni mayúsculas. */
 const normalize = (value: string) => value
   .toLocaleLowerCase('es')
   .normalize('NFD')
@@ -49,12 +50,18 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
   const { t } = useI18n();
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [pendingCommand, setPendingCommand] = useState<CommandListItem | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const reviewConfirmRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const listId = useId();
   const titleId = useId();
+  const lastRecordedEmptyQuery = useRef<string | null>(null);
 
-  const close = useCallback(() => onClose(), [onClose]);
+  const close = useCallback(() => {
+    setPendingCommand(null);
+    onClose();
+  }, [onClose]);
 
   const context = useMemo<CommandContext>(() => ({
     t,
@@ -85,6 +92,10 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
    *  monta al abrirse, difiere el efecto un frame para no competir con el
    *  cierre/restauración de foco de la propia paleta. */
   const execute = useCallback((command: CommandListItem) => {
+    if (command.requiresConfirmation) {
+      setPendingCommand(command);
+      return;
+    }
     if (command.deferredOpen) {
       close();
       window.requestAnimationFrame(() => command.run());
@@ -94,11 +105,19 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
     close();
   }, [close]);
 
+  const confirmPendingCommand = useCallback(() => {
+    if (!pendingCommand) return;
+    pendingCommand.run();
+    close();
+  }, [close, pendingCommand]);
+
   const matches = useMemo(() => {
     const needle = normalize(query.trim());
     if (!needle) return commands;
     return commands.filter((command) =>
-      normalize(command.label).includes(needle) || (command.hint ? normalize(command.hint).includes(needle) : false));
+      normalize(command.label).includes(needle)
+      || (command.hint ? normalize(command.hint).includes(needle) : false)
+      || command.aliases?.some((alias) => normalize(alias).includes(needle)));
   }, [commands, query]);
 
   const enabled = useMemo(() => matches.filter((command) => !command.disabled), [matches]);
@@ -106,9 +125,23 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
   useEffect(() => setActiveIndex(0), [query, open]);
 
   useEffect(() => {
+    const normalizedQuery = normalize(query.trim());
+    if (!open || !normalizedQuery || matches.length || lastRecordedEmptyQuery.current === normalizedQuery) return;
+    // Only the fact that search had no match is retained locally; the query
+    // itself can be model-specific text and is deliberately never recorded.
+    recordLocalMetric(window.localStorage, { name: 'command_search_empty' });
+    lastRecordedEmptyQuery.current = normalizedQuery;
+  }, [matches.length, open, query]);
+
+  useEffect(() => {
     if (!open) return;
     window.requestAnimationFrame(() => inputRef.current?.focus());
   }, [open]);
+
+  useEffect(() => {
+    if (!pendingCommand) return;
+    window.requestAnimationFrame(() => reviewConfirmRef.current?.focus());
+  }, [pendingCommand]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -161,7 +194,17 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
           <X size={16} />
         </button>
       </header>
-      <div className="command-palette-search">
+      {pendingCommand ? <section className="command-palette-review" aria-labelledby={`${titleId}-review`}>
+        <h3 id={`${titleId}-review`}>{t('palette.reviewTitle')}</h3>
+        <strong>{pendingCommand.label}</strong>
+        {pendingCommand.route ? <small>{pendingCommand.route}</small> : null}
+        {pendingCommand.hint ? <p>{pendingCommand.hint}</p> : null}
+        <p>{t('palette.reviewBody')}</p>
+        <footer>
+          <button type="button" onClick={() => setPendingCommand(null)}>{t('palette.reviewCancel')}</button>
+          <button ref={reviewConfirmRef} type="button" onClick={confirmPendingCommand}>{t('palette.reviewConfirm')}</button>
+        </footer>
+      </section> : <><div className="command-palette-search">
         <Search size={17} aria-hidden="true" />
         <input
           ref={inputRef}
@@ -182,6 +225,12 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
         <kbd aria-hidden="true">Esc</kbd>
       </div>
 
+      <p className="sr-only" role="status" aria-live="polite">
+        {matches.length === 0
+          ? t('palette.noResults', { query: query.trim() })
+          : `${t('palette.resultCount', { count: matches.length })} ${activeCommandId ? t('palette.activeCommand', { label: enabled[activeIndex]?.label ?? '' }) : ''}`}
+      </p>
+
       <div className="command-palette-list" id={listId} role="listbox" aria-label={t('palette.title')} ref={listRef}>
         {matches.length === 0 ? <p className="command-palette-empty">{t('palette.noResults', { query: query.trim() })}</p> : null}
         {GROUP_ORDER.map((group) => {
@@ -199,7 +248,7 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
                 role="option"
                 /* Sin etiqueta explícita, el nombre accesible concatena
                    `strong`+`small`+`kbd` sin separación ("NodoN"). */
-                aria-label={[command.label, command.hint, command.shortcut].filter(Boolean).join(' · ')}
+                aria-label={[command.label, command.route, command.hint, command.shortcut].filter(Boolean).join(' · ')}
                 aria-selected={isActive}
                 aria-disabled={command.disabled}
                 data-palette-active={isActive}
@@ -214,6 +263,7 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
                 <Icon size={16} aria-hidden="true" />
                 <span className="command-palette-label">
                   <strong>{command.label}</strong>
+                  {command.route ? <small className="command-palette-route">{command.route}</small> : null}
                   {command.hint ? <small>{command.hint}</small> : null}
                 </span>
                 {command.shortcut ? <kbd>{command.shortcut}</kbd> : null}
@@ -227,6 +277,7 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
         <span>{t('palette.hintNavigate')}</span>
         <span>{selection && selection.kind !== 'multi' ? t('palette.currentSelection', { id: selection.id }) : t('palette.noSelection')}</span>
       </footer>
+      </>}
     </div>
   </div>;
 };

@@ -1,11 +1,12 @@
 import { memo, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import { ChevronRight, CircleHelp, GripHorizontal, MoveDown, Plus, RotateCcw, Sigma, X } from 'lucide-react';
+import { ChevronRight, CircleHelp, GripHorizontal, MoveDown, Pencil, Plus, RotateCcw, Sigma, X } from 'lucide-react';
 import { fromDisplay, toDisplay, unitLabel, type UnitQuantity } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
+import type { TranslationKey } from '../../i18n/catalogs';
 import { useProjectAnalysis } from '../../store/ProjectAnalysisContext';
 import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
-import type { Selection, Tool } from '../../types';
+import type { LoadCase, Selection, Tool } from '../../types';
 import { InspectorNumericField } from './InspectorNumericField';
 import { InspectorProperties } from './InspectorProperties';
 import { readCanvasViewSettings, withCanvasViewSettings } from '../view/canvasViewSettings';
@@ -51,15 +52,27 @@ const Segmented = ({ value, options, onChange }: { value: string; options: Array
   </div>
 );
 
+const loadCaseCategoryKey: Record<LoadCase['category'], TranslationKey> = {
+  permanent: 'inspector.loadCaseCategoryPermanent',
+  variable: 'inspector.loadCaseCategoryVariable',
+  accidental: 'inspector.loadCaseCategoryAccidental',
+  other: 'inspector.loadCaseCategoryOther',
+};
+
 type InspectorProps = {
   className?: string;
   desktopWidth?: number;
   presentation?: Extract<SurfacePresentation, 'dock' | 'inset' | 'sheet'>;
   status?: SurfaceStatus;
   onClose?: () => void;
+  /** Renders selection context without the dense editor, preserving the same selection authority. */
+  compact?: boolean;
+  onExpand?: () => void;
   onDesktopWidthChange?: (width: number) => void;
   mobileDetent?: InspectorDetent;
   onMobileDetentChange?: (detent: InspectorDetent) => void;
+  /** Lets the workspace skip a detent unavailable in the current viewport. */
+  onMobileDetentCycle?: (direction: 1 | -1) => void;
   /** In Workspace this makes the panel one independently brokered owner. */
   surface?: 'detail' | 'analysisSetup' | 'view';
   /** Injected by Workspace for a selection-independent analysis surface. */
@@ -79,9 +92,12 @@ const InspectorContent = ({
   presentation = 'dock',
   status = 'active',
   onClose,
+  compact = false,
+  onExpand,
   onDesktopWidthChange,
   mobileDetent = 'medium',
   onMobileDetentChange,
+  onMobileDetentCycle,
   surface,
   selection,
   activeTool,
@@ -146,6 +162,10 @@ const InspectorContent = ({
       ? t('inspector.detentMedium')
       : t('inspector.detentLarge');
   const moveDetent = (direction: 1 | -1) => {
+    if (onMobileDetentCycle) {
+      onMobileDetentCycle(direction);
+      return;
+    }
     if (!onMobileDetentChange) return;
     const currentIndex = inspectorDetents.indexOf(mobileDetent);
     const nextIndex = (currentIndex + direction + inspectorDetents.length) % inspectorDetents.length;
@@ -190,6 +210,7 @@ const InspectorContent = ({
       data-workspace-surface={surface ?? 'detail'}
       data-surface-presentation={presentation}
       data-surface-status={status}
+      data-inspector-compact={compact || undefined}
       hidden={status !== 'active'}
       data-mobile-detent={sheet ? mobileDetent : undefined}
     >
@@ -211,8 +232,8 @@ const InspectorContent = ({
         onPointerUp={() => setResizeOrigin(null)}
         onPointerCancel={() => setResizeOrigin(null)}
       /> : null}
-      {sheet && (onMobileDetentChange || onClose) ? <div className="inspector-sheet-controls">
-        {onMobileDetentChange ? <button
+      {sheet && (onMobileDetentChange || onMobileDetentCycle || onClose) ? <div className="inspector-sheet-controls">
+        {onMobileDetentChange || onMobileDetentCycle ? <button
             type="button"
             className="inspector-sheet-handle"
             aria-label={`${t('inspector.detentGroup')}: ${detentLabel(mobileDetent)}`}
@@ -223,6 +244,16 @@ const InspectorContent = ({
             <span className="sr-only">{detentLabel(mobileDetent)}</span>
           </button> : <span aria-hidden="true" />}
         {onClose ? <button type="button" className="mobile-inspector-close" aria-label={t('inspector.close')} onClick={onClose}><X size={18} /></button> : null}
+      </div> : null}
+      {surface === 'detail' && !sheet ? <div className="inspector-context-controls">
+        <span>{t('inspector.tab')}</span>
+        <div>
+          {compact && onExpand ? <button type="button" className="inspector-context-expand" onClick={onExpand}>
+            <Pencil size={15} aria-hidden="true" />
+            <span>{t('inspector.editAll')}</span>
+          </button> : null}
+          {onClose ? <button type="button" className="inspector-context-close" aria-label={t('inspector.close')} onClick={onClose}><X size={18} aria-hidden="true" /></button> : null}
+        </div>
       </div> : null}
       {!surface ? <div className="inspector-tabs" role="tablist" aria-label={t('inspector.tab')}>
         <button id="inspector-tab-inspector" type="button" role="tab" aria-controls="inspector-tabpanel" aria-selected={tab === 'inspector'} tabIndex={tab === 'inspector' ? 0 : -1} className={tab === 'inspector' ? 'active' : ''} onClick={() => setTab('inspector')} onKeyDown={(event) => onTabKeyDown(event, 0)}>{t('inspector.tab')}</button>
@@ -319,7 +350,7 @@ const AnalysisSetupPanel = ({ activeTool, onChooseTool, selectedCombinationId, s
           const item = draft.loadCases.find((candidate) => candidate.id === loadCase.id);
           if (item) item.name = event.target.value;
           return draft;
-        })} /><small>{loadCase.category}</small></div>
+        })} /><small>{t(loadCaseCategoryKey[loadCase.category])}</small></div>
         <ChevronRight size={15} aria-hidden="true" />
       </div>)}</div>
     </section>

@@ -197,9 +197,11 @@ describe('origen y apoyos', () => {
     render(<Harness initial={{ family: 'portal-frame' }} />);
     expect(screen.getByText('Sin apoyos')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Origen de inserción' }));
+    expect(screen.getByText(/No restringe GDL/i)).toBeTruthy();
     await user.click(screen.getByRole('radio', { name: 'Empotramiento' }));
     expect(screen.queryByText('Sin apoyos')).toBeNull();
     expect(summaryValue('supports')).toBe('3');
+    expect(screen.getByText(/Restringe Ux, Uy y Rz/i)).toBeTruthy();
   });
 });
 

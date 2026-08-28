@@ -12,6 +12,7 @@ import type { PreparedTopologyRepair, ProjectCommand, ProjectCommandResult } fro
 import type { PreparedStructureGeneration } from '../commands/structureGeneration';
 import { WORKER_PROTOCOL_VERSION, type AnalysisWorkerPayload, type WorkerRequestEnvelope, type WorkerResponseEnvelope } from '../runtime/workerProtocol';
 import type { ProjectRepository } from '../storage/projectRepository';
+import { recordLocalMetric } from '../analytics/localMetrics';
 import type { PreparedStructuralEdit } from '../data/structuralEditing';
 
 // oxlint-disable-next-line react/only-export-components
@@ -33,6 +34,10 @@ interface HistoryEntry {
   project: ProjectModel;
   description: string;
 }
+
+// Kept here as a literal so the optional IndexedDB module can remain lazy in
+// the editor shell; this key carries only revision notifications, never data.
+const PROJECT_LIBRARY_CHANGE_KEY = 'structureCo.project-library.changed';
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [initial] = useState(() => loadProjectFromStorage(localStorage));
@@ -74,6 +79,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const repositoryRevisionRef = useRef<{ projectId: string; revision: number } | null>(null);
   const repositoryBlockedProjectIdRef = useRef<string | null>(null);
   const repositorySaveChainRef = useRef<Promise<void>>(Promise.resolve());
+  const projectChecksumRef = useRef<((project: ProjectModel) => Promise<string>) | null>(null);
 
   const setSelection = useCallback((next: Selection) => {
     selectionRef.current = next;
@@ -87,11 +93,12 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (typeof indexedDB === 'undefined') return undefined;
     let active = true;
-    void import('../storage/projectRepository').then(async ({ getProjectRepository, migrateLegacyProject }) => {
+    void import('../storage/projectRepository').then(async ({ getProjectRepository, migrateLegacyProject, projectChecksum }) => {
       const repository = getProjectRepository();
       const migration = await migrateLegacyProject(repository, localStorage);
       if (!active) return;
       repositoryRef.current = repository;
+      projectChecksumRef.current = projectChecksum;
       if (migration.record) repositoryRevisionRef.current = { projectId: migration.record.id, revision: migration.record.revision };
       if (migration.status === 'conflict') {
         repositoryBlockedProjectIdRef.current = projectRef.current.id;
@@ -108,6 +115,53 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       });
     });
     return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    const onLibraryChange = (event: StorageEvent) => {
+      if (event.key !== PROJECT_LIBRARY_CHANGE_KEY || !event.newValue) return;
+      try {
+        const change = JSON.parse(event.newValue) as { projectId?: unknown; revision?: unknown };
+        if (typeof change.projectId !== 'string' || change.projectId !== projectRef.current.id || typeof change.revision !== 'number') return;
+        if (repositoryRevisionRef.current?.projectId === change.projectId && repositoryRevisionRef.current.revision === change.revision) return;
+        const changedProjectId = change.projectId;
+        const repository = repositoryRef.current;
+        const checksum = projectChecksumRef.current;
+        if (!repository || !checksum) return;
+        // Otra pestaña escribió una revisión distinta. Marcamos el ID antes
+        // de cualquier await para que un autosave pendiente no gane la carrera
+        // y, después, conservamos la edición local si realmente difiere.
+        repositoryBlockedProjectIdRef.current = changedProjectId;
+        const localProject = structuredClone(projectRef.current);
+        repositorySaveChainRef.current = repositorySaveChainRef.current.catch(() => undefined).then(async () => {
+          try {
+            const saved = await repository.openProject(changedProjectId);
+            if (!saved) return;
+            if (await checksum(localProject) === saved.checksum) {
+              repositoryRevisionRef.current = { projectId: saved.id, revision: saved.revision };
+              repositoryBlockedProjectIdRef.current = null;
+              return;
+            }
+            await repository.createRecovery(localProject, 'conflict');
+            saveProjectToStorage(localStorage, saved.project);
+            recordLocalMetric(localStorage, { name: 'conflict_detected', code: 'cross-tab' });
+            setStorageState({
+              issue: 'conflict',
+              message: 'Otra pestaña guardó una revisión distinta. Esta edición se protegió como recuperación hasta que elijas una versión en Proyectos locales.',
+            });
+          } catch (error) {
+            setStorageState({
+              issue: 'repository-degraded',
+              message: error instanceof Error ? error.message : 'No se pudo proteger la edición al sincronizar otra pestaña.',
+            });
+          }
+        });
+      } catch {
+        // A malformed notification must not interrupt the editor.
+      }
+    };
+    window.addEventListener('storage', onLibraryChange);
+    return () => window.removeEventListener('storage', onLibraryChange);
   }, []);
 
   const invalidateAnalysis = useCallback(() => {
@@ -162,33 +216,51 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     if (transactionActive) return;
     const handle = window.setTimeout(() => {
       try {
-        saveProjectToStorage(localStorage, project);
-        setStorageState((current) => current.issue === 'save-failed'
-          ? { issue: null, message: null }
-          : current);
         const repository = repositoryRef.current;
-        if (repository && repositoryBlockedProjectIdRef.current !== project.id) {
-          repositorySaveChainRef.current = repositorySaveChainRef.current.catch(() => undefined).then(async () => {
-            const expected = repositoryRevisionRef.current?.projectId === project.id
-              ? repositoryRevisionRef.current.revision
-              : undefined;
-            try {
-              const record = await repository.saveProject(project, expected);
-              repositoryRevisionRef.current = { projectId: record.id, revision: record.revision };
-              if (repositoryBlockedProjectIdRef.current === record.id) repositoryBlockedProjectIdRef.current = null;
-              setStorageState((current) => current.issue === 'repository-degraded' || current.issue === 'conflict'
-                ? { issue: null, message: null }
-                : current);
-            } catch (error) {
-              const conflict = error instanceof Error && error.name === 'RepositoryConflictError';
-              if (conflict) repositoryBlockedProjectIdRef.current = project.id;
-              setStorageState({
-                issue: conflict ? 'conflict' : 'repository-degraded',
-                message: error instanceof Error ? error.message : 'La biblioteca IndexedDB no pudo guardar; el espejo compatible permanece disponible.',
-              });
-            }
-          });
+        const persistCompatible = (next: ProjectModel) => {
+          saveProjectToStorage(localStorage, next);
+          setStorageState((current) => current.issue === 'save-failed'
+            ? { issue: null, message: null }
+            : current);
+        };
+        if (!repository) {
+          persistCompatible(project);
+          return;
         }
+        // A conflict is already a durable recovery. Do not keep rewriting the
+        // compatibility mirror while the user is deciding which revision wins.
+        if (repositoryBlockedProjectIdRef.current === project.id) return;
+        repositorySaveChainRef.current = repositorySaveChainRef.current.catch(() => undefined).then(async () => {
+          const expected = repositoryRevisionRef.current?.projectId === project.id
+            ? repositoryRevisionRef.current.revision
+            : undefined;
+          try {
+            const record = await repository.saveProject(project, expected);
+            repositoryRevisionRef.current = { projectId: record.id, revision: record.revision };
+            persistCompatible(record.project);
+            localStorage.setItem(PROJECT_LIBRARY_CHANGE_KEY, JSON.stringify({ projectId: record.id, revision: record.revision, at: record.updatedAt }));
+            if (repositoryBlockedProjectIdRef.current === record.id) repositoryBlockedProjectIdRef.current = null;
+            setStorageState((current) => current.issue === 'repository-degraded' || current.issue === 'conflict'
+              ? { issue: null, message: null }
+              : current);
+          } catch (error) {
+            const conflict = error instanceof Error && error.name === 'RepositoryConflictError';
+            if (conflict) {
+              repositoryBlockedProjectIdRef.current = project.id;
+              // The local edit is now a recovery in IndexedDB. Mirror the
+              // canonical saved side so an offline reload cannot manufacture
+              // a second conflict from the compatibility store.
+              const saved = await repository.openProject(project.id).catch(() => null);
+              if (saved) saveProjectToStorage(localStorage, saved.project);
+            } else {
+              persistCompatible(project);
+            }
+            setStorageState({
+              issue: conflict ? 'conflict' : 'repository-degraded',
+              message: error instanceof Error ? error.message : 'La biblioteca IndexedDB no pudo guardar; el espejo compatible permanece disponible.',
+            });
+          }
+        });
       } catch (error) {
         setStorageState({
           issue: 'save-failed',

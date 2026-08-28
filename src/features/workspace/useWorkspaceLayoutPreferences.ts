@@ -14,6 +14,12 @@ export type ToolDockPosition = 'bottom' | 'left';
  */
 export interface WorkspaceLayoutPreferences {
   inspectorCollapsed: boolean;
+  /**
+   * El resumen conserva la selección y sus resultados rápidos, pero cede el
+   * ancho de la mesa al Centro analítico. Es una preferencia de presentación
+   * local: no forma parte del proyecto ni altera una selección.
+   */
+  inspectorCompact: boolean;
   fullCanvas: boolean;
   inspectorWidth: number;
   inspectorDetent: InspectorDetent;
@@ -33,6 +39,28 @@ export const normalizeInspectorDetent = (
   return detent;
 };
 
+const INSPECTOR_DETENT_ORDER: readonly InspectorDetent[] = ['compact', 'medium', 'large'];
+
+/**
+ * Advances to a height that is actually available in the current viewport.
+ * In a short landscape viewport `large` normalizes to `medium`; skipping that
+ * duplicate keeps the sheet handle responsive instead of appearing inert.
+ */
+export const nextAvailableInspectorDetent = (
+  detent: InspectorDetent,
+  direction: 1 | -1,
+  viewport: { width: number; height: number },
+): InspectorDetent => {
+  const current = normalizeInspectorDetent(detent, viewport);
+  const currentIndex = INSPECTOR_DETENT_ORDER.indexOf(current);
+  for (let offset = 1; offset < INSPECTOR_DETENT_ORDER.length; offset += 1) {
+    const candidateIndex = (currentIndex + direction * offset + INSPECTOR_DETENT_ORDER.length) % INSPECTOR_DETENT_ORDER.length;
+    const candidate = normalizeInspectorDetent(INSPECTOR_DETENT_ORDER[candidateIndex], viewport);
+    if (candidate !== current) return candidate;
+  }
+  return current;
+};
+
 export const clampInspectorWidth = (value: number) => Math.min(
   MAX_INSPECTOR_WIDTH,
   Math.max(MIN_INSPECTOR_WIDTH, Math.round(value)),
@@ -40,6 +68,7 @@ export const clampInspectorWidth = (value: number) => Math.min(
 
 const DEFAULT_PREFERENCES: WorkspaceLayoutPreferences = {
   inspectorCollapsed: true,
+  inspectorCompact: false,
   fullCanvas: false,
   inspectorWidth: DEFAULT_INSPECTOR_WIDTH,
   inspectorDetent: 'medium',
@@ -79,6 +108,7 @@ const readPreferences = (): WorkspaceLayoutPreferences => {
     // the legacy record, but migrate that one presentation choice to closed;
     // a deliberate choice in v2 remains sticky.
     inspectorCollapsed: currentRecord && typeof stored.inspectorCollapsed === 'boolean' ? stored.inspectorCollapsed : DEFAULT_PREFERENCES.inspectorCollapsed,
+    inspectorCompact: typeof stored.inspectorCompact === 'boolean' ? stored.inspectorCompact : DEFAULT_PREFERENCES.inspectorCompact,
     fullCanvas: typeof stored.fullCanvas === 'boolean' ? stored.fullCanvas : DEFAULT_PREFERENCES.fullCanvas,
     inspectorWidth: typeof stored.inspectorWidth === 'number' && Number.isFinite(stored.inspectorWidth)
       ? clampInspectorWidth(stored.inspectorWidth)

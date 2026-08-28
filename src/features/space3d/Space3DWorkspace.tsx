@@ -331,6 +331,24 @@ const WorkspaceBody = ({
     () => [...new Set(pendingNotes.filter((item) => !BRIDGE_RESOLVABLE.has(item.code)).map((item) => item.code))],
     [pendingNotes],
   );
+  const nextBridgeRequirement = pendingNotes[0] ?? null;
+  /**
+   * El puente nunca rellena campos ni reconoce una diferencia por su cuenta.
+   * Esta acción sólo lleva al inspector de la entidad que el propio puente
+   * marcó, para que la persona decida el dato y lo guarde explícitamente.
+   */
+  const completeBridgeRequirement = (item: Space3DBridgeNote) => {
+    const target = item.entityKind === 'project'
+      ? project.nodes[0] ? { kind: 'node' as const, id: project.nodes[0].id } : null
+      : item.entityKind === 'member'
+        ? project.members.some((member) => member.id === item.entityId) ? { kind: 'member' as const, id: item.entityId } : null
+        : item.entityKind === 'node'
+          ? project.nodes.some((node) => node.id === item.entityId) ? { kind: 'node' as const, id: item.entityId } : null
+          : project.nodalLoads.some((load) => load.id === item.entityId) ? { kind: 'load' as const, id: item.entityId } : null;
+    if (!target) return;
+    setRail('model');
+    selectEntity(target);
+  };
   const diverged = sourceProject !== undefined && derived !== null
     && !space3dMatchesPlanarSource(project, sourceProject);
 
@@ -461,6 +479,9 @@ const WorkspaceBody = ({
         <button type="button" className="space3d-tool" onClick={cancelAnalysis} disabled={!running} title={t('space3d.cancelAnalysis')}>
           <CircleStop size={16} aria-hidden="true" /><span className="space3d-visually-hidden">{t('space3d.cancelAnalysis')}</span>
         </button>
+        {nextBridgeRequirement ? <p className="space3d-run-blocked" role="status">
+          {t('space3d.bridgeNextRequirement', { requirement: t(BRIDGE_KEYS[nextBridgeRequirement.code] ?? 'space3d.error.generic') })}
+        </p> : null}
       </div>
     </div>
 
@@ -480,8 +501,16 @@ const WorkspaceBody = ({
           <p className="space3d-notice space3d-notice--warn" role="status">{t('space3d.bridgeBody')}</p>
           <ul className="space3d-issues">
             {[...new Map(pendingNotes.map((item) => [item.code, item])).values()].map((item) => <li key={item.code} data-diagnostic-code={item.code}>
-              <span>{t(BRIDGE_KEYS[item.code] ?? 'space3d.error.generic')}</span>
+              <span className="space3d-issue-copy" id={`space3d-bridge-${item.code}`}>{t(BRIDGE_KEYS[item.code] ?? 'space3d.error.generic')}</span>
               <em>{pendingNotes.filter((other) => other.code === item.code).map((other) => other.entityId).filter(Boolean).join(' ')}</em>
+              {BRIDGE_RESOLVABLE.has(item.code)
+                ? <button
+                  type="button"
+                  className="space3d-button space3d-button--ghost space3d-bridge-complete"
+                  onClick={() => completeBridgeRequirement(item)}
+                  aria-describedby={`space3d-bridge-${item.code}`}
+                >{t('space3d.bridgeCompleteNow')}</button>
+                : null}
             </li>)}
           </ul>
           {acknowledgeable.length > 0

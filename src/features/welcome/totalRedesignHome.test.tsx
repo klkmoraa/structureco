@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { readFileSync } from 'node:fs';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createBlankProject } from '../../data/defaultProject';
@@ -51,12 +51,12 @@ describe('Home total redesign contract', () => {
     expect(compactCss).not.toMatch(/\.project-hub__list\s*{[^}]*overflow-x:\s*auto;/s);
   });
 
-  it('exposes seven real Home destinations without a decorative step rail', () => {
+  it('exposes named Home destinations without a decorative step rail', () => {
     const { container } = renderHome();
     const navigation = screen.getByRole('navigation', { name: 'Navegación principal' });
 
     expect(navigation).toBeTruthy();
-    for (const name of ['Inicio', 'Proyectos', 'Plantillas', 'Biblioteca', 'Aula', 'Importar', 'Space 3D']) {
+    for (const name of ['Inicio', 'Proyectos', 'Plantillas', 'Biblioteca', 'Estudio de ilustraciones', 'Aula', 'Importar', 'Space 3D']) {
       expect(within(navigation).getByRole('button', { name })).toBeTruthy();
     }
     expect(container.querySelector('.welcome-steps')).toBeNull();
@@ -133,35 +133,38 @@ describe('Home total redesign contract', () => {
     expect(screen.getByRole('heading', { name: 'Elige una estructura de partida' })).toBeTruthy();
   });
 
-  it('opens the full Illustration Studio from desktop Settings and returns focus after Escape', async () => {
+  it('opens real preferences from desktop Settings and returns focus after Escape', async () => {
     const user = userEvent.setup();
     renderHome();
     const launcher = screen.getByRole('button', { name: 'Ajustes' });
     await user.click(launcher);
-    expect(screen.getByRole('dialog', { name: 'Estudio de ilustraciones' })).toBeTruthy();
-    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cerrar estudio' }));
-    await user.keyboard('{Escape}');
+    expect(screen.getByRole('dialog', { name: 'Ajustes' })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: 'Idioma' })).toBeTruthy();
+    expect((screen.getByRole('checkbox', { name: /Guardar mediciones locales/i }) as HTMLInputElement).checked).toBe(false);
     expect(screen.queryByRole('dialog', { name: 'Estudio de ilustraciones' })).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cerrar ajustes' })));
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Ajustes' })).toBeNull();
     expect(document.activeElement).toBe(launcher);
   });
 
-  it('includes Settings in the existing mobile navigation menu', async () => {
+  it('includes real Settings in the existing mobile navigation menu', async () => {
     const user = userEvent.setup();
     const { container } = renderHome();
     await user.click(screen.getByRole('button', { name: 'Abrir navegación' }));
     const mobileNavigation = container.querySelector('.sc-home-nav--mobile') as HTMLElement;
     await user.click(within(mobileNavigation).getByRole('button', { name: 'Ajustes' }));
-    expect(screen.getByRole('dialog', { name: 'Estudio de ilustraciones' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Ajustes' })).toBeTruthy();
     expect(container.querySelector('.sc-home-nav--mobile')).toBeNull();
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('dialog', { name: 'Estudio de ilustraciones' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Ajustes' })).toBeNull();
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Abrir navegación' }));
   });
 
   it('makes Home inert and aria-hidden while the Studio modal is open', async () => {
     const user = userEvent.setup();
     renderHome();
-    await user.click(screen.getByRole('button', { name: 'Ajustes' }));
+    await user.click(screen.getByRole('button', { name: 'Estudio de ilustraciones' }));
     const home = screen.getByTestId('welcome-screen');
     expect(home.inert).toBe(true);
     expect(home.getAttribute('aria-hidden')).toBe('true');

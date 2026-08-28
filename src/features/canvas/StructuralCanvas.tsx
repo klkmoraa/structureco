@@ -366,10 +366,10 @@ export const StructuralCanvas = ({
   useEffect(() => {
     if (!surfaceBroker) return;
     const intentOpen = surfaceBroker.stateFor('contextualActions').open;
-    const shouldOpen = !compactCanvasChrome && Boolean(selection) && activeTool === 'select' && !memberStart;
+    const shouldOpen = Boolean(selection) && activeTool === 'select' && !memberStart;
     if (shouldOpen && !intentOpen) surfaceBroker.openSurface('contextualActions');
     else if (!shouldOpen && intentOpen) surfaceBroker.closeSurface('contextualActions');
-  }, [activeTool, compactCanvasChrome, memberStart, selection, surfaceBroker]);
+  }, [activeTool, memberStart, selection, surfaceBroker]);
   const structuralEditPreview = useMemo((): { prepared: PreparedStructuralEdit | null; error: string } => {
     if (!structuralEditDraft) return { prepared: null, error: '' };
     if (structuralEditDraft.sourceSnapshot !== structuralEditSnapshot(project)) {
@@ -1871,6 +1871,14 @@ export const StructuralCanvas = ({
       // which is where a screen reader's quick-nav browse mode intercepts
       // single letters — they must not fire, or they hijack that navigation.
       const canvasHasFocus = document.activeElement instanceof Node && Boolean(hostRef.current?.contains(document.activeElement));
+      // WCAG 2.2 2.5.7: moving geometry cannot depend on a drag. F2 is an
+      // intentional keyboard entry from a focused canvas object to the same
+      // numeric, reversible structural editor offered by the visual control.
+      if (event.key === 'F2' && canvasHasFocus && selection && editCapabilities.structural) {
+        event.preventDefault();
+        emitWorkspaceCommand('open-structural-edit');
+        return;
+      }
       if (key === 'r' && !command && !event.altKey && canvasHasFocus && !compactCanvasChrome) {
         if (!repeatCandidate) return;
         event.preventDefault();
@@ -1932,7 +1940,7 @@ export const StructuralCanvas = ({
       window.removeEventListener('blur', cancelActiveInteraction);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [activateRepeat, cancelActiveInteraction, cancelStructuralEdit, candidatePicker, closeCandidatePicker, compactCanvasChrome, copyStructuralSelection, deleteSelection, duplicateDraft, pasteStructuralSelection, repeatCandidate, selection, setActiveTool, setSelection, startDuplicate, structuralEditDraft]);
+  }, [activateRepeat, cancelActiveInteraction, cancelStructuralEdit, candidatePicker, closeCandidatePicker, compactCanvasChrome, copyStructuralSelection, deleteSelection, duplicateDraft, editCapabilities.structural, pasteStructuralSelection, repeatCandidate, selection, setActiveTool, setSelection, startDuplicate, structuralEditDraft]);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -2292,7 +2300,7 @@ export const StructuralCanvas = ({
         role="application"
         aria-label={t('canvas.workspace')}
         aria-describedby="canvas-interaction-description"
-        aria-keyshortcuts="V H N M S P D O C X B R ArrowUp ArrowDown Home End Enter Delete Backspace Escape"
+        aria-keyshortcuts="V H N M S P D O C X B R F2 ArrowUp ArrowDown Home End Enter Delete Backspace Escape"
         data-pointer-support="mouse touch pen"
         tabIndex={0}
         onPointerDownCapture={handlePointerDownCapture}
@@ -2312,7 +2320,7 @@ export const StructuralCanvas = ({
         }}
       >
         <title>{t('canvas.workspace')}</title>
-        <desc id="canvas-interaction-description">{t('canvas.gestureDesktop')}. {t('canvas.gestureTouch')}.</desc>
+        <desc id="canvas-interaction-description">{t('canvas.gestureDesktop')}. {t('canvas.gestureTouch')}. {t('canvas.keyboardEditAlternative')}.</desc>
         <defs>
           <marker id="arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--force)" /></marker>
           <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--shear)" /></marker>
@@ -2571,7 +2579,7 @@ export const StructuralCanvas = ({
         onCancel={cancelStructuralEdit}
       />
 
-      {surfaceBroker && !compactCanvasChrome ? <ContextualActions
+      {surfaceBroker ? <ContextualActions
         selection={selection}
         availability={contextualActionAvailability}
         active={contextualActionsSurface?.status === 'active'

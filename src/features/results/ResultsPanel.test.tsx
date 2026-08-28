@@ -109,6 +109,22 @@ describe('Results analytical center', () => {
     expect(panel.classList.contains('desktop-collapsed')).toBe(true);
   });
 
+  it('keeps a solved run legible in the collapsed dock', async () => {
+    const user = userEvent.setup();
+    const project = createHibbelerStyleDiagramPractice();
+    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+    render(<ProjectProvider><ResultsPanel presentation="dock" status="active" defaultDesktopExpanded /></ProjectProvider>);
+
+    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
+    await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+    await user.click(screen.getByRole('button', { name: 'Cerrar resultados' }));
+
+    const panel = screen.getByRole('region', { name: 'Resultados del análisis' });
+    expect(panel.classList.contains('desktop-collapsed')).toBe(true);
+    expect(screen.getByTestId('results-collapsed-governing').textContent).toMatch(/M gobernante.*kN·m.*AB/i);
+    expect(screen.getByTestId('results-collapsed-status').textContent).toMatch(/resuelto.*actualizado/i);
+  }, 10_000);
+
   it('uses one quantity rail and keeps dense views beside the result quantities', async () => {
     const user = userEvent.setup();
     renderResults();
@@ -129,6 +145,27 @@ describe('Results analytical center', () => {
       'Aprender',
     ]);
   });
+
+  it('keeps critical values out of the SVG collision zone and makes each station pinnable', async () => {
+    const user = userEvent.setup();
+    renderResults();
+    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
+    const chart = await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
+    const legend = screen.getByRole('region', { name: 'Puntos notables' });
+    const stations = within(legend).getAllByRole('button');
+
+    // El SVG conserva marcas y títulos semánticos, no texto que compita por el
+    // mismo píxel con la curva o los ticks.
+    expect(chart.querySelectorAll('.chart-critical text')).toHaveLength(0);
+    expect(stations.length).toBeGreaterThan(0);
+
+    await user.click(stations[0]);
+    expect(stations[0].getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByLabelText('Cursor de resultados').textContent).not.toBe('none');
+    await user.keyboard('{Enter}');
+    expect(stations[0].getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByLabelText('Cursor de resultados').textContent).toBe('none');
+  }, 10_000);
 
   it('localizes the empty classroom next step in English', () => {
     const project = createBlankProject();

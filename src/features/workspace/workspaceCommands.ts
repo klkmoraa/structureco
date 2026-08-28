@@ -49,6 +49,8 @@ export interface WorkspaceCommands {
   'export-png': void;
   /** Raise the command palette; emitted from the ToolRail trigger or keyboard shortcut. */
   'open-command-palette': void;
+  /** Reopen the non-blocking first-analysis companion after it was dismissed. */
+  'open-first-analysis-guide': void;
   /** Open the preventive Model Doctor surface before or after analysis. */
   'open-model-doctor': void;
   /**

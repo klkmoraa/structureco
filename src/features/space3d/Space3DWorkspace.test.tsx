@@ -335,8 +335,21 @@ describe('Space3DWorkspace derived from a 2D project', () => {
     renderDerived();
     expect((screen.getByRole('button', { name: /^analizar$/i }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText(/no se ha inventado ningún valor/i)).toBeDefined();
-    expect(screen.getByText(/inercia del eje débil/i)).toBeDefined();
+    expect(screen.getByText(/siguiente requisito para analizar/i)).toBeDefined();
+    expect(screen.getAllByText(/inercia del eje débil/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/restringe uz/i)).toBeDefined();
+  });
+
+  it('lleva al inspector del requisito de puente sin inventar ni guardar valores', async () => {
+    const user = userEvent.setup();
+    renderDerived();
+
+    const weakAxisIssue = screen.getAllByText(/falta la inercia del eje débil/i).find((element) => element.classList.contains('space3d-issue-copy'))!;
+    await user.click(within(weakAxisIssue.closest('li')!).getByRole('button', { name: /completar ahora/i }));
+
+    expect(screen.getByRole('button', { name: /guardar barra/i })).toBeDefined();
+    expect((screen.getByLabelText(/inercia iy/i) as HTMLInputElement).value).toBe('0');
+    expect((screen.getByRole('button', { name: /^analizar$/i }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('desbloquea el análisis cuando el usuario completa lo que faltaba', async () => {

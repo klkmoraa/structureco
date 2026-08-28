@@ -301,7 +301,7 @@ export const StructureGeneratorPanel = ({
       options={GENERATOR_SUPPORT_CHOICES.map((choice) => ({ value: choice, label: t(`support.${choice}`) }))}
       onValueChange={(value) => patch({ support: value as GeneratorFormState['support'] })}
     />
-    <small className="structure-generator__hint">{t('support.hint')}</small>
+    <small className="structure-generator__hint">{t('support.hint')} {t(`support.detail.${form.support}` as never)}</small>
   </div>;
 
   const propertyFields = <div className="structure-generator__properties">

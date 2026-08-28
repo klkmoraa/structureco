@@ -19,7 +19,7 @@ import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import type { SurfaceExtent, SurfacePresentation } from '../workspace/surfacePresentation';
 import { buildModelDoctorReport, type ModelDoctorFinding, type ModelDoctorSeverity } from './modelDoctorDiagnostics';
 import { getModelDoctorCopy } from './modelDoctorCopy';
-import { presentModelDoctorFinding } from './modelDoctorPresentation';
+import { presentModelDoctorFinding, type ContextualModelDoctorRepair } from './modelDoctorPresentation';
 import { prepareTopologyRepair, type TopologyRepairPreview } from './topologyRepairPreview';
 import './modelDoctor.css';
 
@@ -224,6 +224,46 @@ const RepairPreview = ({
   </section>;
 };
 
+/**
+ * A repair route for choices that cannot be made safely by the app. Unlike the
+ * topology preview above, this component never prepares or applies a project
+ * mutation: it previews the next user-controlled editing step instead.
+ */
+const GuidedToolRepairPreview = ({
+  repair,
+  onBegin,
+  onCancel,
+}: {
+  repair: ContextualModelDoctorRepair;
+  onBegin: () => void;
+  onCancel: () => void;
+}) => {
+  const backRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const timer = window.setTimeout(() => backRef.current?.focus(), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  return <section className="model-doctor-preview model-doctor-guided-repair" aria-labelledby="model-doctor-guided-repair-title">
+    <div className="model-doctor-preview__heading">
+      <button ref={backRef} type="button" className="model-doctor-preview__back" onClick={onCancel} aria-label={repair.returnLabel}>
+        <ArrowLeft size={18} aria-hidden="true" />
+      </button>
+      <div>
+        <h3 id="model-doctor-guided-repair-title">{repair.previewTitle}</h3>
+        <p>{repair.previewDescription}</p>
+      </div>
+    </div>
+    <ol className="model-doctor-guided-repair__steps">
+      {repair.steps.map((step) => <li key={step}>{step}</li>)}
+    </ol>
+    <footer className="model-doctor-preview__actions">
+      <Button size="touch" variant="ghost" onClick={onCancel}>{repair.returnLabel}</Button>
+      <Button size="touch" variant="primary" leadingIcon={<Wrench />} onClick={onBegin}>{repair.beginLabel}</Button>
+    </footer>
+  </section>;
+};
+
 export const ModelDoctor = ({
   open,
   onOpenChange,
@@ -245,6 +285,7 @@ export const ModelDoctor = ({
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const [localAcknowledged, setLocalAcknowledged] = useState<Set<string>>(() => new Set());
   const [preview, setPreview] = useState<TopologyRepairPreview | null>(null);
+  const [guidedRepair, setGuidedRepair] = useState<ContextualModelDoctorRepair | null>(null);
   const [repairError, setRepairError] = useState('');
   const [applyingRepair, setApplyingRepair] = useState(false);
   const [repairApplied, setRepairApplied] = useState(false);
@@ -264,14 +305,14 @@ export const ModelDoctor = ({
   }, [report]);
 
   useEffect(() => {
-    if (preview || !previewReturnId) return;
+    if (preview || guidedRepair || !previewReturnId) return;
     const timer = window.setTimeout(() => {
       const returnTarget = document.getElementById(previewReturnId);
       if (returnTarget instanceof HTMLElement) returnTarget.focus();
       setPreviewReturnId(null);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [preview, previewReturnId]);
+  }, [guidedRepair, preview, previewReturnId]);
 
   useEffect(() => {
     if (!repairApplied || preview) return undefined;
@@ -319,6 +360,24 @@ export const ModelDoctor = ({
     } catch (cause) {
       setRepairError(cause instanceof Error ? cause.message : String(cause));
     }
+  };
+  const openGuidedRepairPreview = (repair: ContextualModelDoctorRepair, returnId: string) => {
+    setPreviewReturnId(returnId);
+    setGuidedRepair(repair);
+    setRepairError('');
+    setRepairApplied(false);
+  };
+  const beginGuidedRepair = () => {
+    if (!guidedRepair) return;
+    setActiveTool(guidedRepair.tool);
+    setGuidedRepair(null);
+    setPreviewReturnId(null);
+    // The production surface can remain mounted as a peek while the user
+    // places a support, making the Doctor an explicit return destination. The
+    // local fallback closes the modal so the canvas remains operable in hosts
+    // that do not provide the surface broker.
+    if (onPeek) onPeek();
+    else onOpenChange(false);
   };
   const previewStale = preview !== null
     && projectCommandSnapshot(project) !== preview.prepared.command.sourceSnapshot;
@@ -371,6 +430,10 @@ export const ModelDoctor = ({
       onRegenerate={() => openRepairPreview()}
       onApply={() => { void applyRepair(); }}
       onCancel={() => { setPreview(null); setRepairError(''); }}
+    /> : guidedRepair ? <GuidedToolRepairPreview
+      repair={guidedRepair}
+      onBegin={beginGuidedRepair}
+      onCancel={() => { setGuidedRepair(null); setRepairError(''); }}
     /> : <>{report.total > 0 ? <section className="model-doctor-health" aria-label={copy.healthLabel} data-model-health="attention">
       <div className="model-doctor-health__icon" aria-hidden="true"><ShieldAlert size={22} /></div>
       <div>
@@ -455,8 +518,10 @@ export const ModelDoctor = ({
                 : <span className="model-doctor-location-unavailable">{copy.unavailableLocation}</span>}
               {finding.suggestedTool ? <Button aria-label={`${copy.useTool}: ${presented.title}`} size="touch" variant="ghost" leadingIcon={<Wrench />} onClick={() => {
                 setActiveTool(finding.suggestedTool!);
-                onOpenChange(false);
+                if (onPeek) onPeek();
+                else onOpenChange(false);
               }}>{copy.useTool}</Button> : null}
+              {presented.contextualRepair ? <Button id={previewActionId} aria-label={`${presented.contextualRepair.actionLabel}: ${presented.title}`} size="touch" leadingIcon={<Wrench />} onClick={() => openGuidedRepairPreview(presented.contextualRepair!, previewActionId)}>{presented.contextualRepair.actionLabel}</Button> : null}
               {finding.repair?.available ? <Button id={previewActionId} aria-label={`${copy.previewAction}: ${presented.title}`} size="touch" leadingIcon={<Wrench />} onClick={() => openRepairPreview(previewActionId)}>{copy.previewAction}</Button> : null}
               {finding.canAcknowledge ? <Button aria-label={`${isAcknowledged ? copy.unacknowledge : copy.acknowledge}: ${presented.title}`} size="touch" variant="ghost" onClick={() => toggleAcknowledged(finding.id)}>
                 {isAcknowledged ? copy.unacknowledge : copy.acknowledge}

@@ -17,12 +17,14 @@ describe('AppShellLayout', () => {
       inspectorWidth={384}
       footer={<footer>Footer</footer>}
       inspectorCollapsed
+      inspectorCompact
       shellClass="M1"
     />);
 
     const shell = container.querySelector('.app-shell');
     expect(shell?.getAttribute('data-project-id')).toBe('project-01');
     expect(shell?.getAttribute('data-inspector-collapsed')).toBe('true');
+    expect(shell?.getAttribute('data-inspector-compact')).toBe('true');
     expect(shell?.getAttribute('data-shell-class')).toBe('M1');
     // La compacidad del riel se deriva de la clase, no llega como prop propia.
     expect(shell?.getAttribute('data-tool-rail-compact')).toBe('true');
