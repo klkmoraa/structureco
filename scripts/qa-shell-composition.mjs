@@ -60,7 +60,7 @@ const newPage = async (viewport) => {
 };
 
 const enterWorkspace = async (page) => {
-  await page.goto(baseURL, { waitUntil: 'networkidle' });
+  await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 20_000 });
   await page.getByTestId('welcome-screen').waitFor({ state: 'visible', timeout: 20_000 });
   // CRI-116 · el pórtico de ejemplo vive en el tercer paso desde CRI-112.
   const launcher = await openExamplePortal(page);
