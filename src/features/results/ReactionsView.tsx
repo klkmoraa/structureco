@@ -4,7 +4,6 @@ import { resolveReliability } from '../../engine/reliability';
 import { toDisplay, unitLabel } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import { useProject } from '../../store/ProjectContext';
-import type { ResultRef } from './provenance';
 import { ResultExtremeCard } from './ResultExtremeCard';
 import { formatResultNumber } from './resultFormatting';
 
@@ -26,9 +25,6 @@ export const ReactionsView = () => {
   const momentUnit = unitLabel(units, 'moment');
   const nodeResults = useMemo(() => analysis?.nodeResults ?? [], [analysis]);
   const reliability = analysis ? resolveReliability(analysis).level : 'failed';
-  const caseOrCombinationId = project.loadCases.find((loadCase) => loadCase.active)?.id
-    ?? project.loadCases[0]?.id
-    ?? '—';
 
   /**
    * Los extremos no dependen del cursor de resultados: se derivan una sola vez
@@ -46,26 +42,15 @@ export const ReactionsView = () => {
       nodeId: string;
       value: number;
       quantity: 'force' | 'moment';
-      component: ResultRef['component'];
     }> = [];
     const rx = critical((result) => result.rx);
     const ry = critical((result) => result.ry);
     const rm = critical((result) => result.rm);
-    if (rx) entries.push({ id: 'rx', symbol: 'Rx', nodeId: rx.nodeId, value: rx.rx, quantity: 'force', component: 'x' });
-    if (ry) entries.push({ id: 'ry', symbol: 'Ry', nodeId: ry.nodeId, value: ry.ry, quantity: 'force', component: 'y' });
-    if (rm) entries.push({ id: 'rm', symbol: 'Mz', nodeId: rm.nodeId, value: rm.rm, quantity: 'moment', component: 'rotation' });
+    if (rx) entries.push({ id: 'rx', symbol: 'Rx', nodeId: rx.nodeId, value: rx.rx, quantity: 'force' });
+    if (ry) entries.push({ id: 'ry', symbol: 'Ry', nodeId: ry.nodeId, value: ry.ry, quantity: 'force' });
+    if (rm) entries.push({ id: 'rm', symbol: 'Mz', nodeId: rm.nodeId, value: rm.rm, quantity: 'moment' });
     return entries;
   }, [nodeResults]);
-
-  const provenanceRefs = useMemo(() => new Map(extremes.map((extreme) => [extreme.id, {
-    quantity: 'R',
-    entity: { kind: 'node', id: extreme.nodeId },
-    component: extreme.component,
-    caseOrCombinationId,
-    signConvention: t(extreme.component === 'x'
-      ? 'results.signGlobalX'
-      : extreme.component === 'y' ? 'results.signGlobalY' : 'results.signGlobalRotation'),
-  } satisfies ResultRef])), [caseOrCombinationId, extremes, t]);
 
   return <div className="dense-reactions">
     <div className="result-extreme-grid">
@@ -77,8 +62,6 @@ export const ReactionsView = () => {
         position={`${t('results.node')} ${extreme.nodeId}`}
         reliability={reliability}
         accent="reaction"
-        analysis={analysis ?? undefined}
-        provenanceRef={provenanceRefs.get(extreme.id)}
         onLocate={() => setSelection({ kind: 'node', id: extreme.nodeId })}
       />)}
     </div>

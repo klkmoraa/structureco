@@ -6,7 +6,6 @@ import { StructuralCanvas } from '../canvas/StructuralCanvas';
 import { ToolRail } from '../canvas/ToolRail';
 import { TopBar } from '../topbar/TopBar';
 import { ClassroomGuide } from '../classroom/ClassroomGuide';
-import { FirstAnalysisGuide } from './FirstAnalysisGuide';
 import { ToastNotification } from './ToastNotification';
 import { useI18n } from '../../i18n/useI18n';
 import { useProject } from '../../store/ProjectContext';
@@ -57,7 +56,7 @@ const focusStableLauncherIfUnclaimed = (selector: string): void => {
   });
 };
 
-type WorkspaceShellProps = { onOpenHome: () => void; onOpenHomeTemplates: () => void; onOpenSpace3D: () => void; projectId: string };
+type WorkspaceShellProps = { onOpenHome: () => void; onOpenSpace3D: () => void; projectId: string };
 type LayoutController = ReturnType<typeof useWorkspaceLayoutPreferences>;
 type PendingModelDoctorNotification = {
   id: number;
@@ -68,7 +67,6 @@ type PendingModelDoctorNotification = {
 
 const WorkspaceBrokerContent = ({
   onOpenHome,
-  onOpenHomeTemplates,
   onOpenSpace3D,
   projectId,
   shellRef,
@@ -78,7 +76,6 @@ const WorkspaceBrokerContent = ({
   layoutController: LayoutController;
 }) => {
   const [modelDoctorAcknowledgedIds, setModelDoctorAcknowledgedIds] = useState<Set<string>>(() => new Set());
-  const [firstAnalysisGuideOpen, setFirstAnalysisGuideOpen] = useState(() => window.sessionStorage.getItem('structureco:first-analysis-guide.active') === '1');
   const [revisionBaseline, setRevisionBaseline] = useState<RevisionSnapshot | null>(null);
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
   const { t } = useI18n();
@@ -144,10 +141,6 @@ const WorkspaceBrokerContent = ({
         // o Datasheet.
         if (canOpenPalette) openSurface('palette');
       }),
-      onWorkspaceCommand('open-first-analysis-guide', () => {
-        window.sessionStorage.setItem('structureco:first-analysis-guide.active', '1');
-        setFirstAnalysisGuideOpen(true);
-      }),
       onWorkspaceCommand('open-model-doctor', () => openSurface('doctor')),
       onWorkspaceCommand('open-datasheet', () => openSurface('datasheet')),
       onWorkspaceCommand('open-structural-bom', () => openSurface('bom')),
@@ -189,17 +182,6 @@ const WorkspaceBrokerContent = ({
     (['generator', 'dense', 'datasheet', 'bom', 'comparison', 'doctor', 'palette'] as const).forEach((surface) => closeSurface(surface));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
-
-  useEffect(() => {
-    if (project.nodes.length === 0 && project.members.length === 0 && !analysis?.success) {
-      window.sessionStorage.setItem('structureco:first-analysis-guide.active', '1');
-      setFirstAnalysisGuideOpen(true);
-    }
-    if (analysis?.success) {
-      window.sessionStorage.removeItem('structureco:first-analysis-guide.active');
-      setFirstAnalysisGuideOpen(false);
-    }
-  }, [analysis?.success, project.members.length, project.nodes.length]);
 
   // Al terminar una corrida válida, Resultados aparece en su modo cerrado:
   // cabe junto al lienzo pero ya responde resultado, caso, actualidad y valor
@@ -430,16 +412,6 @@ const WorkspaceBrokerContent = ({
         emitWorkspaceCommand('analysis-requested');
         analyze();
       }} /> : null}
-      {project.settings.calculationMode !== 'classroom' && firstAnalysisGuideOpen && !analysis?.success ? <FirstAnalysisGuide
-        project={project}
-        analysis={analysis}
-        onOpenTemplates={onOpenHomeTemplates}
-        onOpenGenerator={() => emitWorkspaceCommand('open-structure-generator')}
-        onChooseTool={setActiveTool}
-        onOpenDoctor={() => openSurface('doctor')}
-        onAnalyze={() => { emitWorkspaceCommand('analysis-requested'); analyze(); }}
-        onDismiss={() => { window.sessionStorage.removeItem('structureco:first-analysis-guide.active'); setFirstAnalysisGuideOpen(false); }}
-      /> : null}
       <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => openDetail()} />
       {broker.isRetained('results') ? <ResultsPanel
         presentation={results.presentation as 'dock' | 'inset' | 'sheet'}

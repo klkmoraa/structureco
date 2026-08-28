@@ -138,7 +138,7 @@ describe('Dense results surface', () => {
       expect(card.getAttribute('data-level')).toBe('raised');
       expect(card.textContent).toMatch(/Posición/);
       expect(card.textContent).toMatch(/Fiabilidad/);
-      expect(within(card).getByText('Explicar este valor')).toBeTruthy();
+      expect(within(card).queryByText('Explicar este valor')).toBeNull();
     }
 
     const table = within(surface).getByRole('table', { name: /Reacciones y desplazamientos nodales/i });

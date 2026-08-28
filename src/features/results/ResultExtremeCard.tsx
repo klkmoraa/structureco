@@ -2,9 +2,7 @@ import { memo } from 'react';
 import { LocateFixed } from 'lucide-react';
 import { Surface } from '../../design-system/components/surface';
 import { useI18n } from '../../i18n/useI18n';
-import type { AnalysisResult, ReliabilityLevel } from '../../types';
-import { ProvenanceCard } from './ProvenanceCard';
-import type { ResultRef } from './provenance';
+import type { ReliabilityLevel } from '../../types';
 import { reliabilityLevelLabelKey } from './reliabilityCopy';
 
 /**
@@ -47,10 +45,6 @@ export interface ResultExtremeCardProps {
   accent?: 'axial' | 'shear' | 'moment' | 'deformation' | 'reaction';
   /** Lleva la selección y el cursor al punto descrito. Opcional. */
   onLocate?: () => void;
-  /** Referencia del número para la procedencia; se omite si no aplica. */
-  provenanceRef?: ResultRef;
-  /** Análisis del que se resuelve la procedencia. */
-  analysis?: AnalysisResult;
 }
 
 const ResultExtremeCardComponent = ({
@@ -61,8 +55,6 @@ const ResultExtremeCardComponent = ({
   reliability,
   accent,
   onLocate,
-  provenanceRef,
-  analysis,
 }: ResultExtremeCardProps) => {
   const { t } = useI18n();
   return <Surface
@@ -88,9 +80,6 @@ const ResultExtremeCardComponent = ({
         <dd data-reliability={reliability}>{t(reliabilityLevelLabelKey[reliability])}</dd>
       </div>
     </dl>
-    {provenanceRef && analysis
-      ? <ProvenanceCard analysis={analysis} resultRef={provenanceRef} level="flat" />
-      : null}
     {onLocate ? <button type="button" className="result-extreme-card__locate" onClick={onLocate}>
       <LocateFixed size={14} aria-hidden="true" />
       {t('results.cardLocate')}

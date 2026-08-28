@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { AlertCircle, ChevronUp, CircleDotDashed, Eye, EyeOff, GripHorizontal, X } from 'lucide-react';
+import { AlertCircle, ChevronUp, CircleDotDashed, GripHorizontal, X } from 'lucide-react';
 import { useProject, type ResultTab } from '../../store/ProjectContext';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../../engine/diagram';
 import { resolveReliability } from '../../engine/reliability';
@@ -7,7 +7,7 @@ import { buildDiagramEnvelope, evaluateEnvelopeAt } from '../../engine/envelope'
 import { analysisSignature } from '../../engine/projectSignature';
 import { summarizeAnalysisResults } from '../../engine/resultSummary';
 import { useScenarioAnalysis } from '../../engine/useScenarioAnalysis';
-import type { CriticalKind, DiagramQuantity, DiagramSegment, MemberResult } from '../../types';
+import type { DiagramQuantity, DiagramSegment, MemberResult } from '../../types';
 import { toDisplay, unitLabel } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import type { TranslationKey } from '../../i18n/catalogs';
@@ -17,9 +17,7 @@ import { deriveClassroomProgress, type ClassroomProgressStepId } from '../../edu
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import type { SurfacePresentation, SurfaceStatus } from '../workspace/surfacePresentation';
-import { ProvenanceCard } from './ProvenanceCard';
 import { ResultExtremeCard } from './ResultExtremeCard';
-import type { ResultRef } from './provenance';
 import { DENSE_RESULT_VIEWS, preloadDenseResultsSurface, preloadInfluenceLineView, type DenseResultView } from './denseResults';
 import { reliabilityLevelLabelKey } from './reliabilityCopy';
 import { formatResultNumber } from './resultFormatting';
@@ -37,67 +35,6 @@ const tabs: Array<{ id: ResultTab; labelKey: TranslationKey; color?: string }> =
   { id: 'moment', labelKey: 'results.moment', color: 'moment' },
   { id: 'deformed', labelKey: 'results.deformed' },
 ];
-
-type CriticalLegendPoint = {
-  kind: CriticalKind;
-  x: number;
-  value: number;
-  side?: 'left' | 'right' | 'continuous';
-};
-
-const criticalKindLabelKey: Record<CriticalKind, TranslationKey> = {
-  maximum: 'results.criticalMaximum',
-  minimum: 'results.criticalMinimum',
-  jump: 'results.criticalJump',
-  zero: 'results.criticalZero',
-  end: 'results.criticalEnd',
-};
-
-/**
- * The graph keeps only spatial marks. Exact labels live immediately below it,
- * where they cannot collide with a curve, tick, or one another. The buttons
- * are also a keyboard/touch equivalent of pointing at a critical station.
- */
-const CriticalPointLegend = ({
-  points,
-  length,
-  unit,
-  formatPosition,
-  formatValue,
-  pinnedX,
-  onPin,
-}: {
-  points: readonly CriticalLegendPoint[];
-  length: number;
-  unit: string;
-  formatPosition: (x: number) => string;
-  formatValue: (value: number) => string;
-  pinnedX: number | null;
-  onPin: (x: number) => void;
-}) => {
-  const { t } = useI18n();
-  const visible = points.slice(0, 8);
-  if (visible.length === 0) return null;
-  return <section className="diagram-critical-legend" aria-label={t('results.criticalPoints')}>
-    <span>{t('results.criticalPoints')}</span>
-    <div>{visible.map((point, index) => {
-      const label = t(criticalKindLabelKey[point.kind]);
-      const position = `x ${formatPosition(point.x)}`;
-      const detail = `${label} · ${position} · ${formatValue(point.value)} ${unit}`;
-      const pinned = pinnedX !== null && Math.abs(pinnedX - point.x) <= Math.max(length, 1) * 1e-8;
-      return <button
-        type="button"
-        key={`${point.kind}-${point.side ?? 'continuous'}-${point.x}-${index}`}
-        className={`diagram-critical-legend__point is-${point.kind}`}
-        aria-pressed={pinned}
-        aria-label={pinned ? t('results.unpinCriticalPoint', { point: detail }) : t('results.pinCriticalPoint', { point: detail })}
-        onClick={() => onPin(point.x)}
-      >
-        <span>{label}</span><strong>{formatValue(point.value)} {unit}</strong><small>{position}</small>
-      </button>;
-    })}</div>
-  </section>;
-};
 
 const denseViewLabelKey: Record<DenseResultView, TranslationKey> = {
   reactions: 'results.reactions',
@@ -148,7 +85,7 @@ export interface ResultsPanelProps {
 }
 
 export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenChange, defaultDesktopExpanded = false }: ResultsPanelProps) => {
-  const { project, analysis, resultTab, setResultTab, analyze, selection, isAnalyzing, selectedCombinationId, resultCursor } = useProject();
+  const { project, analysis, resultTab, setResultTab, analyze, selection, isAnalyzing, selectedCombinationId } = useProject();
   const { t } = useI18n();
   const isMobile = presentation === 'sheet';
   const [height, setHeight] = useState(() => isMobile ? Math.min(330, window.innerHeight * 0.4) : 285);
@@ -156,7 +93,6 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
   const mobileExpanded = status === 'active';
   const [panelMode, setPanelMode] = useState<ResultsPanelMode>(readResultsMode);
   const [desktopExpanded, setDesktopExpanded] = useState(defaultDesktopExpanded);
-  const [mobileMetricsVisible, setMobileMetricsVisible] = useState(true);
   const previousAnalysisRef = useRef(analysis);
   const resizeFrameRef = useRef<number | null>(null);
   const pendingHeightRef = useRef<number | null>(null);
@@ -189,36 +125,6 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
   }, [analysis?.memberResults, project.memberLoads, project.members, project.nodalLoads, selection, t]);
   const selectedMemberId = resultContext.memberId;
   const memberResult = selectedMemberId ? analysis?.memberResults.find((result) => result.memberId === selectedMemberId) : undefined;
-  const provenanceRef = useMemo<ResultRef | null>(() => {
-    if (!analysis?.success) return null;
-    const caseOrCombinationId = selectedCombinationId || project.loadCases.find((loadCase) => loadCase.active)?.id || project.loadCases[0]?.id || '—';
-    if (resultTab === 'axial' || resultTab === 'shear' || resultTab === 'moment') {
-      if (!memberResult) return null;
-      const storedStart = memberResult.diagram[0];
-      const cursor = resultCursor?.memberId === memberResult.memberId ? resultCursor : null;
-      const quantity = resultTab === 'axial' ? 'N' : resultTab === 'shear' ? 'V' : 'M';
-      return {
-        quantity,
-        entity: { kind: 'member', id: memberResult.memberId },
-        caseOrCombinationId,
-        signConvention: quantity === 'N' ? t('results.signAxial') : quantity === 'V' ? t('results.signShear') : t('results.signMoment'),
-        position: { x: cursor?.x ?? storedStart?.x ?? 0, side: cursor ? undefined : storedStart?.side },
-      };
-    }
-    if (resultTab === 'summary' || resultTab === 'reactions' || resultTab === 'deformed' || resultTab === 'learn') {
-      const nodeId = selection?.kind === 'node' ? selection.id : analysis.nodeResults[0]?.nodeId;
-      if (!nodeId) return null;
-      const reaction = resultTab === 'reactions';
-      return {
-        quantity: reaction ? 'R' : 'U',
-        entity: { kind: 'node', id: nodeId },
-        component: 'y',
-        caseOrCombinationId,
-        signConvention: t('results.signGlobalY'),
-      };
-    }
-    return null;
-  }, [analysis, memberResult, project.loadCases, resultCursor, resultTab, selectedCombinationId, selection, t]);
   const availableTabs = tabs;
   const activeTab = availableTabs.find((tab) => tab.id === resultTab) ?? availableTabs[0];
   /**
@@ -386,14 +292,6 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
         <span className="results-desktop-toggle__action">{t('results.openDock')} <ChevronUp size={17} aria-hidden="true" /></span>
       </button> : <>
       {isMobile && mobileExpanded ? <div className="results-mobile-commandbar">
-        {analysis?.success && activeTab.id !== 'summary' ? <button
-          type="button"
-          className="results-mobile-metrics-toggle"
-          aria-label={mobileMetricsVisible ? t('results.hideMetricCards') : t('results.showMetricCards')}
-          aria-controls="results-mobile-metrics"
-          aria-expanded={mobileMetricsVisible}
-          onClick={() => setMobileMetricsVisible((visible) => !visible)}
-        >{mobileMetricsVisible ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}</button> : null}
         <button
           type="button"
           className="results-mobile-focus"
@@ -486,21 +384,18 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
         }} /> : null}
         {analysis && !analysis.success ? <FailedResults onOpenModelDoctor={() => emitWorkspaceCommand('open-model-doctor')} /> : null}
         {analysis?.success && activeTab.id === 'summary' ? <ResultSummary /> : null}
-        {analysis?.success && ['axial', 'shear', 'moment'].includes(activeTab.id) ? <DiagramView type={activeTab.id as 'axial' | 'shear' | 'moment'} memberResult={memberResult} memberId={selectedMemberId ?? ''} isMobile={isMobile} mobileMetricsVisible={mobileMetricsVisible} /> : null}
-        {analysis?.success && activeTab.id === 'deformed' ? <DeformationView memberResult={memberResult} memberId={selectedMemberId ?? ''} isMobile={isMobile} mobileMetricsVisible={mobileMetricsVisible} /> : null}
-        {analysis?.success && provenanceRef ? <ProvenanceCard analysis={analysis} resultRef={provenanceRef} /> : null}
+        {analysis?.success && ['axial', 'shear', 'moment'].includes(activeTab.id) ? <DiagramView type={activeTab.id as 'axial' | 'shear' | 'moment'} memberResult={memberResult} memberId={selectedMemberId ?? ''} isMobile={isMobile} /> : null}
+        {analysis?.success && activeTab.id === 'deformed' ? <DeformationView memberResult={memberResult} memberId={selectedMemberId ?? ''} isMobile={isMobile} /> : null}
       </div>
       </>}
     </section>
   </>;
 };
 
-const ResultMetricRail = ({ isMobile, visible, className, children }: { isMobile: boolean; visible: boolean; className: string; children: ReactNode }) => <div
+const ResultMetricRail = ({ isMobile, className, children }: { isMobile: boolean; className: string; children: ReactNode }) => <div
   id={isMobile ? 'results-mobile-metrics' : undefined}
   data-testid={isMobile ? 'results-mobile-metrics' : undefined}
-  data-mobile-metrics-visible={isMobile ? String(visible) : undefined}
   className={`result-metric-rail${isMobile ? ' is-mobile' : ''}`}
-  hidden={isMobile && !visible}
 >
   <div className={`result-extreme-grid ${className}${isMobile ? ' is-mobile-rail' : ''}`}>{children}</div>
 </div>;
@@ -527,8 +422,8 @@ const FailedResults = ({ onOpenModelDoctor }: { onOpenModelDoctor: () => void })
   </div>;
 };
 
-const DiagramView = ({ type, memberResult, memberId, isMobile, mobileMetricsVisible }: { type: DiagramQuantity; memberResult: MemberResult | undefined; memberId: string; isMobile: boolean; mobileMetricsVisible: boolean }) => {
-  const { project, analysis, selectedCombinationId, setSelection, resultCursor, setResultCursor } = useProject();
+const DiagramView = ({ type, memberResult, memberId, isMobile }: { type: DiagramQuantity; memberResult: MemberResult | undefined; memberId: string; isMobile: boolean }) => {
+  const { project, analysis, setSelection, resultCursor, setResultCursor } = useProject();
   const { t } = useI18n();
   const [hoverX, setHoverX] = useState<number | null>(null);
   const [envelopeMode, setEnvelopeMode] = useState(false);
@@ -606,17 +501,6 @@ const DiagramView = ({ type, memberResult, memberId, isMobile, mobileMetricsVisi
   const maxPoint = memberResult.criticalPoints.find((point) => point.quantity === type && point.kind === 'maximum');
   const minPoint = memberResult.criticalPoints.find((point) => point.quantity === type && point.kind === 'minimum');
   const reliability = analysis ? resolveReliability(analysis).level : 'failed';
-  const caseOrCombinationId = selectedCombinationId
-    || project.loadCases.find((loadCase) => loadCase.active)?.id
-    || project.loadCases[0]?.id
-    || '—';
-  const extremeProvenance = (x: number, side?: 'left' | 'right' | 'continuous'): ResultRef => ({
-    quantity: type === 'axial' ? 'N' : type === 'shear' ? 'V' : 'M',
-    entity: { kind: 'member', id: memberId },
-    caseOrCombinationId,
-    signConvention: t(type === 'axial' ? 'results.signAxial' : type === 'shear' ? 'results.signShear' : 'results.signMoment'),
-    position: { x, side },
-  });
   const snapCandidates = Array.from(new Set([
     0,
     L,
@@ -675,7 +559,7 @@ const DiagramView = ({ type, memberResult, memberId, isMobile, mobileMetricsVisi
         componente, misma materia y los mismos datos que en el resumen. La
         lectura del cursor no es un extremo — sigue siendo lectura, y vive
         junto al gráfico. */}
-    <ResultMetricRail isMobile={isMobile} visible={mobileMetricsVisible} className="diagram-focus-cards">
+    <ResultMetricRail isMobile={isMobile} className="diagram-focus-cards">
       <ResultExtremeCard
         label={`${label} · ${t('results.maximum')}`}
         value={formatFixed(displayValue(max), 3)}
@@ -683,8 +567,6 @@ const DiagramView = ({ type, memberResult, memberId, isMobile, mobileMetricsVisi
         position={maxPoint ? `${memberId} · x ${formatFixed(toDisplay(maxPoint.x, units, 'length'), 2)} ${lengthUnit}` : memberId}
         reliability={reliability}
         accent={colorClass}
-        analysis={analysis ?? undefined}
-        provenanceRef={maxPoint ? extremeProvenance(maxPoint.x, maxPoint.side) : undefined}
       />
       <ResultExtremeCard
         label={`${label} · ${t('results.minimum')}`}
@@ -693,8 +575,6 @@ const DiagramView = ({ type, memberResult, memberId, isMobile, mobileMetricsVisi
         position={minPoint ? `${memberId} · x ${formatFixed(toDisplay(minPoint.x, units, 'length'), 2)} ${lengthUnit}` : memberId}
         reliability={reliability}
         accent={colorClass}
-        analysis={analysis ?? undefined}
-        provenanceRef={minPoint ? extremeProvenance(minPoint.x, minPoint.side) : undefined}
       />
       {cursorPoint ? <div className="diagram-cursor-readout diagram-cursor-metric"><span>{t('results.cursorValue')}</span><strong>{formatFixed(displayValue(cursorPoint[type]), 3)} {unit}</strong><small>x {formatFixed(toDisplay(cursorPoint.x, units, 'length'), 2)} {lengthUnit}</small></div> : null}
     </ResultMetricRail>
@@ -712,13 +592,13 @@ const DiagramView = ({ type, memberResult, memberId, isMobile, mobileMetricsVisi
       <path className={`chart-fill ${envelopeMode ? 'muted' : ''}`} d={fillCommands.join(' ')} />
       <path className={`chart-line ${envelopeMode ? 'muted' : ''}`} d={lineCommands.join(' ')} fill="none" />
       {envelopeMode && envelope ? <><path className="envelope-line minimum" d={envelopePath('minimum')} fill="none" /><path className="envelope-line maximum" d={envelopePath('maximum')} fill="none" /></> : null}
-      {displayCritical.map((point, index) => <g className={`chart-critical ${point.kind}`} key={`${point.kind}-${point.side}-${point.x}-${index}`}><title>{`${t(criticalKindLabelKey[point.kind])} · x ${formatFixed(toDisplay(point.x, units, 'length'), 2)} ${lengthUnit} · ${formatFixed(displayValue(point.value), 2)} ${unit}`}</title><circle cx={sx(point.x)} cy={sy(point.value)} r={point.kind === 'zero' ? 4 : 3.2} /></g>)}
+      {displayCritical.map((point, index) => <g className={`chart-critical ${point.kind}`} key={`${point.kind}-${point.side}-${point.x}-${index}`}><circle cx={sx(point.x)} cy={sy(point.value)} r={point.kind === 'zero' ? 4 : 3.2} /></g>)}
       {cursorPoint ? <g className={`chart-hover ${pinnedX === null ? '' : 'pinned'}`}><line x1={sx(cursorPoint.x)} y1="16" x2={sx(cursorPoint.x)} y2={height - 18} /><circle cx={sx(cursorPoint.x)} cy={sy(cursorPoint[type])} r="4" /></g> : null}
-    </svg><CriticalPointLegend points={displayCritical} length={L} unit={unit} formatPosition={(x) => `${formatFixed(toDisplay(x, units, 'length'), 2)} ${lengthUnit}`} formatValue={(value) => formatFixed(displayValue(value), 2)} pinnedX={pinnedX} onPin={pinAt} />{cursorPoint ? <div className={`diagram-cursor-readout ${cursorJump || envelopeCursorJump ? 'at-jump' : ''}`} role={pinnedX !== null ? 'status' : undefined} aria-live={pinnedX !== null ? 'polite' : undefined} aria-atomic={pinnedX !== null ? true : undefined}><span className="cursor-position"><b>x</b>{formatFixed(toDisplay(cursorPoint.x, units, 'length'), 3)} {unitLabel(units, 'length')}</span>{envelopeCursor ? <><span className="envelope-min"><b>{t('results.minimum')}</b>{formatFixed(displayValue(envelopeCursor.minimum), 3)} {unit}</span><span className="envelope-max"><b>{t('results.maximum')}</b>{formatFixed(displayValue(envelopeCursor.maximum), 3)} {unit}</span><small>{envelopeCursor.minimumScenario} → {envelopeCursor.maximumScenario}</small>{envelopeCursorJump && envelopeCursorLeft && envelopeCursorRight ? <><small>{t('results.envelopeDiscontinuityReading', { quantity: t('results.minimum'), left: formatFixed(displayValue(envelopeCursorLeft.minimum), 3), right: formatFixed(displayValue(envelopeCursorRight.minimum), 3), unit })}</small><small>{t('results.envelopeDiscontinuityReading', { quantity: t('results.maximum'), left: formatFixed(displayValue(envelopeCursorLeft.maximum), 3), right: formatFixed(displayValue(envelopeCursorRight.maximum), 3), unit })}</small></> : null}</> : <><span className="axial-text"><b>N</b>{formatFixed(toDisplay(cursorPoint.axial, units, 'force'), 3)} {unitLabel(units, 'force')}</span><span className="shear-text"><b>V</b>{formatFixed(toDisplay(cursorPoint.shear, units, 'force'), 3)} {unitLabel(units, 'force')}</span><span className="moment-text"><b>M</b>{formatFixed(toDisplay(cursorPoint.moment, units, 'moment'), 3)} {unitLabel(units, 'moment')}</span>{cursorJump && cursorLeft && cursorRight ? <small>{t('results.discontinuityReading', { left: formatFixed(displayValue(cursorLeft[type]), 3), right: formatFixed(displayValue(cursorRight[type]), 3), unit })}</small> : null}</>}</div> : <div className="diagram-cursor-placeholder">{t('results.exactDiagramCursor')}</div>}</div>
+    </svg>{cursorPoint ? <div className={`diagram-cursor-readout ${cursorJump || envelopeCursorJump ? 'at-jump' : ''}`} role={pinnedX !== null ? 'status' : undefined} aria-live={pinnedX !== null ? 'polite' : undefined} aria-atomic={pinnedX !== null ? true : undefined}><span className="cursor-position"><b>x</b>{formatFixed(toDisplay(cursorPoint.x, units, 'length'), 3)} {unitLabel(units, 'length')}</span>{envelopeCursor ? <><span className="envelope-min"><b>{t('results.minimum')}</b>{formatFixed(displayValue(envelopeCursor.minimum), 3)} {unit}</span><span className="envelope-max"><b>{t('results.maximum')}</b>{formatFixed(displayValue(envelopeCursor.maximum), 3)} {unit}</span><small>{envelopeCursor.minimumScenario} → {envelopeCursor.maximumScenario}</small>{envelopeCursorJump && envelopeCursorLeft && envelopeCursorRight ? <><small>{t('results.envelopeDiscontinuityReading', { quantity: t('results.minimum'), left: formatFixed(displayValue(envelopeCursorLeft.minimum), 3), right: formatFixed(displayValue(envelopeCursorRight.minimum), 3), unit })}</small><small>{t('results.envelopeDiscontinuityReading', { quantity: t('results.maximum'), left: formatFixed(displayValue(envelopeCursorLeft.maximum), 3), right: formatFixed(displayValue(envelopeCursorRight.maximum), 3), unit })}</small></> : null}</> : <><span className="axial-text"><b>N</b>{formatFixed(toDisplay(cursorPoint.axial, units, 'force'), 3)} {unitLabel(units, 'force')}</span><span className="shear-text"><b>V</b>{formatFixed(toDisplay(cursorPoint.shear, units, 'force'), 3)} {unitLabel(units, 'force')}</span><span className="moment-text"><b>M</b>{formatFixed(toDisplay(cursorPoint.moment, units, 'moment'), 3)} {unitLabel(units, 'moment')}</span>{cursorJump && cursorLeft && cursorRight ? <small>{t('results.discontinuityReading', { left: formatFixed(displayValue(cursorLeft[type]), 3), right: formatFixed(displayValue(cursorRight[type]), 3), unit })}</small> : null}</>}</div> : <div className="diagram-cursor-placeholder">{t('results.exactDiagramCursor')}</div>}</div>
   </div>;
 };
 
-const DeformationView = ({ memberResult, memberId, isMobile, mobileMetricsVisible }: { memberResult: MemberResult | undefined; memberId: string; isMobile: boolean; mobileMetricsVisible: boolean }) => {
+const DeformationView = ({ memberResult, memberId, isMobile }: { memberResult: MemberResult | undefined; memberId: string; isMobile: boolean }) => {
   const { project, analysis, setSelection, resultCursor, setResultCursor } = useProject();
   const reliability = analysis ? resolveReliability(analysis).level : 'failed';
   const { t } = useI18n();
@@ -781,7 +661,7 @@ const DeformationView = ({ memberResult, memberId, isMobile, mobileMetricsVisibl
     {/* Los tres máximos de respuesta son extremos: misma tarjeta, misma
         materia. Sin procedencia porque el máximo interior no tiene dato
         almacenado que lo respalde — no se pierde nada que antes existiera. */}
-    <ResultMetricRail isMobile={isMobile} visible={mobileMetricsVisible} className="deformation-focus-cards">
+    <ResultMetricRail isMobile={isMobile} className="deformation-focus-cards">
       {([
         { id: 'u', symbol: '|u|', point: absU, unit: unitLabel(units, 'length') },
         { id: 'v', symbol: '|v|', point: absV, unit: unitLabel(units, 'length') },
@@ -805,10 +685,9 @@ const DeformationView = ({ memberResult, memberId, isMobile, mobileMetricsVisibl
         <title>{responseAriaLabel}</title><desc>{t('results.chartKeyboardHelp')}</desc>
         <line className="chart-axis" x1="0" y1={baseline} x2={width} y2={baseline} />
         <path className="chart-line" d={line} fill="none" />
-        {critical.filter((point) => point.kind === 'maximum' || point.kind === 'minimum' || point.kind === 'zero').slice(0, 16).map((point, index) => <g className={`chart-critical ${point.kind}`} key={`${point.kind}-${point.x}-${index}`}><title>{`${t(criticalKindLabelKey[point.kind])} · x ${formatFixed(toDisplay(point.x, units, 'length'), 2)} ${unitLabel(units, 'length')} · ${formatScientific(displayValue(point.value), 2)} ${unit}`}</title><circle cx={sx(point.x)} cy={sy(point.value)} r="3.2" /></g>)}
+        {critical.filter((point) => point.kind === 'maximum' || point.kind === 'minimum' || point.kind === 'zero').slice(0, 16).map((point, index) => <g className={`chart-critical ${point.kind}`} key={`${point.kind}-${point.x}-${index}`}><circle cx={sx(point.x)} cy={sy(point.value)} r="3.2" /></g>)}
         {cursor ? <g className={`chart-hover ${pinnedX === null ? '' : 'pinned'}`}><line x1={sx(cursor.x)} y1="16" x2={sx(cursor.x)} y2={height - 18} /><circle cx={sx(cursor.x)} cy={sy(cursor[quantity])} r="4" /></g> : null}
       </svg>
-      <CriticalPointLegend points={critical.filter((point) => point.kind === 'maximum' || point.kind === 'minimum' || point.kind === 'zero')} length={L} unit={unit} formatPosition={(x) => `${formatFixed(toDisplay(x, units, 'length'), 2)} ${unitLabel(units, 'length')}`} formatValue={(value) => formatScientific(displayValue(value), 2)} pinnedX={pinnedX} onPin={pinAt} />
       {cursor ? <div className="diagram-cursor-readout" role={pinnedX !== null ? 'status' : undefined} aria-live={pinnedX !== null ? 'polite' : undefined} aria-atomic={pinnedX !== null ? true : undefined}><span className="cursor-position"><b>x</b>{formatFixed(toDisplay(cursor.x, units, 'length'), 3)} {unitLabel(units, 'length')}</span><span><b>u</b>{formatScientific(toDisplay(cursor.u, units, 'length'), 4)} {unitLabel(units, 'length')}</span><span><b>v</b>{formatScientific(toDisplay(cursor.v, units, 'length'), 4)} {unitLabel(units, 'length')}</span><span><b>θ</b>{formatScientific(cursor.theta, 4)} rad</span></div> : <div className="diagram-cursor-placeholder">{t('results.exactDeformationCursor')}</div>}
     </div>
   </div>;

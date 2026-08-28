@@ -146,25 +146,14 @@ describe('Results analytical center', () => {
     ]);
   });
 
-  it('keeps critical values out of the SVG collision zone and makes each station pinnable', async () => {
+  it('keeps the diagram uncluttered while retaining the result cards', async () => {
     const user = userEvent.setup();
     renderResults();
     await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
     const chart = await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
-    const legend = screen.getByRole('region', { name: 'Puntos notables' });
-    const stations = within(legend).getAllByRole('button');
-
-    // El SVG conserva marcas y títulos semánticos, no texto que compita por el
-    // mismo píxel con la curva o los ticks.
     expect(chart.querySelectorAll('.chart-critical text')).toHaveLength(0);
-    expect(stations.length).toBeGreaterThan(0);
-
-    await user.click(stations[0]);
-    expect(stations[0].getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByLabelText('Cursor de resultados').textContent).not.toBe('none');
-    await user.keyboard('{Enter}');
-    expect(stations[0].getAttribute('aria-pressed')).toBe('false');
-    expect(screen.getByLabelText('Cursor de resultados').textContent).toBe('none');
+    expect(screen.queryByRole('region', { name: 'Puntos notables' })).toBeNull();
+    expect(chart.closest('.diagram-result-layout')?.querySelectorAll('.diagram-focus-cards .result-extreme-card')).toHaveLength(2);
   }, 10_000);
 
   it('localizes the empty classroom next step in English', () => {
@@ -266,7 +255,7 @@ describe('Results analytical center', () => {
     expect(momentCard.textContent).toMatch(/Posición/);
     expect(momentCard.textContent).toMatch(/AB · x/);
     expect(momentCard.textContent).toMatch(/Fiabilidad/);
-    expect(within(momentCard).getByText('Explicar este valor')).toBeTruthy();
+    expect(within(momentCard).queryByText('Explicar este valor')).toBeNull();
     expect(momentCard.getAttribute('data-level')).toBe('raised');
 
     await user.click(within(momentCard).getByRole('button', { name: 'Localizar en el modelo' }));
@@ -480,7 +469,7 @@ describe('Results analytical center', () => {
     }
   }, 10_000);
 
-  it('keeps phone result metrics as a hideable horizontal rail while the diagram remains available', async () => {
+  it('keeps phone result cards visible in their horizontal rail', async () => {
     const user = userEvent.setup();
     setViewport('phone');
     renderResults();
@@ -489,16 +478,10 @@ describe('Results analytical center', () => {
     const chart = await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
     const metrics = screen.getByTestId('results-mobile-metrics');
 
-    expect(metrics.getAttribute('data-mobile-metrics-visible')).toBe('true');
     expect(metrics.querySelector('.result-extreme-grid')?.classList.contains('is-mobile-rail')).toBe(true);
     expect(metrics.querySelectorAll('.result-extreme-card')).toHaveLength(2);
-
-    await user.click(screen.getByRole('button', { name: 'Ocultar tarjetas de resultados' }));
-    expect(metrics.hidden).toBe(true);
     expect(chart).toBeTruthy();
-
-    await user.click(screen.getByRole('button', { name: 'Mostrar tarjetas de resultados' }));
-    expect(metrics.hidden).toBe(false);
+    expect(screen.queryByRole('button', { name: /tarjetas de resultados/i })).toBeNull();
   }, 10_000);
 
   it('keeps native learning summaries inside the mobile focus loop', async () => {
@@ -510,13 +493,7 @@ describe('Results analytical center', () => {
     await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
     await user.click(screen.getByRole('tab', { name: 'Resumen' }));
     const sheet = screen.getByRole('dialog', { name: 'Resultados del análisis' });
-    // La procedencia de cada tarjeta sigue siendo un `summary` nativo dentro
-    // de la hoja: cardificar no la sacó del recorrido de foco.
-    const summaries = [...sheet.querySelectorAll<HTMLElement>('summary')];
-    expect(summaries.length).toBeGreaterThan(0);
-    summaries[summaries.length - 1].focus();
-    await user.tab();
-    expect(document.activeElement).not.toBe(screen.getByRole('button', { name: /Resumen ·/ }));
+    expect(sheet.querySelectorAll('summary')).toHaveLength(0);
   }, 10_000);
 
   it('keeps Aula free of the retired hypothesis gate after switching presentation modes', async () => {

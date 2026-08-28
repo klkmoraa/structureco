@@ -156,16 +156,6 @@ const STATIC_COMMANDS: readonly CommandDefinition[] = [
     run: () => emitWorkspaceCommand('open-model-doctor'),
   },
   {
-    id: 'analysis:first-analysis-guide',
-    category: 'analysis',
-    icon: Play,
-    label: (ctx) => ctx.project.settings.language === 'en' ? 'First analysis guide' : 'Guía del primer análisis',
-    hint: (ctx) => ctx.project.settings.language === 'en' ? 'Choose a safe route from a blank model to analysis' : 'Elige una ruta segura desde un modelo vacío hasta el análisis',
-    aliases: () => ['ayuda', 'primer resultado', 'first result', 'help', 'onboarding'],
-    route: () => 'Análisis › Primer análisis',
-    run: () => emitWorkspaceCommand('open-first-analysis-guide'),
-  },
-  {
     id: 'tool:datasheet',
     category: 'tools',
     icon: Sheet,

@@ -276,7 +276,6 @@
 .result-extreme-card__locate { min-height:30px; margin-top:1px; padding:0 8px; border:0; border-radius:8px; background:var(--surface-2); color:var(--text); display:inline-flex; align-items:center; justify-self:start; gap:5px; font:inherit; font-size:9px; font-weight:650; cursor:pointer; }
 .result-extreme-card__locate:hover { color:var(--accent); }
 .result-extreme-card__locate:focus-visible { outline:3px solid var(--focus); outline-offset:3px; }
-.result-extreme-card .provenance-card { margin:0; }
 .diagram-cursor-metric { display:grid; align-content:start; gap:2px; padding:10px 11px; }
 .diagram-cursor-metric span { color:var(--muted); font-size:8px; }
 .diagram-cursor-metric strong { font-family:var(--sc-font-mono); font-size:12px; }

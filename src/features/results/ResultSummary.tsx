@@ -16,7 +16,6 @@ import { NumericQualityCard } from './NumericQualityCard';
 import { ElasticDemandCard } from './ElasticDemandCard';
 import { ResultExtremeCard } from './ResultExtremeCard';
 import { NtcSteelDesignCard } from '../design/NtcSteelDesignCard';
-import type { ResultRef } from './provenance';
 
 const diagramTab: Record<DiagramQuantity, ResultTab> = { axial: 'axial', shear: 'shear', moment: 'moment' };
 const diagramSymbol: Record<DiagramQuantity, string> = { axial: 'N', shear: 'V', moment: 'M' };
@@ -45,7 +44,6 @@ export const ResultSummary = () => {
    */
   const extremes = useMemo(() => {
     if (!analysis?.success || !summary) return [];
-    const caseOrCombinationId = project.loadCases.find((loadCase) => loadCase.active)?.id ?? project.loadCases[0]?.id ?? '—';
     const lengthLabel = unitLabel(units, 'length');
     const position = (memberId: string, x: number) => `${memberId} · x ${formatResultNumber(toDisplay(x, units, 'length'))} ${lengthLabel}`;
     type ExtremeCardData = {
@@ -56,7 +54,6 @@ export const ResultSummary = () => {
       unit: string;
       position: string;
       onLocate: () => void;
-      provenanceRef?: ResultRef;
     };
     const cards: ExtremeCardData[] = (['axial', 'shear', 'moment'] as const).flatMap((quantity) => {
       const item = summary.diagrams[quantity]?.absolute;
@@ -71,13 +68,6 @@ export const ResultSummary = () => {
         unit: unitLabel(units, unitQuantity),
         position: position(item.memberId, item.x),
         onLocate: () => locate(quantity, item.memberId, item.x),
-        provenanceRef: {
-          quantity: symbol as ResultRef['quantity'],
-          entity: { kind: 'member', id: item.memberId },
-          caseOrCombinationId,
-          signConvention: t(quantity === 'axial' ? 'results.signAxial' : quantity === 'shear' ? 'results.signShear' : 'results.signMoment'),
-          position: { x: item.x },
-        } satisfies ResultRef,
       }];
     });
     const deformation = summary.deformations.v?.absolute;
@@ -89,14 +79,9 @@ export const ResultSummary = () => {
       unit: lengthLabel,
       position: `${deformation.memberId} · ${t('results.exactInteriorMaximum')}`,
       onLocate: () => locate('v', deformation.memberId, deformation.x),
-      /* Sin procedencia, y a propósito: el máximo interior se evalúa desde la
-         forma exacta, no hay dato almacenado que lo respalde y `ResultRef` no
-         sabe expresarlo. La tarjeta no reclama una evidencia que no tiene —
-         tampoco la tenía la rejilla anterior, así que cardificar no cuesta
-         ninguno de los cinco. */
     });
     return cards;
-  }, [analysis, locate, project.loadCases, summary, t, units]);
+  }, [analysis, locate, summary, t, units]);
   const reliability = useMemo(() => analysis?.success ? resolveReliability(analysis).level : 'failed', [analysis]);
   if (!analysis?.success || !summary) return null;
   const displayDiagram = (quantity: DiagramQuantity, value: number) => {
@@ -148,8 +133,6 @@ export const ResultSummary = () => {
         position={extreme.position}
         reliability={reliability}
         accent={extreme.accent}
-        analysis={analysis}
-        provenanceRef={extreme.provenanceRef}
         onLocate={extreme.onLocate}
       />)}
     </div>
