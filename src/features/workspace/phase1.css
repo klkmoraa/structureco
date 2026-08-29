@@ -2065,3 +2065,9 @@
   border-color:var(--sc-color-border);
 }
 @keyframes sc-clay-popover-in { from { opacity:0; transform:translateY(-4px) scale(.985); } to { opacity:1; transform:translateY(0) scale(1); } }
+
+/* Same data workflow, preserving the distinct workbenches and their state. */
+.data-surface-navigation { display:flex; flex-wrap:wrap; gap:6px; padding:0 0 12px; margin-bottom:12px; border-bottom:1px solid var(--border-soft); }
+.data-surface-navigation button { min-height:32px; padding:5px 9px; border:1px solid var(--border); border-radius:8px; color:var(--muted); background:var(--surface); font-size:12px; }
+.data-surface-navigation button[aria-current='page'] { color:var(--accent-on-soft); border-color:color-mix(in srgb,var(--accent) 44%,var(--border)); background:var(--accent-soft); }
+.data-surface-navigation button:disabled { opacity:1; cursor:default; }

@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { ChevronRight, CircleHelp, GripHorizontal, MoveDown, Pencil, Plus, RotateCcw, Sigma, X } from 'lucide-react';
 import { fromDisplay, toDisplay, unitLabel, type UnitQuantity } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
@@ -6,7 +6,8 @@ import type { TranslationKey } from '../../i18n/catalogs';
 import { useProjectAnalysis } from '../../store/ProjectAnalysisContext';
 import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
-import type { LoadCase, Selection, Tool } from '../../types';
+import type { GeneratedLoadSource, LoadCase, MovingLoadCase, Selection, Tool } from '../../types';
+import { NTC_CDMX_2023_GROUP_B, createProjectCombinationFromNormativeDraft, generateNormativeCombinationDrafts } from '../../data/loadCombinationStandards';
 import { InspectorNumericField } from './InspectorNumericField';
 import { InspectorProperties } from './InspectorProperties';
 import { readCanvasViewSettings, withCanvasViewSettings } from '../view/canvasViewSettings';
@@ -312,6 +313,133 @@ export const Inspector = (props: InspectorProps) => (
     : <ConnectedInspector {...props} />
 );
 
+const NtcCombinationDraftPanel = ({ setSelectedCombinationId }: Pick<{
+  setSelectedCombinationId: (id: string) => void;
+}, 'setSelectedCombinationId'>) => {
+  const { project, updateProject } = useProjectModel();
+  const { t } = useI18n();
+  const permanentCases = project.loadCases.filter((loadCase) => loadCase.category === 'permanent');
+  const variableCases = project.loadCases.filter((loadCase) => loadCase.category === 'variable');
+  const [permanentCaseId, setPermanentCaseId] = useState('');
+  const [variableCaseId, setVariableCaseId] = useState('');
+  const selectedPermanentCaseId = permanentCases.some((loadCase) => loadCase.id === permanentCaseId) ? permanentCaseId : (permanentCases[0]?.id ?? '');
+  const selectedVariableCaseId = variableCases.some((loadCase) => loadCase.id === variableCaseId) ? variableCaseId : (variableCases[0]?.id ?? '');
+  const drafts = useMemo(() => (
+    selectedPermanentCaseId && selectedVariableCaseId
+      ? generateNormativeCombinationDrafts(NTC_CDMX_2023_GROUP_B, project.loadCases, { permanentCaseId: selectedPermanentCaseId, variableCaseId: selectedVariableCaseId })
+      : []
+  ), [project.loadCases, selectedPermanentCaseId, selectedVariableCaseId]);
+
+  return <section className="inspector-section normative-drafts">
+    <h3>{t('inspector.normativeDrafts')}</h3>
+    <p className="section-description">{t('inspector.normativeDraftsDescription')}</p>
+    <div className="normative-drafts__scope">
+      <strong>{NTC_CDMX_2023_GROUP_B.title}</strong>
+      <span>{t('inspector.normativeDraftsScope')}</span>
+    </div>
+    {permanentCases.length && variableCases.length ? <>
+      <label className="select-field"><span>{t('inspector.normativePermanentCase')}</span><select value={selectedPermanentCaseId} onChange={(event) => setPermanentCaseId(event.target.value)}>{permanentCases.map((loadCase) => <option value={loadCase.id} key={loadCase.id}>{loadCase.name}</option>)}</select></label>
+      <label className="select-field"><span>{t('inspector.normativeVariableCase')}</span><select value={selectedVariableCaseId} onChange={(event) => setVariableCaseId(event.target.value)}>{variableCases.map((loadCase) => <option value={loadCase.id} key={loadCase.id}>{loadCase.name}</option>)}</select></label>
+      <div className="normative-drafts__list">
+        {drafts.map((draft) => {
+          const alreadyAdded = project.combinations.some((combination) => combination.name === draft.name && combination.sourceUrl === draft.provenance.sourceUrl);
+          return <article className="normative-drafts__item" key={draft.draftId}>
+            <div><strong>{draft.name}</strong><small>{draft.stateLimit === 'ultimate' ? t('inspector.normativeUltimate') : t('inspector.normativeService')}</small></div>
+            <span>{Object.entries(draft.factors).map(([caseId, factor]) => `${caseId} × ${factor}`).join(' + ')}</span>
+            <small>{t('inspector.normativeSections', { sections: draft.provenance.sourceSections.join(', ') })}</small>
+            <button type="button" className="mini-button normative-drafts__add" aria-label={t('inspector.addNormativeDraft', { name: draft.name })} disabled={alreadyAdded} onClick={() => {
+              let combinationId = '';
+              updateProject((projectDraft) => {
+                const combination = createProjectCombinationFromNormativeDraft(draft, projectDraft.combinations);
+                combinationId = combination.id;
+                projectDraft.combinations.push(combination);
+                return projectDraft;
+              });
+              if (combinationId) setSelectedCombinationId(combinationId);
+            }}>{alreadyAdded ? t('inspector.normativeAlreadyAdded') : t('inspector.addNormativeDraftAction')}</button>
+          </article>;
+        })}
+      </div>
+    </> : <div className="inspector-note"><CircleHelp size={17} /> {t('inspector.normativeMissingCases')}</div>}
+    <details className="normative-drafts__exclusions"><summary>{t('inspector.normativeExclusions')}</summary><ul>{NTC_CDMX_2023_GROUP_B.exclusions.map((exclusion) => <li key={exclusion}>{exclusion}</li>)}</ul></details>
+  </section>;
+};
+
+const AdvancedLoadSourcesPanel = () => {
+  const { project, updateProject } = useProjectModel();
+  const frameIds = project.members.filter((member) => member.type === 'frame').map((member) => member.id);
+  const defaultCaseId = project.loadCases[0]?.id ?? 'LC1';
+  const updateSource = (id: string, patch: Record<string, unknown>) => updateProject((draft) => {
+    const source = (draft.generatedLoadSources ?? []).find((item) => item.id === id);
+    if (source) Object.assign(source as unknown as Record<string, unknown>, patch);
+    return draft;
+  });
+  const addSource = (kind: GeneratedLoadSource['kind']) => updateProject((draft) => {
+    if (!frameIds.length) return draft;
+    draft.generatedLoadSources ??= [];
+    let index = 1; while (draft.generatedLoadSources.some((item) => item.id === `GL${index}`)) index += 1;
+    const base = { id: `GL${index}`, kind, caseId: defaultCaseId, memberIds: [...frameIds], label: `Fuente ${index}` };
+    const source: GeneratedLoadSource = kind === 'tributary-surface'
+      ? { ...base, kind, pressure: 1, tributaryWidth: 1, direction: 'global-y' }
+      : kind === 'hydrostatic' || kind === 'soil-pressure'
+        ? { ...base, kind, referenceY: 0, unitWeight: 9.81, direction: 'global-x', sign: 1 }
+        : kind === 'elastic-foundation'
+          ? { id: base.id, kind, memberIds: base.memberIds, stiffness: 10_000, direction: 'global-y', label: base.label }
+        : kind === 'live-pattern' || kind === 'member-chain'
+          ? { ...base, kind, qy: -1, coordinateSystem: 'global', lengthBasis: 'real', pattern: kind === 'live-pattern' ? 'all' : undefined }
+          : { ...base, kind: 'prestress', force: -100, eccentricity: 0 };
+    draft.generatedLoadSources.push(source);
+    return draft;
+  });
+  const updateMembers = (id: string, value: string) => {
+    const ids = value.split(',').map((item) => item.trim()).filter((item) => frameIds.includes(item));
+    if (ids.length) updateSource(id, { memberIds: ids });
+  };
+  const addMoving = () => updateProject((draft) => {
+    if (!frameIds.length) return draft;
+    draft.movingLoadCases ??= [];
+    let index = 1; while (draft.movingLoadCases.some((item) => item.id === `MOV${index}`)) index += 1;
+    draft.movingLoadCases.push({ id: `MOV${index}`, name: `Carga móvil ${index}`, memberIds: [...frameIds], targetMemberId: frameIds[0], targetPosition: 0.5, quantity: 'M', impactFactor: 1, axles: [{ id: 'E1', P: 100, offset: 0 }] });
+    return draft;
+  });
+  const updateMoving = (id: string, patch: Partial<MovingLoadCase>) => updateProject((draft) => {
+    const item = (draft.movingLoadCases ?? []).find((candidate) => candidate.id === id);
+    if (item) Object.assign(item, patch);
+    return draft;
+  });
+
+  return <section className="inspector-section">
+    <div className="section-heading"><h3>Fuentes de carga avanzadas</h3><span className="section-description">Se resuelven al analizar; no duplican cargas manuales.</span></div>
+    <div className="load-tool-grid">
+      <button type="button" disabled={!frameIds.length} onClick={() => addSource('tributary-surface')}>Superficie tributaria</button>
+      <button type="button" disabled={!frameIds.length} onClick={() => addSource('hydrostatic')}>Hidrostática / terreno</button>
+      <button type="button" disabled={!frameIds.length} onClick={() => addSource('elastic-foundation')}>Fundación elástica</button>
+      <button type="button" disabled={!frameIds.length} onClick={() => addSource('live-pattern')}>Patrón vivo</button>
+      <button type="button" disabled={!frameIds.length} onClick={() => addSource('member-chain')}>Cadena de vigas</button>
+      <button type="button" disabled={!frameIds.length} onClick={() => addSource('prestress')}>Pretensado</button>
+    </div>
+    {(project.generatedLoadSources ?? []).map((source) => <details className="combination-card" key={source.id}>
+      <summary>{source.label ?? source.id} · {source.kind}</summary>
+      {source.kind !== 'elastic-foundation' ? <label className="select-field"><span>Caso</span><select value={source.caseId} onChange={(event) => updateSource(source.id, { caseId: event.currentTarget.value })}>{project.loadCases.map((loadCase) => <option value={loadCase.id} key={loadCase.id}>{loadCase.name}</option>)}</select></label> : null}
+      <label className="select-field"><span>Miembros (IDs separados por coma)</span><input value={source.memberIds.join(', ')} onChange={(event) => updateMembers(source.id, event.currentTarget.value)} /></label>
+      {source.kind === 'tributary-surface' ? <><NumberField label="Presión" value={source.pressure} unit="kN/m²" resetKey={`${source.id}:pressure`} onChange={(value) => updateSource(source.id, { pressure: value })} /><NumberField label="Ancho tributario" value={source.tributaryWidth} unit="m" resetKey={`${source.id}:width`} onChange={(value) => updateSource(source.id, { tributaryWidth: Math.max(0, value) })} /></> : null}
+      {source.kind === 'hydrostatic' || source.kind === 'soil-pressure' ? <><NumberField label="Cota de referencia" value={source.referenceY} unit="m" resetKey={`${source.id}:level`} onChange={(value) => updateSource(source.id, { referenceY: value })} /><NumberField label="Peso unitario" value={source.unitWeight} unit="kN/m³" resetKey={`${source.id}:gamma`} onChange={(value) => updateSource(source.id, { unitWeight: value })} /></> : null}
+      {source.kind === 'elastic-foundation' ? <NumberField label="Módulo Winkler" value={source.stiffness} unit="kN/m²" resetKey={`${source.id}:foundation`} onChange={(value) => updateSource(source.id, { stiffness: Math.max(value, 1e-9) })} /> : null}
+      {source.kind === 'live-pattern' || source.kind === 'member-chain' ? <><NumberField label="qy" value={source.qy} unit="kN/m" resetKey={`${source.id}:qy`} onChange={(value) => updateSource(source.id, { qy: value })} />{source.kind === 'live-pattern' ? <label className="select-field"><span>Patrón</span><select value={source.pattern ?? 'all'} onChange={(event) => updateSource(source.id, { pattern: event.currentTarget.value })}><option value="all">Todos</option><option value="alternating-odd">Alternado impar</option><option value="alternating-even">Alternado par</option></select></label> : null}</> : null}
+      {source.kind === 'prestress' ? <><NumberField label="Fuerza (compresión negativa)" value={source.force} unit="kN" resetKey={`${source.id}:force`} onChange={(value) => updateSource(source.id, { force: value })} /><NumberField label="Excentricidad local" value={source.eccentricity ?? 0} unit="m" resetKey={`${source.id}:eccentricity`} onChange={(value) => updateSource(source.id, { eccentricity: value })} /></> : null}
+      <button type="button" className="icon-danger-button" onClick={() => updateProject((draft) => ({ ...draft, generatedLoadSources: (draft.generatedLoadSources ?? []).filter((item) => item.id !== source.id) }))}>Eliminar</button>
+    </details>)}
+    <div className="section-heading"><h3>Cargas móviles persistentes</h3><button type="button" className="mini-button" aria-label="Agregar carga móvil" disabled={!frameIds.length} onClick={addMoving}><Plus size={15} /></button></div>
+    {(project.movingLoadCases ?? []).map((moving) => <details className="combination-card" key={moving.id}><summary>{moving.name}</summary>
+      <label className="select-field"><span>Respuesta</span><select value={moving.quantity} onChange={(event) => updateMoving(moving.id, { quantity: event.currentTarget.value as MovingLoadCase['quantity'] })}><option value="N">N</option><option value="V">V</option><option value="M">M</option></select></label>
+      <label className="select-field"><span>Miembro objetivo</span><select value={moving.targetMemberId} onChange={(event) => updateMoving(moving.id, { targetMemberId: event.currentTarget.value })}>{moving.memberIds.map((id) => <option value={id} key={id}>{id}</option>)}</select></label>
+      <NumberField label="x/L objetivo" value={moving.targetPosition} resetKey={`${moving.id}:target`} onChange={(value) => updateMoving(moving.id, { targetPosition: Math.max(0, Math.min(1, value)) })} />
+      <NumberField label="Carga del primer eje" value={moving.axles[0]?.P ?? 0} unit="kN" resetKey={`${moving.id}:axle`} onChange={(value) => updateMoving(moving.id, { axles: [{ ...(moving.axles[0] ?? { id: 'E1', offset: 0 }), P: Math.max(0, value) }, ...moving.axles.slice(1)] })} />
+      <button type="button" className="icon-danger-button" onClick={() => updateProject((draft) => ({ ...draft, movingLoadCases: (draft.movingLoadCases ?? []).filter((item) => item.id !== moving.id) }))}>Eliminar</button>
+    </details>)}
+  </section>;
+};
+
 const AnalysisSetupPanel = ({ activeTool, onChooseTool, selectedCombinationId, setSelectedCombinationId }: {
   activeTool: Tool;
   onChooseTool: (tool: Extract<Tool, 'pointLoad' | 'distributedLoad' | 'moment'>) => void;
@@ -351,10 +479,16 @@ const AnalysisSetupPanel = ({ activeTool, onChooseTool, selectedCombinationId, s
           const item = draft.loadCases.find((candidate) => candidate.id === loadCase.id);
           if (item) item.name = event.target.value;
           return draft;
-        })} /><small>{t(loadCaseCategoryKey[loadCase.category])}</small></div>
+        })} /><label className="load-case-category"><span>{t('inspector.loadCaseCategory', { id: loadCase.id })}</span><select aria-label={t('inspector.loadCaseCategory', { id: loadCase.id })} value={loadCase.category} onChange={(event) => updateProject((draft) => {
+          const item = draft.loadCases.find((candidate) => candidate.id === loadCase.id);
+          if (item) item.category = event.target.value as LoadCase['category'];
+          return draft;
+        })}>{(Object.keys(loadCaseCategoryKey) as LoadCase['category'][]).map((category) => <option key={category} value={category}>{t(loadCaseCategoryKey[category])}</option>)}</select></label></div>
         <ChevronRight size={15} aria-hidden="true" />
       </div>)}</div>
     </section>
+    <AdvancedLoadSourcesPanel />
+    <NtcCombinationDraftPanel setSelectedCombinationId={setSelectedCombinationId} />
     <section className="inspector-section">
       <div className="section-heading"><h3>{t('inspector.combinations')}</h3><button type="button" className="mini-button" aria-label={t('inspector.addCombination')} onClick={() => updateProject((draft) => {
         let index = 1;
@@ -371,7 +505,7 @@ const AnalysisSetupPanel = ({ activeTool, onChooseTool, selectedCombinationId, s
           if (item) item.factors[loadCase.id] = value;
           return draft;
         })} />)}
-        {combination.source ? <div className="norm-source"><strong>{combination.jurisdiction} · {combination.edition}</strong><span>{combination.source}</span><small>{t('inspector.editableTemplateNote')}</small></div> : null}
+        {combination.source ? <div className="norm-source"><strong>{combination.jurisdiction} · {combination.edition}</strong><span>{combination.source}</span>{combination.sourceUrl ? <a href={combination.sourceUrl} target="_blank" rel="noreferrer">{t('inspector.openOfficialSource')}</a> : null}<small>{t('inspector.editableTemplateNote')}</small></div> : null}
       </details>)}
     </section>
     <div className="inspector-note"><CircleHelp size={17} /> {t('inspector.fullEffectsNote')}</div>

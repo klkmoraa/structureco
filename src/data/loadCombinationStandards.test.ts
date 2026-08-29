@@ -3,6 +3,7 @@ import type { LoadCase } from '../types';
 import {
   NTC_CDMX_2023_GROUP_B,
   evaluateNormativeDraft,
+  createProjectCombinationFromNormativeDraft,
   generateNormativeCombinationDrafts,
 } from './loadCombinationStandards';
 
@@ -122,5 +123,26 @@ describe('versioned load-combination standards', () => {
 
     expect(() => evaluateNormativeDraft(draft, { DL: 100 })).toThrow(/LL/);
     expect(() => evaluateNormativeDraft(draft, { DL: 100, LL: Number.NaN })).toThrow(/finito/i);
+  });
+
+  it('creates an editable project combination while retaining its standards provenance', () => {
+    const [draft] = generateNormativeCombinationDrafts(NTC_CDMX_2023_GROUP_B, cases, {
+      permanentCaseId: 'DL', variableCaseId: 'LL',
+    });
+    const combination = createProjectCombinationFromNormativeDraft(draft, [{ id: 'COMB1', name: 'Existente', factors: {} }]);
+
+    expect(combination).toMatchObject({
+      id: 'COMB2',
+      name: draft.name,
+      factors: { DL: 1.3, LL: 1.5 },
+      jurisdiction: 'Ciudad de México',
+      edition: '2023',
+      stateLimit: 'ultimate',
+      sourceUrl: NTC_CDMX_2023_GROUP_B.source.url,
+      reviewedAt: NTC_CDMX_2023_GROUP_B.reviewedAt,
+    });
+    expect(combination.source).toContain('2.3.1(a)');
+    expect(combination.source).toContain(NTC_CDMX_2023_GROUP_B.source.sha256);
+    expect(draft.appliedToProject).toBe(false);
   });
 });

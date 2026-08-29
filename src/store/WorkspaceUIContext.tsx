@@ -3,6 +3,10 @@ import type { Selection, ThemeMode, Tool } from '../types';
 
 export type ResultTab = 'summary' | 'reactions' | 'axial' | 'shear' | 'moment' | 'influence' | 'deformed' | 'learn' | 'issues';
 export interface ResultCursor { memberId: string; x: number; pinned: boolean }
+export interface ModeShapeCanvasState {
+  kind: 'buckling' | 'modal'; index: number; label: string;
+  shape: Array<{ nodeId: string; ux: number; uy: number; rz: number }>;
+}
 
 /**
  * Ephemeral editor UI state: active tool, selection, theme, results tab/cursor.
@@ -20,6 +24,8 @@ export interface WorkspaceUIContextValue {
   setResultTab: (tab: ResultTab) => void;
   resultCursor: ResultCursor | null;
   setResultCursor: (cursor: ResultCursor | null) => void;
+  modeShapeState: ModeShapeCanvasState | null;
+  setModeShapeState: (state: ModeShapeCanvasState | null) => void;
 }
 
 export const WorkspaceUIContext = createContext<WorkspaceUIContextValue | null>(null);

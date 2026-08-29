@@ -11,12 +11,14 @@ import type {
   MemberModel,
   MemberResult,
   MatrixTrace,
+  NodeLink,
   NodeModel,
   NodeResult,
   ProjectModel,
   ValidationIssue,
 } from '../types';
 import { memberInteriorRatioAtPoint, nodeHasStructuralActivity } from '../data/modelOperations';
+import { withResolvedGeneratedLoads } from './generatedLoads';
 import { abortedAnalysis } from './analysisFailure';
 import {
   buildDeformationCurve,
@@ -49,6 +51,87 @@ export interface Geometry {
   dy: number;
 }
 
+/** Linearized force r = tangentStiffness * delta + constantForce for one link. */
+export interface LinkLinearization {
+  tangentStiffness: number;
+  constantForce: number;
+  active: boolean;
+}
+
+export const linkRelativeDisplacement = (
+  link: NodeLink,
+  displacements: readonly number[],
+  nodeIndex: ReadonlyMap<string, number>,
+): number => {
+  const angle = ((link.angleDeg ?? 0) * Math.PI) / 180;
+  const nx = Math.cos(angle); const ny = Math.sin(angle);
+  const i = nodeIndex.get(link.nodeI);
+  if (i === undefined) return Number.NaN;
+  let delta = nx * displacements[i * 3] + ny * displacements[i * 3 + 1];
+  if (link.nodeJ) {
+    const j = nodeIndex.get(link.nodeJ);
+    if (j === undefined) return Number.NaN;
+    delta = nx * (displacements[j * 3] - displacements[i * 3]) + ny * (displacements[j * 3 + 1] - displacements[i * 3 + 1]);
+  }
+  return delta;
+};
+
+/**
+ * Active-set tangent for unilateral contacts, clearance stops and regularized
+ * Coulomb friction. Friction keeps a very small post-slip tangent solely to
+ * make the static equilibrium well-posed; its reported force is capped.
+ */
+export const linearizeNodeLink = (link: NodeLink, delta = 0): LinkLinearization => {
+  const stiffness = link.stiffness;
+  if (link.behavior === 'linear') return { tangentStiffness: stiffness, constantForce: 0, active: true };
+  if (link.behavior === 'friction') {
+    const limit = link.slipForce ?? 0;
+    const elastic = stiffness * delta;
+    if (Math.abs(elastic) <= limit) return { tangentStiffness: stiffness, constantForce: 0, active: true };
+    const tangentStiffness = Math.max(stiffness * 1e-8, 1e-12);
+    return { tangentStiffness, constantForce: Math.sign(elastic) * limit - tangentStiffness * delta, active: true };
+  }
+  const clearance = link.clearance ?? 0;
+  if (link.behavior === 'compression-only') {
+    return delta < -clearance ? { tangentStiffness: stiffness, constantForce: stiffness * clearance, active: true } : { tangentStiffness: 0, constantForce: 0, active: false };
+  }
+  if (link.behavior === 'tension-only') {
+    return delta > clearance ? { tangentStiffness: stiffness, constantForce: -stiffness * clearance, active: true } : { tangentStiffness: 0, constantForce: 0, active: false };
+  }
+  if (delta > clearance) return { tangentStiffness: stiffness, constantForce: -stiffness * clearance, active: true };
+  if (delta < -clearance) return { tangentStiffness: stiffness, constantForce: stiffness * clearance, active: true };
+  return { tangentStiffness: 0, constantForce: 0, active: false };
+};
+
+/** Adds one directional link to K and its offset force to F. */
+export const assembleNodeLink = (
+  K: Matrix,
+  F: number[],
+  link: NodeLink,
+  nodeIndex: ReadonlyMap<string, number>,
+  linearization: LinkLinearization,
+  linearizationOffsets?: number[],
+): void => {
+  if (!linearization.active || !(linearization.tangentStiffness > 0)) return;
+  const angle = ((link.angleDeg ?? 0) * Math.PI) / 180;
+  const nx = Math.cos(angle); const ny = Math.sin(angle);
+  const i = nodeIndex.get(link.nodeI);
+  if (i === undefined) return;
+  const terms: Array<[number, number]> = [[i * 3, nx], [i * 3 + 1, ny]];
+  if (link.nodeJ) {
+    const j = nodeIndex.get(link.nodeJ);
+    if (j === undefined) return;
+    terms[0][1] *= -1; terms[1][1] *= -1;
+    terms.push([j * 3, nx], [j * 3 + 1, ny]);
+  }
+  for (const [row, rowCoefficient] of terms) {
+    const offset = -linearization.constantForce * rowCoefficient;
+    F[row] += offset;
+    if (linearizationOffsets) linearizationOffsets[row] += offset;
+    for (const [column, columnCoefficient] of terms) K[row][column] += linearization.tangentStiffness * rowCoefficient * columnCoefficient;
+  }
+};
+
 interface ElementAssembly {
   member: MemberModel;
   geometry: Geometry;
@@ -69,6 +152,7 @@ interface ElementAssembly {
   initialCurvature: number;
   globalStiffness: Matrix;
   globalLoad: number[];
+  foundationGlobalStiffness: Matrix;
   connectionRecovery?: NonNullable<CondensationResult['recovery']>;
 }
 
@@ -100,7 +184,7 @@ const integratePolynomialSquare = (coefficients: readonly number[], length: numb
   }, 0);
 };
 
-const getNodeMap = (project: ProjectModel): Map<string, NodeModel> =>
+export const getNodeMap = (project: ProjectModel): Map<string, NodeModel> =>
   new Map(project.nodes.map((node) => [node.id, node]));
 
 const frameEndTransfersRotation = (member: MemberModel, nodeId: string): boolean => {
@@ -126,7 +210,7 @@ const geometryOf = (member: MemberModel, nodes: Map<string, NodeModel>): Geometr
   return { L, c: dx / L, s: dy / L, dx, dy };
 };
 
-const deformableGeometryOf = (member: MemberModel, nodes: Map<string, NodeModel>): {
+export const deformableGeometryOf = (member: MemberModel, nodes: Map<string, NodeModel>): {
   geometry: Geometry;
   grossLength: number;
   startOffset: number;
@@ -143,6 +227,76 @@ const deformableGeometryOf = (member: MemberModel, nodes: Map<string, NodeModel>
     startOffset,
     endOffset,
   };
+};
+
+export type ConstraintKind = 'support' | 'bookkeeping' | 'rigid' | 'multi-point';
+export interface ConstraintDefinition { row: number[]; kind: ConstraintKind; nodeId?: string; value: number }
+
+/**
+ * Restricciones homogéneas para los problemas propios. Conserva exactamente
+ * qué GDL participan en el solver; los asientos no entran porque un modo no
+ * tiene término independiente.
+ */
+export const assembleKinematicConstraints = (
+  project: ProjectModel,
+  nodes: Map<string, NodeModel>,
+  nodeIndex: Map<string, number>,
+  ndof: number,
+): ConstraintDefinition[] => {
+  const constraints: ConstraintDefinition[] = [];
+  const add = (terms: Array<[number, number]>, kind: ConstraintKind, nodeId?: string) => {
+    const row = Array(ndof).fill(0);
+    terms.forEach(([index, coefficient]) => { row[index] += coefficient; });
+    constraints.push({ row, kind, nodeId, value: 0 });
+  };
+  for (const node of project.nodes) {
+    const base = nodeIndex.get(node.id)! * 3;
+    if (node.support.type === 'fixed') { add([[base, 1]], 'support', node.id); add([[base + 1, 1]], 'support', node.id); add([[base + 2, 1]], 'support', node.id); }
+    else if (node.support.type === 'pin') { add([[base, 1]], 'support', node.id); add([[base + 1, 1]], 'support', node.id); }
+    else if (node.support.type === 'roller') {
+      const angle = ((node.support.angleDeg ?? 90) * Math.PI) / 180;
+      add([[base, Math.cos(angle)], [base + 1, Math.sin(angle)]], 'support', node.id);
+    } else if (node.support.type === 'custom') {
+      if (node.support.restrainX) add([[base, 1]], 'support', node.id);
+      if (node.support.restrainY) add([[base + 1, 1]], 'support', node.id);
+      if (node.support.restrainR) add([[base + 2, 1]], 'support', node.id);
+    }
+  }
+  const participating = new Set(project.members.flatMap((member) => [member.i, member.j]));
+  for (const node of project.nodes) {
+    if (participating.has(node.id)) continue;
+    const base = nodeIndex.get(node.id)! * 3;
+    add([[base, 1]], 'bookkeeping', node.id); add([[base + 1, 1]], 'bookkeeping', node.id); add([[base + 2, 1]], 'bookkeeping', node.id);
+  }
+  for (const node of project.nodes) {
+    const restrained = node.support.type === 'fixed' || (node.support.type === 'custom' && Boolean(node.support.restrainR));
+    const spring = (node.support.spring?.kr ?? 0) > 0;
+    const transfers = project.members.some((member) => {
+      if (member.i !== node.id && member.j !== node.id) return false;
+      if (member.type === 'rigid') return true;
+      if (node.internalHinge) return false;
+      return frameEndTransfersRotation(member, node.id);
+    });
+    if (!restrained && !spring && !transfers) add([[nodeIndex.get(node.id)! * 3 + 2, 1]], 'bookkeeping', node.id);
+  }
+  for (const member of project.members.filter((item) => item.type === 'rigid')) {
+    const i = nodes.get(member.i)!; const j = nodes.get(member.j)!;
+    const ii = nodeIndex.get(member.i)! * 3; const ji = nodeIndex.get(member.j)! * 3;
+    add([[ji, 1], [ii, -1], [ii + 2, j.y - i.y]], 'rigid');
+    add([[ji + 1, 1], [ii + 1, -1], [ii + 2, i.x - j.x]], 'rigid');
+    add([[ji + 2, 1], [ii + 2, -1]], 'rigid');
+  }
+  for (const constraint of project.multiPointConstraints ?? []) {
+    const terms: Array<[number, number]> = [];
+    for (const term of constraint.terms) {
+      const index = nodeIndex.get(term.nodeId);
+      if (index === undefined) continue;
+      const component = term.component === 'ux' ? 0 : term.component === 'uy' ? 1 : 2;
+      terms.push([index * 3 + component, term.coefficient]);
+    }
+    if (terms.length) add(terms, 'multi-point');
+  }
+  return constraints;
 };
 
 export const frameLocalStiffness = (member: MemberModel, L: number): Matrix => {
@@ -184,7 +338,7 @@ export const geometricStiffness = (L: number, N: number): Matrix => {
   return k;
 };
 
-const trussLocalStiffness = (member: MemberModel, L: number): Matrix => {
+export const trussLocalStiffness = (member: MemberModel, L: number): Matrix => {
   const a = (member.E * member.A) / L;
   return [
     [a, 0, 0, -a, 0, 0],
@@ -255,6 +409,26 @@ const shapeVector = (member: MemberModel, x: number, L: number): number[] => {
   if (member.type !== 'frame') return [1 - r, 0, 0, r, 0, 0];
   const interpolation = frameInterpolation(member, x, L);
   return [1 - r, interpolation.v[0], interpolation.v[1], r, interpolation.v[2], interpolation.v[3]];
+};
+
+/** Consistent Winkler-foundation stiffness integrated over each frame member. */
+export const foundationLocalStiffness = (project: ProjectModel, member: MemberModel, geometry: Geometry): Matrix => {
+  const result = zeros(6, 6);
+  if (member.type !== 'frame') return result;
+  for (const source of project.generatedLoadSources ?? []) {
+    if (source.kind !== 'elastic-foundation' || !source.memberIds.includes(member.id)) continue;
+    for (const point of GAUSS_POINTS) {
+      const x = ((point.x + 1) * geometry.L) / 2;
+      const n = shapeVector(member, x, geometry.L);
+      // u_global,x = c u_local - s v_local; u_global,y = s u_local + c v_local.
+      const direction = source.direction === 'global-x'
+        ? [geometry.c * n[0], -geometry.s * n[1], -geometry.s * n[2], geometry.c * n[3], -geometry.s * n[4], -geometry.s * n[5]]
+        : [geometry.s * n[0], geometry.c * n[1], geometry.c * n[2], geometry.s * n[3], geometry.c * n[4], geometry.c * n[5]];
+      const weight = source.stiffness * geometry.L / 2 * point.w;
+      for (let i = 0; i < 6; i += 1) for (let j = 0; j < 6; j += 1) result[i][j] += weight * direction[i] * direction[j];
+    }
+  }
+  return result;
 };
 
 const rotationShapeVector = (member: MemberModel, x: number, L: number): number[] => {
@@ -357,7 +531,7 @@ const initialEffectEquivalentLoad = (
   return [-axial, 0, -bending, axial, 0, bending];
 };
 
-interface CondensationResult {
+export interface CondensationResult {
   stiffness: Matrix;
   load: number[];
   released: number[];
@@ -365,11 +539,11 @@ interface CondensationResult {
     kba: Matrix;
     kbb: Matrix;
     fb: number[];
-    beamRotationIndices: number[];
+    localIndices: number[];
   };
 }
 
-const condenseConnections = (
+export const condenseConnections = (
   k: Matrix,
   f: number[],
   member: MemberModel,
@@ -377,17 +551,24 @@ const condenseConnections = (
   releaseJ: boolean,
   linearBackend: LinearSolverPolicy = 'auto',
 ): CondensationResult => {
-  const connections = [
-    releaseI || member.rotationalSpringI !== undefined ? { localRotation: 2, stiffness: releaseI ? 0 : member.rotationalSpringI ?? 0 } : null,
-    releaseJ || member.rotationalSpringJ !== undefined ? { localRotation: 5, stiffness: releaseJ ? 0 : member.rotationalSpringJ ?? 0 } : null,
-  ].filter((connection): connection is { localRotation: number; stiffness: number } => connection !== null);
-  const released = connections.filter((connection) => connection.stiffness === 0).map((connection) => connection.localRotation);
+  const candidates = [
+    { localIndex: 0, released: Boolean(member.releases?.iAxial), stiffness: undefined },
+    { localIndex: 1, released: Boolean(member.releases?.iShear), stiffness: undefined },
+    { localIndex: 2, released: releaseI, stiffness: member.rotationalSpringI },
+    { localIndex: 3, released: Boolean(member.releases?.jAxial), stiffness: undefined },
+    { localIndex: 4, released: Boolean(member.releases?.jShear), stiffness: undefined },
+    { localIndex: 5, released: releaseJ, stiffness: member.rotationalSpringJ },
+  ];
+  const connections = candidates
+    .filter((candidate) => candidate.released || candidate.stiffness !== undefined)
+    .map((candidate) => ({ localIndex: candidate.localIndex, stiffness: candidate.released ? 0 : candidate.stiffness ?? 0 }));
+  const released = connections.filter((connection) => connection.stiffness === 0).map((connection) => connection.localIndex);
   if (!connections.length) return { stiffness: k, load: f, released };
   const size = 6 + connections.length;
   const augmentedK = zeros(size, size);
   const augmentedF = Array(size).fill(0);
   const beamMap = [0, 1, 2, 3, 4, 5];
-  connections.forEach((connection, index) => { beamMap[connection.localRotation] = 6 + index; });
+  connections.forEach((connection, index) => { beamMap[connection.localIndex] = 6 + index; });
   for (let i = 0; i < 6; i += 1) {
     augmentedF[beamMap[i]] += f[i];
     for (let j = 0; j < 6; j += 1) augmentedK[beamMap[i]][beamMap[j]] += k[i][j];
@@ -395,7 +576,7 @@ const condenseConnections = (
   connections.forEach((connection, index) => {
     if (connection.stiffness <= 0) return;
     const internal = 6 + index;
-    const joint = connection.localRotation;
+    const joint = connection.localIndex;
     augmentedK[joint][joint] += connection.stiffness;
     augmentedK[internal][internal] += connection.stiffness;
     augmentedK[joint][internal] -= connection.stiffness;
@@ -418,7 +599,7 @@ const condenseConnections = (
   const correctionF = multiplyMatrixVector(kab, kbbInverseTimesFb);
   const condensedK = kaa.map((row, i) => row.map((value, j) => value - correctionK[i][j]));
   const condensedF = fa.map((value, i) => value - correctionF[i]);
-  return { stiffness: condensedK, load: condensedF, released, recovery: { kba, kbb, fb, beamRotationIndices: connections.map((connection) => connection.localRotation) } };
+  return { stiffness: condensedK, load: condensedF, released, recovery: { kba, kbb, fb, localIndices: connections.map((connection) => connection.localIndex) } };
 };
 
 const recoverConnectedDisplacements = (
@@ -427,11 +608,11 @@ const recoverConnectedDisplacements = (
   linearBackend: LinearSolverPolicy = 'auto',
 ): number[] => {
   if (!assembly.connectionRecovery) return nodalLocalDisplacements;
-  const { kba, kbb, fb, beamRotationIndices } = assembly.connectionRecovery;
+  const { kba, kbb, fb, localIndices } = assembly.connectionRecovery;
   const rhs = fb.map((value, i) => value - multiplyMatrixVector(kba, nodalLocalDisplacements)[i]);
   const db = solveLinearSystem(kbb, rhs, { backend: linearBackend }).x;
   const recovered = [...nodalLocalDisplacements];
-  beamRotationIndices.forEach((index, i) => {
+  localIndices.forEach((index, i) => {
     recovered[index] = db[i];
   });
   return recovered;
@@ -456,7 +637,8 @@ const hasEvidentGrounding = (project: ProjectModel): boolean => {
     const spring = node.support.spring;
     return Boolean(spring && [spring.kx, spring.ky, spring.kr, spring.kNormal].some((value) => (value ?? 0) > 0));
   });
-  return hasSupportConstraint || hasGroundingSpring;
+  const hasGroundingLink = (project.nodeLinks ?? []).some((link) => !link.nodeJ && link.stiffness > 0);
+  return hasSupportConstraint || hasGroundingSpring || hasGroundingLink;
 };
 
 export const getEvidentGroundingIssue = (project: ProjectModel): ValidationIssue | null => hasEvidentGrounding(project)
@@ -470,6 +652,35 @@ export const validateProject = (project: ProjectModel): ValidationIssue[] => {
   const memberMap = new Map(project.members.map((member) => [member.id, member]));
   const caseIds = new Set(project.loadCases.map((loadCase) => loadCase.id));
   const finiteValue = (value: number) => Number.isFinite(value);
+
+  for (const link of project.nodeLinks ?? []) {
+    if (!nodeMap.has(link.nodeI)) push({ id: `node-link-i-${link.id}`, severity: 'error', title: 'Vínculo con nodo inexistente', message: `El vínculo ${link.id} no encuentra su nodo inicial ${link.nodeI}.`, objectId: link.id });
+    if (link.nodeJ && !nodeMap.has(link.nodeJ)) push({ id: `node-link-j-${link.id}`, severity: 'error', title: 'Vínculo con nodo inexistente', message: `El vínculo ${link.id} no encuentra su nodo final ${link.nodeJ}.`, objectId: link.id });
+    if (link.nodeJ === link.nodeI) push({ id: `node-link-loop-${link.id}`, severity: 'error', title: 'Vínculo degenerado', message: `El vínculo ${link.id} conecta un nodo consigo mismo.`, objectId: link.id });
+    if (!finiteValue(link.stiffness) || !(link.stiffness > 0)) push({ id: `node-link-stiffness-${link.id}`, severity: 'error', title: 'Rigidez de vínculo inválida', message: `El vínculo ${link.id} requiere una rigidez positiva y finita.`, objectId: link.id });
+    if (!finiteValue(link.angleDeg ?? 0) || !finiteValue(link.clearance ?? 0) || (link.clearance ?? 0) < 0) push({ id: `node-link-geometry-${link.id}`, severity: 'error', title: 'Geometría de vínculo inválida', message: `El ángulo y la holgura de ${link.id} deben ser finitos; la holgura no puede ser negativa.`, objectId: link.id });
+    if (link.behavior === 'friction' && (!finiteValue(link.slipForce ?? Number.NaN) || !(link.slipForce! > 0))) push({ id: `node-link-friction-${link.id}`, severity: 'error', title: 'Límite de fricción inválido', message: `El vínculo de fricción ${link.id} requiere una fuerza de deslizamiento positiva.`, objectId: link.id });
+  }
+  for (const constraint of project.multiPointConstraints ?? []) {
+    if (constraint.terms.length < 2 || !constraint.terms.some((term) => Math.abs(term.coefficient) > 0)) push({ id: `multi-point-terms-${constraint.id}`, severity: 'error', title: 'Restricción multipunto inválida', message: `${constraint.id} necesita al menos dos términos y un coeficiente no nulo.`, objectId: constraint.id });
+    if (!finiteValue(constraint.value ?? 0)) push({ id: `multi-point-value-${constraint.id}`, severity: 'error', title: 'Valor multipunto inválido', message: `El valor impuesto de ${constraint.id} debe ser finito.`, objectId: constraint.id });
+    for (const term of constraint.terms) {
+      if (!nodeMap.has(term.nodeId) || !finiteValue(term.coefficient)) push({ id: `multi-point-term-${constraint.id}-${term.nodeId}`, severity: 'error', title: 'Término multipunto inválido', message: `La restricción ${constraint.id} tiene un nodo inexistente o coeficiente no finito.`, objectId: constraint.id });
+    }
+  }
+  for (const mass of project.nodalMasses ?? []) {
+    if (!nodeMap.has(mass.nodeId) || !finiteValue(mass.mass) || mass.mass < 0 || !finiteValue(mass.rotationalInertia ?? 0) || (mass.rotationalInertia ?? 0) < 0) push({ id: `nodal-mass-${mass.id}`, severity: 'error', title: 'Masa nodal inválida', message: `La masa ${mass.id} requiere nodo existente y valores no negativos finitos.`, objectId: mass.id });
+  }
+  for (const source of project.generatedLoadSources ?? []) {
+    const missingMember = source.memberIds.find((memberId) => !memberMap.has(memberId));
+    if (missingMember) push({ id: `generated-member-${source.id}`, severity: 'error', title: 'Fuente de carga huérfana', message: `${source.id} referencia el miembro inexistente ${missingMember}.`, objectId: source.id });
+    if (source.kind === 'elastic-foundation') {
+      if (!finiteValue(source.stiffness) || !(source.stiffness > 0)) push({ id: `foundation-stiffness-${source.id}`, severity: 'error', title: 'Fundación elástica inválida', message: `${source.id} requiere una rigidez Winkler positiva y finita.`, objectId: source.id });
+      if (source.memberIds.some((memberId) => memberMap.get(memberId)?.type !== 'frame')) push({ id: `foundation-type-${source.id}`, severity: 'error', title: 'Fundación elástica incompatible', message: `${source.id} sólo puede aplicarse a miembros de pórtico.`, objectId: source.id });
+      continue;
+    }
+    if (!caseIds.has(source.caseId)) push({ id: `generated-case-${source.id}`, severity: 'error', title: 'Caso de carga inexistente', message: `${source.id} referencia el caso ${source.caseId}.`, objectId: source.id });
+  }
 
   if (project.nodes.length < 2) {
     push({ id: 'nodes-min', severity: 'error', title: 'Modelo incompleto', message: 'Agrega al menos dos nodos.', suggestedFix: 'Usa la herramienta Nodo y después conecta los nodos con miembros.' });
@@ -494,6 +705,11 @@ export const validateProject = (project: ProjectModel): ValidationIssue[] => {
   validateUniqueIds(project.nodalLoads, 'cargas nodales', 'nodal-load');
   validateUniqueIds(project.memberLoads, 'cargas de miembro', 'member-load');
   validateUniqueIds(project.prescribedDisplacements ?? [], 'desplazamientos prescritos', 'prescribed-displacement');
+  validateUniqueIds(project.nodeLinks ?? [], 'vínculos nodales', 'node-link');
+  validateUniqueIds(project.multiPointConstraints ?? [], 'restricciones multipunto', 'multi-point');
+  validateUniqueIds(project.nodalMasses ?? [], 'masas nodales', 'nodal-mass');
+  validateUniqueIds(project.generatedLoadSources ?? [], 'fuentes de carga generadas', 'generated-load');
+  validateUniqueIds(project.movingLoadCases ?? [], 'casos móviles', 'moving-load');
 
   const xs = project.nodes.map((node) => node.x).filter(Number.isFinite);
   const ys = project.nodes.map((node) => node.y).filter(Number.isFinite);
@@ -576,7 +792,8 @@ export const validateProject = (project: ProjectModel): ValidationIssue[] => {
       if (member.type === 'frame' && (!finiteValue(member.I) || member.I <= 0)) push({ id: `I-${member.id}`, severity: 'error', title: 'Inercia inválida', message: `I del miembro ${member.id} debe ser mayor que cero.`, objectId: member.id, suggestedFix: 'Define un momento de inercia positivo.' });
       if (finiteValue(member.E) && finiteValue(member.A) && !finiteValue(member.E * member.A)) push({ id: `EA-${member.id}`, severity: 'error', title: 'Rigidez axial fuera de rango', message: `E·A del miembro ${member.id} excede el rango numérico disponible.`, objectId: member.id, suggestedFix: 'Revisa unidades y órdenes de magnitud de E y A.' });
       if (member.type === 'frame' && finiteValue(member.E) && finiteValue(member.I) && !finiteValue(member.E * member.I)) push({ id: `EI-${member.id}`, severity: 'error', title: 'Rigidez flexional fuera de rango', message: `E·I del miembro ${member.id} excede el rango numérico disponible.`, objectId: member.id, suggestedFix: 'Revisa unidades y órdenes de magnitud de E e I.' });
-      if (member.type !== 'frame' && (member.releases?.iMoment || member.releases?.jMoment)) push({ id: `release-type-${member.id}`, severity: 'error', title: 'Liberación incompatible', message: `Las liberaciones de momento de ${member.id} solo aplican a miembros de marco.`, objectId: member.id, suggestedFix: 'Elimina la liberación o cambia el tipo de miembro.' });
+      if (member.type !== 'frame' && Object.values(member.releases ?? {}).some(Boolean)) push({ id: `release-type-${member.id}`, severity: 'error', title: 'Liberación incompatible', message: `Las liberaciones de extremo de ${member.id} solo aplican a miembros de marco.`, objectId: member.id, suggestedFix: 'Elimina la liberación o cambia el tipo de miembro.' });
+      if (member.type === 'frame' && ['iAxial', 'iShear', 'iMoment', 'jAxial', 'jShear', 'jMoment'].every((key) => member.releases?.[key as keyof typeof member.releases])) push({ id: `release-all-${member.id}`, severity: 'error', title: 'Miembro sin conexión', message: `${member.id} libera sus seis grados de extremo y no puede transferir ninguna acción.`, objectId: member.id, suggestedFix: 'Conserva al menos una conexión o elimina el miembro.' });
       if (member.beamTheory === 'timoshenko') {
         if (member.type !== 'frame') push({ id: `timoshenko-type-${member.id}`, severity: 'error', title: 'Teoría de viga incompatible', message: `Timoshenko solo está disponible para miembros de pórtico; ${member.id} es ${member.type}.`, objectId: member.id });
         if (!finiteValue(member.G ?? Number.NaN) || (member.G ?? 0) <= 0) push({ id: `G-${member.id}`, severity: 'error', title: 'Módulo cortante inválido', message: `G del miembro ${member.id} debe ser mayor que cero para Timoshenko.`, objectId: member.id, suggestedFix: 'Define G o usa Euler–Bernoulli.' });
@@ -1257,6 +1474,8 @@ const abortedResult = abortedAnalysis;
  */
 export interface AnalyzeProjectOptions {
   pDeltaAxialForces?: Map<string, number>;
+  /** Nonlinear-link tangent selected by the active-set wrapper for this iteration. */
+  nodeLinkLinearizations?: ReadonlyMap<string, LinkLinearization>;
   includeEducationTrace?: boolean;
   /** Internal run-wide policy; P-Delta uses `dense` to stay isolated from sparse. */
   linearBackend?: LinearSolverPolicy;
@@ -1267,6 +1486,7 @@ export const analyzeProject = (
   combination?: LoadCombination | null,
   options?: AnalyzeProjectOptions,
 ): AnalysisResult => {
+  project = withResolvedGeneratedLoads(project);
   const issues = validateProject(project);
   if (issues.some((issue) => issue.severity === 'error')) {
     return abortedResult(issues);
@@ -1346,6 +1566,7 @@ export const analyzeProject = (
       const indices = [iIndex * 3, iIndex * 3 + 1, iIndex * 3 + 2, jIndex * 3, jIndex * 3 + 1, jIndex * 3 + 2];
       const transform = rigidOffsetTransform(geometry, startOffset, endOffset);
       const elasticStiffness = member.type === 'truss' ? trussLocalStiffness(member, geometry.L) : frameLocalStiffness(member, geometry.L);
+      const foundationStiffness = foundationLocalStiffness(project, member, geometry);
       // Geometric stiffness only applies to bending (frame) members: a truss
       // member has no transverse DOFs to soften/stiffen, and a rigid member
       // never reaches this loop (it is a pure kinematic constraint, see below).
@@ -1353,9 +1574,9 @@ export const analyzeProject = (
       const localStiffnessOriginal = pDeltaAxialForce
         ? (() => {
             const kg = geometricStiffness(geometry.L, pDeltaAxialForce);
-            return elasticStiffness.map((row, i) => row.map((value, j) => value + kg[i][j]));
+            return elasticStiffness.map((row, i) => row.map((value, j) => value + kg[i][j] + foundationStiffness[i][j]));
           })()
-        : elasticStiffness;
+        : elasticStiffness.map((row, i) => row.map((value, j) => value + foundationStiffness[i][j]));
       const localLoads = resolveMemberLocalLoads(project, member.id, combination).loads;
       const initialEffect = resolveMemberInitialEffect(project, member.id, combination);
       const mechanicalEquivalentLoad = equivalentNodalLoad(localLoads, geometry.L, member);
@@ -1367,6 +1588,7 @@ export const analyzeProject = (
         ? condenseConnections(localStiffnessOriginal, localLoadOriginal, member, releaseI, releaseJ, options?.linearBackend)
         : { stiffness: localStiffnessOriginal, load: localLoadOriginal, released: [] };
       const globalStiffness = multiply(multiply(transpose(transform), condensed.stiffness), transform);
+      const foundationGlobalStiffness = multiply(multiply(transpose(transform), foundationStiffness), transform);
       const globalLoad = multiplyMatrixVector(transpose(transform), condensed.load);
       addToMatrix(K, globalStiffness, indices);
       addToVector(F, globalLoad, indices);
@@ -1384,6 +1606,7 @@ export const analyzeProject = (
         initialCurvature: member.type === 'frame' ? initialEffect.curvature : 0,
         globalStiffness,
         globalLoad,
+        foundationGlobalStiffness,
         connectionRecovery: condensed.recovery,
       });
     }
@@ -1407,7 +1630,18 @@ export const analyzeProject = (
       }
     }
 
-    type ConstraintKind = 'support' | 'bookkeeping' | 'rigid';
+    // Node-to-ground and node-to-node links use the same global assembly as
+    // nodal springs. Nonlinear variants arrive here already linearized by the
+    // active-set wrapper, so each iteration remains one auditable linear solve.
+    const linkLinearizations = new Map<string, LinkLinearization>();
+    const linkLinearizationOffsets = Array(ndof).fill(0);
+    for (const link of project.nodeLinks ?? []) {
+      const linearization = options?.nodeLinkLinearizations?.get(link.id) ?? linearizeNodeLink(link);
+      linkLinearizations.set(link.id, linearization);
+      assembleNodeLink(K, F, link, nodeIndex, linearization, linkLinearizationOffsets);
+    }
+
+    type ConstraintKind = 'support' | 'bookkeeping' | 'rigid' | 'multi-point';
     interface ConstraintDefinition { row: number[]; kind: ConstraintKind; nodeId?: string; value: number }
     const constraints: ConstraintDefinition[] = [];
     const addConstraint = (terms: Array<[number, number]>, kind: ConstraintKind, nodeId?: string, value = 0) => {
@@ -1473,6 +1707,17 @@ export const analyzeProject = (
       addConstraint([[ji, 1], [ii, -1], [ii + 2, dy]], 'rigid');
       addConstraint([[ji + 1, 1], [ii + 1, -1], [ii + 2, -dx]], 'rigid');
       addConstraint([[ji + 2, 1], [ii + 2, -1]], 'rigid');
+    }
+
+    for (const constraint of project.multiPointConstraints ?? []) {
+      const terms: Array<[number, number]> = [];
+      for (const term of constraint.terms) {
+        const index = nodeIndex.get(term.nodeId);
+        if (index === undefined) continue;
+        const component = term.component === 'ux' ? 0 : term.component === 'uy' ? 1 : 2;
+        terms.push([index * 3 + component, term.coefficient]);
+      }
+      if (terms.length) addConstraint(terms, 'multi-point', undefined, constraint.value ?? 0);
     }
 
     // Remove exact duplicate constraints to avoid an artificial singularity.
@@ -1669,6 +1914,16 @@ export const analyzeProject = (
       issues.push({ id: 'linear-residual', severity: 'warning', title: 'Precisión limitada del sistema lineal', message: `El residuo relativo del sistema equilibrado es ${solved.relativeResidual.toExponential(3)} después de ${solved.refinementIterations} iteraciones de refinamiento.` });
     }
 
+    // A distributed Winkler foundation is an external ground reaction even
+    // though its stiffness is assembled through the member. Recover its
+    // consistent nodal resultant so global statics includes the soil/support.
+    const foundationReactions = Array(ndof).fill(0);
+    for (const assembly of elementAssemblies) {
+      const globalD = assembly.indices.map((index) => U[index]);
+      const localReaction = multiplyMatrixVector(assembly.foundationGlobalStiffness, globalD);
+      assembly.indices.forEach((dof, index) => { foundationReactions[dof] -= localReaction[index]; });
+    }
+
     const nodeResults: NodeResult[] = project.nodes.map((node, index) => {
       const ux = U[index * 3];
       const uy = U[index * 3 + 1];
@@ -1676,6 +1931,9 @@ export const analyzeProject = (
       let rx = hardSupportReactions[index * 3];
       let ry = hardSupportReactions[index * 3 + 1];
       let rm = hardSupportReactions[index * 3 + 2];
+      rx += foundationReactions[index * 3];
+      ry += foundationReactions[index * 3 + 1];
+      rm += foundationReactions[index * 3 + 2];
       const spring = node.support.spring;
       if (spring) {
         rx -= (spring.kx ?? 0) * ux;
@@ -1689,6 +1947,16 @@ export const analyzeProject = (
           rx -= spring.kNormal * normalDisplacement * nx;
           ry -= spring.kNormal * normalDisplacement * ny;
         }
+      }
+      for (const link of project.nodeLinks ?? []) {
+        if (link.nodeJ || link.nodeI !== node.id) continue;
+        const linearization = linkLinearizations.get(link.id);
+        if (!linearization?.active) continue;
+        const delta = linkRelativeDisplacement(link, U, nodeIndex);
+        const force = linearization.tangentStiffness * delta + linearization.constantForce;
+        const angle = ((link.angleDeg ?? 0) * Math.PI) / 180;
+        rx -= force * Math.cos(angle);
+        ry -= force * Math.sin(angle);
       }
       const supportAngle = ((node.support.angleDeg ?? 90) * Math.PI) / 180;
       const nx = Math.cos(supportAngle);
@@ -1721,9 +1989,12 @@ export const analyzeProject = (
       const base = index * 3;
       const dx = node.x - referenceX;
       const dy = node.y - referenceY;
-      const fx = F[base];
-      const fy = F[base + 1];
-      const nodalMoment = F[base + 2];
+      // A nonlinear-link tangent may carry a constant offset so that its
+      // piecewise law is represented exactly in this linear iteration. It is
+      // an internal linearization term, never an applied external load.
+      const fx = F[base] - linkLinearizationOffsets[base];
+      const fy = F[base + 1] - linkLinearizationOffsets[base + 1];
+      const nodalMoment = F[base + 2] - linkLinearizationOffsets[base + 2];
       addResultant(
         assembledAccumulator,
         fx,

@@ -60,6 +60,8 @@ import {
 import { CanvasResultLayer, diagramPixelScaleFor, reactionClearanceFor } from './CanvasResultLayer';
 import { CanvasInteractionLayer } from './CanvasInteractionLayer';
 import { CanvasMiniMap } from './CanvasMiniMap';
+import { CanvasDiagramStack } from './CanvasDiagramStack';
+import { persistStackQuantities, readStoredStackQuantities, resolveStackMemberId, stackMetricsFor, toggleStackQuantity, type StackQuantity } from './diagramStack';
 import { CanvasTouchLoupe } from './CanvasTouchLoupe';
 import { CandidatePicker } from './CanvasCandidatePicker';
 import {
@@ -248,7 +250,9 @@ export const StructuralCanvas = ({
     cancelProjectTransaction,
     learningFocus,
     resultCursor,
+    setResultCursor,
     influenceCanvasState,
+    modeShapeState,
   } = useProject();
   const view = readCanvasViewSettings(project);
   const { language, t } = useI18n();
@@ -265,6 +269,8 @@ export const StructuralCanvas = ({
   const [canvasMeasured, setCanvasMeasured] = useState(false);
   const [camera, setCamera] = useState<Camera>({ scale: 85, x: 260, y: 500 });
   const [memberStart, setMemberStart] = useState<string | null>(null);
+  const [stackActive, setStackActive] = useState(false);
+  const [stackQuantities, setStackQuantities] = useState<StackQuantity[]>(readStoredStackQuantities);
   const [cut, setCut] = useState<CutInfo | null>(null);
   const [interaction, setInteractionState] = useState<CanvasInteraction>(IDLE_INTERACTION);
   const [spacePressed, setSpacePressed] = useState(false);
@@ -645,15 +651,24 @@ export const StructuralCanvas = ({
     coordinateReadoutRef.current.textContent = `X ${formatFixed(toDisplay(point.x, units, 'length'), 3)} · Y ${formatFixed(toDisplay(point.y, units, 'length'), 3)} ${lengthLabel}`;
   }, [lengthLabel, localScreenPoint, units]);
 
-  const fitModel = useCallback(() => {
+  const fitModel = useCallback((bottomReserve = 0) => {
     if (!project.nodes.length || !size.width || !size.height) return;
     const viewport = { width: size.width, height: size.height };
+    const insets = canvasSafeInsetsFor(viewport);
     updateCamera(cameraToFitBounds(
       modelBounds(project.nodes),
       viewport,
-      canvasSafeInsetsFor(viewport),
+      { ...insets, bottom: insets.bottom + bottomReserve },
     ));
   }, [project.nodes, size, updateCamera]);
+
+  const navigateMinimapTo = useCallback((point: ModelPoint) => {
+    updateCamera((current) => ({
+      scale: current.scale,
+      x: size.width / 2 - point.x * current.scale,
+      y: size.height / 2 + point.y * current.scale,
+    }));
+  }, [size.height, size.width, updateCamera]);
 
   useEffect(() => {
     if (!hostRef.current) return;
@@ -1922,6 +1937,42 @@ export const StructuralCanvas = ({
     return maximum;
   }, [analysis, resultTab]);
 
+  const stackMemberId = useMemo(
+    () => stackActive ? resolveStackMemberId(project, selection, resultMap) : null,
+    [project, resultMap, selection, stackActive],
+  );
+  const stackResult = stackMemberId ? resultMap.get(stackMemberId) ?? null : null;
+  const stackAnchor = useMemo(() => {
+    if (!stackResult || !project.nodes.length) return null;
+    const bounds = modelBounds(project.nodes);
+    const left = toScreen(bounds.minX, bounds.minY);
+    const right = toScreen(bounds.maxX, bounds.minY);
+    return { minX: left.x, maxX: right.x, maxY: Math.max(left.y, right.y) };
+  }, [project.nodes, stackResult, toScreen]);
+  const stackAvailable = Boolean(analysis?.success && resolveStackMemberId(project, selection, resultMap));
+  const readStackStation = useCallback((x: number | null) => {
+    if (!stackMemberId || resultCursor?.pinned) return;
+    const current = resultCursor?.memberId === stackMemberId ? resultCursor.x : null;
+    if (current === x) return;
+    setResultCursor(x === null ? null : { memberId: stackMemberId, x, pinned: false });
+  }, [resultCursor?.memberId, resultCursor?.pinned, resultCursor?.x, setResultCursor, stackMemberId]);
+  const stackCursorX = stackMemberId && resultCursor?.memberId === stackMemberId ? resultCursor.x : null;
+  const toggleStack = useCallback(() => {
+    if (!stackActive && !layers.results) dispatchLayers({ type: 'set', layer: 'results', visible: true });
+    if (!stackActive) window.requestAnimationFrame(() => fitModel(stackMetricsFor(size.height, stackQuantities.length).total));
+    if (stackActive && !resultCursor?.pinned && resultCursor?.memberId === stackMemberId) setResultCursor(null);
+    setStackActive((current) => !current);
+  }, [dispatchLayers, fitModel, layers.results, resultCursor?.memberId, resultCursor?.pinned, setResultCursor, size.height, stackActive, stackMemberId, stackQuantities.length]);
+  const toggleStackQuantityChoice = useCallback((quantity: StackQuantity) => {
+    setStackQuantities((current) => {
+      const next = toggleStackQuantity(current, quantity);
+      persistStackQuantities(next);
+      if (stackActive) window.requestAnimationFrame(() => fitModel(stackMetricsFor(size.height, next.length).total));
+      return next;
+    });
+  }, [fitModel, size.height, stackActive]);
+  useEffect(() => onWorkspaceCommand('toggle-diagram-stack', toggleStack), [toggleStack]);
+
   const mechanismPixelScale = useMemo(() => {
     let maximum = 0;
     for (const node of mechanismMap.values()) maximum = Math.max(maximum, Math.hypot(node.ux, node.uy));
@@ -2316,6 +2367,7 @@ export const StructuralCanvas = ({
           resultsAllowed={resultsAllowed}
           resultCursor={resultCursor}
           influenceCanvasState={influenceCanvasState}
+          modeShapeState={modeShapeState}
           camera={camera}
           toScreen={toScreen}
           nodeMap={nodeMap}
@@ -2334,6 +2386,19 @@ export const StructuralCanvas = ({
           size={size}
           t={t}
         />
+
+        {stackActive && stackResult && stackAnchor && layers.results && analysis?.success && !structuralEditDraft ? <CanvasDiagramStack
+          memberId={stackResult.memberId}
+          result={stackResult}
+          quantities={stackQuantities}
+          modelScreenBounds={stackAnchor}
+          viewportHeight={size.height}
+          cursorX={stackCursorX}
+          onCursorChange={readStackStation}
+          units={units}
+          lengthLabel={lengthLabel}
+          t={t}
+        /> : null}
 
         <CanvasGeometryLayer
           slot="members"
@@ -2370,6 +2435,7 @@ export const StructuralCanvas = ({
           resultsAllowed={resultsAllowed}
           resultCursor={resultCursor}
           influenceCanvasState={influenceCanvasState}
+          modeShapeState={modeShapeState}
           camera={camera}
           toScreen={toScreen}
           nodeMap={nodeMap}
@@ -2515,6 +2581,11 @@ export const StructuralCanvas = ({
         onZoomIn={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1.15))}
         onZoomOut={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1 / 1.15))}
         onFit={fitModel}
+        stackActive={stackActive}
+        stackAvailable={stackAvailable}
+        stackQuantities={stackQuantities}
+        onStackToggle={toggleStack}
+        onStackQuantityToggle={toggleStackQuantityChoice}
       />
       {project.members.length >= 12 || project.nodes.length >= 16 ? <CanvasMiniMap
         nodes={project.nodes}
@@ -2522,6 +2593,7 @@ export const StructuralCanvas = ({
         viewport={minimapViewport}
         label={t('canvas.minimap')}
         onFit={fitModel}
+        onNavigate={navigateMinimapTo}
       /> : null}
       {touchLoupe ? <CanvasTouchLoupe
         {...touchLoupe}

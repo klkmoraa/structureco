@@ -13,7 +13,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { TranslationKey } from '../../i18n/catalogs';
 import { useI18n } from '../../i18n/useI18n';
 import type { AnalysisResult, ProjectModel } from '../../types';
@@ -76,6 +76,8 @@ export interface ImportCenterAdapter {
 
 export interface ImportCenterDialogProps {
   open: boolean;
+  /** Archivo ya entregado por el sistema operativo; sigue pasando por revisión y confirmación. */
+  initialFile?: File | null;
   currentProjectName: string;
   onClose: () => void;
   onImported: (outcome: ImportOutcome) => void;
@@ -213,6 +215,7 @@ const getFileIcon = (kind?: ImportInspection['kind']) => {
 
 export const ImportCenterDialog = ({
   open,
+  initialFile = null,
   currentProjectName,
   onClose,
   onImported,
@@ -220,7 +223,7 @@ export const ImportCenterDialog = ({
   adapter,
 }: ImportCenterDialogProps) => {
   const { t } = useI18n();
-  const activeAdapter = adapter ?? createJsonImportCenterAdapter(t);
+  const activeAdapter = useMemo(() => adapter ?? createJsonImportCenterAdapter(t), [adapter, t]);
   const [stage, setStage] = useState<ImportStage>('select');
   const [file, setFile] = useState<File | null>(null);
   const [inspection, setInspection] = useState<ImportInspection | null>(null);
@@ -250,8 +253,13 @@ export const ImportCenterDialog = ({
    * during 'inspect'), so this is defense in depth rather than a reachable race today.
    */
   const inspectionRequestRef = useRef(0);
+  const initialFileRef = useRef<File | null>(null);
 
   useEffect(() => {
+    // React estricto repite los efectos de montaje. Volver a habilitar el
+    // archivo inicial aquí hace que su segunda pasada vuelva a programar la
+    // inspección, en vez de invalidarla y dejar el diálogo vacío.
+    initialFileRef.current = null;
     if (!open) return;
     setStage('select');
     setFile(null);
@@ -281,9 +289,7 @@ export const ImportCenterDialog = ({
     dialogRef.current?.querySelector<HTMLElement>(`[data-import-stage-focus="${stage}"]`)?.focus();
   }, [open, stage]);
 
-  if (!open) return null;
-
-  const inspectFile = async (nextFile: File) => {
+  const inspectFile = useCallback(async (nextFile: File) => {
     const requestId = (inspectionRequestRef.current += 1);
     setFile(nextFile);
     setInspection(null);
@@ -304,7 +310,15 @@ export const ImportCenterDialog = ({
       setBusyPhase(null);
       setStage('select');
     }
-  };
+  }, [activeAdapter, t]);
+
+  useEffect(() => {
+    if (!open || !initialFile || initialFileRef.current === initialFile) return;
+    initialFileRef.current = initialFile;
+    void inspectFile(initialFile);
+  }, [initialFile, inspectFile, open]);
+
+  if (!open) return null;
 
   /** Abandons an in-flight inspection. Its eventual result, if any, is discarded on arrival. */
   const cancelInspection = () => {

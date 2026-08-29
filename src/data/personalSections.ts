@@ -9,7 +9,10 @@ export type ParametricSectionDefinition =
   | { readonly family: 'rectangle'; readonly width: number; readonly depth: number }
   | { readonly family: 'circle'; readonly diameter: number }
   | { readonly family: 'symmetric-i'; readonly width: number; readonly depth: number; readonly webThickness: number; readonly flangeThickness: number }
-  | { readonly family: 'rectangular-box'; readonly width: number; readonly depth: number; readonly thickness: number };
+  | { readonly family: 'channel'; readonly width: number; readonly depth: number; readonly webThickness: number; readonly flangeThickness: number }
+  | { readonly family: 'angle'; readonly width: number; readonly depth: number; readonly thickness: number }
+  | { readonly family: 'rectangular-box'; readonly width: number; readonly depth: number; readonly thickness: number }
+  | { readonly family: 'circular-tube'; readonly outerDiameter: number; readonly thickness: number };
 
 export interface ParametricSectionProperties {
   readonly area: number;
@@ -74,12 +77,34 @@ const normalizeDefinition = (value: unknown): ParametricSectionDefinition => {
     if (2 * flangeThickness >= depth) throw new Error('definition.flangeThickness debe dejar un alma de altura positiva.');
     return { family: value.family, width, depth, webThickness, flangeThickness };
   }
+  if (value.family === 'channel') {
+    const width = dimension(value.width, 'definition.width');
+    const depth = dimension(value.depth, 'definition.depth');
+    const webThickness = dimension(value.webThickness, 'definition.webThickness');
+    const flangeThickness = dimension(value.flangeThickness, 'definition.flangeThickness');
+    if (webThickness >= width) throw new Error('definition.webThickness debe ser menor que el ancho total.');
+    if (2 * flangeThickness >= depth) throw new Error('definition.flangeThickness debe dejar un alma de altura positiva.');
+    return { family: value.family, width, depth, webThickness, flangeThickness };
+  }
+  if (value.family === 'angle') {
+    const width = dimension(value.width, 'definition.width');
+    const depth = dimension(value.depth, 'definition.depth');
+    const thickness = dimension(value.thickness, 'definition.thickness');
+    if (thickness >= Math.min(width, depth)) throw new Error('definition.thickness debe dejar ambas alas con longitud positiva.');
+    return { family: value.family, width, depth, thickness };
+  }
   if (value.family === 'rectangular-box') {
     const width = dimension(value.width, 'definition.width');
     const depth = dimension(value.depth, 'definition.depth');
     const thickness = dimension(value.thickness, 'definition.thickness');
     if (2 * thickness >= Math.min(width, depth)) throw new Error('definition.thickness debe dejar un hueco interior positivo.');
     return { family: value.family, width, depth, thickness };
+  }
+  if (value.family === 'circular-tube') {
+    const outerDiameter = dimension(value.outerDiameter, 'definition.outerDiameter');
+    const thickness = dimension(value.thickness, 'definition.thickness');
+    if (2 * thickness >= outerDiameter) throw new Error('definition.thickness debe dejar un hueco interior positivo.');
+    return { family: value.family, outerDiameter, thickness };
   }
   throw new Error('definition.family no está soportada.');
 };
@@ -93,6 +118,38 @@ const propertiesFrom = (area: number, inertiaX: number, inertiaY: number, depth:
   radiusX: Math.sqrt(inertiaX / area),
   radiusY: Math.sqrt(inertiaY / area),
 });
+
+interface SectionRectangle {
+  readonly width: number;
+  readonly depth: number;
+  readonly centerX: number;
+  readonly centerY: number;
+}
+
+const propertiesFromRectangles = (
+  rectangles: readonly SectionRectangle[],
+  width: number,
+  depth: number,
+): ParametricSectionProperties => {
+  const area = rectangles.reduce((sum, rectangle) => sum + rectangle.width * rectangle.depth, 0);
+  const centroidX = rectangles.reduce((sum, rectangle) => sum + rectangle.width * rectangle.depth * rectangle.centerX, 0) / area;
+  const centroidY = rectangles.reduce((sum, rectangle) => sum + rectangle.width * rectangle.depth * rectangle.centerY, 0) / area;
+  const inertiaX = rectangles.reduce((sum, rectangle) => sum + (
+    rectangle.width * rectangle.depth ** 3 / 12 + rectangle.width * rectangle.depth * (rectangle.centerY - centroidY) ** 2
+  ), 0);
+  const inertiaY = rectangles.reduce((sum, rectangle) => sum + (
+    rectangle.depth * rectangle.width ** 3 / 12 + rectangle.width * rectangle.depth * (rectangle.centerX - centroidX) ** 2
+  ), 0);
+  return {
+    area,
+    inertiaX,
+    inertiaY,
+    sectionModulusX: inertiaX / Math.max(centroidY, depth - centroidY),
+    sectionModulusY: inertiaY / Math.max(centroidX, width - centroidX),
+    radiusX: Math.sqrt(inertiaX / area),
+    radiusY: Math.sqrt(inertiaY / area),
+  };
+};
 
 export const calculateParametricSection = (raw: ParametricSectionDefinition): ParametricSectionProperties => {
   const definition = normalizeDefinition(raw);
@@ -113,6 +170,29 @@ export const calculateParametricSection = (raw: ParametricSectionDefinition): Pa
     const inertiaX = (width * depth ** 3 - (width - webThickness) * webDepth ** 3) / 12;
     const inertiaY = 2 * flangeThickness * width ** 3 / 12 + webDepth * webThickness ** 3 / 12;
     return propertiesFrom(area, inertiaX, inertiaY, depth, width);
+  }
+  if (definition.family === 'channel') {
+    const { width, depth, webThickness, flangeThickness } = definition;
+    const webDepth = depth - 2 * flangeThickness;
+    return propertiesFromRectangles([
+      { width, depth: flangeThickness, centerX: width / 2, centerY: flangeThickness / 2 },
+      { width, depth: flangeThickness, centerX: width / 2, centerY: depth - flangeThickness / 2 },
+      { width: webThickness, depth: webDepth, centerX: webThickness / 2, centerY: depth / 2 },
+    ], width, depth);
+  }
+  if (definition.family === 'angle') {
+    const { width, depth, thickness } = definition;
+    return propertiesFromRectangles([
+      { width: thickness, depth, centerX: thickness / 2, centerY: depth / 2 },
+      { width: width - thickness, depth: thickness, centerX: thickness + (width - thickness) / 2, centerY: thickness / 2 },
+    ], width, depth);
+  }
+  if (definition.family === 'circular-tube') {
+    const { outerDiameter, thickness } = definition;
+    const innerDiameter = outerDiameter - 2 * thickness;
+    const area = Math.PI * (outerDiameter ** 2 - innerDiameter ** 2) / 4;
+    const inertia = Math.PI * (outerDiameter ** 4 - innerDiameter ** 4) / 64;
+    return propertiesFrom(area, inertia, inertia, outerDiameter, outerDiameter);
   }
   const { width, depth, thickness } = definition;
   const innerWidth = width - 2 * thickness;

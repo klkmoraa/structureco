@@ -55,6 +55,25 @@ describe('SectionBuilder', () => {
     expect(localStorage.getItem(PERSONAL_SECTIONS_STORAGE_KEY)).toBeNull();
   });
 
+  it('offers channel, angle, and circular-tube families with their parametric previews', async () => {
+    const user = userEvent.setup();
+    render(<SectionBuilder language="es" units="kN-m" storage={localStorage} />);
+    await user.click(screen.getByRole('button', { name: 'Nueva sección' }));
+    const family = screen.getByLabelText('Familia geométrica');
+
+    await user.selectOptions(family, 'channel');
+    expect(screen.getByTestId('section-builder-preview').getAttribute('data-family')).toBe('channel');
+    expect(screen.getByLabelText('Espesor del alma tw (m)')).toBeTruthy();
+
+    await user.selectOptions(family, 'angle');
+    expect(screen.getByTestId('section-builder-preview').getAttribute('data-family')).toBe('angle');
+    expect(screen.getByLabelText('Espesor t (m)')).toBeTruthy();
+
+    await user.selectOptions(family, 'circular-tube');
+    expect(screen.getByTestId('section-builder-preview').getAttribute('data-family')).toBe('circular-tube');
+    expect(screen.getByLabelText('Diámetro d (m)')).toBeTruthy();
+  });
+
   it('exports and imports the versioned personal library without touching the project', async () => {
     const user = userEvent.setup();
     const onDownload = vi.fn();

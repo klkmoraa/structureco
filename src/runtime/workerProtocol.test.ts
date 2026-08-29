@@ -5,11 +5,14 @@ import { analyzeAxleTrain, buildInfluenceLine } from '../engine/influence';
 import {
   WORKER_PROTOCOL_VERSION,
   type InfluenceWorkerPayload,
+  type StudiesWorkerPayload,
   type WorkerRequestEnvelope,
 } from './workerProtocol';
 import {
+  handleCertificateEnvelope,
   handleInfluenceEnvelope,
   handleScenarioEnvelope,
+  handleStudiesEnvelope,
 } from './workerHandlers';
 
 describe('worker protocol v1', () => {
@@ -40,6 +43,30 @@ describe('worker protocol v1', () => {
       protocolVersion: 1, type: 'success', domain: 'influence', requestId: 11,
       result: { line, axleTrain: payload.input.train ? analyzeAxleTrain(line, payload.input.train) : null },
     });
+  });
+
+  it('keeps the optional numeric certificate in its own worker domain', () => {
+    const project = createDefaultProject();
+    const response = handleCertificateEnvelope({
+      protocolVersion: WORKER_PROTOCOL_VERSION,
+      type: 'run',
+      domain: 'certificate',
+      requestId: 12,
+      payload: { project },
+    });
+    expect(response).toMatchObject({ protocolVersion: 1, type: 'success', domain: 'certificate', requestId: 12 });
+    if (response.type === 'success') expect(response.result.checks).toHaveLength(4);
+  });
+
+  it('labels modal and buckling worker results with the requested study kind', () => {
+    const project = createDefaultProject();
+    const request: WorkerRequestEnvelope<'studies', StudiesWorkerPayload> = {
+      protocolVersion: 1, type: 'run', domain: 'studies', requestId: 13,
+      payload: { kind: 'modal', project, modes: 1 },
+    };
+    const response = handleStudiesEnvelope(request);
+    expect(response).toMatchObject({ protocolVersion: 1, type: 'success', domain: 'studies', requestId: 13 });
+    if (response.type === 'success') expect(response.result.kind).toBe('modal');
   });
 
   it('fails closed on a protocol mismatch without invoking a domain handler', () => {

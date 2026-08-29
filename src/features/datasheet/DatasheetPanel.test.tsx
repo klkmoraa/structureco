@@ -10,6 +10,7 @@ import { workspaceCommandEventName } from '../workspace/workspaceCommands';
 import { DatasheetPanel } from './DatasheetPanel';
 import { createDatasheetProject } from './datasheetFixtures';
 import { useState } from 'react';
+import { DataSurfaceRetainedStateProvider } from '../workspace/DataSurfaceRetainedState';
 
 afterEach(cleanup);
 beforeEach(() => localStorage.clear());
@@ -55,6 +56,31 @@ const renderDatasheet = async () => {
 const rowFor = (id: string) => screen.getByRole('rowheader', { name: id }).closest('tr') as HTMLElement;
 
 describe('datasheet panel', () => {
+  it('keeps an unapplied draft when changing to another retained data tool and back', async () => {
+    const user = setup();
+    const HandoffHarness = () => {
+      const { project, replaceProject } = useProjectModel();
+      const [mounted, setMounted] = useState(true);
+      if (project.id !== 'datasheet-fixture') return <button type="button" onClick={() => replaceProject(createDatasheetProject())}>sembrar</button>;
+      return <>
+        <button type="button" onClick={() => setMounted(false)}>cambiar herramienta</button>
+        <button type="button" onClick={() => setMounted(true)}>volver a hoja</button>
+        {mounted ? <DatasheetPanel open onOpenChange={keepOpen} presentation="drawer" /> : null}
+      </>;
+    };
+    render(<ProjectProvider><DataSurfaceRetainedStateProvider><HandoffHarness /></DataSurfaceRetainedStateProvider></ProjectProvider>);
+    await user.click(screen.getByRole('button', { name: 'sembrar' }));
+    const xField = await screen.findByLabelText(/^X \(m\)/);
+    await user.clear(xField);
+    await user.type(xField, '12.75');
+
+    await user.click(screen.getByRole('button', { name: 'cambiar herramienta' }));
+    expect(screen.queryByRole('dialog', { name: /Hoja de datos/ })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'volver a hoja' }));
+
+    expect((await screen.findByLabelText(/^X \(m\)/) as HTMLInputElement).value).toBe('12.75');
+  });
+
   it('retains a real unapplied draft while the broker suspends and resumes the surface', async () => {
     const user = setup();
     const ContinuityHarness = () => {

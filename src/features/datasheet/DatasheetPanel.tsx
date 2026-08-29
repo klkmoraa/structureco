@@ -6,6 +6,8 @@ import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { Selection } from '../../types';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
+import { DataSurfaceNavigation, type DataSurfaceDestination } from '../workspace/DataSurfaceNavigation';
+import { useDataSurfaceRetainedState } from '../workspace/dataSurfaceRetainedStateStore';
 import type { SurfaceExtent, SurfacePresentation } from '../workspace/surfacePresentation';
 import type { DatasheetCellEditorProps } from './DatasheetCellEditor';
 import { DatasheetEditorPanel } from './DatasheetEditorPanel';
@@ -111,6 +113,7 @@ export interface DatasheetPanelProps {
   onPeek?: () => void;
   /** Restores from `peek` back to `default`. */
   onRestore?: () => void;
+  onNavigateData?: (target: DataSurfaceDestination) => void;
 }
 
 export const DatasheetPanel = ({
@@ -122,11 +125,12 @@ export const DatasheetPanel = ({
   extent = 'default',
   onPeek,
   onRestore,
+  onNavigateData,
 }: DatasheetPanelProps) => {
   const { language, t } = useI18n();
   const { project, updateProject } = useProjectModel();
   const { selection, setSelection } = useWorkspaceUI();
-  const [entity, setEntity] = useState<DatasheetEntity>('nodes');
+  const [entity, setEntity] = useDataSurfaceRetainedState<DatasheetEntity>('datasheet.entity', 'nodes');
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<Record<string, ReadonlySet<string>>>({});
   const [sort, setSort] = useState<DatasheetSort | null>(null);
@@ -136,7 +140,7 @@ export const DatasheetPanel = ({
    * Borrador de edición. No es estado del modelo: es lo que el usuario tecleó y
    * todavía no aplicó, y desaparece al aplicar, al cancelar o al cerrar.
    */
-  const [draft, setDraft] = useState<DatasheetEditDraft>(EMPTY_DATASHEET_DRAFT);
+  const [draft, setDraft] = useDataSurfaceRetainedState<DatasheetEditDraft>('datasheet.draft', EMPTY_DATASHEET_DRAFT);
   const [editing, setEditing] = useState<GridPosition | null>(null);
   /** Presente sólo cuando el borrador viene de un pegado, con lo que descartó. */
   const [paste, setPaste] = useState<DatasheetPasteReport | null>(null);
@@ -147,9 +151,10 @@ export const DatasheetPanel = ({
    * su propia barra de Aplicar, y sustituirlo por la revisión mientras se edita
    * le quitaría al usuario justo lo que estaba mirando.
    */
-  const [draftSource, setDraftSource] = useState<'grid' | 'panel' | null>(null);
+  const [draftSource, setDraftSource] = useDataSurfaceRetainedState<'grid' | 'panel' | null>('datasheet.draftSource', null);
   /** Ancla del rango con `Mayús`; es estado de interacción, no del modelo. */
   const rangeAnchorRef = useRef<string | null>(null);
+  const previousEntityRef = useRef<DatasheetEntity | null>(null);
 
   const units = project.settings.units;
   const columns = datasheetColumns(entity);
@@ -186,6 +191,12 @@ export const DatasheetPanel = ({
   // Cambiar de entidad invalida orden, filtros, foco y borrador: sus filas y sus
   // columnas son otras, así que un cambio pendiente ya no tendría dónde caer.
   useEffect(() => {
+    if (previousEntityRef.current === null) {
+      previousEntityRef.current = entity;
+      return;
+    }
+    if (previousEntityRef.current === entity) return;
+    previousEntityRef.current = entity;
     setFilters({});
     setSort(null);
     setFocus({ row: 0, column: 0 });
@@ -195,7 +206,7 @@ export const DatasheetPanel = ({
     setDraftSource(null);
     setSelectionOnly(false);
     rangeAnchorRef.current = null;
-  }, [entity]);
+  }, [entity, setDraft, setDraftSource]);
 
   // Buscar o filtrar puede dejar el foco fuera de la tabla; se reencaja para que
   // la rejilla nunca se quede sin su única parada de tabulación.
@@ -288,14 +299,14 @@ export const DatasheetPanel = ({
     setDraft(EMPTY_DATASHEET_DRAFT);
     setPaste(null);
     setDraftSource(null);
-  }, [updateProject]);
+  }, [setDraft, setDraftSource, updateProject]);
 
   const onCancelDraft = useCallback(() => {
     setDraft(EMPTY_DATASHEET_DRAFT);
     setEditing(null);
     setPaste(null);
     setDraftSource(null);
-  }, []);
+  }, [setDraft, setDraftSource]);
 
   const onCommitEdit = useCallback((rowId: string, fieldId: DatasheetFieldId, raw: string) => {
     setEditing(null);
@@ -310,7 +321,7 @@ export const DatasheetPanel = ({
     }
     setDraft(next);
     setDraftSource('grid');
-  }, [applyPlan, draft, project, units]);
+  }, [applyPlan, draft, project, setDraft, setDraftSource, units]);
 
   const onPasteBlock = useCallback((text: string, anchor: GridPosition) => {
     const result = mapPasteToEdits({ block: parseClipboardGrid(text), rows, columns, entity, anchor });
@@ -323,7 +334,7 @@ export const DatasheetPanel = ({
     // que un pegado entró entero, no sólo cuándo se descartó algo.
     setPaste({ droppedOutside: result.droppedOutside, droppedReadOnly: result.droppedReadOnly });
     setDraftSource('grid');
-  }, [columns, entity, rows]);
+  }, [columns, entity, rows, setDraft, setDraftSource]);
 
   const draftText = useCallback((row: DatasheetRow, column: DatasheetColumn): string | undefined => {
     const fieldId = datasheetRowField(entity, column.id, row.kind);
@@ -359,7 +370,7 @@ export const DatasheetPanel = ({
     if (!target) return;
     setDraft((current) => stageDatasheetEdit(current, target.id, fieldId, raw));
     setDraftSource('panel');
-  }, [target]);
+  }, [setDraft, setDraftSource, target]);
 
   const panelDraftText = useCallback(
     (fieldId: DatasheetFieldId) => (target ? draft[draftKey(target.id, fieldId)] : undefined),
@@ -418,6 +429,7 @@ export const DatasheetPanel = ({
     restoreLabel={t('datasheet.restore')}
   >
     <div className="datasheet-layout" data-datasheet-layout="audit-workbench">
+      {onNavigateData ? <DataSurfaceNavigation current="datasheet" onNavigate={onNavigateData} /> : null}
       <div className="datasheet-main">
         <div className="datasheet-toolbar">
           <div className="datasheet-entity" role="group" aria-label={t('datasheet.entityGroup')}>

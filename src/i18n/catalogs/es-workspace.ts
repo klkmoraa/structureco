@@ -1,4 +1,17 @@
 export const esWorkspace = {
+  'select.paletteEntry': '{query} · {count}',
+  'select.membersSimilar': 'Barras similares a la selección',
+  'select.membersFrame': 'Barras de pórtico',
+  'select.membersTruss': 'Barras de armadura',
+  'select.membersReleased': 'Barras con liberación',
+  'select.membersLoaded': 'Barras cargadas',
+  'select.membersUnloaded': 'Barras sin carga',
+  'select.nodesSupported': 'Nodos con apoyo',
+  'select.nodesFree': 'Nodos libres',
+  'select.nodesLoaded': 'Nodos cargados',
+  'select.nodesPin': 'Apoyos articulados',
+  'select.nodesRoller': 'Apoyos móviles',
+  'select.nodesFixed': 'Apoyos empotrados',
   'app.professionalNote': 'structureCo es una herramienta educativa y de apoyo. Verifica datos, unidades y resultados; no sustituye la revisión de un profesional responsable.',
   'welcome.import': 'Importar archivo',
   'welcome.importDescription': 'Revisa JSON, PDF o expedientes .structureco',
@@ -589,4 +602,5 @@ export const esWorkspace = {
   'palette.layerPreset': 'Capas: {preset}',
   'palette.openResultTab': 'Resultados: {tab}',
   'palette.toggleEvidenceLayer': 'Evidencia: {layer}',
+  'palette.toggleDiagramStack': 'Alternar diagramas N, V y M',
 } as const;

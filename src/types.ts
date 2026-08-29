@@ -54,7 +54,12 @@ export interface NodeModel {
 }
 
 export interface MemberRelease {
+  /** Releases use local member axes: axial (u), transverse (v) and moment (theta). */
+  iAxial?: boolean;
+  iShear?: boolean;
   iMoment?: boolean;
+  jAxial?: boolean;
+  jShear?: boolean;
   jMoment?: boolean;
 }
 
@@ -81,6 +86,11 @@ export interface MemberModel {
   shearArea?: number; // m²
   density?: number; // kg/m³
   releases?: MemberRelease;
+  /**
+   * Signo axial que el miembro puede transmitir. Un cable sólo tracciona y un
+   * puntal/contacto sólo comprime; los resuelve la iteración de conjunto activo.
+   */
+  axialBehavior?: 'both' | 'tension-only' | 'compression-only';
   /** Semi-rigid end connection stiffness. Undefined means rigid; zero is a release. */
   rotationalSpringI?: number; // kN·m/rad
   rotationalSpringJ?: number;
@@ -164,6 +174,119 @@ export interface MemberLoad {
   position?: number; // normalized 0..1
 }
 
+/**
+ * Directional zero-length connection. With no `nodeJ` it connects nodeI to
+ * ground; otherwise it transfers the relative motion between both nodes.
+ * The positive direction is measured counter-clockwise from global +X.
+ */
+export interface NodeLink {
+  id: string;
+  nodeI: string;
+  nodeJ?: string;
+  behavior: 'linear' | 'compression-only' | 'tension-only' | 'stop' | 'friction';
+  angleDeg?: number;
+  /** Tangent stiffness in kN/m. Required for every behavior. */
+  stiffness: number;
+  /** Free travel before a unilateral link or stop engages, in m. */
+  clearance?: number;
+  /** Coulomb force limit for a friction link, in kN. */
+  slipForce?: number;
+  label?: string;
+}
+
+export interface MultiPointConstraintTerm {
+  nodeId: string;
+  component: 'ux' | 'uy' | 'rz';
+  coefficient: number;
+}
+
+/** A general linear relation such as Ux(B) - Ux(A) = 0. */
+export interface MultiPointConstraint {
+  id: string;
+  terms: MultiPointConstraintTerm[];
+  value?: number;
+  label?: string;
+}
+
+/** Additional concentrated mass for modal studies, stored in kg and kg*m². */
+export interface NodalMass {
+  id: string;
+  nodeId: string;
+  mass: number;
+  rotationalInertia?: number;
+  label?: string;
+}
+
+export type GeneratedLoadSource =
+  | {
+    id: string;
+    kind: 'tributary-surface';
+    caseId: string;
+    memberIds: string[];
+    pressure: number;
+    tributaryWidth: number;
+    direction: 'global-x' | 'global-y';
+    label?: string;
+  }
+  | {
+    id: string;
+    kind: 'hydrostatic' | 'soil-pressure';
+    caseId: string;
+    memberIds: string[];
+    referenceY: number;
+    unitWeight: number;
+    pressureAtReference?: number;
+    direction: 'global-x' | 'global-y';
+    sign?: 1 | -1;
+    label?: string;
+  }
+  | {
+    id: string;
+    kind: 'elastic-foundation';
+    memberIds: string[];
+    /** Winkler modulus per metre of member, in kN/m². */
+    stiffness: number;
+    direction: 'global-x' | 'global-y';
+    label?: string;
+  }
+  | {
+    id: string;
+    kind: 'live-pattern' | 'member-chain';
+    caseId: string;
+    memberIds: string[];
+    qx?: number;
+    qy: number;
+    coordinateSystem?: LoadCoordinateSystem;
+    lengthBasis?: LoadLengthBasis;
+    /** Alternating patterns select members by their order in memberIds. */
+    pattern?: 'all' | 'alternating-odd' | 'alternating-even';
+    label?: string;
+  }
+  | {
+    id: string;
+    kind: 'prestress';
+    caseId: string;
+    memberIds: string[];
+    /** Compression is negative, following the engine axial-force convention. */
+    force: number;
+    /** Optional eccentricity in local y; creates the compatible initial curvature. */
+    eccentricity?: number;
+    label?: string;
+  };
+
+/** Persisted axle train used by the influence-line workflow. */
+export interface MovingLoadCase {
+  id: string;
+  name: string;
+  memberIds: string[];
+  targetMemberId: string;
+  targetPosition: number;
+  quantity: 'R' | 'N' | 'V' | 'M';
+  startNodeId?: string;
+  impactFactor?: number;
+  axles: Array<{ id?: string; P: number; offset: number }>;
+}
+
 export interface ProjectSettings {
   units: UnitSystemId;
   language: 'es' | 'en';
@@ -197,6 +320,11 @@ export interface ProjectSettings {
   calculationMode?: 'complete' | 'classroom';
   /** Second-order geometric-stiffness (P-Delta) analysis; absent/`'first-order'` keeps today's linear behavior. */
   analysisMode?: 'first-order' | 'p-delta';
+  /**
+   * Classical procedure selected for explanation and the calculation report.
+   * The matrix stiffness solver remains the authoritative analysis engine.
+   */
+  solutionMethod?: 'matrix-stiffness' | 'double-integration' | 'portal-method' | 'cantilever-method' | 'three-moment' | 'virtual-work' | 'castigliano-truss' | 'hardy-cross' | 'kani-frame' | 'method-of-sections' | 'method-of-joints' | 'conjugate-beam';
   /** Overrides merged over `DEFAULT_PDELTA_CONFIG`; unset fields keep their default. */
   pDeltaConfig?: Partial<PDeltaConfig>;
 }
@@ -214,6 +342,16 @@ export interface ProjectModel {
   memberLoads: MemberLoad[];
   /** Optional for backwards-compatible in-memory fixtures; imports normalize it to an array. */
   memberInitialEffects?: MemberInitialEffect[];
+  /** Zero-length ground or node-to-node links, including gap, stop and friction behavior. */
+  nodeLinks?: NodeLink[];
+  /** General kinematic equations between selected node degrees of freedom. */
+  multiPointConstraints?: MultiPointConstraint[];
+  /** Concentrated/additional masses for modal studies. */
+  nodalMasses?: NodalMass[];
+  /** Persistent high-level load definitions resolved into auditable member effects at analysis time. */
+  generatedLoadSources?: GeneratedLoadSource[];
+  /** Saved moving-load definitions for the influence-line workflow. */
+  movingLoadCases?: MovingLoadCase[];
   settings: ProjectSettings;
   educationalCase?: {
     kind: 'attributed-example' | 'original-practice';
@@ -593,6 +731,20 @@ export interface AnalysisResult {
   explanation: ExplanationStep[];
   /** Present only when `analyzeProjectPDelta` produced this result; absent on every first-order run. */
   pDelta?: PDeltaDiagnostics;
+  /** Presente sólo en modelos con barras de signo restringido. */
+  activeSet?: ActiveSetDiagnostics;
+}
+
+export interface ActiveSetDiagnostics {
+  converged: boolean;
+  iterations: number;
+  activeMemberIds: string[];
+  inactiveMemberIds: string[];
+  /** Conditional node links (gap, hook, stop or friction) participating in the final state. */
+  activeLinkIds?: string[];
+  inactiveLinkIds?: string[];
+  reason: string;
+  cycled: boolean;
 }
 
 export interface MatrixTrace {

@@ -40,6 +40,7 @@ export default defineConfig({
   base: './',
   define: { __APP_VERSION__: JSON.stringify(version) },
   test: {
+    setupFiles: ['src/i18n/testCatalogSetup.ts'],
     // The quality gate must only observe the real product. Backups, worktrees and
     // vendored copies of the app live beside `src/` and would otherwise be collected,
     // reporting stale failures and inflating the suite by an order of magnitude.

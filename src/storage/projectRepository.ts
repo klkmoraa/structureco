@@ -25,7 +25,9 @@ export interface StoredProjectRecord {
 export interface RecoveryRecord {
   id: string;
   projectId: string;
-  reason: 'conflict' | 'manual' | 'migration' | 'dxf-import';
+  reason: 'conflict' | 'manual' | 'migration' | 'dxf-import' | 'version';
+  /** Las versiones solicitadas por el usuario se distinguen de recuperaciones automáticas. */
+  label?: string;
   createdAt: string;
   checksum: string;
   project: ProjectModel;
@@ -45,7 +47,7 @@ export interface ProjectRepository {
   renameProject(id: string, name: string): Promise<StoredProjectRecord>;
   duplicateProject(id: string, name: string): Promise<StoredProjectRecord>;
   deleteProject(id: string): Promise<void>;
-  createRecovery(project: ProjectModel, reason: RecoveryRecord['reason']): Promise<RecoveryRecord>;
+  createRecovery(project: ProjectModel, reason: RecoveryRecord['reason'], label?: string): Promise<RecoveryRecord>;
   listRecoveries(projectId?: string): Promise<RecoveryRecord[]>;
   restoreRecovery(id: string): Promise<StoredProjectRecord>;
   duplicateRecovery(id: string, name: string): Promise<StoredProjectRecord>;
@@ -84,10 +86,11 @@ const projectRecord = async (project: ProjectModel, revision: number): Promise<S
   };
 };
 
-const recoveryRecord = async (project: ProjectModel, reason: RecoveryRecord['reason']): Promise<RecoveryRecord> => {
+const recoveryRecord = async (project: ProjectModel, reason: RecoveryRecord['reason'], label?: string): Promise<RecoveryRecord> => {
   const normalized = normalizeProject(project);
   return {
     id: createId(), projectId: normalized.id, reason, createdAt: new Date().toISOString(),
+    ...(reason === 'version' && label?.trim() ? { label: label.trim() } : {}),
     checksum: await projectChecksum(normalized), project: normalized,
   };
 };
@@ -150,9 +153,9 @@ export class InMemoryProjectRepository implements ProjectRepository {
     if (!this.projects.delete(id)) throw new Error(`No existe el proyecto ${id}.`);
   }
 
-  async createRecovery(project: ProjectModel, reason: RecoveryRecord['reason']) {
+  async createRecovery(project: ProjectModel, reason: RecoveryRecord['reason'], label?: string) {
     return this.write(async () => {
-      const record = await recoveryRecord(project, reason);
+      const record = await recoveryRecord(project, reason, label);
       this.recoveries.set(record.id, structuredClone(record));
       return structuredClone(record);
     });
@@ -309,8 +312,8 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     await done;
   }
 
-  async createRecovery(project: ProjectModel, reason: RecoveryRecord['reason']) {
-    const record = await recoveryRecord(project, reason);
+  async createRecovery(project: ProjectModel, reason: RecoveryRecord['reason'], label?: string) {
+    const record = await recoveryRecord(project, reason, label);
     const database = await this.database();
     const transaction = database.transaction(RECOVERIES_STORE, 'readwrite');
     const done = transactionDone(transaction);

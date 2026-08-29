@@ -2,10 +2,14 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { cleanup, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { es, en } from '../../i18n/catalogs';
+import { es } from '../../i18n/catalogs';
+import { en } from '../../i18n/catalogEn';
 import { ProjectProvider } from '../../store/ProjectContext';
 import { ResultExtremeCard } from './ResultExtremeCard';
+import { createDefaultProject } from '../../data/defaultProject';
+import { analyzeProject } from '../../engine/solver';
 
 /**
  * Las guardas de V-10 que no pueden vivir sólo en la revisión visual.
@@ -79,6 +83,25 @@ describe('Result card contracts (V-10)', () => {
     const reliability = card.querySelector('.result-extreme-card__reliability dd') as HTMLElement;
     expect(reliability.getAttribute('data-reliability')).toBe('unreliable');
     expect(reliability.textContent).toBe('No confiable');
+  });
+
+  it('reveals provenance only when the caller supplies an exact stored result reference', async () => {
+    const user = userEvent.setup();
+    const analysis = analyzeProject(createDefaultProject());
+    expect(analysis.success).toBe(true);
+    renderCard({
+      analysis,
+      provenanceRef: {
+        quantity: 'M',
+        entity: { kind: 'member', id: 'M1' },
+        caseOrCombinationId: 'LC1',
+        signConvention: 'Convención local del diagrama',
+        position: { x: 0 },
+      },
+    });
+    await user.click(screen.getByText('Ver procedencia del valor'));
+    expect(screen.getByText('Valor interno almacenado')).toBeTruthy();
+    expect(screen.getByText(/AnalysisResult\.memberResults\[M1\]/)).toBeTruthy();
   });
 });
 

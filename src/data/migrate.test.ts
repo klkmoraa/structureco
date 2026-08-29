@@ -60,6 +60,32 @@ describe('project schema migration and validation', () => {
     expect(result.settings.language).toBe('en');
   });
 
+  it('preserves and validates a member axial behavior', () => {
+    const source = createDefaultProject();
+    source.members[0].axialBehavior = 'tension-only';
+    expect(normalizeProject(source).members[0].axialBehavior).toBe('tension-only');
+
+    const invalid = structuredClone(source) as unknown as Record<string, unknown>;
+    const member = (invalid.members as Array<Record<string, unknown>>)[0];
+    member.axialBehavior = 'unilateral-magic';
+    expect(() => normalizeProject(invalid)).toThrow(/members\[0\]\.axialBehavior/);
+  });
+
+  it('preserva vínculos, masas y fuentes avanzadas al importar', () => {
+    const source = createDefaultProject();
+    source.nodeLinks = [{ id: 'LINK1', nodeI: 'N3', behavior: 'stop', stiffness: 1_000, clearance: 0.01, angleDeg: 90 }];
+    source.multiPointConstraints = [{ id: 'MPC1', terms: [{ nodeId: 'N3', component: 'ux', coefficient: 1 }, { nodeId: 'N4', component: 'ux', coefficient: -1 }] }];
+    source.nodalMasses = [{ id: 'NM1', nodeId: 'N3', mass: 250 }];
+    source.generatedLoadSources = [{ id: 'F1', kind: 'elastic-foundation', memberIds: ['M2'], stiffness: 50_000, direction: 'global-y' }];
+    source.movingLoadCases = [{ id: 'MOV1', name: 'Camión', memberIds: ['M2'], targetMemberId: 'M2', targetPosition: 0.5, quantity: 'M', axles: [{ P: 80, offset: 0 }] }];
+    const normalized = normalizeProject(JSON.parse(JSON.stringify(source)));
+    expect(normalized.nodeLinks).toEqual(source.nodeLinks);
+    expect(normalized.multiPointConstraints).toEqual(source.multiPointConstraints);
+    expect(normalized.nodalMasses).toEqual(source.nodalMasses);
+    expect(normalized.generatedLoadSources).toEqual(source.generatedLoadSources);
+    expect(normalized.movingLoadCases).toEqual(source.movingLoadCases);
+  });
+
   it('preserva y valida assertions educativas estructuradas', () => {
     const source = createDefaultProject();
     source.educationalCase = {
@@ -128,6 +154,16 @@ describe('project schema migration and validation', () => {
 });
 
 describe('P-Delta settings survive normalization', () => {
+  it('conserva y valida el método clásico seleccionado', () => {
+    const project = createDefaultProject();
+    project.settings.solutionMethod = 'double-integration';
+    expect(normalizeProject(project).settings.solutionMethod).toBe('double-integration');
+
+    const invalid = structuredClone(project) as unknown as Record<string, unknown>;
+    invalid.settings = { ...(invalid.settings as object), solutionMethod: 'metodo-inventado' };
+    expect(() => normalizeProject(invalid)).toThrow(/settings\.solutionMethod/);
+  });
+
   it('conserva analysisMode y pDeltaConfig al recargar, importar o deshacer', () => {
     // Sin esto, `normalizeProject` los descartaba en silencio y todo proyecto
     // reabierto volvía a primer orden con el selector aún en P-Delta.

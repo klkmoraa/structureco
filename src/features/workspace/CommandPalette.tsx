@@ -71,6 +71,7 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
     canUndo,
     canRedo,
     classroomMode: project.settings.calculationMode === 'classroom',
+    selection,
     theme,
     setActiveTool,
     setSelection,
@@ -82,7 +83,7 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
     undo,
     redo,
   }), [
-    t, project, analysis, isAnalyzing, canUndo, canRedo, theme,
+    t, project, analysis, isAnalyzing, canUndo, canRedo, theme, selection,
     setActiveTool, setSelection, setResultTab, setTheme, updateProjectView, dispatchLayers, analyze, undo, redo,
   ]);
 

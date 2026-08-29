@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { StrictMode } from 'react';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -49,6 +50,17 @@ const renderInLanguage = (dialog: React.ReactElement, language: 'es' | 'en' = 'e
 };
 
 describe('ImportCenterDialog', () => {
+  it('inspects a file handed over by the operating system but still requires review', async () => {
+    const adapter = createAdapter();
+    const launched = new File(['{}'], 'lanzado.structureco');
+    renderInLanguage(<StrictMode><ImportCenterDialog open initialFile={launched} currentProjectName="Actual" adapter={adapter} onClose={vi.fn()} onImported={vi.fn()} /></StrictMode>);
+
+    expect(await screen.findByRole('heading', { name: 'Contenido encontrado' })).toBeTruthy();
+    expect(adapter.inspect).toHaveBeenCalledWith(launched);
+    expect(screen.getByRole('button', { name: 'Continuar' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Importar ahora' })).toBeNull();
+  });
+
   it('localizes active copy, ARIA, steps and destination options in English while preserving project data', async () => {
     const user = userEvent.setup();
     const englishInspection: ImportInspection = {

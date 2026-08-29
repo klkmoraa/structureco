@@ -3,7 +3,10 @@ import { LocateFixed } from 'lucide-react';
 import { Surface } from '../../design-system/components/surface';
 import { useI18n } from '../../i18n/useI18n';
 import type { ReliabilityLevel } from '../../types';
+import type { AnalysisResult } from '../../types';
 import { reliabilityLevelLabelKey } from './reliabilityCopy';
+import type { ResultRef } from './provenance';
+import { ProvenanceCard } from './ProvenanceCard';
 
 /**
  * La tarjeta de un extremo (CRI-101 · V-10).
@@ -45,6 +48,9 @@ export interface ResultExtremeCardProps {
   accent?: 'axial' | 'shear' | 'moment' | 'deformation' | 'reaction';
   /** Lleva la selección y el cursor al punto descrito. Opcional. */
   onLocate?: () => void;
+  /** Optional reference to an already stored analysis datum. */
+  analysis?: AnalysisResult;
+  provenanceRef?: ResultRef;
 }
 
 const ResultExtremeCardComponent = ({
@@ -55,6 +61,8 @@ const ResultExtremeCardComponent = ({
   reliability,
   accent,
   onLocate,
+  analysis,
+  provenanceRef,
 }: ResultExtremeCardProps) => {
   const { t } = useI18n();
   return <Surface
@@ -84,6 +92,7 @@ const ResultExtremeCardComponent = ({
       <LocateFixed size={14} aria-hidden="true" />
       {t('results.cardLocate')}
     </button> : null}
+    {analysis && provenanceRef ? <ProvenanceCard analysis={analysis} resultRef={provenanceRef} level="flat" /> : null}
   </Surface>;
 };
 

@@ -257,6 +257,37 @@
   display: grid;
   gap: var(--sc-space-3);
 }
+
+/* Versiones nombradas: un detalle colapsado por proyecto para no competir con
+   las recuperaciones, que son alertas y por eso siguen visibles de inmediato. */
+.project-hub__entry { display: grid; gap: 0; }
+.project-hub__versions { margin: -2px var(--sc-space-2) 0; padding: 0 var(--sc-space-3) var(--sc-space-2); border: var(--sc-clay-edge); border-top: 0; border-radius: 0 0 var(--sc-radius-sm) var(--sc-radius-sm); background: var(--sc-color-surface-inset); }
+.project-hub__versions > summary { display: flex; align-items: center; gap: 6px; padding: 9px 0; color: var(--sc-color-text-secondary); cursor: pointer; font-size: 12px; font-weight: var(--sc-font-weight-bold); }
+.project-hub__versions-body { display: grid; gap: 9px; }
+.project-hub__version-form { display: flex; flex-wrap: wrap; gap: 7px; }
+.project-hub__version-form label { flex: 1; min-width: 12rem; }
+.project-hub__version-form input { width: 100%; min-height: 36px; padding: 0 10px; border: var(--sc-clay-edge); border-radius: var(--sc-radius-xs); background: var(--sc-color-surface-1); color: var(--sc-color-text-primary); font: inherit; }
+.project-hub__version-form button,
+.project-hub__version-list button:not(.project-hub__version-pick) { min-height: 36px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: var(--sc-clay-edge); border-radius: var(--sc-radius-pill); background: var(--sc-color-surface-1); color: var(--sc-color-text-primary); font: inherit; font-size: 12px; font-weight: var(--sc-font-weight-bold); }
+.project-hub__versions-note, .project-hub__versions-empty, .project-hub__diff-more { margin: 0; color: var(--sc-color-text-muted); font-size: 12px; line-height: 1.4; }
+.project-hub__version-list, .project-hub__diff-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.project-hub__version-list li { display: flex; align-items: center; gap: 7px; padding: 4px; border-radius: var(--sc-radius-xs); }
+.project-hub__version-list li.is-selected { background: var(--sc-color-surface-1); }
+.project-hub__version-pick { flex: 1; min-width: 0; display: grid; gap: 2px; padding: 4px 7px; border: 0; border-radius: var(--sc-radius-xs); background: none; color: var(--sc-color-text-primary); text-align: left; font: inherit; }
+.project-hub__version-pick strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-hub__version-pick time { color: var(--sc-color-text-muted); font-size: 11px; }
+.project-hub__diff { display: grid; gap: 8px; padding: 9px; border: var(--sc-clay-edge); border-radius: var(--sc-radius-xs); background: var(--sc-color-surface-1); }
+.project-hub__diff > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.project-hub__diff-target { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--sc-color-text-secondary); font-size: 12px; }
+.project-hub__diff-target select { min-height: 32px; border: var(--sc-clay-edge); border-radius: var(--sc-radius-xs); background: var(--sc-color-surface-inset); color: var(--sc-color-text-primary); }
+.project-hub__diff-direction { display: inline-flex; align-items: center; gap: 5px; margin: 0; color: var(--sc-color-text-muted); font-size: 11px; }
+.project-hub__diff-counts, .project-hub__diff-identical { margin: 0; font-size: 12px; font-weight: var(--sc-font-weight-bold); }
+.project-hub__diff-list li { display: flex; gap: 7px; flex-wrap: wrap; color: var(--sc-color-text-secondary); font-size: 11px; }
+.project-hub__diff-list code { color: var(--sc-color-text-primary); font-family: var(--sc-font-mono); }
+.project-hub__diff-group { display: grid; gap: 5px; }
+.project-hub__diff-group h4 { margin: 0; color: var(--sc-color-text-secondary); font-size: 12px; }
+.project-hub__diff-badge { padding: 1px 5px; border-radius: var(--sc-radius-pill); background: var(--sc-color-surface-inset); color: var(--sc-color-text-primary); font-size: 10px; font-weight: var(--sc-font-weight-bold); }
+.project-hub__diff-fields { min-width: 0; overflow-wrap: anywhere; }
 .project-hub__recoveries > h3 { margin: 0; font-size: 14px; color: var(--sc-color-state-warning-foreground); }
 .project-hub__recovery {
   display: grid;

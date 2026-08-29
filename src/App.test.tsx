@@ -7,6 +7,7 @@ import { createDefaultProject } from './data/defaultProject';
 import { PROJECT_STORAGE_KEY } from './data/projectStorage';
 import { InMemoryProjectRepository } from './storage/projectRepository';
 import { readWelcomeEntry, shouldResumeDirectly } from './features/welcome/welcomeEntry';
+import { buildShareLink } from './utils/shareLink';
 
 // El visor real necesita WebGL, que jsdom no ofrece. Se sustituye el viewport
 // por un doble inerte para poder ejercitar la navegación y la superficie.
@@ -208,6 +209,21 @@ const confirmSpace3DEntry = async (user: ReturnType<typeof userEvent.setup>) => 
 };
 
 describe('structureCo app shell', () => {
+  it('routes a shared local link through review before replacing the current project', async () => {
+    const shared = createDefaultProject();
+    shared.name = 'Modelo compartido';
+    const link = buildShareLink(shared, window.location.href);
+    if (!link.ok) throw new Error('El modelo de prueba debe caber en un enlace');
+    window.history.replaceState(null, '', new URL(link.url).pathname + new URL(link.url).hash);
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: /contenido encontrado/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /continuar/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /importar ahora/i })).toBeNull();
+    expect(window.location.hash).toBe('');
+  });
+
   it('reaches Space 3D from the workspace top bar and keeps no other 3D surface', async () => {
     const user = userEvent.setup();
     render(<App />);

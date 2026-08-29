@@ -16,14 +16,21 @@ import { NumericQualityCard } from './NumericQualityCard';
 import { ElasticDemandCard } from './ElasticDemandCard';
 import { ResultExtremeCard } from './ResultExtremeCard';
 import { NtcSteelDesignCard } from '../design/NtcSteelDesignCard';
+import { useNumericCertificate } from '../../engine/useNumericCertificate';
+import { NumericCertificateCard } from './NumericCertificateCard';
+import type { ResultRef } from './provenance';
+import { useModelStudies } from '../../engine/useModelStudies';
+import { StabilityStudiesCard } from './StabilityStudiesCard';
 
 const diagramTab: Record<DiagramQuantity, ResultTab> = { axial: 'axial', shear: 'shear', moment: 'moment' };
 const diagramSymbol: Record<DiagramQuantity, string> = { axial: 'N', shear: 'V', moment: 'M' };
 
 export const ResultSummary = () => {
-  const { project, analysis, setSelection, setResultCursor, setResultTab } = useProject();
+  const { project, analysis, selectedCombinationId, setSelection, setResultCursor, setResultTab } = useProject();
   const { language, t } = useI18n();
   const { scenarios, busy: comparisonBusy, error: comparisonError, run: compare } = useScenarioAnalysis(project);
+  const certificate = useNumericCertificate(project, selectedCombinationId);
+  const studies = useModelStudies(project, selectedCombinationId);
   const summary = useMemo(() => analysis?.success ? summarizeAnalysisResults(analysis) : null, [analysis]);
   const reactionEnvelope = useMemo(() => scenarios ? buildReactionEnvelope(scenarios) : null, [scenarios]);
   const selectedMemberId = summary?.diagrams.moment?.absolute.memberId ?? summary?.members[0]?.memberId ?? '';
@@ -54,6 +61,13 @@ export const ResultSummary = () => {
       unit: string;
       position: string;
       onLocate: () => void;
+      provenanceRef?: ResultRef;
+    };
+    const caseOrCombinationId = selectedCombinationId || project.loadCases.find((item) => item.active)?.id || project.loadCases[0]?.id || '—';
+    const provenance: Record<DiagramQuantity, Pick<ResultRef, 'quantity' | 'signConvention'>> = {
+      axial: { quantity: 'N', signConvention: t('results.signAxial') },
+      shear: { quantity: 'V', signConvention: t('results.signGlobalY') },
+      moment: { quantity: 'M', signConvention: t('results.signMoment') },
     };
     const cards: ExtremeCardData[] = (['axial', 'shear', 'moment'] as const).flatMap((quantity) => {
       const item = summary.diagrams[quantity]?.absolute;
@@ -68,6 +82,12 @@ export const ResultSummary = () => {
         unit: unitLabel(units, unitQuantity),
         position: position(item.memberId, item.x),
         onLocate: () => locate(quantity, item.memberId, item.x),
+        provenanceRef: {
+          ...provenance[quantity],
+          entity: { kind: 'member', id: item.memberId },
+          caseOrCombinationId,
+          position: { x: item.x },
+        },
       }];
     });
     const deformation = summary.deformations.v?.absolute;
@@ -81,7 +101,7 @@ export const ResultSummary = () => {
       onLocate: () => locate('v', deformation.memberId, deformation.x),
     });
     return cards;
-  }, [analysis, locate, summary, t, units]);
+  }, [analysis, locate, project.loadCases, selectedCombinationId, summary, t, units]);
   const reliability = useMemo(() => analysis?.success ? resolveReliability(analysis).level : 'failed', [analysis]);
   if (!analysis?.success || !summary) return null;
   const displayDiagram = (quantity: DiagramQuantity, value: number) => {
@@ -100,6 +120,8 @@ export const ResultSummary = () => {
     </header>
     <ElasticDemandCard />
     <NumericQualityCard analysis={analysis} />
+    <NumericCertificateCard {...certificate} />
+    <StabilityStudiesCard studies={studies} />
     <NtcSteelDesignCard />
     {analysis.pDelta ? <section className="p-delta-summary" aria-label={t('pdelta.summaryTitle')}>
       <strong>{t('pdelta.summaryTitle')} <span className="experimental-badge">{t('pdelta.experimental')}</span></strong>
@@ -134,6 +156,8 @@ export const ResultSummary = () => {
         reliability={reliability}
         accent={extreme.accent}
         onLocate={extreme.onLocate}
+        analysis={analysis}
+        provenanceRef={extreme.provenanceRef}
       />)}
     </div>
     <Surface as="section" level="raised" className="result-table-card" aria-label={t('results.memberExtremaCaption')}>

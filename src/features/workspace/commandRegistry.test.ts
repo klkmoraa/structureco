@@ -84,3 +84,19 @@ describe('revision comparison command', () => {
     unsubscribe();
   });
 });
+
+describe('diagram stack command', () => {
+  it('keeps the ACM canvas reading reachable from the command palette', () => {
+    const opened = vi.fn();
+    const unsubscribe = onWorkspaceCommand('toggle-diagram-stack', opened);
+    const commands = buildCommands({
+      t: (key) => key, project: createBlankProject(), hasAnalysis: true, isAnalyzing: false, canUndo: false, canRedo: false, classroomMode: false, theme: 'light',
+      setActiveTool: vi.fn(), setSelection: vi.fn(), setResultTab: vi.fn(), setTheme: vi.fn(), updateProjectView: vi.fn(), dispatchLayers: vi.fn(), analyze: vi.fn(), undo: vi.fn(), redo: vi.fn(),
+    });
+    const command = commands.find((item) => item.id === 'evidence:acm');
+    expect(command).toMatchObject({ label: 'palette.toggleDiagramStack', disabled: false });
+    command?.run();
+    expect(opened).toHaveBeenCalledOnce();
+    unsubscribe();
+  });
+});

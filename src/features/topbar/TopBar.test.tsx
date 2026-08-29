@@ -120,6 +120,40 @@ describe('TopBar portable export', () => {
     expect(pdfButton.disabled).toBe(false);
   });
 
+  it('offers only applicable classical procedures and persists the selection', async () => {
+    const user = userEvent.setup();
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
+
+    await user.click(screen.getByRole('button', { name: 'Configuración de análisis' }));
+    const method = screen.getByRole('combobox', { name: 'Método de procedimiento' });
+    expect(within(method).getByRole('option', { name: 'Matricial de la rigidez' })).toBeTruthy();
+    expect(within(method).getByRole('option', { name: 'Método del portal' })).toBeTruthy();
+    expect(within(method).queryByRole('option', { name: 'Doble integración' })).toBeNull();
+
+    await user.selectOptions(method, 'portal-method');
+    await waitFor(() => expect(JSON.parse(localStorage.getItem(PROJECT_STORAGE_KEY) ?? '{}').settings.solutionMethod).toBe('portal-method'));
+  });
+
+  it('previews the generated PDF before sharing or downloading that same artifact', async () => {
+    const user = userEvent.setup();
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
+
+    await user.click(screen.getByRole('button', { name: 'Exportar' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Vista previa del PDF' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Vista previa de la memoria PDF' })).toBeTruthy();
+    expect(portableMocks.createCalculationReport).toHaveBeenCalledOnce();
+    expect(portableMocks.shareOrDownloadPortableBytes).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Descargar PDF' }));
+    await waitFor(() => expect(portableMocks.shareOrDownloadPortableBytes).toHaveBeenCalledWith(
+      new Uint8Array([1, 2, 3]),
+      'memoria-structureco.pdf',
+      'application/pdf',
+      expect.stringContaining('memoria de cálculo'),
+    ));
+  });
+
   it('analyzes the current project and generates the PDF from one click', async () => {
     const user = userEvent.setup();
     render(<TopBarHarness><TopBar /></TopBarHarness>);
@@ -140,6 +174,35 @@ describe('TopBar portable export', () => {
 });
 
 describe('TopBar copy project JSON', () => {
+  it('saves to a native file and reuses its handle for the next save', async () => {
+    const user = userEvent.setup();
+    const written: ArrayBuffer[] = [];
+    const handle = {
+      name: 'proyecto-nativo.structureco.json',
+      async createWritable() {
+        return { async write(data: BufferSource) { written.push(data as ArrayBuffer); }, async close() {} };
+      },
+    };
+    const picker = vi.fn(async () => handle);
+    (window as unknown as Record<string, unknown>).showSaveFilePicker = picker;
+    const toasts: unknown[] = [];
+    const unsubscribe = onWorkspaceCommand('show-toast', (payload) => toasts.push(payload));
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
+
+    await user.click(screen.getByRole('button', { name: 'Exportar' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Guardar en el disco' }));
+    await waitFor(() => expect(written).toHaveLength(1));
+    await waitFor(() => expect(toasts).toEqual([expect.objectContaining({ message: 'Guardado en proyecto-nativo.structureco.json', tone: 'success' })]));
+
+    await user.click(screen.getByRole('button', { name: 'Exportar' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Guardar en el disco' }));
+    await waitFor(() => expect(written).toHaveLength(2));
+    expect(picker).toHaveBeenCalledOnce();
+
+    unsubscribe();
+    delete (window as unknown as Record<string, unknown>).showSaveFilePicker;
+  });
+
   it('copies the normalized project JSON to the clipboard when available', async () => {
     const user = userEvent.setup();
     const writeText = vi.fn().mockResolvedValue(undefined);
@@ -184,6 +247,29 @@ describe('TopBar copy project JSON', () => {
     })]));
 
     unsubscribe();
+  });
+
+  it('copies a bounded local share link without placing the model in the query string', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
+    Object.defineProperty(window.navigator, 'clipboard', { configurable: true, value: { writeText } });
+    const toasts: unknown[] = [];
+    const unsubscribe = onWorkspaceCommand('show-toast', (payload) => toasts.push(payload));
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
+
+    await user.click(screen.getByRole('button', { name: 'Exportar' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Copiar enlace' }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    const link = new URL(writeText.mock.calls[0][0]);
+    expect(link.hash.startsWith('#m1:')).toBe(true);
+    expect(link.search).not.toContain('m1:');
+    expect(toasts).toEqual([expect.objectContaining({ message: 'Enlace copiado al portapapeles', tone: 'success' })]);
+
+    unsubscribe();
+    // @ts-expect-error test-only cleanup of a jsdom property defined above
+    delete window.navigator.clipboard;
   });
 });
 

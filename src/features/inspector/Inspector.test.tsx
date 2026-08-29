@@ -3,7 +3,8 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import userEvent from '@testing-library/user-event';
 import { useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createDefaultProject } from '../../data/defaultProject';
+import { createBlankProject, createDefaultProject } from '../../data/defaultProject';
+import { createPersonalSection, writePersonalSections } from '../../data/personalSections';
 import { PROJECT_STORAGE_KEY } from '../../data/projectStorage';
 import { findStandardSection } from '../../data/standardSections';
 import { ClassroomSessionProvider } from '../../store/ClassroomSessionContext';
@@ -15,6 +16,7 @@ import type { ProjectModel, Selection, UnitSystemId } from '../../types';
 import { createFavorite, writePersonalLibrary } from '../library/personalLibrary';
 import { readCanvasViewSettings } from '../view/canvasViewSettings';
 import { Inspector } from './Inspector';
+import { onWorkspaceCommand } from '../workspace/workspaceCommands';
 
 const ADVANCED_STORAGE_KEY = 'structureCo.inspector.expanded.v1';
 
@@ -194,8 +196,27 @@ describe('Inspector selection variants', () => {
     const summary = selectionSummary();
     expect(within(summary).getByText('Nada seleccionado')).toBeTruthy();
     expect(within(summary).getByText('—')).toBeTruthy();
-    expect(screen.getByText('Selecciona un objeto para ver sus propiedades, unidades y resultados derivados.')).toBeTruthy();
+    const overview = screen.getByRole('region', { name: 'Panorama del modelo' });
+    expect(within(overview).getByText('Censo y contexto del modelo abierto.')).toBeTruthy();
+    expect(within(overview).getByText('Extensión')).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Propiedades frecuentes' })).toBeNull();
+  });
+
+  it('keeps Model Doctor findings visible from the overview and opens its established surface', async () => {
+    const user = userEvent.setup();
+    const project = createInspectorProject();
+    project.nodes[3] = { ...project.nodes[3], x: project.nodes[0].x, y: project.nodes[0].y };
+    const openModelDoctor = vi.fn();
+    const unsubscribe = onWorkspaceCommand('open-model-doctor', openModelDoctor);
+    try {
+      renderInspector(project);
+      const overview = screen.getByRole('region', { name: 'Panorama del modelo' });
+      const launcher = await within(overview).findByRole('button', { name: /Model Doctor encontró/ });
+      await user.click(launcher);
+      expect(openModelDoctor).toHaveBeenCalledOnce();
+    } finally {
+      unsubscribe();
+    }
   });
 
   it('localizes Inspector chrome, load tools, and display controls in English without changing technical values', async () => {
@@ -207,11 +228,12 @@ describe('Inspector selection variants', () => {
 
     expect(screen.getByRole('complementary', { name: 'Inspector' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'Selection summary' })).toBeTruthy();
+    expect(screen.getByRole('region', { name: 'Model overview' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Loads' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'View' })).toBeTruthy();
     await user.click(screen.getByRole('tab', { name: 'Loads' }));
-    expect(screen.getByText('Variable')).toBeTruthy();
-    expect(screen.getByText('Permanent')).toBeTruthy();
+    expect(screen.getAllByText('Variable').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Permanent').length).toBeGreaterThan(0);
     expect(screen.queryByText('variable')).toBeNull();
     expect(screen.queryByText('permanent')).toBeNull();
 
@@ -473,6 +495,22 @@ describe('split Inspector surfaces', () => {
     await user.click(screen.getByRole('button', { name: 'seleccionar miembro dividido' }));
     expect(screen.getByRole('complementary', { name: 'Cargas' }).getAttribute('data-workspace-surface')).toBe('analysisSetup');
     expect((screen.getByRole('textbox', { name: 'Nombre del caso LC1' }) as HTMLInputElement).value).toBe(before);
+  });
+
+  it('adds a reviewed NTC draft as an editable, source-bound combination', async () => {
+    const user = userEvent.setup();
+    renderSplitSurface('analysisSetup');
+
+    expect(screen.getByRole('heading', { name: 'Borradores normativos' })).toBeTruthy();
+    expect((screen.getByRole('combobox', { name: 'Caso permanente' }) as HTMLSelectElement).value).toBe('DL');
+    expect((screen.getByRole('combobox', { name: 'Caso variable' }) as HTMLSelectElement).value).toBe('LC1');
+    await user.click(screen.getByRole('button', { name: /Añadir borrador 2023.*falla/i }));
+
+    await waitFor(() => {
+      expect((screen.getByRole('option', { name: /2023.*falla/i }) as HTMLOptionElement).selected).toBe(true);
+      expect(screen.getByText(/Gaceta Oficial de la Ciudad de México/i)).toBeTruthy();
+      expect(screen.getByRole('link', { name: 'Abrir fuente oficial' }).getAttribute('href')).toContain('gacetas');
+    });
   });
 });
 
@@ -789,6 +827,35 @@ describe('Inspector advanced, locked, and validation states', () => {
     expect(onExpand).toHaveBeenCalledOnce();
     await user.click(screen.getByRole('button', { name: 'Cerrar inspector' }));
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('opens the structure generator from an empty model overview', async () => {
+    const user = userEvent.setup();
+    const openGenerator = vi.fn();
+    const unsubscribe = onWorkspaceCommand('open-structure-generator', openGenerator);
+    renderInspector(createBlankProject());
+
+    await user.click(screen.getByRole('button', { name: 'Generar estructura' }));
+    expect(openGenerator).toHaveBeenCalledOnce();
+    unsubscribe();
+  });
+
+  it('applies a personal section as an undoable A/I snapshot and clears catalog identity', async () => {
+    const section = createPersonalSection([], {
+      name: 'Canal U personal', definition: { family: 'channel', width: 0.2, depth: 0.5, webThickness: 0.01, flangeThickness: 0.02 },
+    }, 'personal:channel', '2026-08-29T00:00:00.000Z')[0];
+    writePersonalSections(localStorage, [section]);
+    const user = userEvent.setup();
+    renderInspector();
+    await user.click(screen.getByRole('button', { name: 'Seleccionar miembro M1' }));
+    const originalArea = storedNumber('M1 A almacenada');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Sección personal' }), 'personal:channel');
+
+    await waitFor(() => expect(storedNumber('M1 A almacenada')).toBe(section.properties.area));
+    expect(screen.getByLabelText('M1 sección ID').textContent).toBe('');
+    expect(screen.getByLabelText('M1 origen sección').textContent).toBe('custom');
+    await user.click(screen.getByRole('button', { name: 'Deshacer fixture' }));
+    await waitFor(() => expect(storedNumber('M1 A almacenada')).toBe(originalArea));
   });
 
   it('persists advanced-property accordion state in localStorage across remounts', async () => {

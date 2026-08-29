@@ -3,10 +3,15 @@ import type {
   LoadCase,
   LoadCombination,
   EducationalAssertion,
+  GeneratedLoadSource,
   MemberInitialEffect,
   MemberLoad,
   MemberModel,
+  MovingLoadCase,
+  MultiPointConstraint,
+  NodalMass,
   NodeModel,
+  NodeLink,
   NodalLoad,
   PrescribedDisplacement,
   ProjectModel,
@@ -178,6 +183,13 @@ const normalizeSettings = (input: unknown): ProjectSettings => {
     analysisMode: raw.analysisMode === undefined
       ? defaults.analysisMode
       : enumAt(raw.analysisMode, 'settings.analysisMode', ['first-order', 'p-delta'] as const),
+    solutionMethod: raw.solutionMethod === undefined
+      ? defaults.solutionMethod
+      : enumAt(raw.solutionMethod, 'settings.solutionMethod', [
+        'matrix-stiffness', 'double-integration', 'portal-method', 'cantilever-method',
+        'three-moment', 'virtual-work', 'castigliano-truss', 'hardy-cross', 'kani-frame',
+        'method-of-sections', 'method-of-joints', 'conjugate-beam',
+      ] as const),
     pDeltaConfig: normalizePDeltaConfig(raw.pDeltaConfig, 'settings.pDeltaConfig'),
   };
   if (settings.gridSize <= 0) fail('settings.gridSize', 'debe ser mayor que cero.');
@@ -218,6 +230,9 @@ const normalizeMembers = (input: unknown, nodeIds: Set<string>): MemberModel[] =
     if (!nodeIds.has(j)) fail(`${path}.j`, `el nodo "${j}" no existe.`);
     if (i === j) fail(path, 'los extremos i y j deben ser nodos distintos.');
     const type = enumAt(raw.type, `${path}.type`, ['frame', 'truss', 'rigid'] as const, 'frame');
+    const axialBehavior = raw.axialBehavior === undefined
+      ? undefined
+      : enumAt(raw.axialBehavior, `${path}.axialBehavior`, ['both', 'tension-only', 'compression-only'] as const);
     const releaseRaw = raw.releases === undefined ? undefined : objectAt(raw.releases, `${path}.releases`);
     const rigidOffsetI = optionalFiniteAt(raw.rigidOffsetI, `${path}.rigidOffsetI`);
     const rigidOffsetJ = optionalFiniteAt(raw.rigidOffsetJ, `${path}.rigidOffsetJ`);
@@ -263,8 +278,13 @@ const normalizeMembers = (input: unknown, nodeIds: Set<string>): MemberModel[] =
       G: optionalFiniteAt(raw.G, `${path}.G`),
       shearArea: optionalFiniteAt(raw.shearArea, `${path}.shearArea`),
       density: optionalFiniteAt(raw.density, `${path}.density`),
+      axialBehavior,
       releases: releaseRaw ? {
+        iAxial: releaseRaw.iAxial === undefined ? undefined : booleanAt(releaseRaw.iAxial, `${path}.releases.iAxial`, false),
+        iShear: releaseRaw.iShear === undefined ? undefined : booleanAt(releaseRaw.iShear, `${path}.releases.iShear`, false),
         iMoment: releaseRaw.iMoment === undefined ? undefined : booleanAt(releaseRaw.iMoment, `${path}.releases.iMoment`, false),
+        jAxial: releaseRaw.jAxial === undefined ? undefined : booleanAt(releaseRaw.jAxial, `${path}.releases.jAxial`, false),
+        jShear: releaseRaw.jShear === undefined ? undefined : booleanAt(releaseRaw.jShear, `${path}.releases.jShear`, false),
         jMoment: releaseRaw.jMoment === undefined ? undefined : booleanAt(releaseRaw.jMoment, `${path}.releases.jMoment`, false),
       } : undefined,
       rotationalSpringI,
@@ -443,6 +463,148 @@ const normalizeMemberInitialEffects = (
   });
 };
 
+const normalizeNodeLinks = (input: unknown, nodeIds: Set<string>): NodeLink[] => {
+  const ids = new Set<string>();
+  return arrayAt(input, 'nodeLinks').map((item, index) => {
+    const path = `nodeLinks[${index}]`;
+    const raw = objectAt(item, path);
+    const id = stringAt(raw.id, `${path}.id`, `LINK${index + 1}`);
+    uniqueId(id, ids, `${path}.id`);
+    const nodeI = stringAt(raw.nodeI, `${path}.nodeI`);
+    const nodeJ = optionalStringAt(raw.nodeJ, `${path}.nodeJ`);
+    if (!nodeIds.has(nodeI)) fail(`${path}.nodeI`, `el nodo "${nodeI}" no existe.`);
+    if (nodeJ !== undefined && !nodeIds.has(nodeJ)) fail(`${path}.nodeJ`, `el nodo "${nodeJ}" no existe.`);
+    if (nodeJ === nodeI) fail(`${path}.nodeJ`, 'debe ser distinto de nodeI.');
+    const behavior = enumAt(raw.behavior, `${path}.behavior`, ['linear', 'compression-only', 'tension-only', 'stop', 'friction'] as const);
+    const stiffness = finiteAt(raw.stiffness, `${path}.stiffness`);
+    const clearance = optionalFiniteAt(raw.clearance, `${path}.clearance`);
+    const slipForce = optionalFiniteAt(raw.slipForce, `${path}.slipForce`);
+    if (!(stiffness > 0)) fail(`${path}.stiffness`, 'debe ser positiva.');
+    if (clearance !== undefined && clearance < 0) fail(`${path}.clearance`, 'no puede ser negativa.');
+    if (slipForce !== undefined && slipForce < 0) fail(`${path}.slipForce`, 'no puede ser negativa.');
+    if (behavior === 'friction' && !(slipForce && slipForce > 0)) fail(`${path}.slipForce`, 'es obligatoria y positiva para fricción.');
+    return { id, nodeI, nodeJ, behavior, stiffness, clearance, slipForce, angleDeg: optionalFiniteAt(raw.angleDeg, `${path}.angleDeg`), label: optionalStringAt(raw.label, `${path}.label`) };
+  });
+};
+
+const normalizeMultiPointConstraints = (input: unknown, nodeIds: Set<string>): MultiPointConstraint[] => {
+  const ids = new Set<string>();
+  return arrayAt(input, 'multiPointConstraints').map((item, index) => {
+    const path = `multiPointConstraints[${index}]`;
+    const raw = objectAt(item, path);
+    const id = stringAt(raw.id, `${path}.id`, `MPC${index + 1}`);
+    uniqueId(id, ids, `${path}.id`);
+    const terms = arrayAt(raw.terms, `${path}.terms`).map((term, termIndex) => {
+      const termPath = `${path}.terms[${termIndex}]`;
+      const termRaw = objectAt(term, termPath);
+      const nodeId = stringAt(termRaw.nodeId, `${termPath}.nodeId`);
+      if (!nodeIds.has(nodeId)) fail(`${termPath}.nodeId`, `el nodo "${nodeId}" no existe.`);
+      return {
+        nodeId,
+        component: enumAt(termRaw.component, `${termPath}.component`, ['ux', 'uy', 'rz'] as const),
+        coefficient: finiteAt(termRaw.coefficient, `${termPath}.coefficient`),
+      };
+    });
+    if (terms.length < 2) fail(`${path}.terms`, 'debe contener al menos dos términos.');
+    if (!terms.some((term) => Math.abs(term.coefficient) > 0)) fail(`${path}.terms`, 'debe incluir al menos un coeficiente no nulo.');
+    return { id, terms, value: optionalFiniteAt(raw.value, `${path}.value`), label: optionalStringAt(raw.label, `${path}.label`) };
+  });
+};
+
+const normalizeNodalMasses = (input: unknown, nodeIds: Set<string>): NodalMass[] => {
+  const ids = new Set<string>();
+  return arrayAt(input, 'nodalMasses').map((item, index) => {
+    const path = `nodalMasses[${index}]`;
+    const raw = objectAt(item, path);
+    const id = stringAt(raw.id, `${path}.id`, `NM${index + 1}`);
+    uniqueId(id, ids, `${path}.id`);
+    const nodeId = stringAt(raw.nodeId, `${path}.nodeId`);
+    if (!nodeIds.has(nodeId)) fail(`${path}.nodeId`, `el nodo "${nodeId}" no existe.`);
+    const mass = finiteAt(raw.mass, `${path}.mass`);
+    const rotationalInertia = optionalFiniteAt(raw.rotationalInertia, `${path}.rotationalInertia`);
+    if (mass < 0) fail(`${path}.mass`, 'no puede ser negativa.');
+    if (rotationalInertia !== undefined && rotationalInertia < 0) fail(`${path}.rotationalInertia`, 'no puede ser negativa.');
+    return { id, nodeId, mass, rotationalInertia, label: optionalStringAt(raw.label, `${path}.label`) };
+  });
+};
+
+const normalizeSourceMemberIds = (input: unknown, path: string, memberIds: Set<string>): string[] => {
+  const result = arrayAt(input, path).map((value, index) => stringAt(value, `${path}[${index}]`));
+  if (!result.length) fail(path, 'debe incluir al menos un miembro.');
+  if (new Set(result).size !== result.length) fail(path, 'no puede repetir miembros.');
+  result.forEach((memberId, index) => { if (!memberIds.has(memberId)) fail(`${path}[${index}]`, `el miembro "${memberId}" no existe.`); });
+  return result;
+};
+
+const normalizeGeneratedLoadSources = (input: unknown, memberIds: Set<string>, caseIds: Set<string>): GeneratedLoadSource[] => {
+  const ids = new Set<string>();
+  return arrayAt(input, 'generatedLoadSources').map((item, index) => {
+    const path = `generatedLoadSources[${index}]`;
+    const raw = objectAt(item, path);
+    const id = stringAt(raw.id, `${path}.id`, `GL${index + 1}`);
+    uniqueId(id, ids, `${path}.id`);
+    const kind = enumAt(raw.kind, `${path}.kind`, ['tributary-surface', 'hydrostatic', 'soil-pressure', 'elastic-foundation', 'live-pattern', 'member-chain', 'prestress'] as const);
+    const selectedMemberIds = normalizeSourceMemberIds(raw.memberIds, `${path}.memberIds`, memberIds);
+    const label = optionalStringAt(raw.label, `${path}.label`);
+    if (kind === 'elastic-foundation') {
+      const stiffness = finiteAt(raw.stiffness, `${path}.stiffness`);
+      if (!(stiffness > 0)) fail(`${path}.stiffness`, 'debe ser positiva.');
+      return { id, kind, memberIds: selectedMemberIds, stiffness, direction: enumAt(raw.direction, `${path}.direction`, ['global-x', 'global-y'] as const), label };
+    }
+    const caseId = stringAt(raw.caseId, `${path}.caseId`);
+    if (!caseIds.has(caseId)) fail(`${path}.caseId`, `el caso "${caseId}" no existe.`);
+    if (kind === 'tributary-surface') {
+      const tributaryWidth = finiteAt(raw.tributaryWidth, `${path}.tributaryWidth`);
+      if (tributaryWidth < 0) fail(`${path}.tributaryWidth`, 'no puede ser negativa.');
+      return { id, kind, caseId, memberIds: selectedMemberIds, pressure: finiteAt(raw.pressure, `${path}.pressure`), tributaryWidth, direction: enumAt(raw.direction, `${path}.direction`, ['global-x', 'global-y'] as const), label };
+    }
+    if (kind === 'hydrostatic' || kind === 'soil-pressure') return {
+      id, kind, caseId, memberIds: selectedMemberIds,
+      referenceY: finiteAt(raw.referenceY, `${path}.referenceY`),
+      unitWeight: finiteAt(raw.unitWeight, `${path}.unitWeight`),
+      pressureAtReference: optionalFiniteAt(raw.pressureAtReference, `${path}.pressureAtReference`),
+      direction: enumAt(raw.direction, `${path}.direction`, ['global-x', 'global-y'] as const),
+      sign: raw.sign === undefined ? undefined : enumAt(String(raw.sign), `${path}.sign`, ['1', '-1'] as const) === '1' ? 1 : -1,
+      label,
+    };
+    if (kind === 'live-pattern' || kind === 'member-chain') return {
+      id, kind, caseId, memberIds: selectedMemberIds, qx: optionalFiniteAt(raw.qx, `${path}.qx`), qy: finiteAt(raw.qy, `${path}.qy`),
+      coordinateSystem: raw.coordinateSystem === undefined ? undefined : enumAt(raw.coordinateSystem, `${path}.coordinateSystem`, ['global', 'local'] as const),
+      lengthBasis: raw.lengthBasis === undefined ? undefined : enumAt(raw.lengthBasis, `${path}.lengthBasis`, ['real', 'horizontal', 'vertical'] as const),
+      pattern: raw.pattern === undefined ? undefined : enumAt(raw.pattern, `${path}.pattern`, ['all', 'alternating-odd', 'alternating-even'] as const), label,
+    };
+    return { id, kind, caseId, memberIds: selectedMemberIds, force: finiteAt(raw.force, `${path}.force`), eccentricity: optionalFiniteAt(raw.eccentricity, `${path}.eccentricity`), label };
+  });
+};
+
+const normalizeMovingLoadCases = (input: unknown, memberIds: Set<string>, nodeIds: Set<string>): MovingLoadCase[] => {
+  const ids = new Set<string>();
+  return arrayAt(input, 'movingLoadCases').map((item, index) => {
+    const path = `movingLoadCases[${index}]`;
+    const raw = objectAt(item, path);
+    const id = stringAt(raw.id, `${path}.id`, `MOV${index + 1}`);
+    uniqueId(id, ids, `${path}.id`);
+    const selectedMemberIds = normalizeSourceMemberIds(raw.memberIds, `${path}.memberIds`, memberIds);
+    const targetMemberId = stringAt(raw.targetMemberId, `${path}.targetMemberId`);
+    if (!selectedMemberIds.includes(targetMemberId)) fail(`${path}.targetMemberId`, 'debe pertenecer a la trayectoria de carga.');
+    const targetPosition = finiteAt(raw.targetPosition, `${path}.targetPosition`);
+    if (targetPosition < 0 || targetPosition > 1) fail(`${path}.targetPosition`, 'debe estar entre 0 y 1.');
+    const axles = arrayAt(raw.axles, `${path}.axles`).map((axle, axleIndex) => {
+      const axlePath = `${path}.axles[${axleIndex}]`;
+      const axleRaw = objectAt(axle, axlePath);
+      const P = finiteAt(axleRaw.P, `${axlePath}.P`);
+      if (P < 0) fail(`${axlePath}.P`, 'no puede ser negativa.');
+      return { id: optionalStringAt(axleRaw.id, `${axlePath}.id`), P, offset: finiteAt(axleRaw.offset, `${axlePath}.offset`) };
+    });
+    if (!axles.length) fail(`${path}.axles`, 'debe incluir al menos un eje.');
+    const impactFactor = optionalFiniteAt(raw.impactFactor, `${path}.impactFactor`);
+    if (impactFactor !== undefined && impactFactor <= 0) fail(`${path}.impactFactor`, 'debe ser positivo.');
+    const startNodeId = optionalStringAt(raw.startNodeId, `${path}.startNodeId`);
+    if (startNodeId !== undefined && !nodeIds.has(startNodeId)) fail(`${path}.startNodeId`, `el nodo "${startNodeId}" no existe.`);
+    return { id, name: stringAt(raw.name, `${path}.name`, id), memberIds: selectedMemberIds, targetMemberId, targetPosition, quantity: enumAt(raw.quantity, `${path}.quantity`, ['R', 'N', 'V', 'M'] as const), startNodeId, impactFactor, axles };
+  });
+};
+
 const normalizeEducationalAssertions = (
   input: unknown,
   nodeIds: Set<string>,
@@ -529,6 +691,11 @@ export const normalizeProject = (input: unknown): ProjectModel => {
     prescribedDisplacements: normalizePrescribedDisplacements(raw.prescribedDisplacements, nodeIds, caseIds),
     memberLoads: normalizeMemberLoads(raw.memberLoads, memberIds, caseIds),
     memberInitialEffects: normalizeMemberInitialEffects(raw.memberInitialEffects, memberIds, caseIds),
+    nodeLinks: normalizeNodeLinks(raw.nodeLinks, nodeIds),
+    multiPointConstraints: normalizeMultiPointConstraints(raw.multiPointConstraints, nodeIds),
+    nodalMasses: normalizeNodalMasses(raw.nodalMasses, nodeIds),
+    generatedLoadSources: normalizeGeneratedLoadSources(raw.generatedLoadSources, memberIds, caseIds),
+    movingLoadCases: normalizeMovingLoadCases(raw.movingLoadCases, memberIds, nodeIds),
     settings: normalizeSettings(raw.settings),
     educationalCase: educationalRaw ? {
       kind: enumAt(educationalRaw.kind, 'educationalCase.kind', ['attributed-example', 'original-practice'] as const),

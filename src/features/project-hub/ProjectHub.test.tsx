@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultProject } from '../../data/defaultProject';
 import { ProjectProvider } from '../../store/ProjectContext';
 import { InMemoryProjectRepository } from '../../storage/projectRepository';
+import { saveNamedVersion } from '../../storage/projectVersions';
 import { getLocalMetrics, setLocalMetricsOptIn } from '../../analytics/localMetrics';
 import { ProjectHub } from './ProjectHub';
 
@@ -68,6 +69,44 @@ describe('ProjectHub', () => {
     const panel = document.querySelector('.project-hub__menu-panel');
     expect(panel?.parentElement).toBe(document.querySelector('.project-hub__row'));
     expect(panel?.contains(screen.getByRole('button', { name: 'Eliminar Pórtico compacto' }))).toBe(true);
+  });
+
+  it('creates a named version separately from recoverable copies', async () => {
+    const repository = new InMemoryProjectRepository();
+    await repository.saveProject({ ...createDefaultProject(), name: 'Pórtico versionable' });
+    const user = userEvent.setup();
+    render(<ProjectProvider><ProjectHub repository={repository} onOpen={() => undefined} /></ProjectProvider>);
+
+    await screen.findByText('Pórtico versionable');
+    await user.click(screen.getByText('Versiones (0)'));
+    await user.type(screen.getByRole('textbox', { name: 'Nombre de la versión' }), 'Antes de editar');
+    await user.click(screen.getByRole('button', { name: 'Guardar versión' }));
+
+    expect(await screen.findByRole('button', { name: /Antes de editar/, pressed: true })).toBeTruthy();
+    expect(await screen.findByText('No hay diferencias entre los dos estados.')).toBeTruthy();
+    expect((await repository.listRecoveries()).some((record) => record.reason === 'version')).toBe(true);
+    expect(screen.queryByText(/Copias recuperables/)).toBeNull();
+  });
+
+  it('groups a named-version diff by entity and exposes the changed fields', async () => {
+    const repository = new InMemoryProjectRepository();
+    const initial = { ...createDefaultProject(), name: 'Pórtico con cambios' };
+    await repository.saveProject(initial);
+    await saveNamedVersion(repository, initial, 'Original');
+    const changed = structuredClone(initial);
+    changed.nodes[0] = { ...changed.nodes[0], x: 9 };
+    await repository.saveProject(changed);
+    await saveNamedVersion(repository, changed, 'Nodo ajustado');
+    const user = userEvent.setup();
+    render(<ProjectProvider><ProjectHub repository={repository} onOpen={() => undefined} /></ProjectProvider>);
+
+    await screen.findByText('Pórtico con cambios');
+    await user.click(await screen.findByText('Versiones (2)'));
+    await user.click(screen.getAllByRole('button', { name: /Original/ }).find((button) => button.classList.contains('project-hub__version-pick'))!);
+
+    expect(await screen.findByRole('heading', { name: 'Nudos' })).toBeTruthy();
+    expect(screen.getByText(/x: 0 → 9/)).toBeTruthy();
+    expect(screen.getByText('Modificaciones: 1')).toBeTruthy();
   });
 
   it('removes a project only after the user confirms the destructive action', async () => {

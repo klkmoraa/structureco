@@ -1,12 +1,19 @@
 import { analyzeProjectScenarios, type AnalysisScenario } from '../engine/envelope';
 import { analyzeAxleTrain, buildInfluenceLine } from '../engine/influence';
+import { certifyResult } from '../engine/certificate';
+import { analyzeBuckling } from '../engine/buckling';
+import { analyzeModal } from '../engine/modal';
 import { handleAnalysisWorkerRequest } from '../engine/analysisWorkerProtocol';
 import type { AnalysisResult, ProjectModel } from '../types';
 import {
   WORKER_PROTOCOL_VERSION,
   type AnalysisWorkerPayload,
+  type CertificateWorkerPayload,
+  type CertificateWorkerResult,
   type InfluenceWorkerPayload,
   type InfluenceWorkerResult,
+  type StudiesWorkerPayload,
+  type StudiesWorkerResult,
   type WorkerDomain,
   type WorkerRequestEnvelope,
   type WorkerResponseEnvelope,
@@ -62,5 +69,42 @@ export const handleInfluenceEnvelope = (
     };
   } catch (error) {
     return domainError('influence', request.requestId, error, 'No se pudo calcular la línea de influencia.');
+  }
+};
+
+export const handleCertificateEnvelope = (
+  request: WorkerRequestEnvelope<'certificate', CertificateWorkerPayload>,
+): WorkerResponseEnvelope<'certificate', CertificateWorkerResult> => {
+  if (request.protocolVersion !== WORKER_PROTOCOL_VERSION || request.domain !== 'certificate') return mismatch('certificate', request.requestId);
+  try {
+    const { project, combinationId } = request.payload;
+    const combination = combinationId
+      ? project.combinations.find((candidate) => candidate.id === combinationId) ?? null
+      : null;
+    return {
+      protocolVersion: 1,
+      type: 'success',
+      domain: 'certificate',
+      requestId: request.requestId,
+      result: certifyResult(project, combination),
+    };
+  } catch (error) {
+    return domainError('certificate', request.requestId, error, 'No se pudo emitir el certificado numérico.');
+  }
+};
+
+export const handleStudiesEnvelope = (
+  request: WorkerRequestEnvelope<'studies', StudiesWorkerPayload>,
+): WorkerResponseEnvelope<'studies', StudiesWorkerResult> => {
+  if (request.protocolVersion !== WORKER_PROTOCOL_VERSION || request.domain !== 'studies') return mismatch('studies', request.requestId);
+  const { project, kind, modes, combinationId } = request.payload;
+  const combination = combinationId ? project.combinations.find((item) => item.id === combinationId) ?? null : null;
+  try {
+    const result: StudiesWorkerResult = kind === 'buckling'
+      ? { kind, result: analyzeBuckling(project, combination, { modes }) }
+      : { kind, result: analyzeModal(project, { modes }) };
+    return { protocolVersion: 1, type: 'success', domain: 'studies', requestId: request.requestId, result };
+  } catch (error) {
+    return domainError('studies', request.requestId, error, 'No se pudo completar el estudio del modelo.');
   }
 };

@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import type { AnalysisResult, DiagramQuantity, MemberModel, NodeModel, ProjectModel } from '../../types';
-import type { InfluenceCanvasState, ResultCursor, ResultTab } from '../../store/ProjectContext';
+import type { InfluenceCanvasState, ModeShapeCanvasState, ResultCursor, ResultTab } from '../../store/ProjectContext';
 import type { CanvasCamera } from './canvasInteraction';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../../engine/diagram';
 import { toDisplay, unitLabel } from '../../engine/units';
@@ -8,6 +8,7 @@ import { memberAxis } from '../../graphics/structureGeometry';
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
 import type { TranslationKey } from '../../i18n/catalogs';
 import { readCanvasViewSettings } from '../view/canvasViewSettings';
+import { modeShapePoints, modeShapeScaleFor } from './modeShapePath';
 
 type MemberResult = AnalysisResult['memberResults'][number];
 type NodeResult = AnalysisResult['nodeResults'][number];
@@ -25,6 +26,7 @@ export interface CanvasResultLayerProps {
   resultsAllowed: boolean;
   resultCursor: ResultCursor | null;
   influenceCanvasState: InfluenceCanvasState | null;
+  modeShapeState: ModeShapeCanvasState | null;
   camera: CanvasCamera;
   toScreen: (x: number, y: number) => { x: number; y: number };
   nodeMap: Map<string, NodeModel>;
@@ -93,7 +95,7 @@ export const criticalExtremesFor = (
 };
 
 const CanvasResultLayerImpl = ({
-  slot, project, analysis, resultTab, resultsAllowed, resultCursor, influenceCanvasState, camera, toScreen,
+  slot, project, analysis, resultTab, resultsAllowed, resultCursor, influenceCanvasState, modeShapeState, camera, toScreen,
   nodeMap, memberMap, resultMap, nodeResultMap, mechanismMap, mechanismPixelScale, globalDiagramMax,
   units, lengthLabel, forceLabel, momentLabel, showResults, showDiagnostics, size, t,
 }: CanvasResultLayerProps) => {
@@ -174,6 +176,20 @@ const CanvasResultLayerImpl = ({
     const displacedJ = toScreen(nj.x + scale * (jResult?.ux ?? 0), nj.y + scale * (jResult?.uy ?? 0));
     const all = [displacedI, ...curved, displacedJ];
     return all.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+  };
+
+  const renderModeShape = () => {
+    if (!showResults || !modeShapeState) return null;
+    const dofs = new Map(modeShapeState.shape.map((node) => [node.nodeId, node]));
+    const scale = modeShapeScaleFor(project.nodes);
+    const paths = project.members.flatMap((member) => {
+      const start = nodeMap.get(member.i); const end = nodeMap.get(member.j);
+      const startDof = dofs.get(member.i); const endDof = dofs.get(member.j);
+      if (!start || !end || !startDof || !endDof) return [];
+      const points = modeShapePoints(start, end, startDof, endDof, { samples: member.type === 'frame' ? 13 : 2, scale });
+      return [<path key={member.id} d={points.map((point, index) => `${index ? 'L' : 'M'} ${toScreen(point.x, point.y).x} ${toScreen(point.x, point.y).y}`).join(' ')} />];
+    });
+    return paths.length ? <g className={`mode-shape-layer is-${modeShapeState.kind}`} aria-label={modeShapeState.label}><title>{modeShapeState.label}</title>{paths}</g> : null;
   };
 
   const renderResultCursor = () => {
@@ -419,6 +435,7 @@ const CanvasResultLayerImpl = ({
     return <>
       {showResults ? <g className="diagram-layer">{project.members.map(diagramPath)}</g> : null}
       {showResults && resultsAllowed && resultTab === 'deformed' && analysis?.success ? <g className="deformed-layer">{project.members.map((member) => <path key={member.id} d={deformedPath(member)} />)}</g> : null}
+      {renderModeShape()}
       {showResults ? renderResultCursor() : null}
       {showDiagnostics ? renderMechanism() : null}
     </>;

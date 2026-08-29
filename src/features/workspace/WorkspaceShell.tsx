@@ -25,6 +25,8 @@ import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
 import { isOwnHistoryScope } from './commandRegistry';
 import type { AnalysisResult } from '../../types';
 import type { RevisionSnapshot } from '../revision-comparison/revisionComparison';
+import type { DataSurfaceDestination } from './DataSurfaceNavigation';
+import { DataSurfaceRetainedStateProvider } from './DataSurfaceRetainedState';
 
 const LazyCommandPalette = lazy(() => import('./CommandPalette').then((module) => ({ default: module.CommandPalette })));
 const LazyModelDoctor = lazy(() => import('../model-doctor/ModelDoctor').then((module) => ({ default: module.ModelDoctor })));
@@ -76,6 +78,7 @@ const WorkspaceBrokerContent = ({
   layoutController: LayoutController;
 }) => {
   const [modelDoctorAcknowledgedIds, setModelDoctorAcknowledgedIds] = useState<Set<string>>(() => new Set());
+  const [dataSurfaceStateEpoch, setDataSurfaceStateEpoch] = useState(0);
   const [revisionBaseline, setRevisionBaseline] = useState<RevisionSnapshot | null>(null);
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
   const { t } = useI18n();
@@ -304,6 +307,7 @@ const WorkspaceBrokerContent = ({
     if (open) openSurface('results', trigger);
     else {
       closeSurface('results');
+      setDataSurfaceStateEpoch((epoch) => epoch + 1);
       // En K0 Utilidades sigue siendo un lanzador persistente mientras la hoja
       // se cierra. Es el respaldo correcto cuando el cierre viene del propio
       // panel y el disparador original ya no está montado — nunca cuando el
@@ -323,16 +327,17 @@ const WorkspaceBrokerContent = ({
   }, [closeSurface, setPreference]);
   const setDatasheetOpen = useCallback((open: boolean) => {
     if (open) openSurface('datasheet');
-    else closeSurface('datasheet');
+    else { closeSurface('datasheet'); setDataSurfaceStateEpoch((epoch) => epoch + 1); }
   }, [closeSurface, openSurface]);
   const setDoctorOpen = useCallback((open: boolean) => {
     if (open) openSurface('doctor');
-    else closeSurface('doctor');
+    else { closeSurface('doctor'); setDataSurfaceStateEpoch((epoch) => epoch + 1); }
   }, [closeSurface, openSurface]);
   const setBomOpen = useCallback((open: boolean) => {
     if (open) openSurface('bom');
     else {
       closeSurface('bom');
+      setDataSurfaceStateEpoch((epoch) => epoch + 1);
       // Los items de Exportar/Utilidades se desmontan al abrir la superficie:
       // ahí el bróker no tiene a dónde devolver el foco y este lanzador
       // persistente es el respaldo de la composición vigente.
@@ -345,7 +350,14 @@ const WorkspaceBrokerContent = ({
   }, [closeSurface, openSurface]);
   const setDenseOpen = useCallback((open: boolean) => {
     if (open) openSurface('dense');
-    else closeSurface('dense');
+    else { closeSurface('dense'); setDataSurfaceStateEpoch((epoch) => epoch + 1); }
+  }, [closeSurface, openSurface]);
+  const switchDataSurface = useCallback((from: Extract<DataSurfaceDestination, 'datasheet' | 'doctor' | 'bom'>, target: DataSurfaceDestination) => {
+    if (from === target) return;
+    // Unlike a generic open command, switching closes the departing drawer so
+    // it cannot remain retained behind the destination when the user returns.
+    closeSurface(from);
+    window.requestAnimationFrame(() => openSurface(target));
   }, [closeSurface, openSurface]);
   const markDenseReady = useCallback((ready: boolean) => markSurfaceReady('dense', ready), [markSurfaceReady]);
   const markDatasheetReady = useCallback((ready: boolean) => markSurfaceReady('datasheet', ready), [markSurfaceReady]);
@@ -363,7 +375,7 @@ const WorkspaceBrokerContent = ({
   const peekDoctor = useCallback(() => setSurfaceExtent('doctor', 'peek'), [setSurfaceExtent]);
   const restoreDoctor = useCallback(() => setSurfaceExtent('doctor', 'default'), [setSurfaceExtent]);
 
-  return <AppShellLayout
+  return <DataSurfaceRetainedStateProvider resetVersion={dataSurfaceStateEpoch}><AppShellLayout
     ref={shellRef}
     projectId={projectId}
     skipLabel={t('shell.skipToCanvas')}
@@ -443,6 +455,7 @@ const WorkspaceBrokerContent = ({
         extent={datasheet.extent}
         onPeek={peekDatasheet}
         onRestore={restoreDatasheet}
+        onNavigateData={(target) => switchDataSurface('datasheet', target)}
       /></Suspense> : null}
       {broker.isRetained('bom') ? <Suspense fallback={null}><LazyStructuralBom
         open={bom.status === 'active'}
@@ -452,6 +465,7 @@ const WorkspaceBrokerContent = ({
         extent={bom.extent}
         onPeek={peekBom}
         onRestore={restoreBom}
+        onNavigateData={(target) => switchDataSurface('bom', target)}
       /></Suspense> : null}
       {broker.isRetained('comparison') ? <Suspense fallback={null}><LazyRevisionComparison
         open={comparison.status === 'active'}
@@ -474,6 +488,7 @@ const WorkspaceBrokerContent = ({
         extent={doctor.extent}
         onPeek={peekDoctor}
         onRestore={restoreDoctor}
+        onNavigateData={(target) => switchDataSurface('doctor', target)}
       /></Suspense> : null}
     </>}
     inspector={<div className="workspace-surfaces" data-workspace-right-slot>
@@ -485,7 +500,7 @@ const WorkspaceBrokerContent = ({
       <button className="mobile-inspector-toggle" onClick={(event) => openDetail(event.currentTarget)} aria-label={t('inspector.open')} aria-expanded={detail.status === 'active'} aria-controls="workspace-detail"><SlidersHorizontal size={20} /></button>
     </div>}
     footer={<div className="professional-note">{t('app.professionalNote')}</div>}
-  />;
+  /></DataSurfaceRetainedStateProvider>;
 };
 
 const WorkspaceSurface = (props: WorkspaceShellProps) => {

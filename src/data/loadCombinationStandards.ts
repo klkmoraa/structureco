@@ -1,4 +1,4 @@
-import type { LoadCase } from '../types';
+import type { LoadCase, LoadCombination } from '../types';
 
 export type NormativeActionRole = 'permanent' | 'variable';
 export type NormativeStateLimit = 'service' | 'ultimate';
@@ -188,3 +188,28 @@ export const evaluateNormativeDraft = (
   if (!Number.isFinite(effect)) throw new Error(`El efecto del caso ${caseId} debe ser finito.`);
   return total + factor * effect;
 }, 0);
+
+/**
+ * Converts an inspectable standards draft into the project's existing, editable
+ * combination shape.  The draft itself remains immutable; provenance travels
+ * with the user-created combination so its origin stays visible after saving.
+ */
+export const createProjectCombinationFromNormativeDraft = (
+  draft: NormativeCombinationDraft,
+  existing: readonly LoadCombination[],
+): LoadCombination => {
+  let index = 1;
+  while (existing.some((combination) => combination.id === `COMB${index}`)) index += 1;
+
+  return {
+    id: `COMB${index}`,
+    name: draft.name,
+    factors: { ...draft.factors },
+    source: `${draft.provenance.title} · secciones ${draft.provenance.sourceSections.join(', ')} · SHA-256: ${draft.provenance.sourceSha256}`,
+    sourceUrl: draft.provenance.sourceUrl,
+    jurisdiction: draft.provenance.jurisdiction,
+    edition: draft.provenance.edition,
+    stateLimit: draft.stateLimit,
+    reviewedAt: draft.provenance.reviewedAt,
+  };
+};

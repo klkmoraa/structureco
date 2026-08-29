@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import {
   Check,
@@ -8,10 +8,12 @@ import {
   CloudOff,
   Copy,
   Download,
+  Eye,
   FileArchive,
   FileText,
   FilePlus2,
   FolderOpen,
+  HardDriveDownload,
   Maximize2,
   Minimize2,
   MoreHorizontal,
@@ -22,8 +24,10 @@ import {
   Play,
   Redo2,
   Save,
+  Share2,
   Sheet,
   SlidersHorizontal,
+  Sparkles,
   Layers3,
   Undo2,
   Wrench,
@@ -33,8 +37,10 @@ import { useI18n } from '../../i18n/useI18n';
 import { usePhase2I18n } from '../../i18n/usePhase2I18n';
 import { useProjectAnalysis, useProjectModel } from '../../store/ProjectContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
-import { exportProjectJson } from '../../utils/export';
+import { exportProjectJson, safeProjectFilename } from '../../utils/export';
 import { normalizeProject } from '../../data/migrate';
+import { saveBytes, type SaveOutcome } from '../../platform/fileSystem';
+import { buildShareLink } from '../../utils/shareLink';
 import { AnalysisStatus } from './AnalysisStatus';
 import { BrandMark } from './BrandMark';
 import { Button, IconButton } from '../../design-system/components/controls';
@@ -43,11 +49,17 @@ import { presentExample } from '../welcome/examplePresentation';
 import { APP_VERSION } from '../../appVersion';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { resolveTopBarCommand, type TopBarCommandContext } from '../workspace/commandRegistry';
+import { applicableMethods, resolveSolutionMethod, type SolutionMethodId } from '../../analysis-methods/methodRegistry';
+import type { TranslationKey } from '../../i18n/catalogs';
 import { PDeltaAdvancedConfig, TopBarHistoryControls } from './TopBarControlGroups';
 import type { ToolDockPosition } from '../workspace/useWorkspaceLayoutPreferences';
+import type { PdfPreviewArtifact } from '../pdf-preview/PdfPreviewDialog';
+import type { CalculationReportOptions } from '../../utils/pdf/reportContext';
 import './topbar.css';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
+const LocalCommandAssistant = lazy(() => import('../ai/LocalCommandAssistant').then((module) => ({ default: module.LocalCommandAssistant })));
+const PdfPreviewDialog = lazy(() => import('../pdf-preview/PdfPreviewDialog').then((module) => ({ default: module.PdfPreviewDialog })));
 
 /**
  * La compacidad del riel salió de aquí en CRI-89: la decide la clase de
@@ -114,8 +126,11 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [importCenterOpen, setImportCenterOpen] = useState(false);
-  const [portableExport, setPortableExport] = useState<'pdf' | 'bundle' | null>(null);
+  const [localAssistantOpen, setLocalAssistantOpen] = useState(false);
+  const [portableExport, setPortableExport] = useState<'pdf' | 'bundle' | 'pdf-preview' | null>(null);
+  const [pdfPreview, setPdfPreview] = useState<PdfPreviewArtifact | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [saveHandle, setSaveHandle] = useState<unknown>(null);
   const [projectNameDraft, setProjectNameDraft] = useState(project.name);
   const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine !== false);
   const topbarRef = useRef<HTMLElement>(null);
@@ -124,6 +139,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
   const analysisMenuButtonRef = useRef<HTMLButtonElement>(null);
   const exportMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const localAssistantButtonRef = useRef<HTMLButtonElement>(null);
   const menuOpen = showProjectMenu || showAnalysisMenu || showExportMenu || showMobileMenu;
 
   useEffect(() => {
@@ -239,6 +255,9 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
   };
 
   useLayoutEffect(() => setProjectNameDraft(project.name), [project.id, project.name]);
+  // Un manejador pertenece al archivo de un proyecto concreto. Renombrarlo no
+  // debe perder la ruta; cambiar de proyecto sí evita escribir sobre otro.
+  useEffect(() => setSaveHandle(null), [project.id]);
 
   const commitProjectName = () => {
     const next = projectNameDraft.trim() || project.name;
@@ -296,6 +315,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
     if (!analysis) return t(kind === 'pdf' ? 'portable.analyzingPdf' : 'portable.analyzingBundle');
     return t(kind === 'pdf' ? 'portable.generatingPdf' : 'portable.preparingBundle');
   };
+  const pdfPreviewLabel = portableExport === 'pdf-preview' ? t('portable.generatingPreview') : t('portable.previewLabel');
   const requestAnalysis = () => {
     if (project.settings.calculationMode === 'classroom') {
       classroomSession.markAnalysisRequested();
@@ -330,6 +350,10 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
       const options = { appVersion: APP_VERSION, scenarioName, scenarioFactors, includeEducationTrace: true };
       if (kind === 'pdf') {
         const report = await portable.createCalculationReport(project, exportAnalysis, options);
+        // The calculation report is a single cohesive document. A local ReportLab process used
+        // to append a second, differently styled "vector" appendix here; that made a normal
+        // export depend on an unrelated visual treatment. Keep the authoritative browser report
+        // intact and reserve the companion for explicit offline tooling only.
         await portable.shareOrDownloadPortableBytes(report.bytes, report.filename, 'application/pdf', t('portable.reportShareTitle', { name: project.name }));
       } else {
         const bundle = await portable.createPortableBundle(project, exportAnalysis, options);
@@ -342,6 +366,44 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
       setExportError(language === 'es' && error instanceof Error ? error.message : t('portable.exportFailed'));
     } finally {
       setPortableExport(null);
+    }
+  };
+
+  const buildPdfPreviewArtifact = async (selection: CalculationReportOptions = {}): Promise<PdfPreviewArtifact> => {
+    let exportAnalysis = analysis;
+    if (!exportAnalysis) {
+      const { analyzeForPortableExport } = await import('./portableExportAnalysis');
+      exportAnalysis = analyzeForPortableExport(project, selectedCombination ?? null);
+    } else if (!exportAnalysis.educationTrace) {
+      exportAnalysis = await ensureEducationTrace() ?? exportAnalysis;
+    }
+    const portable = await import('../../utils/portable');
+    const options: CalculationReportOptions = { appVersion: APP_VERSION, scenarioName, scenarioFactors, includeEducationTrace: true, ...selection };
+    const report = await portable.createCalculationReport(project, exportAnalysis, options);
+    return { bytes: report.bytes, filename: report.filename, renderEngine: 'browser' };
+  };
+
+  const openPdfPreview = async () => {
+    setPortableExport('pdf-preview');
+    setExportError(null);
+    try {
+      setPdfPreview(await buildPdfPreviewArtifact());
+      setShowExportMenu(false);
+      setShowMobileMenu(false);
+    } catch (error) {
+      setExportError(language === 'es' && error instanceof Error ? error.message : t('portable.exportFailed'));
+    } finally {
+      setPortableExport(null);
+    }
+  };
+
+  const downloadPdfPreview = async (artifact: PdfPreviewArtifact) => {
+    try {
+      const portable = await import('../../utils/portable');
+      await portable.shareOrDownloadPortableBytes(artifact.bytes, artifact.filename, 'application/pdf', t('portable.reportShareTitle', { name: project.name }));
+      emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' });
+    } catch (error) {
+      setExportError(language === 'es' && error instanceof Error ? error.message : t('portable.exportFailed'));
     }
   };
 
@@ -363,6 +425,44 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
     setShowMobileMenu(false);
   };
 
+  const handleSaveToDisk = async () => {
+    const normalized = normalizeProject(project);
+    const filename = `${safeProjectFilename(normalized.name)}.structureco.json`;
+    const outcome: SaveOutcome = await saveBytes({
+      bytes: new TextEncoder().encode(JSON.stringify(normalized, null, 2)),
+      filename,
+      mimeType: 'application/json',
+      extension: '.json',
+      description: t('export.saveToDisk'),
+      handle: saveHandle,
+    });
+    if (outcome.status === 'cancelled') return;
+    if (outcome.status === 'written') {
+      setSaveHandle(outcome.handle);
+      emitWorkspaceCommand('show-toast', { message: t('export.savedToFile', { filename: outcome.filename }), description: project.name, tone: 'success' });
+    } else {
+      emitWorkspaceCommand('show-toast', { message: t('export.savedDownload', { filename: outcome.filename }), description: project.name, tone: 'info' });
+    }
+    setShowExportMenu(false);
+    setShowMobileMenu(false);
+  };
+
+  const handleShare = async () => {
+    const result = buildShareLink(project, window.location.href);
+    if (!result.ok) {
+      setExportError(t('export.shareTooLarge', { characters: result.characters, limit: result.limit }));
+      return;
+    }
+    try {
+      if (!navigator.clipboard || !window.isSecureContext) throw new Error('clipboard-unavailable');
+      await navigator.clipboard.writeText(result.url);
+      emitWorkspaceCommand('show-toast', { message: t('export.shareLinkCopied'), description: project.name, tone: 'success' });
+      setExportError(null);
+      setShowExportMenu(false);
+      setShowMobileMenu(false);
+    } catch { setExportError(t('export.shareFailed')); }
+  };
+
   const analyzeCommand = command('analysis:run');
   const undoCommand = command('analysis:undo');
   const redoCommand = command('analysis:redo');
@@ -378,6 +478,10 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
   const exportPrintCommand = command('export:print');
   const analysisOrderLabel = t(project.settings.analysisMode === 'p-delta' ? 'analysis.orderPDelta' : 'analysis.orderFirst');
   const analysisModeLabel = t(project.settings.calculationMode === 'classroom' ? 'analysis.modeClassroom' : 'analysis.modeComplete');
+  // Los métodos clásicos son procedimientos alternativos para explicar y
+  // contrastar el resultado. El solver matricial conserva la autoridad del
+  // análisis; el selector nunca ofrece una técnica fuera de su dominio.
+  const methods = useMemo(() => applicableMethods(project), [project]);
 
   return (
     <header ref={topbarRef} className="topbar topbar--atelier" data-topbar-layout="command-island">
@@ -432,6 +536,10 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
               <button aria-label={t('project.importJson')} onClick={() => { setImportCenterOpen(true); setShowProjectMenu(false); }}>
                 <FolderOpen size={19} />
                 <span className="menu-copy"><strong>{t('project.importJson')}</strong><small>{t('topbar.projectHubImportDescription')}</small></span>
+              </button>
+              <button ref={localAssistantButtonRef} aria-label={phase2T('proposal.menuLabel')} onClick={() => { setLocalAssistantOpen(true); setShowProjectMenu(false); }}>
+                <Sparkles size={19} />
+                <span className="menu-copy"><strong>{phase2T('proposal.menuLabel')}</strong><small>{phase2T('proposal.menuDescription')}</small></span>
               </button>
               <button
                 className="topbar-project-examples-trigger"
@@ -512,6 +620,19 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
                   <option value="p-delta">{t('analysis.orderPDelta')}</option>
                 </select>
               </label>
+              {methods.length > 1 ? <label className="topbar-panel-field" data-context-control="method">
+                <span>{t('method.label')}</span>
+                <select
+                  aria-label={t('method.label')}
+                  value={resolveSolutionMethod(project)}
+                  onChange={(event) => updateProjectView((draft) => ({
+                    ...draft,
+                    settings: { ...draft.settings, solutionMethod: event.target.value as SolutionMethodId },
+                  }))}
+                >
+                  {methods.map((method) => <option key={method.id} value={method.id}>{t(method.labelKey as TranslationKey)}</option>)}
+                </select>
+              </label> : null}
               <label className="topbar-panel-field">
                 <span>{t('units.label')}</span>
                 <select
@@ -562,8 +683,11 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
               {showExportMenu ? (
                 <m.div {...popoverMotionProps} className="popover export-menu" role="menu" aria-label={t('export.label')} onKeyDown={onMenuKeyDown}>
                   <button role="menuitem" onClick={() => { structuralBomCommand.run(); setShowExportMenu(false); }}><StructuralBomIcon size={16} aria-hidden="true" /> {structuralBomCommand.label}</button>
-                  <button role="menuitem" onClick={() => { exportJsonCommand.run(); setShowExportMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
+                <button role="menuitem" onClick={() => { exportJsonCommand.run(); setShowExportMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
+                <button role="menuitem" onClick={() => void handleSaveToDisk()}><HardDriveDownload size={16} /> {t('export.saveToDisk')}</button>
                   <button role="menuitem" onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
+                  <button role="menuitem" onClick={() => void handleShare()}><Share2 size={16} /> {t('export.share')}</button>
+                  <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void openPdfPreview()}><Eye size={16} /> {pdfPreviewLabel}</button>
                   <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
                   <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
                   <button role="menuitem" onClick={() => { exportSvgCommand.run(); setShowExportMenu(false); }}>{exportSvgCommand.label}</button>
@@ -636,8 +760,11 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
                   <div className="menu-section">
                     <div className="menu-section-title">{t('menu.sectionExport')}</div>
                     <button onClick={() => { structuralBomCommand.run(); setShowMobileMenu(false); }}><StructuralBomIcon size={16} aria-hidden="true" /> {structuralBomCommand.label}</button>
-                    <button onClick={() => { exportJsonCommand.run(); setShowMobileMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
-                    <button onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
+                  <button onClick={() => { exportJsonCommand.run(); setShowMobileMenu(false); }}><Save size={16} /> {exportJsonCommand.label}</button>
+                  <button onClick={() => void handleSaveToDisk()}><HardDriveDownload size={16} /> {t('export.saveToDisk')}</button>
+                  <button onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
+                    <button onClick={() => void handleShare()}><Share2 size={16} /> {t('export.share')}</button>
+                    <button disabled={isAnalyzing || portableExport !== null} onClick={() => void openPdfPreview()}><Eye size={16} /> {pdfPreviewLabel}</button>
                     <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
                     <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
                     <button onClick={() => { exportSvgCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportSvgCommand.label}</button>
@@ -705,6 +832,11 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
           closeImportCenter();
         }}
       /></Suspense> : null}
+      {localAssistantOpen ? <Suspense fallback={null}><LocalCommandAssistant open onClose={() => {
+        setLocalAssistantOpen(false);
+        window.requestAnimationFrame(() => localAssistantButtonRef.current?.focus());
+      }} /></Suspense> : null}
+      {pdfPreview ? <Suspense fallback={null}><PdfPreviewDialog artifact={pdfPreview} onClose={() => setPdfPreview(null)} onDownload={downloadPdfPreview} onRebuild={buildPdfPreviewArtifact} /></Suspense> : null}
     </header>
   );
 };

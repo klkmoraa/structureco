@@ -23,7 +23,7 @@ type Language = 'es' | 'en';
 const COPY = {
   es: {
     eyebrow: 'Secciones personales', title: 'Section Builder', body: 'Diseña geometría paramétrica reproducible. El catálogo integrado no cambia y una sección personal no se aplica al proyecto hasta que tú la confirmes en un flujo compatible.',
-    new: 'Nueva sección', name: 'Nombre de la sección', family: 'Familia geométrica', rectangle: 'Rectangular sólida', circle: 'Circular sólida', i: 'I simétrica', box: 'Caja rectangular',
+    new: 'Nueva sección', name: 'Nombre de la sección', family: 'Familia geométrica', rectangle: 'Rectangular sólida', circle: 'Circular sólida', i: 'I simétrica', channel: 'Canal U', angle: 'Ángulo L', box: 'Caja rectangular', tube: 'Tubo circular',
     width: 'Ancho b', depth: 'Peralte h', diameter: 'Diámetro d', web: 'Espesor del alma tw', flange: 'Espesor del patín tf', thickness: 'Espesor t',
     save: 'Guardar sección', saveChanges: 'Guardar cambios', cancel: 'Cancelar', edit: 'Editar', duplicate: 'Duplicar', delete: 'Borrar', revision: 'Revisión', formulas: 'Fórmulas',
     empty: 'Todavía no hay secciones personales.', emptyBody: 'Crea una sin modificar el catálogo ni el proyecto abierto.',
@@ -33,7 +33,7 @@ const COPY = {
   },
   en: {
     eyebrow: 'Personal sections', title: 'Section Builder', body: 'Design reproducible parametric geometry. The built-in catalog stays unchanged and a personal section is not applied to the project until you confirm it through a compatible flow.',
-    new: 'New section', name: 'Section name', family: 'Geometric family', rectangle: 'Solid rectangle', circle: 'Solid circle', i: 'Symmetric I', box: 'Rectangular box',
+    new: 'New section', name: 'Section name', family: 'Geometric family', rectangle: 'Solid rectangle', circle: 'Solid circle', i: 'Symmetric I', channel: 'Channel', angle: 'Angle', box: 'Rectangular box', tube: 'Circular tube',
     width: 'Width b', depth: 'Depth h', diameter: 'Diameter d', web: 'Web thickness tw', flange: 'Flange thickness tf', thickness: 'Thickness t',
     save: 'Save section', saveChanges: 'Save changes', cancel: 'Cancel', edit: 'Edit', duplicate: 'Duplicate', delete: 'Delete', revision: 'Revision', formulas: 'Formulas',
     empty: 'There are no personal sections yet.', emptyBody: 'Create one without changing the catalog or the open project.',
@@ -46,12 +46,17 @@ const COPY = {
 const defaultDefinition = (family: ParametricSectionDefinition['family']): ParametricSectionDefinition => {
   if (family === 'circle') return { family, diameter: 0.2 };
   if (family === 'symmetric-i') return { family, width: 0.2, depth: 0.5, webThickness: 0.01, flangeThickness: 0.02 };
+  if (family === 'channel') return { family, width: 0.2, depth: 0.5, webThickness: 0.01, flangeThickness: 0.02 };
+  if (family === 'angle') return { family, width: 0.15, depth: 0.15, thickness: 0.012 };
   if (family === 'rectangular-box') return { family, width: 0.3, depth: 0.4, thickness: 0.02 };
+  if (family === 'circular-tube') return { family, outerDiameter: 0.2, thickness: 0.01 };
   return { family, width: 0.3, depth: 0.5 };
 };
 
 const sectionDimensions = (definition: ParametricSectionDefinition) => definition.family === 'circle'
   ? { width: definition.diameter, depth: definition.diameter }
+  : definition.family === 'circular-tube'
+    ? { width: definition.outerDiameter, depth: definition.outerDiameter }
   : { width: definition.width, depth: definition.depth };
 
 const SectionPreview = ({ definition, label }: { definition: ParametricSectionDefinition; label: string }) => {
@@ -65,6 +70,10 @@ const SectionPreview = ({ definition, label }: { definition: ParametricSectionDe
   const left = 90 - width / 2;
   const top = 70 - depth / 2;
   if (definition.family === 'circle') return <svg data-testid="section-builder-preview" data-family={definition.family} viewBox="0 0 180 140" role="img" aria-label={label}><circle cx="90" cy="70" r={width / 2} /></svg>;
+  if (definition.family === 'circular-tube') {
+    const thickness = Math.min(width / 2 - 1, Math.max(2, definition.thickness * scale));
+    return <svg data-testid="section-builder-preview" data-family={definition.family} viewBox="0 0 180 140" role="img" aria-label={label}><circle cx="90" cy="70" r={width / 2} /><circle cx="90" cy="70" r={Math.max(1, width / 2 - thickness)} className="section-builder__preview-hole" /></svg>;
+  }
   if (definition.family === 'symmetric-i') {
     const web = Math.max(3, definition.webThickness * scale);
     const flange = Math.max(3, definition.flangeThickness * scale);
@@ -73,6 +82,15 @@ const SectionPreview = ({ definition, label }: { definition: ParametricSectionDe
   if (definition.family === 'rectangular-box') {
     const thickness = Math.max(3, definition.thickness * scale);
     return <svg data-testid="section-builder-preview" data-family={definition.family} viewBox="0 0 180 140" role="img" aria-label={label}><path fillRule="evenodd" d={`M ${left} ${top} H ${left + width} V ${top + depth} H ${left} Z M ${left + thickness} ${top + thickness} V ${top + depth - thickness} H ${left + width - thickness} V ${top + thickness} Z`} /></svg>;
+  }
+  if (definition.family === 'channel') {
+    const web = Math.max(3, definition.webThickness * scale);
+    const flange = Math.max(3, definition.flangeThickness * scale);
+    return <svg data-testid="section-builder-preview" data-family={definition.family} viewBox="0 0 180 140" role="img" aria-label={label}><path d={`M ${left} ${top} H ${left + width} V ${top + flange} H ${left + web} V ${top + depth - flange} H ${left + width} V ${top + depth} H ${left} Z`} /></svg>;
+  }
+  if (definition.family === 'angle') {
+    const thickness = Math.max(3, definition.thickness * scale);
+    return <svg data-testid="section-builder-preview" data-family={definition.family} viewBox="0 0 180 140" role="img" aria-label={label}><path d={`M ${left} ${top} H ${left + thickness} V ${top + depth - thickness} H ${left + width} V ${top + depth} H ${left} Z`} /></svg>;
   }
   return <svg data-testid="section-builder-preview" data-family={definition.family} viewBox="0 0 180 140" role="img" aria-label={label}><rect x={left} y={top} width={width} height={depth} rx="2" /></svg>;
 };
@@ -96,12 +114,15 @@ export const SectionBuilder = ({
   storage = localStorage,
   readFile = (file) => file.text(),
   onDownload = defaultDownload,
+  onSaved,
 }: {
   language: Language;
   units: UnitSystemId;
   storage?: Storage;
   readFile?: (file: File) => Promise<string>;
   onDownload?: (serialized: string, filename: string) => void;
+  /** Lets an embedding flow offer an explicit next action without owning persistence. */
+  onSaved?: (section: PersonalParametricSection) => void;
 }) => {
   const copy = COPY[language];
   const [sections, setSections] = useState<PersonalParametricSection[]>(() => readPersonalSections(storage));
@@ -156,6 +177,8 @@ export const SectionBuilder = ({
         ? updatePersonalSection(sections, editingId, { name, definition })
         : createPersonalSection(sections, { name, definition });
       if (!persist(next)) return;
+      const saved = next.find((section) => section.id === editingId) ?? next.at(-1);
+      if (saved) onSaved?.(saved);
       setFeedback({ role: 'status', text: editingId ? copy.revised : copy.saved });
       setEditorOpen(false);
       setEditingId(undefined);
@@ -202,9 +225,11 @@ export const SectionBuilder = ({
 
   const fields = definition.family === 'circle'
     ? [dimensionField('diameter', copy.diameter)]
-    : definition.family === 'symmetric-i'
+    : definition.family === 'circular-tube'
+      ? [dimensionField('outerDiameter', copy.diameter), dimensionField('thickness', copy.thickness)]
+      : definition.family === 'symmetric-i' || definition.family === 'channel'
       ? [dimensionField('width', copy.width), dimensionField('depth', copy.depth), dimensionField('webThickness', copy.web), dimensionField('flangeThickness', copy.flange)]
-      : definition.family === 'rectangular-box'
+      : definition.family === 'rectangular-box' || definition.family === 'angle'
         ? [dimensionField('width', copy.width), dimensionField('depth', copy.depth), dimensionField('thickness', copy.thickness)]
         : [dimensionField('width', copy.width), dimensionField('depth', copy.depth)];
 
@@ -222,7 +247,7 @@ export const SectionBuilder = ({
       <div className="section-builder__fields">
         <label><span>{copy.name}</span><input aria-label={copy.name} value={name} onChange={(event) => setName(event.currentTarget.value)} /></label>
         <label><span>{copy.family}</span><select aria-label={copy.family} value={definition.family} onChange={(event) => changeFamily(event.currentTarget.value as ParametricSectionDefinition['family'])}>
-          <option value="rectangle">{copy.rectangle}</option><option value="circle">{copy.circle}</option><option value="symmetric-i">{copy.i}</option><option value="rectangular-box">{copy.box}</option>
+          <option value="rectangle">{copy.rectangle}</option><option value="circle">{copy.circle}</option><option value="symmetric-i">{copy.i}</option><option value="channel">{copy.channel}</option><option value="angle">{copy.angle}</option><option value="rectangular-box">{copy.box}</option><option value="circular-tube">{copy.tube}</option>
         </select></label>
         {fields}
       </div>

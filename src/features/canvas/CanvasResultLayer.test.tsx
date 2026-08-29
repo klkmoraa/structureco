@@ -50,6 +50,7 @@ const renderLayer = (resultTab: ResultTab, overrides: Record<string, unknown> = 
       resultsAllowed
       resultCursor={null}
       influenceCanvasState={null}
+      modeShapeState={null}
       camera={{ scale: 40, x: 0, y: 0 }}
       toScreen={(x, y) => ({ x: 40 + x * 40, y: 300 - y * 40 })}
       nodeMap={new Map(project.nodes.map((item) => [item.id, item]))}
@@ -117,5 +118,20 @@ describe('CanvasResultLayer critical M/V stamps', () => {
     // Con el máximo global diez veces mayor, 45 kN·m cae por debajo del 15 %.
     renderLayer('moment', { globalDiagramMax: 600 });
     expect(stamps()).toHaveLength(0);
+  });
+});
+
+describe('CanvasResultLayer modal and buckling modes', () => {
+  it('draws a selected normalized mode independently of the static deformed shape', () => {
+    renderLayer('summary', {
+      slot: 'diagrams',
+      modeShapeState: { kind: 'modal', index: 0, label: 'Modo modal 1', shape: [
+        { nodeId: 'N1', ux: 0, uy: 0, rz: 1 }, { nodeId: 'N2', ux: 0, uy: 0, rz: -1 },
+      ] },
+    });
+    const layer = document.querySelector('.mode-shape-layer');
+    expect(layer?.getAttribute('class')).toContain('is-modal');
+    expect(layer?.getAttribute('aria-label')).toBe('Modo modal 1');
+    expect(layer?.querySelectorAll('path')).toHaveLength(1);
   });
 });

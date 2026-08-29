@@ -16,6 +16,7 @@ import {
   type InfluenceLine,
   type InfluenceQuantity,
 } from '../../engine/influence';
+import { axleTrainFromMovingLoadCase } from '../../engine/generatedLoads';
 import { useInfluenceAnalysis } from '../../engine/useInfluenceAnalysis';
 import { fromDisplay, toDisplay, unitLabel } from '../../engine/units';
 import type { DiagramQuantity, ProjectModel, Selection } from '../../types';
@@ -366,6 +367,7 @@ export const InfluenceLineView = ({ project, selection = null, onCanvasStateChan
     { id: 'E2', P: 100, offset: 2 },
   ]);
   const [impactFactor, setImpactFactor] = useState(1);
+  const [savedMovingCaseId, setSavedMovingCaseId] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
   const [cursor, setCursor] = useState<CursorReading | null>(null);
   const axleIdRef = useRef(3);
@@ -452,6 +454,20 @@ export const InfluenceLineView = ({ project, selection = null, onCanvasStateChan
     setPathMemberIds(selectedFrameIds);
   };
 
+  const useSavedMovingCase = (id: string) => {
+    setSavedMovingCaseId(id);
+    const saved = (project.movingLoadCases ?? []).find((item) => item.id === id);
+    if (!saved) return;
+    invalidate();
+    setPathMemberIds([...saved.memberIds]);
+    setTargetMemberId(saved.targetMemberId);
+    setTargetX(memberDeformableLength(project, saved.targetMemberId) * saved.targetPosition);
+    setQuantity(saved.quantity === 'R' ? 'M' : saved.quantity);
+    setAxles(axleTrainFromMovingLoadCase(saved).axles);
+    setImpactFactor(saved.impactFactor ?? 1);
+    setSubtab('train');
+  };
+
   const calculate = () => {
     setLocalError(null);
     if (!targetMemberId || targetLength <= 0) {
@@ -478,6 +494,7 @@ export const InfluenceLineView = ({ project, selection = null, onCanvasStateChan
     run({
       pathMemberIds,
       target: { memberId: targetMemberId, x: targetX, quantity, side: targetSide },
+      startNodeId: (project.movingLoadCases ?? []).find((item) => item.id === savedMovingCaseId)?.startNodeId,
       train: { axles, impactFactor },
     });
   };
@@ -542,6 +559,7 @@ export const InfluenceLineView = ({ project, selection = null, onCanvasStateChan
         }}>{deformableMembers.map((member) => <option value={member.id} key={member.id}>{member.label ? `${member.id} · ${member.label}` : member.id}</option>)}</select></label>
         <label style={fieldStyle}><span>{t('influence.cutLimit')}</span><select className="influence-field-control" value={targetSide} onChange={(event) => { invalidate(); setTargetSide(event.currentTarget.value as 'left' | 'right'); }}><option value="right">{t('influence.right')}</option><option value="left">{t('influence.left')}</option></select></label>
         <div style={fieldStyle}><span>{t('influence.loadPath')}</span><button type="button" className="influence-secondary-btn" disabled={!selectedFrameIds.length || busy} onClick={useSelectionAsPath}>{t('influence.useSelection', { count: selectedFrameIds.length })}</button></div>
+        {(project.movingLoadCases ?? []).length ? <label style={fieldStyle}><span>Caso móvil guardado</span><select className="influence-field-control" value={savedMovingCaseId} onChange={(event) => useSavedMovingCase(event.currentTarget.value)}><option value="">Seleccionar…</option>{(project.movingLoadCases ?? []).map((saved) => <option key={saved.id} value={saved.id}>{saved.name}</option>)}</select></label> : null}
       </div>
       <label style={fieldStyle}>
         <span>{t('influence.targetSection', { length: formatFixed(targetLengthDisplay, 3), unit: lengthUnit })}</span>

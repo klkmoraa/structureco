@@ -2,10 +2,9 @@
 /**
  * Reports the initial download using the same measurement source as the performance report.
  *
- * Fase 4 keeps this command as an observability check, but deliberately does not impose a
- * byte/gzip ceiling: the product decision for this phase is an unbounded budget. A failed
- * measurement still fails the command; a larger bundle remains visible in the output without
- * blocking implementation work.
+ * El presupuesto protege la primera pintada. Medimos el artefacto real de
+ * `dist/`, no una estimación de dependencias: una importación estática o un
+ * cambio de splitting que entra al HTML deja de ser una regresión silenciosa.
  *
  * Usage: npm run build && node scripts/check-performance-budget.mjs
  */
@@ -16,12 +15,14 @@ import process from 'node:process';
 const ROOT = path.resolve(import.meta.dirname, '..');
 
 /**
- * Fase 4 decision (2026-08-09): no hard performance ceiling. `Infinity` is explicit so a
- * future finite budget cannot be mistaken for an omitted check.
+ * Línea base renovada el 2026-08-29: 1 294 863 bytes / 356 508 gzip. El margen
+ * permite una mejora cohesiva sin normalizar una dependencia grande en la
+ * entrada. Cambiar estos valores exige justificar el cambio y actualizar la
+ * medición de referencia en el reporte de adopción.
  */
 const BUDGET = {
-  eagerBytes: Number.POSITIVE_INFINITY,
-  eagerGzip: Number.POSITIVE_INFINITY,
+  eagerBytes: 1_400_000,
+  eagerGzip: 380_000,
 };
 
 let report;
@@ -62,4 +63,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`Métrica de rendimiento registrada: ${eagerBytes} bytes / ${eagerGzip} gzip (límite ${displayLimit(BUDGET.eagerBytes)} / ${displayLimit(BUDGET.eagerGzip)}; sin techo bloqueante).`);
+console.log(`Presupuesto de entrada aprobado: ${eagerBytes} bytes / ${eagerGzip} gzip (límite ${displayLimit(BUDGET.eagerBytes)} / ${displayLimit(BUDGET.eagerGzip)}).`);

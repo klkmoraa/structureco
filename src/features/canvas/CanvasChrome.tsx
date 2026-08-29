@@ -5,6 +5,7 @@ import { IconButton } from '../../design-system/components/controls';
 import type { ResultTab } from '../../store/ProjectContext';
 import { CanvasLayers } from './CanvasLayers';
 import { CanvasEvidenceRail } from './CanvasEvidenceRail';
+import type { StackQuantity } from './diagramStack';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { formatFixed } from '../../utils/numberFormat';
 import { onWorkspaceCommand } from '../workspace/workspaceCommands';
@@ -27,6 +28,11 @@ export interface CanvasChromeProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onFit: () => void;
+  stackActive?: boolean;
+  stackAvailable?: boolean;
+  stackQuantities?: readonly StackQuantity[];
+  onStackToggle?: () => void;
+  onStackQuantityToggle?: (quantity: StackQuantity) => void;
 }
 
 /** Presentation-only canvas controls. Camera and model mutations stay upstream. */
@@ -48,6 +54,11 @@ export const CanvasChrome = ({
   onZoomIn,
   onZoomOut,
   onFit,
+  stackActive,
+  stackAvailable,
+  stackQuantities,
+  onStackToggle,
+  onStackQuantityToggle,
 }: CanvasChromeProps) => {
   const { t } = useI18n();
 
@@ -65,7 +76,7 @@ export const CanvasChrome = ({
       {placementInstruction ? <IconButton size="sm" label={t('canvas.cancelPlacement')} onClick={onCancelPlacement}><X size={14} /></IconButton> : null}
     </div>
     <CanvasLayers layers={layers} dispatch={dispatchLayers} />
-    <CanvasEvidenceRail layers={layers} dispatch={dispatchLayers} resultTab={resultTab} setResultTab={setResultTab} visible={analysisAvailable} />
+    <CanvasEvidenceRail layers={layers} dispatch={dispatchLayers} resultTab={resultTab} setResultTab={setResultTab} visible={analysisAvailable} stackActive={stackActive} stackAvailable={stackAvailable} stackQuantities={stackQuantities} onStackToggle={onStackToggle} onStackQuantityToggle={onStackQuantityToggle} />
     <div className="canvas-view-chips" role="status" aria-label={t('canvas.viewStatus')} data-canvas-chrome="view-status">
       <span className={snapEnabled ? 'active' : ''}>{snapEnabled ? t('canvas.snapOn') : t('canvas.snapOff')}</span>
       <span className={gridEnabled ? 'active' : ''}>{gridEnabled ? t('canvas.gridOn') : t('canvas.gridOff')}</span>

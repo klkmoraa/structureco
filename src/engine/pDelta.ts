@@ -9,6 +9,7 @@ import type {
 import { abortedAnalysis } from './analysisFailure';
 import { classifyAnalysisReliability } from './reliability';
 import { analyzeProject, selectedFactors } from './solver';
+import { analyzeProjectWithActiveSet, conditionalMembers, conditionalNodeLinks } from './activeSet';
 
 export const DEFAULT_PDELTA_CONFIG: PDeltaConfig = {
   maxLoadSteps: 12,
@@ -561,7 +562,23 @@ export const analyzeProjectAuto = (
   project: ProjectModel,
   combination?: LoadCombination | null,
   options?: { includeEducationTrace?: boolean },
-): AnalysisResult =>
-  project.settings.analysisMode === 'p-delta'
-    ? analyzeProjectPDelta(project, combination, undefined, options)
-    : analyzeProject(project, combination, options);
+): AnalysisResult => {
+  if (project.settings.analysisMode !== 'p-delta') return analyzeProjectWithActiveSet(project, combination, options);
+  const result = analyzeProjectPDelta(project, combination, undefined, options);
+  const conditional = conditionalMembers(project);
+  const conditionalLinks = conditionalNodeLinks(project);
+  if (!conditional.length && !conditionalLinks.length) return result;
+  const details = [
+    conditional.length ? `${conditional.length} barra(s) de signo restringido` : '',
+    conditionalLinks.length ? `${conditionalLinks.length} vínculo(s) de contacto/fricción` : '',
+  ].filter(Boolean).join(' y ');
+  return {
+    ...result,
+    issues: [...result.issues, {
+      id: conditional.length ? 'pdelta-ignores-axial-behavior' : 'pdelta-ignores-active-set', severity: 'warning',
+      title: 'P-Delta no aplica el conjunto activo',
+      message: `${details} se resolvieron con la rigidez inicial durante el análisis de segundo orden; sus cambios abierto/cerrado o adherido/deslizante no se iteraron junto con P-Delta.`,
+      suggestedFix: 'Para vínculos unilaterales usa primer orden hasta contar con una iteración acoplada validada; conserva P-Delta sólo para modelos lineales.',
+    }],
+  };
+};

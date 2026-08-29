@@ -1,4 +1,17 @@
 export const enWorkspace = {
+  'select.paletteEntry': '{query} · {count}',
+  'select.membersSimilar': 'Members similar to selection',
+  'select.membersFrame': 'Frame members',
+  'select.membersTruss': 'Truss members',
+  'select.membersReleased': 'Members with releases',
+  'select.membersLoaded': 'Loaded members',
+  'select.membersUnloaded': 'Unloaded members',
+  'select.nodesSupported': 'Supported nodes',
+  'select.nodesFree': 'Free nodes',
+  'select.nodesLoaded': 'Loaded nodes',
+  'select.nodesPin': 'Pinned supports',
+  'select.nodesRoller': 'Roller supports',
+  'select.nodesFixed': 'Fixed supports',
   'app.professionalNote': 'structureCo is an educational support tool. Verify inputs, units, and results; it does not replace review by the responsible professional.',
   'welcome.import': 'Import file',
   'welcome.importDescription': 'Review JSON, PDF, or .structureco packages',
@@ -589,4 +602,5 @@ export const enWorkspace = {
   'palette.layerPreset': 'Layers: {preset}',
   'palette.openResultTab': 'Results: {tab}',
   'palette.toggleEvidenceLayer': 'Evidence: {layer}',
+  'palette.toggleDiagramStack': 'Toggle N, V, and M diagrams',
 } as const;

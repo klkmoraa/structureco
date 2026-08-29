@@ -51,11 +51,30 @@ describe('parametric personal sections', () => {
     expect(box.inertiaX).toBeCloseTo((0.3 * 0.4 ** 3 - 0.26 * 0.36 ** 3) / 12, 15);
   });
 
+  it('calculates channel, angle, and circular tube properties from their material geometry', () => {
+    const channel = calculateParametricSection({ family: 'channel', depth: 0.5, width: 0.2, webThickness: 0.01, flangeThickness: 0.02 });
+    expect(channel.area).toBeCloseTo(2 * 0.2 * 0.02 + (0.5 - 2 * 0.02) * 0.01, 15);
+    expect(channel.inertiaX).toBeCloseTo((0.2 * 0.5 ** 3 - (0.2 - 0.01) * (0.5 - 2 * 0.02) ** 3) / 12, 15);
+    expect(channel.inertiaY).toBeGreaterThan(0);
+
+    const angle = calculateParametricSection({ family: 'angle', depth: 0.15, width: 0.1, thickness: 0.01 });
+    expect(angle.area).toBeCloseTo(0.01 * 0.15 + (0.1 - 0.01) * 0.01, 15);
+    expect(angle.inertiaX).toBeGreaterThan(0);
+    expect(angle.inertiaY).toBeGreaterThan(0);
+
+    const tube = calculateParametricSection({ family: 'circular-tube', outerDiameter: 0.2, thickness: 0.01 });
+    expect(tube.area).toBeCloseTo(Math.PI * (0.2 ** 2 - 0.18 ** 2) / 4, 15);
+    expect(tube.inertiaX).toBeCloseTo(Math.PI * (0.2 ** 4 - 0.18 ** 4) / 64, 15);
+    expect(tube.inertiaY).toBeCloseTo(tube.inertiaX, 15);
+  });
+
   it('rejects non-finite, implausible, or self-intersecting geometry with field paths', () => {
     expect(() => calculateParametricSection({ family: 'rectangle', width: 0, depth: 0.5 })).toThrow(/width/);
     expect(() => calculateParametricSection({ family: 'circle', diameter: Number.NaN })).toThrow(/diameter/);
     expect(() => calculateParametricSection({ family: 'rectangular-box', depth: 0.2, width: 0.2, thickness: 0.1 })).toThrow(/thickness/);
     expect(() => calculateParametricSection({ family: 'symmetric-i', depth: 0.2, width: 0.2, webThickness: 0.2, flangeThickness: 0.01 })).toThrow(/webThickness/);
+    expect(() => calculateParametricSection({ family: 'angle', depth: 0.2, width: 0.2, thickness: 0.2 })).toThrow(/thickness/);
+    expect(() => calculateParametricSection({ family: 'circular-tube', outerDiameter: 0.2, thickness: 0.1 })).toThrow(/thickness/);
     expect(() => calculateParametricSection({ family: 'rectangle', width: 11, depth: 0.5 })).toThrow(/width/);
   });
 

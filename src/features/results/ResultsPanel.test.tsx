@@ -144,6 +144,23 @@ describe('Results analytical center', () => {
       'Influencia',
       'Aprender',
     ]);
+    expect(within(quantityBar!).getByRole('group', { name: 'Datos del modelo' })
+      .querySelectorAll('[data-result-data-launcher]')).toHaveLength(3);
+  });
+
+  it('opens table, review and BOM from the same result navigation without retaining another panel', async () => {
+    const user = userEvent.setup();
+    const commands: string[] = [];
+    const listeners = ['open-datasheet', 'open-model-doctor', 'open-structural-bom'].map((command) => {
+      const listener = () => commands.push(command);
+      window.addEventListener(workspaceCommandEventName(command as 'open-datasheet'), listener);
+      return { command, listener };
+    });
+    renderResults();
+    const data = screen.getByRole('group', { name: 'Datos del modelo' });
+    for (const launcher of Array.from(data.querySelectorAll<HTMLButtonElement>('[data-result-data-launcher]'))) await user.click(launcher);
+    expect(commands).toEqual(['open-datasheet', 'open-model-doctor', 'open-structural-bom']);
+    listeners.forEach(({ command, listener }) => window.removeEventListener(workspaceCommandEventName(command as 'open-datasheet'), listener));
   });
 
   it('keeps the diagram uncluttered while retaining the result cards', async () => {
@@ -493,7 +510,10 @@ describe('Results analytical center', () => {
     await screen.findByTestId('diagram-chart', {}, { timeout: 5000 });
     await user.click(screen.getByRole('tab', { name: 'Resumen' }));
     const sheet = screen.getByRole('dialog', { name: 'Resultados del análisis' });
-    expect(sheet.querySelectorAll('summary')).toHaveLength(0);
+    // Provenance cards intentionally use <details>; the learning accordions
+    // must not leak into the active summary tab in the mobile focus sheet.
+    const activeContent = sheet.querySelector('#results-content');
+    expect(activeContent?.querySelectorAll('details.learning-step > summary')).toHaveLength(0);
   }, 10_000);
 
   it('keeps Aula free of the retired hypothesis gate after switching presentation modes', async () => {

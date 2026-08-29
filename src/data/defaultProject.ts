@@ -1,7 +1,7 @@
 import type { ProjectModel, ProjectSettings } from '../types';
 import { createId } from '../utils/id';
 
-export const CURRENT_SCHEMA_VERSION = 6;
+export const CURRENT_SCHEMA_VERSION = 7;
 
 const CUSTOM_MEMBER_IDENTITY = { materialOrigin: 'custom', sectionOrigin: 'custom' } as const;
 
@@ -41,6 +41,11 @@ export const createBlankProject = (): ProjectModel => ({
   prescribedDisplacements: [],
   memberLoads: [],
   memberInitialEffects: [],
+  nodeLinks: [],
+  multiPointConstraints: [],
+  nodalMasses: [],
+  generatedLoadSources: [],
+  movingLoadCases: [],
   settings: createDefaultSettings(),
 });
 
@@ -97,6 +102,11 @@ export const createDefaultProject = (): ProjectModel => ({
     },
   ],
   memberInitialEffects: [],
+  nodeLinks: [],
+  multiPointConstraints: [],
+  nodalMasses: [],
+  generatedLoadSources: [],
+  movingLoadCases: [],
   settings: createDefaultSettings(),
 });
 

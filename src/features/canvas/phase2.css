@@ -68,6 +68,7 @@
 .multi-selection-badge rect { fill:color-mix(in srgb,var(--selection) 12%,var(--surface)); stroke:var(--selection); stroke-width:1; }
 .multi-selection-badge text { fill:var(--selection); font-size:10px; font-weight:800; }
 .deformed-layer path { fill: none; stroke: var(--deformed); stroke-width: 3; stroke-dasharray: 6 4; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--deformed) 35%, transparent)); }
+.mode-shape-layer { fill:none; pointer-events:none; }.mode-shape-layer path { fill:none; stroke-width:3; stroke-dasharray:10 5; filter:drop-shadow(0 0 5px color-mix(in srgb,currentColor 38%,transparent)); }.mode-shape-layer.is-modal { color:var(--deformed); }.mode-shape-layer.is-modal path { stroke:var(--deformed); }.mode-shape-layer.is-buckling { color:var(--warning); }.mode-shape-layer.is-buckling path { stroke:var(--warning); }
 .mechanism-layer { pointer-events: none; }
 .mechanism-member { stroke: var(--warning); stroke-width: 4; stroke-dasharray: 9 6; opacity: .88; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--warning) 38%, transparent)); }
 .mechanism-node line, .mechanism-node path { fill: none; stroke: var(--warning); stroke-width: 2; stroke-dasharray: 4 3; }
@@ -1262,7 +1263,32 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 .canvas-evidence-layer--shear[aria-pressed='true'] { color:var(--shear); border-color:color-mix(in srgb,var(--shear) 46%,var(--sc-color-border-soft)); }
 .canvas-evidence-layer--moment[aria-pressed='true'] { color:var(--moment); border-color:color-mix(in srgb,var(--moment) 46%,var(--sc-color-border-soft)); }
 .canvas-evidence-layer--deformed[aria-pressed='true'] { color:var(--deformed); border-color:color-mix(in srgb,var(--deformed) 46%,var(--sc-color-border-soft)); }
+.canvas-evidence-layer--stack[aria-pressed='true'] { color:var(--moment); border-color:color-mix(in srgb,var(--moment) 46%,var(--sc-color-border-soft)); }
+.canvas-evidence-stack-choices { display:flex; gap:2px; padding-left:2px; }
+.canvas-evidence-stack-choice { min-width:26px; height:26px; padding:0 6px; border:1px solid var(--sc-color-border-soft); border-radius:7px; color:var(--muted); background:var(--surface); font-size:11px; font-weight:750; }
+.canvas-evidence-stack-choice[aria-pressed='true'] { color:var(--accent-on-soft); border-color:color-mix(in srgb,var(--accent) 44%,var(--sc-color-border-soft)); background:var(--accent-soft); }
+.canvas-evidence-stack-choice:disabled { opacity:.52; cursor:not-allowed; }
 .canvas-host:has(.canvas-evidence-rail) .canvas-mode-badge:not(.placing-load) { display:none; }
+
+/* ACM is a read-only extension of the solved diagrams. Each lane keeps its
+   own scale so a small axial action never vanishes beside a large moment. */
+.diagram-stack-baseline { stroke:var(--border-soft); stroke-width:1; }
+.diagram-stack-line { fill:none; stroke-width:2; }
+.diagram-stack-fill { stroke:none; opacity:.18; }
+.diagram-stack-caption { font-size:13px; font-weight:700; }
+.diagram-stack-title { fill:var(--muted); font-size:12px; font-weight:650; }
+.diagram-stack-title__span { fill:var(--subtle); font-weight:400; }
+.diagram-stack-extreme-label,.diagram-stack-reading text { font-size:10px; font-weight:700; paint-order:stroke; stroke:var(--canvas-bg); stroke-width:3px; }
+.diagram-stack-extremes { transition:opacity var(--sc-motion-fast) var(--sc-ease-standard); }
+.diagram-stack-extremes.is-dimmed { opacity:.3; }
+.diagram-stack-reading text { font-size:10px; font-weight:700; paint-order:stroke; stroke:var(--canvas-bg); stroke-width:3px; }
+.diagram-stack-cursor { stroke:var(--text); stroke-width:1; stroke-dasharray:4 3; opacity:.55; pointer-events:none; }
+.diagram-stack-cursor__station { fill:var(--muted); font-size:10px; font-weight:650; paint-order:stroke; stroke:var(--canvas-bg); stroke-width:3px; }
+.diagram-stack-reading circle { stroke:var(--canvas-bg); stroke-width:1.5; }
+.diagram-stack-surface { fill:transparent; stroke:none; cursor:crosshair; }
+.diagram-stack-lane.axial .diagram-stack-line { stroke:var(--axial); }.diagram-stack-lane.axial .diagram-stack-fill,.diagram-stack-lane.axial .diagram-stack-extreme,.diagram-stack-lane.axial .diagram-stack-extreme-label,.diagram-stack-lane.axial .diagram-stack-reading circle,.diagram-stack-lane.axial .diagram-stack-reading text,.diagram-stack-lane.axial .diagram-stack-caption { fill:var(--axial); }
+.diagram-stack-lane.shear .diagram-stack-line { stroke:var(--shear); }.diagram-stack-lane.shear .diagram-stack-fill,.diagram-stack-lane.shear .diagram-stack-extreme,.diagram-stack-lane.shear .diagram-stack-extreme-label,.diagram-stack-lane.shear .diagram-stack-reading circle,.diagram-stack-lane.shear .diagram-stack-reading text,.diagram-stack-lane.shear .diagram-stack-caption { fill:var(--shear); }
+.diagram-stack-lane.moment .diagram-stack-line { stroke:var(--moment); }.diagram-stack-lane.moment .diagram-stack-fill,.diagram-stack-lane.moment .diagram-stack-extreme,.diagram-stack-lane.moment .diagram-stack-extreme-label,.diagram-stack-lane.moment .diagram-stack-reading circle,.diagram-stack-lane.moment .diagram-stack-reading text,.diagram-stack-lane.moment .diagram-stack-caption { fill:var(--moment); }
 
 @media (max-width:1023px) {
   .canvas-evidence-rail { top:8px; left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right)); max-width:none; }

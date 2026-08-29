@@ -1,18 +1,34 @@
 /**
  * Text sanitising and wrapping for the standard PDF fonts.
  *
- * Helvetica and Times only carry WinAnsi, so engineering notation has to be transliterated
- * explicitly instead of silently dropping to a replacement glyph.
+ * Prose is drawn in Helvetica, which only carries WinAnsi, so `pdfText` transliterates
+ * every engineering glyph explicitly instead of dropping to a replacement box.
  */
 import type { PDFFont } from 'pdf-lib';
 
-/** Standard PDF fonts use WinAnsi; transliterate engineering glyphs explicitly. */
-const PDF_GLYPHS = new Map<string, string>([
-  ['−', '-'], ['–', '-'], ['—', '-'], ['·', ' x '], ['⋅', ' x '],
+/**
+ * Unicode super/subscripts, as the `^x`/`_x` markers the fórmula typesetter understands.
+ *
+ * `ᵢ` (U+1D62) and `ⱼ` (U+2C7C) are Unicode *subscripts*. They were mapped to `^i`/`^j`,
+ * which printed the solver's `ΔX = Xⱼ − Xᵢ` — a difference between node indices — as if the
+ * indices were exponents.
+ */
+const SCRIPT_GLYPHS = new Map<string, string>([
   ['²', '^2'], ['³', '^3'], ['⁴', '^4'], ['⁵', '^5'], ['⁶', '^6'], ['⁷', '^7'], ['⁸', '^8'], ['⁹', '^9'], ['⁰', '^0'], ['ᵀ', '^T'],
   ['₀', '_0'], ['₁', '_1'], ['₂', '_2'], ['₃', '_3'], ['₄', '_4'], ['₅', '_5'], ['₆', '_6'], ['₇', '_7'], ['₈', '_8'], ['₉', '_9'],
-  ['ₐ', '_a'], ['ₑ', '_e'], ['ₙ', '_n'], ['ₛ', '_s'], ['ₓ', '_x'], ['ᵧ', '_y'],
-  ['ᵃ', '^a'], ['ᵉ', '^e'], ['ᵍ', '^g'], ['ᵢ', '^i'], ['ⱼ', '^j'], ['ˡ', '^l'], ['ⁿ', '^n'],
+  ['ₐ', '_a'], ['ₑ', '_e'], ['ₙ', '_n'], ['ₛ', '_s'], ['ₓ', '_x'], ['ᵧ', '_y'], ['ᵢ', '_i'], ['ⱼ', '_j'],
+  ['ᵃ', '^a'], ['ᵉ', '^e'], ['ᵍ', '^g'], ['ˡ', '^l'], ['ⁿ', '^n'],
+]);
+
+
+/** Standard PDF fonts use WinAnsi; transliterate engineering glyphs explicitly. */
+const PDF_GLYPHS = new Map<string, string>([
+  ...SCRIPT_GLYPHS,
+  ['−', '-'], ['–', '-'], ['—', '-'],
+  // U+00B7 MIDDLE DOT is WinAnsi, so it needs no transliteration at all — it used to be
+  // rewritten to ` x `, which turned `kN·m` into `kN x m` and every `A · B` separator in the
+  // prose into a multiplication sign. Its non-WinAnsi twin U+22C5 folds onto it.
+  ['⋅', '·'],
   ['Σ', 'Sum'], ['∑', 'Sum'], ['Δ', 'Delta'], ['δ', 'delta'], ['θ', 'theta'], ['Θ', 'Theta'], ['ξ', 'xi'], ['Ξ', 'Xi'],
   ['α', 'alpha'], ['β', 'beta'], ['γ', 'gamma'], ['Γ', 'Gamma'], ['ε', 'epsilon'], ['ζ', 'zeta'], ['η', 'eta'],
   ['κ', 'kappa'], ['λ', 'lambda'], ['Λ', 'Lambda'], ['μ', 'mu'], ['ν', 'nu'], ['π', 'pi'], ['Π', 'Pi'],
@@ -23,14 +39,24 @@ const PDF_GLYPHS = new Map<string, string>([
   ['“', '"'], ['”', '"'], ['‘', "'"], ['’', "'"], ['…', '...'], ['⟨', '<'], ['⟩', '>'],
 ]);
 
-export const pdfText = (value: unknown): string => Array.from(String(value))
-  .map((character) => {
-    const replacement = PDF_GLYPHS.get(character);
-    if (replacement !== undefined) return replacement;
-    const code = character.charCodeAt(0);
-    return code === 9 || code === 10 || code === 13 || (code >= 32 && code <= 255) ? character : '';
-  })
-  .join('');
+/** WinAnsi covers Latin-1, so `á é í ó ú ñ ü ¿ ¡ °` survive; anything above it does not. */
+const isWinAnsi = (character: string): boolean => {
+  const code = character.charCodeAt(0);
+  return code === 9 || code === 10 || code === 13 || (code >= 32 && code <= 255);
+};
+
+const transliterate = (value: unknown, keep: (character: string) => boolean): string =>
+  Array.from(String(value))
+    .map((character) => {
+      if (keep(character)) return character;
+      const replacement = PDF_GLYPHS.get(character);
+      if (replacement !== undefined) return replacement;
+      return isWinAnsi(character) ? character : '';
+    })
+    .join('');
+
+/** Prose for the WinAnsi faces: every glyph outside Latin-1 is spelled out. */
+export const pdfText = (value: unknown): string => transliterate(value, () => false);
 
 export const wrapText = (text: string, font: PDFFont, size: number, maxWidth: number): string[] => {
   const paragraphs = pdfText(text).split(/\r?\n/);

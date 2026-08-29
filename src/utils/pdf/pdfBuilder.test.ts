@@ -3,15 +3,20 @@
 /**
  * Layout arithmetic of the report's table primitive.
  *
- * The annex is read with a calculator beside it, so a table that silently overflows the
+ * The document is read with a calculator beside it, so a table that silently overflows the
  * margin, drops a row at a page break or loses the header on the continuation page is a
  * correctness bug, not a cosmetic one. The geometry is asserted here; the rendered text is
  * asserted end-to-end in `calculationPdfEditorial.test.ts`.
+ *
+ * The layout is built with the report's real palette rather than a stand-in, so a token that
+ * stops resolving fails here too.
  */
 import { describe, expect, it } from 'vitest';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, concatTransformationMatrix, popGraphicsState, pushGraphicsState, rgb } from 'pdf-lib';
 import { CONTENT_BOTTOM, MARGIN, PAGE_SIZE, PdfLayout, resolveColumnWidths } from './pdfBuilder';
-import type { ReportPalette } from './reportContext';
+import { createPalette } from './pdfTheme';
+
+const vectorOps = { concatTransformationMatrix, pushGraphicsState, popGraphicsState };
 
 const createLayout = async () => {
   const doc = await PDFDocument.create();
@@ -20,17 +25,9 @@ const createLayout = async () => {
     bold: await doc.embedFont(StandardFonts.HelveticaBold),
     mathRegular: await doc.embedFont(StandardFonts.TimesRoman),
     mathItalic: await doc.embedFont(StandardFonts.TimesRomanItalic),
+    mathSymbol: await doc.embedFont(StandardFonts.Symbol),
   };
-  const palette: ReportPalette = {
-    forest: rgb(0.07, 0.38, 0.21),
-    forestDeep: rgb(0.04, 0.24, 0.14),
-    forestSoft: rgb(0.86, 0.95, 0.89),
-    ink: rgb(0.12, 0.16, 0.22),
-    rule: rgb(0.73, 0.78, 0.84),
-    white: rgb(1, 1, 1),
-    quantity: { axial: rgb(0, 0, 1), shear: rgb(0, 1, 0), moment: rgb(1, 0, 0) },
-  };
-  return new PdfLayout(doc, fonts, palette, rgb);
+  return new PdfLayout(doc, fonts, createPalette(rgb), rgb, vectorOps);
 };
 
 const CONTENT_WIDTH = PAGE_SIZE[0] - MARGIN * 2;

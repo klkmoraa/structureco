@@ -15,17 +15,19 @@ const download = (blob: Blob, filename: string) => {
   window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
 };
 
+/** Nombre estable y seguro, compartido por las rutas de descarga y guardado nativo. */
+export const safeProjectFilename = (name: string): string => name
+  .normalize('NFKD')
+  .replace(/[^a-zA-Z0-9 _-]/g, '')
+  .trim()
+  .replace(/\s+/g, '-')
+  .toLowerCase() || 'structureco-project';
+
 export const exportProjectJson = (project: ProjectModel) => {
   const normalized = normalizeProject(project);
-  const safeName = normalized.name
-    .normalize('NFKD')
-    .replace(/[^a-zA-Z0-9 _-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .toLowerCase() || 'structureco-project';
   download(
     new Blob([JSON.stringify(normalized, null, 2)], { type: 'application/json' }),
-    `${safeName}.structureco.json`,
+    `${safeProjectFilename(normalized.name)}.structureco.json`,
   );
 };
 

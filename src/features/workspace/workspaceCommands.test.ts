@@ -61,6 +61,14 @@ describe('bus de comandos del workspace', () => {
     unsubscribe();
   });
 
+  it('activa la lectura simultánea de diagramas por el bus tipado', () => {
+    const handler = vi.fn();
+    const unsubscribe = onWorkspaceCommand('toggle-diagram-stack', handler);
+    emitWorkspaceCommand('toggle-diagram-stack');
+    expect(handler).toHaveBeenCalledOnce();
+    unsubscribe();
+  });
+
   it('abre la comparación de revisiones por el bus tipado', () => {
     const handler = vi.fn();
     const unsubscribe = onWorkspaceCommand('open-revision-comparison', handler);

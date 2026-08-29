@@ -42,6 +42,12 @@ const denseViewLabelKey: Record<DenseResultView, TranslationKey> = {
   learn: 'results.learn',
 };
 
+const dataViewActions: ReadonlyArray<{ command: 'open-datasheet' | 'open-model-doctor' | 'open-structural-bom'; labelKey: TranslationKey }> = [
+  { command: 'open-datasheet', labelKey: 'datasheet.title' },
+  { command: 'open-model-doctor', labelKey: 'modelDoctor.open' },
+  { command: 'open-structural-bom', labelKey: 'bom.title' },
+];
+
 type ResultsPanelMode = 'compact' | 'expanded' | 'focused';
 
 const RESULTS_MODE_STORAGE_KEY = 'structureCo.results.mode.v1';
@@ -375,6 +381,15 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
             onPointerEnter={() => { void preloadDenseResultsSurface(); if (view === 'influence') void preloadInfluenceLineView(); }}
             onClick={(event) => emitWorkspaceCommand('open-dense-results', { view, trigger: event.currentTarget })}
           >{t(denseViewLabelKey[view])}</button>)}
+        </div>
+        <div className="results-dense-rail results-data-rail" role="group" aria-label={t('results.dataViews')}>
+          {dataViewActions.map(({ command, labelKey }) => <button
+            key={command}
+            type="button"
+            className="results-dense-rail__action"
+            data-result-data-launcher={command}
+            onClick={() => emitWorkspaceCommand(command)}
+          >{t(labelKey)}</button>)}
         </div>
       </nav>
       <div id="results-content" className="results-body" role="tabpanel" aria-labelledby={`result-tab-${activeTab.id}`} aria-busy={isAnalyzing}>

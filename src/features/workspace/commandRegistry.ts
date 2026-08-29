@@ -24,6 +24,7 @@
 import type { ComponentType } from 'react';
 import {
   ChartNoAxesCombined,
+  BoxSelect,
   ClipboardList,
   Download,
   Grid3x3,
@@ -42,6 +43,7 @@ import type { TranslationKey } from '../../i18n/catalogs';
 import type { ProjectModel, Selection, Tool } from '../../types';
 import type { ResultTab } from '../../store/ProjectContext';
 import { TOOL_REGISTRY } from '../canvas/toolRegistry';
+import { SELECTION_QUERIES, countOf, toSelection } from '../canvas/selectByProperty';
 import type { EditorLayerAction, EditorLayerPresetId } from '../canvas/editorLayers';
 import { activateEvidenceLayer, EVIDENCE_LAYERS } from '../canvas/evidenceLayers';
 import { emitWorkspaceCommand } from './workspaceCommands';
@@ -61,6 +63,7 @@ export interface CommandContext {
   canUndo: boolean;
   canRedo: boolean;
   classroomMode: boolean;
+  selection?: Selection;
   theme: 'light' | 'dark';
   setActiveTool: (tool: Tool) => void;
   setSelection: (selection: Selection) => void;
@@ -334,6 +337,28 @@ const evidenceLayerCommands = (ctx: CommandContext): CommandListItem[] => EVIDEN
   run: () => activateEvidenceLayer(evidence.id, { setResultTab: ctx.setResultTab, dispatchLayers: ctx.dispatchLayers }),
 }));
 
+const diagramStackCommand = (ctx: CommandContext): CommandListItem => ({
+  id: 'evidence:acm',
+  category: 'results',
+  icon: ChartNoAxesCombined,
+  label: ctx.t('palette.toggleDiagramStack'),
+  hint: ctx.t('canvas.evidenceStack'),
+  disabled: !ctx.hasAnalysis,
+  run: () => emitWorkspaceCommand('toggle-diagram-stack'),
+});
+
+const selectionQueryCommands = (ctx: CommandContext): CommandListItem[] => SELECTION_QUERIES
+  .map((query) => ({ query, result: query.run(ctx.project, ctx.selection ?? null) }))
+  .filter(({ query, result }) => countOf(result) > 0 || query.needsSelection)
+  .map(({ query, result }): CommandListItem => ({
+    id: `select:${query.id}`,
+    category: 'navigate',
+    icon: BoxSelect,
+    label: ctx.t('select.paletteEntry', { query: ctx.t(query.labelKey), count: countOf(result) }),
+    disabled: countOf(result) === 0,
+    run: () => ctx.setSelection(toSelection(result)),
+  }));
+
 const toolCommands = (ctx: CommandContext): CommandListItem[] => TOOL_REGISTRY
   .filter((tool) => !(ctx.classroomMode && tool.classroomAdvanced))
   .map((tool): CommandListItem => ({
@@ -405,6 +430,8 @@ export const buildCommands = (ctx: CommandContext): CommandListItem[] => [
   ...layerPresetCommands(ctx),
   ...resultTabCommands(ctx),
   ...evidenceLayerCommands(ctx),
+  diagramStackCommand(ctx),
+  ...selectionQueryCommands(ctx),
   ...nodeCommands(ctx),
   ...memberCommands(ctx),
 ];

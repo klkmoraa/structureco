@@ -14,6 +14,7 @@ import {
 import { ThreeStructuralImage } from '../structural-assets';
 import type { ThreeStructuralAssetId } from '../structural-assets/threeStructuralRender';
 import { recordLocalMetric } from '../../analytics/localMetrics';
+import { ProjectVersions } from './ProjectVersions';
 import './projectHub.css';
 
 /**
@@ -173,7 +174,7 @@ export const ProjectHub = ({
     try {
       const snapshot = await activeRepository.listLibrary();
       setProjects(snapshot.projects);
-      setRecoveries(snapshot.recoveries);
+      setRecoveries(snapshot.recoveries.filter((recovery) => recovery.reason !== 'version'));
       setError(null);
     } catch {
       setError(t('hub.unavailable'));
@@ -306,7 +307,7 @@ export const ProjectHub = ({
     {error ? <p className="project-hub__error" role="alert">{error}</p> : null}
     {!loading && projects.length === 0 ? <p className="project-hub__empty">{t('hub.empty')}</p> : null}
     {visibleProjects.length ? <div className="project-hub__list">
-      {visibleProjects.map((record) => <article className="project-hub__row" key={record.id}>
+      {visibleProjects.map((record) => <div className="project-hub__entry" key={record.id}><article className="project-hub__row">
         <div className="project-hub__preview" aria-hidden="true">
           <ThreeStructuralImage assetId={projectAssetId(record.project)} theme={theme} />
         </div>
@@ -332,7 +333,14 @@ export const ProjectHub = ({
           <button type="button" aria-label={t('hub.duplicateAction', { name: record.name })} onClick={() => { setOpenMenuId(null); void duplicate(record); }}><Copy size={15} />{t('hub.duplicate')}</button>
           <button type="button" className="project-hub__delete" aria-label={t('hub.deleteAction', { name: record.name })} onClick={() => void remove(record)}><Trash2 size={15} />{t('hub.delete')}</button>
         </div> : null}
-      </article>)}
+      </article>{activeRepository && variant === 'full' ? <ProjectVersions
+        repository={activeRepository}
+        record={record}
+        formatDate={(iso) => formatUpdated(iso, language)}
+        t={t}
+        onRestored={onOpen}
+        onChanged={() => { void refresh(); }}
+      /> : null}</div>)}
     </div> : null}
     {recoveries.length ? <section className="project-hub__recoveries" aria-labelledby="recoveries-title">
       <h3 id="recoveries-title">{t('hub.recoveries', { count: recoveries.length })}</h3>

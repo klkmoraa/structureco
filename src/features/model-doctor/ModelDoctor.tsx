@@ -16,6 +16,7 @@ import { Drawer } from '../../design-system/components/overlays';
 import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
+import { DataSurfaceNavigation, type DataSurfaceDestination } from '../workspace/DataSurfaceNavigation';
 import type { SurfaceExtent, SurfacePresentation } from '../workspace/surfacePresentation';
 import { buildModelDoctorReport, type ModelDoctorFinding, type ModelDoctorSeverity } from './modelDoctorDiagnostics';
 import { getModelDoctorCopy } from './modelDoctorCopy';
@@ -39,6 +40,7 @@ export interface ModelDoctorProps {
   onPeek?: () => void;
   /** Restores from `peek` back to `default`. */
   onRestore?: () => void;
+  onNavigateData?: (target: DataSurfaceDestination) => void;
 }
 
 type FindingFilter = 'all' | ModelDoctorSeverity;
@@ -276,6 +278,7 @@ export const ModelDoctor = ({
   extent = 'default',
   onPeek,
   onRestore,
+  onNavigateData,
 }: ModelDoctorProps) => {
   const { project, executePreparedTopologyRepair } = useProjectModel();
   const { setActiveTool, setSelection } = useWorkspaceUI();
@@ -421,6 +424,7 @@ export const ModelDoctor = ({
     onRestore={onRestore}
     restoreLabel={copy.restore}
   >
+    {onNavigateData ? <DataSurfaceNavigation current="doctor" onNavigate={onNavigateData} /> : null}
     {preview ? <RepairPreview
       preview={preview}
       stale={previewStale}

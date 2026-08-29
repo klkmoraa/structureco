@@ -15,6 +15,23 @@ export interface CalculationReportOptions extends PortablePayloadOptions {
   includeEducationTrace?: boolean;
   /** Exact load-case multipliers used to produce the supplied analysis. */
   scenarioFactors?: Record<string, number>;
+  /**
+   * Sections the reader can drop from the export. All default to `true`, so every existing
+   * caller keeps the complete document; the preview dialog is what makes them adjustable.
+   * The portable payload is attached regardless — a shorter report is still re-importable.
+   */
+  includeDiagrams?: boolean;
+  includeScope?: boolean;
+  includeProcedure?: boolean;
+  includeAnnex?: boolean;
+  /** The material and section specification part. */
+  includeMaterials?: boolean;
+  /**
+   * The free-body diagram of every step of the chosen method — one per cut, per joint, per
+   * storey, per span. Complete by default; a reader who only wants the arithmetic can drop
+   * the drawings without losing the procedure they belong to.
+   */
+  includeMethodFreeBodies?: boolean;
 }
 
 export interface CalculationReportArtifact {
@@ -29,22 +46,29 @@ export type PdfColor = ReturnType<typeof import('pdf-lib').rgb>;
 /** The `rgb` factory itself, handed to the renderer by the dynamic import. */
 export type RgbFactory = typeof import('pdf-lib').rgb;
 
+/**
+ * The three `pdf-lib` operator functions `mathVector.ts` needs to draw a formula's outer
+ * transform manually (see that file's header for why). All three are ordinary top-level
+ * `pdf-lib` exports — its ESM entry re-exports `./api/operators` wholesale — so they travel
+ * through the single dynamic `import('pdf-lib')` in `calculationPdf.ts`, the same way `rgb`
+ * does. A static value import of `pdf-lib` anywhere under `utils/pdf/` would drag the library
+ * back into the entry chunk, hence the `typeof import(...)` type queries.
+ */
+export interface PdfVectorOps {
+  concatTransformationMatrix: typeof import('pdf-lib').concatTransformationMatrix;
+  pushGraphicsState: typeof import('pdf-lib').pushGraphicsState;
+  popGraphicsState: typeof import('pdf-lib').popGraphicsState;
+}
+
+export type { ReportPalette } from './pdfTheme';
+
 export interface ReportFonts {
   readonly regular: import('pdf-lib').PDFFont;
   readonly bold: import('pdf-lib').PDFFont;
   readonly mathRegular: import('pdf-lib').PDFFont;
   readonly mathItalic: import('pdf-lib').PDFFont;
-}
-
-export interface ReportPalette {
-  readonly forest: PdfColor;
-  readonly forestDeep: PdfColor;
-  readonly forestSoft: PdfColor;
-  /** Default body text. */
-  readonly ink: PdfColor;
-  readonly rule: PdfColor;
-  readonly white: PdfColor;
-  readonly quantity: Readonly<Record<'axial' | 'shear' | 'moment', PdfColor>>;
+  /** Adobe Symbol: the Greek and the operators the WinAnsi faces cannot encode. */
+  readonly mathSymbol: import('pdf-lib').PDFFont;
 }
 
 /**
