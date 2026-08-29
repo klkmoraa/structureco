@@ -24,14 +24,13 @@ const result = (memberId: string): MemberResult => ({
 const project = { id: 'portal', name: 'Pórtico', nodes, members, settings: { units: 'kN-m' } } as unknown as ProjectModel;
 
 describe('CanvasDiagramStack', () => {
-  it('attaches the selected ACM diagrams to every solved member of the frame', () => {
+  it('renders one exterior full-structure replica per selected ACM response', () => {
     const { container } = render(<svg><CanvasDiagramStack
       project={project}
       results={members.map((member) => result(member.id))}
       quantities={['axial', 'shear', 'moment']}
       nodeMap={new Map(nodes.map((node) => [node.id, node]))}
-      camera={{ x: 40, y: 260, scale: 40 }}
-      toScreen={(x, y) => ({ x: 40 + x * 40, y: 260 - y * 40 })}
+      size={{ width: 640, height: 520 }}
       t={((key: string) => key) as never}
     /></svg>);
 
@@ -39,5 +38,21 @@ describe('CanvasDiagramStack', () => {
     expect(container.querySelectorAll('[data-stack-member="AB"][data-stack-lane]').length).toBe(3);
     expect(container.querySelectorAll('[data-stack-member="BC"][data-stack-lane]').length).toBe(3);
     expect(container.querySelectorAll('[data-stack-member="CD"][data-stack-lane]').length).toBe(3);
+    expect(container.querySelectorAll('[data-stack-panel]').length).toBe(3);
+    expect(container.querySelectorAll('.diagram-stack-replica-member').length).toBe(9);
+  });
+
+  it('keeps a single selected response in one exterior replica rather than over the editable member', () => {
+    const { container } = render(<svg><CanvasDiagramStack
+      project={project}
+      results={members.map((member) => result(member.id))}
+      quantities={['moment']}
+      nodeMap={new Map(nodes.map((node) => [node.id, node]))}
+      size={{ width: 640, height: 520 }}
+      t={((key: string) => key) as never}
+    /></svg>);
+
+    expect(container.querySelectorAll('[data-stack-panel="moment"]').length).toBe(1);
+    expect(container.querySelectorAll('[data-stack-member][data-stack-lane="moment"] .diagram-stack-replica-member').length).toBe(3);
   });
 });

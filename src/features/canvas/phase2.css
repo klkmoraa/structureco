@@ -1290,23 +1290,26 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 .diagram-stack-lane.shear .diagram-stack-line { stroke:var(--shear); }.diagram-stack-lane.shear .diagram-stack-fill,.diagram-stack-lane.shear .diagram-stack-extreme,.diagram-stack-lane.shear .diagram-stack-extreme-label,.diagram-stack-lane.shear .diagram-stack-reading circle,.diagram-stack-lane.shear .diagram-stack-reading text,.diagram-stack-lane.shear .diagram-stack-caption { fill:var(--shear); }
 .diagram-stack-lane.moment .diagram-stack-line { stroke:var(--moment); }.diagram-stack-lane.moment .diagram-stack-fill,.diagram-stack-lane.moment .diagram-stack-extreme,.diagram-stack-lane.moment .diagram-stack-extreme-label,.diagram-stack-lane.moment .diagram-stack-reading circle,.diagram-stack-lane.moment .diagram-stack-reading text,.diagram-stack-lane.moment .diagram-stack-caption { fill:var(--moment); }
 
-/* ACM is attached to every solved member, not presented as a detached chart
-   for whichever bar happened to be selected. A shared magnitude per action
-   keeps columns and beams comparable, while the three compact lanes preserve
-   the structure's geometry and joint continuity. */
-.diagram-stack-layer--structure { pointer-events:none; }
+/* ACM sits outside the editable model. Every panel is a full structural
+   replica, so a pórtico reads as three pórticos (N/V/M), never as curves
+   painted over its members. */
+.diagram-stack-layer--external { pointer-events:none; }
+.diagram-stack-panel-frame { fill:color-mix(in srgb,var(--canvas-bg) 82%,var(--surface)); stroke:var(--border-soft); stroke-width:1; opacity:.92; }
+.diagram-stack-panel-title { fill:var(--muted); font-size:10px; font-weight:750; letter-spacing:.02em; }
+.diagram-stack-member-label { fill:var(--subtle); font-size:9px; font-weight:700; paint-order:stroke; stroke:var(--canvas-bg); stroke-width:3px; }
+.diagram-stack-replica-member { stroke:var(--text); stroke-width:1.25; opacity:.72; }
 .diagram-stack-member-baseline { fill:none; stroke:var(--border-soft); stroke-width:1; stroke-dasharray:3 3; opacity:.82; }
-.diagram-stack-member-fill { stroke:none; opacity:.16; }
-.diagram-stack-member-line { fill:none; stroke-width:2; stroke-linejoin:round; stroke-linecap:round; }
+.diagram-stack-member-fill { stroke:none; opacity:.24; }
+.diagram-stack-member-line { fill:none; stroke-width:2.35; stroke-linejoin:round; stroke-linecap:round; }
 .diagram-stack-member-lane.axial .diagram-stack-member-line { stroke:var(--axial); }
 .diagram-stack-member-lane.axial .diagram-stack-member-fill { fill:var(--axial); }
 .diagram-stack-member-lane.shear .diagram-stack-member-line { stroke:var(--shear); }
 .diagram-stack-member-lane.shear .diagram-stack-member-fill { fill:var(--shear); }
 .diagram-stack-member-lane.moment .diagram-stack-member-line { stroke:var(--moment); }
 .diagram-stack-member-lane.moment .diagram-stack-member-fill { fill:var(--moment); }
-.diagram-stack-legend rect { fill:var(--sc-color-surface-elevated); stroke:var(--sc-color-border-soft); stroke-width:1; opacity:.94; }
-.diagram-stack-legend text { fill:var(--text); font-size:10px; font-weight:750; }
-.diagram-stack-legend__item.axial { fill:var(--axial); }.diagram-stack-legend__item.shear { fill:var(--shear); }.diagram-stack-legend__item.moment { fill:var(--moment); }
+.diagram-stack-panel.axial .diagram-stack-panel-title { fill:var(--axial); }
+.diagram-stack-panel.shear .diagram-stack-panel-title { fill:var(--shear); }
+.diagram-stack-panel.moment .diagram-stack-panel-title { fill:var(--moment); }
 
 @media (max-width:1023px) {
   .canvas-evidence-rail { top:8px; left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right)); max-width:none; }

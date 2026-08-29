@@ -60,7 +60,7 @@ import {
 import { CanvasResultLayer, diagramPixelScaleFor, reactionClearanceFor } from './CanvasResultLayer';
 import { CanvasInteractionLayer } from './CanvasInteractionLayer';
 import { CanvasMiniMap } from './CanvasMiniMap';
-import { CanvasDiagramStack } from './CanvasDiagramStack';
+import { CanvasDiagramStack, externalStackBottomReserve } from './CanvasDiagramStack';
 import { persistStackQuantities, readStoredStackQuantities, toggleStackQuantity, type StackQuantity } from './diagramStack';
 import { CanvasTouchLoupe } from './CanvasTouchLoupe';
 import { CandidatePicker } from './CanvasCandidatePicker';
@@ -1937,11 +1937,15 @@ export const StructuralCanvas = ({
   }, [analysis, resultTab]);
 
   const stackAvailable = Boolean(analysis?.success && analysis.memberResults.some((result) => result.diagramSegments.length > 0));
+  // ACM is an analysis drawing, not an editor composition. Its own traces are
+  // meaningful only when reaction labels, load arrows and local axes do not
+  // compete with them. This is presentation-only; the persisted layer choice
+  // and model data remain untouched.
+  const acmLayers = stackActive ? { ...layers, dimensions: false } : layers;
   const toggleStack = useCallback(() => {
     if (!stackActive && !layers.results) dispatchLayers({ type: 'set', layer: 'results', visible: true });
-    if (!stackActive) window.requestAnimationFrame(() => fitModel());
     setStackActive((current) => !current);
-  }, [dispatchLayers, fitModel, layers.results, stackActive]);
+  }, [dispatchLayers, layers.results, stackActive]);
   const toggleStackQuantityChoice = useCallback((quantity: StackQuantity) => {
     setStackQuantities((current) => {
       const next = toggleStackQuantity(current, quantity);
@@ -1949,6 +1953,9 @@ export const StructuralCanvas = ({
       return next;
     });
   }, []);
+  useEffect(() => {
+    if (stackActive) fitModel(externalStackBottomReserve(project, size, stackQuantities.length));
+  }, [fitModel, project, size, stackActive, stackQuantities.length]);
   useEffect(() => onWorkspaceCommand('toggle-diagram-stack', toggleStack), [toggleStack]);
 
   const mechanismPixelScale = useMemo(() => {
@@ -2365,16 +2372,6 @@ export const StructuralCanvas = ({
           t={t}
         />
 
-        {stackActive && layers.results && analysis?.success && !structuralEditDraft ? <CanvasDiagramStack
-          project={project}
-          results={analysis.memberResults}
-          quantities={stackQuantities}
-          nodeMap={nodeMap}
-          camera={camera}
-          toScreen={toScreen}
-          t={t}
-        /> : null}
-
         <CanvasGeometryLayer
           slot="members"
           project={project}
@@ -2386,8 +2383,8 @@ export const StructuralCanvas = ({
           candidatePreview={candidatePreview}
           learningFocus={learningFocus}
           memberStartId={memberStart}
-          layers={layers}
-          loadsLayerVisible={loadsLayerVisible}
+          layers={acmLayers}
+          loadsLayerVisible={loadsLayerVisible && !stackActive}
           heatmapRatios={heatmapRatios}
           demandMapActive={demandMapActive}
           resultTab={resultTab}
@@ -2401,6 +2398,15 @@ export const StructuralCanvas = ({
           onShowCut={showCut}
           onCutLeave={onCutLeave}
         />
+
+        {stackActive && layers.results && analysis?.success && !structuralEditDraft ? <CanvasDiagramStack
+          project={project}
+          results={analysis.memberResults}
+          quantities={stackQuantities}
+          nodeMap={nodeMap}
+          size={size}
+          t={t}
+        /> : null}
 
         <CanvasResultLayer
           slot="annotations"
@@ -2424,7 +2430,7 @@ export const StructuralCanvas = ({
           lengthLabel={lengthLabel}
           forceLabel={forceLabel}
           momentLabel={momentLabel}
-          showResults={layers.results && !structuralEditDraft}
+          showResults={layers.results && !stackActive && !structuralEditDraft}
           showDiagnostics={layers.diagnostics && !structuralEditDraft}
           size={size}
           t={t}
@@ -2441,8 +2447,8 @@ export const StructuralCanvas = ({
           candidatePreview={candidatePreview}
           learningFocus={learningFocus}
           memberStartId={memberStart}
-          layers={layers}
-          loadsLayerVisible={loadsLayerVisible}
+          layers={acmLayers}
+          loadsLayerVisible={loadsLayerVisible && !stackActive}
           heatmapRatios={heatmapRatios}
           demandMapActive={demandMapActive}
           resultTab={resultTab}
@@ -2472,9 +2478,9 @@ export const StructuralCanvas = ({
           t={t}
         />
 
-        {smartLabelLayer}
+        {!stackActive ? smartLabelLayer : null}
 
-        <GlobalAxes canvasHeight={size.height} />
+        {!stackActive ? <GlobalAxes canvasHeight={size.height} /> : null}
         </g>
       </svg>
 

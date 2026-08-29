@@ -6,7 +6,6 @@ import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { Selection } from '../../types';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
-import { DataSurfaceNavigation, type DataSurfaceDestination } from '../workspace/DataSurfaceNavigation';
 import { useDataSurfaceRetainedState } from '../workspace/dataSurfaceRetainedStateStore';
 import type { SurfaceExtent, SurfacePresentation } from '../workspace/surfacePresentation';
 import type { DatasheetCellEditorProps } from './DatasheetCellEditor';
@@ -113,7 +112,6 @@ export interface DatasheetPanelProps {
   onPeek?: () => void;
   /** Restores from `peek` back to `default`. */
   onRestore?: () => void;
-  onNavigateData?: (target: DataSurfaceDestination) => void;
 }
 
 export const DatasheetPanel = ({
@@ -125,7 +123,6 @@ export const DatasheetPanel = ({
   extent = 'default',
   onPeek,
   onRestore,
-  onNavigateData,
 }: DatasheetPanelProps) => {
   const { language, t } = useI18n();
   const { project, updateProject } = useProjectModel();
@@ -429,7 +426,6 @@ export const DatasheetPanel = ({
     restoreLabel={t('datasheet.restore')}
   >
     <div className="datasheet-layout" data-datasheet-layout="audit-workbench">
-      {onNavigateData ? <DataSurfaceNavigation current="datasheet" onNavigate={onNavigateData} /> : null}
       <div className="datasheet-main">
         <div className="datasheet-toolbar">
           <div className="datasheet-entity" role="group" aria-label={t('datasheet.entityGroup')}>

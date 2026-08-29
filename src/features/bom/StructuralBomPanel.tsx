@@ -7,7 +7,6 @@ import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { ProjectModel } from '../../types';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
-import { DataSurfaceNavigation, type DataSurfaceDestination } from '../workspace/DataSurfaceNavigation';
 import type { SurfaceExtent, SurfacePresentation } from '../workspace/surfacePresentation';
 import {
   buildStructuralBom,
@@ -27,7 +26,6 @@ export interface StructuralBomPanelProps {
   onPeek?: () => void;
   onRestore?: () => void;
   download?: (project: ProjectModel, bom: StructuralBom) => void;
-  onNavigateData?: (target: DataSurfaceDestination) => void;
 }
 
 const displayNumber = (value: number | null, language: 'es' | 'en'): string => {
@@ -46,7 +44,6 @@ export const StructuralBomPanel = ({
   onPeek,
   onRestore,
   download = downloadStructuralBomCsv,
-  onNavigateData,
 }: StructuralBomPanelProps) => {
   const { project } = useProjectModel();
   const { setSelection } = useWorkspaceUI();
@@ -94,7 +91,6 @@ export const StructuralBomPanel = ({
     restoreLabel={t('bom.restore')}
   >
     <div className="structural-bom" data-testid="structural-bom" data-row-count={bom.rows.length}>
-      {onNavigateData ? <DataSurfaceNavigation current="bom" onNavigate={onNavigateData} /> : null}
       <header className="structural-bom__scope">
         <div>
           <span className="structural-bom__eyebrow">{t('bom.eyebrow')}</span>

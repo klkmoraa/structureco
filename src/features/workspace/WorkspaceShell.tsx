@@ -25,7 +25,6 @@ import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
 import { isOwnHistoryScope } from './commandRegistry';
 import type { AnalysisResult } from '../../types';
 import type { RevisionSnapshot } from '../revision-comparison/revisionComparison';
-import type { DataSurfaceDestination } from './DataSurfaceNavigation';
 import { DataSurfaceRetainedStateProvider } from './DataSurfaceRetainedState';
 
 const LazyCommandPalette = lazy(() => import('./CommandPalette').then((module) => ({ default: module.CommandPalette })));
@@ -352,13 +351,6 @@ const WorkspaceBrokerContent = ({
     if (open) openSurface('dense');
     else { closeSurface('dense'); setDataSurfaceStateEpoch((epoch) => epoch + 1); }
   }, [closeSurface, openSurface]);
-  const switchDataSurface = useCallback((from: Extract<DataSurfaceDestination, 'datasheet' | 'doctor' | 'bom'>, target: DataSurfaceDestination) => {
-    if (from === target) return;
-    // Unlike a generic open command, switching closes the departing drawer so
-    // it cannot remain retained behind the destination when the user returns.
-    closeSurface(from);
-    window.requestAnimationFrame(() => openSurface(target));
-  }, [closeSurface, openSurface]);
   const markDenseReady = useCallback((ready: boolean) => markSurfaceReady('dense', ready), [markSurfaceReady]);
   const markDatasheetReady = useCallback((ready: boolean) => markSurfaceReady('datasheet', ready), [markSurfaceReady]);
   const markBomReady = useCallback((ready: boolean) => markSurfaceReady('bom', ready), [markSurfaceReady]);
@@ -455,7 +447,6 @@ const WorkspaceBrokerContent = ({
         extent={datasheet.extent}
         onPeek={peekDatasheet}
         onRestore={restoreDatasheet}
-        onNavigateData={(target) => switchDataSurface('datasheet', target)}
       /></Suspense> : null}
       {broker.isRetained('bom') ? <Suspense fallback={null}><LazyStructuralBom
         open={bom.status === 'active'}
@@ -465,7 +456,6 @@ const WorkspaceBrokerContent = ({
         extent={bom.extent}
         onPeek={peekBom}
         onRestore={restoreBom}
-        onNavigateData={(target) => switchDataSurface('bom', target)}
       /></Suspense> : null}
       {broker.isRetained('comparison') ? <Suspense fallback={null}><LazyRevisionComparison
         open={comparison.status === 'active'}
@@ -488,7 +478,6 @@ const WorkspaceBrokerContent = ({
         extent={doctor.extent}
         onPeek={peekDoctor}
         onRestore={restoreDoctor}
-        onNavigateData={(target) => switchDataSurface('doctor', target)}
       /></Suspense> : null}
     </>}
     inspector={<div className="workspace-surfaces" data-workspace-right-slot>
