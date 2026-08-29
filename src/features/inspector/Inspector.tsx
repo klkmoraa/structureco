@@ -8,6 +8,7 @@ import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
 import type { GeneratedLoadSource, LoadCase, MovingLoadCase, Selection, Tool } from '../../types';
 import { NTC_CDMX_2023_GROUP_B, createProjectCombinationFromNormativeDraft, generateNormativeCombinationDrafts } from '../../data/loadCombinationStandards';
+import { applicableMethods, resolveSolutionMethod, type SolutionMethodId } from '../../analysis-methods/methodRegistry';
 import { InspectorNumericField } from './InspectorNumericField';
 import { InspectorProperties } from './InspectorProperties';
 import { readCanvasViewSettings, withCanvasViewSettings } from '../view/canvasViewSettings';
@@ -365,6 +366,50 @@ const NtcCombinationDraftPanel = ({ setSelectedCombinationId }: Pick<{
   </section>;
 };
 
+const APPROXIMATE_PROCEDURE_METHODS = new Set<SolutionMethodId>(['portal-method', 'cantilever-method']);
+
+const methodExplanationKey = (method: SolutionMethodId): TranslationKey => {
+  if (method === 'matrix-stiffness') return 'method.matrixDescription';
+  return APPROXIMATE_PROCEDURE_METHODS.has(method) ? 'method.approximateDescription' : 'method.procedureDescription';
+};
+
+/**
+ * A procedure method belongs with the analysis setup, not in the compact top
+ * bar selector. It never replaces the solver: it chooses the verified or
+ * approximate explanation added to the calculation report for this model.
+ */
+const ProcedureMethodPanel = () => {
+  const { project, updateProjectView } = useProjectModel();
+  const { t } = useI18n();
+  const methods = useMemo(() => applicableMethods(project), [project]);
+  const selectedId = resolveSolutionMethod(project);
+  const selected = methods.find((method) => method.id === selectedId) ?? methods[0];
+
+  return <section className="inspector-section procedure-method-panel" data-context-control="method">
+    <h3>{t('method.title')}</h3>
+    <p className="section-description">{t('method.intro')}</p>
+    <label className="select-field">
+      <span>{t('method.label')}</span>
+      <select
+        aria-label={t('method.label')}
+        value={selectedId}
+        onChange={(event) => updateProjectView((draft) => ({
+          ...draft,
+          settings: { ...draft.settings, solutionMethod: event.target.value as SolutionMethodId },
+        }))}
+      >
+        {methods.map((method) => <option key={method.id} value={method.id}>{t(method.labelKey as TranslationKey)}</option>)}
+      </select>
+    </label>
+    {selected ? <div className="procedure-method-panel__explanation">
+      <strong>{t(selected.labelKey as TranslationKey)}</strong>
+      <span>{t('method.appliesNow')}</span>
+      <p>{t(methodExplanationKey(selected.id))}</p>
+    </div> : null}
+    <small>{t('method.resultAuthority')}</small>
+  </section>;
+};
+
 const AdvancedLoadSourcesPanel = () => {
   const { project, updateProject } = useProjectModel();
   const frameIds = project.members.filter((member) => member.type === 'frame').map((member) => member.id);
@@ -453,7 +498,7 @@ const AnalysisSetupPanel = ({ activeTool, onChooseTool, selectedCombinationId, s
     { tool: 'distributedLoad', label: t('inspector.distributed'), detail: t('toolbar.distributedLoadDetail'), icon: Sigma },
     { tool: 'moment', label: t('results.moment'), detail: t('toolbar.momentDetail'), icon: RotateCcw },
   ];
-  return <><AnalysisModePanel />
+  return <><AnalysisModePanel /><ProcedureMethodPanel />
     <section className="inspector-section load-starter">
       <h3>{t('inspector.addLoadTitle')}</h3>
       <p>{t('inspector.addLoadDescription')}</p>

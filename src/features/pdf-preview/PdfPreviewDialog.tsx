@@ -83,9 +83,9 @@ export const PdfPreviewDialog = ({ artifact, onClose, onDownload, onRebuild }: P
       setDocumentProxy(null);
       setPageNumber(1);
       try {
-        const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+        const pdfjs = await import('pdfjs-dist/build/pdf.mjs');
         if (typeof document !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
-          const worker = await import('pdfjs-dist/legacy/build/pdf.worker.mjs?url');
+          const worker = await import('pdfjs-dist/build/pdf.worker.mjs?url');
           pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
         }
         const source = new Uint8Array(currentArtifact.bytes.byteLength);

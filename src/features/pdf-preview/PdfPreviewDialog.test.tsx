@@ -7,11 +7,11 @@ import { PdfPreviewDialog } from './PdfPreviewDialog';
 
 const pdfMocks = vi.hoisted(() => ({ getDocument: vi.fn(), render: vi.fn(() => ({ promise: Promise.resolve() })), getPage: vi.fn() }));
 
-vi.mock('pdfjs-dist/legacy/build/pdf.mjs', () => ({
+vi.mock('pdfjs-dist/build/pdf.mjs', () => ({
   GlobalWorkerOptions: { workerSrc: '' },
   getDocument: pdfMocks.getDocument,
 }));
-vi.mock('pdfjs-dist/legacy/build/pdf.worker.mjs?url', () => ({ default: 'pdf-worker.js' }));
+vi.mock('pdfjs-dist/build/pdf.worker.mjs?url', () => ({ default: 'pdf-worker.js' }));
 
 afterEach(() => {
   cleanup();

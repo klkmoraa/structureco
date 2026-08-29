@@ -61,7 +61,7 @@ import { CanvasResultLayer, diagramPixelScaleFor, reactionClearanceFor } from '.
 import { CanvasInteractionLayer } from './CanvasInteractionLayer';
 import { CanvasMiniMap } from './CanvasMiniMap';
 import { CanvasDiagramStack } from './CanvasDiagramStack';
-import { persistStackQuantities, readStoredStackQuantities, resolveStackMemberId, stackMetricsFor, toggleStackQuantity, type StackQuantity } from './diagramStack';
+import { persistStackQuantities, readStoredStackQuantities, toggleStackQuantity, type StackQuantity } from './diagramStack';
 import { CanvasTouchLoupe } from './CanvasTouchLoupe';
 import { CandidatePicker } from './CanvasCandidatePicker';
 import {
@@ -250,7 +250,6 @@ export const StructuralCanvas = ({
     cancelProjectTransaction,
     learningFocus,
     resultCursor,
-    setResultCursor,
     influenceCanvasState,
     modeShapeState,
   } = useProject();
@@ -1937,40 +1936,19 @@ export const StructuralCanvas = ({
     return maximum;
   }, [analysis, resultTab]);
 
-  const stackMemberId = useMemo(
-    () => stackActive ? resolveStackMemberId(project, selection, resultMap) : null,
-    [project, resultMap, selection, stackActive],
-  );
-  const stackResult = stackMemberId ? resultMap.get(stackMemberId) ?? null : null;
-  const stackAnchor = useMemo(() => {
-    if (!stackResult || !project.nodes.length) return null;
-    const bounds = modelBounds(project.nodes);
-    const left = toScreen(bounds.minX, bounds.minY);
-    const right = toScreen(bounds.maxX, bounds.minY);
-    return { minX: left.x, maxX: right.x, maxY: Math.max(left.y, right.y) };
-  }, [project.nodes, stackResult, toScreen]);
-  const stackAvailable = Boolean(analysis?.success && resolveStackMemberId(project, selection, resultMap));
-  const readStackStation = useCallback((x: number | null) => {
-    if (!stackMemberId || resultCursor?.pinned) return;
-    const current = resultCursor?.memberId === stackMemberId ? resultCursor.x : null;
-    if (current === x) return;
-    setResultCursor(x === null ? null : { memberId: stackMemberId, x, pinned: false });
-  }, [resultCursor?.memberId, resultCursor?.pinned, resultCursor?.x, setResultCursor, stackMemberId]);
-  const stackCursorX = stackMemberId && resultCursor?.memberId === stackMemberId ? resultCursor.x : null;
+  const stackAvailable = Boolean(analysis?.success && analysis.memberResults.some((result) => result.diagramSegments.length > 0));
   const toggleStack = useCallback(() => {
     if (!stackActive && !layers.results) dispatchLayers({ type: 'set', layer: 'results', visible: true });
-    if (!stackActive) window.requestAnimationFrame(() => fitModel(stackMetricsFor(size.height, stackQuantities.length).total));
-    if (stackActive && !resultCursor?.pinned && resultCursor?.memberId === stackMemberId) setResultCursor(null);
+    if (!stackActive) window.requestAnimationFrame(() => fitModel());
     setStackActive((current) => !current);
-  }, [dispatchLayers, fitModel, layers.results, resultCursor?.memberId, resultCursor?.pinned, setResultCursor, size.height, stackActive, stackMemberId, stackQuantities.length]);
+  }, [dispatchLayers, fitModel, layers.results, stackActive]);
   const toggleStackQuantityChoice = useCallback((quantity: StackQuantity) => {
     setStackQuantities((current) => {
       const next = toggleStackQuantity(current, quantity);
       persistStackQuantities(next);
-      if (stackActive) window.requestAnimationFrame(() => fitModel(stackMetricsFor(size.height, next.length).total));
       return next;
     });
-  }, [fitModel, size.height, stackActive]);
+  }, []);
   useEffect(() => onWorkspaceCommand('toggle-diagram-stack', toggleStack), [toggleStack]);
 
   const mechanismPixelScale = useMemo(() => {
@@ -2381,22 +2359,19 @@ export const StructuralCanvas = ({
           lengthLabel={lengthLabel}
           forceLabel={forceLabel}
           momentLabel={momentLabel}
-          showResults={layers.results && !structuralEditDraft}
+          showResults={layers.results && !stackActive && !structuralEditDraft}
           showDiagnostics={layers.diagnostics && !structuralEditDraft}
           size={size}
           t={t}
         />
 
-        {stackActive && stackResult && stackAnchor && layers.results && analysis?.success && !structuralEditDraft ? <CanvasDiagramStack
-          memberId={stackResult.memberId}
-          result={stackResult}
+        {stackActive && layers.results && analysis?.success && !structuralEditDraft ? <CanvasDiagramStack
+          project={project}
+          results={analysis.memberResults}
           quantities={stackQuantities}
-          modelScreenBounds={stackAnchor}
-          viewportHeight={size.height}
-          cursorX={stackCursorX}
-          onCursorChange={readStackStation}
-          units={units}
-          lengthLabel={lengthLabel}
+          nodeMap={nodeMap}
+          camera={camera}
+          toScreen={toScreen}
           t={t}
         /> : null}
 

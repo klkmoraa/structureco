@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import {
   Check,
@@ -49,8 +49,6 @@ import { presentExample } from '../welcome/examplePresentation';
 import { APP_VERSION } from '../../appVersion';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { resolveTopBarCommand, type TopBarCommandContext } from '../workspace/commandRegistry';
-import { applicableMethods, resolveSolutionMethod, type SolutionMethodId } from '../../analysis-methods/methodRegistry';
-import type { TranslationKey } from '../../i18n/catalogs';
 import { PDeltaAdvancedConfig, TopBarHistoryControls } from './TopBarControlGroups';
 import type { ToolDockPosition } from '../workspace/useWorkspaceLayoutPreferences';
 import type { PdfPreviewArtifact } from '../pdf-preview/PdfPreviewDialog';
@@ -478,11 +476,6 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
   const exportPrintCommand = command('export:print');
   const analysisOrderLabel = t(project.settings.analysisMode === 'p-delta' ? 'analysis.orderPDelta' : 'analysis.orderFirst');
   const analysisModeLabel = t(project.settings.calculationMode === 'classroom' ? 'analysis.modeClassroom' : 'analysis.modeComplete');
-  // Los métodos clásicos son procedimientos alternativos para explicar y
-  // contrastar el resultado. El solver matricial conserva la autoridad del
-  // análisis; el selector nunca ofrece una técnica fuera de su dominio.
-  const methods = useMemo(() => applicableMethods(project), [project]);
-
   return (
     <header ref={topbarRef} className="topbar topbar--atelier" data-topbar-layout="command-island">
       <div className="topbar-zone topbar-document-zone topbar-project-zone" data-topbar-zone="document" data-topbar-role="project">
@@ -620,19 +613,6 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
                   <option value="p-delta">{t('analysis.orderPDelta')}</option>
                 </select>
               </label>
-              {methods.length > 1 ? <label className="topbar-panel-field" data-context-control="method">
-                <span>{t('method.label')}</span>
-                <select
-                  aria-label={t('method.label')}
-                  value={resolveSolutionMethod(project)}
-                  onChange={(event) => updateProjectView((draft) => ({
-                    ...draft,
-                    settings: { ...draft.settings, solutionMethod: event.target.value as SolutionMethodId },
-                  }))}
-                >
-                  {methods.map((method) => <option key={method.id} value={method.id}>{t(method.labelKey as TranslationKey)}</option>)}
-                </select>
-              </label> : null}
               <label className="topbar-panel-field">
                 <span>{t('units.label')}</span>
                 <select

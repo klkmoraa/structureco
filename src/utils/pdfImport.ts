@@ -54,9 +54,9 @@ export const inspectPdf = async (
       : new Uint8Array(input);
   if (source.byteLength > maxBytes) throw tooLarge();
 
-  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const pdfjs = await import('pdfjs-dist/build/pdf.mjs');
   if (typeof document !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
-    const worker = await import('pdfjs-dist/legacy/build/pdf.worker.mjs?url');
+    const worker = await import('pdfjs-dist/build/pdf.worker.mjs?url');
     pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
   }
 
@@ -109,7 +109,7 @@ export const inspectPdf = async (
     const page = await documentProxy.getPage(pageNumber);
     const content = await page.getTextContent();
     const pageText = content.items
-      .map((item) => 'str' in item ? item.str : '')
+      .map((item: { str?: unknown }) => typeof item.str === 'string' ? item.str : '')
       .filter(Boolean)
       .join(' ');
     textByPage.push(normalizeText(pageText));

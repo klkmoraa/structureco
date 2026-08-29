@@ -7,7 +7,7 @@
  * drawn box, exactly as it always has, so none of its nine call sites needed to change.
  */
 import { atomize, translateExpression } from './mathLatex';
-import { MathTypesetError, typesetLatex } from './mathTypeset';
+import { isVectorMathAvailable, MathTypesetError, typesetLatex } from './mathTypeset';
 import type { ParsedFormula } from './mathTypeset';
 import { drawFormula, measureFormula } from './mathVector';
 import { pdfText, wrapText } from './pdfGlyphs';
@@ -34,6 +34,7 @@ const warnedExpressions = new Set<string>();
  * instead of hiding behind the fallback.
  */
 const safeTypeset = (expression: string, display = false): ParsedFormula | null => {
+  if (!isVectorMathAvailable) return null;
   try {
     return typesetLatex(translateExpression(expression), display);
   } catch (error) {
@@ -239,6 +240,7 @@ export const drawFormulaCard = (
  * and they typeset in display style, which is what a numbered relation on its own line is.
  */
 const safeTypesetLatex = (latex: string): ParsedFormula | null => {
+  if (!isVectorMathAvailable) return null;
   try {
     return typesetLatex(latex, true);
   } catch (error) {

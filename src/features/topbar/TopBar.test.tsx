@@ -120,18 +120,13 @@ describe('TopBar portable export', () => {
     expect(pdfButton.disabled).toBe(false);
   });
 
-  it('offers only applicable classical procedures and persists the selection', async () => {
+  it('keeps the compact analysis popover focused on analysis settings', async () => {
     const user = userEvent.setup();
     render(<TopBarHarness><TopBar /></TopBarHarness>);
 
     await user.click(screen.getByRole('button', { name: 'Configuración de análisis' }));
-    const method = screen.getByRole('combobox', { name: 'Método de procedimiento' });
-    expect(within(method).getByRole('option', { name: 'Matricial de la rigidez' })).toBeTruthy();
-    expect(within(method).getByRole('option', { name: 'Método del portal' })).toBeTruthy();
-    expect(within(method).queryByRole('option', { name: 'Doble integración' })).toBeNull();
-
-    await user.selectOptions(method, 'portal-method');
-    await waitFor(() => expect(JSON.parse(localStorage.getItem(PROJECT_STORAGE_KEY) ?? '{}').settings.solutionMethod).toBe('portal-method'));
+    expect(screen.queryByRole('combobox', { name: 'Método de procedimiento' })).toBeNull();
+    expect(screen.getByRole('combobox', { name: 'Caso o combinación' })).toBeTruthy();
   });
 
   it('previews the generated PDF before sharing or downloading that same artifact', async () => {
@@ -529,7 +524,7 @@ describe('TopBar information architecture', () => {
     // decide la clase de composición, así que su conmutador ya no existe.
     await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
     expect(screen.queryByRole('button', { name: 'Contraer herramientas' })).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Cargas de análisis' }));
+    await user.click(screen.getByRole('button', { name: 'Análisis y cargas' }));
     expect(onOpenAnalysisSetup).toHaveBeenCalledOnce();
 
     await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
