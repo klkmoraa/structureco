@@ -53,8 +53,20 @@ export const DEFAULT_EDITOR_LAYERS: Readonly<EditorLayerState> = Object.freeze({
   heatmap: false,
 });
 
+const ALL_EDITOR_LAYERS: Readonly<EditorLayerState> = Object.freeze({
+  model: true,
+  loads: true,
+  dimensions: true,
+  ids: true,
+  results: true,
+  labels: true,
+  help: true,
+  diagnostics: true,
+  heatmap: true,
+});
+
 export const EDITOR_LAYER_PRESETS: Readonly<Record<EditorLayerPresetId, Readonly<EditorLayerState>>> = Object.freeze({
-  all: DEFAULT_EDITOR_LAYERS,
+  all: ALL_EDITOR_LAYERS,
   model: Object.freeze({
     model: true, loads: false, dimensions: true, ids: true,
     results: false, labels: false, help: true, diagnostics: true, heatmap: false,
