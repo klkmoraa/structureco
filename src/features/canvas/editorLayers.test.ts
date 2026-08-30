@@ -65,7 +65,8 @@ describe('editor layer state', () => {
 
   it('reports the preset that matches the current view, and none once the user diverges', () => {
     const state = createEditorLayerState();
-    expect(activeEditorLayerPreset(state)).toBe('all');
+    expect(activeEditorLayerPreset(state)).toBeNull();
+    expect(activeEditorLayerPreset(editorLayerReducer(state, { type: 'preset', preset: 'all' }))).toBe('all');
     expect(activeEditorLayerPreset(editorLayerReducer(state, { type: 'preset', preset: 'loads' }))).toBe('loads');
     expect(activeEditorLayerPreset(editorLayerReducer(state, { type: 'toggle', layer: 'ids' }))).toBeNull();
   });
