@@ -74,11 +74,13 @@ const actual = parse(lines.join('\n'));
 const problems = [];
 
 for (const [file, hash] of expected) {
-  if (!actual.has(file)) problems.push(`ELIMINADO   ${file}`);
-  else if (actual.get(file) !== hash) problems.push(`MODIFICADO  ${file}`);
+  if (!actual.has(file)) problems.push(`ELIMINADO   ${file}\n             esperado ${hash}`);
+  else if (actual.get(file) !== hash) problems.push(
+    `MODIFICADO  ${file}\n             esperado ${hash}\n             actual   ${actual.get(file)}`,
+  );
 }
-for (const file of actual.keys()) {
-  if (!expected.has(file)) problems.push(`AGREGADO    ${file}`);
+for (const [file, hash] of actual) {
+  if (!expected.has(file)) problems.push(`AGREGADO    ${file}\n             actual   ${hash}`);
 }
 
 if (problems.length > 0) {
