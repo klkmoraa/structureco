@@ -34,21 +34,29 @@ const externalCells = (bounds: Bounds, size: DiagramSize, quantities: readonly S
   const outerX = compact ? 14 : 30;
   const outerRight = compact ? 14 : 178;
   // The compact canvas keeps its zoom controls at the lower-right corner.
-  // Reserve that shelf so the final M replica stays fully readable.
+  // Reserve that shelf so the final M diagram stays fully readable.
   const bottom = compact ? 96 : 30;
   const gap = compact ? 10 : 18;
+  // ACM is read exactly as the worked examples: one complete structural
+  // diagram beneath another. A frame is repeated down the canvas for N, V and
+  // M; it is never reduced to three cards or merged into the editable model.
   const aspect = (bounds.maxX - bounds.minX) / Math.max(1e-9, bounds.maxY - bounds.minY);
-  const sideBySide = aspect < 2;
-  if (sideBySide) {
-    const height = Math.max(compact ? 96 : 132, Math.min(compact ? 142 : 206, size.height * .31));
+  // A pórtico has a genuinely two-dimensional topology. On a wide canvas its
+  // three full-size copies use the width side-by-side (not as cards); compact
+  // canvases keep the same copies one below another so the reading survives.
+  if (!compact && aspect < 1.8) {
+    const height = Math.max(210, Math.min(380, size.height * .44));
     const width = Math.max(1, (size.width - outerX - outerRight - gap * (quantities.length - 1)) / quantities.length);
     const y = size.height - bottom - height;
     return {
-    cells: quantities.map((quantity, index) => ({ quantity, x: outerX + index * (width + gap), y, width, height })),
-      bottomReserve: height + bottom + (compact ? 30 : 44),
+      cells: quantities.map((quantity, index) => ({ quantity, x: outerX + index * (width + gap), y, width, height })),
+      bottomReserve: height + bottom + 44,
     };
   }
-  const height = Math.max(compact ? 56 : 74, Math.min(compact ? 76 : 112, (size.height * .48 - gap * (quantities.length - 1)) / quantities.length));
+  const height = Math.max(
+    compact ? 74 : 112,
+    Math.min(compact ? 128 : 210, (size.height * .58 - gap * (quantities.length - 1)) / quantities.length),
+  );
   const total = quantities.length * height + Math.max(0, quantities.length - 1) * gap;
   const y = size.height - bottom - total;
   return {
@@ -92,23 +100,36 @@ export const CanvasDiagramStack = memo(({
   }), [nodeMap, project.members, resultMap]);
 
   if (!cells.length || !solvedMembers.length) return null;
+  const labelFor = (quantity: StackQuantity) => quantity === 'axial'
+    ? t('results.axial')
+    : quantity === 'shear'
+      ? t('results.shear')
+      : t('results.moment');
+  const formatValue = (value: number) => {
+    const stable = Math.abs(value) < 5e-8 ? 0 : value;
+    return Number(stable.toFixed(Math.abs(stable) >= 100 ? 0 : 2)).toString();
+  };
+
   return <g className="diagram-stack-layer diagram-stack-layer--external" data-canvas-layer="diagram-stack" aria-label={t('canvas.evidenceStackStructure')}>
     <title>{t('canvas.evidenceStackStructureDetail')}</title>
     {cells.map((cell) => {
       const spanX = Math.max(1e-9, bounds.maxX - bounds.minX);
       const spanY = Math.max(1e-9, bounds.maxY - bounds.minY);
-      const topInset = 30;
-      const padding = 14;
-      const scale = Math.min((cell.width - padding * 2) / spanX, Math.max(1, cell.height - topInset - padding) / spanY);
+      const topInset = compact ? 16 : 22;
+      const padding = compact ? 10 : 16;
+      const amplitude = Math.max(compact ? 12 : 17, Math.min(compact ? 20 : 34, cell.height * .2));
+      // Keep the entire portal and the signed diagram offsets inside its lane.
+      // This makes every N/V/M copy legible as a complete pórtico, just like
+      // the reference calculation sheets, rather than a cropped thumbnail.
+      const usableHeight = Math.max(1, cell.height - topInset - padding - amplitude * 2);
+      const scale = Math.min((cell.width - padding * 2) / spanX, usableHeight / spanY);
       const contentWidth = spanX * scale;
       const contentHeight = spanY * scale;
       const originX = cell.x + (cell.width - contentWidth) / 2 - bounds.minX * scale;
-      const originY = cell.y + topInset + (cell.height - topInset - contentHeight) / 2 + bounds.maxY * scale;
+      const originY = cell.y + topInset + amplitude + (usableHeight - contentHeight) / 2 + bounds.maxY * scale;
       const screenPoint = (node: NodeModel) => ({ x: originX + node.x * scale, y: originY - node.y * scale });
-      const amplitude = Math.max(11, Math.min(24, cell.height * .22));
       return <g key={cell.quantity} className={`diagram-stack-panel ${cell.quantity}`} data-stack-panel={cell.quantity}>
-        <rect className="diagram-stack-panel-frame" x={cell.x} y={cell.y} width={cell.width} height={cell.height} rx="10" />
-        <text className="diagram-stack-panel-title" x={cell.x + 12} y={cell.y + 19}>{compact ? STACK_SYMBOLS[cell.quantity] : `${STACK_SYMBOLS[cell.quantity]} · ${t('canvas.evidenceStackStructure')}`}</text>
+        <text className="diagram-stack-panel-title" x={cell.x} y={cell.y + 10}>{compact ? STACK_SYMBOLS[cell.quantity] : `${STACK_SYMBOLS[cell.quantity]} · ${labelFor(cell.quantity)}`}</text>
         {solvedMembers.map(({ member, result, start, end, axis }) => {
           const memberStart = screenPoint(start);
           const memberEnd = screenPoint(end);
@@ -145,12 +166,24 @@ export const CanvasDiagramStack = memo(({
           const baselineEnd = position(result.length);
           fill.push(`L ${baselineEnd.x} ${baselineEnd.y}`, 'Z');
           const midpoint = { x: (memberStart.x + memberEnd.x) / 2, y: (memberStart.y + memberEnd.y) / 2 };
+          const readingPoints = result.criticalPoints
+            .filter((point) => point.quantity === cell.quantity && (point.kind === 'maximum' || point.kind === 'minimum' || point.kind === 'end'))
+            .filter((point, index, points) => index === points.findIndex((candidate) => Math.abs(candidate.x - point.x) < 1e-9 && Math.abs(candidate.value - point.value) < 1e-9))
+            .slice(0, compact ? 2 : 3);
           return <g key={`${member.id}:${cell.quantity}`} className={`diagram-stack-member-lane ${cell.quantity}`} data-stack-member={member.id} data-stack-lane={cell.quantity}>
             <line className="diagram-stack-replica-member" x1={memberStart.x} y1={memberStart.y} x2={memberEnd.x} y2={memberEnd.y} />
             <path className="diagram-stack-member-baseline" d={`M ${baselineStart.x} ${baselineStart.y} L ${baselineEnd.x} ${baselineEnd.y}`} />
             <path className="diagram-stack-member-fill" d={fill.join(' ')} />
             <path className="diagram-stack-member-line" d={line.join(' ')} />
             <text className="diagram-stack-member-label" x={midpoint.x} y={midpoint.y - 6} textAnchor="middle">{member.id}</text>
+            {readingPoints.map((point, index) => {
+              const reading = position(point.x, point.value);
+              const side = Math.sign(point.value) || (index % 2 ? -1 : 1);
+              return <g key={`${point.kind}:${point.x}:${point.value}`} className="diagram-stack-reading" data-stack-reading={`${member.id}:${cell.quantity}:${point.kind}`}>
+                <circle cx={reading.x} cy={reading.y} r={compact ? 1.8 : 2.4} />
+                <text x={reading.x + normal.x * side * 7} y={reading.y + normal.y * side * 7 - 2} textAnchor="middle">{formatValue(point.value)}</text>
+              </g>;
+            })}
             <title>{`${member.id} · ${STACK_SYMBOLS[cell.quantity]}`}</title>
           </g>;
         })}

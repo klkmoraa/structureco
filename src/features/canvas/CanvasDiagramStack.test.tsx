@@ -40,6 +40,8 @@ describe('CanvasDiagramStack', () => {
     expect(container.querySelectorAll('[data-stack-member="CD"][data-stack-lane]').length).toBe(3);
     expect(container.querySelectorAll('[data-stack-panel]').length).toBe(3);
     expect(container.querySelectorAll('.diagram-stack-replica-member').length).toBe(9);
+    expect(container.querySelectorAll('.diagram-stack-panel-frame')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-stack-reading]')).toHaveLength(0);
   });
 
   it('keeps a single selected response in one exterior replica rather than over the editable member', () => {
@@ -54,5 +56,21 @@ describe('CanvasDiagramStack', () => {
 
     expect(container.querySelectorAll('[data-stack-panel="moment"]').length).toBe(1);
     expect(container.querySelectorAll('[data-stack-member][data-stack-lane="moment"] .diagram-stack-replica-member').length).toBe(3);
+  });
+
+  it('uses the canvas width for three full portal diagrams on a wide workspace', () => {
+    const { container } = render(<svg><CanvasDiagramStack
+      project={project}
+      results={members.map((member) => result(member.id))}
+      quantities={['axial', 'shear', 'moment']}
+      nodeMap={new Map(nodes.map((node) => [node.id, node]))}
+      size={{ width: 1280, height: 900 }}
+      t={((key: string) => key) as never}
+    /></svg>);
+
+    const starts = Array.from(container.querySelectorAll('[data-stack-member="AB"] .diagram-stack-replica-member'))
+      .map((line) => Number(line.getAttribute('x1')));
+    expect(starts).toHaveLength(3);
+    expect(new Set(starts.map((value) => Math.round(value))).size).toBe(3);
   });
 });
