@@ -8,7 +8,7 @@ import { resolveReliability } from '../../engine/reliability';
 import { useProject, type ResultTab } from '../../store/ProjectContext';
 import type { DiagramQuantity, ResponseQuantity } from '../../types';
 import { downloadResultsCsv } from '../../utils/resultsExport';
-import { formatResultNumber, formatResultValue } from './resultFormatting';
+import { formatResultNearZero, formatResultNumber, formatResultValue } from './resultFormatting';
 import { useI18n } from '../../i18n/useI18n';
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
@@ -130,8 +130,8 @@ export const ResultSummary = () => {
       <small>{t('pdelta.iterationsSummary', { steps: analysis.pDelta.loadStepsUsed, iterations: analysis.pDelta.totalIterations })}</small>
       {typeof analysis.pDelta.amplificationFactor === 'number' ? <small>{t('pdelta.amplification', { factor: formatFixed(analysis.pDelta.amplificationFactor, 3) })}</small> : null}
       <small>{t('pdelta.equilibriumResidual', {
-        value: formatScientific(analysis.pDelta.finalEquilibriumResidual, 2),
-        axial: formatScientific(analysis.pDelta.finalAxialChange, 2),
+        value: formatResultNearZero(analysis.pDelta.finalEquilibriumResidual, 1),
+        axial: formatResultNearZero(analysis.pDelta.finalAxialChange, 1),
       })}</small>
       {/* Rendered from the structured factor rather than the engine's own
           message so the reading follows the selected language, and always

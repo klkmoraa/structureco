@@ -104,6 +104,12 @@ const rectCenter = (rect: SmartLabelRect) => ({
   y: rect.y + rect.height / 2,
 });
 
+const finite = (value: number): boolean => Number.isFinite(value);
+
+const validBounds = (bounds: CanvasSafeRect): boolean => [bounds.x, bounds.y, bounds.width, bounds.height].every(finite)
+  && bounds.width >= 0
+  && bounds.height >= 0;
+
 /**
  * Deterministic, presentation-only label placement. P0/P1 labels are mandatory;
  * P2/P3 labels yield when the safe canvas area is already occupied.
@@ -113,24 +119,33 @@ export const layoutSmartLabels = (
   bounds: CanvasSafeRect,
   scale: number,
 ): PlacedSmartLabel[] => {
+  if (!validBounds(bounds)) return [];
   const ordered = [...candidates]
     .filter((candidate) => candidate.text.trim().length > 0)
+    .filter((candidate) => finite(candidate.anchor.x) && finite(candidate.anchor.y))
     .filter((candidate) => candidate.forceVisible || scale >= (candidate.minScale ?? defaultMinimumScale(candidate.priority)))
     .sort((first, second) => first.priority - second.priority || first.id.localeCompare(second.id));
   const placed: PlacedSmartLabel[] = [];
 
   for (const candidate of ordered) {
-    const preferred = candidate.preferredOffset ?? { x: 18, y: -18 };
+    const preferred = candidate.preferredOffset && finite(candidate.preferredOffset.x) && finite(candidate.preferredOffset.y)
+      ? candidate.preferredOffset
+      : { x: 18, y: -18 };
     const preferredCenter = {
       x: candidate.anchor.x + preferred.x,
       y: candidate.anchor.y + preferred.y,
     };
     let selectedRect: SmartLabelRect | null = null;
+    let selectedDistance = Number.POSITIVE_INFINITY;
     for (const offset of candidateOffsets(preferred)) {
       const rect = rectAt(candidate, offset, bounds);
       if (!placed.some((label) => smartLabelRectsOverlap(rect, label.rect))) {
-        selectedRect = rect;
-        break;
+        const center = rectCenter(rect);
+        const distance = Math.hypot(center.x - preferredCenter.x, center.y - preferredCenter.y);
+        if (distance < selectedDistance) {
+          selectedRect = rect;
+          selectedDistance = distance;
+        }
       }
     }
 

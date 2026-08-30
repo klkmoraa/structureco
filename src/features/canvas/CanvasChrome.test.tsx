@@ -56,9 +56,11 @@ describe('CanvasChrome', () => {
     expect(onZoomIn).toHaveBeenCalledOnce();
     expect(onZoomOut).toHaveBeenCalledOnce();
     expect(onFit).toHaveBeenCalledOnce();
+    expect(onFit.mock.calls[0]).toHaveLength(0);
     expect(onCancelPlacement).toHaveBeenCalledOnce();
 
     window.dispatchEvent(new CustomEvent('structureco:fit-canvas'));
     expect(onFit).toHaveBeenCalledTimes(2);
+    expect(onFit.mock.calls[1]).toHaveLength(0);
   });
 });

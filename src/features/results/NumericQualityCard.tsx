@@ -3,6 +3,7 @@ import type { AnalysisResult, NumericQualityState } from '../../types';
 import type { TranslationKey } from '../../i18n/catalogs';
 import { useI18n } from '../../i18n/useI18n';
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
+import { formatResultNearZero } from './resultFormatting';
 
 const statusKey: Record<NumericQualityState, TranslationKey> = {
   stable: 'results.qualityStable',
@@ -12,8 +13,10 @@ const statusKey: Record<NumericQualityState, TranslationKey> = {
   unavailable: 'results.qualityUnavailable',
 };
 
-const finiteMetric = (value: number | undefined, fallback: string): string =>
-  typeof value === 'number' && Number.isFinite(value) ? formatScientific(value, 3) : fallback;
+const finiteMetric = (value: number | undefined, fallback: string, collapseMachineZero = false): string =>
+  typeof value === 'number' && Number.isFinite(value)
+    ? collapseMachineZero ? formatResultNearZero(value, 1) : formatScientific(value, 3)
+    : fallback;
 
 export const NumericQualityCard = ({ analysis }: { analysis: AnalysisResult }) => {
   const { t } = useI18n();
@@ -43,8 +46,8 @@ export const NumericQualityCard = ({ analysis }: { analysis: AnalysisResult }) =
     </div>
     <dl className="numeric-quality-metrics">
       <div><dt>{t('results.qualityCondition')}</dt><dd>{finiteMetric(analysis.conditionEstimate, unavailable)}</dd></div>
-      <div><dt>{t('results.qualityResidual')}</dt><dd>{finiteMetric(analysis.linearResidual ?? analysis.residualNorm, unavailable)}</dd></div>
-      <div><dt>{t('results.qualityForwardError')}</dt><dd>{finiteMetric(analysis.forwardErrorBound, unavailable)}</dd></div>
+      <div><dt>{t('results.qualityResidual')}</dt><dd>{finiteMetric(analysis.linearResidual ?? analysis.residualNorm, unavailable, true)}</dd></div>
+      <div><dt>{t('results.qualityForwardError')}</dt><dd>{finiteMetric(analysis.forwardErrorBound, unavailable, true)}</dd></div>
       <div><dt>{t('results.qualityDigits')}</dt><dd>{Number.isFinite(analysis.reliableDigits) ? formatFixed(analysis.reliableDigits!, 1) : unavailable}</dd></div>
       <div><dt>{t('results.qualityRefinement')}</dt><dd>{analysis.refinementIterations ?? unavailable}</dd></div>
       <div><dt>{t('results.qualityBackend')}</dt><dd>{backend}</dd></div>

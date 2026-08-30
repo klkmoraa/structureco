@@ -112,6 +112,20 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
   const { t: phase2T } = usePhase2I18n(language);
   const classroomSession = useClassroomSession();
   const reducedMotion = useReducedMotion();
+  const [modelDoctorTotal, setModelDoctorTotal] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    let active = true;
+    setModelDoctorTotal(undefined);
+    void import('../model-doctor/modelDoctorDiagnostics')
+      .then(({ buildModelDoctorReport }) => {
+        if (active) setModelDoctorTotal(buildModelDoctorReport(project).total);
+      })
+      .catch(() => {
+        // The status keeps its existing analysis-issue fallback if diagnostics
+        // are unavailable; loading Model Doctor must never block the editor.
+      });
+    return () => { active = false; };
+  }, [project]);
   const popoverMotionProps = reducedMotion
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.01 } }
     : {
@@ -792,6 +806,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
           analysis={analysis}
           isAnalyzing={isAnalyzing}
           onOpenModelDoctor={openModelDoctor}
+          modelDoctorReport={modelDoctorTotal === undefined ? undefined : { total: modelDoctorTotal }}
         />
         <div
           className={`autosave-state${storageHasError || storageState === 'offline' ? ' has-issue' : ''} topbar-persistence`}

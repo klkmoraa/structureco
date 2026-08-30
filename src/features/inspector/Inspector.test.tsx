@@ -87,6 +87,7 @@ const InspectorHarness = ({ modal = false, onClose, compact, onExpand, surface, 
   const nodeN3 = project.nodes.find((node) => node.id === 'N3');
   const nodeN4 = project.nodes.find((node) => node.id === 'N4');
   const memberM1 = project.members.find((member) => member.id === 'M1');
+  const memberLoadML2 = project.memberLoads.find((load) => load.id === 'ML2');
 
   return <ClassroomSessionProvider projectId={project.id}>
     <div>
@@ -113,6 +114,7 @@ const InspectorHarness = ({ modal = false, onClose, compact, onExpand, surface, 
       <output aria-label="M1 origen material">{String((memberM1 as unknown as Record<string, unknown>)?.materialOrigin ?? '')}</output>
       <output aria-label="M1 sección ID">{String((memberM1 as unknown as Record<string, unknown>)?.sectionId ?? '')}</output>
       <output aria-label="M1 origen sección">{String((memberM1 as unknown as Record<string, unknown>)?.sectionOrigin ?? '')}</output>
+      <output aria-label="ML2 posición almacenada">{String(memberLoadML2?.position ?? '')}</output>
       <output aria-label="Estado de análisis">{analysis ? (analysis.success ? 'success' : 'failed') : 'none'}</output>
       <output aria-label="Issues de análisis">{analysis?.issues.map((issue) => issue.id).join(',') ?? ''}</output>
       <Inspector surface={surface} compact={compact} onExpand={onExpand} desktopWidth={desktopWidth} presentation={modal ? 'sheet' : 'dock'} onClose={onClose} onDesktopWidthChange={onDesktopWidthChange} mobileDetent={mobileDetent} onMobileDetentChange={onMobileDetentChange} onMobileDetentCycle={onMobileDetentCycle} />
@@ -129,6 +131,15 @@ const renderInspector = (
 };
 
 const storedNumber = (label: string) => Number(screen.getByLabelText(label).textContent);
+
+const InspectorSurfaceHarness = () => {
+  const [surface, setSurface] = useState<'detail' | 'other'>('detail');
+  return <>
+    <button type="button" onClick={() => setSurface('other')}>cambiar superficie</button>
+    <button type="button" onClick={() => setSurface('detail')}>volver superficie</button>
+    {surface === 'detail' ? <InspectorHarness surface="detail" /> : <p>otra superficie</p>}
+  </>;
+};
 
 const SplitSurfaceHarness = ({ surface }: { surface: 'detail' | 'analysisSetup' | 'view' }) => {
   const [presentation, setPresentation] = useState<'dock' | 'inset' | 'sheet'>('dock');
@@ -411,6 +422,35 @@ describe('Inspector selection variants', () => {
     expect(within(selectionSummary()).getByText('ML3')).toBeTruthy();
     expectDescribedUnit(screen.getByRole('textbox', { name: 'Posición' }), 'x/L');
     expectDescribedUnit(screen.getByRole('textbox', { name: 'M' }), 'kN·m');
+  });
+
+  it('conserva exactamente 0.5 de una carga puntual al cambiar de superficie y recargar', async () => {
+    const user = userEvent.setup();
+    const project = createInspectorProject();
+    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+    const mount = () => render(<ProjectProvider><InspectorSurfaceHarness /></ProjectProvider>);
+    mount();
+
+    await user.click(screen.getByRole('button', { name: 'Seleccionar carga puntual ML2' }));
+    const position = screen.getByRole('textbox', { name: 'Posición' });
+    await user.clear(position);
+    await user.type(position, '0.5');
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => expect(screen.getByLabelText('ML2 posición almacenada').textContent).toBe('0.5'));
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem(PROJECT_STORAGE_KEY) ?? '{}') as ProjectModel;
+      expect(stored.memberLoads.find((load) => load.id === 'ML2')?.position).toBe(0.5);
+    });
+
+    await user.click(screen.getByRole('button', { name: 'cambiar superficie' }));
+    await user.click(screen.getByRole('button', { name: 'volver superficie' }));
+    expect((screen.getByRole('textbox', { name: 'Posición' }) as HTMLInputElement).value).toBe('0.5');
+
+    cleanup();
+    mount();
+    await user.click(screen.getByRole('button', { name: 'Seleccionar carga puntual ML2' }));
+    expect((screen.getByRole('textbox', { name: 'Posición' }) as HTMLInputElement).value).toBe('0.5');
   });
 
   it('identifies a mixed nodal load without changing its force or moment contracts', async () => {

@@ -107,11 +107,14 @@ const OptionSelect = ({
   fieldId,
   label,
   current,
+  emptyLabel,
 }: {
   ctx: FieldContext;
   fieldId: DatasheetFieldId;
   label: string;
   current: string;
+  /** Identity shown when the source value is not a catalog option. */
+  emptyLabel?: string;
 }) => {
   const options = datasheetFieldOptions(datasheetField(fieldId), ctx.previewProject, ctx.language, ctx.t);
   const groups = [...new Set(options.map((option) => option.group))];
@@ -121,6 +124,7 @@ const OptionSelect = ({
     error={errorFor(ctx, fieldId)}
     onChange={(event) => ctx.onStage(fieldId, event.target.value)}
   >
+    {emptyLabel ? <option value="" disabled>{emptyLabel}</option> : null}
     {groups.map((group) => {
       const inGroup = options.filter((option) => option.group === group);
       if (group === undefined) {
@@ -323,12 +327,13 @@ const AttachedLoads = ({
 /** Resumen de una carga de barra en su propia familia; nada de campos ajenos. */
 const describeMemberLoad = (load: MemberLoad, units: UnitSystemId): string => {
   if (load.type === 'moment') {
-    return `M ${formatDatasheetNumber(load.moment ?? 0, units, 'moment')} ${unitLabel(units, 'moment')}`;
+    return `x/L ${formatDatasheetNumber(load.position ?? load.start, units)} · M ${formatDatasheetNumber(load.moment ?? 0, units, 'moment')} ${unitLabel(units, 'moment')}`;
   }
   if (load.type === 'point') {
+    const position = formatDatasheetNumber(load.position ?? load.start, units);
     const px = formatDatasheetNumber(load.px ?? 0, units, 'force');
     const py = formatDatasheetNumber(load.py ?? 0, units, 'force');
-    return `Px ${px} · Py ${py} ${unitLabel(units, 'force')}`;
+    return `x/L ${position} · Px ${px} · Py ${py} ${unitLabel(units, 'force')}`;
   }
   const start = formatDatasheetNumber(load.qyStart ?? 0, units, 'distributedForce');
   const end = formatDatasheetNumber(load.qyEnd ?? load.qyStart ?? 0, units, 'distributedForce');
@@ -475,8 +480,22 @@ export const MemberCards = ({
 }) => {
   const { t, units } = ctx;
   const sectionChanged = sourceMember.sectionId !== member.sectionId
+    || sourceMember.sectionOrigin !== member.sectionOrigin
     || sourceMember.A !== member.A
     || sourceMember.I !== member.I;
+  const sectionOrigin = member.sectionOrigin ?? 'legacy';
+  // A custom/imported/legacy section has no selectable catalog identity. Do
+  // not feed a stale sectionId to the native select: browsers may then expose
+  // the first catalog option (for example W6x9) as if it were the member's
+  // actual section.
+  const sectionCatalogId = sectionOrigin === 'catalog' ? member.sectionId ?? '' : '';
+  const sectionIdentityLabel = sectionOrigin === 'custom'
+    ? t('datasheet.origin.custom')
+    : sectionOrigin === 'imported'
+      ? t('datasheet.origin.imported')
+      : sectionOrigin === 'catalog'
+        ? t('datasheet.origin.catalog')
+        : t('datasheet.origin.legacy');
 
   return <>
     {/* La clave reinicia el modo al cambiar de barra: es estado de la
@@ -522,7 +541,8 @@ export const MemberCards = ({
         ctx={ctx}
         fieldId="member.sectionId"
         label={t('datasheet.column.section')}
-        current={sourceMember.sectionId ?? ''}
+        current={sectionCatalogId}
+        emptyLabel={sectionIdentityLabel}
       />
       <div className="datasheet-field-grid">
         <NumberRow ctx={ctx} fieldId="member.A" label={`A (${unitLabel(units, 'area')})`} base={sourceMember.A} />
@@ -633,6 +653,12 @@ export const LoadCard = ({
         />
       </div> : null}
       {memberLoad.type === 'point' ? <div className="datasheet-field-grid">
+        <NumberRow
+          ctx={ctx}
+          fieldId="memberLoad.position"
+          label={t('datasheet.column.position')}
+          base={memberLoad.position ?? memberLoad.start}
+        />
         <NumberRow ctx={ctx} fieldId="memberLoad.px" label={`Px (${forceUnit})`} base={memberLoad.px} />
         <NumberRow ctx={ctx} fieldId="memberLoad.py" label={`Py (${forceUnit})`} base={memberLoad.py} />
       </div> : null}
@@ -641,6 +667,12 @@ export const LoadCard = ({
         fieldId="memberLoad.moment"
         label={`M (${unitLabel(units, 'moment')})`}
         base={memberLoad.moment}
+      /> : null}
+      {memberLoad.type === 'moment' ? <NumberRow
+        ctx={ctx}
+        fieldId="memberLoad.position"
+        label={t('datasheet.column.position')}
+        base={memberLoad.position ?? memberLoad.start}
       /> : null}
       <OptionSelect
         ctx={ctx}

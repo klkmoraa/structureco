@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { createRef, useContext } from 'react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectProvider, useProject } from '../../store/ProjectContext';
 import { onWorkspaceCommand } from '../workspace/workspaceCommands';
 import { ShellCompositionContext } from '../workspace/useShellComposition';
 import type { ShellClass } from '../workspace/shellComposition';
+import { SurfacePresentationContext } from '../workspace/SurfacePresentationContext';
+import { SurfacePresentationProvider } from '../workspace/SurfacePresentationProvider';
 import { ToolRail } from './ToolRail';
 
 const ActiveToolStatus = () => {
@@ -16,6 +19,20 @@ const ActiveToolStatus = () => {
 const SelectionSetter = () => {
   const { setSelection } = useProject();
   return <button type="button" onClick={() => setSelection({ kind: 'node', id: 'N1' })}>seleccionar nodo</button>;
+};
+
+const GeneratorStateHarness = () => {
+  const { activeTool, setActiveTool } = useProject();
+  const surfacePresentation = useContext(SurfacePresentationContext);
+  const generatorOpen = surfacePresentation?.stateFor('generator').open ?? false;
+  return <>
+    <button type="button" data-testid="activate-node" onClick={() => setActiveTool('node')}>activar Nodo</button>
+    <button type="button" data-testid="open-generator" onClick={() => surfacePresentation?.openSurface('generator')}>abrir generador</button>
+    <button type="button" data-testid="cancel-generator" onClick={() => surfacePresentation?.closeSurface('generator')}>Cancelar generador</button>
+    <button type="button" data-testid="generate-structure" onClick={() => surfacePresentation?.closeSurface('generator')}>Generar estructura</button>
+    <output data-testid="generator-state">{generatorOpen ? 'open' : 'closed'}</output>
+    <output aria-label="herramienta activa">{activeTool}</output>
+  </>;
 };
 
 /** La forma del riel la decide `shellClass` (CRI-98): se fija explícito por
@@ -40,6 +57,37 @@ beforeEach(() => localStorage.clear());
 afterEach(() => cleanup());
 
 describe('ToolRail mobile action sheets', () => {
+  it('returns to Seleccionar when generator Cancelar or Generar closes its surface', async () => {
+    const user = userEvent.setup();
+    const backgroundRef = createRef<HTMLDivElement>();
+    render(
+      <ShellCompositionContext.Provider value={{ shellClass: 'X2', phone: false }}>
+        <ProjectProvider>
+          <SurfacePresentationProvider shellClass="X2" backgroundRef={backgroundRef}>
+            <div ref={backgroundRef}>
+              <ToolRail />
+              <GeneratorStateHarness />
+            </div>
+          </SurfacePresentationProvider>
+        </ProjectProvider>
+      </ShellCompositionContext.Provider>,
+    );
+
+    await user.click(screen.getByTestId('activate-node'));
+    expect(screen.getByLabelText('herramienta activa').textContent).toBe('node');
+
+    await user.click(screen.getByTestId('open-generator'));
+    await waitFor(() => expect(screen.getByTestId('generator-state').textContent).toBe('open'));
+    await user.click(screen.getByTestId('cancel-generator'));
+    await waitFor(() => expect(screen.getByLabelText('herramienta activa').textContent).toBe('select'));
+
+    await user.click(screen.getByTestId('activate-node'));
+    await user.click(screen.getByTestId('open-generator'));
+    await waitFor(() => expect(screen.getByTestId('generator-state').textContent).toBe('open'));
+    await user.click(screen.getByTestId('generate-structure'));
+    await waitFor(() => expect(screen.getByLabelText('herramienta activa').textContent).toBe('select'));
+  });
+
   it('keeps workspace settings and dock placement out of the modeling dock', () => {
     renderToolRail('K0');
     expect(screen.queryByRole('button', { name: /paneles de trabajo/i })).toBeNull();

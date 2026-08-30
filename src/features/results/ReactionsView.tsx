@@ -5,7 +5,8 @@ import { toDisplay, unitLabel } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import { useProject } from '../../store/ProjectContext';
 import { ResultExtremeCard } from './ResultExtremeCard';
-import { formatResultNumber } from './resultFormatting';
+import { formatResultNearZero, formatResultNumber } from './resultFormatting';
+import { isReactionDofConstrained, type ReactionDof } from './reactionPresentation';
 
 /**
  * Reacciones — vista densa invocada (CRI-101).
@@ -25,6 +26,25 @@ export const ReactionsView = () => {
   const momentUnit = unitLabel(units, 'moment');
   const nodeResults = useMemo(() => analysis?.nodeResults ?? [], [analysis]);
   const reliability = analysis ? resolveReliability(analysis).level : 'failed';
+  const reactionScales = useMemo(() => ({
+    force: Math.max(1, ...nodeResults.flatMap((result) => [
+      Math.abs(toDisplay(result.rx, units, 'force')),
+      Math.abs(toDisplay(result.ry, units, 'force')),
+    ])),
+    moment: Math.max(1, ...nodeResults.map((result) => Math.abs(toDisplay(result.rm, units, 'moment')))),
+    rotation: Math.max(1, ...nodeResults.map((result) => Math.abs(result.rz))),
+  }), [nodeResults, units]);
+
+  const formatReaction = (value: number, quantity: 'force' | 'moment') => formatResultNearZero(
+    toDisplay(value, units, quantity),
+    reactionScales[quantity],
+  );
+  const formatConstrainedDof = (value: number, quantity: 'length' | 'rotation', constrained: boolean) => {
+    const displayValue = quantity === 'length' ? toDisplay(value, units, 'length') : value;
+    return constrained
+      ? formatResultNearZero(displayValue, quantity === 'length' ? 1 : reactionScales.rotation)
+      : formatResultNumber(displayValue);
+  };
 
   /**
    * Los extremos no dependen del cursor de resultados: se derivan una sola vez
@@ -57,7 +77,7 @@ export const ReactionsView = () => {
       {extremes.map((extreme) => <ResultExtremeCard
         key={extreme.id}
         label={`${extreme.symbol} ${t('results.maximum')}`}
-        value={formatResultNumber(toDisplay(extreme.value, units, extreme.quantity))}
+        value={formatReaction(extreme.value, extreme.quantity)}
         unit={extreme.quantity === 'moment' ? momentUnit : forceUnit}
         position={`${t('results.node')} ${extreme.nodeId}`}
         reliability={reliability}
@@ -72,12 +92,15 @@ export const ReactionsView = () => {
           <thead><tr><th scope="col">{t('results.node')}</th><th scope="col">Ux ({lengthUnit})</th><th scope="col">Uy ({lengthUnit})</th><th scope="col">Rz (rad)</th><th scope="col">Rx ({forceUnit})</th><th scope="col">Ry ({forceUnit})</th><th scope="col">Mz ({momentUnit})</th></tr></thead>
           <tbody>{nodeResults.map((result) => {
             const selected = selection?.kind === 'node' && selection.id === result.nodeId;
+            const node = project.nodes.find((candidate) => candidate.id === result.nodeId);
+            const constrained = (dof: ReactionDof) => Boolean(node && isReactionDofConstrained(node.support, dof));
+            const constrainedCell = (dof: ReactionDof) => constrained(dof) ? 'true' : 'false';
             return <tr key={result.nodeId} aria-selected={selected || undefined}>
               <th scope="row"><button type="button" className="result-object-link" aria-pressed={selected} onClick={() => setSelection({ kind: 'node', id: result.nodeId })}>{result.nodeId}<span className="sr-only"> · {t('results.locateModel')}</span></button></th>
-              <td>{formatResultNumber(toDisplay(result.ux, units, 'length'))}</td><td>{formatResultNumber(toDisplay(result.uy, units, 'length'))}</td><td>{formatResultNumber(result.rz)}</td>
-              <td>{formatResultNumber(toDisplay(result.rx, units, 'force'))}</td>
-              <td>{formatResultNumber(toDisplay(result.ry, units, 'force'))}</td>
-              <td>{formatResultNumber(toDisplay(result.rm, units, 'moment'))}</td>
+              <td data-constrained={constrainedCell('x')}>{formatConstrainedDof(result.ux, 'length', constrained('x'))}</td><td data-constrained={constrainedCell('y')}>{formatConstrainedDof(result.uy, 'length', constrained('y'))}</td><td data-constrained={constrainedCell('r')}>{formatConstrainedDof(result.rz, 'rotation', constrained('r'))}</td>
+              <td data-constrained={constrainedCell('x')}>{formatReaction(result.rx, 'force')}</td>
+              <td data-constrained={constrainedCell('y')}>{formatReaction(result.ry, 'force')}</td>
+              <td data-constrained={constrainedCell('r')}>{formatReaction(result.rm, 'moment')}</td>
             </tr>;
           })}</tbody>
         </table>

@@ -69,4 +69,25 @@ describe('smart label layout', () => {
     expect(placed).toHaveLength(1);
     expect(placed[0].id).toBe('critical-maximum');
   });
+
+  it('chooses the closest available non-overlapping offset', () => {
+    const placed = layoutSmartLabels([
+      { id: 'first', text: 'A', anchor: { x: 260, y: 160 }, priority: 0, preferredOffset: { x: 100, y: 0 } },
+      { id: 'second', text: 'B', anchor: { x: 260, y: 160 }, priority: 1, preferredOffset: { x: 100, y: 0 } },
+    ], bounds, 100);
+    const center = {
+      x: placed[1].rect.x + placed[1].rect.width / 2,
+      y: placed[1].rect.y + placed[1].rect.height / 2,
+    };
+    expect(center.x).toBeCloseTo(306, 5);
+    expect(center.y).toBeCloseTo(160, 5);
+  });
+
+  it('does not emit NaN geometry when a candidate or safe area is invalid', () => {
+    expect(layoutSmartLabels([
+      { id: 'invalid', text: 'NaN', anchor: { x: Number.NaN, y: 10 }, priority: 0 },
+      { id: 'valid', text: 'OK', anchor: { x: 260, y: 160 }, priority: 0 },
+    ], bounds, 100).map((label) => label.id)).toEqual(['valid']);
+    expect(layoutSmartLabels([{ id: 'valid', text: 'OK', anchor: { x: 260, y: 160 }, priority: 0 }], { ...bounds, width: Number.NaN }, 100)).toEqual([]);
+  });
 });

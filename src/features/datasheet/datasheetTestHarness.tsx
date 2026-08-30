@@ -33,9 +33,13 @@ const keepOpen = () => {};
 
 export interface RenderDatasheetOptions {
   entity?: DatasheetEntity;
+  project?: ProjectModel;
 }
 
-export const renderDatasheet = async ({ entity = 'nodes' }: RenderDatasheetOptions = {}) => {
+export const renderDatasheet = async ({
+  entity = 'nodes',
+  project: seedProject = createDatasheetProject(),
+}: RenderDatasheetOptions = {}) => {
   const user = userEvent.setup({ delay: null });
   const projectRef = { current: null as ProjectModel | null };
   const selectionRef = { current: null as Selection };
@@ -53,8 +57,8 @@ export const renderDatasheet = async ({ entity = 'nodes' }: RenderDatasheetOptio
     projectRef.current = project;
     selectionRef.current = selection;
     undoRef.current = undo;
-    if (project.id !== 'datasheet-fixture') {
-      return <button type="button" onClick={() => replaceProject(createDatasheetProject())}>sembrar</button>;
+    if (project.id !== seedProject.id) {
+      return <button type="button" onClick={() => replaceProject(seedProject)}>sembrar</button>;
     }
     return <DatasheetPanel open onOpenChange={keepOpen} />;
   };

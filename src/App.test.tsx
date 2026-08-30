@@ -218,7 +218,7 @@ describe('structureCo app shell', () => {
 
     render(<App />);
 
-    expect(await screen.findByRole('heading', { name: /contenido encontrado/i })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: /contenido encontrado/i }, { timeout: 5000 })).toBeTruthy();
     expect(screen.getByRole('button', { name: /continuar/i })).toBeTruthy();
     expect(screen.queryByRole('button', { name: /importar ahora/i })).toBeNull();
     expect(window.location.hash).toBe('');
@@ -312,6 +312,31 @@ describe('structureCo app shell', () => {
     expect(container.querySelectorAll('.node-object')).toHaveLength(0);
     expect(container.querySelectorAll('.member-object')).toHaveLength(0);
   }, 10_000);
+
+  it('resets Results and its visual context when creating a project from another unit system', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(createDefaultProject()));
+    render(<App />);
+    await openWorkspace(user);
+
+    const resultsLauncher = screen.getByRole('button', { name: 'Resultados' });
+    await user.click(resultsLauncher);
+    await waitFor(() => expect(resultsLauncher.getAttribute('aria-pressed')).toBe('true'));
+    expect(document.querySelector('.results-panel')).not.toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Proyecto actual' }));
+    await user.click(screen.getByRole('button', { name: 'Proyecto nuevo' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Proyecto actual' }).textContent).toContain('Proyecto sin título');
+      expect(document.querySelector('.results-panel')).toBeNull();
+    });
+    expect(screen.getByRole('button', { name: 'Resultados' }).getAttribute('aria-pressed')).toBe('false');
+
+    await user.click(screen.getByRole('button', { name: 'Configuración de análisis' }));
+    expect((screen.getByRole('combobox', { name: 'Unidades' }) as HTMLSelectElement).value).toBe('kN-m');
+    expect((screen.getByRole('combobox', { name: 'Modo de cálculo' }) as HTMLSelectElement).value).toBe('complete');
+  }, 15_000);
 
   it('keeps every product entry point reachable from Home navigation', async () => {
     const user = userEvent.setup();

@@ -84,7 +84,7 @@ export const CanvasChrome = ({
     <div className="canvas-controls" role="group" aria-label={t('canvas.viewControls')} data-canvas-chrome="camera">
       <IconButton label={t('canvas.zoomIn')} title={t('canvas.zoomIn')} onClick={onZoomIn}><Plus size={18} /></IconButton>
       <IconButton label={t('canvas.zoomOut')} title={t('canvas.zoomOut')} onClick={onZoomOut}><Minus size={18} /></IconButton>
-      <IconButton label={t('canvas.fit')} title={t('canvas.fit')} onClick={onFit}><LocateFixed size={18} /></IconButton>
+      <IconButton label={t('canvas.fit')} title={t('canvas.fit')} onClick={() => onFit()}><LocateFixed size={18} /></IconButton>
     </div>
     <div className="canvas-status" data-canvas-chrome="coordinates">
       <Crosshair size={14} aria-hidden="true" />

@@ -108,6 +108,7 @@ import { CanvasStructureGeneratorLayer } from './CanvasStructureGeneratorLayer';
 import type { StructureGenerationGhost } from '../../data/generators/generatorGhost';
 import { GlobalAxes, SmartLabelLayer } from './CanvasVisualOverlays';
 import { useStableCanvasEvent } from './useStableCanvasEvent';
+import { SupportPlacementPopover, type SupportPlacementType } from './SupportPlacementPopover';
 
 /**
  * El generador y su núcleo determinista sólo pesan cuando se abre: nadie paga su
@@ -219,8 +220,6 @@ const nextId = (prefix: string, ids: string[]) => {
   return `${prefix}${index}`;
 };
 
-const supportCycle = ['none', 'pin', 'roller', 'fixed'] as const;
-
 export const StructuralCanvas = ({
   onRequestInspector,
   layers,
@@ -278,6 +277,12 @@ export const StructuralCanvas = ({
   const [quickEntryMode, setQuickEntryMode] = useState<'delta' | 'polar'>('delta');
   const [quickEntryError, setQuickEntryError] = useState('');
   const [candidatePicker, setCandidatePicker] = useState<CandidatePickerState | null>(null);
+  const [supportPlacement, setSupportPlacement] = useState<{
+    nodeId: string;
+    anchor: ScreenPoint;
+    initialType: SupportPlacementType;
+    initialAngleDeg: number;
+  } | null>(null);
   const [repeatRecipe, setRepeatRecipe] = useState<RepeatRecipe | null>(null);
   const [duplicateDraft, setDuplicateDraft] = useState<{ selection: Selection; x: string; y: string } | null>(null);
   const [structuralEditDraft, setStructuralEditDraft] = useState<StructuralEditDraft | null>(null);
@@ -651,13 +656,18 @@ export const StructuralCanvas = ({
   }, [lengthLabel, localScreenPoint, units]);
 
   const fitModel = useCallback((bottomReserve = 0) => {
-    if (!project.nodes.length || !size.width || !size.height) return;
+    if (!project.nodes.length || !Number.isFinite(size.width) || !Number.isFinite(size.height) || size.width <= 0 || size.height <= 0) return;
+    // React supplies a MouseEvent when this callback is handed directly to a
+    // button. Only the ACM effect is allowed to provide a numeric reserve.
+    const safeBottomReserve = typeof bottomReserve === 'number' && Number.isFinite(bottomReserve)
+      ? Math.max(0, bottomReserve)
+      : 0;
     const viewport = { width: size.width, height: size.height };
     const insets = canvasSafeInsetsFor(viewport);
     updateCamera(cameraToFitBounds(
       modelBounds(project.nodes),
       viewport,
-      { ...insets, bottom: insets.bottom + bottomReserve },
+      { ...insets, bottom: insets.bottom + safeBottomReserve },
     ));
   }, [project.nodes, size, updateCamera]);
 
@@ -1157,6 +1167,62 @@ export const StructuralCanvas = ({
     window.requestAnimationFrame(() => onRequestInspector?.());
   };
 
+  const openSupportPlacement = useCallback((nodeId: string, client: ScreenPoint, initialType: SupportPlacementType = 'none', initialAngleDeg = 90) => {
+    setSupportPlacement({
+      nodeId,
+      anchor: localScreenPoint(client.x, client.y),
+      initialType,
+      initialAngleDeg: Number.isFinite(initialAngleDeg) ? initialAngleDeg : 90,
+    });
+  }, [localScreenPoint]);
+
+  const applySupportPlacement = useCallback((type: SupportPlacementType, angleDeg: number) => {
+    const pending = supportPlacement;
+    if (!pending) return;
+    updateProject((draft) => {
+      const node = draft.nodes.find((item) => item.id === pending.nodeId);
+      if (!node) return draft;
+      const previous = node.support;
+      const shared = { spring: previous.spring, prescribed: previous.prescribed };
+      if (type === 'roller') {
+        node.support = {
+          ...shared,
+          type,
+          angleDeg: Number.isFinite(angleDeg) ? angleDeg : 90,
+        };
+      } else if (type === 'custom') {
+        node.support = {
+          ...shared,
+          type,
+          restrainX: previous.type === 'custom' ? previous.restrainX ?? false : false,
+          restrainY: previous.type === 'custom' ? previous.restrainY ?? false : false,
+          restrainR: previous.type === 'custom' ? previous.restrainR ?? false : false,
+        };
+      } else {
+        node.support = { ...shared, type };
+      }
+      return draft;
+    });
+    setSelection({ kind: 'node', id: pending.nodeId });
+    setSupportPlacement(null);
+    setActiveTool('select');
+    window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
+  }, [setActiveTool, setSelection, supportPlacement, updateProject]);
+
+  const cancelSupportPlacement = useCallback(() => {
+    setSupportPlacement(null);
+    setActiveTool('select');
+    window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
+  }, [setActiveTool]);
+
+  useEffect(() => {
+    if (supportPlacement && !nodeMap.has(supportPlacement.nodeId)) setSupportPlacement(null);
+  }, [nodeMap, supportPlacement]);
+
+  useEffect(() => {
+    if (supportPlacement && activeTool !== 'support') setSupportPlacement(null);
+  }, [activeTool, supportPlacement]);
+
   const finishSelectionBox = useCallback((box: SelectionBox) => {
     const result = selectGeometryByBox(box.start, box.current, project.nodes, project.members, selectionFilter);
     const nodeIds = new Set(result.nodeIds);
@@ -1172,7 +1238,7 @@ export const StructuralCanvas = ({
     setSelection(structuralSelectionFromIds(nodeIds, memberIds));
   }, [project.members, project.nodes, selection, selectionFilter, setSelection]);
 
-  const performNodeAction = (node: NodeModel, tool: Tool, shiftKey = false) => {
+  const performNodeAction = (node: NodeModel, tool: Tool, client: ScreenPoint, shiftKey = false) => {
     if (tool === 'member') {
       if (!memberStart) { setMemberStart(node.id); setSelection({ kind: 'node', id: node.id }); return; }
       if (memberStart === node.id) { setMemberStart(null); return; }
@@ -1192,16 +1258,8 @@ export const StructuralCanvas = ({
       return;
     }
     if (tool === 'support') {
-      updateProject((draft) => {
-        const target = draft.nodes.find((item) => item.id === node.id);
-        if (target) {
-          const current = supportCycle.indexOf(target.support.type as typeof supportCycle[number]);
-          const type = supportCycle[(current + 1 + supportCycle.length) % supportCycle.length];
-          target.support = type === 'roller' ? { type, angleDeg: 90 } : { type };
-        }
-        return draft;
-      });
       setSelection({ kind: 'node', id: node.id });
+      openSupportPlacement(node.id, client, node.support.type as SupportPlacementType, node.support.angleDeg ?? 90);
       return;
     }
     if (tool === 'pointLoad') {
@@ -1259,9 +1317,12 @@ export const StructuralCanvas = ({
         description: `Dividir miembro ${member.id}`,
         memberId: member.id,
         ratio,
-        nodeSupport: tool === 'support' ? { type: 'pin' } : undefined,
+        nodeSupport: undefined,
       }).then((result) => {
-        if (result?.kind === 'member.split') setSelection({ kind: 'node', id: result.nodeId });
+        if (result?.kind === 'member.split') {
+          setSelection({ kind: 'node', id: result.nodeId });
+          if (tool === 'support') openSupportPlacement(result.nodeId, client);
+        }
       });
       return;
     }
@@ -1359,7 +1420,7 @@ export const StructuralCanvas = ({
     }
     if (target.kind === 'node') {
       const node = nodeMap.get(target.id);
-      if (node) performNodeAction(node, tool, shiftKey);
+      if (node) performNodeAction(node, tool, client, shiftKey);
       return;
     }
     if (target.kind === 'member') {
@@ -1377,7 +1438,7 @@ export const StructuralCanvas = ({
 
   const handleObjectPointerDown = useStableCanvasEvent((event: ReactPointerEvent, target: StructuralTarget) => {
     event.stopPropagation();
-    if (candidatePicker) return;
+    if (candidatePicker || supportPlacement) return;
     if (interactionRef.current.kind === 'pinch') return;
     if (shouldStartPan(event)) {
       event.preventDefault();
@@ -1432,7 +1493,7 @@ export const StructuralCanvas = ({
   });
 
   const handleBackgroundPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (candidatePicker) return;
+    if (candidatePicker || supportPlacement) return;
     if (event.target !== event.currentTarget && (event.target as Element).closest('[data-structure-object]')) return;
     if (interactionRef.current.kind === 'pinch') return;
     if (shouldStartPan(event)) {
@@ -1466,7 +1527,7 @@ export const StructuralCanvas = ({
   };
 
   const handlePointerDownCapture = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (candidatePicker) {
+    if (candidatePicker || supportPlacement) {
       event.stopPropagation();
       return;
     }
@@ -1793,6 +1854,12 @@ export const StructuralCanvas = ({
       const target = event.target instanceof HTMLElement ? event.target : null;
       const modalOpen = document.querySelector<HTMLElement>('[aria-modal="true"]');
       const interactive = target?.closest('input, select, textarea, button, [contenteditable="true"], [role="dialog"], [role="menu"], [role="listbox"], [role="tablist"]');
+      if (event.key === 'Escape' && supportPlacement) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        cancelSupportPlacement();
+        return;
+      }
       if (event.key === 'Escape' && candidatePicker) {
         event.preventDefault();
         event.stopImmediatePropagation();
@@ -1890,7 +1957,7 @@ export const StructuralCanvas = ({
       window.removeEventListener('blur', cancelActiveInteraction);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [activateRepeat, cancelActiveInteraction, cancelStructuralEdit, candidatePicker, closeCandidatePicker, compactCanvasChrome, copyStructuralSelection, deleteSelection, duplicateDraft, editCapabilities.structural, pasteStructuralSelection, repeatCandidate, selection, setActiveTool, setSelection, startDuplicate, structuralEditDraft]);
+  }, [activateRepeat, cancelActiveInteraction, cancelStructuralEdit, cancelSupportPlacement, candidatePicker, closeCandidatePicker, compactCanvasChrome, copyStructuralSelection, deleteSelection, duplicateDraft, editCapabilities.structural, pasteStructuralSelection, repeatCandidate, selection, setActiveTool, setSelection, startDuplicate, structuralEditDraft, supportPlacement]);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -2483,6 +2550,28 @@ export const StructuralCanvas = ({
         {!stackActive ? <GlobalAxes canvasHeight={size.height} /> : null}
         </g>
       </svg>
+
+      {supportPlacement ? <SupportPlacementPopover
+        nodeId={supportPlacement.nodeId}
+        anchor={supportPlacement.anchor}
+        viewport={size}
+        title={t('inspector.support')}
+        description={t('inspector.nodeFrequentDescription')}
+        labels={{
+          none: t('inspector.free'),
+          pin: t('inspector.pin'),
+          roller: t('inspector.roller'),
+          fixed: t('inspector.fixed'),
+          custom: t('inspector.custom'),
+        }}
+        rollerAngleLabel={t('inspector.normal')}
+        degreesLabel="°"
+        cancelLabel={t('canvas.cancelPlacement')}
+        initialType={supportPlacement.initialType}
+        initialAngleDeg={supportPlacement.initialAngleDeg}
+        onSelect={applySupportPlacement}
+        onCancel={cancelSupportPlacement}
+      /> : null}
 
       {duplicateDraft ? <form
         className="duplicate-preview-panel"

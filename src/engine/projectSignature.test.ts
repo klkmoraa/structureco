@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createDefaultProject } from '../data/defaultProject';
-import { analysisSignature } from './projectSignature';
+import { analysisBinding, analysisSignature, matchesAnalysisBinding } from './projectSignature';
 
 const clone = <T>(value: T): T => structuredClone(value);
 
@@ -34,5 +34,23 @@ describe('analysis signature', () => {
     const classroom = clone(project);
     classroom.settings.calculationMode = project.settings.calculationMode === 'classroom' ? 'complete' : 'classroom';
     expect(analysisSignature(classroom)).not.toBe(reference);
+  });
+
+  it('binds a result to the project identity and exact selected combination', () => {
+    const project = createDefaultProject();
+    const firstCombinationId = project.combinations[0].id;
+    const secondCombinationId = project.combinations[1].id;
+    const binding = analysisBinding(project, firstCombinationId);
+
+    expect(matchesAnalysisBinding(clone(project), firstCombinationId, binding)).toBe(true);
+
+    const otherProject = clone(project);
+    otherProject.id = 'other-project';
+    expect(matchesAnalysisBinding(otherProject, firstCombinationId, binding)).toBe(false);
+    expect(matchesAnalysisBinding(project, secondCombinationId, binding)).toBe(false);
+
+    const changedCombination = clone(project);
+    changedCombination.combinations[0].factors = { ...changedCombination.combinations[0].factors, LC1: 2 };
+    expect(matchesAnalysisBinding(changedCombination, firstCombinationId, binding)).toBe(false);
   });
 });
