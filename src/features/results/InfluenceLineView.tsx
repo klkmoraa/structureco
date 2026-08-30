@@ -454,7 +454,7 @@ export const InfluenceLineView = ({ project, selection = null, onCanvasStateChan
     setPathMemberIds(selectedFrameIds);
   };
 
-  const useSavedMovingCase = (id: string) => {
+  const applySavedMovingCase = (id: string) => {
     setSavedMovingCaseId(id);
     const saved = (project.movingLoadCases ?? []).find((item) => item.id === id);
     if (!saved) return;
@@ -559,7 +559,7 @@ export const InfluenceLineView = ({ project, selection = null, onCanvasStateChan
         }}>{deformableMembers.map((member) => <option value={member.id} key={member.id}>{member.label ? `${member.id} · ${member.label}` : member.id}</option>)}</select></label>
         <label style={fieldStyle}><span>{t('influence.cutLimit')}</span><select className="influence-field-control" value={targetSide} onChange={(event) => { invalidate(); setTargetSide(event.currentTarget.value as 'left' | 'right'); }}><option value="right">{t('influence.right')}</option><option value="left">{t('influence.left')}</option></select></label>
         <div style={fieldStyle}><span>{t('influence.loadPath')}</span><button type="button" className="influence-secondary-btn" disabled={!selectedFrameIds.length || busy} onClick={useSelectionAsPath}>{t('influence.useSelection', { count: selectedFrameIds.length })}</button></div>
-        {(project.movingLoadCases ?? []).length ? <label style={fieldStyle}><span>Caso móvil guardado</span><select className="influence-field-control" value={savedMovingCaseId} onChange={(event) => useSavedMovingCase(event.currentTarget.value)}><option value="">Seleccionar…</option>{(project.movingLoadCases ?? []).map((saved) => <option key={saved.id} value={saved.id}>{saved.name}</option>)}</select></label> : null}
+        {(project.movingLoadCases ?? []).length ? <label style={fieldStyle}><span>Caso móvil guardado</span><select className="influence-field-control" value={savedMovingCaseId} onChange={(event) => applySavedMovingCase(event.currentTarget.value)}><option value="">Seleccionar…</option>{(project.movingLoadCases ?? []).map((saved) => <option key={saved.id} value={saved.id}>{saved.name}</option>)}</select></label> : null}
       </div>
       <label style={fieldStyle}>
         <span>{t('influence.targetSection', { length: formatFixed(targetLengthDisplay, 3), unit: lengthUnit })}</span>
