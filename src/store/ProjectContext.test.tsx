@@ -7,6 +7,7 @@ import { createDefaultProject } from '../data/defaultProject';
 import { ProjectProvider, useProject } from './ProjectContext';
 import type { ProjectCommand } from '../commands/projectCommand';
 import { prepareStructuralEdit, type PreparedStructuralEdit } from '../data/structuralEditing';
+import type { AnalysisResult } from '../types';
 
 const TransactionHarness = () => {
   const {
@@ -49,6 +50,60 @@ const AnalysisHarness = () => {
     <button onClick={() => updateProject((draft) => ({ ...draft, name: `${draft.name} editado` }))}>edit</button>
     <button onClick={() => setSelectedCombinationId(project.combinations[0]?.id ?? '')}>combination</button>
     <button onClick={undo}>undo-analysis</button>
+  </>;
+};
+
+class SnapshotWorker {
+  static runCount = 0;
+  onmessage: ((event: MessageEvent) => void) | null = null;
+  onerror: (() => void) | null = null;
+
+  postMessage(request: { requestId: number }) {
+    const result = {
+      success: true,
+      issues: [],
+      nodeResults: [],
+      memberResults: [],
+      displacements: [],
+      residualNorm: ++SnapshotWorker.runCount,
+    } as unknown as AnalysisResult;
+    window.setTimeout(() => this.onmessage?.({ data: { type: 'analysis-result', requestId: request.requestId, result } } as MessageEvent), 0);
+  }
+
+  terminate() {}
+}
+
+const ResultSnapshotHarness = () => {
+  const {
+    project,
+    analysis,
+    selectedCombinationId,
+    analyze,
+    updateProject,
+    setSelectedCombinationId,
+    replaceProject,
+    undo,
+    redo,
+  } = useProject();
+  return <>
+    <output aria-label="snapshot-project-id">{project.id}</output>
+    <output aria-label="snapshot-x">{project.nodes[0]?.x}</output>
+    <output aria-label="snapshot-combination">{selectedCombinationId}</output>
+    <output aria-label="snapshot-analysis">{analysis?.residualNorm ?? 'none'}</output>
+    <button onClick={analyze}>snapshot-analyze</button>
+    <button onClick={() => updateProject((draft) => ({
+      ...draft,
+      nodes: draft.nodes.map((node, index) => index === 0 ? { ...node, x: node.x + 0.25 } : node),
+    }))}>snapshot-move</button>
+    <button onClick={() => setSelectedCombinationId(project.combinations[0]?.id ?? '')}>snapshot-combination-one</button>
+    <button onClick={() => setSelectedCombinationId(project.combinations[1]?.id ?? '')}>snapshot-combination-two</button>
+    <button onClick={() => {
+      const other = createDefaultProject();
+      other.id = 'other-project';
+      replaceProject(other);
+    }}>snapshot-replace-project</button>
+    <button onClick={undo}>snapshot-undo</button>
+    <button onClick={redo}>snapshot-redo</button>
   </>;
 };
 
@@ -378,6 +433,71 @@ describe('ProjectContext analysis lifecycle', () => {
     await user.click(screen.getByText('move'));
     await user.click(screen.getByText('cancel'));
     expect(screen.getByLabelText('can-undo').textContent).toBe('false');
+  });
+
+  it('restores the exact result snapshot after an edit is undone, but invalidates it again on redo', async () => {
+    const user = userEvent.setup();
+    const originalWorker = globalThis.Worker;
+    SnapshotWorker.runCount = 0;
+    Object.defineProperty(globalThis, 'Worker', { configurable: true, value: SnapshotWorker });
+    try {
+      localStorage.setItem('structureCo.project', JSON.stringify(createDefaultProject()));
+      render(<ProjectProvider><ResultSnapshotHarness /></ProjectProvider>);
+
+      const originalX = screen.getByLabelText('snapshot-x').textContent;
+      await user.click(screen.getByText('snapshot-analyze'));
+      await waitFor(() => expect(screen.getByLabelText('snapshot-analysis').textContent).toBe('1'));
+
+      await user.click(screen.getByText('snapshot-move'));
+      expect(screen.getByLabelText('snapshot-analysis').textContent).toBe('none');
+
+      await user.click(screen.getByText('snapshot-undo'));
+      expect(screen.getByLabelText('snapshot-x').textContent).toBe(originalX);
+      expect(screen.getByLabelText('snapshot-analysis').textContent).toBe('1');
+
+      await user.click(screen.getByText('snapshot-redo'));
+      expect(screen.getByLabelText('snapshot-analysis').textContent).toBe('none');
+
+      await user.click(screen.getByText('snapshot-undo'));
+      expect(screen.getByLabelText('snapshot-analysis').textContent).toBe('1');
+      expect(SnapshotWorker.runCount).toBe(1);
+    } finally {
+      Object.defineProperty(globalThis, 'Worker', { configurable: true, value: originalWorker });
+    }
+  });
+
+  it('does not restore a result for another combination or across a project replacement', async () => {
+    const user = userEvent.setup();
+    const originalWorker = globalThis.Worker;
+    SnapshotWorker.runCount = 0;
+    Object.defineProperty(globalThis, 'Worker', { configurable: true, value: SnapshotWorker });
+    try {
+      localStorage.setItem('structureCo.project', JSON.stringify(createDefaultProject()));
+      render(<ProjectProvider><ResultSnapshotHarness /></ProjectProvider>);
+
+      await user.click(screen.getByText('snapshot-combination-one'));
+      await user.click(screen.getByText('snapshot-analyze'));
+      await waitFor(() => expect(screen.getByLabelText('snapshot-analysis').textContent).toBe('1'));
+
+      await user.click(screen.getByText('snapshot-move'));
+      await user.click(screen.getByText('snapshot-combination-two'));
+      expect(screen.getByLabelText('snapshot-analysis').textContent).toBe('none');
+
+      await user.click(screen.getByText('snapshot-undo'));
+      expect(screen.getByLabelText('snapshot-analysis').textContent).toBe('none');
+
+      await user.click(screen.getByText('snapshot-combination-one'));
+      expect(screen.getByLabelText('snapshot-analysis').textContent).toBe('1');
+      expect(SnapshotWorker.runCount).toBe(1);
+
+      await user.click(screen.getByText('snapshot-replace-project'));
+      expect(screen.getByLabelText('snapshot-project-id').textContent).toBe('other-project');
+      expect(screen.getByLabelText('snapshot-analysis').textContent).toBe('none');
+      await user.click(screen.getByText('snapshot-undo'));
+      expect(screen.getByLabelText('snapshot-analysis').textContent).toBe('none');
+    } finally {
+      Object.defineProperty(globalThis, 'Worker', { configurable: true, value: originalWorker });
+    }
   });
 });
 

@@ -39,3 +39,42 @@ export const analysisSignature = (project: ProjectModel): string => {
   cache.set(project, signature);
   return signature;
 };
+
+/**
+ * The model signature deliberately excludes the persisted project id because
+ * it is also used to compare equivalent model inputs. A live analysis needs
+ * that identity as a separate binding so a result cannot cross project
+ * boundaries, even when two projects happen to contain identical inputs.
+ *
+ * The worker treats an empty or unknown combination id as the active load
+ * cases. Resolve the id the same way here so the binding describes what was
+ * actually analyzed, not only what a stale UI control happened to contain.
+ */
+export interface AnalysisBinding {
+  projectId: string;
+  analysisSignature: string;
+  combinationId: string;
+}
+
+export const resolveAnalysisCombinationId = (project: ProjectModel, selectedCombinationId: string): string => (
+  selectedCombinationId && project.combinations.some((combination) => combination.id === selectedCombinationId)
+    ? selectedCombinationId
+    : ''
+);
+
+export const analysisBinding = (project: ProjectModel, selectedCombinationId: string): AnalysisBinding => ({
+  projectId: project.id,
+  analysisSignature: analysisSignature(project),
+  combinationId: resolveAnalysisCombinationId(project, selectedCombinationId),
+});
+
+export const matchesAnalysisBinding = (
+  project: ProjectModel,
+  selectedCombinationId: string,
+  binding: AnalysisBinding,
+): boolean => {
+  const current = analysisBinding(project, selectedCombinationId);
+  return current.projectId === binding.projectId
+    && current.analysisSignature === binding.analysisSignature
+    && current.combinationId === binding.combinationId;
+};

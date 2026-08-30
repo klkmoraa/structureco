@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { unavailableAnalysis } from '../engine/analysisFailure';
 import type { AnalysisWorkerResponse } from '../engine/analysisWorkerProtocol';
+import { analysisBinding, matchesAnalysisBinding, type AnalysisBinding } from '../engine/projectSignature';
 import { normalizeProject } from '../data/migrate';
 import { loadProjectFromStorage, saveProjectToStorage } from '../data/projectStorage';
 import { repairProjectTopology } from '../data/modelOperations';
@@ -33,6 +34,11 @@ const runFallbackAnalysis = async (project: ProjectModel, combinationId: string,
 interface HistoryEntry {
   project: ProjectModel;
   description: string;
+}
+
+interface AnalysisSnapshot {
+  binding: AnalysisBinding;
+  result: AnalysisResult;
 }
 
 // Kept here as a literal so the optional IndexedDB module can remain lazy in
@@ -71,6 +77,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const projectRef = useRef(project);
   const selectionRef = useRef(selection);
   const analysisRef = useRef(analysis);
+  const analysisSnapshotRef = useRef<AnalysisSnapshot | null>(null);
   const transactionStartRef = useRef<ProjectModel | null>(null);
   const transactionDescriptionRef = useRef('Editar proyecto');
   const analysisTimerRef = useRef<number | null>(null);
@@ -174,6 +181,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     analysisWorkerRef.current?.terminate();
     analysisWorkerRef.current = null;
     setIsAnalyzing(false);
+    analysisRef.current = null;
     setAnalysis(null);
     setResultCursor(null);
     setInfluenceCanvasState(null);
@@ -191,6 +199,31 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     invalidateAnalysis();
     publishProject(next);
   }, [invalidateAnalysis, publishProject]);
+
+  /** Publishes a completed result and keeps one immutable recovery snapshot. */
+  const publishAnalysisResult = useCallback((result: AnalysisResult, analyzedProject: ProjectModel, combinationId: string) => {
+    analysisSnapshotRef.current = {
+      binding: analysisBinding(analyzedProject, combinationId),
+      result: structuredClone(result),
+    };
+    analysisRef.current = result;
+    setAnalysis(result);
+  }, []);
+
+  /** Clears the active result, restoring it only for the exact bound target. */
+  const restoreAnalysisForProject = useCallback((targetProject: ProjectModel, combinationId: string) => {
+    invalidateAnalysis();
+    const snapshot = analysisSnapshotRef.current;
+    if (!snapshot || !matchesAnalysisBinding(targetProject, combinationId, snapshot.binding)) return;
+    const restored = structuredClone(snapshot.result);
+    analysisRef.current = restored;
+    setAnalysis(restored);
+  }, [invalidateAnalysis]);
+
+  const clearAnalysis = useCallback(() => {
+    analysisSnapshotRef.current = null;
+    invalidateAnalysis();
+  }, [invalidateAnalysis]);
 
   /** Stores one bounded undo checkpoint and discards its redo branch. */
   const recordHistory = useCallback((previous: ProjectModel, description: string) => {
@@ -308,7 +341,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
           suggestedFix: 'Revisa la geometría reparada; puedes deshacerla desde el historial si la coincidencia era intencional.',
         }, ...nextResult.issues],
       } : nextResult;
-      setAnalysis(next);
+      publishAnalysisResult(next, source, selectedCombinationId);
       setIsAnalyzing(false);
       if (!next.success) setResultTab('issues');
       else if (selectionRef.current?.kind !== 'member' && next.memberResults.length) {
@@ -368,7 +401,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     } catch {
       runFallback();
     }
-  }, [selectedCombinationId, setSelection]);
+  }, [publishAnalysisResult, selectedCombinationId, setSelection]);
 
   // Standalone worker-or-fallback runner for `ensureEducationTrace`: unlike
   // `analyze()` above, this never touches history, selection or the revision
@@ -421,19 +454,18 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       // requested for, never onto whatever is current now.
       if (analysisRef.current !== target || !withTrace.educationTrace) return null;
       const merged = { ...target, educationTrace: withTrace.educationTrace };
-      analysisRef.current = merged;
-      setAnalysis(merged);
+      publishAnalysisResult(merged, projectRef.current, selectedCombinationId);
       return merged;
     } catch {
       return null;
     }
-  }, [runAnalysisWithTrace, selectedCombinationId]);
+  }, [publishAnalysisResult, runAnalysisWithTrace, selectedCombinationId]);
 
   const setSelectedCombinationId = useCallback((id: string) => {
     if (id === selectedCombinationId) return;
-    invalidateAnalysis();
     setSelectedCombinationIdState(id);
-  }, [invalidateAnalysis, selectedCombinationId]);
+    restoreAnalysisForProject(projectRef.current, id);
+  }, [restoreAnalysisForProject, selectedCombinationId]);
 
   const renameProject = useCallback((name: string) => {
     const current = projectRef.current;
@@ -454,14 +486,17 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       const requestRevision = analysisRevisionRef.current;
       window.setTimeout(() => {
         void runFallbackAnalysis(next, selectedCombinationId, false)
-          .then((result) => { if (analysisRevisionRef.current === requestRevision) setAnalysis(result); })
+          .then((result) => {
+            if (analysisRevisionRef.current !== requestRevision) return;
+            publishAnalysisResult(result, next, selectedCombinationId);
+          })
           .catch((error: unknown) => {
             if (analysisRevisionRef.current !== requestRevision) return;
-            setAnalysis(unavailableAnalysis(error instanceof Error ? error.message : 'No se pudo completar el análisis estructural.'));
+            publishAnalysisResult(unavailableAnalysis(error instanceof Error ? error.message : 'No se pudo completar el análisis estructural.'), next, selectedCombinationId);
           });
       }, 0);
     }
-  }, [commitReversibleProjectChange, selectedCombinationId]);
+  }, [commitReversibleProjectChange, publishAnalysisResult, selectedCombinationId]);
 
   const executeProjectCommand = useCallback(async (command: ProjectCommand): Promise<ProjectCommandResult | undefined> => {
     const { applyProjectPatch, compileProjectCommand } = await import('../commands/projectCommand');
@@ -563,50 +598,60 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     transactionStartRef.current = null;
     if (start && JSON.stringify(start) !== JSON.stringify(projectRef.current)) {
       recordHistory(start, transactionDescriptionRef.current);
+    } else if (start) {
+      restoreAnalysisForProject(projectRef.current, selectedCombinationId);
     }
     setTransactionActive(false);
     setPersistenceRevision((revision) => revision + 1);
-  }, [recordHistory]);
+  }, [recordHistory, restoreAnalysisForProject, selectedCombinationId]);
 
   const cancelProjectTransaction = useCallback(() => {
     const start = transactionStartRef.current;
     transactionStartRef.current = null;
     if (start) {
-      publishAnalysisAffectingProject(start);
+      publishProject(start);
+      restoreAnalysisForProject(start, selectedCombinationId);
     }
     setTransactionActive(false);
     setPersistenceRevision((revision) => revision + 1);
-  }, [publishAnalysisAffectingProject]);
+  }, [publishProject, restoreAnalysisForProject, selectedCombinationId]);
 
   const replaceProject = useCallback((next: ProjectModel, restoredAnalysis?: AnalysisResult, repositoryRevision?: number) => {
     const normalized = normalizeProject(next);
+    const nextCombinationId = selectedCombinationId && normalized.combinations.some((item) => item.id === selectedCombinationId)
+      ? selectedCombinationId
+      : '';
     setPast((history) => [...history.slice(-49), { project, description: 'Abrir proyecto' }]);
     setFuture([]);
     setProject(normalized);
     projectRef.current = normalized;
     repositoryRevisionRef.current = repositoryRevision === undefined ? null : { projectId: normalized.id, revision: repositoryRevision };
     if (repositoryRevision !== undefined) repositoryBlockedProjectIdRef.current = null;
+    analysisSnapshotRef.current = null;
     invalidateAnalysis();
     if (restoredAnalysis) {
+      // Imported results are an explicit load boundary. The portable contract
+      // predates analysis bindings, so keep its established visible result but
+      // do not make an unbound result eligible for a later undo/redo restore.
+      analysisRef.current = restoredAnalysis;
       setAnalysis(restoredAnalysis);
       setResultTab(restoredAnalysis.success ? 'summary' : 'issues');
     }
     setActiveTool('select');
-    setSelectedCombinationIdState((current) => normalized.combinations.some((item) => item.id === current) ? current : '');
+    setSelectedCombinationIdState(nextCombinationId);
     setSelection(null);
     setResultCursor(null);
-  }, [invalidateAnalysis, project, setSelection]);
+  }, [invalidateAnalysis, project, selectedCombinationId, setSelection]);
 
   const undo = useCallback(() => {
     if (past.length === 0) return;
     const previous = past[past.length - 1];
     setFuture((items) => [{ project, description: previous.description }, ...items].slice(0, 50));
     setPast(past.slice(0, -1));
-    setProject(previous.project);
-    projectRef.current = previous.project;
-    invalidateAnalysis();
+    publishProject(previous.project);
+    restoreAnalysisForProject(previous.project, selectedCombinationId);
     setSelection(null);
-  }, [invalidateAnalysis, past, project, setSelection]);
+  }, [past, project, publishProject, restoreAnalysisForProject, selectedCombinationId, setSelection]);
 
   const redo = useCallback(() => {
     if (future.length === 0) return;
@@ -616,11 +661,10 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     // History entries are already-valid in-memory snapshots. Re-normalizing
     // here can add optional keys with `undefined` and makes redo differ from
     // the exact state that was originally published and previewed.
-    setProject(entry.project);
-    projectRef.current = entry.project;
-    invalidateAnalysis();
+    publishProject(entry.project);
+    restoreAnalysisForProject(entry.project, selectedCombinationId);
     setSelection(null);
-  }, [future, invalidateAnalysis, project, setSelection]);
+  }, [future, project, publishProject, restoreAnalysisForProject, selectedCombinationId, setSelection]);
 
   const modelValue = useMemo<ProjectModelContextValue>(() => ({
     project,
@@ -634,9 +678,9 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
   const analysisValue = useMemo<ProjectAnalysisContextValue>(() => ({
     analysis, isAnalyzing, selectedCombinationId, learningFocus, influenceCanvasState,
-    setSelectedCombinationId, setLearningFocus, setInfluenceCanvasState, analyze, clearAnalysis: invalidateAnalysis,
+    setSelectedCombinationId, setLearningFocus, setInfluenceCanvasState, analyze, clearAnalysis,
     ensureEducationTrace,
-  }), [analysis, isAnalyzing, selectedCombinationId, learningFocus, influenceCanvasState, setSelectedCombinationId, analyze, invalidateAnalysis, ensureEducationTrace]);
+  }), [analysis, isAnalyzing, selectedCombinationId, learningFocus, influenceCanvasState, setSelectedCombinationId, analyze, clearAnalysis, ensureEducationTrace]);
 
   const uiValue = useMemo<WorkspaceUIContextValue>(() => ({
     activeTool, selection, theme, resultTab, resultCursor, modeShapeState,

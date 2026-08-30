@@ -81,7 +81,7 @@ const WorkspaceBrokerContent = ({
   const [revisionBaseline, setRevisionBaseline] = useState<RevisionSnapshot | null>(null);
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
   const { t } = useI18n();
-  const { project, analysis, isAnalyzing, setActiveTool, setResultTab, analyze, undo, redo, canUndo, canRedo } = useProject();
+  const { project, analysis, isAnalyzing, setActiveTool, setSelection, setResultTab, analyze, undo, redo, canUndo, canRedo } = useProject();
   const [pendingModelDoctorNotification, setPendingModelDoctorNotification] = useState<PendingModelDoctorNotification | null>(null);
   const modelDoctorNotificationIdRef = useRef(0);
   const pendingModelDoctorNotificationIdRef = useRef<number | null>(null);
@@ -181,7 +181,13 @@ const WorkspaceBrokerContent = ({
     setModelDoctorAcknowledgedIds(new Set());
     pendingModelDoctorNotificationIdRef.current = null;
     setPendingModelDoctorNotification(null);
-    (['generator', 'dense', 'datasheet', 'bom', 'comparison', 'doctor', 'palette'] as const).forEach((surface) => closeSurface(surface));
+    setActiveTool('select');
+    setSelection(null);
+    setResultTab('summary');
+    setDenseView('reactions');
+    setDataSurfaceStateEpoch((epoch) => epoch + 1);
+    reportedAnalysisRef.current = null;
+    (['results', 'generator', 'dense', 'datasheet', 'bom', 'comparison', 'doctor', 'palette'] as const).forEach((surface) => closeSurface(surface));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 

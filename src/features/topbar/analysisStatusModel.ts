@@ -1,5 +1,6 @@
 import { resolveReliability } from '../../engine/reliability';
 import type { AnalysisResult, ReliabilityCheck, ReliabilityLevel } from '../../types';
+import type { ModelDoctorReport } from '../model-doctor/modelDoctorDiagnostics';
 
 export type AnalysisVisualStatus = 'ready' | 'calculating' | 'resolved' | 'stale' | 'warning' | 'error';
 
@@ -7,17 +8,22 @@ interface DeriveAnalysisStatusOptions {
   analysis: AnalysisResult | null;
   isAnalyzing: boolean;
   hadAnalysis: boolean;
+  /** Model Doctor is the authority for model findings shown as attention. */
+  modelDoctorReport?: Pick<ModelDoctorReport, 'total'>;
 }
 
 export const deriveAnalysisStatus = ({
   analysis,
   isAnalyzing,
   hadAnalysis,
+  modelDoctorReport,
 }: DeriveAnalysisStatusOptions): AnalysisVisualStatus => {
   if (isAnalyzing) return 'calculating';
   if (!analysis) return hadAnalysis ? 'stale' : 'ready';
   if (!analysis.success || analysis.issues.some((issue) => issue.severity === 'error')) return 'error';
-  if (analysis.issues.some((issue) => issue.severity === 'warning')) return 'warning';
+  if (modelDoctorReport
+    ? modelDoctorReport.total > 0
+    : analysis.issues.some((issue) => issue.severity === 'warning')) return 'warning';
   return 'resolved';
 };
 

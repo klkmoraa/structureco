@@ -20,7 +20,7 @@ import {
   Sigma,
   type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '../../i18n/useI18n';
 import { useProject } from '../../store/ProjectContext';
@@ -35,6 +35,7 @@ import {
 } from './toolRegistry';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { useShellComposition } from '../workspace/useShellComposition';
+import { SurfacePresentationContext } from '../workspace/SurfacePresentationContext';
 
 const toolIcons: Record<Tool, LucideIcon> = {
   select: MousePointer2,
@@ -247,6 +248,9 @@ export const ToolRail = () => {
   const moreMenuButtonRef = useRef<HTMLButtonElement>(null);
   const paletteRef = useRef<HTMLElement>(null);
   const { shellClass } = useShellComposition();
+  const surfacePresentation = useContext(SurfacePresentationContext);
+  const generatorOpen = surfacePresentation?.stateFor('generator').open ?? false;
+  const generatorWasOpenRef = useRef(generatorOpen);
   const previousShellClassRef = useRef(shellClass);
   /** Expanded (`X2`) lleva etiqueta; Medium (`M1`) y Compact (`K0`) son icon-only. */
   const compact = shellClass !== 'X2';
@@ -268,6 +272,20 @@ export const ToolRail = () => {
   const canEditSelection = selection?.kind === 'node'
     || selection?.kind === 'member'
     || (selection?.kind === 'multi' && (selection.nodeIds.length > 0 || selection.memberIds.length > 0));
+
+  // The generator is a tool surface, not a modeling tool. Its Cancelar and
+  // Generar actions both close the same broker surface; closing it is the
+  // explicit boundary that returns the canvas to selection mode, including
+  // when Nodo was active before the surface opened.
+  useEffect(() => {
+    if (generatorOpen) {
+      generatorWasOpenRef.current = true;
+      return;
+    }
+    if (!generatorWasOpenRef.current) return;
+    generatorWasOpenRef.current = false;
+    setActiveTool('select');
+  }, [generatorOpen, setActiveTool]);
 
   const selectTool = (tool: Tool) => {
     setActiveTool(tool);

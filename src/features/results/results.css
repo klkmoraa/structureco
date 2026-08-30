@@ -300,6 +300,8 @@
 .dense-results-tabs button:focus-visible { outline:3px solid var(--focus); outline-offset:3px; }
 .dense-results-panel { min-width:0; display:grid; gap:12px; }
 .dense-reactions { min-width:0; display:grid; gap:10px; }
+.dense-reactions .results-table td[data-constrained='true'] { color:var(--text); font-weight:700; }
+.dense-reactions .results-table td[data-constrained='false'] { color:var(--muted); }
 @media (max-width:700px) {
   .results-dense-launchers { padding:0 10px 8px; }
 }
@@ -347,6 +349,28 @@
   border:1px solid var(--border-soft);
   border-radius:11px;
   background:color-mix(in srgb,var(--surface) 96%,var(--accent-soft));
+}
+
+/* Deformada: la escala se lee junto al gráfico y el modo Aula deja explícita
+   la procedencia asumida de E/A/I sin alterar las propiedades almacenadas. */
+.deformation-reading-meta {
+  min-width:0;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:5px 12px;
+  margin:0 0 8px;
+  padding:8px 10px;
+  border:1px solid var(--border-soft);
+  border-radius:9px;
+  background:var(--surface-2);
+}
+.deformation-reading-meta strong { color:var(--deformed); font-family:var(--sc-font-mono); font-size:9px; }
+.deformation-reading-meta small { min-width:0; color:var(--muted); font-size:8.5px; line-height:1.4; }
+.deformation-reading-meta[data-rigidity-assumed='true'] { border-color:color-mix(in srgb,var(--warning) 40%,var(--border)); background:color-mix(in srgb,var(--warning) 6%,var(--surface)); }
+.deformation-reading-meta[data-rigidity-assumed='true'] strong { color:var(--warning); }
+@media (max-width:700px) {
+  .deformation-reading-meta { margin-bottom:7px; }
 }
 .empty-results > svg { color:var(--accent); }
 .empty-results strong,.failed-results strong { font-size:15px; }

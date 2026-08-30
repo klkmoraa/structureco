@@ -14,12 +14,14 @@ import type { AnalysisResult } from '../../types';
 import { Popover } from '../../design-system/components/overlays';
 import { describeReliabilityCheck, reliabilityLevelLabelKey } from '../results/reliabilityCopy';
 import { deriveAnalysisStatus, deriveReliabilityPresentation, type AnalysisVisualStatus } from './analysisStatusModel';
+import type { ModelDoctorReport } from '../model-doctor/modelDoctorDiagnostics';
 
 interface AnalysisStatusProps {
   projectId: string;
   analysis: AnalysisResult | null;
   isAnalyzing: boolean;
   onOpenModelDoctor: () => void;
+  modelDoctorReport?: Pick<ModelDoctorReport, 'total'>;
 }
 
 const statusPresentation: Record<AnalysisVisualStatus, {
@@ -45,7 +47,7 @@ const statusPresentation: Record<AnalysisVisualStatus, {
  * which changes `analysis`, `isAnalyzing` or `projectId` — never re-renders the
  * state/reliability line the TopBar owns (CRI-100 architecture requirement).
  */
-const AnalysisStatusComponent = ({ projectId, analysis, isAnalyzing, onOpenModelDoctor }: AnalysisStatusProps) => {
+const AnalysisStatusComponent = ({ projectId, analysis, isAnalyzing, onOpenModelDoctor, modelDoctorReport }: AnalysisStatusProps) => {
   const { t } = useI18n();
   const lifecycleRef = useRef({ projectId, hadAnalysis: Boolean(analysis) });
   const [governingCauseOpen, setGoverningCauseOpen] = useState(false);
@@ -58,6 +60,7 @@ const AnalysisStatusComponent = ({ projectId, analysis, isAnalyzing, onOpenModel
     analysis,
     isAnalyzing,
     hadAnalysis: lifecycleRef.current.hadAnalysis,
+    modelDoctorReport,
   });
   if (analysis) lifecycleRef.current.hadAnalysis = true;
   // `reliability` answers a different question than `status`: a run can succeed

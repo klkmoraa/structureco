@@ -380,6 +380,8 @@ describe('Results analytical center', () => {
     expect(within(deformation).getByRole('group', { name: 'Member response' })).toBeTruthy();
     expect(screen.getByText('Exact member response')).toBeTruthy();
     expect(screen.getByText('Interior maximum')).toBeTruthy();
+    expect(within(deformation).getByText('Deformed scale ×80')).toBeTruthy();
+    expect(within(deformation).queryByText(/Automatic properties are educational aids/)).toBeNull();
     expect(within(deformation).getByText('Exact u–v–θ cursor · interior maxima are calculated from the polynomial roots')).toBeTruthy();
     const deformationGraph = within(deformation).getByRole('img', { name: /v response for member/i });
     deformationGraph.focus();
@@ -556,6 +558,14 @@ describe('Results analytical center', () => {
       expect(within(denseMenu).getByRole('button', { name: view })).toBeTruthy();
     }
     expect(screen.getByLabelText('Predicciones base').textContent).toBe('{}');
+
+    await user.click(screen.getByRole('tab', { name: 'Deformada' }));
+    const deformation = await screen.findByTestId('deformation-chart', {}, { timeout: 5000 });
+    expect(within(deformation).getByText('Escala deformada ×80')).toBeTruthy();
+    const deformationNote = within(deformation).getByRole('note');
+    expect(deformationNote.textContent).toContain('E/A/I');
+    expect(deformationNote.textContent).toContain('propiedades automáticas');
+    expect(deformationNote.textContent).toContain('ayudas educativas');
 
     const modelState = screen.getByLabelText('Estado del modelo').textContent;
     await user.click(screen.getByRole('button', { name: 'Modo completo test' }));

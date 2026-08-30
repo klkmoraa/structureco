@@ -13,6 +13,7 @@ import {
   sortDatasheetRows,
   type DatasheetRow,
 } from './datasheetModel';
+import { datasheetCellText } from './datasheetPresentation';
 
 const project = createDatasheetProject();
 const nodeRows = projectDatasheetRows(project, 'nodes');
@@ -106,6 +107,23 @@ describe('entidad de cargas', () => {
 
   it('muestra el caso con el nombre que le puso el usuario', () => {
     expect(loadRows[0].values.case).toEqual({ kind: 'ref', id: 'LC1', label: 'Permanente' });
+  });
+
+  it('proyecta la posición exacta x/L de una carga puntual', () => {
+    const pointProject = createDatasheetProject({
+      memberLoads: [{
+        id: 'ML-point', memberId: 'M1', caseId: 'LC1', type: 'point',
+        coordinateSystem: 'global', lengthBasis: 'real', start: 0.5, end: 0.5,
+        position: 0.5, px: 0, py: -10,
+      }],
+    });
+    const row = projectDatasheetRows(pointProject, 'loads').find((candidate) => candidate.id === 'ML-point');
+    if (!row) throw new Error('La proyección no contiene ML-point.');
+    const positionColumn = datasheetColumns('loads').find((column) => column.id === 'position');
+
+    expect(positionColumn?.labelKey).toBe('datasheet.column.position');
+    expect(row.values.position).toEqual({ kind: 'number', value: 0.5 });
+    expect(datasheetCellText(row.values.position, 'kN-m', () => '')).toBe('0.5');
   });
 
   it('deja el id a la vista cuando el caso ya no existe', () => {

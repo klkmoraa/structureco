@@ -625,6 +625,10 @@ const DeformationView = ({ memberResult, memberId, isMobile }: { memberResult: M
   const pinnedX = resultCursor?.memberId === memberId && resultCursor.pinned ? Math.max(0, Math.min(L, resultCursor.x)) : null;
   const units = project.settings.units;
   const unit = quantity === 'theta' ? 'rad' : unitLabel(units, 'length');
+  const deformationScale = Number.isFinite(project.settings.deformedScale) && project.settings.deformedScale > 0
+    ? project.settings.deformedScale
+    : 1;
+  const classroomRigidityAssumed = project.settings.calculationMode === 'classroom';
   const displayValue = (value: number) => quantity === 'theta' ? value : toDisplay(value, units, 'length');
   const critical = memberResult.deformationCriticalPoints.filter((point) => point.quantity === quantity);
   const candidates = critical.filter((point) => point.kind === 'maximum' || point.kind === 'minimum' || point.kind === 'end');
@@ -694,7 +698,15 @@ const DeformationView = ({ memberResult, memberId, isMobile }: { memberResult: M
       />)}
     </ResultMetricRail>
     <div className="diagram-guidance deformation-guidance"><div className="step-badge deformed">1</div><div><strong>{t('results.exactMemberResponseTitle')}</strong><p>{t('results.exactMemberResponseBody')}</p></div><div className="step-badge muted">2</div><div><strong>{t('results.interiorMaximum')}</strong><p>{absolute ? t('results.responseAtPosition', { quantity, value: formatScientific(displayValue(absolute.value), 4), unit, x: formatFixed(toDisplay(absolute.x, units, 'length'), 3), lengthUnit: unitLabel(units, 'length') }) : '—'}</p></div></div>
-    <div className="diagram-chart deformation" data-testid="deformation-chart"><div className="diagram-chart-heading"><label><span>{t('results.member')}</span><select aria-label={t('results.memberForDeformation')} value={memberId} onChange={(event) => { setSelection({ kind: 'member', id: event.target.value }); setResultCursor(null); }}>{memberOptions.map((member) => <option key={member.memberId} value={member.memberId}>{member.memberId}</option>)}</select></label><div className="response-selector" role="group" aria-label={t('results.memberResponse')}>{(['u', 'v', 'theta'] as const).map((item) => <button key={item} aria-pressed={quantity === item} className={quantity === item ? 'active' : ''} onClick={() => setQuantity(item)}>{item === 'theta' ? 'θ' : item}</button>)}</div><small>{pinnedX === null ? t('results.pointerHint') : t('results.pinnedHint')}</small></div>
+    <div className="diagram-chart deformation" data-testid="deformation-chart"><div
+      className="deformation-reading-meta"
+      data-deformation-scale={deformationScale}
+      data-rigidity-assumed={classroomRigidityAssumed ? 'true' : undefined}
+      role="note"
+    >
+      <strong>{t('inspector.deformedScale')} ×{formatResultNumber(deformationScale)}</strong>
+      {classroomRigidityAssumed ? <small><b>E/A/I</b> · {t('classroom.defaultsWarning')}</small> : null}
+    </div><div className="diagram-chart-heading"><label><span>{t('results.member')}</span><select aria-label={t('results.memberForDeformation')} value={memberId} onChange={(event) => { setSelection({ kind: 'member', id: event.target.value }); setResultCursor(null); }}>{memberOptions.map((member) => <option key={member.memberId} value={member.memberId}>{member.memberId}</option>)}</select></label><div className="response-selector" role="group" aria-label={t('results.memberResponse')}>{(['u', 'v', 'theta'] as const).map((item) => <button key={item} aria-pressed={quantity === item} className={quantity === item ? 'active' : ''} onClick={() => setQuantity(item)}>{item === 'theta' ? 'θ' : item}</button>)}</div><small>{pinnedX === null ? t('results.pointerHint') : t('results.pinnedHint')}</small></div>
       <span id={cursorHelpId} className="sr-only">{t('results.chartKeyboardHelp')}</span>
       <svg tabIndex={0} role="img" aria-label={responseAriaLabel} aria-describedby={cursorHelpId} aria-keyshortcuts="ArrowLeft ArrowRight Home End Escape" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" onKeyDown={movePinnedByKeyboard} onPointerMove={(event) => setHoverX(pointerX(event))} onPointerDown={(event) => pinAt(pointerX(event))} onPointerLeave={() => setHoverX(null)}>
         <title>{responseAriaLabel}</title><desc>{t('results.chartKeyboardHelp')}</desc>

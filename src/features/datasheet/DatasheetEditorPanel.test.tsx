@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { createDatasheetProject } from './datasheetFixtures';
 import { renderDatasheet } from './datasheetTestHarness';
 
 /**
@@ -82,6 +83,47 @@ describe('editores visuales', () => {
     await user.type(fy, '8');
     await waitFor(() => expect(screen.getByTestId('datasheet-load-preview').getAttribute('data-direction'))
       .toBe('up'));
+  });
+
+  it('muestra la posición x/L exacta de una carga puntual en la tabla y su tarjeta', async () => {
+    const pointProject = createDatasheetProject({
+      memberLoads: [{
+        id: 'ML-point', memberId: 'M1', caseId: 'LC1', type: 'point',
+        coordinateSystem: 'global', lengthBasis: 'real', start: 0.5, end: 0.5,
+        position: 0.5, px: 0, py: -10,
+      }],
+    });
+    const { user } = await renderDatasheet({ entity: 'loads', project: pointProject });
+    const row = screen.getByRole('rowheader', { name: 'ML-point' }).closest('tr') as HTMLElement;
+
+    expect(within(row).getByText('0.5')).toBeTruthy();
+    await user.click(screen.getByRole('rowheader', { name: 'ML-point' }));
+
+    const position = within(panel()).getByRole('textbox', { name: 'Posición x/L' }) as HTMLInputElement;
+    expect(position.value).toBe('0.5');
+  });
+
+  it('muestra una sección manual como Personalizado sin adoptar la identidad W6x9', async () => {
+    const project = createDatasheetProject();
+    const member = project.members.find((item) => item.id === 'M2');
+    if (!member) throw new Error('La fixture no contiene M2.');
+    // Este estado reproduce una identidad de catálogo vieja junto con
+    // propiedades manuales: la interfaz debe confiar en sectionOrigin, no en
+    // un sectionId que ya no describe al miembro.
+    member.sectionId = 'w6x9';
+    member.sectionOrigin = 'custom';
+
+    const { user } = await renderDatasheet({ entity: 'members', project });
+    await user.click(screen.getByRole('rowheader', { name: 'M2' }));
+
+    const card = screen.getByRole('region', { name: 'Sección' });
+    const selector = within(card).getByRole('combobox', { name: 'Sección' }) as HTMLSelectElement;
+    await waitFor(() => expect(selector.value).toBe(''));
+    expect(selector.selectedOptions[0]?.textContent).toBe('Personalizado');
+    expect(within(card).getByTestId('section-viewer-2d').textContent).toContain('Rectangular equivalente');
+    expect(within(card).getByTestId('section-viewer-2d').textContent).not.toContain('W6x9');
+    expect((within(card).getByRole('textbox', { name: /^A \(/ }) as HTMLInputElement).value).toBe('0.03');
+    expect((within(card).getByRole('textbox', { name: /^I \(/ }) as HTMLInputElement).value).toBe('0.0002');
   });
 
   it('no ofrece liberaciones en una armadura', async () => {

@@ -62,6 +62,23 @@ describe('deriveAnalysisStatus', () => {
 });
 
 describe('AnalysisStatus', () => {
+  it('does not show a warning badge when Model Doctor has no findings', () => {
+    render(
+      <ProjectProvider>
+        <AnalysisStatus
+          projectId="project-a"
+          analysis={result(true, [issue('warning')])}
+          isAnalyzing={false}
+          onOpenModelDoctor={vi.fn()}
+          modelDoctorReport={{ total: 0 }}
+        />
+      </ProjectProvider>,
+    );
+
+    expect(screen.getByRole('status').getAttribute('data-analysis-status')).toBe('resolved');
+    expect(screen.queryByRole('button', { name: /Revisar advertencias.*Abrir Model Doctor/ })).toBeNull();
+  });
+
   it('remembers a cleared result as stale only within the same project', () => {
     const props = { isAnalyzing: false, onOpenModelDoctor: vi.fn() };
     const { rerender } = render(

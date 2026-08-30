@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatInspectorNumber } from '../inspector/numericFormatting';
-import { formatResultNumber, formatResultValue } from './resultFormatting';
+import { formatResultNearZero, formatResultNumber, formatResultValue } from './resultFormatting';
 
 describe('result presentation formatting', () => {
   it('keeps six useful digits without writing back a rounded value', () => {
@@ -24,5 +24,11 @@ describe('result presentation formatting', () => {
     for (const value of [4.123456789012345, 1e-14, 0.0000123456, 12_500, -0, 1e9]) {
       expect(formatResultNumber(value)).toBe(formatInspectorNumber(value));
     }
+  });
+
+  it('collapses only relative machine noise while preserving a readable small result', () => {
+    expect(formatResultNearZero(2.8e-14, 1)).toBe('0');
+    expect(formatResultNearZero(1e-5, 1)).toBe('1e-5');
+    expect(formatResultNearZero(1e-8, 100)).toBe('0');
   });
 });
