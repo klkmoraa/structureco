@@ -91,6 +91,12 @@ export const SurfacePresentationProvider = ({
   const previousShellClass = useRef(shellClass);
 
   const openSurface = useCallback((surface: SurfaceId, trigger?: HTMLElement | null) => {
+    // Resultados is an invoked surface. Analysis may update its data, but it
+    // must not steal canvas space by mounting itself without an explicit user
+    // launcher. Every real launcher supplies its triggering element so focus
+    // can be restored on close; a trigger-less results request is therefore
+    // the legacy auto-open path and is intentionally ignored.
+    if (surface === 'results' && !trigger) return;
     const candidate = trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     if (candidate && candidate !== document.body) returnFocusRefs.current.set(surface, candidate);
     dispatch({ type: 'open', surface });
