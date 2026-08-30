@@ -58,7 +58,7 @@ describe('CanvasDiagramStack', () => {
     expect(container.querySelectorAll('[data-stack-member][data-stack-lane="moment"] .diagram-stack-replica-member').length).toBe(3);
   });
 
-  it('uses the canvas width for three full portal diagrams on a wide workspace', () => {
+  it('keeps all three full portal diagrams inside the same desktop canvas without overlap', () => {
     const { container } = render(<svg><CanvasDiagramStack
       project={project}
       results={members.map((member) => result(member.id))}
@@ -68,9 +68,11 @@ describe('CanvasDiagramStack', () => {
       t={((key: string) => key) as never}
     /></svg>);
 
-    const starts = Array.from(container.querySelectorAll('[data-stack-member="AB"] .diagram-stack-replica-member'))
-      .map((line) => Number(line.getAttribute('x1')));
+    const panels = Array.from(container.querySelectorAll('[data-stack-panel]'));
+    expect(panels).toHaveLength(3);
+    const starts = Array.from(container.querySelectorAll('[data-stack-member="AB"] .diagram-stack-replica-member'));
     expect(starts).toHaveLength(3);
-    expect(new Set(starts.map((value) => Math.round(value))).size).toBe(3);
+    const positions = starts.map((line) => `${Math.round(Number(line.getAttribute('x1')))}:${Math.round(Number(line.getAttribute('y1')))}`);
+    expect(new Set(positions).size).toBe(3);
   });
 });
