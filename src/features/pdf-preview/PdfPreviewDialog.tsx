@@ -3,13 +3,24 @@ import { ChevronLeft, ChevronRight, Download, FileText } from 'lucide-react';
 import { Dialog } from '../../design-system/components/overlays';
 import { Button } from '../../design-system/components/controls';
 import { useI18n } from '../../i18n/useI18n';
-import type { CalculationReportOptions } from '../../utils/pdf/reportContext';
+import {
+  DEFAULT_SOLUTION_METHOD,
+  SOLUTION_METHODS,
+  type SolutionMethodId,
+} from '../../analysis-methods/methodRegistry';
+import {
+  CALCULATION_PDF_EXPORT_DEFAULTS,
+  type CalculationReportOptions,
+} from '../../utils/pdf/reportContext';
+import type { TranslationKey } from '../../i18n/catalogs';
 import './pdfPreviewDialog.css';
 
 export interface PdfPreviewArtifact {
   bytes: Uint8Array;
   filename: string;
   renderEngine?: 'browser' | 'reportlab';
+  solutionMethod?: SolutionMethodId;
+  methodAvailability?: Record<SolutionMethodId, { available: boolean; reasonKey?: string }>;
 }
 
 interface PdfPreviewDialogProps {
@@ -30,7 +41,9 @@ const PREVIEW_SECTIONS = [
 ] as const;
 type PreviewSection = (typeof PREVIEW_SECTIONS)[number];
 type PreviewSelection = Record<PreviewSection, boolean>;
-const DEFAULT_SELECTION: PreviewSelection = Object.fromEntries(PREVIEW_SECTIONS.map((key) => [key, true])) as PreviewSelection;
+const DEFAULT_SELECTION: PreviewSelection = Object.fromEntries(
+  PREVIEW_SECTIONS.map((key) => [key, CALCULATION_PDF_EXPORT_DEFAULTS[key] !== false]),
+) as PreviewSelection;
 const HOSTED_BY: Partial<Record<PreviewSection, PreviewSection>> = {
   includeMethodFreeBodies: 'includeProcedure',
   includeEducationTrace: 'includeAnnex',
@@ -53,13 +66,14 @@ export const PdfPreviewDialog = ({ artifact, onClose, onDownload, onRebuild }: P
   const { t } = useI18n();
   const [currentArtifact, setCurrentArtifact] = useState(artifact);
   const [selection, setSelection] = useState<PreviewSelection>(DEFAULT_SELECTION);
+  const [solutionMethod, setSolutionMethod] = useState<SolutionMethodId>(artifact.solutionMethod ?? DEFAULT_SOLUTION_METHOD);
   const [rebuilding, setRebuilding] = useState(false);
   const [rebuildFailed, setRebuildFailed] = useState(false);
   const [documentProxy, setDocumentProxy] = useState<PdfPreviewDocument | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const selectionKey = JSON.stringify(selection);
+  const selectionKey = JSON.stringify({ selection, solutionMethod });
   const lastSelection = useRef(selectionKey);
 
   useEffect(() => { setCurrentArtifact(artifact); }, [artifact]);
@@ -70,10 +84,10 @@ export const PdfPreviewDialog = ({ artifact, onClose, onDownload, onRebuild }: P
       lastSelection.current = selectionKey;
       setRebuilding(true);
       setRebuildFailed(false);
-      void onRebuild(selection).then(setCurrentArtifact).catch(() => setRebuildFailed(true)).finally(() => setRebuilding(false));
+      void onRebuild({ ...selection, solutionMethod }).then(setCurrentArtifact).catch(() => setRebuildFailed(true)).finally(() => setRebuilding(false));
     }, 320);
     return () => window.clearTimeout(timer);
-  }, [onRebuild, selection, selectionKey]);
+  }, [onRebuild, selection, selectionKey, solutionMethod]);
 
   useEffect(() => {
     let cancelled = false;
@@ -151,6 +165,25 @@ export const PdfPreviewDialog = ({ artifact, onClose, onDownload, onRebuild }: P
     <div className="pdf-preview-dialog__meta"><FileText size={18} aria-hidden="true" /><span>{currentArtifact.filename}</span><span className="pdf-preview-dialog__engine">{t(currentArtifact.renderEngine === 'reportlab' ? 'portable.previewEngineReportLab' : 'portable.previewEngineBrowser')}</span>{pageCount > 0 ? <span>{t('portable.previewPage', { page: pageNumber, total: pageCount })}</span> : null}</div>
     <div className="pdf-preview-dialog__workspace">
       <aside className="pdf-preview-dialog__options" aria-label={t('portable.previewContentTitle')}>
+        <fieldset className="pdf-preview-dialog__methods">
+          <legend>{t('method.exportTitle', { count: SOLUTION_METHODS.length })}</legend>
+          {SOLUTION_METHODS.map((method) => {
+            const methodState = currentArtifact.methodAvailability?.[method.id];
+            const available = methodState?.available ?? method.id === DEFAULT_SOLUTION_METHOD;
+            return <label key={method.id}>
+              <input
+                type="radio"
+                name="pdf-solution-method"
+                value={method.id}
+                checked={solutionMethod === method.id}
+                disabled={rebuilding || !available}
+                onChange={() => setSolutionMethod(method.id)}
+              />
+              <span>{t(method.labelKey as TranslationKey)}</span>
+              <small>{t((available ? 'method.appliesNow' : methodState?.reasonKey ?? 'method.unavailableForModel') as TranslationKey)}</small>
+            </label>;
+          })}
+        </fieldset>
         <strong>{t('portable.previewContentTitle')}</strong>
         {PREVIEW_SECTIONS.map((section) => <label key={section}><input type="checkbox" checked={selection[section]} disabled={rebuilding || Boolean(HOSTED_BY[section] && !selection[HOSTED_BY[section]!] )} onChange={() => setSelection((current) => ({ ...current, [section]: !current[section] }))} /><span>{t(`portable.preview.${section}`)}</span></label>)}
         <small>{t('portable.previewContentNote')}</small>

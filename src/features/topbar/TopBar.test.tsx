@@ -86,7 +86,8 @@ describe('TopBar portable export', () => {
 
     await user.keyboard('{Escape}');
     await user.click(screen.getByRole('button', { name: 'Workspace tools' }));
-    await user.click(screen.getByRole('button', { name: 'Complete reimportable PDF' }));
+    await user.click(screen.getByRole('button', { name: 'Prepare calculation PDF' }));
+    await user.click(await screen.findByRole('button', { name: 'Download PDF' }));
     await waitFor(() => expect(portableMocks.shareOrDownloadPortableBytes).toHaveBeenCalledWith(
       expect.any(Uint8Array),
       'memoria-structureco.pdf',
@@ -104,18 +105,18 @@ describe('TopBar portable export', () => {
     render(<TopBarHarness><TopBar /></TopBarHarness>);
 
     await user.click(screen.getByRole('button', { name: 'Workspace tools' }));
-    await user.click(screen.getByRole('button', { name: 'Complete reimportable PDF' }));
+    await user.click(screen.getByRole('button', { name: 'Prepare calculation PDF' }));
 
     expect((await screen.findByRole('alert')).textContent).toContain('The package could not be generated.');
     expect(screen.queryByText('No se pudo generar el expediente.')).toBeNull();
   });
 
-  it('keeps the PDF option enabled before the user runs Analysis', async () => {
+  it('keeps the PDF preparation option enabled before the user runs Analysis', async () => {
     const user = userEvent.setup();
     render(<TopBarHarness><TopBar /></TopBarHarness>);
 
     await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
-    const pdfButton = screen.getByRole('button', { name: 'PDF completo reimportable' }) as HTMLButtonElement;
+    const pdfButton = screen.getByRole('button', { name: 'Preparar PDF de cálculo' }) as HTMLButtonElement;
 
     expect(pdfButton.disabled).toBe(false);
   });
@@ -134,7 +135,7 @@ describe('TopBar portable export', () => {
     render(<TopBarHarness><TopBar /></TopBarHarness>);
 
     await user.click(screen.getByRole('button', { name: 'Exportar' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Vista previa del PDF' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Preparar PDF de cálculo' }));
 
     expect(await screen.findByRole('dialog', { name: 'Vista previa de la memoria PDF' })).toBeTruthy();
     expect(portableMocks.createCalculationReport).toHaveBeenCalledOnce();
@@ -149,22 +150,18 @@ describe('TopBar portable export', () => {
     ));
   });
 
-  it('analyzes the current project and generates the PDF from one click', async () => {
+  it('routes PDF generation through method preparation instead of a direct download', async () => {
     const user = userEvent.setup();
     render(<TopBarHarness><TopBar /></TopBarHarness>);
 
     await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
-    await user.click(screen.getByRole('button', { name: 'PDF completo reimportable' }));
+    await user.click(screen.getByRole('button', { name: 'Preparar PDF de cálculo' }));
 
     await waitFor(() => expect(portableMocks.createCalculationReport).toHaveBeenCalledOnce());
     const [, generatedAnalysis] = portableMocks.createCalculationReport.mock.calls[0];
     expect(generatedAnalysis.success).toBe(true);
-    expect(portableMocks.shareOrDownloadPortableBytes).toHaveBeenCalledWith(
-      new Uint8Array([1, 2, 3]),
-      'memoria-structureco.pdf',
-      'application/pdf',
-      expect.stringContaining('memoria de cálculo'),
-    );
+    expect(await screen.findByRole('dialog', { name: 'Vista previa de la memoria PDF' })).toBeTruthy();
+    expect(portableMocks.shareOrDownloadPortableBytes).not.toHaveBeenCalled();
   });
 });
 

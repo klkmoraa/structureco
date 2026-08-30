@@ -10,7 +10,7 @@
  * chrome, and a flow layout that prints the whole model however large it is.
  */
 import { describe, expect, it } from 'vitest';
-import { createHibbelerStyleDiagramPractice } from '../data/defaultProject';
+import { createDefaultProject, createHibbelerStyleDiagramPractice } from '../data/defaultProject';
 import type { ProjectModel } from '../types';
 import { analyzeProject } from '../engine/solver';
 import { createCalculationReport } from './calculationPdf';
@@ -31,6 +31,23 @@ const fixedOptions = {
 };
 
 describe('memoria de cálculo: estructura del documento', () => {
+  it('publica aplicabilidad profunda y rechaza un procedimiento que no cumple sus cargas', async () => {
+    const project = createDefaultProject();
+    const analysis = analyzeProject(project);
+    expect(analysis.success).toBe(true);
+
+    const matrix = await createCalculationReport(project, analysis, fixedOptions);
+    expect(matrix.methodAvailability['matrix-stiffness']).toEqual({ available: true });
+    expect(matrix.methodAvailability['portal-method']).toEqual({
+      available: false,
+      reasonKey: 'method.rejectedMemberLateralLoad',
+    });
+    await expect(createCalculationReport(project, analysis, {
+      ...fixedOptions,
+      solutionMethod: 'portal-method',
+    })).rejects.toThrow(/no aplica/i);
+  }, 60_000);
+
   it('abre cada parte numerada en su propia página, en una sola secuencia', async () => {
     const { project, analysis } = fixture();
     const report = await createCalculationReport(project, analysis, { ...fixedOptions, includeEducationTrace: false });
@@ -152,9 +169,8 @@ describe('memoria de cálculo: estructura del documento', () => {
     const analysis = analyzeProject(beam);
     expect(analysis.success).toBe(true);
 
-    const withMethod = { ...beam, settings: { ...beam.settings, solutionMethod: 'double-integration' as const } };
     const [chosen, plain] = await Promise.all([
-      createCalculationReport(withMethod, analysis, fixedOptions),
+      createCalculationReport(beam, analysis, { ...fixedOptions, solutionMethod: 'double-integration' }),
       createCalculationReport(beam, analysis, fixedOptions),
     ]);
     const [chosenText, plainText] = await Promise.all([
@@ -170,8 +186,10 @@ describe('memoria de cálculo: estructura del documento', () => {
     expect(chosenText).toMatch(/Verificación contra el análisis matricial/i);
     // La redundante de la empotrada-apoyada es 3qL/8 = 22.5 kN, y la columna del solver tiene
     // que decir lo mismo: el documento enseña que los dos caminos se encontraron.
-    expect(chosenText).toMatch(/22\.5\s+22\.5/);
+    expect(chosenText).toMatch(/Doble integración \(kN\)\s+22\.5/);
+    expect(chosenText).toMatch(/Análisis matricial \(kN\)\s+22\.5/);
     expect(chosenText).toMatch(/Curva elástica/i);
+    expect(chosen.filename).toMatch(/memoria-doble-integracion\.pdf$/);
 
     // Sin método elegido, la misma parte lleva el recorrido matricial completo.
     expect(plainText).toMatch(/Procedimiento y cálculos/i);
@@ -187,9 +205,9 @@ describe('memoria de cálculo: estructura del documento', () => {
     const flat = page.replace(/\s+/g, ' ');
     // Las ecuaciones genéricas del motor (ΔX = Xⱼ − Xᵢ, L = √(ΔX²+ΔY²)…) describen el método
     // y ya no se imprimen: en su lugar van las mismas, sustituidas con las coordenadas reales
-    // — A(0,0), B(8,0) en este miembro — más la tabla que las recoge para todos los miembros.
+    // — A(0,0), B(8,0) en este miembro — más el registro técnico que las recoge sin tabla.
     expect(flat).toMatch(/Miembro AB: de A \(0, 0\) a B \(8, 0\) m/);
-    expect(flat).toMatch(/Miembro DeltaX \(m\) DeltaY \(m\) L \(m\) c s AB 8 0 8 1 0/);
+    expect(flat).toMatch(/Miembro AB DeltaX = 8 m .* DeltaY = 0 m .* L = 8 m .* c = 1 .* s = 0/);
     // El paso de cargas no reconstruye su propia tabla: apunta a la parte que ya la lleva.
     const all = inspection.text.replace(/\s+/g, ' ');
     expect(all).toMatch(/están completos en «Modelo y acciones»/i);

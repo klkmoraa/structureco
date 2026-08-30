@@ -10,7 +10,6 @@ import {
   Download,
   Eye,
   FileArchive,
-  FileText,
   FilePlus2,
   FolderOpen,
   HardDriveDownload,
@@ -52,7 +51,10 @@ import { resolveTopBarCommand, type TopBarCommandContext } from '../workspace/co
 import { PDeltaAdvancedConfig, TopBarHistoryControls } from './TopBarControlGroups';
 import type { ToolDockPosition } from '../workspace/useWorkspaceLayoutPreferences';
 import type { PdfPreviewArtifact } from '../pdf-preview/PdfPreviewDialog';
-import type { CalculationReportOptions } from '../../utils/pdf/reportContext';
+import {
+  CALCULATION_PDF_EXPORT_DEFAULTS,
+  type CalculationReportOptions,
+} from '../../utils/pdf/reportContext';
 import './topbar.css';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
@@ -125,7 +127,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [importCenterOpen, setImportCenterOpen] = useState(false);
   const [localAssistantOpen, setLocalAssistantOpen] = useState(false);
-  const [portableExport, setPortableExport] = useState<'pdf' | 'bundle' | 'pdf-preview' | null>(null);
+  const [portableExport, setPortableExport] = useState<'bundle' | 'pdf-preview' | null>(null);
   const [pdfPreview, setPdfPreview] = useState<PdfPreviewArtifact | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [saveHandle, setSaveHandle] = useState<unknown>(null);
@@ -308,10 +310,10 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
       : storageState === 'offline'
         ? t('storage.offlineDescription')
         : t('storage.localDescription');
-  const portableExportLabel = (kind: 'pdf' | 'bundle'): string => {
-    if (portableExport !== kind) return t(kind === 'pdf' ? 'portable.pdfLabel' : 'portable.bundleLabel');
-    if (!analysis) return t(kind === 'pdf' ? 'portable.analyzingPdf' : 'portable.analyzingBundle');
-    return t(kind === 'pdf' ? 'portable.generatingPdf' : 'portable.preparingBundle');
+  const portableExportLabel = (): string => {
+    if (portableExport !== 'bundle') return t('portable.bundleLabel');
+    if (!analysis) return t('portable.analyzingBundle');
+    return t('portable.preparingBundle');
   };
   const pdfPreviewLabel = portableExport === 'pdf-preview' ? t('portable.generatingPreview') : t('portable.previewLabel');
   const requestAnalysis = () => {
@@ -331,8 +333,8 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
   const topBarCommandContext: TopBarCommandContext = { t, project, isAnalyzing, canUndo, canRedo, theme, setTheme, analyze: requestAnalysis, undo, redo };
   const command = (id: Parameters<typeof resolveTopBarCommand>[0]) => resolveTopBarCommand(id, topBarCommandContext);
 
-  const exportPortable = async (kind: 'pdf' | 'bundle') => {
-    setPortableExport(kind);
+  const exportPortable = async () => {
+    setPortableExport('bundle');
     setExportError(null);
     try {
       let exportAnalysis = analysis;
@@ -346,17 +348,8 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
       }
       const portable = await import('../../utils/portable');
       const options = { appVersion: APP_VERSION, scenarioName, scenarioFactors, includeEducationTrace: true };
-      if (kind === 'pdf') {
-        const report = await portable.createCalculationReport(project, exportAnalysis, options);
-        // The calculation report is a single cohesive document. A local ReportLab process used
-        // to append a second, differently styled "vector" appendix here; that made a normal
-        // export depend on an unrelated visual treatment. Keep the authoritative browser report
-        // intact and reserve the companion for explicit offline tooling only.
-        await portable.shareOrDownloadPortableBytes(report.bytes, report.filename, 'application/pdf', t('portable.reportShareTitle', { name: project.name }));
-      } else {
-        const bundle = await portable.createPortableBundle(project, exportAnalysis, options);
-        await portable.shareOrDownloadPortableBytes(bundle.bytes, bundle.filename, portable.STRUCTURECO_BUNDLE_MIME, t('portable.bundleShareTitle', { name: project.name }));
-      }
+      const bundle = await portable.createPortableBundle(project, exportAnalysis, options);
+      await portable.shareOrDownloadPortableBytes(bundle.bytes, bundle.filename, portable.STRUCTURECO_BUNDLE_MIME, t('portable.bundleShareTitle', { name: project.name }));
       emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' });
       setShowExportMenu(false);
       setShowMobileMenu(false);
@@ -367,7 +360,9 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
     }
   };
 
-  const buildPdfPreviewArtifact = async (selection: CalculationReportOptions = {}): Promise<PdfPreviewArtifact> => {
+  const buildPdfPreviewArtifact = async (
+    selection: CalculationReportOptions = CALCULATION_PDF_EXPORT_DEFAULTS,
+  ): Promise<PdfPreviewArtifact> => {
     let exportAnalysis = analysis;
     if (!exportAnalysis) {
       const { analyzeForPortableExport } = await import('./portableExportAnalysis');
@@ -376,9 +371,21 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
       exportAnalysis = await ensureEducationTrace() ?? exportAnalysis;
     }
     const portable = await import('../../utils/portable');
-    const options: CalculationReportOptions = { appVersion: APP_VERSION, scenarioName, scenarioFactors, includeEducationTrace: true, ...selection };
+    const options: CalculationReportOptions = {
+      appVersion: APP_VERSION,
+      scenarioName,
+      scenarioFactors,
+      ...CALCULATION_PDF_EXPORT_DEFAULTS,
+      ...selection,
+    };
     const report = await portable.createCalculationReport(project, exportAnalysis, options);
-    return { bytes: report.bytes, filename: report.filename, renderEngine: 'browser' };
+    return {
+      bytes: report.bytes,
+      filename: report.filename,
+      renderEngine: 'browser',
+      solutionMethod: report.solutionMethod,
+      methodAvailability: report.methodAvailability,
+    };
   };
 
   const openPdfPreview = async () => {
@@ -668,8 +675,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
                   <button role="menuitem" onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
                   <button role="menuitem" onClick={() => void handleShare()}><Share2 size={16} /> {t('export.share')}</button>
                   <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void openPdfPreview()}><Eye size={16} /> {pdfPreviewLabel}</button>
-                  <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
-                  <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
+                  <button role="menuitem" disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable()}><FileArchive size={16} /> {portableExportLabel()}</button>
                   <button role="menuitem" onClick={() => { exportSvgCommand.run(); setShowExportMenu(false); }}>{exportSvgCommand.label}</button>
                   <button role="menuitem" onClick={() => { exportPngCommand.run(); setShowExportMenu(false); }}>{exportPngCommand.label}</button>
                   <button role="menuitem" onClick={() => { exportPrintCommand.run(); setShowExportMenu(false); }}>{exportPrintCommand.label}</button>
@@ -745,8 +751,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
                   <button onClick={() => void handleCopyJson()}><Copy size={16} /> {t('export.copyData')}</button>
                     <button onClick={() => void handleShare()}><Share2 size={16} /> {t('export.share')}</button>
                     <button disabled={isAnalyzing || portableExport !== null} onClick={() => void openPdfPreview()}><Eye size={16} /> {pdfPreviewLabel}</button>
-                    <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('pdf')}><FileText size={16} /> {portableExportLabel('pdf')}</button>
-                    <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable('bundle')}><FileArchive size={16} /> {portableExportLabel('bundle')}</button>
+                    <button disabled={isAnalyzing || portableExport !== null} onClick={() => void exportPortable()}><FileArchive size={16} /> {portableExportLabel()}</button>
                     <button onClick={() => { exportSvgCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportSvgCommand.label}</button>
                     <button onClick={() => { exportPngCommand.run(); setShowMobileMenu(false); }}><Download size={16} /> {exportPngCommand.label}</button>
                     <button onClick={() => { exportPrintCommand.run(); setShowMobileMenu(false); }}>{exportPrintCommand.label}</button>

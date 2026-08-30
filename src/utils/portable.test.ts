@@ -61,21 +61,21 @@ describe('expediente portable structureCo', () => {
     expect(inspection.payload?.project).toEqual(report.payload.project);
     expect(inspection.payload?.analysis).toEqual(report.payload.analysis);
     expect(inspection.text).toMatch(/Diagramas N, V y M/i);
-    expect(inspection.text).toMatch(/Procedimiento y calculos/i);
+    expect(inspection.text).toMatch(/Procedimiento y cálculos/i);
     expect(inspection.text).toMatch(/dominio x\/L=0\s*->\s*0\.7/i);
     expect(inspection.text).toMatch(/x=0 ft\s*->\s*7 ft/i);
     expect(inspection.text).toMatch(/longitud real cargada=7 ft/i);
     expect(inspection.text).toMatch(/longitud real cargada=/i);
     expect(inspection.text).toMatch(/cobertura=70%/i);
     expect(inspection.text).toMatch(/base=longitud real/i);
-    expect(inspection.text).toMatch(/Factores del escenario\s+LC1=1/i);
-    expect(inspection.text).toMatch(/d_local\s*=\s*T d_global/i);
+    expect(inspection.text).toMatch(/Factores del escenario\s+LC1\s*=\s*1/i);
+    expect(inspection.text).toMatch(/Transformación T/i);
     expect(inspection.text).toMatch(/\[U_x, U_y, R_z\]/i);
-    expect(inspection.text).toMatch(/Auditoria independiente de cargas/i);
-    expect(inspection.text).toMatch(/Auditoria por trabajo virtual/i);
+    expect(inspection.text).toMatch(/Auditoría independiente de cargas/i);
+    expect(inspection.text).toMatch(/Reintegración por trabajo virtual/i);
     // The per-member residuals are a table since AG-014, so the label is a column header
     // rather than a `nombre=valor` pair. The audit itself is unchanged.
-    expect(inspection.text).toMatch(/Residuo mecanico\s+Residuo inicial\s+Residuo total/i);
+    expect(inspection.text).toMatch(/Residuo mecánico\s+Residuo inicial\s+Residuo total/i);
     expect(inspection.text).toMatch(/residuo equilibrio f[ií]sico/i);
   }, 30_000);
 

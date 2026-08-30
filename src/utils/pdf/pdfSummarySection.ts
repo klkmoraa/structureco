@@ -16,10 +16,7 @@ import { clearCell, clearDisplay, clearNumber, display, unitFor } from './pdfFor
 import { drawGlobalDcl } from './pdfDiagrams';
 import { equilibriumSums } from './pdfSubstitution';
 import { TYPE } from './pdfTheme';
-import type { PdfTableColumn } from './pdfBuilder';
 import type { ReportContext } from './reportContext';
-
-const NUMERIC: Pick<PdfTableColumn, 'align'> = { align: 'right' };
 
 /** Largest |value| of a quantity across the model, preferring the engine's critical points. */
 const absoluteExtreme = (
@@ -110,20 +107,12 @@ export const drawSummaryPart = (context: ReportContext): void => {
   if (!supported.length) {
     layout.note('El modelo no reporta ninguna reacción distinta de cero.');
   } else {
-    layout.table(
-      [
-        { header: 'Nodo', width: 90 },
-        { header: `Rx (${unitFor(project, 'force')})`, ...NUMERIC },
-        { header: `Ry (${unitFor(project, 'force')})`, ...NUMERIC },
-        { header: `M (${unitFor(project, 'moment')})`, ...NUMERIC },
-      ],
-      supported.map((node) => [
-        node.nodeId,
-        clearCell(project, node.rx, 'force', reactionMaximum),
-        clearCell(project, node.ry, 'force', reactionMaximum),
-        clearCell(project, node.rm, 'moment', moment ? Math.abs(moment.value) : 1),
-      ]),
-    );
+    layout.keyValues(supported.map((node) => [
+      `Nodo ${node.nodeId}`,
+      `Rx = ${clearCell(project, node.rx, 'force', reactionMaximum)} ${unitFor(project, 'force')}  ·  `
+      + `Ry = ${clearCell(project, node.ry, 'force', reactionMaximum)} ${unitFor(project, 'force')}  ·  `
+      + `M = ${clearCell(project, node.rm, 'moment', moment ? Math.abs(moment.value) : 1)} ${unitFor(project, 'moment')}`,
+    ]));
   }
 
   const quality = resolveNumericQualityState(analysis);

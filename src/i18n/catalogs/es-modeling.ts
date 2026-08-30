@@ -282,7 +282,6 @@ export const esModeling = {
   'inspector.materialLockedClassroomBody': 'E, A e I conservan los valores actuales. Cambia a Completo para editarlos.',
   'inspector.noEditableStiffness': 'Sin propiedades de rigidez editables',
   'inspector.noEditableStiffnessBody': 'El vínculo rígido se define por su cinemática.',
-  'inspector.momentReleases': 'Liberaciones de momento',
   'inspector.memberDerivedDescription': 'Geometría y extremos calculados, sin edición directa.',
   'inspector.nodalLoadFrequentDescription': 'Componentes de fuerza y momento aplicados al nodo.',
   'inspector.horizontalFx': 'Horizontal Fx',

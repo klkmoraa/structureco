@@ -16,10 +16,23 @@ import { clearNumber, displayCell, number, unitFor } from './pdfFormat';
 import { stepSubstitutions, type SubstitutionBlock } from './pdfSubstitution';
 import { asWorkedEquation, drawWorkedEquation, measureWorkedEquation } from './pdfEquation';
 import { TYPE } from './pdfTheme';
-import type { PdfTableColumn } from './pdfBuilder';
 import type { ReportContext } from './reportContext';
+import type { SolutionMethodId } from '../../analysis-methods/methodRegistry';
 
-const NUMERIC: Pick<PdfTableColumn, 'align'> = { align: 'right' };
+const METHOD_LABEL: Record<SolutionMethodId, string> = {
+  'matrix-stiffness': 'Matriz de rigidez',
+  'double-integration': 'Doble integración',
+  'conjugate-beam': 'Viga conjugada',
+  'three-moment': 'Teorema de los tres momentos',
+  'hardy-cross': 'Distribución de momentos de Hardy Cross',
+  'portal-method': 'Método del portal',
+  'cantilever-method': 'Método del voladizo',
+  'kani-frame': 'Método de Kani (sin traslación lateral)',
+  'virtual-work': 'Trabajo virtual / carga unitaria',
+  'method-of-sections': 'Cortes / secciones',
+  'method-of-joints': 'Método de los nudos',
+  'castigliano-truss': 'Castigliano / trabajo mínimo',
+};
 
 /**
  * Draws one step's substituted relations: a caption naming what the arithmetic belongs to,
@@ -42,33 +55,23 @@ const drawSubstitutions = (context: ReportContext, blocks: readonly Substitution
  * `memberAxis` — the same helper the canvas and the solver's axis resolution use. This reads
  * project data; it does not touch `src/engine`.
  */
-const drawGeometryTable = (context: ReportContext): void => {
+const drawGeometryRecords = (context: ReportContext): void => {
   const { layout, project, index } = context;
   if (!project.members.length) return;
-  layout.table(
-    [
-      { header: 'Miembro', width: 62 },
-      { header: `ΔX (${unitFor(project, 'length')})`, ...NUMERIC },
-      { header: `ΔY (${unitFor(project, 'length')})`, ...NUMERIC },
-      { header: `L (${unitFor(project, 'length')})`, ...NUMERIC },
-      { header: 'c', ...NUMERIC },
-      { header: 's', ...NUMERIC },
-    ],
-    project.members.map((member) => {
+  const lengthUnit = unitFor(project, 'length');
+  layout.keyValues(project.members.map((member) => {
       const ni = index.node(member.i);
       const nj = index.node(member.j);
-      if (!ni || !nj) return [member.id, 'n/d', 'n/d', 'n/d', 'n/d', 'n/d'];
+      if (!ni || !nj) return [`Miembro ${member.id}`, 'Geometría no disponible'];
       const axis = memberAxis(member, ni, nj);
       return [
-        member.id,
-        displayCell(project, axis.dx, 'length'),
-        displayCell(project, axis.dy, 'length'),
-        displayCell(project, axis.length, 'length'),
-        number(axis.c, 4),
-        number(axis.s, 4),
+        `Miembro ${member.id}`,
+        `ΔX = ${displayCell(project, axis.dx, 'length')} ${lengthUnit}  ·  `
+        + `ΔY = ${displayCell(project, axis.dy, 'length')} ${lengthUnit}  ·  `
+        + `L = ${displayCell(project, axis.length, 'length')} ${lengthUnit}  ·  `
+        + `c = ${number(axis.c, 4)}  ·  s = ${number(axis.s, 4)}`,
       ];
-    }),
-  );
+    }));
 };
 
 const drawGenericProcedure = (context: ReportContext): void => {
@@ -94,7 +97,7 @@ const drawGenericProcedure = (context: ReportContext): void => {
     // project's numbers. A step with nothing to substitute prints no equation at all.
     drawSubstitutions(context, stepSubstitutions(context, step.id));
 
-    if (step.id === 'geometry') drawGeometryTable(context);
+    if (step.id === 'geometry') drawGeometryRecords(context);
     if ((step.id === 'loads' || step.id === 'equivalent-loads') && hasModelPart) {
       layout.note('El intervalo, la intensidad y la resultante de cada carga están completos en «Modelo y acciones».', 12);
     }
@@ -118,12 +121,11 @@ const drawGenericProcedure = (context: ReportContext): void => {
       for (const entry of entries) {
         scaleByUnit.set(entry.unit, Math.max(scaleByUnit.get(entry.unit) ?? 1e-12, Math.abs(entry.value)));
       }
-      layout.table(
-        // The engine labels these with symbols (`ΣFx`, `κ₁`), so the column is typeset as
-        // maths rather than prose, which is what turned them into `SumFx` and `kappa_1`.
-        [{ header: title, width: 168, math: true }, { header: 'Valor', ...NUMERIC }, { header: 'Unidad', width: 78 }],
-        entries.map((entry) => [entry.label, clearNumber(entry.value, scaleByUnit.get(entry.unit) ?? 1), entry.unit]),
-      );
+      layout.text(title, TYPE.small, layout.fonts.bold, layout.palette.ink);
+      layout.keyValues(entries.map((entry) => [
+        entry.label,
+        `${clearNumber(entry.value, scaleByUnit.get(entry.unit) ?? 1)} ${entry.unit}`,
+      ]), 190);
     };
     quantities('Datos de este paso', step.inputs ?? []);
     quantities('Resultados de este paso', step.outputs ?? []);
@@ -132,16 +134,33 @@ const drawGenericProcedure = (context: ReportContext): void => {
 };
 
 export const drawProcedurePart = (context: ReportContext): void => {
-  const { layout, project } = context;
-  const method = project.settings.solutionMethod;
+  const { layout, solutionMethod: method } = context;
   layout.part(
     'Procedimiento y cálculos',
     method && method !== 'matrix-stiffness'
       ? 'El método elegido, desarrollado con los números de esta estructura.'
       : 'Cada paso del análisis matricial, con la operación que realmente se hizo.',
   );
-  // A chosen method writes this part with this project's numbers. Without one — or when the
-  // chosen one does not apply to this structure — the matrix walk stays: the document is never
-  // left without its procedure.
-  if (!drawMethodSection(context)) drawGenericProcedure(context);
+  layout.keyValues([
+    ['Motor de resultados', 'Matriz de rigidez (autoritativo)'],
+    ['Procedimiento documentado', METHOD_LABEL[method]],
+    [
+      'Estado',
+      method === 'portal-method' || method === 'cantilever-method'
+        ? 'Aproximación didáctica; la brecha contra la matriz se muestra en el procedimiento.'
+        : method === 'matrix-stiffness'
+          ? 'Cálculo directo del motor.'
+          : 'Reconstrucción procedural verificada contra el análisis matricial.',
+    ],
+  ]);
+  if (method === 'matrix-stiffness') {
+    drawGenericProcedure(context);
+    return;
+  }
+  // An explicit export choice must never silently turn into a different method. The preview
+  // keeps incompatible methods disabled; this guard also protects direct API callers and
+  // geometry-specific rejections discovered only by the method solver.
+  if (!drawMethodSection(context)) {
+    throw new Error('El método elegido no puede desarrollarse para este modelo. Elige otro método para la memoria PDF.');
+  }
 };

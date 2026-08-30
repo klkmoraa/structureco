@@ -454,20 +454,10 @@ describe('Inspector selection variants', () => {
 });
 
 describe('split Inspector surfaces', () => {
-  it('shows applicable procedures in Analysis and loads, explains their role, and persists the choice', async () => {
-    const user = userEvent.setup();
+  it('keeps PDF procedure methods out of Analysis and loads', () => {
     renderSplitSurface('analysisSetup');
-
-    expect(screen.getByRole('heading', { name: 'Procedimiento de la memoria' })).toBeTruthy();
-    expect(screen.getByText('Cambiar este método no altera el modelo ni los resultados N–V–M; cambia el procedimiento detallado que acompaña la memoria PDF.')).toBeTruthy();
-    const method = screen.getByRole('combobox', { name: 'Método de procedimiento' });
-    expect(within(method).getByRole('option', { name: 'Matricial de la rigidez' })).toBeTruthy();
-    expect(within(method).getByRole('option', { name: 'Método del portal' })).toBeTruthy();
-    expect(within(method).queryByRole('option', { name: 'Doble integración' })).toBeNull();
-
-    await user.selectOptions(method, 'portal-method');
-    await waitFor(() => expect(JSON.parse(localStorage.getItem(PROJECT_STORAGE_KEY) ?? '{}').settings.solutionMethod).toBe('portal-method'));
-    expect(screen.getByText('Es una aproximación didáctica para pórticos con carga lateral; se presenta con sus supuestos y se contrasta con el cálculo matricial.')).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: 'Procedimiento de la memoria' })).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Método de procedimiento' })).toBeNull();
   });
 
   it('keeps a focused numeric detail draft through X2, M1, K0, and back without publishing it', async () => {

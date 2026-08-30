@@ -282,7 +282,6 @@ export const enModeling = {
   'inspector.materialLockedClassroomBody': 'E, A, and I keep their current values. Switch to Complete to edit them.',
   'inspector.noEditableStiffness': 'No editable stiffness properties',
   'inspector.noEditableStiffnessBody': 'The rigid link is defined by its kinematics.',
-  'inspector.momentReleases': 'Moment releases',
   'inspector.memberDerivedDescription': 'Calculated geometry and ends, with no direct editing.',
   'inspector.nodalLoadFrequentDescription': 'Force and moment components applied to the node.',
   'inspector.horizontalFx': 'Horizontal Fx',

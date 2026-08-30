@@ -33,10 +33,27 @@ import {
   type ReportContext,
 } from './pdf/reportContext';
 import type { AnalysisResult, ProjectModel } from '../types';
+import { DEFAULT_SOLUTION_METHOD, type SolutionMethodId } from '../analysis-methods/methodRegistry';
+import { inspectPdfMethodAvailability } from './pdf/pdfMethodSection';
 
 export type { CalculationReportOptions, CalculationReportArtifact } from './pdf/reportContext';
 
 const DOCUMENT_TITLE = 'Memoria de cálculo estructural';
+
+const METHOD_FILENAME: Record<SolutionMethodId, string> = {
+  'matrix-stiffness': 'rigidez-matricial',
+  'double-integration': 'doble-integracion',
+  'conjugate-beam': 'viga-conjugada',
+  'three-moment': 'tres-momentos',
+  'hardy-cross': 'hardy-cross',
+  'portal-method': 'portal',
+  'cantilever-method': 'voladizo',
+  'kani-frame': 'kani',
+  'virtual-work': 'trabajo-virtual',
+  'method-of-sections': 'cortes',
+  'method-of-joints': 'nudos',
+  'castigliano-truss': 'castigliano',
+};
 
 /**
  * Repeated on the cover because that is the one page of a signed document everybody reads.
@@ -53,6 +70,20 @@ export const createCalculationReport = async (
   analysis: AnalysisResult,
   options: CalculationReportOptions = {},
 ): Promise<CalculationReportArtifact> => {
+  const solutionMethod = options.solutionMethod ?? DEFAULT_SOLUTION_METHOD;
+  const scenarioFactors = options.scenarioFactors ?? Object.fromEntries(
+    project.loadCases.filter((loadCase) => loadCase.active).map((loadCase) => [loadCase.id, 1]),
+  );
+  const combination = {
+    id: '__pdf_export__',
+    name: options.scenarioName ?? 'Escenario exportado',
+    factors: scenarioFactors,
+  };
+  const methodAvailability = inspectPdfMethodAvailability(project, analysis, combination);
+  const requestedAvailability = methodAvailability[solutionMethod];
+  if (!requestedAvailability.available) {
+    throw new Error(`El procedimiento seleccionado no aplica a este modelo (${requestedAvailability.reasonKey ?? 'sin cierre verificable'}).`);
+  }
   const [
     {
       PDFDocument, StandardFonts, rgb, PDFName, PDFArray, PDFNumber, PDFHexString,
@@ -77,9 +108,9 @@ export const createCalculationReport = async (
     analysis,
     payload,
     options,
-    scenarioFactors: options.scenarioFactors ?? Object.fromEntries(
-      project.loadCases.filter((loadCase) => loadCase.active).map((loadCase) => [loadCase.id, 1]),
-    ),
+    solutionMethod,
+    combination,
+    scenarioFactors,
     index: createModelIndex(project, analysis),
   };
   const { layout } = context;
@@ -114,5 +145,11 @@ export const createCalculationReport = async (
   layout.stampChrome(project.name, DOCUMENT_TITLE);
 
   const bytes = await attachPortablePayload(context);
-  return { bytes, filename: `${safeFilename(project.name)}-memoria-calculo.pdf`, payload };
+  return {
+    bytes,
+    filename: `${safeFilename(project.name)}-memoria-${METHOD_FILENAME[solutionMethod]}.pdf`,
+    payload,
+    solutionMethod,
+    methodAvailability,
+  };
 };

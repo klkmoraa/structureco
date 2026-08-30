@@ -651,13 +651,13 @@ const deformationBlocks = (context: ReportContext): SubstitutionBlock[] => {
     if (segment && EI > 0) {
       const moment = segment.moment[0] ?? 0;
       equations.push(
-        `dθ/dx (x = ${dim(project, segment.x0, 0, 1)}) = M/EI = ${operand(dim(project, moment, 1, 1))}/${dim(project, EI, 1, 2)} = ${number(moment / EI, 6)} rad/${lengthUnit}`,
+        `dθ/dx (x = ${dim(project, segment.x0, 0, 1)}) = M/EI = ${operand(dim(project, moment, 1, 1))}/${dim(project, EI, 1, 2)} = ${clearNumber(moment / EI, 1, 6)} rad/${lengthUnit}`,
       );
     }
     if (segment && EA > 0) {
       const axial = segment.axial[0] ?? 0;
       equations.push(
-        `du/dx (x = ${dim(project, segment.x0, 0, 1)}) = N/EA = ${operand(dim(project, axial, 1, 0))}/${dim(project, EA, 1, 0)} = ${number(axial / EA, 6)}`,
+        `du/dx (x = ${dim(project, segment.x0, 0, 1)}) = N/EA = ${operand(dim(project, axial, 1, 0))}/${dim(project, EA, 1, 0)} = ${clearNumber(axial / EA, 1, 6)}`,
       );
     }
     const extreme = result.deformationCriticalPoints

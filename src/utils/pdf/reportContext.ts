@@ -6,12 +6,18 @@
  * `createCalculationReport`, and its factories travel through this context. A static value
  * import anywhere in this folder would drag `pdf-lib` back into the entry chunk.
  */
-import type { AnalysisResult, MemberModel, MemberResult, NodeModel, ProjectModel } from '../../types';
+import type { AnalysisResult, LoadCombination, MemberModel, MemberResult, NodeModel, ProjectModel } from '../../types';
+import type { SolutionMethodId } from '../../analysis-methods/methodRegistry';
 import type { StructureCoPortablePayload } from '../portableTypes';
 import type { PortablePayloadOptions } from '../portablePayload';
 import type { PdfLayout } from './pdfBuilder';
 
 export interface CalculationReportOptions extends PortablePayloadOptions {
+  /**
+   * Procedure to develop in this particular PDF. It is deliberately an export option rather
+   * than analysis state: the matrix solver remains the sole authority for numerical results.
+   */
+  solutionMethod?: SolutionMethodId;
   includeEducationTrace?: boolean;
   /** Exact load-case multipliers used to produce the supplied analysis. */
   scenarioFactors?: Record<string, number>;
@@ -34,10 +40,28 @@ export interface CalculationReportOptions extends PortablePayloadOptions {
   includeMethodFreeBodies?: boolean;
 }
 
+/**
+ * A calculation-first memoir: diagrams and the chosen worked method, without the database-like
+ * annexes that are useful for audit packages but distract from a printable hand calculation.
+ */
+export const CALCULATION_PDF_EXPORT_DEFAULTS = {
+  includeDiagrams: true,
+  includeScope: false,
+  includeProcedure: true,
+  includeMethodFreeBodies: true,
+  includeMaterials: false,
+  includeAnnex: false,
+  includeEducationTrace: false,
+} as const satisfies CalculationReportOptions;
+
 export interface CalculationReportArtifact {
   bytes: Uint8Array;
   filename: string;
   payload: StructureCoPortablePayload;
+  /** Method represented by this immutable export artifact. */
+  solutionMethod: SolutionMethodId;
+  /** Deep, load-aware applicability checked by the real procedure modules. */
+  methodAvailability: Record<SolutionMethodId, { available: boolean; reasonKey?: string }>;
 }
 
 /** A colour produced by `rgb()`; named so the signature does not repeat the inference. */
@@ -110,6 +134,10 @@ export interface ReportContext {
   readonly analysis: AnalysisResult;
   readonly payload: StructureCoPortablePayload;
   readonly options: CalculationReportOptions;
+  /** Method selected for this PDF only; it never changes the solver or stored project. */
+  readonly solutionMethod: SolutionMethodId;
+  /** Synthetic combination carrying exactly the factors behind `analysis`. */
+  readonly combination: LoadCombination;
   /** Load-case multipliers behind the supplied analysis, resolved once. */
   readonly scenarioFactors: Record<string, number>;
   readonly index: ModelIndex;

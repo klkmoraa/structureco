@@ -60,15 +60,19 @@ const buildReport = async () => {
 };
 
 describe('memoria de calculo: calidad editorial', () => {
-  it('produce un documento A4 paginado, con cabecera y pie en cada pagina', async () => {
+  it('produce un documento A4 paginado, con portada e índice limpios y chrome en el cuerpo', async () => {
     const { pages } = await buildReport();
     expect(pages.length).toBeGreaterThanOrEqual(9);
     for (const page of pages) {
       expect(Math.abs(page.width - A4_WIDTH)).toBeLessThan(1);
       expect(Math.abs(page.height - A4_HEIGHT)).toBeLessThan(1);
       expect(page.text).not.toBe('');
-      expect(page.text).toMatch(/structureCo/);
-      expect(page.text).toMatch(new RegExp(`pagina ${page.number} de ${pages.length}`));
+    }
+    expect(pages[0]?.text).toMatch(/Memoria de cálculo estructural/);
+    expect(pages[1]?.text).toMatch(/Contenido/);
+    for (const page of pages.slice(2)) {
+      expect(page.text).toMatch(/Memoria de cálculo estructural/);
+      expect(page.text).toMatch(new RegExp(`página ${page.number} de ${pages.length}`));
     }
   }, 60_000);
 
@@ -87,26 +91,26 @@ describe('memoria de calculo: calidad editorial', () => {
   it('declara unidades, convenciones de signo, alcance y limitaciones', async () => {
     const { pages } = await buildReport();
     const all = pages.map((page) => page.text).join('\n');
-    expect(all).toMatch(/Unidades de presentacion/);
-    expect(all).toMatch(/Longitud y desplazamiento: ft/);
-    expect(all).toMatch(/Fuerza y reaccion: kip/);
-    expect(all).toMatch(/Momento: kip x ft/);
+    expect(all).toMatch(/Unidades de presentación/);
+    expect(all).toMatch(/Longitud y desplazamiento\s+ft/);
+    expect(all).toMatch(/Fuerza y reacción\s+kip/);
+    expect(all).toMatch(/Momento\s+kip·ft/);
     expect(all).toMatch(/Convenciones de signo/);
-    expect(all).toMatch(/N axial: positivo en traccion/);
-    expect(all).toMatch(/Alcance del analisis/);
+    expect(all).toMatch(/N axial positivo en tracción/);
+    expect(all).toMatch(/Alcance del análisis/);
     expect(all).toMatch(/Limitaciones declaradas/);
     expect(all).toMatch(/P-Delta/);
     expect(all).toMatch(/no reporta verificaciones normativas|no se aplica ninguna norma|No se aplica ninguna norma/i);
-    expect(all).toMatch(/Advertencias del analisis/);
+    expect(all).toMatch(/Advertencias del análisis/);
   }, 60_000);
 
   it('comunica calidad numérica sin convertir success en aprobación estructural', async () => {
     const { pages } = await buildReport();
     const all = pages.map((page) => page.text).join('\n');
-    expect(all).toMatch(/CALIDAD NUMERICA/);
+    expect(all).toMatch(/CALIDAD NUMÉRICA/);
     expect(all).toMatch(/ESTABLE/);
-    expect(all).toMatch(/condicion k1/i);
-    expect(all).toMatch(/no evalua seguridad estructural/i);
+    expect(all).toMatch(/condición/i);
+    expect(all).toMatch(/no si la estructura es segura/i);
     expect(all).not.toMatch(/EQUILIBRIO APROBADO/);
   }, 60_000);
 
@@ -127,7 +131,8 @@ describe('memoria de calculo: calidad editorial', () => {
     // column gap rather than by "min=/max=" labels. What is guarded is unchanged: both
     // extremes read as an exact 0.
     expect(all).toMatch(/N axial\s+0\s+0\s+kip/);
-    expect(all).toMatch(/Equilibrio\s+Fx=0, Fy=0, M=0/);
+    expect(all).toMatch(/SumF_x\s*=.*=\s*0\s+kip/);
+    expect(all).toMatch(/SumF_y\s*=.*=\s*0\s+kip/);
     // Only one context may legitimately carry a value that small: the solver's own
     // precision figures, where the exponent *is* the information.
     //
@@ -151,14 +156,14 @@ describe('memoria de calculo: calidad editorial', () => {
     // component now owns a column whose header carries the unit, so a force column and a
     // moment column cannot end up sharing one.
     expect(all).toMatch(/Fx_i \(kip\)/);
-    expect(all).toMatch(/M_i \(kip x ft\)/);
-    expect(all).toMatch(/M_j \(kip x ft\)/);
+    expect(all).toMatch(/M_i \(kip·ft\)/);
+    expect(all).toMatch(/M_j \(kip·ft\)/);
     // And the values under them stay converted: this beam's end shear is 2.5 kip, the same
     // figure the cover reports, not the 11.1 kN the engine holds internally.
-    expect(all).toMatch(/M_j \(kip x ft\)\s+0\s+2\.5\s+0/);
-    expect(all).toMatch(/REACCION MAX\. 2\.5 kip/);
+    expect(all).toMatch(/M_j \(kip·ft\)\s+0\s+2\.5\s+0/);
+    expect(all).toMatch(/REACCIÓN MÁXIMA\s+2\.5 kip/);
     // Reactions and displacements likewise declare their unit once, in the header.
-    expect(all).toMatch(/Rx \(kip\)\s+Ry \(kip\)\s+M \(kip x ft\)/);
+    expect(all).toMatch(/Rx \(kip\)\s+Ry \(kip\)\s+M \(kip·ft\)/);
     expect(all).toMatch(/Ux \(ft\)\s+Uy \(ft\)\s+Rz \(rad\)/);
   }, 60_000);
 

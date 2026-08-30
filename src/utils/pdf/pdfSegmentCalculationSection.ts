@@ -78,19 +78,16 @@ const drawEquations = (context: ReportContext, segment: Segment): void => {
     { symbol: 'M', key: 'moment', value: values.moment },
   ];
   layout.heading('Ecuaciones del tramo y sustitución en el corte', 3);
-  layout.table(
-    [
-      { header: 'Magnitud', width: 84 },
-      { header: 'Ecuación exacta para ξ = s - s₀', math: true },
-      { header: `Valor en s = ${(display(project, middle, 'length'))}`, width: 156, align: 'right' },
-    ],
-    equations.map(({ symbol, key, value }) => [
-      `${symbol}(s)`,
-      `${symbol}(\\xi) = ${formatPolynomial(project, key, segment[key], '\\xi')}`,
+  for (const { symbol, key, value } of equations) {
+    const relation = `${symbol}(\\xi) = ${formatPolynomial(project, key, segment[key], '\\xi')}`;
+    layout.text(`${symbol}(s)`, 7.8, layout.fonts.bold, layout.palette.ink);
+    layout.ensure(layout.measureMathBlock(relation, 8.2, 12));
+    layout.y -= layout.drawMathBlockAt(relation, 8.2, 12, layout.palette.ink, `(${layout.nextEquationNumber()})`);
+    layout.keyValues([[
+      `Corte en s = ${display(project, middle, 'length')}`,
       clearDisplay(project, value, quantityUnit(key)),
-    ]),
-    { size: 7.2 },
-  );
+    ]], 150);
+  }
   layout.keyValues([
     ['Dominio del tramo', `${display(project, segment.x0, 'length')} ≤ s ≤ ${display(project, segment.x1, 'length')}`],
     ['Variable local', `ξ = s - ${display(project, segment.x0, 'length')}; el origen de la ecuación es el inicio de este tramo.`],
@@ -103,7 +100,7 @@ export const drawSegmentCalculationPart = (context: ReportContext): void => {
   const { layout, analysis, project } = context;
   layout.part(
     'Cálculo por miembro y por tramo',
-    'Cada intervalo del análisis se documenta con su cuerpo libre, corte local y ecuaciones N(s), V(s) y M(s).',
+    'Diagramas N, V y M: cada intervalo lleva su cuerpo libre, corte local y ecuaciones N(s), V(s) y M(s).',
   );
   if (!analysis.memberResults.length) {
     layout.note('El análisis no produjo miembros para documentar por tramos.');

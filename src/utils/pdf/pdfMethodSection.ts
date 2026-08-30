@@ -48,13 +48,53 @@ import {
 } from './pdfSubstitution';
 import { pdfText } from './pdfGlyphs';
 import { asWorkedEquation, drawWorkedEquation, measureWorkedEquation, type EquationInput } from './pdfEquation';
-import type { PdfTableColumn } from './pdfBuilder';
+import type { PdfTableColumn, PdfTableOptions } from './pdfBuilder';
 import type { ReportContext } from './reportContext';
+import { SOLUTION_METHODS, applicableMethods, type SolutionMethodId } from '../../analysis-methods/methodRegistry';
+import type { AnalysisResult, LoadCombination, ProjectModel } from '../../types';
 
 const NUMERIC: Pick<PdfTableColumn, 'align'> = { align: 'right' };
 
 /** Height of a free-body figure. Tall enough for a truss, short enough that two share a page. */
 const SCENE_HEIGHT = 186;
+
+export type PdfMethodAvailability = Record<SolutionMethodId, { available: boolean; reasonKey?: string }>;
+
+/**
+ * Applies the same load-aware checks as the actual procedure renderer. Geometry alone is not
+ * enough for Kani, Portal, Cantilever, the continuous-beam procedures, or truss statics.
+ */
+export const inspectPdfMethodAvailability = (
+  project: ProjectModel,
+  analysis: AnalysisResult,
+  combination: LoadCombination,
+): PdfMethodAvailability => {
+  const shallow = new Set(applicableMethods(project).map((method) => method.id));
+  const availability = Object.fromEntries(SOLUTION_METHODS.map((method) => [
+    method.id,
+    method.id === 'matrix-stiffness'
+      ? { available: true }
+      : { available: false, reasonKey: 'method.unavailableForModel' },
+  ])) as PdfMethodAvailability;
+
+  const inspect = (method: SolutionMethodId, outcome: { applicable: boolean; reasonKey?: string }) => {
+    availability[method] = outcome.applicable
+      ? { available: true }
+      : { available: false, reasonKey: outcome.reasonKey ?? 'method.unavailableForModel' };
+  };
+  if (shallow.has('double-integration')) inspect('double-integration', solveDoubleIntegration(project, analysis, combination));
+  if (shallow.has('conjugate-beam')) inspect('conjugate-beam', solveConjugateBeam(project, analysis, combination));
+  if (shallow.has('three-moment')) inspect('three-moment', solveThreeMoment(project, analysis, combination));
+  if (shallow.has('hardy-cross')) inspect('hardy-cross', solveHardyCross(project, analysis, combination));
+  if (shallow.has('portal-method')) inspect('portal-method', solvePortalMethod(project, combination));
+  if (shallow.has('cantilever-method')) inspect('cantilever-method', solveCantileverMethod(project, combination));
+  if (shallow.has('kani-frame')) inspect('kani-frame', solveKaniFrame(project, analysis, combination));
+  if (shallow.has('virtual-work')) inspect('virtual-work', solveVirtualWork(project, analysis, combination));
+  if (shallow.has('method-of-sections')) inspect('method-of-sections', solveMethodOfSections(project, analysis, combination));
+  if (shallow.has('method-of-joints')) inspect('method-of-joints', solveMethodOfJoints(project, analysis, combination));
+  if (shallow.has('castigliano-truss')) inspect('castigliano-truss', solveCastiglianoTruss(project, analysis, combination));
+  return availability;
+};
 
 /**
  * Draws the free bodies of one method step, or nothing when the reader dropped them.
@@ -114,6 +154,46 @@ const drawRelation = (context: ReportContext, equation: EquationInput): void => 
   const worked = asWorkedEquation(equation);
   layout.ensure(measureWorkedEquation(layout, worked, 8.4, 16));
   layout.y -= drawWorkedEquation(layout, worked, 8.4, 16, layout.rgb(0.24, 0.28, 0.34), `(${layout.nextEquationNumber()})`);
+};
+
+/**
+ * Technical records without a grid. Each result is read top-to-bottom as a calculation note:
+ * identifier first, then labelled values and typeset relations. This replaces spreadsheet-like
+ * tables inside the chosen method while keeping every number and unit available for checking.
+ */
+const drawCalculationRecords = (
+  context: ReportContext,
+  columns: readonly PdfTableColumn[],
+  rows: readonly (readonly string[])[],
+  options: PdfTableOptions = {},
+): void => {
+  if (!columns.length || !rows.length) return;
+  const { layout } = context;
+  const size = options.size ?? 7.8;
+  const indent = options.indent ?? 0;
+  for (const row of rows) {
+    layout.ensure(Math.max(34, columns.length * 15));
+    layout.text(
+      `${columns[0]?.header ?? 'Dato'}: ${row[0] ?? '—'}`,
+      size + 0.4,
+      layout.fonts.bold,
+      layout.palette.ink,
+      indent,
+    );
+    for (let index = 1; index < columns.length; index += 1) {
+      const column = columns[index]!;
+      const value = String(row[index] ?? '—');
+      layout.text(column.header, Math.max(6.6, size - 0.6), layout.fonts.bold, layout.palette.inkSoft, indent + 12);
+      if (column.math) {
+        const equationIndent = indent + 24;
+        layout.ensure(layout.measureMathBlock(value, size, equationIndent));
+        layout.y -= layout.drawMathBlockAt(value, size, equationIndent, layout.palette.ink);
+      } else {
+        layout.text(value, size, layout.fonts.regular, layout.palette.ink, indent + 24);
+      }
+    }
+    layout.gap(2);
+  }
 };
 
 /**
@@ -186,7 +266,7 @@ const drawDoubleIntegration = (context: ReportContext, solution: DoubleIntegrati
       + 'obtiene en ese mismo apoyo: el método y el solver tienen que coincidir.',
       8.3, fonts.regular, undefined, 8,
     );
-    layout.table(
+    drawCalculationRecords(context,
       [
         { header: 'Redundante', width: 74, math: true },
         { header: 'Apoyo', width: 64 },
@@ -237,7 +317,7 @@ const drawDoubleIntegration = (context: ReportContext, solution: DoubleIntegrati
     + 'en cada empotramiento. El sistema es cuadrado por construcción.',
     8.3, fonts.regular, undefined, 8,
   );
-  layout.table(
+  drawCalculationRecords(context,
     [{ header: 'Condición', flex: 2.2, math: true }, { header: 'Tipo', width: 84 }, { header: `x (${lengthUnit})`, ...NUMERIC, width: 58 }],
     solution.conditions.map((condition) => [
       condition.statement,
@@ -246,7 +326,7 @@ const drawDoubleIntegration = (context: ReportContext, solution: DoubleIntegrati
     ]),
     { size: 7.4 },
   );
-  layout.table(
+  drawCalculationRecords(context,
     [{ header: 'Constante', width: 74, math: true }, { header: 'Valor', ...NUMERIC }],
     solution.constants.map((constant) => [constant.symbol, clearNumber(constant.value, Math.max(1, Math.abs(constant.value)))]),
     { size: 7.6 },
@@ -258,7 +338,7 @@ const drawDoubleIntegration = (context: ReportContext, solution: DoubleIntegrati
     + 'de arriba estaría mal. Estas son las diferencias máximas medidas.',
     8.3, fonts.regular, undefined, 8,
   );
-  layout.table(
+  drawCalculationRecords(context,
     [{ header: 'Contraste', flex: 2 }, { header: 'Diferencia máxima', ...NUMERIC }, { header: 'Unidad', width: 74 }],
     [
       ['Reacciones redundantes', clearNumber(solution.reactionResidual, 1), unitFor(project, 'force')],
@@ -333,7 +413,7 @@ const drawConjugateBeam = (context: ReportContext, solution: ConjugateBeamResult
     + 'momento, su valor es la flecha real ahí.',
     8.3, fonts.regular, undefined, 8,
   );
-  layout.table(
+  drawCalculationRecords(context,
     [
       { header: 'Nudo', width: 60 },
       { header: 'Apoyo real', width: 96 },
@@ -386,7 +466,7 @@ const drawConjugateBeam = (context: ReportContext, solution: ConjugateBeamResult
     + 'empotramiento. El sistema es cuadrado por construcción.',
     8.3, fonts.regular, undefined, 8,
   );
-  layout.table(
+  drawCalculationRecords(context,
     [{ header: 'Condición', flex: 2.2, math: true }, { header: 'Tipo', width: 84 }, { header: `x (${lengthUnit})`, ...NUMERIC, width: 58 }],
     solution.conditions.map((condition) => [
       condition.statement,
@@ -395,7 +475,7 @@ const drawConjugateBeam = (context: ReportContext, solution: ConjugateBeamResult
     ]),
     { size: 7.4 },
   );
-  layout.table(
+  drawCalculationRecords(context,
     [{ header: 'Constante', width: 74, math: true }, { header: 'Valor', ...NUMERIC }],
     solution.constants.map((constant) => [constant.symbol, clearNumber(constant.value, Math.max(1, Math.abs(constant.value)))]),
     { size: 7.6 },
@@ -407,7 +487,7 @@ const drawConjugateBeam = (context: ReportContext, solution: ConjugateBeamResult
     + 'de arriba estaría mal. Estas son las diferencias máximas medidas.',
     8.3, fonts.regular, undefined, 8,
   );
-  layout.table(
+  drawCalculationRecords(context,
     [{ header: 'Contraste', flex: 2 }, { header: 'Diferencia máxima', ...NUMERIC }, { header: 'Unidad', width: 74 }],
     [
       ['Giro a lo largo de la viga', clearNumber(solution.slopeResidual, 1), 'rad'],
@@ -498,7 +578,7 @@ const drawThreeMoment = (context: ReportContext, solution: ThreeMomentResult): v
     + 'que la ecuación de Clapeyron necesita, no el área ni el centroide por separado.',
     8.3, fonts.regular, undefined, 8,
   );
-  layout.table(
+  drawCalculationRecords(context,
     [
       { header: 'Vano', width: 70 },
       { header: `L (${lengthUnit})`, ...NUMERIC },
@@ -522,7 +602,7 @@ const drawThreeMoment = (context: ReportContext, solution: ThreeMomentResult): v
     + 'el solver tienen que coincidir.',
     8.3, fonts.regular, undefined, 8,
   );
-  layout.table(
+  drawCalculationRecords(context,
     [
       { header: 'Apoyo', width: 90, math: true },
       { header: `Tres momentos (${momentUnit})`, ...NUMERIC },
@@ -622,7 +702,7 @@ const drawVirtualWork = (context: ReportContext, solution: VirtualWorkResult): v
     + 'el método y el solver tienen que coincidir.',
     8.3, fonts.regular, undefined, 8,
   );
-  layout.table(
+  drawCalculationRecords(context,
     [
       { header: 'Nudo', width: 60 },
       { header: 'Componente', width: 90 },
@@ -652,7 +732,7 @@ const drawVirtualWork = (context: ReportContext, solution: VirtualWorkResult): v
     + 'carga real, nᵢ la fuerza bajo la carga virtual unitaria.',
     8.3, fonts.regular, undefined, 8,
   );
-  layout.table(
+  drawCalculationRecords(context,
     [
       { header: 'Barra', width: 56 },
       { header: `L (${lengthUnit})`, ...NUMERIC },
@@ -711,7 +791,7 @@ const drawCastiglianoTruss = (context: ReportContext, solution: CastiglianoTruss
     + 'estructura original: el método y el solver tienen que coincidir.',
     8.3, fonts.regular, undefined, 8,
   );
-  layout.table(
+  drawCalculationRecords(context,
     [
       { header: 'Redundante', width: 60, math: true },
       { header: 'Apoyo', width: 60 },
@@ -744,7 +824,7 @@ const drawCastiglianoTruss = (context: ReportContext, solution: CastiglianoTruss
     + 'estructura original.',
     8.3, fonts.regular, undefined, 8,
   );
-  layout.table(
+  drawCalculationRecords(context,
     [
       { header: 'Barra', width: 56 },
       { header: `L (${lengthUnit})`, ...NUMERIC },
@@ -818,7 +898,7 @@ const drawHardyCross = (context: ReportContext, solution: HardyCrossResult): voi
   );
 
   layout.heading('5.1 Momentos de empotramiento perfecto y rigidez por vano', 2);
-  layout.table(
+  drawCalculationRecords(context,
     [
       { header: 'Vano', width: 70 },
       { header: `L (${lengthUnit})`, ...NUMERIC },
@@ -871,7 +951,7 @@ const drawHardyCross = (context: ReportContext, solution: HardyCrossResult): voi
     + 'matricial obtiene en ese mismo apoyo: el método y el solver tienen que coincidir.',
     8.3, fonts.regular, undefined, 8,
   );
-  layout.table(
+  drawCalculationRecords(context,
     [
       { header: 'Apoyo', width: 90 },
       { header: `Hardy Cross (${momentUnit})`, ...NUMERIC },
@@ -992,7 +1072,7 @@ const drawKaniFrame = (context: ReportContext, solution: KaniResult): void => {
     + 'el método y el solver tienen que coincidir.',
     8.3, fonts.regular, undefined, 8,
   );
-  layout.table(
+  drawCalculationRecords(context,
     [
       { header: 'Barra', width: 60 },
       { header: `L (${lengthUnit})`, ...NUMERIC },
@@ -1034,13 +1114,10 @@ const drawMethodOfSections = (context: ReportContext, solution: MethodOfSections
   const { fonts, palette } = layout;
   const forceUnit = unitFor(project, 'force');
 
-  layout.heading('5. Procedimiento: Método de los Cortes');
+  layout.heading('5. Procedimiento: Cortes / secciones');
   layout.text(
-    'Un corte imaginario divide la armadura en dos, atravesando como mucho tres barras. El '
-    + 'equilibrio del lado que se conserva —las dos sumas de fuerzas y la de momentos, con las '
-    + 'reacciones y cargas ya conocidas de ese lado— basta para hallar las tres fuerzas de barra '
-    + 'que el corte dejó como incógnitas, sin recorrer la armadura nudo por nudo. Debajo de cada '
-    + 'corte van esas sumas ya efectuadas, con las fuerzas y los cosenos directores reales.',
+    'Cada corte atraviesa tres barras o menos. El DCL conserva un lado de la armadura y resuelve '
+    + 'ΣFx = 0, ΣFy = 0 y ΣM = 0 con sus cargas, reacciones y cosenos directores reales.',
     8.7, fonts.regular, undefined, 8,
   );
 
@@ -1056,7 +1133,7 @@ const drawMethodOfSections = (context: ReportContext, solution: MethodOfSections
       `Corte ${cutIndex + 1}: lado conservado {${cut.keptNodeIds.join(', ')}}`,
       8, fonts.bold, palette.ink, 8,
     );
-    layout.table(
+    drawCalculationRecords(context,
       [
         { header: 'Barra', width: 70 },
         { header: `Método de cortes (${forceUnit})`, ...NUMERIC },
@@ -1128,7 +1205,7 @@ const drawMethodOfJoints = (context: ReportContext, solution: MethodOfJointsResu
   for (const [stepIndex, step] of solution.steps.entries()) {
     layout.ensure(40);
     layout.text(`Nudo ${stepIndex + 1}: ${step.nodeId}`, 8, fonts.bold, palette.ink, 8);
-    layout.table(
+    drawCalculationRecords(context,
       [
         { header: 'Barra', width: 70 },
         { header: `Método de los nudos (${forceUnit})`, ...NUMERIC },
@@ -1211,7 +1288,7 @@ const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult):
     + 'planta hacia arriba.',
     8.3, fonts.regular, undefined, 8,
   );
-  layout.table(
+  drawCalculationRecords(context,
     [
       { header: 'Planta', width: 60 },
       { header: `Cortante de planta (${forceUnit})`, ...NUMERIC },
@@ -1243,7 +1320,7 @@ const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult):
   );
 
   layout.heading('5.2 Columnas: cortante, momento y axial', 2);
-  layout.table(
+  drawCalculationRecords(context,
     [
       { header: 'Columna', width: 56 },
       { header: 'Planta', width: 44 },
@@ -1302,7 +1379,7 @@ const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult):
   );
 
   layout.heading('5.3 Vigas: momento y cortante', 2);
-  layout.table(
+  drawCalculationRecords(context,
     [
       { header: 'Vano', width: 70 },
       { header: 'Planta', width: 44 },
@@ -1329,7 +1406,7 @@ const drawPortalMethod = (context: ReportContext, solution: PortalMethodResult):
     + 'las «Portal», el de esta sección.',
     8.3, fonts.regular, undefined, 8,
   );
-  layout.table(
+  drawCalculationRecords(context,
     [
       { header: 'Columna', width: 54 },
       { header: `Rx Portal (${forceUnit})`, ...NUMERIC },
@@ -1393,7 +1470,7 @@ const drawCantileverMethod = (context: ReportContext, solution: CantileverMethod
     + 'tracción, y las columnas más alejadas del centroide de áreas son las que más trabajan.',
     8.3, fonts.regular, undefined, 8,
   );
-  layout.table(
+  drawCalculationRecords(context,
     [
       { header: 'Columna', width: 56 },
       { header: 'Planta', width: 44 },
@@ -1464,7 +1541,7 @@ const drawCantileverMethod = (context: ReportContext, solution: CantileverMethod
   );
 
   layout.heading('5.2 Vigas: momento y cortante', 2);
-  layout.table(
+  drawCalculationRecords(context,
     [
       { header: 'Vano', width: 70 },
       { header: 'Planta', width: 44 },
@@ -1491,7 +1568,7 @@ const drawCantileverMethod = (context: ReportContext, solution: CantileverMethod
     + 'las «Voladizo», el de esta sección.',
     8.3, fonts.regular, undefined, 8,
   );
-  layout.table(
+  drawCalculationRecords(context,
     [
       { header: 'Columna', width: 54 },
       { header: `Rx Voladizo (${forceUnit})`, ...NUMERIC },
@@ -1526,9 +1603,9 @@ const drawCantileverMethod = (context: ReportContext, solution: CantileverMethod
  * the generic procedure rather than leaving the document with a hole where section 5 was.
  */
 export const drawMethodSection = (context: ReportContext): boolean => {
-  const { project, analysis } = context;
-  if (project.settings.solutionMethod === 'double-integration') {
-    const solution = solveDoubleIntegration(project, analysis, null);
+  const { project, analysis, solutionMethod, combination } = context;
+  if (solutionMethod === 'double-integration') {
+    const solution = solveDoubleIntegration(project, analysis, combination);
     if (!solution.applicable) {
       context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
       return false;
@@ -1536,8 +1613,8 @@ export const drawMethodSection = (context: ReportContext): boolean => {
     drawDoubleIntegration(context, solution);
     return true;
   }
-  if (project.settings.solutionMethod === 'conjugate-beam') {
-    const solution = solveConjugateBeam(project, analysis, null);
+  if (solutionMethod === 'conjugate-beam') {
+    const solution = solveConjugateBeam(project, analysis, combination);
     if (!solution.applicable) {
       context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
       return false;
@@ -1545,8 +1622,8 @@ export const drawMethodSection = (context: ReportContext): boolean => {
     drawConjugateBeam(context, solution);
     return true;
   }
-  if (project.settings.solutionMethod === 'portal-method') {
-    const solution = solvePortalMethod(project, null);
+  if (solutionMethod === 'portal-method') {
+    const solution = solvePortalMethod(project, combination);
     if (!solution.applicable) {
       context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
       return false;
@@ -1554,8 +1631,8 @@ export const drawMethodSection = (context: ReportContext): boolean => {
     drawPortalMethod(context, solution);
     return true;
   }
-  if (project.settings.solutionMethod === 'cantilever-method') {
-    const solution = solveCantileverMethod(project, null);
+  if (solutionMethod === 'cantilever-method') {
+    const solution = solveCantileverMethod(project, combination);
     if (!solution.applicable) {
       context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
       return false;
@@ -1563,8 +1640,8 @@ export const drawMethodSection = (context: ReportContext): boolean => {
     drawCantileverMethod(context, solution);
     return true;
   }
-  if (project.settings.solutionMethod === 'three-moment') {
-    const solution = solveThreeMoment(project, analysis, null);
+  if (solutionMethod === 'three-moment') {
+    const solution = solveThreeMoment(project, analysis, combination);
     if (!solution.applicable) {
       context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
       return false;
@@ -1572,8 +1649,8 @@ export const drawMethodSection = (context: ReportContext): boolean => {
     drawThreeMoment(context, solution);
     return true;
   }
-  if (project.settings.solutionMethod === 'hardy-cross') {
-    const solution = solveHardyCross(project, analysis, null);
+  if (solutionMethod === 'hardy-cross') {
+    const solution = solveHardyCross(project, analysis, combination);
     if (!solution.applicable) {
       context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
       return false;
@@ -1581,8 +1658,8 @@ export const drawMethodSection = (context: ReportContext): boolean => {
     drawHardyCross(context, solution);
     return true;
   }
-  if (project.settings.solutionMethod === 'kani-frame') {
-    const solution = solveKaniFrame(project, analysis, null);
+  if (solutionMethod === 'kani-frame') {
+    const solution = solveKaniFrame(project, analysis, combination);
     if (!solution.applicable) {
       context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
       return false;
@@ -1590,8 +1667,8 @@ export const drawMethodSection = (context: ReportContext): boolean => {
     drawKaniFrame(context, solution);
     return true;
   }
-  if (project.settings.solutionMethod === 'virtual-work') {
-    const solution = solveVirtualWork(project, analysis, null);
+  if (solutionMethod === 'virtual-work') {
+    const solution = solveVirtualWork(project, analysis, combination);
     if (!solution.applicable) {
       context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
       return false;
@@ -1599,8 +1676,8 @@ export const drawMethodSection = (context: ReportContext): boolean => {
     drawVirtualWork(context, solution);
     return true;
   }
-  if (project.settings.solutionMethod === 'method-of-sections') {
-    const solution = solveMethodOfSections(project, analysis, null);
+  if (solutionMethod === 'method-of-sections') {
+    const solution = solveMethodOfSections(project, analysis, combination);
     if (!solution.applicable) {
       context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
       return false;
@@ -1608,8 +1685,8 @@ export const drawMethodSection = (context: ReportContext): boolean => {
     drawMethodOfSections(context, solution);
     return true;
   }
-  if (project.settings.solutionMethod === 'method-of-joints') {
-    const solution = solveMethodOfJoints(project, analysis, null);
+  if (solutionMethod === 'method-of-joints') {
+    const solution = solveMethodOfJoints(project, analysis, combination);
     if (!solution.applicable) {
       context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
       return false;
@@ -1617,8 +1694,8 @@ export const drawMethodSection = (context: ReportContext): boolean => {
     drawMethodOfJoints(context, solution);
     return true;
   }
-  if (project.settings.solutionMethod === 'castigliano-truss') {
-    const solution = solveCastiglianoTruss(project, analysis, null);
+  if (solutionMethod === 'castigliano-truss') {
+    const solution = solveCastiglianoTruss(project, analysis, combination);
     if (!solution.applicable) {
       context.layout.text(pdfText(REJECTION_MESSAGE), 8.3, context.layout.fonts.regular, undefined, 8);
       return false;
