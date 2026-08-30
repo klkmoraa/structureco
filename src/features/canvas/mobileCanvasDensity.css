@@ -1,0 +1,184 @@
+/* Mobile canvas density ---------------------------------------------------
+   Keep the structural drawing as the primary surface on small screens. These
+   rules intentionally affect presentation only: they do not change model,
+   analysis, layer persistence or hit-testing. */
+
+.diagram-stack-layer--canvas { pointer-events:none; }
+.diagram-stack-layer--canvas ~ g { display:none; }
+.diagram-stack-panel-surface {
+  fill:color-mix(in srgb,var(--surface) 24%,var(--canvas-bg));
+  stroke:color-mix(in srgb,var(--border) 66%,transparent);
+  stroke-width:1;
+  vector-effect:non-scaling-stroke;
+}
+.diagram-stack-layer--canvas .diagram-stack-panel-title {
+  font-weight:800;
+  letter-spacing:.02em;
+}
+
+@media (max-width:700px) {
+  .canvas-host {
+    --canvas-safe-top:58px;
+    --canvas-safe-right:52px;
+    --canvas-safe-bottom:52px;
+    --canvas-safe-left:10px;
+  }
+
+  /* The mode/help pill and SNAP/GRID chips duplicate information available in
+     the toolbar/view sheet. Removing them on a phone returns drawing area. */
+  .canvas-mode-badge:not(.placing-load),
+  .canvas-view-chips {
+    display:none;
+  }
+
+  /* Result modes become a compact, horizontally scrollable strip instead of a
+     large second toolbar. The layer launcher occupies the reserved right edge. */
+  .canvas-evidence-rail {
+    top:7px;
+    left:7px;
+    right:54px;
+    width:auto;
+    max-width:none;
+    min-height:42px;
+    gap:3px;
+    padding:3px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    scrollbar-width:none;
+    overscroll-behavior-x:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  .canvas-evidence-rail::-webkit-scrollbar { display:none; }
+  .canvas-evidence-layer {
+    flex:0 0 auto;
+    min-width:0;
+    min-height:36px;
+    height:36px;
+    padding:0 9px;
+    border-radius:8px;
+    font-size:11px;
+    line-height:1;
+    white-space:nowrap;
+  }
+  .canvas-evidence-stack-choices {
+    flex:0 0 auto;
+    gap:2px;
+  }
+  .canvas-evidence-stack-choice {
+    width:34px;
+    min-width:34px;
+    height:34px;
+    min-height:34px;
+    border-radius:8px;
+    font-size:11px;
+  }
+
+  .canvas-layer-trigger {
+    top:7px;
+    right:7px;
+    width:42px;
+    min-width:42px;
+    height:42px;
+    min-height:42px;
+    border-radius:10px;
+  }
+  .canvas-layer-panel {
+    top:54px;
+    right:7px;
+    width:min(276px,calc(100% - 14px));
+    max-height:calc(100% - 112px);
+    border-radius:12px;
+  }
+  .canvas-layer-panel > header {
+    min-height:46px;
+    grid-template-columns:minmax(0,1fr) 32px;
+    padding:6px 7px 6px 10px;
+  }
+  .canvas-layer-panel > header strong { font-size:13px; }
+  .canvas-layer-panel > header span { display:none; }
+  .canvas-layer-panel > header button { width:32px; height:32px; border-radius:8px; }
+  .canvas-layer-list { gap:2px; padding:5px; }
+  #workspace-canvas .canvas-layer-row,
+  .canvas-layer-row {
+    min-height:44px;
+    grid-template-columns:30px minmax(0,1fr) 30px;
+    gap:7px;
+    padding:4px 6px;
+    border-radius:9px;
+  }
+  .canvas-layer-icon,
+  .canvas-layer-row .sc-layer-toggle__icon {
+    width:30px;
+    height:30px;
+    border-radius:8px;
+  }
+  .canvas-layer-copy,
+  .canvas-layer-row .sc-layer-toggle__copy { gap:0; }
+  .canvas-layer-copy strong,
+  .canvas-layer-row .sc-layer-toggle__copy strong { font-size:11px; }
+  .canvas-layer-copy small,
+  .canvas-layer-row .sc-layer-toggle__copy small { display:none; }
+  .canvas-layer-reset {
+    min-height:36px;
+    margin:0 5px 5px;
+    font-size:11px;
+  }
+
+  /* Keep only the useful portion of diagram legend on a phone. */
+  .canvas-result-legend {
+    top:54px;
+    left:7px;
+    width:min(205px,calc(100% - 68px));
+    padding:6px 8px;
+    grid-template-columns:auto minmax(0,1fr);
+    gap:2px 6px;
+    border-radius:9px;
+  }
+  .canvas-result-legend strong { font-size:11px; }
+  .canvas-result-legend span { min-width:0; font-size:9px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  .canvas-result-legend small { display:none; }
+  .canvas-result-legend i { width:16px; }
+
+  .canvas-controls {
+    right:7px;
+    bottom:7px;
+    border-radius:10px;
+  }
+  .canvas-controls .sc-icon-button,
+  .canvas-controls button {
+    width:40px;
+    min-width:40px;
+    height:40px;
+    min-height:40px;
+  }
+
+  /* Coordinates are useful with a mouse/pen but are noisy under a finger. Keep
+     scale visible so the user still knows whether the camera is zoomed. */
+  .canvas-status {
+    left:7px;
+    right:auto;
+    bottom:7px;
+    min-height:34px;
+    max-width:118px;
+    transform:none;
+    padding:0 9px;
+    border-radius:9px;
+  }
+  .canvas-status > svg,
+  .canvas-coordinate-output,
+  .canvas-status-divider { display:none; }
+  .canvas-scale-output { font-size:10px; }
+
+  /* ACM is a clean analysis view inside the canvas. The editor scene is masked
+     and compact copies use smaller annotation text and no member IDs. */
+  .diagram-stack-layer--canvas .diagram-stack-panel-title { font-size:10px!important; }
+  .diagram-stack-layer--canvas .diagram-stack-reading text { font-size:8px!important; }
+  .diagram-stack-layer--canvas .diagram-stack-member-line { stroke-width:1.7; }
+  .diagram-stack-layer--canvas .diagram-stack-replica-member { stroke-width:1.4; opacity:.75; }
+  .diagram-stack-layer--canvas .diagram-stack-member-fill { opacity:.12; }
+}
+
+@media (max-width:420px) {
+  .canvas-evidence-layer { padding-inline:8px; font-size:10px; }
+  .canvas-result-legend { width:min(188px,calc(100% - 66px)); }
+}
