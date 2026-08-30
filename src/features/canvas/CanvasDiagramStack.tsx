@@ -3,6 +3,7 @@ import type { AnalysisResult, NodeModel, ProjectModel } from '../../types';
 import type { TranslationKey } from '../../i18n/catalogs';
 import { segmentBezierControls } from '../../engine/diagram';
 import { memberAxis } from '../../graphics/structureGeometry';
+import { formatFixed } from '../../utils/numberFormat';
 import { STACK_QUANTITIES, STACK_SYMBOLS, type StackQuantity } from './diagramStack';
 
 type MemberResult = AnalysisResult['memberResults'][number];
@@ -107,7 +108,8 @@ export const CanvasDiagramStack = memo(({
       : t('results.moment');
   const formatValue = (value: number) => {
     const stable = Math.abs(value) < 5e-8 ? 0 : value;
-    return Number(stable.toFixed(Math.abs(stable) >= 100 ? 0 : 2)).toString();
+    const text = formatFixed(stable, Math.abs(stable) >= 100 ? 0 : 2, 'canvas');
+    return text.includes('.') ? text.replace(/0+$/, '').replace(/\.$/, '') : text;
   };
 
   return <g className="diagram-stack-layer diagram-stack-layer--external" data-canvas-layer="diagram-stack" aria-label={t('canvas.evidenceStackStructure')}>

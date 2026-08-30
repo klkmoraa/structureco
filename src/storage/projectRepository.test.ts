@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createDefaultProject } from '../data/defaultProject';
+import { createDefaultProject, CURRENT_SCHEMA_VERSION } from '../data/defaultProject';
 import { normalizeProject } from '../data/migrate';
 import { PROJECT_STORAGE_KEY, type StorageLike } from '../data/projectStorage';
 import {
@@ -99,7 +99,7 @@ describe('ProjectRepository', () => {
     expect(storage.getItem(PROJECT_STORAGE_KEY)).toBe(raw);
   });
 
-  it('migrates a v5 IndexedDB checksum when localStorage has the equivalent normalized v6 project', async () => {
+  it('migrates a v5 IndexedDB checksum when localStorage has the equivalent normalized project', async () => {
     const legacy = JSON.parse(JSON.stringify(createDefaultProject())) as Record<string, unknown>;
     legacy.schemaVersion = 5;
     for (const member of legacy.members as Array<Record<string, unknown>>) {
@@ -131,7 +131,7 @@ describe('ProjectRepository', () => {
     expect(second.status).toBe('already-migrated');
     expect((await repository.listRecoveries(v6.id))).toHaveLength(0);
     expect(await repository.openProject(v6.id)).toMatchObject({
-      schemaVersion: 6,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
       revision: 8,
       checksum: await projectChecksum(v6),
       project: v6,

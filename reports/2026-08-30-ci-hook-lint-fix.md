@@ -11,3 +11,7 @@ El siguiente requisito del mismo gate reveló que
 
 Validación local: lint, documentación canónica, prueba enfocada de línea de influencia y
 build de producción.
+
+La siguiente corrida completa también reveló dos contratos desactualizados: el lienzo
+externo ahora usa el formateador numérico central, y la migración de persistencia espera
+la versión de esquema vigente en vez de una versión fija.
