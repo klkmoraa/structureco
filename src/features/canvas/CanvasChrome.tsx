@@ -9,6 +9,7 @@ import type { StackQuantity } from './diagramStack';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { formatFixed } from '../../utils/numberFormat';
 import { onWorkspaceCommand } from '../workspace/workspaceCommands';
+import './mobileCanvasDensity.css';
 
 export interface CanvasChromeProps {
   modeLabel: string;
