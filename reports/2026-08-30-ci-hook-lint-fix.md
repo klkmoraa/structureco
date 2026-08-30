@@ -5,4 +5,9 @@ El gate rápido de `main` fallaba por interpretar el manejador local
 sin cambiar la lógica que carga un caso móvil guardado, para que el linter aplique
 correctamente las reglas de Hooks.
 
-Validación local: lint, prueba enfocada de línea de influencia y build de producción.
+El siguiente requisito del mismo gate reveló que
+`docs/product/reportlab-pdf-export.md` no tenía clasificación documental. Se marcó como
+`CANONICAL`, pues describe el flujo de exportación PDF vigente.
+
+Validación local: lint, documentación canónica, prueba enfocada de línea de influencia y
+build de producción.

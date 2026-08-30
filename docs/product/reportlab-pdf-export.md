@@ -1,5 +1,7 @@
 # Exportación PDF con ReportLab
 
+**Clasificación:** `CANONICAL`
+
 StructureCo conserva dos capas deliberadamente separadas:
 
 1. El navegador compone la memoria completa: portada, contenido, cálculo por método, fórmulas con sustituciones reales, materiales, resultados y el payload portable firmado.
