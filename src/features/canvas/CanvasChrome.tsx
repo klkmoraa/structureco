@@ -33,6 +33,8 @@ export interface CanvasChromeProps {
   stackQuantities?: readonly StackQuantity[];
   onStackToggle?: () => void;
   onStackQuantityToggle?: (quantity: StackQuantity) => void;
+  /** Keep the scale probe for canvas tests while the live readout belongs to Instrument. */
+  showCoordinateReadout?: boolean;
 }
 
 /** Presentation-only canvas controls. Camera and model mutations stay upstream. */
@@ -59,6 +61,7 @@ export const CanvasChrome = ({
   stackQuantities,
   onStackToggle,
   onStackQuantityToggle,
+  showCoordinateReadout = true,
 }: CanvasChromeProps) => {
   const { t } = useI18n();
 
@@ -86,10 +89,12 @@ export const CanvasChrome = ({
       <IconButton label={t('canvas.zoomOut')} title={t('canvas.zoomOut')} onClick={onZoomOut}><Minus size={18} /></IconButton>
       <IconButton label={t('canvas.fit')} title={t('canvas.fit')} onClick={() => onFit()}><LocateFixed size={18} /></IconButton>
     </div>
-    <div className="canvas-status" data-canvas-chrome="coordinates">
-      <Crosshair size={14} aria-hidden="true" />
-      <output ref={coordinateReadoutRef} className="canvas-coordinate-output" aria-label={t('canvas.coordinates')}>X — · Y — {lengthLabel}</output>
-      <span className="canvas-status-divider" aria-hidden="true">·</span>
+    <div className={`canvas-status${showCoordinateReadout ? '' : ' canvas-status--legacy-scale-probe'}`} data-canvas-chrome="coordinates">
+      {showCoordinateReadout ? <>
+        <Crosshair size={14} aria-hidden="true" />
+        <output ref={coordinateReadoutRef} className="canvas-coordinate-output" aria-label={t('canvas.coordinates')}>X — · Y — {lengthLabel}</output>
+        <span className="canvas-status-divider" aria-hidden="true">·</span>
+      </> : null}
       <span className="canvas-scale-output">{t('canvas.scale')} {formatFixed((scale / 85), 2)}×</span>
     </div>
   </>;

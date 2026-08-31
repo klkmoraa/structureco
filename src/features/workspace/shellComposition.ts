@@ -6,10 +6,10 @@
  * que sus fronteras y su histéresis se prueben con `vitest` sin navegador.
  *
  * POR QUÉ ES CREÍBLE: las constantes de chrome y las reglas CB-1..CB-6 usan el
- * modelo versionado `scripts/canvas-budget-model.mjs`, que reproduce once mediciones de
- * CRI-7 §2 con un error máximo de 0.24 puntos porcentuales. La frontera
- * Expanded↔Medium NO está escrita en ninguna parte: sale de CB, y este módulo
- * la recalcula (1042–1130 px según altura, ver `expandedBoundaryWidth`).
+ * modelo de presupuesto documentado por las pruebas de este módulo, que
+ * reproduce las mediciones de CRI-7 §2. La frontera Expanded↔Medium NO está
+ * escrita en ninguna parte: sale de CB, y este módulo la recalcula
+ * (1042–1130 px según altura, ver `expandedBoundaryWidth`).
  *
  * CONTRATOS QUE SOSTIENE:
  * - **T-INV-4**: el resolutor lee el viewport de layout (`innerWidth`/
@@ -44,7 +44,7 @@ export interface ShellComposition {
 // 1. Constantes de chrome — despejadas de las mediciones de CRI-7 §2
 // ---------------------------------------------------------------------------
 
-/** Ver `canvas-budget-model.mjs` §1: cada número trae su despeje documentado. */
+/** Cada número conserva su despeje junto al presupuesto que lo consume. */
 export const CHROME = {
   /** 8.9% de 1024×768 = 69 985 px² / 1024 = 68.3 px · 7.6% de 1440×900 → 68.4 px */
   topBarWide: 68,

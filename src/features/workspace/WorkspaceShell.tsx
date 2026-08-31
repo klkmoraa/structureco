@@ -1,10 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState, type RefObject } from 'react';
-import { SlidersHorizontal } from 'lucide-react';
 import { Inspector } from '../inspector/Inspector';
 import { ResultsPanel } from '../results/ResultsPanel';
 import { StructuralCanvas } from '../canvas/StructuralCanvas';
-import { ToolRail } from '../canvas/ToolRail';
-import { TopBar } from '../topbar/TopBar';
+import { Console } from './Console';
+import { Instrument } from './Instrument';
 import { ClassroomGuide } from '../classroom/ClassroomGuide';
 import { ToastNotification } from './ToastNotification';
 import { useI18n } from '../../i18n/useI18n';
@@ -21,6 +20,7 @@ import { preloadDenseResultsSurface, type DenseResultView } from '../results/den
 import type { SurfaceId } from './surfacePresentation';
 import '../../design-system/components/ui.css';
 import './phase1.css';
+import './console.css';
 import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
 import { isOwnHistoryScope } from './commandRegistry';
 import type { AnalysisResult } from '../../types';
@@ -83,6 +83,8 @@ const WorkspaceBrokerContent = ({
   const { t } = useI18n();
   const { project, analysis, isAnalyzing, setActiveTool, setSelection, setResultTab, analyze, undo, redo, canUndo, canRedo } = useProject();
   const [pendingModelDoctorNotification, setPendingModelDoctorNotification] = useState<PendingModelDoctorNotification | null>(null);
+  const coordinateReadoutRef = useRef<HTMLOutputElement>(null);
+  const scaleReadoutRef = useRef<HTMLOutputElement>(null);
   const modelDoctorNotificationIdRef = useRef(0);
   const pendingModelDoctorNotificationIdRef = useRef<number | null>(null);
   const reportedAnalysisRef = useRef<AnalysisResult | null>(null);
@@ -313,11 +315,11 @@ const WorkspaceBrokerContent = ({
     else {
       closeSurface('results');
       setDataSurfaceStateEpoch((epoch) => epoch + 1);
-      // En K0 Utilidades sigue siendo un lanzador persistente mientras la hoja
+      // En K0 la consola sigue siendo un lanzador persistente mientras la hoja
       // se cierra. Es el respaldo correcto cuando el cierre viene del propio
       // panel y el disparador original ya no está montado — nunca cuando el
       // bróker sí pudo devolver el foco al botón que abrió Resultados.
-      focusStableLauncherIfUnclaimed('.utility-more-button');
+      focusStableLauncherIfUnclaimed('.results-launcher, .console-palette-button, .utility-more-button');
     }
   }, [closeSurface, openSurface]);
   const openDetail = useCallback((trigger?: HTMLElement | null) => {
@@ -343,10 +345,10 @@ const WorkspaceBrokerContent = ({
     else {
       closeSurface('bom');
       setDataSurfaceStateEpoch((epoch) => epoch + 1);
-      // Los items de Exportar/Utilidades se desmontan al abrir la superficie:
+      // La paleta se desmonta al abrir la superficie:
       // ahí el bróker no tiene a dónde devolver el foco y este lanzador
       // persistente es el respaldo de la composición vigente.
-      focusStableLauncherIfUnclaimed('.topbar-export-trigger, .utility-more-button');
+      focusStableLauncherIfUnclaimed('.console-palette-button, .utility-more-button');
     }
   }, [closeSurface, openSurface]);
   const setComparisonOpen = useCallback((open: boolean) => {
@@ -381,16 +383,14 @@ const WorkspaceBrokerContent = ({
     inspectorCollapsed={!inspectorOpen}
     inspectorCompact={detail.open && layout.inspectorCompact}
     inspectorWidth={layout.inspectorWidth}
-    toolDockPosition={layout.toolDockPosition}
     fullCanvas={layout.fullCanvas}
-    topBar={<TopBar
+    console={<Console
       onOpenHome={onOpenHome}
       onOpenSpace3D={onOpenSpace3D}
       resultsOpen={results.open}
       layoutActions={{
         inspectorCollapsed: !inspectorOpen,
         fullCanvas: layout.fullCanvas,
-        toolDockPosition: layout.toolDockPosition,
         onToggleInspector: (trigger) => {
           if (layout.fullCanvas) setPreference('fullCanvas', false);
           if (detail.open) closeDetail();
@@ -411,18 +411,22 @@ const WorkspaceBrokerContent = ({
           }
           togglePreference('fullCanvas');
         },
-        onToolDockPositionChange: (position) => setPreference('toolDockPosition', position),
         onOpenAnalysisSetup: () => openSurface('analysisSetup'),
         onOpenViewSettings: () => openSurface('view'),
       }}
     />}
-    toolRail={<ToolRail />}
     workspace={<>
       {project.settings.calculationMode === 'classroom' ? <ClassroomGuide className="classroom-workspace-journey" project={project} analysis={analysis} onChooseTool={setActiveTool} onAnalyze={() => {
         emitWorkspaceCommand('analysis-requested');
         analyze();
       }} /> : null}
-      <StructuralCanvas layers={editorLayers} dispatchLayers={dispatchEditorLayers} onRequestInspector={() => openDetail()} />
+      <StructuralCanvas
+        layers={editorLayers}
+        dispatchLayers={dispatchEditorLayers}
+        onRequestInspector={() => openDetail()}
+        coordinateReadoutRef={coordinateReadoutRef}
+        scaleReadoutRef={scaleReadoutRef}
+      />
       {broker.isRetained('results') ? <ResultsPanel
         presentation={results.presentation as 'dock' | 'inset' | 'sheet'}
         status={results.status}
@@ -491,10 +495,7 @@ const WorkspaceBrokerContent = ({
       {broker.isRetained('analysisSetup') ? <Inspector surface="analysisSetup" className={analysisSetup.presentation === 'sheet' && analysisSetup.status === 'active' ? 'mobile-open' : ''} presentation={analysisSetup.presentation as 'dock' | 'inset' | 'sheet'} status={analysisSetup.status} onClose={() => closeSurface('analysisSetup')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} onMobileDetentCycle={cycleInspectorDetent} activeTool={activeTool} onActiveToolChange={setActiveTool} /> : null}
       {broker.isRetained('view') ? <Inspector surface="view" className={view.presentation === 'sheet' && view.status === 'active' ? 'mobile-open' : ''} presentation={view.presentation as 'dock' | 'inset' | 'sheet'} status={view.status} onClose={() => closeSurface('view')} mobileDetent={layout.inspectorDetent} onMobileDetentChange={(detent) => setPreference('inspectorDetent', detent)} onMobileDetentCycle={cycleInspectorDetent} /> : null}
     </div>}
-    floatingActions={shellClass === 'K0' ? undefined : <div className="workspace-surface-launcher">
-      <button className="mobile-inspector-toggle" onClick={(event) => openDetail(event.currentTarget)} aria-label={t('inspector.open')} aria-expanded={detail.status === 'active'} aria-controls="workspace-detail"><SlidersHorizontal size={20} /></button>
-    </div>}
-    footer={<div className="professional-note">{t('app.professionalNote')}</div>}
+    footer={<Instrument coordinateReadoutRef={coordinateReadoutRef} scaleReadoutRef={scaleReadoutRef} />}
   /></DataSurfaceRetainedStateProvider>;
 };
 
@@ -503,7 +504,7 @@ const WorkspaceSurface = (props: WorkspaceShellProps) => {
   const layoutController = useWorkspaceLayoutPreferences();
   const { shellClass } = useShellComposition();
   // Results is never resident, in any class (CRI-100): state and reliability
-  // already live in the TopBar and evidence is a canvas layer, so the panel only
+  // already live in the Instrument and evidence is a canvas layer, so the panel only
   // opens on request now — it no longer starts open by default.
   const initialOpen = useMemo<SurfaceId[]>(() => {
     if (layoutController.preferences.fullCanvas) return [];

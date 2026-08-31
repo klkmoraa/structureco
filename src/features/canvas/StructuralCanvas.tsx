@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type Ref } from 'react';
+import { lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type Ref, type RefObject } from 'react';
 import { X } from 'lucide-react';
 import { useProject } from '../../store/ProjectContext';
 import type { DiagramPoint, DiagramQuantity, MemberModel, NodeModel, Selection, Tool } from '../../types';
@@ -224,10 +224,14 @@ export const StructuralCanvas = ({
   onRequestInspector,
   layers,
   dispatchLayers,
+  coordinateReadoutRef: externalCoordinateReadoutRef,
+  scaleReadoutRef: externalScaleReadoutRef,
 }: {
   onRequestInspector?: () => void;
   layers: EditorLayerState;
   dispatchLayers: (action: EditorLayerAction) => void;
+  coordinateReadoutRef?: RefObject<HTMLOutputElement | null>;
+  scaleReadoutRef?: RefObject<HTMLOutputElement | null>;
 }) => {
   const {
     project,
@@ -262,7 +266,8 @@ export const StructuralCanvas = ({
   const compactCanvasChrome = surfaceBroker?.shellClass === 'K0';
   const hostRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const coordinateReadoutRef = useRef<HTMLOutputElement>(null);
+  const localCoordinateReadoutRef = useRef<HTMLOutputElement>(null);
+  const coordinateReadoutRef = externalCoordinateReadoutRef ?? localCoordinateReadoutRef;
   const [size, setSize] = useState<Size>({ width: 1000, height: 640 });
   const [canvasMeasured, setCanvasMeasured] = useState(false);
   const [camera, setCamera] = useState<Camera>({ scale: 85, x: 260, y: 500 });
@@ -289,6 +294,13 @@ export const StructuralCanvas = ({
   const [structuralEditLiveDraft, setStructuralEditLiveDraft] = useState<StructuralEditDraft | null>(null);
   const [structuralEditPointerArmed, setStructuralEditPointerArmed] = useState(false);
   const [structuralEditCommitError, setStructuralEditCommitError] = useState('');
+
+  useEffect(() => {
+    if (externalScaleReadoutRef?.current) {
+      externalScaleReadoutRef.current.textContent = `${formatFixed(camera.scale / 85, 2)}×`;
+    }
+  }, [camera.scale, externalScaleReadoutRef]);
+
   /**
    * Generador de estructuras. El lienzo guarda sólo lo que tiene que dibujar
    * —el ghost y su ancla— y quién está pidiendo un punto; los parámetros viven
@@ -650,10 +662,11 @@ export const StructuralCanvas = ({
   }, []);
 
   const updateCoordinateReadout = useCallback((clientX: number, clientY: number, pointerType: string) => {
-    if (!canvasPointerProfile(pointerType).showsCoordinates || !coordinateReadoutRef.current) return;
+    const readout = coordinateReadoutRef.current;
+    if (!canvasPointerProfile(pointerType).showsCoordinates || !readout) return;
     const point = screenToModelPoint(localScreenPoint(clientX, clientY), cameraRef.current);
-    coordinateReadoutRef.current.textContent = `X ${formatFixed(toDisplay(point.x, units, 'length'), 3)} · Y ${formatFixed(toDisplay(point.y, units, 'length'), 3)} ${lengthLabel}`;
-  }, [lengthLabel, localScreenPoint, units]);
+    readout.textContent = `X ${formatFixed(toDisplay(point.x, units, 'length'), 3)} · Y ${formatFixed(toDisplay(point.y, units, 'length'), 3)} ${lengthLabel}`;
+  }, [coordinateReadoutRef, lengthLabel, localScreenPoint, units]);
 
   const fitModel = useCallback((bottomReserve = 0) => {
     if (!project.nodes.length || !Number.isFinite(size.width) || !Number.isFinite(size.height) || size.width <= 0 || size.height <= 0) return;
@@ -2645,6 +2658,7 @@ export const StructuralCanvas = ({
         snapEnabled={view.snap}
         gridEnabled={view.showGrid}
         coordinateReadoutRef={coordinateReadoutRef}
+        showCoordinateReadout={!externalCoordinateReadoutRef}
         lengthLabel={lengthLabel}
         scale={camera.scale}
         onCancelPlacement={() => setActiveTool('select')}

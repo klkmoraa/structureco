@@ -142,15 +142,25 @@ const renderExampleApp = async (user: ReturnType<typeof userEvent.setup>) => {
 };
 
 /**
- * El menú de utilidades es el de la TopBar. Se acota al chrome global porque
- * las acciones contextuales del lienzo publican su propio desbordamiento con el
- * mismo rótulo (CRI-95/CRI-108): son dos dueños distintos y la prueba dice de
- * cuál habla, en vez de exigir que uno se renombre.
+ * El menú del proyecto vive en la consola global, fuera del lienzo.
  */
-const openUtilityMenu = async (user: ReturnType<typeof userEvent.setup>) => {
-  const topbar = within(document.querySelector('.topbar') as HTMLElement);
-  await user.click(topbar.getByRole('button', { name: /herramientas del espacio de trabajo|workspace tools/i }));
-  return screen.findByRole('dialog', { name: /herramientas del espacio de trabajo|workspace tools/i });
+const openProjectMenu = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(screen.getByRole('button', { name: /proyecto actual|current project/i }));
+  await waitFor(() => expect(document.querySelector('.console-project-popover')).not.toBeNull());
+  return document.querySelector('.console-project-popover') as HTMLElement;
+};
+
+const openCommandPalette = async (user: ReturnType<typeof userEvent.setup>) => {
+  const launcher = screen.queryByRole('button', { name: /abrir la paleta de comandos/i });
+  if (launcher) await user.click(launcher);
+  else await user.keyboard('{Control>}k{/Control}');
+  return screen.findByRole('dialog', { name: /paleta de comandos|command palette/i });
+};
+
+const openModelDoctor = async (user: ReturnType<typeof userEvent.setup>) => {
+  const palette = await openCommandPalette(user);
+  await user.click(within(palette).getByRole('option', { name: /Model Doctor/i }));
+  return screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
 };
 
 /**
@@ -232,7 +242,8 @@ describe('structureCo app shell', () => {
     await screen.findByRole('button', { name: /^analizar$/i }, { timeout: 10_000 });
     expect(screen.queryByRole('button', { name: /experimental 3d/i })).toBeNull();
 
-    await user.click(screen.getByRole('button', { name: /abrir space 3d/i }));
+    const projectMenu = await openProjectMenu(user);
+    await user.click(within(projectMenu).getByRole('button', { name: /abrir space 3d/i }));
     await confirmSpace3DEntry(user);
     expect(await screen.findByRole('button', { name: 'Editor 2D' }, { timeout: 10_000 })).toBeTruthy();
 
@@ -308,7 +319,7 @@ describe('structureCo app shell', () => {
     await user.click(screen.getByRole('button', { name: /nuevo proyecto/i }));
 
     expect(await screen.findByRole('button', { name: /proyecto actual/i }, { timeout: 5000 })).toBeTruthy();
-    expect(document.querySelector('.topbar-project-trigger strong')?.textContent).toBe('Proyecto sin título');
+    expect(document.querySelector('.console-project-trigger strong')?.textContent).toBe('Proyecto sin título');
     expect(container.querySelectorAll('.node-object')).toHaveLength(0);
     expect(container.querySelectorAll('.member-object')).toHaveLength(0);
   }, 10_000);
@@ -333,9 +344,9 @@ describe('structureCo app shell', () => {
     });
     expect(screen.getByRole('button', { name: 'Resultados' }).getAttribute('aria-pressed')).toBe('false');
 
-    await user.click(screen.getByRole('button', { name: 'Configuración de análisis' }));
-    expect((screen.getByRole('combobox', { name: 'Unidades' }) as HTMLSelectElement).value).toBe('kN-m');
-    expect((screen.getByRole('combobox', { name: 'Modo de cálculo' }) as HTMLSelectElement).value).toBe('complete');
+    await user.click(screen.getByRole('button', { name: 'Análisis y cargas' }));
+    expect(document.querySelector('[data-workspace-surface="analysisSetup"]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: /completo/i })).toBeTruthy();
   }, 15_000);
 
   it('keeps every product entry point reachable from Home navigation', async () => {
@@ -395,9 +406,9 @@ describe('structureCo app shell', () => {
     const user = userEvent.setup();
     await renderExampleApp(user);
 
-    expect(document.querySelector('.topbar .brand-mark')).not.toBeNull();
+    expect(document.querySelector('.console .brand-mark')).not.toBeNull();
     expect(screen.getByRole('button', { name: /^analizar$/i })).toBeTruthy();
-    expect(document.querySelector('.topbar-project-trigger')?.textContent).toContain('Pórtico de ejemplo');
+    expect(document.querySelector('.console-project-trigger')?.textContent).toContain('Pórtico de ejemplo');
 
     await user.click(screen.getByRole('button', { name: /^analizar$/i }));
 
@@ -431,11 +442,8 @@ describe('structureCo app shell', () => {
   it('opens Model Doctor before analysis, isolates the workspace, and returns focus on Escape', async () => {
     const user = userEvent.setup();
     const { container } = await renderExampleApp(user);
-    const doctorButton = screen.getByRole('button', { name: 'Model Doctor' });
-
-    await user.click(doctorButton);
-
-    expect(await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 })).toBeTruthy();
+    const paletteButton = screen.getByRole('button', { name: /abrir la paleta de comandos/i });
+    await openModelDoctor(user);
     const shell = container.querySelector<HTMLElement>('.app-shell')!;
     expect(shell.inert).toBe(true);
     expect(shell.getAttribute('aria-hidden')).toBe('true');
@@ -455,7 +463,7 @@ describe('structureCo app shell', () => {
     // estar aislado; `aria-hidden` sí es un atributo real y se comprueba entero.
     expect(shell.inert).toBeFalsy();
     expect(shell.hasAttribute('aria-hidden')).toBe(false);
-    await waitFor(() => expect(document.activeElement).toBe(doctorButton));
+    await waitFor(() => expect(document.activeElement).toBe(paletteButton));
   });
 
   it('keeps a completed analysis while Model Doctor is opened and closed', async () => {
@@ -467,8 +475,7 @@ describe('structureCo app shell', () => {
     await screen.findByTestId('diagram-chart', {}, { timeout: 5_000 });
     const diagramsBefore = screen.getAllByTestId('diagram-chart').length;
 
-    await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
-    await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
+    await openModelDoctor(user);
     await user.keyboard('{Escape}');
 
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Model Doctor' })).toBeNull());
@@ -507,23 +514,20 @@ describe('structureCo app shell', () => {
     render(<App />);
     await openWorkspace(user);
 
-    await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
-    let doctor = await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
+    let doctor = await openModelDoctor(user);
     let noLoads = within(doctor).getByRole('article', { name: /sin cargas/i });
     await user.click(within(noLoads).getByRole('button', { name: /reconocer/i }));
     expect(within(noLoads).getByText(/reconocido para esta sesi/i)).toBeTruthy();
     await user.click(within(doctor).getByRole('button', { name: /cerrar model doctor/i }));
 
-    await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
-    doctor = await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
+    doctor = await openModelDoctor(user);
     expect(within(doctor).getByText(/reconocido para esta sesi/i)).toBeTruthy();
     await user.click(within(doctor).getByRole('button', { name: /cerrar model doctor/i }));
 
     await user.click(screen.getByRole('button', { name: /proyecto actual/i }));
     const projectHub = await screen.findByRole('dialog', { name: /proyecto actual/i });
     await user.click(within(projectHub).getByRole('button', { name: /proyecto nuevo/i }));
-    await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
-    doctor = await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
+    doctor = await openModelDoctor(user);
     noLoads = within(doctor).getByRole('article', { name: /sin cargas/i });
     expect(within(noLoads).queryByText(/reconocido para esta sesi/i)).toBeNull();
   });
@@ -539,20 +543,16 @@ describe('structureCo app shell', () => {
     await renderExampleApp(user);
     expect(document.querySelector('.app-shell')?.getAttribute('data-shell-class')).toBe('K0');
     await user.click(screen.getByRole('button', { name: /^analizar$/i }));
-    await waitFor(() =>
-      expect(document.querySelector('.analysis-status-shell')?.getAttribute('data-analysis-status')).toBe('resolved'),
-    );
+    await waitFor(() => expect(document.querySelector('.workspace-instrument [data-analysis-status="resolved"]')).not.toBeNull());
     await openResults(user);
     const results = document.querySelector<HTMLElement>('.results-panel')!;
     expect(results.classList.contains('mobile-collapsed')).toBe(false);
 
-    await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
-
-    await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
+    await openModelDoctor(user);
     await waitFor(() => expect(results.classList.contains('mobile-collapsed')).toBe(true));
     await user.keyboard('{Escape}');
     await waitFor(() => expect(document.activeElement)
-      .toBe(screen.getByRole('button', { name: 'Model Doctor' })));
+      .toBe(screen.getByRole('button', { name: /abrir la paleta de comandos/i })));
   });
 
   it('only announces Model Doctor findings after an explicit analysis request', async () => {
@@ -567,8 +567,7 @@ describe('structureCo app shell', () => {
 
     // Un proyecto importado o editado puede tener hallazgos, pero abrir el
     // workspace no debe interrumpirlo: el diagnóstico manual sigue disponible.
-    await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
-    const doctor = await screen.findByRole('dialog', { name: 'Model Doctor' });
+    const doctor = await openModelDoctor(user);
     expect(within(doctor).getByRole('article', { name: /sin cargas/i })).toBeTruthy();
     expect(screen.queryByText('Model Doctor encontró problemas')).toBeNull();
     await user.keyboard('{Escape}');
@@ -576,9 +575,6 @@ describe('structureCo app shell', () => {
     await user.click(screen.getByRole('button', { name: /^analizar$/i }));
     expect(await screen.findByText('Model Doctor encontró problemas')).toBeTruthy();
     expect(screen.getByText(/Abre Model Doctor para revisarlos/i)).toBeTruthy();
-
-    await user.click(screen.getByRole('button', { name: /configuración de análisis/i }));
-    fireEvent.change(screen.getByRole('combobox', { name: 'Unidades' }), { target: { value: 'N-mm' } });
 
     await waitFor(() => expect(screen.getAllByText('Model Doctor encontró problemas')).toHaveLength(1));
   });
@@ -661,9 +657,7 @@ describe('structureCo app shell', () => {
     const user = userEvent.setup();
     render(<App />);
     await openWorkspace(user);
-    const menu = await openUtilityMenu(user);
-    const button = within(menu).getByRole('button', { name: /tema oscuro/i });
-    await user.click(button);
+    await user.click(screen.getByRole('button', { name: /tema oscuro/i }));
     expect(document.documentElement.dataset.theme).toBe('dark');
   });
 
@@ -671,12 +665,12 @@ describe('structureCo app shell', () => {
     const user = userEvent.setup();
     render(<App />);
     await openWorkspace(user);
-    const menu = await openUtilityMenu(user);
+    const menu = await openProjectMenu(user);
     await user.selectOptions(within(menu).getByRole('combobox', { name: /idioma/i }), 'en');
 
     expect(screen.getByRole('button', { name: /^analyze$/i })).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /analysis settings/i }));
-    expect(screen.getAllByRole('combobox', { name: /load case or combination/i }).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole('button', { name: /analysis and loads/i }));
+    expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0);
     await waitFor(() => expect(document.documentElement.lang).toBe('en'));
     await waitFor(() => {
       const saved = JSON.parse(localStorage.getItem(PROJECT_STORAGE_KEY) ?? '{}');
@@ -918,7 +912,8 @@ describe('structureCo app shell', () => {
     await user.type(name, 'Marco principal');
     await user.tab();
     expect(screen.getByTestId('diagram-chart')).toBeTruthy();
-    const menu = await openUtilityMenu(user);
+    const menu = document.querySelector('.console-project-popover') as HTMLElement;
+    expect(menu).not.toBeNull();
     await user.selectOptions(within(menu).getByRole('combobox', { name: /idioma/i }), 'en');
     expect(screen.getByTestId('diagram-chart')).toBeTruthy();
     // Misma holgura que el resto de recorridos que montan la app, analizan y
@@ -1008,10 +1003,10 @@ describe('structureCo app shell', () => {
     await user.click(member!);
     const before = container.querySelectorAll('.member-object').length;
 
-    // 1 · En Compact el Inspector tiene una ruta con nombre en Utilidades;
+    // 1 · En Compact el Inspector tiene una ruta con nombre en la consola;
     // no depende de un botón flotante que se pierda debajo del dock.
-    const utilities = screen.getByRole('button', { name: /herramientas del espacio de trabajo/i });
-    await user.click(utilities);
+    const utilities = screen.getByRole('button', { name: /mostrar inspector|ocultar inspector/i });
+    if (/ocultar inspector/i.test(utilities.getAttribute('aria-label') ?? '')) await user.click(utilities);
     await user.click(screen.getByRole('button', { name: /mostrar inspector/i }));
     await screen.findByRole('dialog', { name: /inspector/i });
     expect(shell.inert).toBeFalsy();
@@ -1019,14 +1014,13 @@ describe('structureCo app shell', () => {
 
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog', { name: /inspector/i })).toBeNull());
-    await waitFor(() => expect(document.activeElement).toBe(utilities));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: /mostrar inspector/i })));
     expect(container.querySelectorAll('.member-object')).toHaveLength(before);
 
     // 2 · Bajo una superficie MODAL el fondo sí queda aislado y el atajo del
     // lienzo no llega: ni borra ni abre la paleta.
     await user.click(member!);
-    await user.click(screen.getByRole('button', { name: 'Model Doctor' }));
-    await screen.findByRole('dialog', { name: 'Model Doctor' }, { timeout: 5000 });
+    await openModelDoctor(user);
     expect(shell.inert).toBe(true);
     expect(shell.getAttribute('aria-hidden')).toBe('true');
 

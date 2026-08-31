@@ -239,7 +239,7 @@ const setAppShellMobileInert = (inert: boolean) => {
  * paleta táctil — sin booleano de compatibilidad que un llamador pueda pasar
  * por su cuenta.
  */
-export const ToolRail = () => {
+export const ToolRail = ({ hideDesktopCommandPalette = false }: { hideDesktopCommandPalette?: boolean }) => {
   const { activeTool, setActiveTool, project, selection } = useProject();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [mobileMenu, setMobileMenu] = useState<'loads' | 'more' | null>(null);
@@ -469,7 +469,7 @@ export const ToolRail = () => {
             />
           </RailTooltip>;
         })}
-        {dockGroup.id === 'navigate' ? <RailTooltip id="tool-rail-tip-command-palette" content={`${t('palette.open')} (Ctrl K)`} placement="top">
+        {dockGroup.id === 'navigate' && !hideDesktopCommandPalette ? <RailTooltip id="tool-rail-tip-command-palette" content={`${t('palette.open')} (Ctrl K)`} placement="top">
           <CommandPaletteButton label={t('palette.openShort')} accessibleLabel={t('palette.open')} compact aria-describedby="tool-rail-tip-command-palette" />
         </RailTooltip> : null}
         {dockGroup.id === 'build' ? <RailTooltip id="tool-rail-tip-generator" content={t('generator.launcher')} placement="top">
@@ -535,7 +535,7 @@ export const ToolRail = () => {
                     />
                   </RailTooltip>;
                 })}
-                {group.id === 'navigate' ? <RailTooltip id="tool-rail-tip-command-palette" content={`${t('palette.open')} (Ctrl K)`}>
+                {group.id === 'navigate' && !hideDesktopCommandPalette ? <RailTooltip id="tool-rail-tip-command-palette" content={`${t('palette.open')} (Ctrl K)`}>
                   <CommandPaletteButton label={t('palette.openShort')} accessibleLabel={t('palette.open')} compact={compact} aria-describedby="tool-rail-tip-command-palette" />
                 </RailTooltip> : null}
                 {group.id === 'create' ? <RailTooltip id="tool-rail-tip-generator" content={t('generator.launcher')}>

@@ -97,10 +97,10 @@ export const SURFACE_PRESENTATION_TABLE: Readonly<Record<ShellClass, Readonly<Re
  * * `tool` — herramienta invocada que el usuario conduce (`drawer`/`fullscreen`).
  * * `layer` — capa contextual que ocupa la ranura Compact (`sheet`, `overlay`,
  *   `floating`, o los carriles residentes de X2/M1).
- * `tool` y `layer` siguen resolviéndose entre sí por última activación —abrir
- * el Picker o una hoja encima de una herramienta es un acto del usuario y debe
- * ganar—. Lo único que cambia es que una apertura *derivada* ya no puede
- * desbancar a lo que el usuario está usando.
+ * Las superficies `layer` se resuelven por última activación en las tres clases
+ * —abrir el Picker o una hoja encima de otra capa es un acto del usuario y debe
+ * ganar—. Las superficies `tool` siguen teniendo su propio carril modal y no
+ * desbancan la ranura contextual salvo que la presentación lo exija.
  */
 export const SURFACE_ACTIVITY_CLASSES = ['tool', 'layer'] as const;
 
@@ -217,18 +217,20 @@ const latest = (surfaces: readonly SurfaceId[], state: SurfaceBrokerState): Surf
 /**
  * Resolución de actividad (CRI-108).
  *
- * En Compact hay **una** ranura contextual (R-1) y las superficies `tool` y
- * `layer` la disputan por última activación. X2 y M1 no tienen esa ranura
- * única: las superficies abiertas conviven salvo la excepción del generador.
+ * En las tres clases hay **una** ranura contextual (R-1) para las superficies
+ * `layer`. Las superficies `tool` tienen su propio carril modal y se conservan
+ * como estado retenido mientras una capa contextual las cubre.
  */
 export const resolveSurfaceActivity = (
   shellClass: ShellClass,
   state: SurfaceBrokerState,
 ): SurfaceActivityMap => {
   const open = BROKER_SURFACE_IDS.filter((surface) => state.surfaces[surface].open);
-  const compactWinner = shellClass === 'K0'
-    ? latest(open, state)
-    : undefined;
+  const layerWinner = latest(open.filter((surface) => surfaceActivityClass(surface) === 'layer'), state);
+  // Compact has one physical sheet, so every retained surface competes for it.
+  // Wide shells keep their independent modal tools, but still give layers one
+  // shared contextual slot.
+  const exclusiveWinner = shellClass === 'K0' ? latest(open, state) : layerWinner;
   const mediumGeneratorActive = shellClass === 'M1' && state.surfaces.generator.open;
   const modalWinner = latest(open.filter((surface) => (
     isModalPresentation(resolveSurfacePresentation(shellClass, surface))
@@ -242,7 +244,8 @@ export const resolveSurfaceActivity = (
     else if (mediumGeneratorActive
       && surface !== 'generator'
       && ['detail', 'analysisSetup', 'view', 'results'].includes(surface)) status = 'suspended';
-    else if (compactWinner && compactWinner !== surface) status = 'suspended';
+    else if (exclusiveWinner && exclusiveWinner !== surface
+      && (shellClass === 'K0' || surfaceActivityClass(surface) === 'layer')) status = 'suspended';
     else if (isModalPresentation(presentation) && modalWinner !== surface) status = 'suspended';
     return [surface, { ...intent, presentation, status }];
   })) as SurfaceActivityMap;
@@ -268,12 +271,13 @@ export const setSurfaceExtent = (
 };
 
 export const validateSurfaceCombination = (
-  shellClass: ShellClass,
+  _shellClass: ShellClass,
   activity: SurfaceActivityMap,
 ): string[] => {
   const errors: string[] = [];
   const active = BROKER_SURFACE_IDS.filter((surface) => activity[surface].status === 'active');
-  if (shellClass === 'K0' && active.length > 1) errors.push('Compact admite una sola capa contextual activa.');
+  const activeLayers = active.filter((surface) => surfaceActivityClass(surface) === 'layer');
+  if (activeLayers.length > 1) errors.push('La ranura contextual admite una sola capa activa.');
   const modal = active.filter((surface) => isModalPresentation(activity[surface].presentation));
   if (modal.length > 1) errors.push('drawer y fullscreen son mutuamente exclusivos.');
   for (const surface of BROKER_SURFACE_IDS) {
