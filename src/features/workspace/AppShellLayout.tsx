@@ -5,8 +5,12 @@ import type { ToolDockPosition } from './useWorkspaceLayoutPreferences';
 export interface AppShellLayoutProps {
   projectId: string;
   skipLabel: string;
-  topBar: ReactNode;
-  toolRail: ReactNode;
+  /** Legacy slot kept for isolated component consumers during the shell migration. */
+  topBar?: ReactNode;
+  /** The permanent workspace console. It owns the shell's left/mobile chrome. */
+  console?: ReactNode;
+  /** Legacy rail slot; the active shell nests the registry inside `console`. */
+  toolRail?: ReactNode;
   workspace: ReactNode;
   inspector: ReactNode;
   footer?: ReactNode;
@@ -35,6 +39,7 @@ export function AppShellLayout({
   projectId,
   skipLabel,
   topBar,
+  console,
   toolRail,
   workspace,
   inspector,
@@ -54,6 +59,7 @@ export function AppShellLayout({
     className="app-shell workspace-screen"
     data-project-id={projectId}
     data-shell-class={shellClass}
+    data-console-layout={console ? 'true' : undefined}
     data-inspector-collapsed={inspectorCollapsed || undefined}
     data-inspector-compact={inspectorCompact || undefined}
     data-full-canvas={fullCanvas || undefined}
@@ -64,6 +70,7 @@ export function AppShellLayout({
     <a className="app-shell-skip-link" href="#workspace-canvas">{skipLabel}</a>
     {topBar}
     <div className="workspace">
+      {console}
       {toolRail}
       <main id="workspace-canvas" className="center-stage" tabIndex={-1}>
         {workspace}

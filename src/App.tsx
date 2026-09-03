@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import { BrandMark } from './features/topbar/BrandMark';
-import { WelcomeScreen, type HomeView } from './features/welcome/WelcomeScreen';
 import { ProjectProvider } from './store/ProjectContext';
 import { useProject } from './store/ProjectContext';
 import { ClassroomSessionProvider } from './store/ClassroomSessionContext';
@@ -13,6 +12,7 @@ import { safeProjectFilename } from './utils/export';
 import { decodeProjectFragment } from './utils/shareLink';
 import './styles.css';
 import './design-system/material.css';
+import { WelcomeScreen, type HomeView } from './features/welcome/WelcomeScreen';
 
 const loadWorkspaceShell = () => import('./features/workspace/WorkspaceShell');
 const WorkspaceShell = lazy(loadWorkspaceShell);

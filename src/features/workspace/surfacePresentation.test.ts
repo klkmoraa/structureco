@@ -184,15 +184,16 @@ describe('activity classes', () => {
     expect(resolveSurfaceActivity('K0', state).doctor).toMatchObject({ status: 'active', extent: 'default' });
   });
 
-  it('X2 y M1 no cambian: la ranura única es sólo de Compact', () => {
+  it('X2 y M1 mantienen una sola capa contextual y retienen las demás', () => {
     let state = openSurfaceIntent(createSurfaceBrokerState(['results', 'detail']), 'datasheet');
 
     for (const shellClass of ['X2', 'M1'] as const) {
       const activity = resolveSurfaceActivity(shellClass, state);
-      // Los carriles residentes conviven con la herramienta modal.
+      // El carril modal convive con una sola capa contextual; las demás quedan
+      // retenidas para poder reanudarse sin perder estado.
       expect(activity.datasheet).toMatchObject({ status: 'active', presentation: 'drawer' });
       expect(activity.detail.status).toBe('active');
-      expect(activity.results.status).toBe('active');
+      expect(activity.results.status).toBe('suspended');
       expect(validateSurfaceCombination(shellClass, activity)).toEqual([]);
     }
 
