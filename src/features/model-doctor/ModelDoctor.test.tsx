@@ -36,6 +36,23 @@ const withRepairableTopology = (): ProjectModel => {
   return project;
 };
 
+/**
+ * Espera a que el diálogo reclame su foco inicial.
+ *
+ * `useModalFocus` lo hace dentro de un `requestAnimationFrame`, y los paneles
+ * interiores del Doctor reclaman el suyo con un `setTimeout(0)`. En un
+ * navegador real el primero ya ha ocurrido mucho antes de que el usuario abra
+ * un panel; dentro de una prueba todo cae en pocos milisegundos y el orden
+ * entre los dos relojes no está garantizado, así que la reclamación del
+ * diálogo podía aterrizar **después** de la del panel y llevarse el foco.
+ */
+const settledFocus = async () => {
+  await waitFor(() => {
+    const dialog = document.querySelector('[role="dialog"]');
+    expect(dialog?.contains(document.activeElement)).toBe(true);
+  });
+};
+
 const renderDoctor = (project: ProjectModel, initiallyOpen = true, buildReport = buildModelDoctorReport) => {
   localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
   const Harness = () => {
@@ -187,6 +204,7 @@ describe('ModelDoctor surface', () => {
     const user = userEvent.setup();
     const project = withRepairableTopology();
     renderDoctor(project);
+    await settledFocus();
     const original = screen.getByLabelText('doctor-project-snapshot').textContent;
     const finding = (await screen.findAllByRole('article')).find((article) => article.textContent?.includes('N-SPLIT'))!;
 
