@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { Space3DCommandError, applySpace3DCommand } from './commands';
 import { createBlankSpace3DProject, createSpace3DPortalExample } from '../model/defaultProject';
-import { fixedSpace3DRestraints, freeSpace3DRestraints, type Space3DFrameMember, type Space3DNode } from '../model/types';
+import { fixedSpace3DRestraints, freeSpace3DRestraints, noSpace3DSprings, type Space3DFrameMember, type Space3DNode } from '../model/types';
 
 const example = createSpace3DPortalExample();
 
-const newNode = (id: string): Space3DNode => ({ id, x: 1, y: 2, z: 3, restraints: freeSpace3DRestraints() });
+const newNode = (id: string): Space3DNode => ({ id, x: 1, y: 2, z: 3, restraints: freeSpace3DRestraints(), springs: noSpace3DSprings() });
 const newMember = (id: string, i: string, j: string): Space3DFrameMember => ({
   ...example.members[0], id, i, j,
 });

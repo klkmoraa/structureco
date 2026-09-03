@@ -3,7 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
-import { createDefaultProject } from './data/defaultProject';
+import { createBlankProject, createDefaultProject } from './data/defaultProject';
 import { PROJECT_STORAGE_KEY } from './data/projectStorage';
 import { InMemoryProjectRepository } from './storage/projectRepository';
 import { readWelcomeEntry, shouldResumeDirectly } from './features/welcome/welcomeEntry';
@@ -947,6 +947,17 @@ describe('structureCo app shell', () => {
       expect(entry.status).toBe('returning');
       expect(entry.projects).toBe(1);
       expect(shouldResumeDirectly(entry)).toBe(true);
+    });
+
+    it('does not call the empty project the app saves on first launch a library', async () => {
+      const repository = new InMemoryProjectRepository();
+      // Es exactamente lo que `ProjectProvider` persiste en el primer arranque,
+      // antes de que el usuario haya dibujado nada.
+      await repository.saveProject(createBlankProject());
+
+      const entry = await readWelcomeEntry(repository);
+      expect(entry).toEqual({ status: 'new', projects: 0, recoveries: 0 });
+      expect(shouldResumeDirectly(entry)).toBe(false);
     });
 
     it('never auto-skips while a recovery copy is pending', async () => {

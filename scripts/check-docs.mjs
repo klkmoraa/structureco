@@ -10,14 +10,14 @@ const REQUIRED_FILES = [
   'README.md',
   'docs/README.md',
   'docs/architecture/README.md',
-  'docs/architecture/structureco-space-3d-s3d1.md',
+  'docs/architecture/structureco-space-3d.md',
   'docs/product/visual-direction.md',
   'reports/README.md',
 ];
 const REQUIRED_CANONICAL = new Set([
   'docs/README.md',
   'docs/architecture/README.md',
-  'docs/architecture/structureco-space-3d-s3d1.md',
+  'docs/architecture/structureco-space-3d.md',
   'docs/product/visual-direction.md',
 ]);
 

@@ -58,7 +58,11 @@ describe('CanvasDiagramStack', () => {
     expect(container.querySelectorAll('[data-stack-member][data-stack-lane="moment"] .diagram-stack-replica-member').length).toBe(3);
   });
 
-  it('uses the canvas width for three full portal diagrams on a wide workspace', () => {
+  const replicaStarts = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll('[data-stack-member="AB"] .diagram-stack-replica-member'))
+      .map((line) => Number(line.getAttribute('x1')));
+
+  it('apila las tres lecturas en columna cuando el área útil no es apaisada', () => {
     const { container } = render(<svg><CanvasDiagramStack
       project={project}
       results={members.map((member) => result(member.id))}
@@ -68,8 +72,24 @@ describe('CanvasDiagramStack', () => {
       t={((key: string) => key) as never}
     /></svg>);
 
-    const starts = Array.from(container.querySelectorAll('[data-stack-member="AB"] .diagram-stack-replica-member'))
-      .map((line) => Number(line.getAttribute('x1')));
+    // 1280×900 deja un área útil de 1178×776: no llega al umbral apaisado, así
+    // que cada lectura ocupa el ancho completo y comparten abscisa de arranque.
+    const starts = replicaStarts(container);
+    expect(starts).toHaveLength(3);
+    expect(new Set(starts.map((value) => Math.round(value))).size).toBe(1);
+  });
+
+  it('usa el ancho del lienzo para tres pórticos completos en un área apaisada', () => {
+    const { container } = render(<svg><CanvasDiagramStack
+      project={project}
+      results={members.map((member) => result(member.id))}
+      quantities={['axial', 'shear', 'moment']}
+      nodeMap={new Map(nodes.map((node) => [node.id, node]))}
+      size={{ width: 1680, height: 760 }}
+      t={((key: string) => key) as never}
+    /></svg>);
+
+    const starts = replicaStarts(container);
     expect(starts).toHaveLength(3);
     expect(new Set(starts.map((value) => Math.round(value))).size).toBe(3);
   });

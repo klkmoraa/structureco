@@ -18,6 +18,8 @@ export interface Space3DModelCounts {
   readonly members: number;
   readonly supports: number;
   readonly loads: number;
+  readonly memberLoads: number;
+  readonly settlements: number;
   readonly loadCases: number;
   readonly combinations: number;
 }
@@ -48,6 +50,9 @@ const MODEL_ROWS: readonly { readonly focus: Space3DModelFocus; readonly key: Tr
   { focus: 'node', key: 'space3d.nodes', countKey: 'nodes' },
   { focus: 'member', key: 'space3d.members', countKey: 'members' },
   { focus: 'load', key: 'space3d.loads', countKey: 'loads' },
+  { focus: 'member-load', key: 'space3d.memberLoads', countKey: 'memberLoads' },
+  { focus: 'settlement', key: 'space3d.settlements', countKey: 'settlements' },
+  { focus: 'case', key: 'space3d.loadCasesCount', countKey: 'loadCases' },
 ];
 
 export const Space3DModelNav = ({
@@ -71,10 +76,6 @@ export const Space3DModelNav = ({
       <li className="space3d-model-nav-static">
         <span>{t('space3d.supports')}</span>
         <span className="space3d-model-nav-count">{counts.supports}</span>
-      </li>
-      <li className="space3d-model-nav-static">
-        <span>{t('space3d.loadCasesCount')}</span>
-        <span className="space3d-model-nav-count">{counts.loadCases}</span>
       </li>
       <li className="space3d-model-nav-static">
         <span>{t('space3d.combinationsCount')}</span>

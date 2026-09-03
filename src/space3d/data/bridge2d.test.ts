@@ -8,6 +8,7 @@ import {
 import { validateSpace3DProject } from '../model/validation';
 import { createDefaultProject, createBlankProject } from '../../data/defaultProject';
 import type { ProjectModel } from '../../types';
+import { noSpace3DSprings } from '../model/types';
 
 const planar = (): ProjectModel => createDefaultProject();
 
@@ -143,11 +144,22 @@ describe('2D to Space 3D bridge', () => {
     }
   });
 
-  it('declara todo lo que S3D-1 no admite en vez de descartarlo en silencio', () => {
+  it('cruza las cargas de barra en vez de perderlas', () => {
     const source = planar();
     expect(source.memberLoads.length).toBeGreaterThan(0);
-    const codes = codesOf(source);
-    expect(codes).toContain('dropped-member-load');
+    const { project, notes } = deriveSpace3DFromPlanarProject(source);
+    expect(project.memberLoads).toHaveLength(source.memberLoads.length);
+    expect(notes.filter((note) => note.code === 'carried-member-load').every((note) => !note.blocking)).toBe(true);
+    for (const load of project.memberLoads) {
+      expect(source.memberLoads.some((item) => item.id === load.id)).toBe(true);
+      // El plano no tiene componente fuera de plano: la tercera es cero.
+      expect(load.startValue[2]).toBe(0);
+    }
+  });
+
+  it('declara lo que el dominio espacial no admite en vez de descartarlo en silencio', () => {
+    const codes = codesOf(planar());
+    expect(codes).not.toContain('dropped-member-load');
 
     const rich = createBlankProject();
     rich.nodes = [
@@ -159,12 +171,40 @@ describe('2D to Space 3D bridge', () => {
       { id: 'M1', i: 'A', j: 'B', type: 'truss', E: 2e8, A: 0.01, I: 8e-5 },
       { id: 'M2', i: 'B', j: 'C', type: 'frame', E: 2e8, A: 0.01, I: 8e-5, releases: { iMoment: true } },
     ];
-    rich.prescribedDisplacements = [{ id: 'P1', nodeId: 'A', caseId: rich.loadCases[0].id, component: 'uy', value: 0.01 }];
+    rich.prescribedDisplacements = [
+      { id: 'P1', nodeId: 'A', caseId: rich.loadCases[0].id, component: 'uy', value: 0.01 },
+      { id: 'P2', nodeId: 'B', caseId: rich.loadCases[0].id, component: 'normal', value: 0.01 },
+    ];
     const richCodes = codesOf(rich);
     for (const code of [
-      'dropped-support-spring', 'dropped-inclined-support', 'dropped-internal-hinge',
-      'truss-member-as-frame', 'dropped-member-release', 'dropped-prescribed-displacement',
+      'dropped-inclined-support', 'dropped-internal-hinge',
+      'truss-member-as-frame', 'dropped-prescribed-displacement',
     ]) expect(richCodes).toContain(code);
+    // Lo que sí sabe representar cruza como nota informativa.
+    for (const code of ['carried-support-spring', 'carried-member-release', 'carried-prescribed-displacement']) {
+      expect(richCodes).toContain(code);
+    }
+  });
+
+  it('traduce muelles, liberaciones y asientos alineados con los ejes', () => {
+    const source = createBlankProject();
+    source.nodes = [
+      { id: 'A', x: 0, y: 0, support: { type: 'fixed', spring: { kx: 10, ky: 20, kr: 30 } } },
+      { id: 'B', x: 4, y: 0, support: { type: 'none' } },
+    ];
+    source.members = [{
+      id: 'M1', i: 'A', j: 'B', type: 'frame', E: 2e8, A: 0.01, I: 8e-5,
+      releases: { iMoment: true, jAxial: true }, density: 7850,
+    }];
+    source.prescribedDisplacements = [{ id: 'P1', nodeId: 'A', caseId: source.loadCases[0].id, component: 'rz', value: 0.002 }];
+
+    const { project } = deriveSpace3DFromPlanarProject(source);
+    expect(project.nodes[0].springs).toMatchObject({ ux: 10, uy: 20, rz: 30, uz: 0 });
+    expect(project.members[0].releases).toMatchObject({ iMz: true, jN: true, iN: false, jMz: false });
+    expect(project.members[0].density).toBe(7850);
+    expect(project.settlements).toEqual([
+      { id: 'P1', caseId: source.loadCases[0].id, nodeId: 'A', ux: 0, uy: 0, uz: 0, rx: 0, ry: 0, rz: 0.002 },
+    ]);
   });
 
   it('reconoce el proyecto derivado que sigue correspondiendo a su fuente', () => {
@@ -182,7 +222,7 @@ describe('2D to Space 3D bridge', () => {
     // Añadir geometría propia en 3D no es divergencia del 2D.
     const extended = {
       ...project,
-      nodes: [...project.nodes, { id: 'N-3D', x: 1, y: 1, z: 2, restraints: project.nodes[0].restraints }],
+      nodes: [...project.nodes, { id: 'N-3D', x: 1, y: 1, z: 2, restraints: project.nodes[0].restraints, springs: noSpace3DSprings() }],
     };
     expect(space3dMatchesPlanarSource(extended, source)).toBe(true);
 
@@ -230,7 +270,7 @@ describe('2D to Space 3D bridge', () => {
     const completed = {
       ...project,
       members: project.members.map((member) => ({ ...member, G: 7.7e7, Iy: 3e-5, J: 2e-5 })),
-      nodes: project.nodes.map((node) => ({ ...node, restraints: { ...node.restraints, uz: true, rx: true, ry: true } })),
+      nodes: project.nodes.map((node) => ({ ...node, restraints: { ...node.restraints, uz: true, rx: true, ry: true }, springs: noSpace3DSprings() })),
     };
     expect(unresolvedSpace3DBridgeNotes(notes, completed, new Set())).toEqual([]);
   });
@@ -246,12 +286,12 @@ describe('2D to Space 3D bridge', () => {
     const completed = {
       ...project,
       members: project.members.map((member) => ({ ...member, Iy: 3e-5, J: 2e-5 })),
-      nodes: project.nodes.map((node) => ({ ...node, restraints: { ...node.restraints, uz: true, rx: true, ry: true } })),
+      nodes: project.nodes.map((node) => ({ ...node, restraints: { ...node.restraints, uz: true, rx: true, ry: true }, springs: noSpace3DSprings() })),
     };
 
     const pending = unresolvedSpace3DBridgeNotes(notes, completed, new Set());
-    expect(pending.map((note) => note.code).sort()).toEqual(['dropped-support-spring', 'truss-member-as-frame']);
-    expect(unresolvedSpace3DBridgeNotes(notes, completed, new Set(['dropped-support-spring', 'truss-member-as-frame']))).toEqual([]);
+    expect(pending.map((note) => note.code).sort()).toEqual(['truss-member-as-frame']);
+    expect(unresolvedSpace3DBridgeNotes(notes, completed, new Set(['truss-member-as-frame']))).toEqual([]);
   });
 
   it('deriva un proyecto vacío sin romperse', () => {

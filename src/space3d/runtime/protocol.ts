@@ -7,7 +7,7 @@
  * `Map`/`Set`, para que `structuredClone` lo transporte sin pérdida.
  */
 import { analyzeSpace3DProject } from '../engine/solver';
-import type { Space3DAnalysisResult, Space3DProjectV1 } from '../model/types';
+import type { Space3DAnalysisResult, Space3DProject } from '../model/types';
 
 export const SPACE3D_PROTOCOL_VERSION = 1 as const;
 
@@ -15,7 +15,7 @@ export interface Space3DRunRequest {
   readonly protocolVersion: typeof SPACE3D_PROTOCOL_VERSION;
   readonly type: 'run';
   readonly requestId: number;
-  readonly project: Space3DProjectV1;
+  readonly project: Space3DProject;
   readonly targetId: string;
 }
 
@@ -80,7 +80,7 @@ export const handleSpace3DWorkerRequest = (request: unknown): Space3DWorkerRespo
       protocolVersion: SPACE3D_PROTOCOL_VERSION,
       type: 'success',
       requestId,
-      result: analyzeSpace3DProject(envelope.project as Space3DProjectV1, String(envelope.targetId)),
+      result: analyzeSpace3DProject(envelope.project as Space3DProject, String(envelope.targetId)),
     };
   } catch (cause) {
     return error(

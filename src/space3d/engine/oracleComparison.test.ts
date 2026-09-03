@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { analyzeSpace3DProject } from './solver';
-import { SPACE3D_DOF_KEYS, type Space3DAnalysisResult, type Space3DProjectV1 } from '../model/types';
+import { parseSpace3DDraft } from '../data/codec';
+import { SPACE3D_DOF_KEYS, type Space3DAnalysisResult, type Space3DProject } from '../model/types';
 
 const CORPUS = resolve(process.cwd(), 'validation/space3d/oracles');
 
@@ -47,6 +48,15 @@ interface Manifest {
 
 const readJson = <T,>(relative: string): T => JSON.parse(readFileSync(resolve(CORPUS, relative), 'utf8')) as T;
 
+/**
+ * El corpus se conserva byte a byte en el esquema con el que se aprobó: es
+ * evidencia de validación, no un archivo de trabajo. Se lee por el códec
+ * portable, que lo migra al esquema vigente — así la comparación con los
+ * oráculos también comprueba que la migración no altera la física.
+ */
+const readModel = (relative: string): Space3DProject =>
+  parseSpace3DDraft(readFileSync(resolve(CORPUS, relative), 'utf8'));
+
 const manifest = readJson<Manifest>('manifest.json');
 
 type ExpectedFile = {
@@ -70,7 +80,7 @@ describe('Space3D manual oracle corpus', () => {
 
   for (const testCase of manifest.cases) {
     it(`reproduce ${testCase.id} dentro de las tolerancias declaradas`, () => {
-      const project = readJson<Space3DProjectV1>(testCase.model);
+      const project = readModel(testCase.model);
       const expected = readJson<ExpectedFile>(testCase.result);
       const result = analyzeSpace3DProject(project, testCase.target);
       expect(result.success, JSON.stringify(result.issues)).toBe(true);
@@ -130,7 +140,7 @@ describe('Space3D external oracle corpus', () => {
       expect(run.outputSha256).toBeTruthy();
       expect(run.version).toBeTruthy();
 
-      const project = readJson<Space3DProjectV1>(testCase!.model);
+      const project = readModel(testCase!.model);
       const oracle = readJson<ExpectedFile>(run.output!);
       const result = analyzeSpace3DProject(project, testCase!.target);
       expect(result.success).toBe(true);

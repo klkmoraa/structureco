@@ -10,7 +10,7 @@
  * el usuario conserva el último estado bueno.
  */
 import { parseSpace3DDraft, serializeSpace3DProject } from './codec';
-import type { Space3DProjectV1 } from '../model/types';
+import type { Space3DProject } from '../model/types';
 
 export const SPACE3D_STORAGE_KEY = 'structureco:space3d:v1';
 export const SPACE3D_BACKUP_STORAGE_KEY = 'structureco:space3d:v1:backup';
@@ -35,7 +35,7 @@ const browserStorage = (): Space3DStorageLike | null => {
   }
 };
 
-const readValid = (storage: Space3DStorageLike, key: string): Space3DProjectV1 | null => {
+const readValid = (storage: Space3DStorageLike, key: string): Space3DProject | null => {
   let raw: string | null;
   try {
     raw = storage.getItem(key);
@@ -53,7 +53,7 @@ const readValid = (storage: Space3DStorageLike, key: string): Space3DProjectV1 |
 export const loadSpace3DProject = (
   storage: Space3DStorageLike | null = browserStorage(),
   namespace?: string,
-): Space3DProjectV1 | null => {
+): Space3DProject | null => {
   if (!storage) return null;
   const keys = space3dStorageKeys(namespace);
   return readValid(storage, keys.primary) ?? readValid(storage, keys.backup);
@@ -61,7 +61,7 @@ export const loadSpace3DProject = (
 
 /** Devuelve `true` sólo si el proyecto quedó realmente escrito y es recuperable. */
 export const saveSpace3DProject = (
-  project: Space3DProjectV1,
+  project: Space3DProject,
   storage: Space3DStorageLike | null = browserStorage(),
   namespace?: string,
 ): boolean => {

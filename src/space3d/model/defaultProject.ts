@@ -10,10 +10,13 @@ import {
   SPACE3D_SCHEMA_VERSION,
   fixedSpace3DRestraints,
   freeSpace3DRestraints,
+  noSpace3DReleases,
+  noSpace3DSprings,
   type Space3DFrameMember,
+  type Space3DMemberLoad,
   type Space3DNode,
   type Space3DNodalLoad,
-  type Space3DProjectV1,
+  type Space3DProject,
 } from './types';
 
 /** Acero estructural en unidades internas kN-m. */
@@ -24,6 +27,9 @@ const STEEL = Object.freeze({
   Iy: 4.5e-5,
   Iz: 1.36e-4,
   J: 4.0e-7,
+  shearAreaY: 0,
+  shearAreaZ: 0,
+  density: 7850,
 });
 
 const defaultOrientation = () => ({
@@ -37,7 +43,7 @@ const node = (
   y: number,
   z: number,
   restraints = freeSpace3DRestraints(),
-): Space3DNode => ({ id, x, y, z, restraints });
+): Space3DNode => ({ id, x, y, z, restraints, springs: noSpace3DSprings() });
 
 const member = (id: string, i: string, j: string): Space3DFrameMember => ({
   id,
@@ -49,7 +55,28 @@ const member = (id: string, i: string, j: string): Space3DFrameMember => ({
   Iy: STEEL.Iy,
   Iz: STEEL.Iz,
   J: STEEL.J,
+  shearAreaY: STEEL.shearAreaY,
+  shearAreaZ: STEEL.shearAreaZ,
+  density: STEEL.density,
+  releases: noSpace3DReleases(),
   orientation: defaultOrientation(),
+});
+
+/** Carga repartida uniforme sobre toda la barra, en ejes globales. */
+const uniformLoad = (
+  id: string,
+  memberId: string,
+  intensity: readonly [number, number, number],
+): Space3DMemberLoad => ({
+  id,
+  caseId: 'LC1',
+  memberId,
+  kind: 'distributed',
+  axes: 'global',
+  start: 0,
+  end: 1,
+  startValue: [intensity[0], intensity[1], intensity[2]],
+  endValue: [intensity[0], intensity[1], intensity[2]],
 });
 
 const load = (
@@ -64,7 +91,7 @@ const load = (
   ...components,
 });
 
-export const createBlankSpace3DProject = (): Space3DProjectV1 => ({
+export const createBlankSpace3DProject = (): Space3DProject => ({
   analysisSpace: SPACE3D_ANALYSIS_SPACE,
   schemaVersion: SPACE3D_SCHEMA_VERSION,
   id: 'space3d-project',
@@ -73,7 +100,9 @@ export const createBlankSpace3DProject = (): Space3DProjectV1 => ({
   nodes: [],
   members: [],
   nodalLoads: [],
-  loadCases: [{ id: 'LC1', name: 'LC1' }],
+  memberLoads: [],
+  settlements: [],
+  loadCases: [{ id: 'LC1', name: 'LC1', selfWeightFactor: 0 }],
   loadCombinations: [],
 });
 
@@ -81,9 +110,11 @@ export const createBlankSpace3DProject = (): Space3DProjectV1 => ({
  * Marco espacial verificable: tres patas empotradas en el plano de suelo
  * `y = 0` que convergen en un vértice libre elevado y desplazado en Z. Los
  * cuatro nudos no son coplanares, así que la solución ejercita los seis GDL y
- * la carga `fz` actúa fuera del plano que forman dos patas cualesquiera.
+ * la carga `fz` actúa fuera del plano que forman dos patas cualesquiera. Una
+ * repartida sobre `M1` y el peso propio del caso completan el ejemplo con las
+ * dos formas de carga que no son nodales.
  */
-export const createSpace3DPortalExample = (): Space3DProjectV1 => ({
+export const createSpace3DPortalExample = (): Space3DProject => ({
   analysisSpace: SPACE3D_ANALYSIS_SPACE,
   schemaVersion: SPACE3D_SCHEMA_VERSION,
   id: 'space3d-portal',
@@ -101,6 +132,8 @@ export const createSpace3DPortalExample = (): Space3DProjectV1 => ({
     member('M3', 'N3', 'N4'),
   ],
   nodalLoads: [load('L1', 'N4', { fy: -40, fz: -15 })],
-  loadCases: [{ id: 'LC1', name: 'LC1' }],
+  memberLoads: [uniformLoad('ML1', 'M1', [0, -6, 0])],
+  settlements: [],
+  loadCases: [{ id: 'LC1', name: 'LC1', selfWeightFactor: 1 }],
   loadCombinations: [{ id: 'CO1', name: 'CO1', terms: [{ caseId: 'LC1', factor: 1 }] }],
 });

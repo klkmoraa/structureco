@@ -1,0 +1,162 @@
+/*
+ * Orientación previa a Space 3D.
+ *
+ * El componente se renderiza en línea desde `App`, no en un portal, porque
+ * puede aparecer antes de que exista cualquier superficie perezosa. Por eso su
+ * caja es `fixed` y trae su propio velo: sin esto el diálogo se maquetaba en
+ * flujo, quedaba fuera del viewport y `body { overflow: hidden }` impedía
+ * incluso desplazarse hasta él — es decir, Space 3D era inalcanzable.
+ *
+ * La composición y los tokens son los del diálogo del sistema de diseño; lo
+ * que no se reutiliza es su componente, porque este diálogo pone el foco
+ * inicial en la salida segura («Seguir en editor 2D») y `ModalSurface` no
+ * expone ese control.
+ */
+.space3d-entry-dialog {
+  position: fixed;
+  z-index: var(--sc-z-modal);
+  inset: 0;
+  margin: auto;
+  width: min(620px, calc(100vw - (var(--sc-space-5) * 2)));
+  /* `inset: 0` + `margin: auto` centra sólo si la caja tiene tamaño propio:
+     sin `fit-content` la altura se estira hasta el viewport y el panel queda
+     con medio alto vacío bajo el pie. */
+  height: fit-content;
+  max-height: calc(100dvh - (var(--sc-space-5) * 2));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-3);
+  padding: var(--sc-space-5);
+  border: var(--sc-border-width) solid var(--sc-color-border);
+  border-radius: var(--sc-radius-modal);
+  background: var(--sc-color-surface-elevated);
+  color: var(--sc-color-text-primary);
+  /* El velo va como sombra exterior desmesurada, no como pseudo-elemento: el
+     diálogo crea contexto de apilamiento, así que un hijo con `z-index: -1`
+     se pintaría **encima** de su propio fondo y velaría el panel entero. Una
+     sombra exterior siempre queda detrás del fondo y no añade un nodo que el
+     lector de pantalla tendría que ignorar. */
+  box-shadow: var(--sc-shadow-clay-floating), 0 0 0 100vmax var(--sc-color-overlay-strong);
+  animation: sc-fade-in var(--sc-motion-standard) var(--sc-ease-enter) both;
+}
+
+.space3d-entry-dialog h2 {
+  margin: 0;
+  padding-right: var(--sc-space-6);
+  font-size: var(--sc-font-size-panel);
+  line-height: var(--sc-line-height-tight);
+  letter-spacing: var(--sc-tracking-tight);
+}
+
+.space3d-entry-dialog > p {
+  margin: 0;
+  color: var(--sc-color-text-secondary);
+  font-size: var(--sc-font-size-label);
+  line-height: var(--sc-line-height-body);
+}
+
+.space3d-entry-dialog > ul {
+  margin: 0;
+  padding-left: var(--sc-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-2);
+  font-size: var(--sc-font-size-label);
+  line-height: var(--sc-line-height-body);
+}
+
+.space3d-entry-dialog__close {
+  position: absolute;
+  top: var(--sc-space-3);
+  right: var(--sc-space-3);
+  display: grid;
+  place-items: center;
+  width: var(--sc-control-height-touch);
+  height: var(--sc-control-height-touch);
+  border: 0;
+  border-radius: var(--sc-radius-pill);
+  background: transparent;
+  color: var(--sc-color-text-secondary);
+  cursor: pointer;
+}
+
+.space3d-entry-dialog__close:hover { background: var(--sc-color-action-subtle); color: var(--sc-color-text-primary); }
+
+.space3d-entry-dialog__badge {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-1);
+  padding: 2px var(--sc-space-2);
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-action-subtle);
+  color: var(--sc-color-text-secondary);
+  font-size: var(--sc-font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: var(--sc-tracking-eyebrow);
+}
+
+.space3d-entry-dialog__matrix {
+  border: var(--sc-border-width) solid var(--sc-color-border-soft);
+  border-radius: var(--sc-radius-md);
+  padding: var(--sc-space-3);
+  background: var(--sc-color-surface-sunken);
+}
+
+.space3d-entry-dialog__matrix h3 {
+  margin: 0 0 var(--sc-space-2);
+  font-size: var(--sc-font-size-label);
+  color: var(--sc-color-text-secondary);
+}
+
+.space3d-entry-dialog__matrix dl { margin: 0; display: flex; flex-direction: column; gap: var(--sc-space-2); }
+.space3d-entry-dialog__matrix dl > div { display: grid; gap: 2px; }
+.space3d-entry-dialog__matrix dt { font-size: var(--sc-font-size-caption); text-transform: uppercase; letter-spacing: var(--sc-tracking-eyebrow); color: var(--sc-color-text-muted); }
+.space3d-entry-dialog__matrix dd { margin: 0; font-size: var(--sc-font-size-label); line-height: var(--sc-line-height-compact); }
+
+.space3d-entry-dialog > footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sc-space-2);
+  justify-content: flex-end;
+  padding-top: var(--sc-space-2);
+  border-top: var(--sc-border-width) solid var(--sc-color-border-soft);
+}
+
+.space3d-entry-dialog > footer button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sc-space-2);
+  min-height: var(--sc-control-height-touch);
+  padding: 0 var(--sc-space-4);
+  border: var(--sc-border-width) solid var(--sc-color-border);
+  border-radius: var(--sc-radius-control);
+  background: var(--sc-color-surface-elevated);
+  color: var(--sc-color-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.space3d-entry-dialog > footer button:hover { background: var(--sc-color-action-subtle); }
+
+.space3d-entry-dialog__proceed {
+  border-color: var(--sc-color-action-edge) !important;
+  background: var(--sc-color-action-primary) !important;
+  color: var(--sc-color-action-foreground) !important;
+}
+
+.space3d-entry-dialog__proceed:hover { background: var(--sc-color-action-hover) !important; }
+
+@media (max-width: 640px) {
+  .space3d-entry-dialog {
+    inset: auto 0 0;
+    margin: 0;
+    width: 100%;
+    height: auto;
+    max-height: 88dvh;
+    border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0;
+    padding: var(--sc-space-4);
+  }
+}

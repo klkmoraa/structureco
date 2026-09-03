@@ -8,13 +8,20 @@
  * Un resultado obsoleto se etiqueta y se conserva; uno fallido muestra los
  * códigos de issue. En ningún caso se borra el modelo del usuario.
  */
+import { useState } from 'react';
 import { AlertTriangle, ChevronDown, CircleCheck, CircleSlash, Clock } from 'lucide-react';
-import type { Space3DAnalysisIssue, Space3DAnalysisResult } from '../../space3d/model/types';
+import {
+  SPACE3D_ACTION_KEYS,
+  type Space3DActionKey,
+  type Space3DAnalysisIssue,
+  type Space3DAnalysisResult,
+  type Space3DMemberResult,
+} from '../../space3d/model/types';
 import type { Space3DAnalysisState } from '../../space3d/store/Space3DProjectContext';
 import { formatNumber } from '../../utils/numberFormat';
 import type { TranslationKey } from '../../i18n/catalogs';
 
-export type Space3DResultsTab = 'summary' | 'nodes' | 'members' | 'diagnostics';
+export type Space3DResultsTab = 'summary' | 'nodes' | 'members' | 'diagrams' | 'diagnostics';
 
 export interface Space3DResultsPanelProps {
   readonly analysis: Space3DAnalysisResult | null;
@@ -32,8 +39,18 @@ const TABS: readonly { id: Space3DResultsTab; key: TranslationKey }[] = [
   { id: 'summary', key: 'space3d.resultsSummary' },
   { id: 'nodes', key: 'space3d.resultsNodes' },
   { id: 'members', key: 'space3d.resultsMembers' },
+  { id: 'diagrams', key: 'space3d.resultsDiagrams' },
   { id: 'diagnostics', key: 'space3d.resultsDiagnostics' },
 ];
+
+const ACTION_LABELS: Readonly<Record<Space3DActionKey, TranslationKey>> = {
+  N: 'space3d.actionN',
+  Vy: 'space3d.actionVy',
+  Vz: 'space3d.actionVz',
+  T: 'space3d.actionT',
+  My: 'space3d.actionMy',
+  Mz: 'space3d.actionMz',
+};
 
 const ISSUE_KEYS: Record<string, TranslationKey> = {
   mechanism: 'space3d.error.mechanism',
@@ -51,7 +68,42 @@ const ISSUE_KEYS: Record<string, TranslationKey> = {
   'degenerate-orientation': 'space3d.error.invalidValue',
   'missing-case': 'space3d.error.missingEntity',
   'unknown-field': 'space3d.error.unknownField',
+  'invalid-release': 'space3d.error.invalidRelease',
+  'invalid-span': 'space3d.error.invalidSpan',
   'limit-exceeded': 'space3d.error.limitExceeded',
+};
+
+/** Familia de color de cada acción, la misma que colorea la tabla de extremos. */
+const ACTION_FAMILY: Readonly<Record<Space3DActionKey, string>> = {
+  N: 'axial', Vy: 'shear', Vz: 'shear', T: 'moment', My: 'moment', Mz: 'moment',
+};
+
+const DIAGRAM_WIDTH = 320;
+const DIAGRAM_HEIGHT = 96;
+
+/**
+ * Traza el diagrama de una acción interna como un área cerrada contra la
+ * directriz. El eje vertical se normaliza contra el mayor valor absoluto del
+ * propio miembro, así que la forma se lee aunque los órdenes de magnitud entre
+ * barras difieran; los números exactos los da la línea de extremos.
+ */
+const diagramPath = (member: Space3DMemberResult, key: Space3DActionKey): string => {
+  const stations = member.stations;
+  if (stations.length === 0) return '';
+  const peak = Math.max(...stations.map((station) => Math.abs(station[key])), Number.MIN_VALUE);
+  const half = DIAGRAM_HEIGHT / 2 - 4;
+  // Redondeo geométrico, no de presentación: son coordenadas de un `path`, y
+  // la política numérica del producto gobierna lo que el usuario lee, no el
+  // trazo. Dos decimales sobre un `viewBox` de 320 son de sobra.
+  const round = (value: number) => Math.round(value * 100) / 100;
+  const point = (index: number) => {
+    const station = stations[index];
+    const x = round(station.position * DIAGRAM_WIDTH);
+    const y = round(DIAGRAM_HEIGHT / 2 - (station[key] / peak) * half);
+    return `${x},${y}`;
+  };
+  const top = stations.map((_, index) => point(index)).join(' L');
+  return `M0,${DIAGRAM_HEIGHT / 2} L${top} L${DIAGRAM_WIDTH},${DIAGRAM_HEIGHT / 2} Z`;
 };
 
 const STATE_META: Record<Space3DAnalysisState, { key: TranslationKey; tone: string; Icon: typeof CircleCheck }> = {
@@ -80,6 +132,10 @@ export const Space3DResultsPanel = ({
 }: Space3DResultsPanelProps) => {
   const meta = STATE_META[analysisState];
   const StateIcon = meta.Icon;
+  const members = analysis?.memberResults ?? [];
+  const [diagramMemberId, setDiagramMemberId] = useState<string | null>(null);
+  const [diagramAction, setDiagramAction] = useState<Space3DActionKey>('Mz');
+  const diagramMember = members.find((item) => item.memberId === diagramMemberId) ?? members[0] ?? null;
 
   const banner = () => {
     if (analysisState === 'ready') return <p className="space3d-notice space3d-notice--ok" role="status">{t('space3d.readyNotice')}</p>;
@@ -191,6 +247,55 @@ export const Space3DResultsPanel = ({
           ])}
         </tbody>
       </table>
+    </div> : null}
+
+    {tab === 'diagrams' ? <div className="space3d-diagram-panel">
+      {diagramMember ? <>
+        <div className="space3d-field-grid">
+          <label className="space3d-field">
+            <span className="space3d-field-label">{t('space3d.diagramMember')}</span>
+            <select value={diagramMember.memberId} onChange={(event) => setDiagramMemberId(event.target.value)}>
+              {members.map((item) => <option key={item.memberId} value={item.memberId}>{item.memberId}</option>)}
+            </select>
+          </label>
+          <label className="space3d-field">
+            <span className="space3d-field-label">{t('space3d.diagramAction')}</span>
+            <select value={diagramAction} onChange={(event) => setDiagramAction(event.target.value as Space3DActionKey)}>
+              {SPACE3D_ACTION_KEYS.map((key) => <option key={key} value={key}>{t(ACTION_LABELS[key])}</option>)}
+            </select>
+          </label>
+        </div>
+        <figure className="space3d-diagram" data-family={ACTION_FAMILY[diagramAction]}>
+          <svg
+            viewBox={`0 0 ${DIAGRAM_WIDTH} ${DIAGRAM_HEIGHT}`}
+            preserveAspectRatio="none"
+            role="img"
+            aria-label={`${t(ACTION_LABELS[diagramAction])} · ${diagramMember.memberId}`}
+          >
+            <path className="space3d-diagram-fill" d={diagramPath(diagramMember, diagramAction)} />
+            <line
+              className="space3d-diagram-axis"
+              x1={0}
+              x2={DIAGRAM_WIDTH}
+              y1={DIAGRAM_HEIGHT / 2}
+              y2={DIAGRAM_HEIGHT / 2}
+            />
+          </svg>
+          <figcaption>
+            {t('space3d.diagramExtremes', {
+              max: action(diagramMember.extremes[diagramAction].max),
+              min: action(diagramMember.extremes[diagramAction].min),
+            })}
+            {' · '}
+            {t('space3d.diagramAt', { position: engineering(diagramMember.extremes[diagramAction].maxPosition, 3) })}
+          </figcaption>
+        </figure>
+        <button
+          type="button"
+          className="space3d-button space3d-button--ghost"
+          onClick={() => onSelectMember(diagramMember.memberId)}
+        >{t('space3d.member')} {diagramMember.memberId}</button>
+      </> : <p className="space3d-notice">{t('space3d.diagramEmpty')}</p>}
     </div> : null}
 
     {tab === 'diagnostics' ? <div className="space3d-diagnostics">

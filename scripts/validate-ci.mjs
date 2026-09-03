@@ -9,6 +9,11 @@
  * none of the operations prohibited by the local CI policy appear (AI calls, deploy,
  * publish, push, tag).
  *
+ * Deployment is the one rule with an exception, and the exception is named: the workflow
+ * in `PUBLISHING_WORKFLOWS` exists to publish the site, so forbidding it there would only
+ * mean the gate can never pass. Everywhere else a deploy step is still a policy failure,
+ * which is what the rule is actually for — a quality gate must not ship anything.
+ *
  * No YAML parser dependency is added for this: the check is deliberately a conservative,
  * dependency-free text scan rather than a full parse. A workflow that references a script
  * that was renamed, or a path that was moved, fails here instead of failing silently on
@@ -23,6 +28,12 @@ import process from 'node:process';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const WORKFLOWS_DIR = path.join(ROOT, '.github', 'workflows');
+
+/**
+ * Workflows whose declared purpose is publishing. Only these may carry a deploy step;
+ * add one here on purpose, never to silence a failure.
+ */
+const PUBLISHING_WORKFLOWS = new Set(['deploy-pages.yml']);
 
 const pkg = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8'));
 const knownScripts = new Set(Object.keys(pkg.scripts ?? {}));
@@ -96,7 +107,9 @@ for (const file of workflowFiles) {
     [/npm publish/, 'publica un paquete'],
     [/\bgit push\b/, 'hace push'],
     [/\bgit tag\b/, 'crea un tag'],
-    [/actions\/deploy|deploy-pages|netlify|vercel/i, 'despliega'],
+    ...(PUBLISHING_WORKFLOWS.has(file)
+      ? []
+      : [[/actions\/deploy|deploy-pages|netlify|vercel/i, 'despliega']]),
   ];
   for (const [pattern, reason] of forbidden) {
     if (pattern.test(executableText)) note(relative, `${reason}; la política del CI local no lo permite.`);

@@ -2,29 +2,51 @@
  * Solver estático lineal para marcos espaciales.
  *
  * Flujo fail-closed: validar → resolver el objetivo de carga → ensamblar →
- * reducir por restricciones homogéneas → resolver → recuperar reacciones,
- * acciones de extremo y auditoría de equilibrio 6D. Cualquier problema devuelve
+ * reducir por restricciones → resolver → recuperar reacciones, acciones de
+ * extremo, diagramas y auditoría de equilibrio 6D. Cualquier problema devuelve
  * un resultado sin `nodeResults` ni `memberResults`: nunca se publica una
  * respuesta parcialmente utilizable.
+ *
+ * Lo que el ensamblaje contempla:
+ *
+ *   · cargas nodales, cargas sobre barra y peso propio, reducidos al vector de
+ *     cargas consistente de cada elemento;
+ *   · liberaciones de extremo, por condensación estática de la matriz y de las
+ *     acciones de empotramiento;
+ *   · muelles de apoyo, como rigidez añadida sobre los GDL libres;
+ *   · asientos de apoyo, resueltos con la partición `Kff·uf = Ff − Kfs·us`.
  *
  * `solveLinearSystem` se consume como primitiva numérica de sólo lectura; el
  * dominio 2D no se toca.
  */
-import { multiplyMatrixVector, solveLinearSystem, submatrix, subvector, zeros } from '../../engine/math';
-import { buildSpaceFrameElement } from './element';
+import { multiplyMatrixVector, solveLinearSystem, submatrix, subvector, transpose, zeros } from '../../engine/math';
+import { buildSpaceFrameElement, condenseReleases } from './element';
+import {
+  buildLocalLoadField,
+  consistentLoadVector,
+  evaluateStationActions,
+  hasConcentratedAction,
+  stationBreakpoints,
+  type Space3DLocalLoadField,
+} from './memberLoads';
 import { validateSpace3DProject } from '../model/validation';
 import {
+  SPACE3D_ACTION_KEYS,
+  SPACE3D_DIAGRAM_STATIONS,
   SPACE3D_DOF_KEYS,
   Space3DGeometryError,
+  type Space3DActionKey,
   type Space3DAnalysisDiagnostics,
   type Space3DAnalysisIssue,
   type Space3DAnalysisResult,
   type Space3DDofValues,
   type Space3DEquilibriumAudit,
   type Space3DMemberEndForces,
+  type Space3DMemberExtreme,
   type Space3DMemberResult,
+  type Space3DMemberStation,
   type Space3DNodeResult,
-  type Space3DProjectV1,
+  type Space3DProject,
   type Space3DVector,
 } from '../model/types';
 
@@ -95,7 +117,7 @@ const crossProduct = (r: Space3DVector, f: Space3DVector): Space3DVector => [
  * Reparte el objetivo de análisis en factores por caso. Un caso vale 1×; una
  * combinación acumula los factores declarados, sumando los repetidos.
  */
-export const resolveSpace3DTarget = (project: Space3DProjectV1, targetId: string) => {
+export const resolveSpace3DTarget = (project: Space3DProject, targetId: string) => {
   if (project.loadCases.some((item) => item.id === targetId)) {
     return { kind: 'case' as const, factors: new Map([[targetId, 1]]) };
   }
@@ -116,7 +138,69 @@ const classifySolveFailure = (error: unknown): Space3DAnalysisIssue => {
   throw error;
 };
 
-export const analyzeSpace3DProject = (project: Space3DProjectV1, targetId: string): Space3DAnalysisResult => {
+const memberDofMap = (i: number, j: number): number[] => [
+  i * DOF_PER_NODE, i * DOF_PER_NODE + 1, i * DOF_PER_NODE + 2,
+  i * DOF_PER_NODE + 3, i * DOF_PER_NODE + 4, i * DOF_PER_NODE + 5,
+  j * DOF_PER_NODE, j * DOF_PER_NODE + 1, j * DOF_PER_NODE + 2,
+  j * DOF_PER_NODE + 3, j * DOF_PER_NODE + 4, j * DOF_PER_NODE + 5,
+];
+
+/**
+ * Muestrea las acciones internas del vano. Las estaciones equiespaciadas se
+ * completan con los bordes de cada tramo repartido y con las acciones
+ * puntuales, que se duplican para que el salto se lea como salto.
+ */
+const sampleStations = (
+  field: Space3DLocalLoadField,
+  start: Space3DMemberEndForces,
+  length: number,
+): Space3DMemberStation[] => {
+  const tolerance = Math.max(length, 1) * 1e-9;
+  const stations: Space3DMemberStation[] = [];
+  const push = (x: number, side: 'left' | 'right') => {
+    const actions = evaluateStationActions(field, start, x, side);
+    stations.push(Object.freeze({
+      position: length > 0 ? x / length : 0,
+      x,
+      N: actions.N,
+      Vy: actions.Vy,
+      Vz: actions.Vz,
+      T: actions.T,
+      My: actions.My,
+      Mz: actions.Mz,
+    }));
+  };
+
+  for (const x of stationBreakpoints(field, length, SPACE3D_DIAGRAM_STATIONS)) {
+    if (hasConcentratedAction(field, x, tolerance) && x > tolerance) push(x, 'left');
+    push(x, 'right');
+  }
+  return stations;
+};
+
+const extremesOf = (stations: readonly Space3DMemberStation[]): Record<Space3DActionKey, Space3DMemberExtreme> => {
+  const result = {} as Record<Space3DActionKey, Space3DMemberExtreme>;
+  for (const key of SPACE3D_ACTION_KEYS) {
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+    let minPosition = 0;
+    let maxPosition = 0;
+    for (const station of stations) {
+      const value = station[key];
+      if (value < min) { min = value; minPosition = station.position; }
+      if (value > max) { max = value; maxPosition = station.position; }
+    }
+    result[key] = Object.freeze({
+      min: Number.isFinite(min) ? min : 0,
+      max: Number.isFinite(max) ? max : 0,
+      minPosition,
+      maxPosition,
+    });
+  }
+  return result;
+};
+
+export const analyzeSpace3DProject = (project: Space3DProject, targetId: string): Space3DAnalysisResult => {
   const validationIssues = validateSpace3DProject(project);
   if (validationIssues.length > 0) {
     return failed(targetId, 'unknown', validationIssues.map((item) => issue(item.code, item.entityKind, item.entityId, item.field)));
@@ -133,27 +217,51 @@ export const analyzeSpace3DProject = (project: Space3DProjectV1, targetId: strin
   const totalDofs = project.nodes.length * DOF_PER_NODE;
 
   const K = zeros(totalDofs, totalDofs);
-  const elements = [];
+  const F = new Array<number>(totalDofs).fill(0);
+  const elements: {
+    element: ReturnType<typeof buildSpaceFrameElement>;
+    i: number;
+    j: number;
+    field: Space3DLocalLoadField;
+    fixedEnd: number[];
+  }[] = [];
+
   try {
     for (const member of project.members) {
       const i = nodeIndex.get(member.i)!;
       const j = nodeIndex.get(member.j)!;
       const element = buildSpaceFrameElement(member, project.nodes[i], project.nodes[j]);
-      elements.push({ element, i, j });
-      const map = [
-        i * DOF_PER_NODE, i * DOF_PER_NODE + 1, i * DOF_PER_NODE + 2, i * DOF_PER_NODE + 3, i * DOF_PER_NODE + 4, i * DOF_PER_NODE + 5,
-        j * DOF_PER_NODE, j * DOF_PER_NODE + 1, j * DOF_PER_NODE + 2, j * DOF_PER_NODE + 3, j * DOF_PER_NODE + 4, j * DOF_PER_NODE + 5,
-      ];
+      const field = buildLocalLoadField({
+        member,
+        basis: element.basis,
+        length: element.length,
+        memberLoads: project.memberLoads,
+        loadCases: project.loadCases,
+        factors: target.factors,
+      });
+      const applied = consistentLoadVector(field, element.length, element.shear);
+      const fixedEnd = condenseReleases(
+        element.uncondensedStiffness,
+        element.releasedDofs,
+        applied.map((value) => -value),
+      ).forces;
+      elements.push({ element, i, j, field, fixedEnd });
+
+      const map = memberDofMap(i, j);
       for (let row = 0; row < 12; row += 1) {
         for (let col = 0; col < 12; col += 1) K[map[row]][map[col]] += element.globalStiffness[row][col];
       }
+      // Carga equivalente en global: `-Tᵀ·Qf`, con `Qf` ya condensado, de modo
+      // que un extremo liberado no reparte lo que no puede transmitir.
+      const globalEquivalent = multiplyMatrixVector(transpose(element.transformation), fixedEnd);
+      for (let row = 0; row < 12; row += 1) F[map[row]] -= globalEquivalent[row];
     }
   } catch (error) {
     if (!(error instanceof Space3DGeometryError)) throw error;
-    return failed(targetId, target.kind, [issue('degenerate-orientation', 'member', '', error.code)]);
+    const code = error.code === 'release-mechanism' ? 'invalid-release' : 'degenerate-orientation';
+    return failed(targetId, target.kind, [issue(code, 'member', '', error.code)]);
   }
 
-  const F = new Array<number>(totalDofs).fill(0);
   for (const load of project.nodalLoads) {
     const factor = target.factors.get(load.caseId);
     if (factor === undefined || factor === 0) continue;
@@ -167,34 +275,72 @@ export const analyzeSpace3DProject = (project: Space3DProjectV1, targetId: strin
   }
 
   const restrained = new Set<number>();
+  const springs = new Array<number>(totalDofs).fill(0);
   project.nodes.forEach((node, index) => {
     SPACE3D_DOF_KEYS.forEach((key, dof) => {
-      if (node.restraints[key]) restrained.add(index * DOF_PER_NODE + dof);
+      const global = index * DOF_PER_NODE + dof;
+      if (node.restraints[key]) {
+        restrained.add(global);
+        return;
+      }
+      // Un muelle sobre un GDL restringido es inerte: la restricción rígida
+      // manda y el muelle no se ensambla.
+      const stiffness = node.springs?.[key];
+      if (typeof stiffness === 'number' && Number.isFinite(stiffness) && stiffness > 0) springs[global] = stiffness;
     });
   });
 
+  // Asientos impuestos: sólo cuentan sobre GDL restringidos, donde el apoyo
+  // puede imponerlos de verdad.
+  const prescribed = new Array<number>(totalDofs).fill(0);
+  for (const settlement of project.settlements) {
+    const factor = target.factors.get(settlement.caseId);
+    if (factor === undefined || factor === 0) continue;
+    const base = nodeIndex.get(settlement.nodeId)! * DOF_PER_NODE;
+    SPACE3D_DOF_KEYS.forEach((key, dof) => {
+      const global = base + dof;
+      if (restrained.has(global)) prescribed[global] += settlement[key] * factor;
+    });
+  }
+
   const free: number[] = [];
   for (let index = 0; index < totalDofs; index += 1) if (!restrained.has(index)) free.push(index);
-  if (free.length === 0) return failed(targetId, target.kind, [issue('no-free-dof', 'project', '')]);
 
-  const Kff = submatrix(K, free, free);
-  const Ff = subvector(F, free);
+  const Kspring = K.map((row, rowIndex) => row.map((value, colIndex) => (rowIndex === colIndex ? value + springs[rowIndex] : value)));
+  const Kff = submatrix(Kspring, free, free);
+  const supported = [...restrained].sort((a, b) => a - b);
+  const settlementActive = supported.some((index) => prescribed[index] !== 0);
+  const Ff = subvector(F, free).map((value, row) => {
+    if (!settlementActive) return value;
+    let carried = 0;
+    for (const column of supported) carried += Kspring[free[row]][column] * prescribed[column];
+    return value - carried;
+  });
 
-  let solved;
-  try {
-    solved = solveLinearSystem(Kff, Ff);
-  } catch (error) {
-    return failed(targetId, target.kind, [classifySolveFailure(error)]);
-  }
-  if (solved.x.some((value) => !Number.isFinite(value)) || !Number.isFinite(solved.relativeResidual)) {
-    return failed(targetId, target.kind, [issue('mechanism', 'project', '')]);
+  // Un modelo con todos los grados restringidos —la viga biempotrada de una
+  // sola barra— no es un fallo: no hay incógnitas, los desplazamientos son los
+  // impuestos y sólo quedan reacciones y acciones de extremo por recuperar.
+  let solved = { x: [] as number[], relativeResidual: 0, conditionEstimate: 1 };
+  if (free.length > 0) {
+    try {
+      solved = solveLinearSystem(Kff, Ff);
+    } catch (error) {
+      return failed(targetId, target.kind, [classifySolveFailure(error)]);
+    }
+    if (solved.x.some((value) => !Number.isFinite(value)) || !Number.isFinite(solved.relativeResidual)) {
+      return failed(targetId, target.kind, [issue('mechanism', 'project', '')]);
+    }
   }
 
   const U = new Array<number>(totalDofs).fill(0);
   free.forEach((global, index) => { U[global] = solved.x[index]; });
+  for (const index of supported) U[index] = prescribed[index];
 
+  // Las reacciones se leen de la rigidez **sin** muelles: en un GDL libre con
+  // muelle el residual `K·U − F` es exactamente la fuerza que el muelle
+  // devuelve a la estructura, y en uno restringido es la reacción del apoyo.
   const rawReactions = multiplyMatrixVector(K, U).map((value, index) => value - F[index]);
-  const R = rawReactions.map((value, index) => (restrained.has(index) ? value : 0));
+  const R = rawReactions.map((value, index) => (restrained.has(index) || springs[index] > 0 ? value : 0));
 
   const nodeResults: Space3DNodeResult[] = project.nodes.map((node, index) => Object.freeze({
     nodeId: node.id,
@@ -202,19 +348,23 @@ export const analyzeSpace3DProject = (project: Space3DProjectV1, targetId: strin
     reaction: dofValues(R, index * DOF_PER_NODE),
   }));
 
-  const memberResults: Space3DMemberResult[] = elements.map(({ element, i, j }) => {
+  const memberResults: Space3DMemberResult[] = elements.map(({ element, i, j, field, fixedEnd }) => {
     const uElement = [
       ...U.slice(i * DOF_PER_NODE, i * DOF_PER_NODE + 6),
       ...U.slice(j * DOF_PER_NODE, j * DOF_PER_NODE + 6),
     ];
     const uLocal = multiplyMatrixVector(element.transformation, uElement);
-    const fLocal = multiplyMatrixVector(element.localStiffness, uLocal);
+    const fLocal = multiplyMatrixVector(element.localStiffness, uLocal).map((value, index) => value + fixedEnd[index]);
+    const start = endForces(fLocal, 0);
+    const stations = sampleStations(field, start, element.length);
     return Object.freeze({
       memberId: element.memberId,
       length: element.length,
       basis: element.basis,
-      start: endForces(fLocal, 0),
+      start,
       end: endForces(fLocal, 6),
+      stations: Object.freeze(stations),
+      extremes: Object.freeze(extremesOf(stations)),
     });
   });
 
@@ -241,13 +391,16 @@ export const analyzeSpace3DProject = (project: Space3DProjectV1, targetId: strin
 };
 
 /**
- * Auditoría global 6D: fuerzas aplicadas más reacciones deben anularse, y lo
- * mismo los momentos respecto al origen incluyendo `r × F`. El residual se
- * normaliza por separado en fuerza y momento porque comparten magnitud pero no
- * unidad, y se toma el peor de los dos.
+ * Auditoría global 6D: las acciones aplicadas más las reacciones deben
+ * anularse, y lo mismo los momentos respecto al origen incluyendo `r × F`. La
+ * auditoría se hace sobre el vector de cargas ya ensamblado, que incluye las
+ * cargas equivalentes de barra: el reparto consistente conserva resultante y
+ * momento, así que comprobarlo ahí comprueba también las cargas repartidas. El
+ * residual se normaliza por separado en fuerza y momento porque comparten
+ * magnitud pero no unidad, y se toma el peor de los dos.
  */
 const auditEquilibrium = (
-  project: Space3DProjectV1,
+  project: Space3DProject,
   nodeResults: readonly Space3DNodeResult[],
   F: readonly number[],
   nodeIndex: ReadonlyMap<string, number>,

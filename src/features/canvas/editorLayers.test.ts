@@ -65,9 +65,16 @@ describe('editor layer state', () => {
 
   it('reports the preset that matches the current view, and none once the user diverges', () => {
     const state = createEditorLayerState();
-    expect(activeEditorLayerPreset(state)).toBe('all');
+    // La vista de apertura es de trabajo, no un preset: desde que «Todo»
+    // enciende de verdad todas las capas, ningún preset coincide con ella.
+    expect(activeEditorLayerPreset(state)).toBeNull();
+    expect(activeEditorLayerPreset(editorLayerReducer(state, { type: 'preset', preset: 'all' }))).toBe('all');
     expect(activeEditorLayerPreset(editorLayerReducer(state, { type: 'preset', preset: 'loads' }))).toBe('loads');
-    expect(activeEditorLayerPreset(editorLayerReducer(state, { type: 'toggle', layer: 'ids' }))).toBeNull();
+    const diverged = editorLayerReducer(
+      editorLayerReducer(state, { type: 'preset', preset: 'loads' }),
+      { type: 'toggle', layer: 'ids' },
+    );
+    expect(activeEditorLayerPreset(diverged)).toBeNull();
   });
 
   it('restores only validated presentation values and always protects the model', () => {

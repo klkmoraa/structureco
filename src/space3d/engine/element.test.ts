@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildSpaceFrameElement, spaceFrameLocalStiffness, spaceFrameTransformation } from './element';
 import { buildMemberOrientation } from './orientation';
 import { multiply, multiplyMatrixVector, transpose, type Matrix } from '../../engine/math';
-import { freeSpace3DRestraints, type Space3DFrameMember, type Space3DNode } from '../model/types';
+import { freeSpace3DRestraints, noSpace3DReleases, noSpace3DSprings, type Space3DFrameMember, type Space3DNode } from '../model/types';
 
 const expectMatrixClose = (actual: Matrix, expected: Matrix, digits = 10) => {
   expect(actual).toHaveLength(expected.length);
@@ -13,11 +13,12 @@ const identity = (size: number): Matrix =>
   Array.from({ length: size }, (_, i) => Array.from({ length: size }, (_, j) => (i === j ? 1 : 0)));
 
 const node = (id: string, x: number, y: number, z: number): Space3DNode =>
-  ({ id, x, y, z, restraints: freeSpace3DRestraints() });
+  ({ id, x, y, z, restraints: freeSpace3DRestraints(), springs: noSpace3DSprings() });
 
 const steel = (overrides: Partial<Space3DFrameMember> = {}): Space3DFrameMember => ({
   id: 'M1', i: 'I', j: 'J',
   E: 200_000_000, G: 77_000_000, A: 0.0076, Iy: 4.5e-5, Iz: 1.36e-4, J: 4e-7,
+  shearAreaY: 0, shearAreaZ: 0, density: 0, releases: noSpace3DReleases(),
   orientation: { localYReferenceGlobal: [0, 1, 0], rollRadians: 0 },
   ...overrides,
 });

@@ -33,13 +33,13 @@ documento que los cita.
 |---|---|
 | [README principal](../README.md) | Entrada del producto y comandos de desarrollo. |
 | [Mapa de arquitectura](architecture/README.md) | Navegación por los subsistemas y sus límites. |
-| [Space 3D · S3D-1](architecture/structureco-space-3d-s3d1.md) | Contrato operativo del espacio 3D experimental. |
+| [Space 3D](architecture/structureco-space-3d.md) | Contrato operativo del espacio 3D experimental. |
 | [Datasheet estructural](architecture/structureco-datasheet.md) | Límites, edición y verificaciones del datasheet. |
 | [Índice elástico estimado](architecture/structureco-elastic-index.md) | Significado y límites del índice η. |
 | [Módulo de diseño normativo](architecture/structureco-design-module-rfc.md) | Contrato separado `AnalysisResult → DesignResult` y primer slice NTC Acero 2023. |
 | [BOM estructural](architecture/structureco-bom-contract.md) | Contrato reproducible de cuantificación geométrica, agrupación explícita y procedencia por barra. |
 | [Comparación de revisiones](architecture/structureco-revision-comparison-contract.md) | Identidad de snapshot, diff explícito y gate fail-closed para deltas de resultado. |
-| [Fronteras de análisis futuro](architecture/future-analysis-boundaries.md) | Decisiones de alcance y precondiciones para buckling, dinámica, superficies, no linealidad y promoción de S3D-1. |
+| [Fronteras de análisis futuro](architecture/future-analysis-boundaries.md) | Decisiones de alcance y precondiciones para buckling, dinámica, superficies, no linealidad y promoción de Space 3D. |
 | [Dirección visual](product/visual-direction.md) | Dirección de la interfaz y la experiencia actuales. |
 
 ## Referencias
@@ -63,7 +63,7 @@ Los reportes narrativos y capturas de QA de fases cerradas ya no viven en el ár
 |---|---|
 | Ingeniería 2D | `src/types.ts`, `src/engine/**`, `src/workers/**`, pruebas cercanas y `npm run verify:protected`. |
 | Diseño normativo | [RFC del módulo](architecture/structureco-design-module-rfc.md), `src/design/**` y pruebas cercanas; nunca el solver. |
-| Ingeniería 3D | [Space 3D · S3D-1](architecture/structureco-space-3d-s3d1.md), `src/space3d/**` y `npm run verify:space3d`. |
+| Ingeniería 3D | [Space 3D](architecture/structureco-space-3d.md), `src/space3d/**` y `npm run verify:space3d`. |
 | Interfaz | `src/design-system/**`, `src/features/**`, pruebas y QA ejecutables. |
 | Assets estructurales | `public/assets/structural/**`, sus contratos y `npm run verify:structural-assets`. |
 | Identidad visual | [Dirección visual](product/visual-direction.md), código y referencias aprobadas. |

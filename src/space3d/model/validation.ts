@@ -12,31 +12,38 @@
 import {
   SPACE3D_ANALYSIS_SPACE,
   SPACE3D_LIMITS,
+  SPACE3D_RELEASE_KEYS,
   SPACE3D_SCHEMA_VERSION,
   Space3DGeometryError,
   type Space3DEntityKind,
-  type Space3DProjectV1,
+  type Space3DProject,
   type Space3DValidationCode,
   type Space3DValidationIssue,
   type Space3DVector,
 } from './types';
 import { buildMemberOrientation, memberLength } from '../engine/orientation';
 
-const PROJECT_FIELDS = ['analysisSpace', 'schemaVersion', 'id', 'name', 'units', 'nodes', 'members', 'nodalLoads', 'loadCases', 'loadCombinations'];
-const NODE_FIELDS = ['id', 'x', 'y', 'z', 'restraints'];
+const PROJECT_FIELDS = ['analysisSpace', 'schemaVersion', 'id', 'name', 'units', 'nodes', 'members', 'nodalLoads', 'memberLoads', 'settlements', 'loadCases', 'loadCombinations'];
+const NODE_FIELDS = ['id', 'x', 'y', 'z', 'restraints', 'springs'];
 const RESTRAINT_FIELDS = ['ux', 'uy', 'uz', 'rx', 'ry', 'rz'];
-const MEMBER_FIELDS = ['id', 'i', 'j', 'E', 'G', 'A', 'Iy', 'Iz', 'J', 'orientation'];
+const MEMBER_FIELDS = ['id', 'i', 'j', 'E', 'G', 'A', 'Iy', 'Iz', 'J', 'shearAreaY', 'shearAreaZ', 'density', 'releases', 'orientation'];
 const ORIENTATION_FIELDS = ['localYReferenceGlobal', 'rollRadians'];
 const LOAD_FIELDS = ['id', 'caseId', 'nodeId', 'fx', 'fy', 'fz', 'mx', 'my', 'mz'];
 const LOAD_COMPONENT_FIELDS = ['fx', 'fy', 'fz', 'mx', 'my', 'mz'];
-const CASE_FIELDS = ['id', 'name'];
+const MEMBER_LOAD_FIELDS = ['id', 'caseId', 'memberId', 'kind', 'axes', 'start', 'end', 'startValue', 'endValue'];
+const MEMBER_LOAD_KINDS = ['distributed', 'force', 'moment'];
+const LOAD_AXES = ['global', 'local'];
+const SETTLEMENT_FIELDS = ['id', 'caseId', 'nodeId', 'ux', 'uy', 'uz', 'rx', 'ry', 'rz'];
+const CASE_FIELDS = ['id', 'name', 'selfWeightFactor'];
 const COMBINATION_FIELDS = ['id', 'name', 'terms'];
 const TERM_FIELDS = ['caseId', 'factor'];
 const MEMBER_PROPERTY_FIELDS = ['A', 'E', 'G', 'Iy', 'Iz', 'J'] as const;
+const MEMBER_NON_NEGATIVE_FIELDS = ['shearAreaY', 'shearAreaZ', 'density'] as const;
 
 const UNIT_SYSTEMS = ['kN-m', 'N-mm', 'kgf-m', 'kip-ft'];
 
 const isPositiveFinite = (value: unknown): boolean => typeof value === 'number' && Number.isFinite(value) && value > 0;
+const isNonNegativeFinite = (value: unknown): boolean => typeof value === 'number' && Number.isFinite(value) && value >= 0;
 const isFiniteNumber = (value: unknown): boolean => typeof value === 'number' && Number.isFinite(value);
 const isCoordinate = (value: unknown): boolean =>
   isFiniteNumber(value) && Math.abs(value as number) <= SPACE3D_LIMITS.maxCoordinateMagnitude;
@@ -84,7 +91,7 @@ const checkIdentity = (
 const isVector3 = (value: unknown): value is Space3DVector =>
   Array.isArray(value) && value.length === 3 && value.every((component) => isFiniteNumber(component));
 
-export const validateSpace3DProject = (project: Space3DProjectV1): readonly Space3DValidationIssue[] => {
+export const validateSpace3DProject = (project: Space3DProject): readonly Space3DValidationIssue[] => {
   const issues: Space3DValidationIssue[] = [];
   const collect: Collector = {
     push: (code, entityKind, entityId, field) => { issues.push({ code, entityKind, entityId, field }); },
@@ -105,11 +112,15 @@ export const validateSpace3DProject = (project: Space3DProjectV1): readonly Spac
   const nodes = Array.isArray(project.nodes) ? project.nodes : [];
   const members = Array.isArray(project.members) ? project.members : [];
   const nodalLoads = Array.isArray(project.nodalLoads) ? project.nodalLoads : [];
+  const memberLoads = Array.isArray(project.memberLoads) ? project.memberLoads : [];
+  const settlements = Array.isArray(project.settlements) ? project.settlements : [];
   const loadCases = Array.isArray(project.loadCases) ? project.loadCases : [];
   const loadCombinations = Array.isArray(project.loadCombinations) ? project.loadCombinations : [];
   if (!Array.isArray(project.nodes)) collect.push('invalid-property', 'project', '', 'nodes');
   if (!Array.isArray(project.members)) collect.push('invalid-property', 'project', '', 'members');
   if (!Array.isArray(project.nodalLoads)) collect.push('invalid-property', 'project', '', 'nodalLoads');
+  if (!Array.isArray(project.memberLoads)) collect.push('invalid-property', 'project', '', 'memberLoads');
+  if (!Array.isArray(project.settlements)) collect.push('invalid-property', 'project', '', 'settlements');
   if (!Array.isArray(project.loadCases)) collect.push('invalid-property', 'project', '', 'loadCases');
   if (!Array.isArray(project.loadCombinations)) collect.push('invalid-property', 'project', '', 'loadCombinations');
 
@@ -136,6 +147,17 @@ export const validateSpace3DProject = (project: Space3DProjectV1): readonly Spac
         }
       }
     }
+    const springs = node?.springs;
+    if (typeof springs !== 'object' || springs === null) {
+      collect.push('invalid-property', 'node', id, 'springs');
+    } else {
+      unknownFields(collect, springs, RESTRAINT_FIELDS, 'node', id);
+      for (const dof of RESTRAINT_FIELDS) {
+        if (!isNonNegativeFinite((springs as Record<string, unknown>)[dof])) {
+          collect.push('invalid-property', 'node', id, `springs.${dof}`);
+        }
+      }
+    }
     if (id !== '' && isCoordinate(node?.x) && isCoordinate(node?.y) && isCoordinate(node?.z) && !nodeById.has(id)) {
       nodeById.set(id, { x: node.x, y: node.y, z: node.z });
     }
@@ -149,6 +171,28 @@ export const validateSpace3DProject = (project: Space3DProjectV1): readonly Spac
 
     for (const field of MEMBER_PROPERTY_FIELDS) {
       if (!isPositiveFinite(member?.[field])) collect.push('invalid-property', 'member', id, field);
+    }
+    for (const field of MEMBER_NON_NEGATIVE_FIELDS) {
+      if (!isNonNegativeFinite(member?.[field])) collect.push('invalid-property', 'member', id, field);
+    }
+
+    const releases = member?.releases;
+    if (typeof releases !== 'object' || releases === null) {
+      collect.push('invalid-property', 'member', id, 'releases');
+    } else {
+      unknownFields(collect, releases, SPACE3D_RELEASE_KEYS, 'member', id);
+      for (const key of SPACE3D_RELEASE_KEYS) {
+        if (typeof (releases as Record<string, unknown>)[key] !== 'boolean') {
+          collect.push('invalid-property', 'member', id, `releases.${key}`);
+        }
+      }
+      // Liberar la misma acción en los dos extremos deja la barra suelta en ese
+      // grado: es un mecanismo local que el solver no puede condensar.
+      for (const [first, second] of [['iN', 'jN'], ['iT', 'jT'], ['iVy', 'jVy'], ['iVz', 'jVz']] as const) {
+        if ((releases as Record<string, unknown>)[first] === true && (releases as Record<string, unknown>)[second] === true) {
+          collect.push('invalid-release', 'member', id, `releases.${first}`);
+        }
+      }
     }
 
     const orientation = member?.orientation;
@@ -195,6 +239,7 @@ export const validateSpace3DProject = (project: Space3DProjectV1): readonly Spac
     unknownFields(collect, loadCase, CASE_FIELDS, 'case', loadCase?.id ?? '');
     checkIdentity(collect, loadCase?.id, caseIds, 'case');
     if (typeof loadCase?.name !== 'string') collect.push('invalid-property', 'case', loadCase?.id ?? '', 'name');
+    if (!isFiniteNumber(loadCase?.selfWeightFactor)) collect.push('invalid-property', 'case', loadCase?.id ?? '', 'selfWeightFactor');
   }
 
   const loadIds = new Set<string>();
@@ -206,6 +251,43 @@ export const validateSpace3DProject = (project: Space3DProjectV1): readonly Spac
     if (typeof load?.caseId !== 'string' || !caseIds.has(load.caseId)) collect.push('missing-case', 'load', id, 'caseId');
     for (const component of LOAD_COMPONENT_FIELDS) {
       if (!isFiniteNumber(load?.[component as keyof typeof load])) collect.push('invalid-property', 'load', id, component);
+    }
+  }
+
+  const memberIdSet = memberIds;
+  const memberLoadIds = new Set<string>();
+  for (const load of memberLoads) {
+    unknownFields(collect, load, MEMBER_LOAD_FIELDS, 'member-load', load?.id ?? '');
+    checkIdentity(collect, load?.id, memberLoadIds, 'member-load');
+    const id = typeof load?.id === 'string' ? load.id : '';
+    if (typeof load?.memberId !== 'string' || !memberIdSet.has(load.memberId)) collect.push('missing-reference', 'member-load', id, 'memberId');
+    if (typeof load?.caseId !== 'string' || !caseIds.has(load.caseId)) collect.push('missing-case', 'member-load', id, 'caseId');
+    if (!MEMBER_LOAD_KINDS.includes(load?.kind)) collect.push('invalid-property', 'member-load', id, 'kind');
+    if (!LOAD_AXES.includes(load?.axes)) collect.push('invalid-property', 'member-load', id, 'axes');
+    if (!isVector3(load?.startValue)) collect.push('invalid-property', 'member-load', id, 'startValue');
+    if (!isVector3(load?.endValue)) collect.push('invalid-property', 'member-load', id, 'endValue');
+    const start = load?.start;
+    const end = load?.end;
+    const startOk = isFiniteNumber(start) && (start as number) >= 0 && (start as number) <= 1;
+    const endOk = isFiniteNumber(end) && (end as number) >= 0 && (end as number) <= 1;
+    if (!startOk) collect.push('invalid-span', 'member-load', id, 'start');
+    if (!endOk) collect.push('invalid-span', 'member-load', id, 'end');
+    if (startOk && endOk && load.kind === 'distributed' && (end as number) - (start as number) <= 0) {
+      collect.push('invalid-span', 'member-load', id, 'end');
+    }
+  }
+
+  const settlementIds = new Set<string>();
+  for (const settlement of settlements) {
+    unknownFields(collect, settlement, SETTLEMENT_FIELDS, 'settlement', settlement?.id ?? '');
+    checkIdentity(collect, settlement?.id, settlementIds, 'settlement');
+    const id = typeof settlement?.id === 'string' ? settlement.id : '';
+    if (typeof settlement?.nodeId !== 'string' || !nodeIds.has(settlement.nodeId)) collect.push('missing-reference', 'settlement', id, 'nodeId');
+    if (typeof settlement?.caseId !== 'string' || !caseIds.has(settlement.caseId)) collect.push('missing-case', 'settlement', id, 'caseId');
+    for (const dof of RESTRAINT_FIELDS) {
+      if (!isFiniteNumber((settlement as Record<string, unknown> | undefined)?.[dof])) {
+        collect.push('invalid-property', 'settlement', id, dof);
+      }
     }
   }
 

@@ -16,6 +16,14 @@ import type { ProjectRepository } from '../../storage/projectRepository';
  * ya arrastra `storage/projectRepository` en su propio chunk perezoso. Traerlo
  * aquí de forma estática lo subiría al arranque de todos los usuarios para
  * responder una pregunta que sólo importa después del primer pintado.
+ *
+ * ## Qué cuenta como biblioteca
+ *
+ * Un proyecto **vacío** no es trabajo del usuario: la aplicación crea y guarda
+ * uno en el primer arranque, antes de que nadie haya dibujado nada. Contarlo
+ * declaraba «returning» a quien acababa de llegar y le saltaba la bienvenida
+ * entera —la portada aparecía y desaparecía en medio segundo—. Sólo cuentan
+ * los proyectos con geometría: sin un nudo no hay nada que reanudar.
  */
 
 export type WelcomeEntryStatus =
@@ -28,12 +36,17 @@ export type WelcomeEntryStatus =
 
 export interface WelcomeEntry {
   status: WelcomeEntryStatus;
+  /** Proyectos guardados con geometría; el proyecto vacío del arranque no cuenta. */
   projects: number;
   recoveries: number;
 }
 
 const PENDING: WelcomeEntry = { status: 'unknown', projects: 0, recoveries: 0 };
 const FRESH: WelcomeEntry = { status: 'new', projects: 0, recoveries: 0 };
+
+/** Un proyecto sin un solo nudo no es trabajo: es el lienzo que la app abre sola. */
+const hasContent = (record: { project?: { nodes?: readonly unknown[] } }): boolean =>
+  Array.isArray(record.project?.nodes) && record.project.nodes.length > 0;
 
 /**
  * Lee el inventario real. Ante cualquier fallo —IndexedDB no disponible, una
@@ -47,9 +60,10 @@ export const readWelcomeEntry = async (repository?: ProjectRepository): Promise<
       ?? (typeof indexedDB === 'undefined' ? null : (await import('../../storage/projectRepository')).getProjectRepository());
     if (!active) return FRESH;
     const [projects, recoveries] = await Promise.all([active.listProjects(), active.listRecoveries()]);
+    const worked = projects.filter(hasContent);
     return {
-      status: projects.length > 0 ? 'returning' : 'new',
-      projects: projects.length,
+      status: worked.length > 0 ? 'returning' : 'new',
+      projects: worked.length,
       recoveries: recoveries.length,
     };
   } catch {
