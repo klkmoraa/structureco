@@ -577,6 +577,7 @@ export const esWorkspace = {
   'space3d.memberLoadUniform': 'Igualar al inicio',
   'space3d.saveMemberLoad': 'Guardar carga de barra',
   'space3d.emptyMemberLoads': 'Todavía no hay cargas de barra.',
+  'space3d.newSettlement': 'Nuevo asiento',
   'space3d.settlement': 'Asiento de apoyo',
   'space3d.settlements': 'Asientos',
   'space3d.settlementHelp': 'Movimiento impuesto en ejes globales. Sólo actúa sobre los grados restringidos del nudo.',

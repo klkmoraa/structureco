@@ -134,7 +134,12 @@ describe('Illustration Studio surface', () => {
     render(<><button type="button">Home behind</button><IllustrationStudio language="es" onClose={vi.fn()} /></>);
     const close = screen.getByRole('button', { name: 'Cerrar estudio' });
     const last = screen.getByRole('button', { name: 'Exportar SVG' });
-    close.focus();
+    // El modal reclama el foco inicial dentro de un `requestAnimationFrame`.
+    // Tomárselo antes de que aterrice deja esa devolución de llamada pendiente,
+    // que vuelve a mover el foco en mitad del Tab: la prueba pasaba o fallaba
+    // según lo que tardara el runner. Es el mismo patrón que ya usa
+    // `modalFocus.test.tsx`.
+    await waitFor(() => expect(document.activeElement).toBe(close));
     await user.tab({ shift: true });
     expect(document.activeElement).toBe(last);
     await user.tab();

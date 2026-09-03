@@ -577,6 +577,7 @@ export const enWorkspace = {
   'space3d.memberLoadUniform': 'Match the start',
   'space3d.saveMemberLoad': 'Save member load',
   'space3d.emptyMemberLoads': 'No member loads yet.',
+  'space3d.newSettlement': 'New settlement',
   'space3d.settlement': 'Support settlement',
   'space3d.settlements': 'Settlements',
   'space3d.settlementHelp': 'Imposed motion in global axes. It only acts on the restrained degrees of the node.',

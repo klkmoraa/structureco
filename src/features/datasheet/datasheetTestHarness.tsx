@@ -1,4 +1,5 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import { expect } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { ProjectProvider } from '../../store/ProjectContext';
 import { useProjectModel } from '../../store/ProjectModelContext';
@@ -67,6 +68,18 @@ export const renderDatasheet = async ({
 
   await user.click(screen.getByRole('button', { name: 'sembrar' }));
   await screen.findByRole('grid');
+
+  /*
+   * El Drawer reclama su foco inicial dentro de un `requestAnimationFrame`.
+   * Devolver el arnés antes de que aterrice deja esa devolución de llamada
+   * pendiente, y cuando cae en mitad de una secuencia de teclas se lleva el
+   * foco a su botón de cerrar: la prueba pasa o falla según lo que tarde el
+   * runner. Se espera aquí, una vez, en vez de en cada prueba.
+   */
+  await waitFor(() => {
+    const surface = document.querySelector('[role="dialog"]');
+    expect(surface?.contains(document.activeElement)).toBe(true);
+  });
   if (entity !== 'nodes') {
     // Se busca dentro del grupo de entidades: «Cargas» es también el rótulo de
     // una columna, y un `getByRole` global encontraría dos botones.

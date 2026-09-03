@@ -56,7 +56,12 @@ export const Space3DEntryDialog = ({ language, origin, projectName, onCancel, on
     ? text.workspaceOrigin.replace('{name}', projectName)
     : text.standaloneOrigin;
 
-  return <section ref={dialogRef} className="space3d-entry-dialog" role="dialog" aria-modal="true" aria-labelledby="space3d-entry-title" tabIndex={-1}>
+  // El velo es un elemento real, no una sombra: una sombra pinta pero no
+  // participa del hit-testing, así que un clic fuera del panel llegaba a los
+  // botones de la pantalla que hay debajo mientras un diálogo `aria-modal`
+  // seguía abierto.
+  return <div className="space3d-entry-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onCancel(); }}>
+    <section ref={dialogRef} className="space3d-entry-dialog" role="dialog" aria-modal="true" aria-labelledby="space3d-entry-title" tabIndex={-1}>
     <button type="button" className="space3d-entry-dialog__close" aria-label={text.close} onClick={onCancel}><X size={18} /></button>
     <span className="space3d-entry-dialog__badge"><FlaskConical size={15} />{text.badge}</span>
     <h2 id="space3d-entry-title">{text.title}</h2>
@@ -78,5 +83,6 @@ export const Space3DEntryDialog = ({ language, origin, projectName, onCancel, on
       <button ref={cancelRef} type="button" onClick={onCancel}><Undo2 size={16} />{text.cancel}</button>
       <button type="button" className="space3d-entry-dialog__proceed" onClick={onProceed}>{text.proceed}<ArrowRight size={16} /></button>
     </footer>
-  </section>;
+    </section>
+  </div>;
 };

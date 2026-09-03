@@ -11,7 +11,8 @@
  */
 import { buildMemberOrientation } from '../engine/orientation';
 import { resolveSpace3DTarget } from '../engine/solver';
-import { Space3DGeometryError, type Space3DAnalysisResult, type Space3DOrientationBasis, type Space3DProject, type Space3DVector } from '../model/types';
+import { selfWeightIntensity } from '../engine/memberLoads';
+import { SPACE3D_DOF_KEYS, Space3DGeometryError, type Space3DAnalysisResult, type Space3DNode, type Space3DOrientationBasis, type Space3DProject, type Space3DVector } from '../model/types';
 import type { Space3DAnalysisState, Space3DSelection } from '../store/Space3DProjectContext';
 
 export interface Space3DSceneNode {
@@ -39,6 +40,8 @@ export interface Space3DSceneSupport {
   readonly translations: readonly [boolean, boolean, boolean];
   readonly rotations: readonly [boolean, boolean, boolean];
   readonly fullyFixed: boolean;
+  /** El nudo tiene al menos un muelle activo sobre un grado no restringido. */
+  readonly elastic: boolean;
 }
 
 export interface Space3DSceneLoad {
@@ -137,6 +140,14 @@ const normalizeOrZero = (vector: Space3DVector): Space3DVector => {
   return length === 0 ? point(0, 0, 0) : point(vector[0] / length, vector[1] / length, vector[2] / length);
 };
 
+/** Flechas con que se dibuja el peso propio de cada barra. */
+const SELF_WEIGHT_SAMPLES = 4;
+
+/** ¿Sostiene algún muelle a este nudo? Sobre un grado ya restringido es inerte. */
+const nodeHasSprings = (node: Space3DNode): boolean =>
+  SPACE3D_DOF_KEYS.some((key) => !node.restraints[key] && node.springs[key] > 0);
+
+
 export const buildSpace3DSceneModel = (input: Space3DSceneInput): Space3DSceneModel => {
   const { project, analysis, analysisState, selection, targetId, deformationScale } = input;
   const diagnostics: Space3DSceneDiagnostic[] = [];
@@ -192,15 +203,27 @@ export const buildSpace3DSceneModel = (input: Space3DSceneInput): Space3DSceneMo
     }));
   }
 
+  // Un muelle sostiene el nudo tanto como una restricción rígida: el solver lo
+  // ensambla y produce reacción. Dibujar sólo los booleanos mostraba un apoyo
+  // elástico como si el nudo estuviera suelto.
   const supports: Space3DSceneSupport[] = project.nodes
     .filter((node) => positionById.has(node.id))
-    .filter((node) => Object.values(node.restraints).some(Boolean))
+    .filter((node) => Object.values(node.restraints).some(Boolean) || nodeHasSprings(node))
     .map((node) => Object.freeze({
       nodeId: node.id,
       position: positionById.get(node.id)!,
-      translations: Object.freeze([node.restraints.ux, node.restraints.uy, node.restraints.uz] as const),
-      rotations: Object.freeze([node.restraints.rx, node.restraints.ry, node.restraints.rz] as const),
+      translations: Object.freeze([
+        node.restraints.ux || node.springs.ux > 0,
+        node.restraints.uy || node.springs.uy > 0,
+        node.restraints.uz || node.springs.uz > 0,
+      ] as const),
+      rotations: Object.freeze([
+        node.restraints.rx || node.springs.rx > 0,
+        node.restraints.ry || node.springs.ry > 0,
+        node.restraints.rz || node.springs.rz > 0,
+      ] as const),
       fullyFixed: Object.values(node.restraints).every(Boolean),
+      elastic: nodeHasSprings(node),
     }));
 
   const target = resolveSpace3DTarget(project, targetId);
@@ -232,6 +255,40 @@ export const buildSpace3DSceneModel = (input: Space3DSceneInput): Space3DSceneMo
   // tramo cargado: una sola flecha en el centro no distingue una uniforme de una
   // trapecial, que es justo lo que el usuario necesita comprobar de un vistazo.
   const memberById = new Map(members.map((item) => [item.id, item]));
+
+  // El peso propio es una repartida más para el solver, así que también lo es
+  // para la escena: sin esto una barra que sólo carga su peso se dibujaba sin
+  // una sola flecha aunque aportara fuerzas y reacciones.
+  const selfWeightShare = project.loadCases.reduce((total, loadCase) => {
+    const factor = target?.factors.get(loadCase.id) ?? 0;
+    if (factor === 0) return total;
+    const share = loadCase.selfWeightFactor;
+    return total + (typeof share === 'number' && Number.isFinite(share) ? factor * share : 0);
+  }, 0);
+  if (selfWeightShare !== 0) {
+    for (const member of project.members) {
+      const drawn = memberById.get(member.id);
+      if (!drawn) continue;
+      const intensity = selfWeightShare * selfWeightIntensity(member);
+      if (intensity === 0) continue;
+      for (let index = 0; index < SELF_WEIGHT_SAMPLES; index += 1) {
+        const fraction = (index + 0.5) / SELF_WEIGHT_SAMPLES;
+        rawLoads.push({
+          kind: 'line',
+          vector: point(0, -intensity, 0),
+          id: `${member.id}:self-weight`,
+          nodeId: null,
+          memberId: member.id,
+          origin: point(
+            drawn.start[0] + (drawn.end[0] - drawn.start[0]) * fraction,
+            drawn.start[1] + (drawn.end[1] - drawn.start[1]) * fraction,
+            drawn.start[2] + (drawn.end[2] - drawn.start[2]) * fraction,
+          ),
+        });
+      }
+    }
+  }
+
   for (const load of project.memberLoads) {
     const factor = target?.factors.get(load.caseId) ?? 0;
     if (factor === 0) continue;
