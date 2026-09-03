@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { ArrowRight, FlaskConical, Undo2, X } from 'lucide-react';
 import { useModalFocus } from '../../design-system/components/modalFocus';
+import './entryDialog.css';
 
 export type Space3DEntryOrigin = 'workspace' | 'standalone';
 
@@ -21,9 +22,9 @@ const copy = {
     bridge: 'Los datos 2D sin equivalente se señalarán antes de permitir el análisis; no se inventarán valores.',
     return: 'Puedes volver al Editor 2D en cualquier momento sin sustituir su modelo.',
     matrixTitle: 'Qué se conserva y qué requiere revisión',
-    mappedLabel: 'Se conserva', mapped: 'Nudos XY como z=0, barras de pórtico, E/A/Iz y cargas nodales del plano.',
+    mappedLabel: 'Se conserva', mapped: 'Nudos XY como z=0, barras de pórtico, E/A/Iz, cargas nodales y de barra, liberaciones de extremo, muelles alineados con los ejes, asientos por caso y peso propio.',
     completeLabel: 'Debes completar', complete: 'G, Iy, J y restricciones uz/rx/ry fuera del plano.',
-    acknowledgeLabel: 'Debes revisar', acknowledge: 'Cargas en barra, liberaciones y apoyos sin equivalente se señalarán para su reconocimiento.',
+    acknowledgeLabel: 'Debes revisar', acknowledge: 'Celosías, rótulas internas, conexiones semirrígidas, cartelas rígidas, apoyos inclinados y efectos iniciales se señalarán para su reconocimiento.',
     cancel: 'Seguir en editor 2D', proceed: 'Abrir Space 3D',
   },
   en: {
@@ -34,9 +35,9 @@ const copy = {
     bridge: '2D data without an equivalent will be identified before analysis is allowed; no values will be invented.',
     return: 'You can return to the 2D editor at any time without replacing its model.',
     matrixTitle: 'What carries over and what needs review',
-    mappedLabel: 'Preserved', mapped: 'XY nodes as z=0, frame members, E/A/Iz, and planar nodal loads.',
+    mappedLabel: 'Preserved', mapped: 'XY nodes as z=0, frame members, E/A/Iz, nodal and member loads, end releases, axis-aligned springs, per-case settlements, and self-weight.',
     completeLabel: 'You must complete', complete: 'G, Iy, J, and uz/rx/ry out-of-plane restraints.',
-    acknowledgeLabel: 'You must review', acknowledge: 'Member loads, releases, and supports without an equivalent are listed for acknowledgement.',
+    acknowledgeLabel: 'You must review', acknowledge: 'Trusses, internal hinges, semi-rigid connections, rigid end zones, inclined supports, and initial effects are listed for acknowledgement.',
     cancel: 'Stay in 2D editor', proceed: 'Open Space 3D',
   },
 } as const;

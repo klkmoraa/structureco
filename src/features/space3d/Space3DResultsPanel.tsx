@@ -92,11 +92,15 @@ const diagramPath = (member: Space3DMemberResult, key: Space3DActionKey): string
   if (stations.length === 0) return '';
   const peak = Math.max(...stations.map((station) => Math.abs(station[key])), Number.MIN_VALUE);
   const half = DIAGRAM_HEIGHT / 2 - 4;
+  // Redondeo geométrico, no de presentación: son coordenadas de un `path`, y
+  // la política numérica del producto gobierna lo que el usuario lee, no el
+  // trazo. Dos decimales sobre un `viewBox` de 320 son de sobra.
+  const round = (value: number) => Math.round(value * 100) / 100;
   const point = (index: number) => {
     const station = stations[index];
-    const x = station.position * DIAGRAM_WIDTH;
-    const y = DIAGRAM_HEIGHT / 2 - (station[key] / peak) * half;
-    return `${x.toFixed(2)},${y.toFixed(2)}`;
+    const x = round(station.position * DIAGRAM_WIDTH);
+    const y = round(DIAGRAM_HEIGHT / 2 - (station[key] / peak) * half);
+    return `${x},${y}`;
   };
   const top = stations.map((_, index) => point(index)).join(' L');
   return `M0,${DIAGRAM_HEIGHT / 2} L${top} L${DIAGRAM_WIDTH},${DIAGRAM_HEIGHT / 2} Z`;

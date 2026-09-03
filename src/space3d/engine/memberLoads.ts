@@ -286,7 +286,10 @@ export const evaluateStationActions = (
   side: Space3DStationSide = 'right',
 ): Space3DMemberEndForces => {
   const { force, firstMoment } = distributedResultants(field, x);
-  const includes = (position: number) => (side === 'right' ? position <= x + 1e-12 : position < x - 1e-12);
+  // Tolerancia relativa a la abscisa: una absoluta se queda por debajo del
+  // espaciado del flotante en cuanto la barra mide kilómetros.
+  const tolerance = Math.max(Math.abs(x), 1) * 1e-12;
+  const includes = (position: number) => (side === 'right' ? position <= x + tolerance : position < x - tolerance);
 
   let pointX = 0;
   let pointY = 0;

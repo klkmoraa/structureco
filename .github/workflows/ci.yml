@@ -69,6 +69,12 @@ jobs:
       - name: Contrato de assets estructurales
         run: npm run verify:structural-assets
 
+      # El gate de workflows existía sin que nada lo ejecutara, así que una
+      # política rota —un script renombrado, una ruta movida, un paso que
+      # despliega donde no debe— sólo se descubría a mano.
+      - name: Política de los propios workflows
+        run: npm run validate:ci
+
       - name: Build de producción
         run: npm run build
 

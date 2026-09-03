@@ -208,6 +208,26 @@ describe('cierre del diagrama', () => {
     expect(last.Mz).toBeCloseTo(member.end.Mz, 7);
   });
 
+  it('cierra también con una acción puntual justo en el extremo j', () => {
+    const P = -14;
+    const result = analyze({
+      ...unloadedCantilever({ L }),
+      memberLoads: [{
+        id: 'ML1', caseId: 'LC1', memberId: 'M1', kind: 'force', axes: 'local',
+        start: 1, end: 1, startValue: [0, P, 0], endValue: [0, 0, 0],
+      }],
+    });
+    const member = memberResult(result);
+    const stations = member.stations;
+    const last = stations[stations.length - 1];
+
+    // La estación se duplica en `L`: antes de la carga el vano está descargado,
+    // después la lectura empalma con la acción del extremo.
+    expect(stations[stations.length - 2].position).toBeCloseTo(1, 12);
+    expect(stations[stations.length - 2].Vy).toBeCloseTo(-P, 8);
+    expect(last.Vy).toBeCloseTo(-member.end.Vy, 8);
+  });
+
   it('mantiene el equilibrio global con cargas de barra', () => {
     const project: Space3DProject = {
       ...unloadedCantilever({ L }),
