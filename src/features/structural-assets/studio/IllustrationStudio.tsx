@@ -113,8 +113,12 @@ export function IllustrationStudio({ language = 'es', initialTheme = 'light', on
   const activeFamily = STRUCTURAL_ASSET_REGISTRY.find((asset) => asset.id === parameters.assetId)?.family ?? 'portal';
   const activePersonal = library.find((preset) => preset.id === selectedPersonalId);
 
+  // `useModalFocus` ya reclama este mismo botón como foco inicial, dentro de un
+  // `requestAnimationFrame`. Duplicarlo con un efecto síncrono no adelantaba
+  // nada visible y sí escondía esa devolución de llamada: el foco ya estaba
+  // donde tocaba, así que nadie podía esperar a que aterrizara, y cuando lo
+  // hacía en mitad de un Tab movía el foco por su cuenta.
   useModalFocus({ open: true, containerRef: dialogRef, onEscape: onClose, initialFocus: () => closeRef.current, restoreFocus: false });
-  useEffect(() => { closeRef.current?.focus(); }, []);
   useEffect(() => { setRenameDraft(activePersonal?.name ?? ''); }, [activePersonal?.id, activePersonal?.name]);
 
   const applyLibrary = (next: PersonalStudioPreset[]) => {
