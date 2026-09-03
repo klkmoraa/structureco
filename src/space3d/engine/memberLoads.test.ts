@@ -14,7 +14,7 @@ import {
   uniformMemberLoad,
   unloadedCantilever,
 } from './fixtures';
-import { fixedSpace3DRestraints, noSpace3DSprings, type Space3DMemberLoad, type Space3DProject } from '../model/types';
+import { fixedSpace3DRestraints, freeSpace3DRestraints, noSpace3DSprings, type Space3DMemberLoad, type Space3DProject } from '../model/types';
 
 const L = 2;
 const E = 200_000_000;
@@ -309,6 +309,44 @@ describe('liberaciones de extremo', () => {
     expect(memberResult(result).end.N).toBeCloseTo(0, 9);
   });
 
+  it('resuelve una ménsula con el flector liberado en su extremo libre', () => {
+    const P = 10;
+    const base = bendingCantilever({ L, P, axis: 'y' });
+    const result = analyze({
+      ...base,
+      members: base.members.map((member) => ({ ...member, releases: { ...member.releases, jMz: true } })),
+    });
+
+    // El giro del extremo libre deja de participar: no es un mecanismo, es una
+    // incógnita que no existe. La ménsula sigue siendo estable y su flecha es
+    // la de una viga en voladizo con el extremo articulado, `P·L³/(3·E·I)`
+    // sin el término de continuidad —aquí el giro libre no cambia nada porque
+    // no hay nada más allá del extremo.
+    expect(result.nodeResults[1].displacement.uy).toBeCloseTo(P * L ** 3 / (3 * E * Iz), 12);
+    expect(memberResult(result).end.Mz).toBeCloseTo(0, 9);
+  });
+
+  it('resuelve un modelo con un nudo suelto sin barras', () => {
+    const base = bendingCantilever({ L, P: 10, axis: 'y' });
+    const result = analyze({
+      ...base,
+      nodes: [...base.nodes, { id: 'K', x: 9, y: 9, z: 9, restraints: freeSpace3DRestraints(), springs: noSpace3DSprings() }],
+    });
+    expect(result.nodeResults.find((item) => item.nodeId === 'K')!.displacement.uy).toBe(0);
+  });
+
+  it('sigue llamando mecanismo a una acción aplicada donde no hay rigidez', () => {
+    const base = bendingCantilever({ L, P: 10, axis: 'y' });
+    const result = analyzeSpace3DProject({
+      ...base,
+      members: base.members.map((member) => ({ ...member, releases: { ...member.releases, jMz: true } })),
+      nodalLoads: [{ id: 'L1', caseId: 'LC1', nodeId: 'J', fx: 0, fy: 0, fz: 0, mx: 0, my: 0, mz: 5 }],
+    }, 'LC1');
+
+    expect(result.success).toBe(false);
+    expect(result.issues[0]).toMatchObject({ code: 'mechanism', entityKind: 'node', entityId: 'J', field: 'rz' });
+  });
+
   it('rechaza liberar la misma acción en los dos extremos', () => {
     const project = fixedFixedBeam([]);
     const result = analyzeSpace3DProject({
@@ -425,6 +463,21 @@ describe('deformación por cortante', () => {
     const base = bendingCantilever({ L, P: 10, axis: 'y' });
     const result = analyze(base);
     expect(result.nodeResults[1].displacement.uy).toBeCloseTo(10 * L ** 3 / (3 * E * Iz), 12);
+  });
+
+  it('rechaza un resultado no finito aunque no haya ningún grado libre', () => {
+    const project = fixedFixedBeam([{
+      id: 'ML1', caseId: 'LC1', memberId: 'M1', kind: 'distributed', axes: 'local',
+      start: 0, end: 1, startValue: [0, -1e308, 0], endValue: [0, -1e308, 0],
+    }]);
+    const result = analyzeSpace3DProject(project, 'LC1');
+
+    // Sin incógnitas no se resuelve ningún sistema, así que la comprobación de
+    // finitud del solve no cubre este camino: un desbordamiento se publicaba
+    // como éxito con la auditoría de equilibrio en `NaN`, que la interfaz lee
+    // como «sin dato» y no como «no verificado».
+    expect(result.success).toBe(false);
+    expect(result.issues.map((item) => item.code)).toContain('non-finite-solution');
   });
 
   it('deja intactos los momentos de empotramiento de una carga uniforme', () => {

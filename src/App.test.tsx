@@ -770,7 +770,9 @@ describe('structureCo app shell', () => {
     await user.click(within(palette).getByRole('menuitem', { name: /editar selección/i }));
 
     await waitFor(() => expect(document.querySelector('[data-structural-edit-surface]')).toBeTruthy());
-    expect(document.activeElement).toBe(screen.getByLabelText('ΔX'));
+    // La superficie reclama el foco en un `requestAnimationFrame` posterior a
+    // su montaje: afirmarlo en el mismo tick medía el reloj del runner.
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText('ΔX')));
   });
 
   it('exposes canvas shortcuts and selects structural objects from the keyboard', async () => {

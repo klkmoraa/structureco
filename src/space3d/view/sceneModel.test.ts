@@ -66,9 +66,12 @@ describe('Space3D scene model', () => {
         { id: 'L2', caseId: 'LC2', nodeId: 'N4', fx: 0, fy: 0, fz: 0, mx: 12, my: 0, mz: 0 },
       ],
     };
-    // La carga de barra del ejemplo también pertenece a LC1: el objetivo activo
-    // decide qué se dibuja, y LC2 sólo trae su momento nodal.
-    expect(new Set(build({ project: withMoment }).loads.map((load) => load.id))).toEqual(new Set(['L1', 'ML1']));
+    // La carga de barra y el peso propio del ejemplo también pertenecen a LC1:
+    // el objetivo activo decide qué se dibuja, y LC2 sólo trae su momento nodal.
+    const active = new Set(build({ project: withMoment }).loads.map((load) => load.id));
+    expect(active).toContain('L1');
+    expect(active).toContain('ML1');
+    expect([...active].some((id) => id.endsWith(':self-weight'))).toBe(true);
     const other = build({ project: withMoment, targetId: 'LC2' });
     expect(other.loads.map((load) => load.id)).toEqual(['L2']);
     expect(other.loads[0].kind).toBe('moment');
@@ -76,13 +79,46 @@ describe('Space3D scene model', () => {
 
   it('dibuja una repartida como una serie de flechas sobre su barra', () => {
     const scene = build();
-    const line = scene.loads.filter((item) => item.kind === 'line');
+    const line = scene.loads.filter((item) => item.kind === 'line' && item.id === 'ML1');
     expect(line.length).toBeGreaterThan(1);
     expect(new Set(line.map((item) => item.memberId))).toEqual(new Set(['M1']));
     expect(line.every((item) => item.nodeId === null)).toBe(true);
     // Uniforme y global `-Y`: todas las flechas apuntan igual y a lo largo del vano.
     expect(line.every((item) => item.direction[1] < 0)).toBe(true);
     expect(new Set(line.map((item) => item.origin.join(','))).size).toBe(line.length);
+  });
+
+  it('dibuja el peso propio, que ninguna carga explícita representa', () => {
+    // Una barra que sólo carga su peso aportaba fuerzas y reacciones sin una
+    // sola flecha en la escena: no había forma de comprobar visualmente qué
+    // estaba actuando.
+    const weight = build().loads.filter((item) => item.id.endsWith(':self-weight'));
+    expect(new Set(weight.map((item) => item.memberId))).toEqual(new Set(['M1', 'M2', 'M3']));
+    expect(weight.every((item) => item.direction[1] < 0 && item.nodeId === null)).toBe(true);
+
+    const project = createSpace3DPortalExample();
+    const withoutWeight = build({
+      project: { ...project, loadCases: project.loadCases.map((item) => ({ ...item, selfWeightFactor: 0 })) },
+    });
+    expect(withoutWeight.loads.some((item) => item.id.endsWith(':self-weight'))).toBe(false);
+  });
+
+  it('dibuja como apoyo un nudo sostenido sólo por muelles', () => {
+    const project = createSpace3DPortalExample();
+    const sprung = build({
+      project: {
+        ...project,
+        nodes: project.nodes.map((node) => (node.id === 'N4'
+          ? { ...node, springs: { ...node.springs, uy: 350 } }
+          : node)),
+      },
+    });
+    const support = sprung.supports.find((item) => item.nodeId === 'N4');
+    expect(support).toBeDefined();
+    expect(support!.elastic).toBe(true);
+    expect(support!.translations[1]).toBe(true);
+    // Un muelle sobre un grado ya restringido es inerte y no cambia el dibujo.
+    expect(build().supports.some((item) => item.nodeId === 'N4')).toBe(false);
   });
 
   it('publica la deformada como p + escala·u sólo con un resultado vigente', () => {

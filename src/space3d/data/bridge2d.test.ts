@@ -226,6 +226,35 @@ describe('2D to Space 3D bridge', () => {
     };
     expect(space3dMatchesPlanarSource(extended, source)).toBe(true);
 
+    // Editar en 2D una carga de barra que ya cruzó el puente sí es divergencia:
+    // reabrir el modelo espacial con la carga vieja lo dejaría analizar entradas
+    // obsoletas sin un solo aviso.
+    const editedLoads = {
+      ...source,
+      memberLoads: source.memberLoads.map((load, index) => (index === 0 ? { ...load, qyStart: -99, qyEnd: -99 } : load)),
+    };
+    expect(space3dMatchesPlanarSource(project, editedLoads)).toBe(false);
+
+    // Y también cambiar el peso propio, la densidad o un muelle del plano.
+    expect(space3dMatchesPlanarSource(project, {
+      ...source,
+      loadCases: source.loadCases.map((item, index) => (index === 0 ? { ...item, selfWeightFactor: 1 } : item)),
+    })).toBe(false);
+
+    // Añadir en 3D lo que el plano no afirma sigue siendo trabajo del usuario.
+    const enriched = {
+      ...project,
+      memberLoads: [...project.memberLoads, {
+        id: 'solo-3d', caseId: project.loadCases[0].id, memberId: project.members[0].id,
+        kind: 'distributed' as const, axes: 'local' as const, start: 0, end: 1,
+        startValue: [0, -3, 0] as const, endValue: [0, -3, 0] as const,
+      }],
+      nodes: project.nodes.map((node, index) => (index === 0
+        ? { ...node, springs: { ...node.springs, uz: 12 } }
+        : node)),
+    };
+    expect(space3dMatchesPlanarSource(enriched, source)).toBe(true);
+
     // Borrar un nudo que venía del 2D sí lo es.
     const trimmed = { ...project, nodes: project.nodes.slice(1) };
     expect(space3dMatchesPlanarSource(trimmed, source)).toBe(false);

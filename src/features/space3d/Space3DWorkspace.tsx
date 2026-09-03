@@ -35,7 +35,7 @@ import { translate, type Language, type TranslationKey } from '../../i18n/catalo
 import { formatNumber } from '../../utils/numberFormat';
 import { BrandMark } from '../topbar/BrandMark';
 import type { Space3DCommand } from '../../space3d/data/commands';
-import type { Space3DProject, Space3DRestraints } from '../../space3d/model/types';
+import { SPACE3D_DOF_KEYS, type Space3DNode, type Space3DProject, type Space3DRestraints } from '../../space3d/model/types';
 import type { ProjectModel } from '../../types';
 import type { Space3DStorageLike } from '../../space3d/data/storage';
 import type { Space3DWorkerClient } from '../../space3d/runtime/workerClient';
@@ -173,6 +173,11 @@ const LAYER_TOGGLES: readonly { id: keyof Space3DLayerVisibility; key: Translati
 const number = (value: number): string => formatNumber(value, 'table');
 
 const countRestraints = (restraints: Space3DRestraints) => Object.values(restraints).filter(Boolean).length;
+
+/** Un muelle sobre un grado libre sostiene el nudo: cuenta como apoyo. */
+const isSupported = (node: Space3DNode) =>
+  countRestraints(node.restraints) > 0
+  || SPACE3D_DOF_KEYS.some((key) => !node.restraints[key] && node.springs[key] > 0);
 
 interface WorkspaceBodyProps extends Pick<Space3DWorkspaceProps,
   'language' | 'onOpenHome' | 'onOpen2D' | 'createViewport' | 'sourceProject'> {
@@ -401,12 +406,13 @@ const WorkspaceBody = ({
   const canNewMember = project.nodes.length >= 2;
   const canNewLoad = project.nodes.length > 0;
   const canNewMemberLoad = project.members.length > 0 && project.loadCases.length > 0;
+  const canNewSettlement = project.nodes.length > 0 && project.loadCases.length > 0;
   const canEditSupport = selectedNodeId !== null;
   const canDeleteSelection = editorTarget !== null && deleteCommandFor(editorTarget) !== null;
   const modelCounts = {
     nodes: project.nodes.length,
     members: project.members.length,
-    supports: project.nodes.filter((node) => countRestraints(node.restraints) > 0).length,
+    supports: project.nodes.filter(isSupported).length,
     loads: project.nodalLoads.length,
     memberLoads: project.memberLoads.length,
     settlements: project.settlements.length,
@@ -812,6 +818,14 @@ const WorkspaceBody = ({
               </tbody>
             </table>
             {project.settlements.length === 0 ? <p className="space3d-notice">{t('space3d.emptySettlements')}</p> : null}
+            <div className="space3d-inline-actions">
+              <button
+                type="button"
+                className="space3d-button space3d-button--ghost"
+                disabled={!canNewSettlement}
+                onClick={() => openNew('settlement')}
+              >{t('space3d.newSettlement')}</button>
+            </div>
           </div>
 
           <div className="space3d-table-scroll" id="space3d-table-case">

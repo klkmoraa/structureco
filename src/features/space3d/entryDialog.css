@@ -2,27 +2,34 @@
  * Orientación previa a Space 3D.
  *
  * El componente se renderiza en línea desde `App`, no en un portal, porque
- * puede aparecer antes de que exista cualquier superficie perezosa. Por eso su
- * caja es `fixed` y trae su propio velo: sin esto el diálogo se maquetaba en
- * flujo, quedaba fuera del viewport y `body { overflow: hidden }` impedía
- * incluso desplazarse hasta él — es decir, Space 3D era inalcanzable.
+ * puede aparecer antes de que exista cualquier superficie perezosa. Por eso
+ * trae su propio velo `fixed`: sin esto el diálogo se maquetaba en flujo,
+ * quedaba fuera del viewport y `body { overflow: hidden }` impedía incluso
+ * desplazarse hasta él — es decir, Space 3D era inalcanzable. El velo es un
+ * elemento real y no una sombra exterior porque además de tapar tiene que
+ * capturar el puntero: si no, un clic fuera del panel alcanza los botones de
+ * la pantalla que hay debajo con el diálogo `aria-modal` abierto.
  *
  * La composición y los tokens son los del diálogo del sistema de diseño; lo
  * que no se reutiliza es su componente, porque este diálogo pone el foco
  * inicial en la salida segura («Seguir en editor 2D») y `ModalSurface` no
  * expone ese control.
  */
-.space3d-entry-dialog {
+.space3d-entry-backdrop {
   position: fixed;
   z-index: var(--sc-z-modal);
   inset: 0;
-  margin: auto;
+  display: grid;
+  place-items: center;
+  padding: var(--sc-space-5);
+  background: var(--sc-color-overlay-strong);
+  animation: sc-fade-in var(--sc-motion-standard) var(--sc-ease-enter) both;
+}
+
+.space3d-entry-dialog {
+  position: relative;
   width: min(620px, calc(100vw - (var(--sc-space-5) * 2)));
-  /* `inset: 0` + `margin: auto` centra sólo si la caja tiene tamaño propio:
-     sin `fit-content` la altura se estira hasta el viewport y el panel queda
-     con medio alto vacío bajo el pie. */
-  height: fit-content;
-  max-height: calc(100dvh - (var(--sc-space-5) * 2));
+  max-height: 100%;
   overflow-y: auto;
   overscroll-behavior: contain;
   display: flex;
@@ -33,13 +40,7 @@
   border-radius: var(--sc-radius-modal);
   background: var(--sc-color-surface-elevated);
   color: var(--sc-color-text-primary);
-  /* El velo va como sombra exterior desmesurada, no como pseudo-elemento: el
-     diálogo crea contexto de apilamiento, así que un hijo con `z-index: -1`
-     se pintaría **encima** de su propio fondo y velaría el panel entero. Una
-     sombra exterior siempre queda detrás del fondo y no añade un nodo que el
-     lector de pantalla tendría que ignorar. */
-  box-shadow: var(--sc-shadow-clay-floating), 0 0 0 100vmax var(--sc-color-overlay-strong);
-  animation: sc-fade-in var(--sc-motion-standard) var(--sc-ease-enter) both;
+  box-shadow: var(--sc-shadow-clay-floating);
 }
 
 .space3d-entry-dialog h2 {
@@ -150,11 +151,10 @@
 .space3d-entry-dialog__proceed:hover { background: var(--sc-color-action-hover) !important; }
 
 @media (max-width: 640px) {
+  .space3d-entry-backdrop { padding: 0; place-items: end stretch; }
+
   .space3d-entry-dialog {
-    inset: auto 0 0;
-    margin: 0;
     width: 100%;
-    height: auto;
     max-height: 88dvh;
     border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0;
     padding: var(--sc-space-4);

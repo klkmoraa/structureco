@@ -303,10 +303,36 @@ export const analyzeSpace3DProject = (project: Space3DProject, targetId: string)
     });
   }
 
-  const free: number[] = [];
-  for (let index = 0; index < totalDofs; index += 1) if (!restrained.has(index)) free.push(index);
-
   const Kspring = K.map((row, rowIndex) => row.map((value, colIndex) => (rowIndex === colIndex ? value + springs[rowIndex] : value)));
+
+  /**
+   * Grados de contabilidad: filas sin una sola rigidez.
+   *
+   * Una liberación de extremo anula la fila del elemento en ese GDL, y si el
+   * nudo no tiene otra barra, restricción ni muelle que lo sostenga, el GDL
+   * queda a cero. No es un mecanismo —una ménsula con el flector liberado en su
+   * extremo libre es perfectamente estable—: es una incógnita que no existe. Un
+   * nudo suelto, sin ninguna barra, cae en el mismo caso. Se sacan del sistema
+   * reducido, igual que hace el dominio 2D, en vez de dejar que hagan singular
+   * la matriz.
+   *
+   * Lo que sí es un fallo es aplicar una acción sobre uno de ellos: ahí no hay
+   * nada que la equilibre, y eso se sigue reportando como mecanismo.
+   */
+  const magnitude = Math.max(...Kspring.map((row) => Math.max(...row.map(Math.abs))), 0);
+  const stiffnessFloor = magnitude * 1e-12;
+  const loadFloor = Math.max(...F.map(Math.abs), 0) * 1e-12;
+  const free: number[] = [];
+  const inert: number[] = [];
+  for (let index = 0; index < totalDofs; index += 1) {
+    if (restrained.has(index)) continue;
+    const carries = Kspring[index].some((value) => Math.abs(value) > stiffnessFloor);
+    if (carries) free.push(index);
+    else if (Math.abs(F[index]) > loadFloor) {
+      return failed(targetId, target.kind, [issue('mechanism', 'node', project.nodes[Math.floor(index / DOF_PER_NODE)].id, SPACE3D_DOF_KEYS[index % DOF_PER_NODE])]);
+    } else inert.push(index);
+  }
+  void inert;
   const Kff = submatrix(Kspring, free, free);
   const supported = [...restrained].sort((a, b) => a - b);
   const settlementActive = supported.some((index) => prescribed[index] !== 0);
@@ -335,11 +361,21 @@ export const analyzeSpace3DProject = (project: Space3DProject, targetId: string)
   const U = new Array<number>(totalDofs).fill(0);
   free.forEach((global, index) => { U[global] = solved.x[index]; });
   for (const index of supported) U[index] = prescribed[index];
+  // Un modelo enteramente restringido no resuelve ningún sistema, así que la
+  // comprobación de finitud del solve no lo cubre: una intensidad o un factor
+  // desbordados llegarían hasta las reacciones y la auditoría como `Infinity`
+  // o `NaN`, y se publicarían como éxito.
+  if (F.some((value) => !Number.isFinite(value)) || U.some((value) => !Number.isFinite(value))) {
+    return failed(targetId, target.kind, [issue('non-finite-solution', 'project', '')]);
+  }
 
   // Las reacciones se leen de la rigidez **sin** muelles: en un GDL libre con
   // muelle el residual `K·U − F` es exactamente la fuerza que el muelle
   // devuelve a la estructura, y en uno restringido es la reacción del apoyo.
   const rawReactions = multiplyMatrixVector(K, U).map((value, index) => value - F[index]);
+  if (rawReactions.some((value) => !Number.isFinite(value))) {
+    return failed(targetId, target.kind, [issue('non-finite-solution', 'project', '')]);
+  }
   const R = rawReactions.map((value, index) => (restrained.has(index) || springs[index] > 0 ? value : 0));
 
   const nodeResults: Space3DNodeResult[] = project.nodes.map((node, index) => Object.freeze({
@@ -369,6 +405,13 @@ export const analyzeSpace3DProject = (project: Space3DProject, targetId: string)
   });
 
   const equilibrium = auditEquilibrium(project, nodeResults, F, nodeIndex);
+  // La auditoría es la prueba de que el resultado se sostiene. Si ella misma no
+  // es un número —una intensidad desbordada convierte `r × F` en `Infinity` y su
+  // normalización en `NaN`— no hay nada que publicar: un residual `NaN` se lee
+  // en la interfaz como «sin dato», no como «no verificado».
+  if (!Number.isFinite(equilibrium.normalized) || equilibrium.force.some((value) => !Number.isFinite(value))) {
+    return failed(targetId, target.kind, [issue('non-finite-solution', 'project', '')]);
+  }
 
   const diagnostics: Space3DAnalysisDiagnostics = Object.freeze({
     dofCount: totalDofs,

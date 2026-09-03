@@ -25,6 +25,8 @@
  */
 import {
   SPACE3D_ANALYSIS_SPACE,
+  SPACE3D_DOF_KEYS,
+  SPACE3D_RELEASE_KEYS,
   SPACE3D_SCHEMA_VERSION,
   freeSpace3DRestraints,
   noSpace3DReleases,
@@ -414,27 +416,78 @@ export const unresolvedSpace3DBridgeNotes = (
   return !acknowledged.has(item.code);
 });
 
+const sameVector = (a: Space3DVector, b: Space3DVector): boolean =>
+  a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+
 /**
  * ¿Sigue este proyecto espacial derivando del proyecto plano indicado?
  *
- * Comprueba en una sola dirección: que todo lo que vino del 2D siga ahí y en su
- * sitio. Lo que el usuario haya añadido o completado en 3D es suyo y no cuenta
- * — incluir sus nudos nuevos en la comparación declararía «el 2D cambió» por el
- * simple hecho de haber trabajado, que es justo el aviso que no debe salir.
+ * Comprueba en una sola dirección: que **todo lo que el 2D afirma** siga ahí y
+ * con el mismo valor. Lo que el usuario haya añadido o completado en 3D es suyo
+ * y no cuenta — incluir sus nudos nuevos en la comparación declararía «el 2D
+ * cambió» por el simple hecho de haber trabajado, que es justo el aviso que no
+ * debe salir.
+ *
+ * Desde S3D-2 el puente traslada cargas de barra, liberaciones, muelles,
+ * asientos y peso propio, así que la comparación tiene que cubrirlos: mirar
+ * sólo la geometría dejaba reabrir el modelo espacial con las cargas viejas
+ * después de editarlas en 2D, sin un solo aviso.
+ *
+ * La regla es «afirmaciones positivas»: un muelle, una densidad, una liberación
+ * o un peso propio que el 2D declara tienen que seguir declarados; lo que el 2D
+ * deja en cero o en falso el usuario puede ponerlo en 3D sin que cuente como
+ * divergencia.
  */
 export const space3dMatchesPlanarSource = (project: Space3DProject, source: ProjectModel): boolean => {
   if (project.id !== derivedSpace3DId(source.id)) return false;
 
+  const expected = deriveSpace3DFromPlanarProject(source).project;
+
   const nodeById = new Map(project.nodes.map((node) => [node.id, node]));
-  for (const node of source.nodes) {
+  for (const node of expected.nodes) {
     const twin = nodeById.get(node.id);
     if (!twin || twin.x !== node.x || twin.y !== node.y) return false;
+    for (const dof of SPACE3D_DOF_KEYS) {
+      if (node.springs[dof] > 0 && twin.springs[dof] !== node.springs[dof]) return false;
+    }
   }
 
   const memberById = new Map(project.members.map((member) => [member.id, member]));
-  for (const member of source.members) {
+  for (const member of expected.members) {
     const twin = memberById.get(member.id);
     if (!twin || twin.i !== member.i || twin.j !== member.j) return false;
+    // `E`, `A` e `Iz` los aporta el plano enteros; `Iy`, `J` y `G` los completa
+    // el usuario en 3D y por eso no se comparan.
+    if (twin.E !== member.E || twin.A !== member.A || twin.Iz !== member.Iz) return false;
+    if (member.density > 0 && twin.density !== member.density) return false;
+    if (member.shearAreaY > 0 && twin.shearAreaY !== member.shearAreaY) return false;
+    for (const key of SPACE3D_RELEASE_KEYS) {
+      if (member.releases[key] && !twin.releases[key]) return false;
+    }
+  }
+
+  const memberLoadById = new Map(project.memberLoads.map((load) => [load.id, load]));
+  for (const load of expected.memberLoads) {
+    const twin = memberLoadById.get(load.id);
+    if (!twin) return false;
+    if (twin.memberId !== load.memberId || twin.caseId !== load.caseId) return false;
+    if (twin.kind !== load.kind || twin.axes !== load.axes) return false;
+    if (twin.start !== load.start || twin.end !== load.end) return false;
+    if (!sameVector(twin.startValue, load.startValue) || !sameVector(twin.endValue, load.endValue)) return false;
+  }
+
+  const settlementById = new Map(project.settlements.map((item) => [item.id, item]));
+  for (const item of expected.settlements) {
+    const twin = settlementById.get(item.id);
+    if (!twin || twin.nodeId !== item.nodeId || twin.caseId !== item.caseId) return false;
+    if (SPACE3D_DOF_KEYS.some((dof) => twin[dof] !== item[dof])) return false;
+  }
+
+  const caseById = new Map(project.loadCases.map((item) => [item.id, item]));
+  for (const item of expected.loadCases) {
+    const twin = caseById.get(item.id);
+    if (!twin) return false;
+    if (item.selfWeightFactor !== 0 && twin.selfWeightFactor !== item.selfWeightFactor) return false;
   }
 
   return true;
