@@ -7,7 +7,7 @@ import { Space3DProjectProvider, useSpace3DProject } from './Space3DProjectConte
 import { createBlankSpace3DProject, createSpace3DPortalExample } from '../model/defaultProject';
 import { serializeSpace3DProject } from '../data/codec';
 import { SPACE3D_STORAGE_KEY } from '../data/storage';
-import { freeSpace3DRestraints } from '../model/types';
+import { freeSpace3DRestraints, noSpace3DSprings } from '../model/types';
 import type { Space3DStorageLike } from '../data/storage';
 
 class MemoryStorage implements Space3DStorageLike {
@@ -34,7 +34,7 @@ const Harness = () => {
     <p data-testid="undo">{String(canUndo)}</p>
     <p data-testid="target">{analysisTargetId}</p>
     <p data-testid="redo">{String(canRedo)}</p>
-    <button onClick={() => execute({ kind: 'add-node', node: { id: 'N9', x: 1, y: 1, z: 1, restraints: freeSpace3DRestraints() } })}>add</button>
+    <button onClick={() => execute({ kind: 'add-node', node: { id: 'N9', x: 1, y: 1, z: 1, restraints: freeSpace3DRestraints(), springs: noSpace3DSprings() } })}>add</button>
     <button onClick={() => execute({ kind: 'delete-node', nodeId: 'N1' })}>bad</button>
     <button onClick={() => undo()}>undo</button>
     <button onClick={() => redo()}>redo</button>
@@ -163,8 +163,9 @@ describe('Space3DProjectProvider', () => {
     const user = userEvent.setup();
     const renamed = {
       ...createSpace3DPortalExample(),
-      loadCases: [{ id: 'permanente', name: 'Permanente' }],
+      loadCases: [{ id: 'permanente', name: 'Permanente', selfWeightFactor: 0 }],
       nodalLoads: createSpace3DPortalExample().nodalLoads.map((load) => ({ ...load, caseId: 'permanente' })),
+      memberLoads: createSpace3DPortalExample().memberLoads.map((load) => ({ ...load, caseId: 'permanente' })),
       loadCombinations: [],
     };
     render(<Space3DProjectProvider storage={storage} initialProject={renamed}><Harness /></Space3DProjectProvider>);

@@ -107,6 +107,60 @@ describe('Space3DWorkspace end to end', () => {
     expect(within(table(/nudos/i)).getByRole('row', { name: /N4/ }).textContent).toMatch(/6/);
   });
 
+  it('crea una carga repartida sobre una barra y la publica en su tabla', async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    await user.click(screen.getByRole('button', { name: /carga de barra/i }));
+    await user.selectOptions(screen.getByLabelText(/^barra$/i), 'M2');
+    await user.clear(screen.getByLabelText(/^y$/i, { selector: '#space3d-member-load-startY' }));
+    await user.type(screen.getByLabelText(/^y$/i, { selector: '#space3d-member-load-startY' }), '-12');
+    await user.click(screen.getByRole('button', { name: /igualar al inicio/i }));
+    await user.click(screen.getByRole('button', { name: /guardar carga de barra/i }));
+
+    const row = within(table(/cargas de barra/i)).getByRole('row', { name: /ML2/ });
+    expect(row.textContent).toMatch(/M2/);
+    expect(row.textContent).toMatch(/-12/);
+  });
+
+  it('activa el peso propio desde el caso de carga y cambia el resultado', async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    await user.click(screen.getByRole('button', { name: /^analizar$/i }));
+    await waitFor(() => expect(screen.getByTestId('space3d-analysis-state').textContent).toBe('ready'));
+    await user.click(screen.getByRole('tab', { name: /resultados/i }));
+    await user.selectOptions(screen.getByRole('combobox', { name: /tablas de resultados/i }), 'Nudos');
+    const before = within(table(/desplazamiento/i)).getByRole('row', { name: /N4/ }).textContent;
+
+    await user.click(screen.getByRole('tab', { name: /inspector/i }));
+    await user.click(within(table(/casos de carga/i)).getByRole('button', { name: /LC1/ }));
+    await user.clear(screen.getByLabelText(/factor de peso propio/i));
+    await user.type(screen.getByLabelText(/factor de peso propio/i), '0');
+    await user.click(screen.getByRole('button', { name: /guardar caso/i }));
+
+    await user.click(screen.getByRole('button', { name: /^analizar$/i }));
+    await waitFor(() => expect(screen.getByTestId('space3d-analysis-state').textContent).toBe('ready'));
+    await user.click(screen.getByRole('tab', { name: /resultados/i }));
+    await user.selectOptions(screen.getByRole('combobox', { name: /tablas de resultados/i }), 'Nudos');
+    expect(within(table(/desplazamiento/i)).getByRole('row', { name: /N4/ }).textContent).not.toBe(before);
+  });
+
+  it('publica los diagramas de acciones internas del miembro analizado', async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    await user.click(screen.getByRole('button', { name: /^analizar$/i }));
+    await waitFor(() => expect(screen.getByTestId('space3d-analysis-state').textContent).toBe('ready'));
+    await user.click(screen.getByRole('tab', { name: /resultados/i }));
+    await user.selectOptions(screen.getByRole('combobox', { name: /tablas de resultados/i }), 'Diagramas');
+
+    const figure = screen.getByRole('img', { name: /flector mz · m1/i });
+    expect(figure.querySelector('.space3d-diagram-fill')?.getAttribute('d')).toMatch(/^M0,/);
+    await user.selectOptions(screen.getByLabelText(/acción interna/i), 'Vy');
+    expect(screen.getByRole('img', { name: /cortante vy · m1/i })).toBeDefined();
+  });
+
   it('analiza el modelo y publica desplazamientos, reacciones y esfuerzos', async () => {
     const user = userEvent.setup();
     renderWorkspace();

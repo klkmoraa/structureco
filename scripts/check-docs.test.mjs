@@ -20,7 +20,7 @@ test('acepta un árbol documental clasificado y con enlaces relativos válidos',
     write(root, 'README.md', '# Producto\n\nConsulta el [índice](docs/README.md).\n');
     write(root, 'docs/README.md', '# Documentación\n\n**Clasificación:** `CANONICAL`\n\n[Arquitectura](architecture/README.md)\n');
     write(root, 'docs/architecture/README.md', '# Arquitectura\n\n**Clasificación:** `CANONICAL`\n\n[Producto](../../README.md)\n');
-    write(root, 'docs/architecture/structureco-space-3d-s3d1.md', '# Space 3D\n\n**Clasificación:** `CANONICAL`\n');
+    write(root, 'docs/architecture/structureco-space-3d.md', '# Space 3D\n\n**Clasificación:** `CANONICAL`\n');
     write(root, 'docs/product/visual-direction.md', '# Dirección visual\n\n**Clasificación:** `CANONICAL`\n');
     write(root, 'docs/historico.md', '# Documento anterior\n\n> **HISTORICAL** — Conservado como registro.\n\n**Clasificación:** `HISTORICAL`\n\nSustituido por el [índice](README.md).\n');
     write(root, 'reports/README.md', '# Reportes\n\n**Clasificación del directorio:** `AUDIT/TEMPORARY`\n');
@@ -37,7 +37,7 @@ test('reporta faltantes, clasificaciones inválidas, históricos sin aviso y enl
     write(root, 'README.md', '# Producto\n\n[Enlace roto](docs/ausente.md)\n');
     write(root, 'docs/README.md', '# Documentación sin clasificación\n');
     write(root, 'docs/architecture/README.md', '# Arquitectura\n\n**Clasificación:** `CANONICAL`\n');
-    write(root, 'docs/architecture/structureco-space-3d-s3d1.md', '# Space 3D\n\n**Clasificación:** `CANONICAL`\n');
+    write(root, 'docs/architecture/structureco-space-3d.md', '# Space 3D\n\n**Clasificación:** `CANONICAL`\n');
     write(root, 'docs/antiguo.md', '# Antiguo\n\n**Clasificación:** `HISTORICAL`\n');
     write(root, 'docs/desconocido.md', '# Desconocido\n\n**Clasificación:** `CURRENT`\n');
 

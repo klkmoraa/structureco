@@ -312,8 +312,11 @@ export const createSpace3DViewport = (options: Space3DViewportOptions): Space3DV
     const loadLength = Math.max(span * 0.18, 0.3);
     for (const load of model.loads) {
       const direction = new Vector3(...load.direction);
-      const length = loadLength * (0.45 + 0.55 * load.relative);
-      const color = load.kind === 'force' ? palette.load : palette.moment;
+      // Una repartida se dibuja con flechas más cortas: son varias sobre la
+      // misma barra y a tamaño de carga nodal taparían el modelo.
+      const scale = load.kind === 'line' ? 0.55 : 1;
+      const length = loadLength * scale * (0.45 + 0.55 * load.relative);
+      const color = load.kind === 'moment' ? palette.moment : palette.load;
       // La flecha apunta hacia el nudo: el vector nace fuera y termina donde actúa.
       const tail = new Vector3(...load.origin).addScaledVector(direction, -length);
       loadsGroup.add(new ArrowHelper(direction, tail, length, color, length * 0.26, length * 0.14));

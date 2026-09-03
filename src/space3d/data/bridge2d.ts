@@ -2,14 +2,19 @@
  * Puente explícito del dominio plano 2D al dominio espacial S3D-1.
  *
  * Es un adaptador de una sola dirección y sin estado: lee un `ProjectModel` y
- * devuelve un `Space3DProjectV1` nuevo. Los dos dominios siguen separados —
+ * devuelve un `Space3DProject` nuevo. Los dos dominios siguen separados —
  * ningún store se acopla, ningún solver se vuelve híbrido— y el proyecto 2D
  * nunca se toca.
  *
  * La regla que gobierna todo el archivo: **lo que el modelo plano no dice, no
- * se inventa**. Un marco 2D no contiene el eje débil, la torsión ni ninguna
- * restricción fuera del plano; rellenarlos con «valores razonables» produciría
- * un análisis espacial creíble y falso. En su lugar:
+ * se inventa**; y su recíproca: lo que el modelo plano sí dice y el espacial
+ * sabe representar, se traduce en vez de perderse. Desde S3D-2 cruzan el puente
+ * las cargas de barra, el peso propio, las liberaciones de extremo, los muelles
+ * de apoyo alineados con los ejes y los desplazamientos impuestos por caso.
+ *
+ * Un marco 2D no contiene el eje débil, la torsión ni ninguna restricción fuera
+ * del plano; rellenarlos con «valores razonables» produciría un análisis
+ * espacial creíble y falso. En su lugar:
  *
  *   · las propiedades que faltan quedan en `0`, que el validador rechaza y el
  *     editor pide completar;
@@ -22,16 +27,22 @@ import {
   SPACE3D_ANALYSIS_SPACE,
   SPACE3D_SCHEMA_VERSION,
   freeSpace3DRestraints,
+  noSpace3DReleases,
+  noSpace3DSprings,
   type Space3DEntityKind,
   type Space3DFrameMember,
   type Space3DLoadCombination,
+  type Space3DMemberLoad,
+  type Space3DMemberReleases,
   type Space3DNodalLoad,
   type Space3DNode,
-  type Space3DProjectV1,
+  type Space3DProject,
   type Space3DRestraints,
+  type Space3DSpringStiffness,
+  type Space3DSupportSettlement,
   type Space3DVector,
 } from '../model/types';
-import type { MemberModel, NodeModel, ProjectModel } from '../../types';
+import type { MemberLoad, MemberModel, NodeModel, ProjectModel } from '../../types';
 
 export const SPACE3D_DERIVED_ID_PREFIX = 'space3d-from-';
 
@@ -54,7 +65,13 @@ export type Space3DBridgeCode =
   | 'dropped-prescribed-support-motion'
   | 'dropped-member-load'
   | 'dropped-prescribed-displacement'
-  | 'dropped-initial-effect';
+  | 'dropped-initial-effect'
+  /** Traducciones que cruzan el puente, informativas y no bloqueantes. */
+  | 'carried-member-load'
+  | 'carried-member-release'
+  | 'carried-support-spring'
+  | 'carried-prescribed-displacement'
+  | 'carried-self-weight';
 
 export interface Space3DBridgeNote {
   readonly code: Space3DBridgeCode;
@@ -66,7 +83,7 @@ export interface Space3DBridgeNote {
 }
 
 export interface Space3DBridgeResult {
-  readonly project: Space3DProjectV1;
+  readonly project: Space3DProject;
   readonly notes: readonly Space3DBridgeNote[];
 }
 
@@ -114,6 +131,88 @@ const planarLocalYReference = (start: NodeModel, end: NodeModel): Space3DVector 
   return [-dy / length, dx / length, 0];
 };
 
+/**
+ * Liberaciones planas traducidas a ejes espaciales. En el plano sólo existen el
+ * axil, el cortante transversal y el flector alrededor de `z`; la flexión fuera
+ * del plano y la torsión siguen siendo continuas porque el modelo plano no dice
+ * nada de ellas. Devuelve `null` cuando no hay ninguna liberación que traducir.
+ */
+const planarReleases = (member: MemberModel): Space3DMemberReleases | null => {
+  const source = member.releases;
+  if (!source) return null;
+  const releases: Space3DMemberReleases = {
+    ...noSpace3DReleases(),
+    iN: source.iAxial === true,
+    iVy: source.iShear === true,
+    iMz: source.iMoment === true,
+    jN: source.jAxial === true,
+    jVy: source.jShear === true,
+    jMz: source.jMoment === true,
+  };
+  return Object.values(releases).some(Boolean) ? releases : null;
+};
+
+/**
+ * Escala que convierte una intensidad medida sobre una proyección en otra
+ * medida por metro de barra: el total es el mismo, así que basta multiplicar
+ * por la proporción de la proyección respecto a la longitud real.
+ */
+const lengthBasisScale = (basis: MemberLoad['lengthBasis'], start: NodeModel, end: NodeModel): number => {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const length = Math.hypot(dx, dy);
+  if (!Number.isFinite(length) || length === 0) return 1;
+  if (basis === 'horizontal') return Math.abs(dx) / length;
+  if (basis === 'vertical') return Math.abs(dy) / length;
+  return 1;
+};
+
+/**
+ * Carga de barra plana traducida al dominio espacial.
+ *
+ * El eje local `y` del puente es `ẑ × x̂`, exactamente el mismo perpendicular
+ * que usa el modelo plano, así que una carga local cruza sin girar. Una carga
+ * global `(fx, fy)` se convierte en `(fx, fy, 0)`. Devuelve `null` si el tipo
+ * no tiene equivalente espacial.
+ */
+const planarMemberLoad = (load: MemberLoad, start: NodeModel, end: NodeModel): Space3DMemberLoad | null => {
+  const axes = load.coordinateSystem === 'local' ? 'local' : 'global';
+  const common = { id: load.id, caseId: load.caseId, memberId: load.memberId, axes } as const;
+  if (load.type === 'distributed') {
+    const scale = lengthBasisScale(load.lengthBasis, start, end);
+    const span = Math.max(0, Math.min(1, load.end)) - Math.max(0, Math.min(1, load.start));
+    if (span <= 0) return null;
+    return {
+      ...common,
+      kind: 'distributed',
+      start: Math.max(0, Math.min(1, load.start)),
+      end: Math.max(0, Math.min(1, load.end)),
+      startValue: [(load.qxStart ?? 0) * scale, (load.qyStart ?? 0) * scale, 0],
+      endValue: [(load.qxEnd ?? 0) * scale, (load.qyEnd ?? 0) * scale, 0],
+    };
+  }
+  const position = Math.max(0, Math.min(1, load.position ?? load.start ?? 0));
+  if (load.type === 'point') {
+    return {
+      ...common,
+      kind: 'force',
+      start: position,
+      end: position,
+      startValue: [load.px ?? 0, load.py ?? 0, 0],
+      endValue: [0, 0, 0],
+    };
+  }
+  return {
+    ...common,
+    kind: 'moment',
+    start: position,
+    end: position,
+    // El momento plano gira alrededor de `z`, el mismo eje en los dos dominios.
+    startValue: [0, 0, load.moment ?? 0],
+    endValue: [0, 0, 0],
+  };
+};
+
 export const deriveSpace3DFromPlanarProject = (source: ProjectModel): Space3DBridgeResult => {
   const notes: Space3DBridgeNote[] = [];
   const note = (
@@ -126,9 +225,19 @@ export const deriveSpace3DFromPlanarProject = (source: ProjectModel): Space3DBri
 
   const nodes: Space3DNode[] = source.nodes.map((node) => {
     const support = node.support;
-    if (support.spring && Object.values(support.spring).some((value) => typeof value === 'number' && value !== 0)) {
-      note('dropped-support-spring', 'node', node.id, 'support.spring');
+    const spring = support.spring;
+    const springs: Space3DSpringStiffness = {
+      ...noSpace3DSprings(),
+      ux: positive(spring?.kx) ? spring!.kx! : 0,
+      uy: positive(spring?.ky) ? spring!.ky! : 0,
+      rz: positive(spring?.kr) ? spring!.kr! : 0,
+    };
+    if (springs.ux > 0 || springs.uy > 0 || springs.rz > 0) {
+      note('carried-support-spring', 'node', node.id, 'support.spring', false);
     }
+    // Un muelle normal a un apoyo inclinado no tiene eje global al que ir: ése
+    // sí se pierde y sigue siendo bloqueante.
+    if (positive(spring?.kNormal)) note('dropped-support-spring', 'node', node.id, 'support.spring.kNormal');
     if (typeof support.angleDeg === 'number' && support.angleDeg % 180 !== 0 && support.type !== 'none') {
       note('dropped-inclined-support', 'node', node.id, 'support.angleDeg');
     }
@@ -137,14 +246,15 @@ export const deriveSpace3DFromPlanarProject = (source: ProjectModel): Space3DBri
     }
     if (node.internalHinge) note('dropped-internal-hinge', 'node', node.id, 'internalHinge');
 
-    return { id: node.id, x: node.x, y: node.y, z: 0, restraints: restraintsOf(node) };
+    return { id: node.id, x: node.x, y: node.y, z: 0, restraints: restraintsOf(node), springs };
   });
 
   const nodeById = new Map(source.nodes.map((node) => [node.id, node]));
 
   const members: Space3DFrameMember[] = source.members.map((member: MemberModel) => {
     if (member.type === 'truss') note('truss-member-as-frame', 'member', member.id, 'type');
-    if (member.releases?.iMoment || member.releases?.jMoment) note('dropped-member-release', 'member', member.id, 'releases');
+    const releases = planarReleases(member);
+    if (releases) note('carried-member-release', 'member', member.id, 'releases', false);
     if (typeof member.rotationalSpringI === 'number' || typeof member.rotationalSpringJ === 'number') {
       note('dropped-semi-rigid-connection', 'member', member.id, 'rotationalSpring');
     }
@@ -173,6 +283,12 @@ export const deriveSpace3DFromPlanarProject = (source: ProjectModel): Space3DBri
       Iy: 0,
       Iz: member.I,
       J: 0,
+      // El área de cortante plana gobierna la misma flexión que `Iz`, así que
+      // cruza como `shearAreaY`. La del eje débil no existe en el plano.
+      shearAreaY: member.beamTheory === 'timoshenko' && positive(member.shearArea) ? member.shearArea : 0,
+      shearAreaZ: 0,
+      density: positive(member.density) ? member.density : 0,
+      releases: releases ?? noSpace3DReleases(),
       orientation: {
         localYReferenceGlobal: start && end ? planarLocalYReference(start, end) : [0, 1, 0],
         rollRadians: 0,
@@ -182,8 +298,41 @@ export const deriveSpace3DFromPlanarProject = (source: ProjectModel): Space3DBri
 
   if (nodes.length > 0) note('out-of-plane-unrestrained', 'project', '', 'restraints');
 
-  for (const load of source.memberLoads) note('dropped-member-load', 'load', load.id, 'memberLoads');
-  for (const item of source.prescribedDisplacements ?? []) note('dropped-prescribed-displacement', 'load', item.id, 'prescribedDisplacements');
+  const memberById = new Map(source.members.map((member) => [member.id, member]));
+  const memberLoads: Space3DMemberLoad[] = [];
+  for (const load of source.memberLoads) {
+    const owner = memberById.get(load.memberId);
+    const start = owner ? nodeById.get(owner.i) : undefined;
+    const end = owner ? nodeById.get(owner.j) : undefined;
+    const translated = owner && start && end ? planarMemberLoad(load, start, end) : null;
+    if (!translated) {
+      note('dropped-member-load', 'member-load', load.id, 'memberLoads');
+      continue;
+    }
+    memberLoads.push(translated);
+    note('carried-member-load', 'member-load', load.id, 'memberLoads', false);
+  }
+
+  const settlements: Space3DSupportSettlement[] = [];
+  for (const item of source.prescribedDisplacements ?? []) {
+    if (item.component === 'normal' || !nodeById.has(item.nodeId)) {
+      note('dropped-prescribed-displacement', 'settlement', item.id, 'prescribedDisplacements');
+      continue;
+    }
+    settlements.push({
+      id: item.id,
+      caseId: item.caseId,
+      nodeId: item.nodeId,
+      ux: item.component === 'ux' ? item.value : 0,
+      uy: item.component === 'uy' ? item.value : 0,
+      uz: 0,
+      rx: 0,
+      ry: 0,
+      rz: item.component === 'rz' ? item.value : 0,
+    });
+    note('carried-prescribed-displacement', 'settlement', item.id, 'prescribedDisplacements', false);
+  }
+
   for (const item of source.memberInitialEffects ?? []) note('dropped-initial-effect', 'load', item.id, 'memberInitialEffects');
 
   const nodalLoads: Space3DNodalLoad[] = source.nodalLoads
@@ -201,7 +350,13 @@ export const deriveSpace3DFromPlanarProject = (source: ProjectModel): Space3DBri
       mz: load.mz,
     }));
 
-  const loadCases = source.loadCases.map((item) => ({ id: item.id, name: item.name }));
+  const loadCases = source.loadCases.map((item) => {
+    const selfWeightFactor = typeof item.selfWeightFactor === 'number' && Number.isFinite(item.selfWeightFactor)
+      ? item.selfWeightFactor
+      : 0;
+    if (selfWeightFactor !== 0) note('carried-self-weight', 'case', item.id, 'selfWeightFactor', false);
+    return { id: item.id, name: item.name, selfWeightFactor };
+  });
   const caseIds = new Set(loadCases.map((item) => item.id));
   const loadCombinations: Space3DLoadCombination[] = source.combinations.map((combination) => ({
     id: combination.id,
@@ -211,7 +366,7 @@ export const deriveSpace3DFromPlanarProject = (source: ProjectModel): Space3DBri
       .map(([caseId, factor]) => ({ caseId, factor })),
   }));
 
-  const project: Space3DProjectV1 = {
+  const project: Space3DProject = {
     analysisSpace: SPACE3D_ANALYSIS_SPACE,
     schemaVersion: SPACE3D_SCHEMA_VERSION,
     id: derivedSpace3DId(source.id),
@@ -220,6 +375,8 @@ export const deriveSpace3DFromPlanarProject = (source: ProjectModel): Space3DBri
     nodes,
     members,
     nodalLoads,
+    memberLoads,
+    settlements,
     loadCases,
     loadCombinations,
   };
@@ -237,7 +394,7 @@ export const deriveSpace3DFromPlanarProject = (source: ProjectModel): Space3DBri
  */
 export const unresolvedSpace3DBridgeNotes = (
   notes: readonly Space3DBridgeNote[],
-  project: Space3DProjectV1,
+  project: Space3DProject,
   acknowledged: ReadonlySet<string>,
 ): readonly Space3DBridgeNote[] => notes.filter((item) => {
   if (!item.blocking) return false;
@@ -265,7 +422,7 @@ export const unresolvedSpace3DBridgeNotes = (
  * — incluir sus nudos nuevos en la comparación declararía «el 2D cambió» por el
  * simple hecho de haber trabajado, que es justo el aviso que no debe salir.
  */
-export const space3dMatchesPlanarSource = (project: Space3DProjectV1, source: ProjectModel): boolean => {
+export const space3dMatchesPlanarSource = (project: Space3DProject, source: ProjectModel): boolean => {
   if (project.id !== derivedSpace3DId(source.id)) return false;
 
   const nodeById = new Map(project.nodes.map((node) => [node.id, node]));

@@ -11,7 +11,7 @@
  */
 import { buildMemberOrientation } from '../engine/orientation';
 import { resolveSpace3DTarget } from '../engine/solver';
-import { Space3DGeometryError, type Space3DAnalysisResult, type Space3DOrientationBasis, type Space3DProjectV1, type Space3DVector } from '../model/types';
+import { Space3DGeometryError, type Space3DAnalysisResult, type Space3DOrientationBasis, type Space3DProject, type Space3DVector } from '../model/types';
 import type { Space3DAnalysisState, Space3DSelection } from '../store/Space3DProjectContext';
 
 export interface Space3DSceneNode {
@@ -43,8 +43,12 @@ export interface Space3DSceneSupport {
 
 export interface Space3DSceneLoad {
   readonly id: string;
-  readonly nodeId: string;
-  readonly kind: 'force' | 'moment';
+  /** Nudo donde actúa, o `null` si la carga es de barra. */
+  readonly nodeId: string | null;
+  /** Barra donde actúa, o `null` si la carga es nodal. */
+  readonly memberId: string | null;
+  /** `line` es una repartida: se escala contra las demás repartidas, no contra las fuerzas. */
+  readonly kind: 'force' | 'moment' | 'line';
   readonly origin: Space3DVector;
   readonly direction: Space3DVector;
   readonly magnitude: number;
@@ -91,7 +95,7 @@ export interface Space3DSceneModel {
 }
 
 export interface Space3DSceneInput {
-  readonly project: Space3DProjectV1;
+  readonly project: Space3DProject;
   readonly analysis: Space3DAnalysisResult | null;
   readonly analysisState: Space3DAnalysisState;
   readonly selection: Space3DSelection | null;
@@ -200,30 +204,94 @@ export const buildSpace3DSceneModel = (input: Space3DSceneInput): Space3DSceneMo
     }));
 
   const target = resolveSpace3DTarget(project, targetId);
-  const rawLoads = project.nodalLoads
+
+  interface RawLoad {
+    readonly kind: 'force' | 'moment' | 'line';
+    readonly vector: Space3DVector;
+    readonly id: string;
+    readonly nodeId: string | null;
+    readonly memberId: string | null;
+    readonly origin: Space3DVector;
+  }
+
+  const rawLoads: RawLoad[] = project.nodalLoads
     .filter((load) => positionById.has(load.nodeId))
-    .flatMap((load) => {
+    .flatMap((load): RawLoad[] => {
       const factor = target?.factors.get(load.caseId) ?? 0;
       if (factor === 0) return [];
       const force: Space3DVector = point(load.fx * factor, load.fy * factor, load.fz * factor);
       const moment: Space3DVector = point(load.mx * factor, load.my * factor, load.mz * factor);
-      const entries: { kind: 'force' | 'moment'; vector: Space3DVector; id: string; nodeId: string }[] = [];
-      if (Math.hypot(...force) > 0) entries.push({ kind: 'force', vector: force, id: load.id, nodeId: load.nodeId });
-      if (Math.hypot(...moment) > 0) entries.push({ kind: 'moment', vector: moment, id: load.id, nodeId: load.nodeId });
+      const origin = positionById.get(load.nodeId)!;
+      const entries: RawLoad[] = [];
+      if (Math.hypot(...force) > 0) entries.push({ kind: 'force', vector: force, id: load.id, nodeId: load.nodeId, memberId: null, origin });
+      if (Math.hypot(...moment) > 0) entries.push({ kind: 'moment', vector: moment, id: load.id, nodeId: load.nodeId, memberId: null, origin });
       return entries;
     });
 
-  const maxForce = Math.max(...rawLoads.filter((item) => item.kind === 'force').map((item) => Math.hypot(...item.vector)), 0);
-  const maxMoment = Math.max(...rawLoads.filter((item) => item.kind === 'moment').map((item) => Math.hypot(...item.vector)), 0);
+  // Las cargas de barra se dibujan como una serie de flechas repartidas por el
+  // tramo cargado: una sola flecha en el centro no distingue una uniforme de una
+  // trapecial, que es justo lo que el usuario necesita comprobar de un vistazo.
+  const memberById = new Map(members.map((item) => [item.id, item]));
+  for (const load of project.memberLoads) {
+    const factor = target?.factors.get(load.caseId) ?? 0;
+    if (factor === 0) continue;
+    const member = memberById.get(load.memberId);
+    if (!member?.basis) continue;
+    const toGlobal = (vector: Space3DVector): Space3DVector => (load.axes === 'global' ? vector : point(
+      member.basis!.x[0] * vector[0] + member.basis!.y[0] * vector[1] + member.basis!.z[0] * vector[2],
+      member.basis!.x[1] * vector[0] + member.basis!.y[1] * vector[1] + member.basis!.z[1] * vector[2],
+      member.basis!.x[2] * vector[0] + member.basis!.y[2] * vector[1] + member.basis!.z[2] * vector[2],
+    ));
+    const at = (fraction: number): Space3DVector => point(
+      member.start[0] + (member.end[0] - member.start[0]) * fraction,
+      member.start[1] + (member.end[1] - member.start[1]) * fraction,
+      member.start[2] + (member.end[2] - member.start[2]) * fraction,
+    );
+
+    if (load.kind === 'distributed') {
+      const SAMPLES = 5;
+      for (let index = 0; index < SAMPLES; index += 1) {
+        const t = index / (SAMPLES - 1);
+        const fraction = load.start + (load.end - load.start) * t;
+        const raw = point(
+          (load.startValue[0] + (load.endValue[0] - load.startValue[0]) * t) * factor,
+          (load.startValue[1] + (load.endValue[1] - load.startValue[1]) * t) * factor,
+          (load.startValue[2] + (load.endValue[2] - load.startValue[2]) * t) * factor,
+        );
+        const vector = toGlobal(raw);
+        if (Math.hypot(...vector) === 0) continue;
+        rawLoads.push({ kind: 'line', vector, id: load.id, nodeId: null, memberId: load.memberId, origin: at(fraction) });
+      }
+      continue;
+    }
+
+    const vector = toGlobal(point(
+      load.startValue[0] * factor, load.startValue[1] * factor, load.startValue[2] * factor,
+    ));
+    if (Math.hypot(...vector) === 0) continue;
+    rawLoads.push({
+      kind: load.kind === 'force' ? 'force' : 'moment',
+      vector,
+      id: load.id,
+      nodeId: null,
+      memberId: load.memberId,
+      origin: at(load.start),
+    });
+  }
+
+  const peakOf = (kind: RawLoad['kind']) =>
+    Math.max(...rawLoads.filter((item) => item.kind === kind).map((item) => Math.hypot(...item.vector)), 0);
+  const peaks = { force: peakOf('force'), moment: peakOf('moment'), line: peakOf('line') };
 
   const loads: Space3DSceneLoad[] = rawLoads.map((item) => {
     const magnitude = Math.hypot(...item.vector);
-    const reference = item.kind === 'force' ? maxForce : maxMoment;
+    const reference = peaks[item.kind];
     return Object.freeze({
       id: item.id,
       nodeId: item.nodeId,
+      memberId: item.memberId,
       kind: item.kind,
-      origin: positionById.get(item.nodeId)!,
+      origin: item.origin,
       direction: normalizeOrZero(item.vector),
       magnitude,
       relative: reference > 0 ? magnitude / reference : 1,

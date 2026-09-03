@@ -29,8 +29,35 @@ describe('Space3D portable codec', () => {
   });
 
   it('rechaza una versión de esquema desconocida', () => {
-    expect(() => parseSpace3DProject(JSON.stringify({ ...project, schemaVersion: 2 }))).toThrow(/schema-version/);
+    expect(() => parseSpace3DProject(JSON.stringify({ ...project, schemaVersion: 99 }))).toThrow(/schema-version/);
+    expect(() => parseSpace3DProject(JSON.stringify({ ...project, schemaVersion: 0 }))).toThrow(/schema-version/);
   });
+
+  it('migra un archivo S3D-1 completando las capacidades nuevas con su neutro', () => {
+    const legacy = {
+      analysisSpace: 'space-3d',
+      schemaVersion: 1,
+      id: 'legacy',
+      name: 'Legacy',
+      units: 'kN-m',
+      nodes: project.nodes.map(({ id, x, y, z, restraints }) => ({ id, x, y, z, restraints })),
+      members: project.members.map(({ id, i, j, E, G, A, Iy, Iz, J, orientation }) => ({
+        id, i, j, E, G, A, Iy, Iz, J, orientation,
+      })),
+      nodalLoads: project.nodalLoads,
+      loadCases: project.loadCases.map(({ id, name }) => ({ id, name })),
+      loadCombinations: project.loadCombinations,
+    };
+
+    const migrated = parseSpace3DProject(JSON.stringify(legacy));
+    expect(migrated.schemaVersion).toBe(2);
+    expect(migrated.memberLoads).toEqual([]);
+    expect(migrated.settlements).toEqual([]);
+    expect(migrated.nodes.every((node) => node.springs.uy === 0)).toBe(true);
+    expect(migrated.members.every((member) => member.density === 0 && !member.releases.iMz)).toBe(true);
+    expect(migrated.loadCases.every((item) => item.selfWeightFactor === 0)).toBe(true);
+  });
+
 
   it('rechaza un archivo que no es del espacio 3D', () => {
     expect(() => parseSpace3DProject(JSON.stringify({ ...project, analysisSpace: 'plane-2d' }))).toThrow(/analysis-space/);

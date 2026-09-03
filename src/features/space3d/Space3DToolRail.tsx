@@ -7,11 +7,11 @@
  * crear una entidad nueva, porque en S3D-1 el apoyo es un atributo del nudo.
  */
 import {
-  Box, CircleDot, MousePointer2, Redo2, Spline, Trash2, Triangle, Undo2, Weight,
+  Box, CircleDot, MousePointer2, MoveDown, Redo2, Spline, Trash2, Triangle, Undo2, Weight,
 } from 'lucide-react';
 import type { TranslationKey } from '../../i18n/catalogs';
 
-export type Space3DActiveTool = 'select' | 'node' | 'member' | 'load';
+export type Space3DActiveTool = 'select' | 'node' | 'member' | 'load' | 'member-load' | 'settlement' | 'case';
 
 export interface Space3DToolRailProps {
   readonly t: (key: TranslationKey, variables?: Record<string, string | number>) => string;
@@ -20,9 +20,11 @@ export interface Space3DToolRailProps {
   readonly onNewNode: () => void;
   readonly onNewMember: () => void;
   readonly onNewLoad: () => void;
+  readonly onNewMemberLoad: () => void;
   readonly onEditSupport: () => void;
   readonly canNewMember: boolean;
   readonly canNewLoad: boolean;
+  readonly canNewMemberLoad: boolean;
   readonly canEditSupport: boolean;
   /** «Vista»: avanza al siguiente preset de cámara (mismo estado que el selector del lienzo y la lista Vistas). */
   readonly onCycleView: () => void;
@@ -35,8 +37,8 @@ export interface Space3DToolRailProps {
 }
 
 export const Space3DToolRail = ({
-  t, activeTool, onSelectTool, onNewNode, onNewMember, onNewLoad, onEditSupport,
-  canNewMember, canNewLoad, canEditSupport, onCycleView,
+  t, activeTool, onSelectTool, onNewNode, onNewMember, onNewLoad, onNewMemberLoad, onEditSupport,
+  canNewMember, canNewLoad, canNewMemberLoad, canEditSupport, onCycleView,
   canUndo, canRedo, canDelete, onUndo, onRedo, onDelete,
 }: Space3DToolRailProps) => <nav className="space3d-rail-vertical" aria-label={t('space3d.toolRailLabel')}>
   <div className="space3d-rail-vertical-group" role="group" aria-label={t('space3d.toolRailLabel')}>
@@ -84,6 +86,18 @@ export const Space3DToolRail = ({
     >
       <Weight size={19} aria-hidden="true" />
       <span aria-hidden="true">{t('space3d.load')}</span>
+    </button>
+    <button
+      type="button"
+      className="space3d-rail-button"
+      aria-pressed={activeTool === 'member-load'}
+      onClick={onNewMemberLoad}
+      disabled={!canNewMemberLoad}
+      aria-label={t('space3d.memberLoad')}
+      title={t('space3d.memberLoad')}
+    >
+      <MoveDown size={19} aria-hidden="true" />
+      <span aria-hidden="true">{t('space3d.memberLoads')}</span>
     </button>
     <button
       type="button"

@@ -48,8 +48,7 @@ describe('Space3D scene model', () => {
 
   it('construye vectores de carga unitarios con magnitud y tipo', () => {
     const scene = build();
-    expect(scene.loads).toHaveLength(1);
-    const load = scene.loads[0];
+    const load = scene.loads.find((item) => item.nodeId === 'N4')!;
     expect(load.kind).toBe('force');
     expect(load.nodeId).toBe('N4');
     expect(load.magnitude).toBeCloseTo(Math.hypot(40, 15), 12);
@@ -61,16 +60,29 @@ describe('Space3D scene model', () => {
   it('separa fuerzas de momentos y respeta el objetivo de carga activo', () => {
     const withMoment = {
       ...project,
-      loadCases: [...project.loadCases, { id: 'LC2', name: 'LC2' }],
+      loadCases: [...project.loadCases, { id: 'LC2', name: 'LC2', selfWeightFactor: 0 }],
       nodalLoads: [
         ...project.nodalLoads,
         { id: 'L2', caseId: 'LC2', nodeId: 'N4', fx: 0, fy: 0, fz: 0, mx: 12, my: 0, mz: 0 },
       ],
     };
-    expect(build({ project: withMoment }).loads.map((load) => load.id)).toEqual(['L1']);
+    // La carga de barra del ejemplo también pertenece a LC1: el objetivo activo
+    // decide qué se dibuja, y LC2 sólo trae su momento nodal.
+    expect(new Set(build({ project: withMoment }).loads.map((load) => load.id))).toEqual(new Set(['L1', 'ML1']));
     const other = build({ project: withMoment, targetId: 'LC2' });
     expect(other.loads.map((load) => load.id)).toEqual(['L2']);
     expect(other.loads[0].kind).toBe('moment');
+  });
+
+  it('dibuja una repartida como una serie de flechas sobre su barra', () => {
+    const scene = build();
+    const line = scene.loads.filter((item) => item.kind === 'line');
+    expect(line.length).toBeGreaterThan(1);
+    expect(new Set(line.map((item) => item.memberId))).toEqual(new Set(['M1']));
+    expect(line.every((item) => item.nodeId === null)).toBe(true);
+    // Uniforme y global `-Y`: todas las flechas apuntan igual y a lo largo del vano.
+    expect(line.every((item) => item.direction[1] < 0)).toBe(true);
+    expect(new Set(line.map((item) => item.origin.join(','))).size).toBe(line.length);
   });
 
   it('publica la deformada como p + escala·u sólo con un resultado vigente', () => {

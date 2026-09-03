@@ -409,7 +409,7 @@
   min-block-size: var(--sc-size-target-pointer);
   padding: 6px var(--sc-space-2);
   border: 0;
-  border-radius: var(--sc-radius-sm);
+  border-radius: var(--sc-radius-md);
   background: transparent;
   color: var(--sc-color-text-secondary);
   font-family: var(--sc-font-ui);
@@ -502,7 +502,7 @@
   max-inline-size: 168px;
   padding-inline: var(--sc-space-3);
   border: 1px solid var(--sc-color-border-soft);
-  border-radius: var(--sc-radius-sm);
+  border-radius: var(--sc-radius-md);
   background: var(--sc-color-surface-input);
   box-shadow: var(--sc-shadow-clay-pressed);
   color: var(--sc-color-text-primary);
@@ -672,7 +672,7 @@
   min-block-size: var(--sc-control-height-sm);
   padding-inline: var(--sc-space-4);
   border: 1px solid transparent;
-  border-radius: var(--sc-radius-sm);
+  border-radius: var(--sc-radius-md);
   background: transparent;
   color: var(--sc-color-text-secondary);
   font-family: var(--sc-font-ui);
@@ -846,7 +846,7 @@
   min-block-size: var(--sc-control-height-touch);
   padding-inline: var(--sc-space-3);
   border: 1px solid var(--sc-color-border-soft);
-  border-radius: var(--sc-radius-sm);
+  border-radius: var(--sc-radius-md);
   /* Un campo recibe contenido: baja. */
   background: var(--sc-color-surface-input);
   box-shadow: var(--sc-shadow-clay-pressed);
@@ -884,7 +884,7 @@
   gap: 6px;
   min-block-size: var(--sc-size-target-touch);
   border: 1px solid var(--sc-color-border-soft);
-  border-radius: var(--sc-radius-sm);
+  border-radius: var(--sc-radius-md);
   background: var(--sc-color-surface-1);
   font-family: var(--sc-font-mono);
   font-size: var(--sc-font-size-technical);
@@ -936,7 +936,7 @@
 .space3d-notice {
   margin: 0;
   padding: var(--sc-space-2) var(--sc-space-3);
-  border-radius: var(--sc-radius-sm);
+  border-radius: var(--sc-radius-md);
   background: var(--sc-color-surface-2);
   color: var(--sc-color-text-secondary);
   font-size: var(--sc-font-size-technical);
@@ -974,7 +974,47 @@
 .space3d-metrics dt { font-size: var(--sc-font-size-caption); color: var(--sc-color-text-muted); text-transform: uppercase; letter-spacing: var(--sc-tracking-eyebrow); }
 .space3d-metrics dd { margin: 2px 0 0; font-family: var(--sc-font-mono); font-size: var(--sc-font-size-body); font-variant-numeric: var(--sc-numeric-variant); }
 
+/* Diagramas de acciones internas -----------------------------------------
+   El trazo se normaliza contra el propio miembro, así que el SVG sólo aporta
+   forma: la escala numérica la da el pie de figura, no el dibujo. */
+.space3d-diagram-panel { display: flex; flex-direction: column; gap: var(--sc-space-3); }
+
+.space3d-diagram { margin: 0; display: flex; flex-direction: column; gap: var(--sc-space-1); }
+
+.space3d-diagram svg {
+  width: 100%;
+  height: 96px;
+  display: block;
+  border: 1px solid var(--sc-color-border-subtle);
+  border-radius: var(--sc-radius-md);
+  background: var(--sc-color-surface-sunken);
+}
+
+/* El color sigue a la familia de la acción, la misma que colorea las columnas
+   de la tabla de extremos: axil, cortante y flector no se confunden entre
+   pestañas. */
+.space3d-diagram { --space3d-diagram-ink: var(--sc-color-technical-moment); }
+.space3d-diagram[data-family='axial'] { --space3d-diagram-ink: var(--sc-color-technical-axial); }
+.space3d-diagram[data-family='shear'] { --space3d-diagram-ink: var(--sc-color-technical-shear); }
+
+.space3d-diagram-fill {
+  fill: color-mix(in srgb, var(--space3d-diagram-ink) 24%, transparent);
+  stroke: var(--space3d-diagram-ink);
+  stroke-width: 1.25;
+  vector-effect: non-scaling-stroke;
+}
+.space3d-diagram-axis { stroke: var(--sc-color-border-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
+
+.space3d-diagram figcaption {
+  font-size: var(--sc-font-size-caption);
+  color: var(--sc-color-text-muted);
+  font-variant-numeric: var(--sc-numeric-variant);
+}
+
 .space3d-issues { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--sc-space-2); }
+
+/* Lo que el puente sí trasladó se lee como confirmación, no como aviso. */
+.space3d-issues--carried .space3d-issue-copy { color: var(--sc-color-text-muted); }
 
 .space3d-issues li {
   display: flex;

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SPACE3D_VIEW_PRESETS, computeSpace3DCameraPlacement } from './cameraModel';
 import { buildSpace3DSceneModel } from './sceneModel';
 import { createBlankSpace3DProject, createSpace3DPortalExample } from '../model/defaultProject';
+import { noSpace3DSprings } from '../model/types';
 
 const sceneOf = (project = createSpace3DPortalExample()) => buildSpace3DSceneModel({
   project, analysis: null, analysisState: 'idle', selection: null, targetId: 'LC1',
@@ -64,7 +65,7 @@ describe('Space3D camera model', () => {
   it('encuadra un modelo de un solo punto', () => {
     const single = sceneOf({
       ...createBlankSpace3DProject(),
-      nodes: [{ id: 'N1', x: 12, y: -4, z: 7, restraints: { ux: true, uy: true, uz: true, rx: true, ry: true, rz: true } }],
+      nodes: [{ id: 'N1', x: 12, y: -4, z: 7, restraints: { ux: true, uy: true, uz: true, rx: true, ry: true, rz: true }, springs: noSpace3DSprings() }],
     }).bounds;
     const placement = computeSpace3DCameraPlacement(single, 'front');
     expect(placement.target).toEqual([12, -4, 7]);
@@ -76,15 +77,15 @@ describe('Space3D camera model', () => {
     const flat = sceneOf({
       ...createBlankSpace3DProject(),
       nodes: [
-        { id: 'A', x: 0, y: 0, z: 0, restraints: { ux: true, uy: true, uz: true, rx: true, ry: true, rz: true } },
-        { id: 'B', x: 4, y: 3, z: 0, restraints: { ux: false, uy: false, uz: false, rx: false, ry: false, rz: false } },
+        { id: 'A', x: 0, y: 0, z: 0, restraints: { ux: true, uy: true, uz: true, rx: true, ry: true, rz: true }, springs: noSpace3DSprings() },
+        { id: 'B', x: 4, y: 3, z: 0, restraints: { ux: false, uy: false, uz: false, rx: false, ry: false, rz: false }, springs: noSpace3DSprings() },
       ],
     }).bounds;
     const deep = sceneOf({
       ...createBlankSpace3DProject(),
       nodes: [
-        { id: 'A', x: 0, y: 0, z: 0, restraints: { ux: true, uy: true, uz: true, rx: true, ry: true, rz: true } },
-        { id: 'B', x: 4, y: 3, z: 40, restraints: { ux: false, uy: false, uz: false, rx: false, ry: false, rz: false } },
+        { id: 'A', x: 0, y: 0, z: 0, restraints: { ux: true, uy: true, uz: true, rx: true, ry: true, rz: true }, springs: noSpace3DSprings() },
+        { id: 'B', x: 4, y: 3, z: 40, restraints: { ux: false, uy: false, uz: false, rx: false, ry: false, rz: false }, springs: noSpace3DSprings() },
       ],
     }).bounds;
     const near = computeSpace3DCameraPlacement(flat, 'isometric');

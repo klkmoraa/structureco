@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { analyzeSpace3DProject } from './solver';
-import { SPACE3D_LIMITS, fixedSpace3DRestraints, freeSpace3DRestraints, SPACE3D_ANALYSIS_SPACE, SPACE3D_SCHEMA_VERSION, type Space3DFrameMember, type Space3DNode, type Space3DProjectV1 } from '../model/types';
+import { SPACE3D_LIMITS, fixedSpace3DRestraints, freeSpace3DRestraints, noSpace3DReleases, noSpace3DSprings, SPACE3D_ANALYSIS_SPACE, SPACE3D_SCHEMA_VERSION, type Space3DFrameMember, type Space3DNode, type Space3DProject } from '../model/types';
 
 /**
  * Medición de capacidad de S3D-1.
@@ -21,20 +21,25 @@ const STEPS: readonly { nodes: number; members: number }[] = [
   { nodes: 150, members: 300 },
 ];
 
-const STEEL = { E: 200_000_000, G: 77_000_000, A: 0.0076, Iy: 4.5e-5, Iz: 1.36e-4, J: 4e-7 };
+const STEEL = {
+  E: 200_000_000, G: 77_000_000, A: 0.0076, Iy: 4.5e-5, Iz: 1.36e-4, J: 4e-7,
+  shearAreaY: 0, shearAreaZ: 0, density: 0,
+};
 
-const buildLattice = (nodeCount: number, memberCount: number): Space3DProjectV1 => {
+const buildLattice = (nodeCount: number, memberCount: number): Space3DProject => {
   const nodes: Space3DNode[] = Array.from({ length: nodeCount }, (_, index) => ({
     id: `N${index}`,
     x: 3 * Math.cos(index * 0.6),
     y: 0.5 * index,
     z: 3 * Math.sin(index * 0.6),
     restraints: index === 0 ? fixedSpace3DRestraints() : freeSpace3DRestraints(),
+    springs: noSpace3DSprings(),
   }));
 
   const members: Space3DFrameMember[] = [];
   const template = (id: string, i: number, j: number): Space3DFrameMember => ({
     id, i: `N${i}`, j: `N${j}`, ...STEEL,
+    releases: noSpace3DReleases(),
     orientation: { localYReferenceGlobal: [0, 1, 0], rollRadians: 0 },
   });
   for (let stride = 1; stride <= 4 && members.length < memberCount; stride += 1) {
@@ -55,7 +60,9 @@ const buildLattice = (nodeCount: number, memberCount: number): Space3DProjectV1 
       id: 'L1', caseId: 'LC1', nodeId: `N${nodeCount - 1}`,
       fx: 0, fy: -10, fz: -5, mx: 0, my: 0, mz: 0,
     }],
-    loadCases: [{ id: 'LC1', name: 'LC1' }],
+    memberLoads: [],
+    settlements: [],
+    loadCases: [{ id: 'LC1', name: 'LC1', selfWeightFactor: 0 }],
     loadCombinations: [],
   };
 };

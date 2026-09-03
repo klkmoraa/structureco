@@ -35,7 +35,7 @@ import { translate, type Language, type TranslationKey } from '../../i18n/catalo
 import { formatNumber } from '../../utils/numberFormat';
 import { BrandMark } from '../topbar/BrandMark';
 import type { Space3DCommand } from '../../space3d/data/commands';
-import type { Space3DProjectV1, Space3DRestraints } from '../../space3d/model/types';
+import type { Space3DProject, Space3DRestraints } from '../../space3d/model/types';
 import type { ProjectModel } from '../../types';
 import type { Space3DStorageLike } from '../../space3d/data/storage';
 import type { Space3DWorkerClient } from '../../space3d/runtime/workerClient';
@@ -105,6 +105,12 @@ const ANALYSIS_ISSUE_KEYS: Record<string, TranslationKey> = {
   'limit-exceeded': 'space3d.error.limitExceeded',
 };
 
+const MEMBER_LOAD_KIND_KEYS: Record<string, TranslationKey> = {
+  distributed: 'space3d.memberLoadDistributed',
+  force: 'space3d.memberLoadForce',
+  moment: 'space3d.memberLoadMoment',
+};
+
 const STATE_KEYS: Record<string, TranslationKey> = {
   idle: 'space3d.stateIdle',
   running: 'space3d.stateRunning',
@@ -134,6 +140,11 @@ const BRIDGE_KEYS: Record<string, TranslationKey> = {
   'dropped-member-load': 'space3d.bridge.droppedMemberLoad',
   'dropped-prescribed-displacement': 'space3d.bridge.droppedPrescribedDisplacement',
   'dropped-initial-effect': 'space3d.bridge.droppedInitialEffect',
+  'carried-member-load': 'space3d.bridge.carriedMemberLoad',
+  'carried-member-release': 'space3d.bridge.carriedMemberRelease',
+  'carried-support-spring': 'space3d.bridge.carriedSupportSpring',
+  'carried-prescribed-displacement': 'space3d.bridge.carriedPrescribedDisplacement',
+  'carried-self-weight': 'space3d.bridge.carriedSelfWeight',
 };
 
 /** Notas que el usuario resuelve escribiendo un valor, no reconociendolas. */
@@ -166,7 +177,7 @@ const countRestraints = (restraints: Space3DRestraints) => Object.values(restrai
 interface WorkspaceBodyProps extends Pick<Space3DWorkspaceProps,
   'language' | 'onOpenHome' | 'onOpen2D' | 'createViewport' | 'sourceProject'> {
   readonly bridgeNotes: readonly Space3DBridgeNote[];
-  readonly derived: Space3DProjectV1 | null;
+  readonly derived: Space3DProject | null;
 }
 
 const WorkspaceBody = ({
@@ -260,6 +271,19 @@ const WorkspaceBody = ({
     }
   }, [select]);
 
+  /**
+   * Abre el inspector de una entidad que la escena no dibuja —una carga de
+   * barra, un asiento, un caso—. No toca la selección 3D: resaltar en el
+   * visor algo que no tiene geometría propia sería mentir sobre qué está
+   * seleccionado.
+   */
+  const openEditor = (target: Space3DEditorTarget) => {
+    select(null);
+    setEditorTarget(target);
+    setModelNavFocus(target.kind);
+    setSheetExpanded(true);
+  };
+
   const openNew = (kind: Space3DEditorTarget['kind']) => {
     select(null);
     setRail('model');
@@ -308,13 +332,23 @@ const WorkspaceBody = ({
     setPendingReplace(null);
   };
 
+  /** Un caso de carga no se borra desde el inspector: sostiene todo lo demás. */
+  const deleteCommandFor = (target: Space3DEditorTarget): Space3DCommand | null => {
+    if (!target.id) return null;
+    switch (target.kind) {
+      case 'node': return { kind: 'delete-node', nodeId: target.id };
+      case 'member': return { kind: 'delete-member', memberId: target.id };
+      case 'load': return { kind: 'delete-nodal-load', loadId: target.id };
+      case 'member-load': return { kind: 'delete-member-load', loadId: target.id };
+      case 'settlement': return { kind: 'delete-settlement', settlementId: target.id };
+      case 'case': return null;
+    }
+  };
+
   const remove = (target: Space3DEditorTarget) => {
     if (!target.id) return;
-    const command: Space3DCommand = target.kind === 'node'
-      ? { kind: 'delete-node', nodeId: target.id }
-      : target.kind === 'member'
-        ? { kind: 'delete-member', memberId: target.id }
-        : { kind: 'delete-nodal-load', loadId: target.id };
+    const command = deleteCommandFor(target);
+    if (!command) return;
     if (execute(command).ok) {
       select(null);
       setEditorTarget(null);
@@ -332,6 +366,15 @@ const WorkspaceBody = ({
     [pendingNotes],
   );
   const nextBridgeRequirement = pendingNotes[0] ?? null;
+  /**
+   * Lo que el puente sí supo traducir. Se publica junto a lo que bloquea porque
+   * un usuario que ve tres avisos rojos necesita saber, en la misma lectura,
+   * que sus cargas repartidas sí cruzaron.
+   */
+  const carriedNotes = useMemo(
+    () => [...new Map(bridgeNotes.filter((item) => item.code.startsWith('carried-')).map((item) => [item.code, item])).values()],
+    [bridgeNotes],
+  );
   /**
    * El puente nunca rellena campos ni reconoce una diferencia por su cuenta.
    * Esta acción sólo lleva al inspector de la entidad que el propio puente
@@ -357,13 +400,16 @@ const WorkspaceBody = ({
 
   const canNewMember = project.nodes.length >= 2;
   const canNewLoad = project.nodes.length > 0;
+  const canNewMemberLoad = project.members.length > 0 && project.loadCases.length > 0;
   const canEditSupport = selectedNodeId !== null;
-  const canDeleteSelection = editorTarget !== null && editorTarget.id !== null;
+  const canDeleteSelection = editorTarget !== null && deleteCommandFor(editorTarget) !== null;
   const modelCounts = {
     nodes: project.nodes.length,
     members: project.members.length,
     supports: project.nodes.filter((node) => countRestraints(node.restraints) > 0).length,
     loads: project.nodalLoads.length,
+    memberLoads: project.memberLoads.length,
+    settlements: project.settlements.length,
     loadCases: project.loadCases.length,
     combinations: project.loadCombinations.length,
   };
@@ -495,6 +541,11 @@ const WorkspaceBody = ({
           </button>
           : null}
       </header>
+      {carriedNotes.length > 0 ? <ul className="space3d-issues space3d-issues--carried">
+        {carriedNotes.map((item) => <li key={item.code} data-diagnostic-code={item.code}>
+          <span className="space3d-issue-copy">{t(BRIDGE_KEYS[item.code] ?? 'space3d.error.generic')}</span>
+        </li>)}
+      </ul> : null}
       {pendingNotes.length === 0
         ? <p className="space3d-notice">{t('space3d.bridgeResolved')}</p>
         : <>
@@ -547,9 +598,11 @@ const WorkspaceBody = ({
         onNewNode={() => openNew('node')}
         onNewMember={() => openNew('member')}
         onNewLoad={() => openNew('load')}
+        onNewMemberLoad={() => openNew('member-load')}
         onEditSupport={editSelectedSupports}
         canNewMember={canNewMember}
         canNewLoad={canNewLoad}
+        canNewMemberLoad={canNewMemberLoad}
         canEditSupport={canEditSupport}
         onCycleView={cycleView}
         canUndo={canUndo}
@@ -711,6 +764,75 @@ const WorkspaceBody = ({
               </tbody>
             </table>
             {project.nodalLoads.length === 0 ? <p className="space3d-notice">{t('space3d.emptyLoads')}</p> : null}
+          </div>
+
+          <div className="space3d-table-scroll" id="space3d-table-member-load">
+            <table className="space3d-table" aria-label={t('space3d.memberLoads')}>
+              <thead>
+                <tr>
+                  <th scope="col">{t('space3d.memberLoad')}</th>
+                  <th scope="col">{t('space3d.member')}</th>
+                  <th scope="col">{t('space3d.memberLoadKind')}</th>
+                  <th scope="col">X</th><th scope="col">Y</th><th scope="col">Z</th>
+                </tr>
+              </thead>
+              <tbody>
+                {project.memberLoads.map((load) => <tr key={load.id}>
+                  <th scope="row">
+                    <button type="button" className="space3d-linkish" onClick={() => openEditor({ kind: 'member-load', id: load.id })}>{load.id}</button>
+                  </th>
+                  <td>{load.memberId}</td>
+                  <td>{t(MEMBER_LOAD_KIND_KEYS[load.kind])}</td>
+                  <td>{number(load.startValue[0])}</td>
+                  <td>{number(load.startValue[1])}</td>
+                  <td>{number(load.startValue[2])}</td>
+                </tr>)}
+              </tbody>
+            </table>
+            {project.memberLoads.length === 0 ? <p className="space3d-notice">{t('space3d.emptyMemberLoads')}</p> : null}
+          </div>
+
+          <div className="space3d-table-scroll" id="space3d-table-settlement">
+            <table className="space3d-table" aria-label={t('space3d.settlements')}>
+              <thead>
+                <tr>
+                  <th scope="col">{t('space3d.settlement')}</th>
+                  <th scope="col">{t('space3d.node')}</th>
+                  <th scope="col">ux</th><th scope="col">uy</th><th scope="col">uz</th>
+                </tr>
+              </thead>
+              <tbody>
+                {project.settlements.map((item) => <tr key={item.id}>
+                  <th scope="row">
+                    <button type="button" className="space3d-linkish" onClick={() => openEditor({ kind: 'settlement', id: item.id })}>{item.id}</button>
+                  </th>
+                  <td>{item.nodeId}</td>
+                  <td>{number(item.ux)}</td><td>{number(item.uy)}</td><td>{number(item.uz)}</td>
+                </tr>)}
+              </tbody>
+            </table>
+            {project.settlements.length === 0 ? <p className="space3d-notice">{t('space3d.emptySettlements')}</p> : null}
+          </div>
+
+          <div className="space3d-table-scroll" id="space3d-table-case">
+            <table className="space3d-table" aria-label={t('space3d.loadCasesCount')}>
+              <thead>
+                <tr>
+                  <th scope="col">{t('space3d.loadCase')}</th>
+                  <th scope="col">{t('space3d.caseName')}</th>
+                  <th scope="col">{t('space3d.selfWeightFactor')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {project.loadCases.map((item) => <tr key={item.id}>
+                  <th scope="row">
+                    <button type="button" className="space3d-linkish" onClick={() => openEditor({ kind: 'case', id: item.id })}>{item.id}</button>
+                  </th>
+                  <td>{item.name}</td>
+                  <td>{number(item.selfWeightFactor)}</td>
+                </tr>)}
+              </tbody>
+            </table>
           </div>
 
           {editorTarget

@@ -10,7 +10,7 @@ gates fail-closed antes de aparecer como capacidad del producto.
 
 ## Regla común
 
-- El análisis lineal 2D, P-Delta 2D y S3D-1 no implican soporte de buckling
+- El análisis lineal 2D, P-Delta 2D y Space 3D no implican soporte de buckling
   modal, dinámica, superficies ni no linealidad avanzada.
 - Cada familia debe mantener tipos, resultados, procedencia, límites y estados
   de error explícitos; no basta con ampliar un `enum` o reutilizar una etiqueta.
@@ -39,7 +39,7 @@ normativo.
 
 ## Superficies, shells y diaphragms
 
-Permanecen fuera del alcance actual. Los seis GDL de S3D-1 son compatibles pero
+Permanecen fuera del alcance actual. Los seis GDL de Space 3D son compatibles pero
 insuficientes: hacen falta formulación y estabilización, secciones, malla,
 cargas, conexión con frames, postproceso y una arquitectura sparse adecuada.
 Un diaphragm rígido por constraints, un membrane, una plate y un shell son
@@ -57,7 +57,7 @@ Resultados no convergentes o fuera de alcance deben fallar de forma explícita.
 
 ## Space 3D
 
-S3D-1 continúa experimental. Su eventual promoción mantiene este orden de
+Space 3D continúa experimental. Su eventual promoción mantiene este orden de
 gates: contrato visible y smoke con worker/WebGL reales; WebKit, interacción y
 accesibilidad; durabilidad y recuperación; validación numérica ampliada;
 capacidad portable; y revisión independiente final. Ningún PASS local permite

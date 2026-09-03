@@ -4,7 +4,7 @@ import { spaceFrameLocalStiffness } from './element';
 import { buildMemberOrientation } from './orientation';
 import { axialCantilever, bendingCantilever, torsionCantilever } from './fixtures';
 import { createSpace3DPortalExample } from '../model/defaultProject';
-import type { Space3DAnalysisResult, Space3DProjectV1, Space3DVector } from '../model/types';
+import type { Space3DAnalysisResult, Space3DProject, Space3DVector } from '../model/types';
 
 const node = (result: Space3DAnalysisResult, id: string) => result.nodeResults.find((item) => item.nodeId === id)!;
 
@@ -26,13 +26,15 @@ const rotationMatrix = (axis: Space3DVector, angle: number): number[][] => {
   ];
 };
 
+const IDENTITY = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+
 const apply = (R: number[][], v: Space3DVector): Space3DVector => [
   R[0][0] * v[0] + R[0][1] * v[1] + R[0][2] * v[2],
   R[1][0] * v[0] + R[1][1] * v[1] + R[1][2] * v[2],
   R[2][0] * v[0] + R[2][1] * v[1] + R[2][2] * v[2],
 ];
 
-const rotateProject = (project: Space3DProjectV1, R: number[][]): Space3DProjectV1 => ({
+const rotateProject = (project: Space3DProject, R: number[][]): Space3DProject => ({
   ...project,
   nodes: project.nodes.map((item) => {
     const [x, y, z] = apply(R, [item.x, item.y, item.z]);
@@ -47,15 +49,35 @@ const rotateProject = (project: Space3DProjectV1, R: number[][]): Space3DProject
     const [mx, my, mz] = apply(R, [item.mx, item.my, item.mz]);
     return { ...item, fx, fy, fz, mx, my, mz };
   }),
+  // Una carga en ejes locales viaja con la barra; una en globales hay que
+  // girarla igual que el modelo.
+  memberLoads: project.memberLoads.map((item) => (item.axes === 'local' ? item : {
+    ...item,
+    startValue: apply(R, item.startValue),
+    endValue: apply(R, item.endValue),
+  })),
+  // La gravedad no gira con el modelo: apunta a `-Y` global pase lo que pase.
+  // Comparar un modelo girado con peso propio contra el original mediría esa
+  // asimetría física, no la covarianza del solver.
+  loadCases: project.loadCases.map((item) => ({ ...item, selfWeightFactor: 0 })),
 });
 
-const scaleLoads = (project: Space3DProjectV1, factor: number): Space3DProjectV1 => ({
+const scale3 = (v: readonly [number, number, number], factor: number): [number, number, number] =>
+  [v[0] * factor, v[1] * factor, v[2] * factor];
+
+const scaleLoads = (project: Space3DProject, factor: number): Space3DProject => ({
   ...project,
   nodalLoads: project.nodalLoads.map((item) => ({
     ...item,
     fx: item.fx * factor, fy: item.fy * factor, fz: item.fz * factor,
     mx: item.mx * factor, my: item.my * factor, mz: item.mz * factor,
   })),
+  memberLoads: project.memberLoads.map((item) => ({
+    ...item,
+    startValue: scale3(item.startValue, factor),
+    endValue: scale3(item.endValue, factor),
+  })),
+  loadCases: project.loadCases.map((item) => ({ ...item, selfWeightFactor: item.selfWeightFactor * factor })),
 });
 
 describe('Space3D physical invariants', () => {
@@ -73,7 +95,7 @@ describe('Space3D physical invariants', () => {
   it('es covariante ante una rotación rígida global del modelo y sus cargas', () => {
     const project = createSpace3DPortalExample();
     const R = rotationMatrix([1, 2, 3], 0.7);
-    const original = analyzeSpace3DProject(project, 'LC1');
+    const original = analyzeSpace3DProject(rotateProject(project, IDENTITY), 'LC1');
     const rotated = analyzeSpace3DProject(rotateProject(project, R), 'LC1');
     expect(rotated.success).toBe(true);
 
@@ -87,7 +109,7 @@ describe('Space3D physical invariants', () => {
 
   it('trata un roll de 2π como un roll nulo', () => {
     const base = bendingCantilever({ axis: 'y' });
-    const rolled: Space3DProjectV1 = {
+    const rolled: Space3DProject = {
       ...base,
       members: base.members.map((item) => ({ ...item, orientation: { ...item.orientation, rollRadians: 2 * Math.PI } })),
     };
@@ -99,7 +121,7 @@ describe('Space3D physical invariants', () => {
 
   it('es invariante ante la renumeración de nudos y miembros', () => {
     const project = createSpace3DPortalExample();
-    const shuffled: Space3DProjectV1 = {
+    const shuffled: Space3DProject = {
       ...project,
       nodes: [...project.nodes].reverse(),
       members: [...project.members].reverse(),

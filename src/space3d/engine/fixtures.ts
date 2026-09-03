@@ -9,11 +9,14 @@
 import {
   fixedSpace3DRestraints,
   freeSpace3DRestraints,
+  noSpace3DReleases,
+  noSpace3DSprings,
   SPACE3D_ANALYSIS_SPACE,
   SPACE3D_SCHEMA_VERSION,
   type Space3DFrameMember,
+  type Space3DMemberLoad,
   type Space3DNodalLoad,
-  type Space3DProjectV1,
+  type Space3DProject,
 } from '../model/types';
 
 export interface Space3DCantileverOptions {
@@ -55,6 +58,10 @@ const cantileverMember = (options: ReturnType<typeof resolve>): Space3DFrameMemb
   Iy: options.Iy,
   Iz: options.Iz,
   J: options.J,
+  shearAreaY: 0,
+  shearAreaZ: 0,
+  density: 0,
+  releases: noSpace3DReleases(),
   orientation: { localYReferenceGlobal: [0, 1, 0], rollRadians: 0 },
 });
 
@@ -68,30 +75,32 @@ const cantilever = (
   id: string,
   options: ReturnType<typeof resolve>,
   load: Space3DNodalLoad,
-): Space3DProjectV1 => ({
+): Space3DProject => ({
   analysisSpace: SPACE3D_ANALYSIS_SPACE,
   schemaVersion: SPACE3D_SCHEMA_VERSION,
   id,
   name: id,
   units: 'kN-m',
   nodes: [
-    { id: 'I', x: 0, y: 0, z: 0, restraints: fixedSpace3DRestraints() },
-    { id: 'J', x: options.L, y: 0, z: 0, restraints: freeSpace3DRestraints() },
+    { id: 'I', x: 0, y: 0, z: 0, restraints: fixedSpace3DRestraints(), springs: noSpace3DSprings() },
+    { id: 'J', x: options.L, y: 0, z: 0, restraints: freeSpace3DRestraints(), springs: noSpace3DSprings() },
   ],
   members: [cantileverMember(options)],
   nodalLoads: [load],
-  loadCases: [{ id: 'LC1', name: 'LC1' }],
+  memberLoads: [],
+  settlements: [],
+  loadCases: [{ id: 'LC1', name: 'LC1', selfWeightFactor: 0 }],
   loadCombinations: [{ id: 'CO1', name: 'CO1', terms: [{ caseId: 'LC1', factor: 1 }] }],
 });
 
 /** Barra traccionada: `ux(J) = P·L / (E·A)`. */
-export const axialCantilever = (overrides: Space3DCantileverOptions = {}): Space3DProjectV1 => {
+export const axialCantilever = (overrides: Space3DCantileverOptions = {}): Space3DProject => {
   const options = resolve(overrides);
   return cantilever('space3d-axial', options, zeroLoad({ fx: options.P }));
 };
 
 /** Barra torsionada: `rx(J) = T·L / (G·J)`. */
-export const torsionCantilever = (overrides: Space3DCantileverOptions = {}): Space3DProjectV1 => {
+export const torsionCantilever = (overrides: Space3DCantileverOptions = {}): Space3DProject => {
   const options = resolve(overrides);
   return cantilever('space3d-torsion', options, zeroLoad({ mx: options.T }));
 };
@@ -102,7 +111,7 @@ export const torsionCantilever = (overrides: Space3DCantileverOptions = {}): Spa
  */
 export const bendingCantilever = (
   overrides: Space3DCantileverOptions & { readonly axis?: 'y' | 'z' } = {},
-): Space3DProjectV1 => {
+): Space3DProject => {
   const options = resolve(overrides);
   const axis = overrides.axis ?? 'y';
   return cantilever(
@@ -113,11 +122,60 @@ export const bendingCantilever = (
 };
 
 /** Miembro sin ninguna restricción: mecanismo con seis modos de sólido rígido. */
-export const freeFloatingMember = (overrides: Space3DCantileverOptions = {}): Space3DProjectV1 => {
+export const freeFloatingMember = (overrides: Space3DCantileverOptions = {}): Space3DProject => {
   const options = resolve(overrides);
   const project = cantilever('space3d-free', options, zeroLoad({ fy: options.P }));
   return {
     ...project,
     nodes: project.nodes.map((node) => ({ ...node, restraints: freeSpace3DRestraints() })),
+  };
+};
+
+/** Voladizo sin carga nodal, listo para recibir cargas de barra. */
+export const unloadedCantilever = (overrides: Space3DCantileverOptions = {}): Space3DProject => {
+  const options = resolve(overrides);
+  const project = cantilever('space3d-member-load', options, zeroLoad({}));
+  return { ...project, nodalLoads: [] };
+};
+
+/** Carga uniforme sobre toda la barra, en los ejes indicados. */
+export const uniformMemberLoad = (
+  intensity: readonly [number, number, number],
+  axes: Space3DMemberLoad['axes'] = 'local',
+): Space3DMemberLoad => ({
+  id: 'ML1',
+  caseId: 'LC1',
+  memberId: 'M1',
+  kind: 'distributed',
+  axes,
+  start: 0,
+  end: 1,
+  startValue: [intensity[0], intensity[1], intensity[2]],
+  endValue: [intensity[0], intensity[1], intensity[2]],
+});
+
+/**
+ * Viga biapoyada de un solo vano sobre el eje X, con `I` articulado en las tres
+ * traslaciones y `J` en dos: es el caso de manual con el que se contrastan las
+ * cargas de barra y las liberaciones.
+ */
+export const simpleBeam = (overrides: Space3DCantileverOptions = {}): Space3DProject => {
+  const options = resolve(overrides);
+  const project = cantilever('space3d-simple-beam', options, zeroLoad({}));
+  return {
+    ...project,
+    nodalLoads: [],
+    nodes: [
+      {
+        id: 'I', x: 0, y: 0, z: 0,
+        restraints: { ux: true, uy: true, uz: true, rx: true, ry: false, rz: false },
+        springs: noSpace3DSprings(),
+      },
+      {
+        id: 'J', x: options.L, y: 0, z: 0,
+        restraints: { ux: false, uy: true, uz: true, rx: true, ry: false, rz: false },
+        springs: noSpace3DSprings(),
+      },
+    ],
   };
 };

@@ -14,19 +14,30 @@ import { validateSpace3DProject } from '../model/validation';
 import {
   SPACE3D_ANALYSIS_SPACE,
   SPACE3D_LIMITS,
+  SPACE3D_READABLE_SCHEMA_VERSIONS,
+  SPACE3D_RELEASE_KEYS,
   SPACE3D_SCHEMA_VERSION,
+  noSpace3DReleases,
+  noSpace3DSprings,
   type Space3DFrameMember,
+  type Space3DLoadAxes,
   type Space3DLoadCase,
   type Space3DLoadCombination,
+  type Space3DMemberLoad,
+  type Space3DMemberLoadKind,
+  type Space3DMemberReleases,
   type Space3DNodalLoad,
   type Space3DNode,
-  type Space3DProjectV1,
+  type Space3DProject,
   type Space3DRestraints,
+  type Space3DSpringStiffness,
+  type Space3DSupportSettlement,
   type Space3DVector,
 } from '../model/types';
 
 export type Space3DCodecErrorCode =
   | 'malformed-json'
+  | 'not-a-choice'
   | 'analysis-space'
   | 'schema-version'
   | 'unknown-field'
@@ -112,23 +123,52 @@ const readRestraints = (value: unknown, path: string): Space3DRestraints => {
   };
 };
 
-const readNode = (value: unknown, index: number): Space3DNode => {
+const readSprings = (value: unknown, path: string): Space3DSpringStiffness => {
+  const source = object(value, path);
+  exactKeys(source, ['ux', 'uy', 'uz', 'rx', 'ry', 'rz'], path);
+  return {
+    ux: num(source, 'ux', path), uy: num(source, 'uy', path), uz: num(source, 'uz', path),
+    rx: num(source, 'rx', path), ry: num(source, 'ry', path), rz: num(source, 'rz', path),
+  };
+};
+
+const readReleases = (value: unknown, path: string): Space3DMemberReleases => {
+  const source = object(value, path);
+  exactKeys(source, SPACE3D_RELEASE_KEYS, path);
+  const releases = {} as Record<string, boolean>;
+  for (const key of SPACE3D_RELEASE_KEYS) releases[key] = flag(source, key, path);
+  return releases as unknown as Space3DMemberReleases;
+};
+
+const choice = <T extends string>(source: Raw, key: string, allowed: readonly T[], path: string): T => {
+  const value = source[key];
+  if (typeof value !== 'string' || !(allowed as readonly string[]).includes(value)) {
+    fail('not-a-choice', `${path}.${key} «${String(value)}»`);
+  }
+  return value as T;
+};
+
+const readNode = (legacy: boolean) => (value: unknown, index: number): Space3DNode => {
   const path = `nodes[${index}]`;
   const source = object(value, path);
-  exactKeys(source, ['id', 'x', 'y', 'z', 'restraints'], path);
+  exactKeys(source, legacy ? ['id', 'x', 'y', 'z', 'restraints'] : ['id', 'x', 'y', 'z', 'restraints', 'springs'], path);
   return {
     id: text(source, 'id', path),
     x: num(source, 'x', path),
     y: num(source, 'y', path),
     z: num(source, 'z', path),
     restraints: readRestraints(source.restraints, `${path}.restraints`),
+    springs: legacy ? noSpace3DSprings() : readSprings(source.springs, `${path}.springs`),
   };
 };
 
-const readMember = (value: unknown, index: number): Space3DFrameMember => {
+const LEGACY_MEMBER_KEYS = ['id', 'i', 'j', 'E', 'G', 'A', 'Iy', 'Iz', 'J', 'orientation'] as const;
+const MEMBER_KEYS = ['id', 'i', 'j', 'E', 'G', 'A', 'Iy', 'Iz', 'J', 'shearAreaY', 'shearAreaZ', 'density', 'releases', 'orientation'] as const;
+
+const readMember = (legacy: boolean) => (value: unknown, index: number): Space3DFrameMember => {
   const path = `members[${index}]`;
   const source = object(value, path);
-  exactKeys(source, ['id', 'i', 'j', 'E', 'G', 'A', 'Iy', 'Iz', 'J', 'orientation'], path);
+  exactKeys(source, legacy ? LEGACY_MEMBER_KEYS : MEMBER_KEYS, path);
   const orientationPath = `${path}.orientation`;
   const orientation = object(source.orientation, orientationPath);
   exactKeys(orientation, ['localYReferenceGlobal', 'rollRadians'], orientationPath);
@@ -142,6 +182,10 @@ const readMember = (value: unknown, index: number): Space3DFrameMember => {
     Iy: num(source, 'Iy', path),
     Iz: num(source, 'Iz', path),
     J: num(source, 'J', path),
+    shearAreaY: legacy ? 0 : num(source, 'shearAreaY', path),
+    shearAreaZ: legacy ? 0 : num(source, 'shearAreaZ', path),
+    density: legacy ? 0 : num(source, 'density', path),
+    releases: legacy ? noSpace3DReleases() : readReleases(source.releases, `${path}.releases`),
     orientation: {
       localYReferenceGlobal: vector(orientation.localYReferenceGlobal, `${orientationPath}.localYReferenceGlobal`),
       rollRadians: num(orientation, 'rollRadians', orientationPath),
@@ -162,11 +206,48 @@ const readLoad = (value: unknown, index: number): Space3DNodalLoad => {
   };
 };
 
-const readCase = (value: unknown, index: number): Space3DLoadCase => {
+const readCase = (legacy: boolean) => (value: unknown, index: number): Space3DLoadCase => {
   const path = `loadCases[${index}]`;
   const source = object(value, path);
-  exactKeys(source, ['id', 'name'], path);
-  return { id: text(source, 'id', path), name: text(source, 'name', path) };
+  exactKeys(source, legacy ? ['id', 'name'] : ['id', 'name', 'selfWeightFactor'], path);
+  return {
+    id: text(source, 'id', path),
+    name: text(source, 'name', path),
+    selfWeightFactor: legacy ? 0 : num(source, 'selfWeightFactor', path),
+  };
+};
+
+const MEMBER_LOAD_KINDS = ['distributed', 'force', 'moment'] as const;
+const LOAD_AXES = ['global', 'local'] as const;
+
+const readMemberLoad = (value: unknown, index: number): Space3DMemberLoad => {
+  const path = `memberLoads[${index}]`;
+  const source = object(value, path);
+  exactKeys(source, ['id', 'caseId', 'memberId', 'kind', 'axes', 'start', 'end', 'startValue', 'endValue'], path);
+  return {
+    id: text(source, 'id', path),
+    caseId: text(source, 'caseId', path),
+    memberId: text(source, 'memberId', path),
+    kind: choice<Space3DMemberLoadKind>(source, 'kind', MEMBER_LOAD_KINDS, path),
+    axes: choice<Space3DLoadAxes>(source, 'axes', LOAD_AXES, path),
+    start: num(source, 'start', path),
+    end: num(source, 'end', path),
+    startValue: vector(source.startValue, `${path}.startValue`),
+    endValue: vector(source.endValue, `${path}.endValue`),
+  };
+};
+
+const readSettlement = (value: unknown, index: number): Space3DSupportSettlement => {
+  const path = `settlements[${index}]`;
+  const source = object(value, path);
+  exactKeys(source, ['id', 'caseId', 'nodeId', 'ux', 'uy', 'uz', 'rx', 'ry', 'rz'], path);
+  return {
+    id: text(source, 'id', path),
+    caseId: text(source, 'caseId', path),
+    nodeId: text(source, 'nodeId', path),
+    ux: num(source, 'ux', path), uy: num(source, 'uy', path), uz: num(source, 'uz', path),
+    rx: num(source, 'rx', path), ry: num(source, 'ry', path), rz: num(source, 'rz', path),
+  };
 };
 
 const readCombination = (value: unknown, index: number): Space3DLoadCombination => {
@@ -200,7 +281,7 @@ export interface Space3DParseOptions {
   readonly requireAdmissibleModel?: boolean;
 }
 
-export const parseSpace3DProject = (json: string, options: Space3DParseOptions = {}): Space3DProjectV1 => {
+export const parseSpace3DProject = (json: string, options: Space3DParseOptions = {}): Space3DProject => {
   const requireAdmissibleModel = options.requireAdmissibleModel ?? true;
   let raw: unknown;
   try {
@@ -215,25 +296,38 @@ export const parseSpace3DProject = (json: string, options: Space3DParseOptions =
   if (source.analysisSpace !== SPACE3D_ANALYSIS_SPACE) {
     fail('analysis-space', `se esperaba «${SPACE3D_ANALYSIS_SPACE}» y llegó «${String(source.analysisSpace)}»`);
   }
-  if (source.schemaVersion !== SPACE3D_SCHEMA_VERSION) {
-    fail('schema-version', `se esperaba ${SPACE3D_SCHEMA_VERSION} y llegó ${String(source.schemaVersion)}`);
+  if (!(SPACE3D_READABLE_SCHEMA_VERSIONS as readonly unknown[]).includes(source.schemaVersion)) {
+    fail('schema-version', `se esperaba ${SPACE3D_READABLE_SCHEMA_VERSIONS.join(' o ')} y llegó ${String(source.schemaVersion)}`);
   }
 
-  exactKeys(source, ['analysisSpace', 'schemaVersion', 'id', 'name', 'units', 'nodes', 'members', 'nodalLoads', 'loadCases', 'loadCombinations'], 'project');
+  // Un archivo S3D-1 se migra al abrirse: las capacidades que aún no existían
+  // entran con su valor neutro —sin muelles, sin liberaciones, sin peso propio,
+  // sin cargas de barra— de modo que el modelo se lee exactamente igual que
+  // antes y sólo después se le pueden añadir las nuevas.
+  const legacy = source.schemaVersion === 1;
+  exactKeys(
+    source,
+    legacy
+      ? ['analysisSpace', 'schemaVersion', 'id', 'name', 'units', 'nodes', 'members', 'nodalLoads', 'loadCases', 'loadCombinations']
+      : ['analysisSpace', 'schemaVersion', 'id', 'name', 'units', 'nodes', 'members', 'nodalLoads', 'memberLoads', 'settlements', 'loadCases', 'loadCombinations'],
+    'project',
+  );
 
   const units = text(source, 'units', 'project');
   if (!(UNIT_SYSTEMS as readonly string[]).includes(units)) fail('not-a-string', `project.units «${units}»`);
 
-  const project: Space3DProjectV1 = {
+  const project: Space3DProject = {
     analysisSpace: SPACE3D_ANALYSIS_SPACE,
     schemaVersion: SPACE3D_SCHEMA_VERSION,
     id: text(source, 'id', 'project'),
     name: text(source, 'name', 'project'),
-    units: units as Space3DProjectV1['units'],
-    nodes: list(source, 'nodes', 'project', SPACE3D_LIMITS.maxNodes).map(readNode),
-    members: list(source, 'members', 'project', SPACE3D_LIMITS.maxMembers).map(readMember),
+    units: units as Space3DProject['units'],
+    nodes: list(source, 'nodes', 'project', SPACE3D_LIMITS.maxNodes).map(readNode(legacy)),
+    members: list(source, 'members', 'project', SPACE3D_LIMITS.maxMembers).map(readMember(legacy)),
     nodalLoads: list(source, 'nodalLoads', 'project').map(readLoad),
-    loadCases: list(source, 'loadCases', 'project').map(readCase),
+    memberLoads: legacy ? [] : list(source, 'memberLoads', 'project').map(readMemberLoad),
+    settlements: legacy ? [] : list(source, 'settlements', 'project').map(readSettlement),
+    loadCases: list(source, 'loadCases', 'project').map(readCase(legacy)),
     loadCombinations: list(source, 'loadCombinations', 'project').map(readCombination),
   };
 
@@ -249,10 +343,10 @@ export const parseSpace3DProject = (json: string, options: Space3DParseOptions =
 };
 
 /** Lectura de trabajo en curso: forma estricta, admisibilidad no exigida. */
-export const parseSpace3DDraft = (json: string): Space3DProjectV1 =>
+export const parseSpace3DDraft = (json: string): Space3DProject =>
   parseSpace3DProject(json, { requireAdmissibleModel: false });
 
-export const serializeSpace3DProject = (project: Space3DProjectV1): string => JSON.stringify({
+export const serializeSpace3DProject = (project: Space3DProject): string => JSON.stringify({
   analysisSpace: project.analysisSpace,
   schemaVersion: project.schemaVersion,
   id: project.id,
@@ -264,10 +358,16 @@ export const serializeSpace3DProject = (project: Space3DProjectV1): string => JS
       ux: node.restraints.ux, uy: node.restraints.uy, uz: node.restraints.uz,
       rx: node.restraints.rx, ry: node.restraints.ry, rz: node.restraints.rz,
     },
+    springs: {
+      ux: node.springs.ux, uy: node.springs.uy, uz: node.springs.uz,
+      rx: node.springs.rx, ry: node.springs.ry, rz: node.springs.rz,
+    },
   })),
   members: project.members.map((member) => ({
     id: member.id, i: member.i, j: member.j,
     E: member.E, G: member.G, A: member.A, Iy: member.Iy, Iz: member.Iz, J: member.J,
+    shearAreaY: member.shearAreaY, shearAreaZ: member.shearAreaZ, density: member.density,
+    releases: Object.fromEntries(SPACE3D_RELEASE_KEYS.map((key) => [key, member.releases[key]])),
     orientation: {
       localYReferenceGlobal: [...member.orientation.localYReferenceGlobal],
       rollRadians: member.orientation.rollRadians,
@@ -277,7 +377,16 @@ export const serializeSpace3DProject = (project: Space3DProjectV1): string => JS
     id: load.id, caseId: load.caseId, nodeId: load.nodeId,
     fx: load.fx, fy: load.fy, fz: load.fz, mx: load.mx, my: load.my, mz: load.mz,
   })),
-  loadCases: project.loadCases.map((item) => ({ id: item.id, name: item.name })),
+  memberLoads: project.memberLoads.map((load) => ({
+    id: load.id, caseId: load.caseId, memberId: load.memberId,
+    kind: load.kind, axes: load.axes, start: load.start, end: load.end,
+    startValue: [...load.startValue], endValue: [...load.endValue],
+  })),
+  settlements: project.settlements.map((item) => ({
+    id: item.id, caseId: item.caseId, nodeId: item.nodeId,
+    ux: item.ux, uy: item.uy, uz: item.uz, rx: item.rx, ry: item.ry, rz: item.rz,
+  })),
+  loadCases: project.loadCases.map((item) => ({ id: item.id, name: item.name, selfWeightFactor: item.selfWeightFactor })),
   loadCombinations: project.loadCombinations.map((item) => ({
     id: item.id, name: item.name,
     terms: item.terms.map((term) => ({ caseId: term.caseId, factor: term.factor })),

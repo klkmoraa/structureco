@@ -19,17 +19,17 @@ El árbol operativo contiene la aplicación que se compila y publica, sus prueba
 | Importación y exportación | Vigente con límites declarados | JSON, expediente `.structureco`, SVG, PNG, CSV y PDF portable; importación DXF ASCII de un subconjunto experimental. |
 | PDF y PWA | Vigente | Memoria de cálculo PDF reimportable, manifiesto web, shell offline generado durante el build y aviso controlado de actualización. |
 | `ProjectCommand` | Vigente, contrato interno | Comandos tipados, patches reversibles y una ruta común para historial/undo-redo; no es una interfaz de IA. |
-| Space 3D · S3D-1 | Experimental funcional | Marco espacial elástico lineal con 6 GDL por nudo, edición, análisis, resultados, persistencia, import/export y vista 3D en un dominio separado del 2D. |
+| Space 3D · S3D-2 | Experimental funcional | Marco espacial elástico lineal con 6 GDL por nudo: cargas sobre barra, peso propio, liberaciones de extremo, muelles y asientos de apoyo, deformación por cortante, diagramas de acciones internas, edición, persistencia, import/export y vista 3D en un dominio separado del 2D. |
 | IA mediante `CommandProposal` | No implementada | Existe únicamente un pre-RFC de referencia; no hay proveedor, SDK, llamadas de red ni mutación automática del proyecto. |
 
 ## Límites relevantes
 
 - StructureCo es una ayuda de modelado y cálculo; no sustituye revisión, criterio ni certificación profesional.
-- Space 3D sigue marcado como experimental. S3D-1 no incluye cargas en barra, liberaciones, muelles, asentamientos, deformación por cortante, dinámica ni no linealidad.
-- El puente 2D → 3D es explícito y de una sola dirección: no inventa propiedades espaciales ausentes ni convierte el solver 2D en uno híbrido.
+- Space 3D sigue marcado como experimental. S3D-2 no incluye cargas térmicas, rótulas internas de nudo, apoyos inclinados, conexiones semirrígidas, dinámica ni no linealidad.
+- El puente 2D → 3D es explícito y de una sola dirección: traslada cargas de barra, liberaciones, muelles alineados con los ejes, asientos y peso propio, pero no inventa las propiedades espaciales que el modelo plano no contiene ni convierte el solver 2D en uno híbrido.
 - La importación DXF admite sólo un subconjunto ASCII y muestra diagnósticos antes de crear geometría.
 
-El alcance técnico y las convenciones de Space 3D están en el [mapa de arquitectura](docs/architecture/README.md).
+El alcance técnico y las convenciones de Space 3D están en su [contrato canónico](docs/architecture/structureco-space-3d.md) y en el [mapa de arquitectura](docs/architecture/README.md).
 
 ## Inicio local
 

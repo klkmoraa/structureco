@@ -19,7 +19,7 @@ import { parseSpace3DProject, serializeSpace3DProject, Space3DCodecError } from 
 import { loadSpace3DProject, saveSpace3DProject, type Space3DStorageLike } from '../data/storage';
 import { createBlankSpace3DProject, createSpace3DPortalExample } from '../model/defaultProject';
 import { Space3DAnalysisCancelledError, Space3DWorkerClient, createSpace3DWorkerClient } from '../runtime/workerClient';
-import type { Space3DAnalysisResult, Space3DProjectV1 } from '../model/types';
+import type { Space3DAnalysisResult, Space3DProject } from '../model/types';
 
 export type Space3DAnalysisState = 'idle' | 'running' | 'ready' | 'stale' | 'failed' | 'cancelled';
 
@@ -35,7 +35,7 @@ export type Space3DExecuteResult =
   | { readonly ok: false; readonly code: string; readonly message: string };
 
 export interface Space3DProjectContextValue {
-  readonly project: Space3DProjectV1;
+  readonly project: Space3DProject;
   readonly analysis: Space3DAnalysisResult | null;
   readonly analysisState: Space3DAnalysisState;
   readonly analysisTargetId: string;
@@ -50,7 +50,7 @@ export interface Space3DProjectContextValue {
   readonly analyze: () => Promise<void>;
   readonly cancelAnalysis: () => void;
   readonly setAnalysisTargetId: (targetId: string) => void;
-  readonly replaceProject: (project: Space3DProjectV1) => void;
+  readonly replaceProject: (project: Space3DProject) => void;
   readonly importPortable: (json: string) => Space3DExecuteResult;
   readonly exportPortable: () => string;
   readonly select: (selection: Space3DSelection | null) => void;
@@ -61,9 +61,9 @@ export interface Space3DProjectContextValue {
 const Space3DProjectContext = createContext<Space3DProjectContextValue | null>(null);
 
 interface History {
-  readonly past: readonly Space3DProjectV1[];
-  readonly present: Space3DProjectV1;
-  readonly future: readonly Space3DProjectV1[];
+  readonly past: readonly Space3DProject[];
+  readonly present: Space3DProject;
+  readonly future: readonly Space3DProject[];
 }
 
 const HISTORY_LIMIT = 100;
@@ -77,14 +77,14 @@ const HISTORY_LIMIT = 100;
  * origen, y con ellos el analisis fallaba con `unknown-target` sin que nada
  * explicara por que.
  */
-const defaultTargetId = (project: Space3DProjectV1): string =>
+const defaultTargetId = (project: Space3DProject): string =>
   project.loadCases[0]?.id ?? project.loadCombinations[0]?.id ?? '';
 
-const targetExists = (project: Space3DProjectV1, targetId: string): boolean =>
+const targetExists = (project: Space3DProject, targetId: string): boolean =>
   project.loadCases.some((item) => item.id === targetId)
   || project.loadCombinations.some((item) => item.id === targetId);
 
-const push = (history: History, next: Space3DProjectV1): History => ({
+const push = (history: History, next: Space3DProject): History => ({
   past: [...history.past, history.present].slice(-HISTORY_LIMIT),
   present: next,
   future: [],
@@ -94,7 +94,7 @@ export interface Space3DProjectProviderProps {
   readonly children: ReactNode;
   readonly storage?: Space3DStorageLike | null;
   readonly client?: Space3DWorkerClient;
-  readonly initialProject?: Space3DProjectV1;
+  readonly initialProject?: Space3DProject;
   /** Aísla el almacenamiento de un Space 3D derivado del de uno independiente. */
   readonly namespace?: string;
 }
@@ -209,7 +209,7 @@ export const Space3DProjectProvider = ({ children, storage, client, initialProje
     invalidate();
   }, [invalidate]);
 
-  const replaceProject = useCallback((next: Space3DProjectV1) => {
+  const replaceProject = useCallback((next: Space3DProject) => {
     setHistory((current) => push(current, next));
     setSelectedEntity(null);
     // Un proyecto nuevo puede no tener el objetivo actual: se realinea en vez
