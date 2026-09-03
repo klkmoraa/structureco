@@ -174,7 +174,10 @@ export const Space3DCanvas = ({
     <span><b>{model.nodes.length}</b> {copy.nodes}</span>
     <span><b>{model.members.length}</b> {copy.members}</span>
     <span><b>{model.supports.length}</b> {copy.supports}</span>
-    <span><b>{model.loads.length}</b> {copy.loads}</span>
+    {/* Una carga se dibuja con varias flechas —una repartida con cinco, el peso
+        propio con cuatro por barra—, así que contar glifos publicaba «18
+        cargas» donde el modelo tiene una. Se cuentan cargas, no flechas. */}
+    <span><b>{new Set(model.loads.map((load) => load.id)).size}</b> {copy.loads}</span>
   </div>;
 
   return <div className="space3d-canvas">
