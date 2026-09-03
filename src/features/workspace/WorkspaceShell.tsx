@@ -26,6 +26,9 @@ import { isOwnHistoryScope } from './commandRegistry';
 import type { AnalysisResult } from '../../types';
 import type { RevisionSnapshot } from '../revision-comparison/revisionComparison';
 import { DataSurfaceRetainedStateProvider } from './DataSurfaceRetainedState';
+import { APP_VERSION } from '../../appVersion';
+import type { PdfPreviewArtifact } from '../pdf-preview/PdfPreviewDialog';
+import { CALCULATION_PDF_EXPORT_DEFAULTS, type CalculationReportOptions } from '../../utils/pdf/reportContext';
 
 const LazyCommandPalette = lazy(() => import('./CommandPalette').then((module) => ({ default: module.CommandPalette })));
 const LazyModelDoctor = lazy(() => import('../model-doctor/ModelDoctor').then((module) => ({ default: module.ModelDoctor })));
@@ -33,6 +36,88 @@ const LazyDatasheet = lazy(() => import('../datasheet/DatasheetPanel').then((mod
 const LazyStructuralBom = lazy(() => import('../bom/StructuralBomPanel').then((module) => ({ default: module.StructuralBomPanel })));
 const LazyRevisionComparison = lazy(() => import('../revision-comparison/RevisionComparisonPanel').then((module) => ({ default: module.RevisionComparisonPanel })));
 const LazyDenseResults = lazy(() => preloadDenseResultsSurface());
+const LazyLocalCommandAssistant = lazy(() => import('../ai/LocalCommandAssistant').then((module) => ({ default: module.LocalCommandAssistant })));
+const LazyPdfPreviewDialog = lazy(() => import('../pdf-preview/PdfPreviewDialog').then((module) => ({ default: module.PdfPreviewDialog })));
+
+/**
+ * The Console owns the visible launchers, while these dialogs stay in the
+ * workspace broker tree so neither portable export nor local proposals vanish
+ * when a compact console popover closes.
+ */
+const WorkspaceUtilityDialogs = () => {
+  const { project, analysis, selectedCombinationId, ensureEducationTrace } = useProject();
+  const { language, t } = useI18n();
+  const [localAssistantOpen, setLocalAssistantOpen] = useState(false);
+  const [portableExport, setPortableExport] = useState<'bundle' | 'pdf-preview' | null>(null);
+  const [pdfPreview, setPdfPreview] = useState<PdfPreviewArtifact | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const selectedCombination = project.combinations.find((item) => item.id === selectedCombinationId);
+  const scenarioName = selectedCombination?.name
+    ?? (project.loadCases.filter((item) => item.active).map((item) => item.name).join(' + ') || t('analysis.activeCases'));
+  const scenarioFactors = selectedCombination?.factors ?? Object.fromEntries(
+    project.loadCases.filter((loadCase) => loadCase.active).map((loadCase) => [loadCase.id, 1]),
+  );
+
+  const resolveExportAnalysis = async () => {
+    if (!analysis) {
+      const { analyzeForPortableExport } = await import('../topbar/portableExportAnalysis');
+      return analyzeForPortableExport(project, selectedCombination ?? null);
+    }
+    return analysis.educationTrace ? analysis : (await ensureEducationTrace() ?? analysis);
+  };
+  const exportPortable = async () => {
+    setPortableExport('bundle');
+    setExportError(null);
+    try {
+      const exportAnalysis = await resolveExportAnalysis();
+      const portable = await import('../../utils/portable');
+      const bundle = await portable.createPortableBundle(project, exportAnalysis, {
+        appVersion: APP_VERSION, scenarioName, scenarioFactors, includeEducationTrace: true,
+      });
+      await portable.shareOrDownloadPortableBytes(bundle.bytes, bundle.filename, portable.STRUCTURECO_BUNDLE_MIME, t('portable.bundleShareTitle', { name: project.name }));
+      emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' });
+    } catch (error) {
+      setExportError(language === 'es' && error instanceof Error ? error.message : t('portable.exportFailed'));
+    } finally {
+      setPortableExport(null);
+    }
+  };
+  const buildPdfPreviewArtifact = async (selection: CalculationReportOptions = CALCULATION_PDF_EXPORT_DEFAULTS): Promise<PdfPreviewArtifact> => {
+    const exportAnalysis = await resolveExportAnalysis();
+    const portable = await import('../../utils/portable');
+    const report = await portable.createCalculationReport(project, exportAnalysis, {
+      appVersion: APP_VERSION, scenarioName, scenarioFactors, ...CALCULATION_PDF_EXPORT_DEFAULTS, ...selection,
+    });
+    return { bytes: report.bytes, filename: report.filename, renderEngine: 'browser', solutionMethod: report.solutionMethod, methodAvailability: report.methodAvailability };
+  };
+  const openPdfPreview = async () => {
+    setPortableExport('pdf-preview');
+    setExportError(null);
+    try { setPdfPreview(await buildPdfPreviewArtifact()); }
+    catch (error) { setExportError(language === 'es' && error instanceof Error ? error.message : t('portable.exportFailed')); }
+    finally { setPortableExport(null); }
+  };
+  const downloadPdfPreview = async (artifact: PdfPreviewArtifact) => {
+    try {
+      const portable = await import('../../utils/portable');
+      await portable.shareOrDownloadPortableBytes(artifact.bytes, artifact.filename, 'application/pdf', t('portable.reportShareTitle', { name: project.name }));
+      emitWorkspaceCommand('show-toast', { message: t('export.completed'), description: project.name, tone: 'success' });
+    } catch (error) { setExportError(language === 'es' && error instanceof Error ? error.message : t('portable.exportFailed')); }
+  };
+  useEffect(() => {
+    const subscriptions = [
+      onWorkspaceCommand('open-local-command-assistant', () => setLocalAssistantOpen(true)),
+      onWorkspaceCommand('export-portable-bundle', () => { void exportPortable(); }),
+      onWorkspaceCommand('open-calculation-pdf-preview', () => { void openPdfPreview(); }),
+    ];
+    return () => subscriptions.forEach((unsubscribe) => unsubscribe());
+  });
+  return <>
+    {localAssistantOpen ? <Suspense fallback={null}><LazyLocalCommandAssistant open onClose={() => setLocalAssistantOpen(false)} /></Suspense> : null}
+    {pdfPreview ? <Suspense fallback={null}><LazyPdfPreviewDialog artifact={pdfPreview} onClose={() => setPdfPreview(null)} onDownload={downloadPdfPreview} onRebuild={buildPdfPreviewArtifact} /></Suspense> : null}
+    {portableExport || exportError ? <div className="workspace-utility-export-status" role={exportError ? 'alert' : 'status'}>{exportError ?? (portableExport === 'bundle' ? t('portable.preparingBundle') : t('portable.generatingPreview'))}</div> : null}
+  </>;
+};
 
 /**
  * Respaldo de foco para el cierre de una superficie: enfoca el primer lanzador
@@ -433,6 +518,7 @@ const WorkspaceBrokerContent = ({
         onOpenChange={setResultsOpen}
       /> : null}
       <ToastNotification />
+      <WorkspaceUtilityDialogs />
       {broker.isRetained('palette') ? <Suspense fallback={null}><LazyCommandPalette
         open={palette.status === 'active'}
         onClose={() => closeSurface('palette')}

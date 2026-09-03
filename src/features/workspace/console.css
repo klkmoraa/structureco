@@ -624,6 +624,9 @@
   .console-foot .console-status,
   .console-foot .console-storage,
   .console-foot .console-full-canvas-state { display: none; }
+  /* Full-canvas is persisted. Its exit affordance must survive a narrower
+     viewport, otherwise the saved layout leaves no in-workspace recovery. */
+  .app-shell[data-full-canvas='true'] .console-foot .console-full-canvas-state { display: inline-flex; }
   .console-foot > button span,
   .console-foot .console-status span,
   .console-foot .console-storage span,

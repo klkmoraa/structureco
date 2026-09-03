@@ -1,6 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ChevronDown,
+  Eye,
+  FileArchive,
   FilePlus2,
   FolderOpen,
   Layers3,
@@ -12,9 +14,11 @@ import {
   Play,
   Search,
   SlidersHorizontal,
+  Sparkles,
 } from 'lucide-react';
 import { createBlankProject, exampleProjects } from '../../data/defaultProject';
 import { useI18n } from '../../i18n/useI18n';
+import { usePhase2I18n } from '../../i18n/usePhase2I18n';
 import { useProjectAnalysis } from '../../store/ProjectAnalysisContext';
 import { useProjectModel } from '../../store/ProjectModelContext';
 import { useWorkspaceUI } from '../../store/WorkspaceUIContext';
@@ -25,6 +29,7 @@ import { BrandMark } from '../topbar/BrandMark';
 import { emitWorkspaceCommand } from './workspaceCommands';
 import { resolveTopBarCommand, type TopBarCommandContext } from './commandRegistry';
 import { exportProjectJson } from '../../utils/export';
+import { PDeltaAdvancedConfig } from '../topbar/TopBarControlGroups';
 import './console.css';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
@@ -51,11 +56,12 @@ export interface ConsoleProps {
  * or keyboard focus so the canvas keeps the visual priority.
  */
 export const Console = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen = false }: ConsoleProps) => {
-  const { project, canUndo, canRedo, renameProject, replaceProject, updateProjectView, undo, redo } = useProjectModel();
+  const { project, canUndo, canRedo, renameProject, replaceProject, updateProjectView, updateProjectAnalysisSettings, undo, redo } = useProjectModel();
   const { isAnalyzing, analyze } = useProjectAnalysis();
   const { theme, setTheme } = useWorkspaceUI();
   const classroomSession = useClassroomSession();
   const { language, t } = useI18n();
+  const { t: phase2T } = usePhase2I18n(language);
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
   const [examplesOpen, setExamplesOpen] = useState(false);
   const [importCenterOpen, setImportCenterOpen] = useState(false);
@@ -164,10 +170,21 @@ export const Console = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen 
               <option value="en">{t('language.en')}</option>
             </select>
           </label>
+          <label className="console-project-language-field">
+            <span>{t('analysis.order')}</span>
+            <select aria-label={t('analysis.order')} value={project.settings.analysisMode ?? 'first-order'} onChange={(event) => updateProjectAnalysisSettings((settings) => ({ ...settings, analysisMode: event.target.value as 'first-order' | 'p-delta' }))}>
+              <option value="first-order">{t('analysis.orderFirst')}</option>
+              <option value="p-delta">{t('analysis.orderPDelta')}</option>
+            </select>
+          </label>
+          {(project.settings.analysisMode ?? 'first-order') === 'p-delta' ? <PDeltaAdvancedConfig /> : null}
           <div className="console-project-actions">
             <button type="button" onClick={createProject}><FilePlus2 size={16} />{t('project.new')}</button>
             <button type="button" onClick={() => { setImportCenterOpen(true); setProjectMenuOpen(false); }}><FolderOpen size={16} />{t('project.importJson')}</button>
             {onOpenSpace3D ? <button type="button" onClick={() => { onOpenSpace3D(); setProjectMenuOpen(false); }}><Layers3 size={16} />{t('space3d.open')}</button> : null}
+            <button type="button" onClick={() => { emitWorkspaceCommand('open-local-command-assistant'); setProjectMenuOpen(false); }}><Sparkles size={16} />{phase2T('proposal.menuLabel')}</button>
+            <button type="button" onClick={() => { emitWorkspaceCommand('open-calculation-pdf-preview'); setProjectMenuOpen(false); }}><Eye size={16} />{t('portable.previewLabel')}</button>
+            <button type="button" onClick={() => { emitWorkspaceCommand('export-portable-bundle'); setProjectMenuOpen(false); }}><FileArchive size={16} />{t('portable.bundleLabel')}</button>
           </div>
           <button type="button" className="console-examples-toggle" aria-expanded={examplesOpen} onClick={() => setExamplesOpen((open) => !open)}>
             <span>{t('topbar.projectExamples')}</span><ChevronDown size={14} aria-hidden="true" />

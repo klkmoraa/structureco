@@ -64,6 +64,12 @@ export interface WorkspaceCommands {
   'open-revision-comparison': void;
   /** Open the contextual structural-editing surface for the current selection. */
   'open-structural-edit': void;
+  /** Open the local, review-before-apply command assistant. */
+  'open-local-command-assistant': void;
+  /** Export a portable .structureco bundle that the Import Center accepts. */
+  'export-portable-bundle': void;
+  /** Build and preview the structured calculation-report PDF. */
+  'open-calculation-pdf-preview': void;
   /**
    * Open the structure generator over the canvas. It needs no selection: it
    * creates geometry rather than transforming what is already there.
