@@ -31,10 +31,11 @@
     display:none;
   }
 
-  /* Result modes become a compact, horizontally scrollable strip instead of a
-     large second toolbar. The layer launcher occupies the reserved right edge. */
+  /* Results stay at the lower edge like an instrument readout. The top edge
+     remains free for model identity and the layer launcher. */
   .canvas-evidence-rail {
-    top:7px;
+    top:auto;
+    bottom:7px;
     left:7px;
     right:54px;
     width:auto;
@@ -60,6 +61,12 @@
     line-height:1;
     white-space:nowrap;
   }
+  .canvas-evidence-rail__label,
+  .canvas-evidence-layer--secondary,
+  .canvas-evidence-layer > span:not(.canvas-evidence-layer__symbol) {
+    display:none;
+  }
+  .canvas-evidence-layer__symbol { margin-right:0; }
   .canvas-evidence-stack-choices {
     flex:0 0 auto;
     gap:2px;

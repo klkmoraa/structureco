@@ -36,6 +36,7 @@ describe('CanvasEvidenceRail', () => {
 
     const stack = screen.getByRole('button', { name: 'Diagramas N, V y M simultáneos' });
     expect(stack.getAttribute('aria-pressed')).toBe('false');
+    expect(stack.textContent).toBe('NVMComparar');
     await user.click(stack);
     expect(onStackToggle).toHaveBeenCalledOnce();
   });
