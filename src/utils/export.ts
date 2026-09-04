@@ -2,17 +2,15 @@ import type { ProjectModel } from '../types';
 import { normalizeProject } from '../data/migrate';
 import { assertWithinBudget, FILE_BUDGETS } from './fileGuards';
 import { buildStandaloneSvg, serializeStandaloneSvg, type SvgExportOptions } from './svgExport';
+import { deliverFileSync } from '../platform/fileDelivery';
 
+/**
+ * Toda salida de archivo pasa por `platform/fileDelivery`. En un navegador es
+ * exactamente el `<a download>` de siempre; dentro del shell nativo, donde ese
+ * enlace no hace nada en absoluto, se convierte en la hoja de compartir de iOS.
+ */
 const download = (blob: Blob, filename: string) => {
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.style.display = 'none';
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  deliverFileSync(blob, filename, blob.type || 'application/octet-stream');
 };
 
 /** Nombre estable y seguro, compartido por las rutas de descarga y guardado nativo. */

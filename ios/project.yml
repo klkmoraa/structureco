@@ -1,0 +1,52 @@
+# Especificación de XcodeGen.
+#
+# El proyecto de Xcode NO se versiona: un `.pbxproj` escrito a mano es un
+# formato que nadie revisa de verdad, que provoca conflictos ilegibles en cada
+# fusión y que se rompe en silencio. Esta especificación es la fuente de verdad
+# y `xcodegen generate` produce el `.xcodeproj` a partir de ella.
+#
+#   brew install xcodegen
+#   npm run ios:sync        # compila la web y la copia al paquete
+#   cd ios && xcodegen generate && open StructureCo.xcodeproj
+
+name: StructureCo
+options:
+  bundleIdPrefix: co.structure
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: false
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "0.8.2"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    SWIFT_STRICT_CONCURRENCY: minimal
+
+targets:
+  StructureCo:
+    type: application
+    platform: iOS
+    sources:
+      - path: StructureCo/Sources
+      - path: StructureCo/Resources/Assets.xcassets
+      # El build de Vite. Va como carpeta-referencia (`folder`) y no como grupo:
+      # tiene que llegar al paquete con su árbol intacto, porque las rutas de
+      # los `import` del bundle son relativas a él. Un grupo aplanaría
+      # `assets/` sobre la raíz y ningún módulo resolvería.
+      - path: StructureCo/Web
+        type: folder
+        optional: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: co.structure.app
+        INFOPLIST_FILE: StructureCo/Resources/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        # La aplicación llega al borde físico y reparte el inset ella misma.
+        CODE_SIGN_ENTITLEMENTS: ""

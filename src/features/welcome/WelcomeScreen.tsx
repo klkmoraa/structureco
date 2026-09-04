@@ -21,6 +21,7 @@ import { readCanvasViewSettings } from '../view/canvasViewSettings';
 import { useModalFocus } from '../../design-system/components/modalFocus';
 import { clearLocalMetrics, exportLocalMetrics, getLocalMetrics, setLocalMetricsOptIn, type LocalMetricsStore } from '../../analytics/localMetrics';
 import { COMPACT_HOME_QUERY, useMediaQuery } from '../../platform/useMediaQuery';
+import { deliverFileSync } from '../../platform/fileDelivery';
 import { haptics } from '../../platform/haptics';
 import './totalHome.css';
 
@@ -100,13 +101,11 @@ const WelcomePreferences = ({ language, theme, onLanguageChange, onThemeChange, 
   useModalFocus({ open: true, containerRef: dialogRef, onEscape: onClose, initialFocus: () => closeRef.current, restoreFocus: false });
 
   const downloadDiagnostics = () => {
-    const blob = new Blob([exportLocalMetrics(window.localStorage)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = 'structureco-local-diagnostics.json';
-    anchor.click();
-    URL.revokeObjectURL(url);
+    deliverFileSync(
+      new Blob([exportLocalMetrics(window.localStorage)], { type: 'application/json' }),
+      'structureco-local-diagnostics.json',
+      'application/json',
+    );
   };
   return <section ref={dialogRef} className="sc-home-settings-panel" role="dialog" aria-modal="true" aria-label={text.settingsTitle} tabIndex={-1}>
     <button ref={closeRef} type="button" aria-label={text.closeSettings} onClick={onClose}><X size={19} /></button>

@@ -40,6 +40,7 @@ import { exportProjectJson, safeProjectFilename } from '../../utils/export';
 import { normalizeProject } from '../../data/migrate';
 import { saveBytes, type SaveOutcome } from '../../platform/fileSystem';
 import { buildShareLink } from '../../utils/shareLink';
+import { deliverFile, shareLink } from '../../platform/fileDelivery';
 import { AnalysisStatus } from './AnalysisStatus';
 import { BrandMark } from './BrandMark';
 import { Button, IconButton } from '../../design-system/components/controls';
@@ -468,7 +469,36 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
     setShowMobileMenu(false);
   };
 
+  const closeShareMenus = () => {
+    setExportError(null);
+    setShowExportMenu(false);
+    setShowMobileMenu(false);
+  };
+
   const handleShare = async () => {
+    /*
+     * Un enlace compartible necesita un origen web. Dentro del shell nativo la
+     * página vive en `structureco://app`, así que el enlace apuntaría a un sitio
+     * que sólo existe dentro del propio teléfono: sería un enlace roto para
+     * cualquiera que lo reciba. Ahí se comparte el proyecto como archivo, que es
+     * la misma intención («que otro abra esto») por el único camino que de
+     * verdad funciona en iOS.
+     */
+    const webOrigin = window.location.protocol === 'http:' || window.location.protocol === 'https:';
+    if (!webOrigin) {
+      const normalized = normalizeProject(project);
+      const outcome = await deliverFile({
+        blob: new Blob([JSON.stringify(normalized, null, 2)], { type: 'application/json' }),
+        filename: `${safeProjectFilename(normalized.name)}.structureco.json`,
+        mimeType: 'application/json',
+        title: normalized.name,
+      });
+      if (outcome === 'cancelled') return;
+      emitWorkspaceCommand('show-toast', { message: t('export.sharedAsFile'), description: project.name, tone: 'success' });
+      closeShareMenus();
+      return;
+    }
+
     const result = buildShareLink(project, window.location.href);
     if (!result.ok) {
       setExportError(t('export.shareTooLarge', { characters: result.characters, limit: result.limit }));
@@ -478,10 +508,18 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
       if (!navigator.clipboard || !window.isSecureContext) throw new Error('clipboard-unavailable');
       await navigator.clipboard.writeText(result.url);
       emitWorkspaceCommand('show-toast', { message: t('export.shareLinkCopied'), description: project.name, tone: 'success' });
-      setExportError(null);
-      setShowExportMenu(false);
-      setShowMobileMenu(false);
-    } catch { setExportError(t('export.shareFailed')); }
+      closeShareMenus();
+    } catch {
+      // Sin portapapeles —contexto no seguro, o permiso denegado— queda la hoja
+      // de compartir del sistema. Antes esto era un error y el usuario se
+      // quedaba sin ninguna forma de sacar el enlace.
+      if (await shareLink(project.name, undefined, result.url)) {
+        emitWorkspaceCommand('show-toast', { message: t('export.shareSheetOpened'), description: project.name, tone: 'success' });
+        closeShareMenus();
+        return;
+      }
+      setExportError(t('export.shareFailed'));
+    }
   };
 
   const analyzeCommand = command('analysis:run');

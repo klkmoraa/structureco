@@ -2,11 +2,16 @@
 
 **Clasificación:** `REFERENCE`
 
-Este documento describe la capa de plataforma que ya vive en el árbol
-(`src/platform/**`) y el contrato exacto que un shell nativo en Swift tiene que
-cumplir para envolverla. **No hay proyecto Xcode en este repositorio y este
-documento no lo aprueba**: describe la superficie que el producto web publica
-para que, si se decide construirlo, no haya que renegociar nada del lado web.
+Este documento describe la capa de plataforma (`src/platform/**`), el contrato
+del puente y el shell nativo que lo implementa (`ios/**`).
+
+El shell existe en el árbol: seis archivos Swift, una especificación de
+XcodeGen y un script de sincronización. Lo que **no** se versiona es el
+`.xcodeproj` —lo genera XcodeGen— ni el build web dentro del paquete —lo copia
+`ios/Scripts/sync-web.sh`—. Ese árbol no se compila en CI: no hay macOS, y
+montarlo para un shell de seis archivos costaría más de lo que protege. Lo que
+sí se comprueba en cada `npm run verify` es que los dos lados hablen el mismo
+puente (ver §5).
 
 Nada de lo que hay aquí toca el solver, el modelo, las unidades, los IDs, la
 topología, los workers, la persistencia, el import/export ni el historial. La
@@ -80,8 +85,17 @@ que la web manda `style: 'light'` con tema oscuro. No es un error de signo.
 
 ## 3 · El lado Swift
 
-Lo mínimo que hace falta. El `WKWebView` sirve el mismo `dist/` que se publica
-en la web, así que no hay una segunda compilación del producto.
+`ios/StructureCo/Sources/WebHostController.swift` es la implementación real y
+completa; lo que sigue es su núcleo, recortado, para leer el mecanismo sin
+abrir el archivo. El detalle de puesta en marcha está en
+[ios/README.md](../../ios/README.md).
+
+**Por qué un esquema propio y no `file://`.** structureCo se compila a módulos
+ES y mueve el solver a Web Workers. WebKit aplica CORS a `file://` y trata cada
+archivo como un origen opaco distinto: ahí los `import` fallan, los workers no
+arrancan e IndexedDB no persiste entre sesiones. `AppSchemeHandler` sirve el
+build bajo `structureco://app`, que sí es un origen real. No es una preferencia
+de estilo: sobre `file://` la aplicación no arranca.
 
 ```swift
 import UIKit
@@ -205,11 +219,25 @@ con `{"kind": "keyboard", "height": …}`; sin eso, la web ya lo sigue por
 
 ## 5 · Comprobación
 
-No hay gate nativo porque no hay proyecto nativo. Del lado web:
+El puente vive en dos lenguajes y ningún compilador ve los dos a la vez. `tsc`
+impide que la web emita un mensaje que no declara, pero no sabe si Swift lo
+atiende: sin más control, añadir un mensaje nuevo compilaría, pasaría las
+pruebas, se publicaría — y en el teléfono no haría nada, en silencio.
+
+`npm run verify:native-bridge` cierra ese hueco con dos reglas:
+
+1. Todo `kind` saliente declarado en TypeScript tiene su `case` en el shell.
+2. Todo `kind` que el shell envía está declarado como entrante en TypeScript.
+
+Un entrante declarado y todavía sin emisor no es un error —el contrato puede
+reservar vocabulario antes de que el shell lo use— y se informa sin fallar.
 
 ```powershell
-npm.cmd run typecheck   # el contrato del puente es tipado
-npm.cmd run verify      # lint, docs, frontera, pruebas, build y presupuesto
+npm.cmd run verify:native-bridge   # paridad del puente
+npm.cmd run typecheck              # el contrato es tipado
+npm.cmd run verify                 # cadena completa, la paridad incluida
 ```
+
+Del lado Swift no hay gate y esto es una limitación declarada, no un olvido.
 
 Vuelve al [mapa de arquitectura](README.md).

@@ -54,6 +54,8 @@ export const enInterchange = {
   'export.shareLinkCopied': 'Link copied to clipboard',
   'export.shareFailed': 'The link could not be copied.',
   'export.shareTooLarge': 'This model is too large for a link ({characters} of {limit} characters). Use Save to disk or the .structureco package.',
+  'export.shareSheetOpened': 'Shared with the system',
+  'export.sharedAsFile': 'Shared as a project file',
   'export.copySuccessful': 'Copied!',
   'export.copyFallbackDownloaded': 'Clipboard unavailable: file downloaded instead',
   'export.completed': 'Export ready',

@@ -14,6 +14,7 @@ import { AnimatePresence, m, useDragControls, useReducedMotion, type PanInfo } f
 import { useModalFocus } from './modalFocus';
 import { easeOutIos, popIn, springs } from '../motion';
 import { haptics } from '../../platform/haptics';
+import { holdScrollLock } from '../../platform/scrollLock';
 import { useMediaQuery } from '../../platform/useMediaQuery';
 
 export interface TooltipProps {
@@ -184,6 +185,13 @@ const ModalSurface = ({
     onSurfaceReady?.(true);
     return () => onSurfaceReady?.(false);
   }, [onSurfaceReady, open]);
+  // El `scrollView` del anfitrión nativo sigue vivo bajo el documento: sin esto,
+  // arrastrar sobre una hoja mueve además la vista entera de la aplicación.
+  // `peek` no bloquea porque su propósito es justamente dejar usar el lienzo.
+  useEffect(() => {
+    if (!open || extent === 'peek') return undefined;
+    return holdScrollLock();
+  }, [open, extent]);
   const reducedMotion = useReducedMotion();
   const dragControls = useDragControls();
   /*

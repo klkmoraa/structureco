@@ -32,18 +32,29 @@ const TARGETS = [
   { file: 'icon-maskable-512.png', size: 512, inset: 0.1 },
 ];
 
+/**
+ * El paquete iOS pide una sola pieza de 1024 y sin canal alfa: App Store
+ * Connect rechaza un icono con transparencia. Sale del mismo SVG que el resto,
+ * así que la marca de la app instalada y la de la web no pueden divergir.
+ */
+const IOS_ICON = {
+  file: 'ios/StructureCo/Resources/Assets.xcassets/AppIcon.appiconset/icon-1024.png',
+  size: 1024,
+  inset: 0,
+};
+
 const svg = await readFile(path.join(PUBLIC, 'favicon.svg'), 'utf8');
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
 
 try {
-  for (const { file, size, inset } of TARGETS) {
+  for (const { file, size, inset } of [...TARGETS, IOS_ICON]) {
     const page = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });
     const pad = Math.round(size * inset);
     await page.setContent(`<!doctype html><html><body style="margin:0;width:${size}px;height:${size}px;display:grid;place-items:center;background:#007d61">
       <div style="width:${size - pad * 2}px;height:${size - pad * 2}px">${svg.replace('<svg ', '<svg style="width:100%;height:100%" ')}</div>
     </body></html>`);
     const buffer = await page.screenshot({ omitBackground: false });
-    await writeFile(path.join(PUBLIC, file), buffer);
+    await writeFile(file.includes('/') ? path.join(ROOT, file) : path.join(PUBLIC, file), buffer);
     await page.close();
     console.log(`${file} · ${size}×${size}${inset ? ` (zona segura ${Math.round((1 - inset * 2) * 100)} %)` : ''}`);
   }

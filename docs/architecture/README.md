@@ -36,7 +36,8 @@ App / navegación
 | Aula | `src/education/**`, `src/features/classroom/**`, `src/store/ClassroomSessionContext.tsx` | Recorrido, predicciones, niveles y progreso local. |
 | Space 3D | `src/space3d/**`, `src/features/space3d/**` | Dominio separado S3D-2; consulta su [contrato canónico](structureco-space-3d.md). |
 | Design system | `src/design-system/**` | Tokens, tipografía, componentes, iconografía y movimiento. |
-| Capa de plataforma | `src/platform/**` | Área segura, teclado, hápticas y contrato tipado con un anfitrión nativo; consulta su [documento de referencia](structureco-ios-native-shell.md). |
+| Capa de plataforma | `src/platform/**` | Área segura, teclado, hápticas, entrega de archivos y contrato tipado con el anfitrión nativo. |
+| Shell iOS | `ios/**` | `WKWebView` sobre el mismo build web, con esquema propio; consulta su [documento de referencia](structureco-ios-native-shell.md) y su [puesta en marcha](../../ios/README.md). |
 
 ## Fronteras protegidas
 

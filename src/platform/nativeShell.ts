@@ -19,6 +19,7 @@
  * hechos del dispositivo, y sólo cambian presentación.
  */
 import { installNativeBridge, isNativeHost, onNativeMessage, sendToNative } from './nativeBridge';
+import { emitLaunchedFile } from './launchedFile';
 
 export type NativePlatform = 'ios' | 'android' | 'macos' | 'other';
 
@@ -46,6 +47,22 @@ export const isStandalone = (): boolean => {
   if (isNativeHost()) return true;
   const iosStandalone = (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
   return iosStandalone || window.matchMedia?.('(display-mode: standalone)').matches === true;
+};
+
+/**
+ * Los mensajes del puente son JSON, así que un archivo viaja en base64. La
+ * decodificación puede fallar con una carga corrupta y eso no puede tumbar el
+ * despacho: se devuelve `null` y el archivo simplemente no se abre.
+ */
+const decodeBase64File = (base64: string, filename: string, mimeType: string): File | null => {
+  try {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    return new File([bytes], filename, { type: mimeType });
+  } catch {
+    return null;
+  }
 };
 
 const setVar = (name: string, value: string) => {
@@ -129,7 +146,17 @@ export const installNativeShell = (): (() => void) => {
       setVar('--sc-safe-left', `${message.insets.left}px`);
       return;
     }
-    if (message.kind === 'keyboard') setVar('--sc-keyboard-inset', `${Math.max(0, message.height)}px`);
+    if (message.kind === 'keyboard') {
+      setVar('--sc-keyboard-inset', `${Math.max(0, message.height)}px`);
+      return;
+    }
+    if (message.kind === 'openFile') {
+      // «Abrir con structureCo» desde Archivos, Correo o AirDrop. Entra por el
+      // mismo buzón que la cola del sistema operativo en escritorio, así que
+      // acaba en el importador con revisión, no sustituyendo el proyecto.
+      const file = decodeBase64File(message.base64, message.filename, message.mimeType);
+      if (file) emitLaunchedFile({ file });
+    }
   });
 
   /*
