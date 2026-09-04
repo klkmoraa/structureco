@@ -381,7 +381,7 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
   display:grid;
   justify-items:center;
   align-items:start;
-  padding:max(64px,env(safe-area-inset-top)) 16px 16px;
+  padding:max(64px,var(--sc-safe-top)) 16px 16px;
   background:var(--sc-color-overlay-soft);
 }
 .command-palette {
@@ -522,7 +522,7 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
   font-size:var(--sc-font-size-caption);
 }
 @media (max-width:640px) {
-  .command-palette-backdrop { padding-top:max(24px,env(safe-area-inset-top)); }
+  .command-palette-backdrop { padding-top:max(24px,var(--sc-safe-top)); }
   .command-palette { max-height:82vh; }
   .command-palette-list { grid-template-columns:1fr; padding:8px; }
   .command-palette-head { min-height:54px; }
@@ -824,8 +824,8 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .app-shell[data-shell-class='K0'] .topbar.topbar--atelier {
   grid-template-columns:minmax(0, 1fr) max-content max-content;
   min-height:58px;
-  height:calc(58px + env(safe-area-inset-top));
-  padding:calc(7px + env(safe-area-inset-top)) 8px 7px;
+  height:calc(58px + var(--sc-safe-top));
+  padding:calc(7px + var(--sc-safe-top)) 8px 7px;
   gap:5px;
 }
 .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-zone { gap:5px; min-width:0; }
@@ -849,8 +849,8 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .app-shell[data-shell-class='K0'] .topbar--atelier .analysis-status { width:28px; min-width:28px; height:42px; border-radius:12px; }
 .app-shell[data-shell-class='K0'] .topbar--atelier .autosave-state { display:none; }
 .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-conflict-resolver { display:none; }
-.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-panel { position:fixed; inset:auto 8px calc(8px + env(safe-area-inset-bottom)) 8px; width:auto; max-height:min(70dvh, 520px); overflow:auto; transform-origin:bottom center; }
-.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-utilities-panel { position:fixed; inset:auto 8px calc(8px + env(safe-area-inset-bottom)) 8px; width:auto; max-height:min(70dvh, 520px); overflow:auto; transform-origin:bottom center; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-panel { position:fixed; inset:auto 8px calc(8px + var(--sc-safe-bottom)) 8px; width:auto; max-height:min(70dvh, 520px); overflow:auto; transform-origin:bottom center; }
+.app-shell[data-shell-class='K0'] .topbar--atelier .topbar-utilities-panel { position:fixed; inset:auto 8px calc(8px + var(--sc-safe-bottom)) 8px; width:auto; max-height:min(70dvh, 520px); overflow:auto; transform-origin:bottom center; }
 .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-compact-utilities { display:grid; gap:7px; margin:10px 4px 2px; padding-top:10px; border-top:1px solid var(--sc-color-border-soft); color:var(--subtle); font-family:var(--sc-font-mono); font-size:9px; font-weight:750; letter-spacing:.07em; text-transform:uppercase; }
 .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-compact-utilities > div { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
 .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-compact-utilities button { display:flex; align-items:center; gap:7px; padding:8px; font-size:11px; letter-spacing:normal; text-transform:none; }

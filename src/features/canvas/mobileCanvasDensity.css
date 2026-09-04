@@ -154,12 +154,18 @@
 
   /* Coordinates are useful with a mouse/pen but are noisy under a finger. Keep
      scale visible so the user still knows whether the camera is zoomed. */
+  /* Autoridad única de la posición de la píldora en pantalla táctil pequeña.
+     La especificidad extra (`.canvas-host`) no es decorativa: `phase2.css` la
+     coloca abajo al centro en escritorio y los dos archivos entran al paquete
+     en un orden que depende del grafo de módulos, no de una decisión. */
+  .canvas-host .canvas-status,
   .canvas-status {
     top:7px;
     left:7px;
     right:auto;
     bottom:auto;
     min-height:34px;
+    width:max-content;
     max-width:118px;
     transform:none;
     padding:0 9px;

@@ -351,7 +351,7 @@
   bottom: 0;
   display: grid;
   gap: var(--sc-space-2);
-  padding: var(--sc-space-3) 0 calc(var(--sc-space-2) + env(safe-area-inset-bottom, 0px));
+  padding: var(--sc-space-3) 0 calc(var(--sc-space-2) + var(--sc-safe-bottom));
   border-top: var(--sc-border-width) solid var(--sc-color-divider);
   background: var(--sc-color-surface-1);
 }

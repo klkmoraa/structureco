@@ -36,6 +36,7 @@ App / navegación
 | Aula | `src/education/**`, `src/features/classroom/**`, `src/store/ClassroomSessionContext.tsx` | Recorrido, predicciones, niveles y progreso local. |
 | Space 3D | `src/space3d/**`, `src/features/space3d/**` | Dominio separado S3D-2; consulta su [contrato canónico](structureco-space-3d.md). |
 | Design system | `src/design-system/**` | Tokens, tipografía, componentes, iconografía y movimiento. |
+| Capa de plataforma | `src/platform/**` | Área segura, teclado, hápticas y contrato tipado con un anfitrión nativo; consulta su [documento de referencia](structureco-ios-native-shell.md). |
 
 ## Fronteras protegidas
 
@@ -50,7 +51,7 @@ Space 3D permanece aislado bajo `src/space3d/**` y `src/features/space3d/**`. El
 ## Documentos de arquitectura
 
 - `CANONICAL`: [Space 3D](structureco-space-3d.md), [módulo de diseño normativo](structureco-design-module-rfc.md), [BOM estructural](structureco-bom-contract.md), [comparación de revisiones](structureco-revision-comparison-contract.md) e [identidad de materiales y secciones en Model v6](structureco-member-identity-v6.md).
-- `REFERENCE`: [paquete de revisión local-first](structureco-review-package-rfc.md), [fronteras para capacidades de análisis futuras](future-analysis-boundaries.md) y [pre-RFC de IA mediante `CommandProposal`](structureco-fase-4-ai-command-proposal-pre-rfc.md). El paquete de revisión requiere aprobación antes de cualquier formato o interfaz nuevos.
+- `REFERENCE`: [paquete de revisión local-first](structureco-review-package-rfc.md), [fronteras para capacidades de análisis futuras](future-analysis-boundaries.md), [capa nativa y shell iOS](structureco-ios-native-shell.md) y [pre-RFC de IA mediante `CommandProposal`](structureco-fase-4-ai-command-proposal-pre-rfc.md). El paquete de revisión requiere aprobación antes de cualquier formato o interfaz nuevos.
 
 Las decisiones históricas retiradas del árbol operativo permanecen recuperables en Git.
 

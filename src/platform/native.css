@@ -1,0 +1,214 @@
+/*
+ * Capa nativa · lo que separa una web de una aplicación
+ * ---------------------------------------------------------------------------
+ * Todo lo de este archivo es comportamiento de plataforma, no estilo de marca:
+ * cómo se desplaza una superficie bajo el dedo, qué pasa al llegar al final de
+ * una lista, dónde termina la pantalla de verdad y cómo entra una vista.
+ *
+ * Se carga una sola vez desde `App.tsx`, después de `styles.css`, y no declara
+ * ni un color ni una tipografía: consume los tokens que ya existen.
+ *
+ * Los selectores se apoyan en los atributos que publica
+ * `platform/nativeShell.ts` (`data-platform`, `data-standalone`, `data-native`,
+ * `data-pointer`), nunca en el ancho de la ventana: un iPad en horizontal es
+ * ancho y sigue siendo táctil, y una ventana estrecha de escritorio sigue
+ * teniendo ratón.
+ */
+
+/* --- 1 · Superficie física ------------------------------------------------ */
+
+html {
+  /* Safari en iOS reescala el texto al girar el dispositivo si no se le dice
+     que no. En una tabla de resultados eso cambia el ancho de las columnas a
+     mitad de lectura. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* El rebote elástico del documento entero delata el marco web: la barra
+     superior se despega del borde y debajo aparece el fondo del navegador.
+     Las superficies que sí se desplazan lo declaran ellas mismas. */
+  overscroll-behavior: none;
+}
+
+body {
+  /* Sobre pantallas Retina la fuente variable rinde con un peso aparente mayor
+     del que tiene; el suavizado de escala de grises devuelve el color de gris
+     que el diseño midió. Sólo en Apple: en Windows empobrece el trazo. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+}
+
+/* Nada de la interfaz es texto seleccionable por accidente: un arrastre sobre
+   una barra de herramientas no debe pintar media pantalla de azul. El
+   contenido que sí se lee y se copia se reactiva justo debajo. */
+:where(html[data-pointer='coarse']) :where(button, [role='button'], [role='tab'], [role='radio'], label, nav, header, footer, .sc-toolbar, .sc-segmented) {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+:where(input, textarea, [contenteditable='true'], p, span, td, th, code, pre, h1, h2, h3, h4) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* --- 2 · Desplazamiento --------------------------------------------------- */
+
+/*
+ * Inercia y contención en todo lo que se desplaza. `overscroll-behavior:
+ * contain` es lo que impide que al llegar al final de un panel el gesto siga
+ * hacia el documento y arrastre la aplicación entera: sin él, cerrar una lista
+ * larga con el pulgar mueve la barra superior.
+ */
+:where(
+  .sc-modal-surface__body,
+  .sc-popover__surface,
+  .inspector-scroll,
+  .results-body,
+  .toolbar,
+  .sc-home-content,
+  .sc-home-nav--mobile
+) {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+}
+
+/*
+ * Las listas horizontales de fichas se comportan como un carrusel de iOS: cada
+ * elemento se ancla y el gesto no se escapa al eje contrario.
+ *
+ * Sólo bajo puntero grueso. Con ratón, la barra de desplazamiento de una tira
+ * de pestañas es la única pista de que hay más a la derecha —no hay gesto que
+ * lo descubra— y esconderla ahí sería quitar información, no ruido.
+ */
+@media (pointer: coarse) {
+  :where(.sc-home-quick-row, .canvas-evidence-rail, .result-tabs, .sc-tabs__list) {
+    scroll-snap-type: x proximity;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  :where(.sc-home-quick-row, .canvas-evidence-rail, .result-tabs, .sc-tabs__list)::-webkit-scrollbar { display: none; }
+  :where(.sc-home-quick-row, .canvas-evidence-rail) > * { scroll-snap-align: start; }
+}
+
+/* --- 3 · Respuesta al toque ----------------------------------------------- */
+
+/*
+ * En un puntero grueso el `:hover` de CSS se queda pegado después de tocar:
+ * el navegador lo mantiene hasta el siguiente toque en otro sitio, y el
+ * resultado es un botón que se queda iluminado sin que nadie lo esté tocando.
+ * Se anula la elevación de hover donde no hay ratón; el estado activo, que sí
+ * es real, se conserva.
+ */
+@media (hover: none) {
+  :where(.sc-button, .sc-icon-button, .sc-tool-button, .sc-popover__trigger, .sc-layer-toggle, .welcome-import-card):hover {
+    transform: none;
+  }
+}
+
+/*
+ * Objetivo táctil mínimo sin engordar la caja visible. `::before` extiende el
+ * área sensible hasta 44 px alrededor del centro del control, que es lo que
+ * pide la HIG, mientras la pieza dibujada conserva su tamaño de diseño. Es la
+ * misma técnica que usa UIKit con `hitTest`.
+ */
+html[data-pointer='coarse'] :where(.sc-icon-button--sm, .canvas-controls button, .sc-modal-surface__close) {
+  position: relative;
+}
+html[data-pointer='coarse'] :where(.sc-icon-button--sm, .canvas-controls button, .sc-modal-surface__close)::before {
+  content: '';
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: max(100%, var(--sc-size-target-touch));
+  height: max(100%, var(--sc-size-target-touch));
+  transform: translate(-50%, -50%);
+}
+
+/* --- 4 · Bordes de la pantalla -------------------------------------------- */
+
+/*
+ * En modo instalado (o dentro del shell nativo) la aplicación llega hasta el
+ * borde físico: el recorte, la cámara y el indicador de inicio son suyos, no
+ * del navegador. Estas reglas dan a las tres barras fijas su respiración, en
+ * un solo sitio, para que ninguna feature vuelva a escribir `env()` a mano.
+ */
+html[data-standalone='true'] .topbar,
+html[data-standalone='true'] .sc-home-mobile-header {
+  padding-top: var(--sc-safe-top);
+}
+
+html[data-standalone='true'] :where(.mobile-tool-palette, .sc-toast-container, .quick-entry-bar) {
+  padding-bottom: var(--sc-safe-bottom);
+}
+
+/* El teclado en pantalla desplaza el pie de una hoja en lugar de taparlo. */
+.sc-modal-surface__footer,
+.import-center-footer {
+  margin-bottom: var(--sc-keyboard-inset);
+  transition: margin-bottom var(--sc-motion-standard) var(--sc-ease-ios-out);
+}
+
+/*
+ * Safari hace zoom automático al enfocar un campo con menos de 16 px de texto,
+ * y de ese zoom no vuelve: la mesa de trabajo queda descuadrada hasta que el
+ * usuario la reencuadra a mano. 16 px en el campo lo desactiva por completo, y
+ * sólo en iOS, para no engordar los formularios densos de escritorio.
+ */
+html[data-platform='ios'] :where(input, select, textarea) {
+  font-size: max(16px, var(--sc-font-size-control));
+}
+
+/* --- 5 · Presentación de vistas ------------------------------------------- */
+
+/*
+ * Entradas. Son las mismas cuatro que ya usaba `styles.css` como keyframes
+ * sueltos, ahora con las curvas de iOS y con una clase que las nombra, para
+ * que una superficie nueva no tenga que reinventar su llegada.
+ */
+@keyframes sc-native-screen-in {
+  from { opacity: 0; transform: scale(.985); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes sc-native-push-in {
+  from { opacity: 0; transform: translate3d(18px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes sc-native-rise-in {
+  from { opacity: 0; transform: translate3d(0, 12px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes sc-native-sheet-in {
+  from { transform: translate3d(0, 100%, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+.sc-enter-screen { animation: sc-native-screen-in var(--sc-motion-standard) var(--sc-ease-ios-out) both; }
+.sc-enter-push { animation: sc-native-push-in var(--sc-motion-standard) var(--sc-ease-ios-out) both; }
+.sc-enter-rise { animation: sc-native-rise-in var(--sc-motion-standard) var(--sc-ease-ios-out) both; }
+.sc-enter-sheet { animation: sc-native-sheet-in var(--sc-motion-sheet) var(--sc-ease-ios-spring) both; }
+
+/*
+ * Escalonado declarativo. Una rejilla marcada con `data-stagger` retrasa a sus
+ * hijos en pasos de 40 ms hasta el sexto; a partir de ahí el retraso se
+ * congela, porque una lista de treinta tarjetas escalonada de verdad se
+ * convierte en una espera.
+ */
+[data-stagger] > * { animation: sc-native-rise-in var(--sc-motion-standard) var(--sc-ease-ios-out) both; }
+[data-stagger] > *:nth-child(1) { animation-delay: 0ms; }
+[data-stagger] > *:nth-child(2) { animation-delay: 40ms; }
+[data-stagger] > *:nth-child(3) { animation-delay: 80ms; }
+[data-stagger] > *:nth-child(4) { animation-delay: 120ms; }
+[data-stagger] > *:nth-child(5) { animation-delay: 160ms; }
+[data-stagger] > *:nth-child(n+6) { animation-delay: 200ms; }
+
+/* --- 6 · Impresión y movimiento reducido ---------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.sc-enter-screen, .sc-enter-push, .sc-enter-rise, .sc-enter-sheet, [data-stagger] > *, .sc-home, .workspace-screen) {
+    animation: none;
+  }
+  :where(.sc-modal-surface__body, .sc-popover__surface, .inspector-scroll, .results-body, .toolbar, .sc-home-content) {
+    scroll-behavior: auto;
+  }
+}

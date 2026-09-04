@@ -12,14 +12,21 @@ describe('Total-redesign typography', () => {
     expect(fontsCss).toContain("url('/fonts/instrument-sans-variable.woff2')");
     expect(fontsCss).toContain("font-family: 'Geist Mono'");
     expect(fontsCss).toContain("url('/fonts/geist-mono-variable.woff2')");
-    expect(fontsCss.match(/font-display:\s*swap/g)).toHaveLength(2);
+    // Cuatro caras declaradas: recta e itálica de Instrument Sans (la itálica
+    // partida en dos subconjuntos por `unicode-range`) más Geist Mono.
+    expect(fontsCss.match(/font-display:\s*swap/g)).toHaveLength(4);
+    expect(fontsCss).toContain("url('/fonts/instrument-sans-italic-latin.woff2')");
+    expect(fontsCss).toContain('font-style: italic');
     expect(fontsCss).not.toMatch(/https?:\/\//);
   });
 
   it('assigns one family to each semantic reading role', () => {
-    expect(tokensCss).toMatch(/--sc-font-display:\s*"Instrument Sans", ui-sans-serif, system-ui, sans-serif;/);
-    expect(tokensCss).toMatch(/--sc-font-ui:\s*"Instrument Sans", ui-sans-serif, system-ui, sans-serif;/);
-    expect(tokensCss).toMatch(/--sc-font-mono:\s*"Geist Mono", ui-monospace, "Cascadia Mono", monospace;/);
+    // El respaldo intermedio no es una familia más: es la fuente local
+    // reencuadrada con las métricas de la nuestra, y existe para que el primer
+    // pintado no desplace la composición al llegar el webfont.
+    expect(tokensCss).toMatch(/--sc-font-display:\s*"Instrument Sans", "Instrument Sans Fallback", ui-sans-serif, system-ui, sans-serif;/);
+    expect(tokensCss).toMatch(/--sc-font-ui:\s*"Instrument Sans", "Instrument Sans Fallback", ui-sans-serif, system-ui, sans-serif;/);
+    expect(tokensCss).toMatch(/--sc-font-mono:\s*"Geist Mono", "Geist Mono Fallback", ui-monospace, "Cascadia Mono", monospace;/);
     for (const superseded of ['IBM Plex', 'DM Serif Display', 'Manrope', 'JetBrains Mono']) {
       expect(fontsCss).not.toContain(superseded);
       expect(tokensCss).not.toContain(`"${superseded}`);

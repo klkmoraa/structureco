@@ -192,15 +192,15 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 /* Mobile v2 --------------------------------------------------------------- */
 @media (max-width:1023px) {
   .topbar {
-    padding-left:max(10px,env(safe-area-inset-left));
-    padding-right:max(10px,env(safe-area-inset-right));
+    padding-left:max(10px,var(--sc-safe-left));
+    padding-right:max(10px,var(--sc-safe-right));
   }
   .topbar [data-topbar-cluster] { min-height:0; padding:0; border:0; background:transparent; box-shadow:none; }
   .brand-home-button,.project-menu-toggle { min-width:44px; min-height:44px; }
   .analysis-status { width:var(--sc-control-height-touch); height:var(--sc-control-height-touch); min-width:var(--sc-control-height-touch); padding:0; }
   .project-menu-toggle { width:44px; height:44px; }
   .project-menu,.mobile-actions-menu {
-    max-height:calc(100dvh - var(--topbar-h) - env(safe-area-inset-top) - 14px);
+    max-height:calc(100dvh - var(--topbar-h) - var(--sc-safe-top) - 14px);
     overflow-y:auto;
     overscroll-behavior:contain;
   }
@@ -215,9 +215,9 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
     right:auto;
     bottom:auto;
     width:100%;
-    height:calc(64px + env(safe-area-inset-bottom));
-    min-height:calc(64px + env(safe-area-inset-bottom));
-    padding:5px max(7px,env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom)) max(7px,env(safe-area-inset-left));
+    height:calc(64px + var(--sc-safe-bottom));
+    min-height:calc(64px + var(--sc-safe-bottom));
+    padding:5px max(7px,var(--sc-safe-right)) calc(5px + var(--sc-safe-bottom)) max(7px,var(--sc-safe-left));
     --toolbar-clay-border-width:1px 0 0;
     border-radius:0;
     overflow:visible;
@@ -257,7 +257,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
   .mobile-tool-sheet-backdrop {
     position:fixed;
     z-index:var(--sc-z-sheet);
-    inset:var(--topbar-h) 0 calc(64px + env(safe-area-inset-bottom)) 0;
+    inset:var(--topbar-h) 0 calc(64px + var(--sc-safe-bottom)) 0;
     display:block;
     background:var(--sc-color-overlay-sheet);
     border:0;
@@ -265,13 +265,13 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
   .mobile-tool-palette {
     position:fixed;
     z-index:calc(var(--sc-z-sheet) + 1);
-    left:max(8px,env(safe-area-inset-left));
-    right:max(8px,env(safe-area-inset-right));
-    bottom:calc(64px + env(safe-area-inset-bottom));
+    left:max(8px,var(--sc-safe-left));
+    right:max(8px,var(--sc-safe-right));
+    bottom:calc(64px + var(--sc-safe-bottom));
     display:flex;
     flex-direction:column;
     gap:9px;
-    max-height:calc(100dvh - var(--topbar-h) - 74px - env(safe-area-inset-bottom));
+    max-height:calc(100dvh - var(--topbar-h) - 74px - var(--sc-safe-bottom));
     padding:8px 12px 12px;
     overflow-y:auto;
     overscroll-behavior:contain;
@@ -322,7 +322,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
     width:100%;
     height:50px;
     min-height:50px;
-    padding:0 max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left));
+    padding:0 max(14px,var(--sc-safe-right)) 0 max(14px,var(--sc-safe-left));
     border:0;
     border-bottom:1px solid var(--border-soft);
     background:var(--surface);
@@ -351,7 +351,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
   .canvas-mode-badge { max-width:calc(100% - 82px); overflow:hidden; white-space:nowrap; }
   .mobile-inspector-toggle {
     top:12px;
-    right:max(10px,env(safe-area-inset-right));
+    right:max(10px,var(--sc-safe-right));
     bottom:auto;
     width:44px;
     height:44px;
@@ -363,7 +363,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
   }
   .inspector-scroll {
     overscroll-behavior:contain;
-    scroll-padding-bottom:calc(28px + env(safe-area-inset-bottom));
+    scroll-padding-bottom:calc(28px + var(--sc-safe-bottom));
     -webkit-overflow-scrolling:touch;
   }
   .professional-note { display:none; }
@@ -378,7 +378,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
     width:60px;
     height:100%;
     min-height:0;
-    padding:max(4px,env(safe-area-inset-top)) 4px max(4px,env(safe-area-inset-bottom));
+    padding:max(4px,var(--sc-safe-top)) 4px max(4px,var(--sc-safe-bottom));
     --toolbar-clay-border-width:0 1px 0 0;
   }
   .mobile-tool-dock { grid-template-columns:1fr; align-content:center; gap:2px; }
@@ -388,7 +388,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
   .mobile-tool-palette {
     left:68px;
     right:auto;
-    bottom:max(8px,env(safe-area-inset-bottom));
+    bottom:max(8px,var(--sc-safe-bottom));
     width:min(360px,calc(100vw - 84px));
     max-height:calc(100dvh - var(--topbar-h) - 16px);
     border-radius:18px;
@@ -410,7 +410,10 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
   .mobile-actions-menu,.project-menu { max-height:calc(100dvh - 58px); }
 }
 .canvas-host { contain:layout paint; }
-.mobile-tool-palette { animation:native-menu-in var(--motion-standard) var(--ease-native) both; transform-origin:top right; }
+/* La paleta táctil nace del borde inferior, no de la esquina superior derecha:
+   sale del riel de herramientas, que es lo último que el pulgar tocó. Con el
+   origen antiguo la hoja crecía desde un punto donde no había nada. */
+.mobile-tool-palette { animation:sc-native-sheet-in var(--sc-motion-sheet) var(--sc-ease-ios-spring) both; transform-origin:bottom center; }
 
 @media (max-width:1023px) {
   .inspector-panel {
@@ -697,16 +700,16 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
   }
   .canvas-mode-badge {
     top:10px;
-    left:max(10px,env(safe-area-inset-left));
+    left:max(10px,var(--sc-safe-left));
     max-width:calc(100% - 260px);
   }
   .canvas-view-chips {
     top:12px;
-    right:max(64px,calc(env(safe-area-inset-right) + 64px));
+    right:max(64px,calc(var(--sc-safe-right) + 64px));
   }
   .canvas-view-chips span { min-height:28px; padding-inline:7px; }
   .canvas-controls {
-    right:max(10px,env(safe-area-inset-right));
+    right:max(10px,var(--sc-safe-right));
     bottom:10px;
   }
   .canvas-status {
@@ -725,7 +728,10 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 
 @media (pointer:coarse) {
   .canvas-coordinate-output,.canvas-status-divider { display:none; }
-  .canvas-status { min-width:86px; justify-content:center; }
+  /* Con las coordenadas y la regla ocultas, dentro de la píldora sólo queda la
+     escala rotulada («1 m»). 86 px de ancho mínimo la dejaban con la etiqueta
+     flotando en medio de una cápsula vacía sobre el dibujo. */
+  .canvas-status { min-width:54px; justify-content:center; }
   /* La píldora compacta no tiene ancho para una regla de 108 px. Se conserva la
      longitud rotulada, que ya es una medida del dibujo y no un factor de zoom. */
   .canvas-scale-bar-rule { display:none; }
@@ -741,7 +747,14 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
   .canvas-mode-badge { top:8px; left:8px; max-width:calc(100% - 66px); }
   .canvas-view-chips { display:none; }
   .canvas-controls { right:8px; bottom:8px; }
-  .canvas-status { bottom:8px; min-height:34px; max-width:96px; padding-inline:8px; overflow:hidden; }
+  /* La posición de la píldora en pantalla pequeña la fija `mobileCanvasDensity.css`
+     (arriba a la izquierda, junto a la identidad del modelo). Aquí sólo queda
+     su tamaño. Declarar además un `bottom` la dejaba anclada por arriba Y por
+     abajo a la vez —cada archivo ponía un extremo— y el resultado era una
+     cápsula estirada de lado a lado de la altura del lienzo, tapando el
+     dibujo entero en un iPhone. Un elemento absoluto se ancla por un solo
+     borde: el que decide quien manda en esta pantalla. */
+  .canvas-status { min-height:34px; max-width:118px; padding-inline:8px; overflow:hidden; }
   .canvas-coordinate-output,.canvas-status-divider { display:none; }
   .desktop-gesture-hint { display:none; }
   .touch-gesture-hint { display:inline; }
@@ -877,13 +890,13 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 @media (max-width:1023px) {
   .canvas-layer-trigger {
     top:64px;
-    right:max(10px,env(safe-area-inset-right));
+    right:max(10px,var(--sc-safe-right));
     width:44px;
     height:44px;
   }
   .canvas-layer-panel {
     top:116px;
-    right:max(10px,env(safe-area-inset-right));
+    right:max(10px,var(--sc-safe-right));
     width:min(310px,calc(100% - 20px));
     max-height:calc(100% - 184px);
   }
@@ -966,11 +979,11 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
   .brand-mark,.brand-mark svg { width:24px; height:24px; }
   .project-name input { font-size:12px; }
   .toolbar {
-    height:calc(58px + env(safe-area-inset-bottom));
-    min-height:calc(58px + env(safe-area-inset-bottom));
-    padding:3px max(6px,env(safe-area-inset-right))
-      calc(3px + env(safe-area-inset-bottom))
-      max(6px,env(safe-area-inset-left));
+    height:calc(58px + var(--sc-safe-bottom));
+    min-height:calc(58px + var(--sc-safe-bottom));
+    padding:3px max(6px,var(--sc-safe-right))
+      calc(3px + var(--sc-safe-bottom))
+      max(6px,var(--sc-safe-left));
   }
   .mobile-tool-dock .tool-button {
     height:50px;
@@ -1038,7 +1051,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
   }
   .canvas-layer-trigger {
     top:60px;
-    right:max(8px,env(safe-area-inset-right));
+    right:max(8px,var(--sc-safe-right));
   }
   .toolbar {
     grid-column:1;
@@ -1055,14 +1068,14 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
     white-space:nowrap;
   }
   .mobile-tool-sheet-backdrop {
-    inset:var(--topbar-h) 0 calc(58px + env(safe-area-inset-bottom)) 0;
+    inset:var(--topbar-h) 0 calc(58px + var(--sc-safe-bottom)) 0;
   }
   .mobile-tool-palette {
-    left:max(8px,env(safe-area-inset-left));
-    right:max(8px,env(safe-area-inset-right));
-    bottom:calc(58px + env(safe-area-inset-bottom));
+    left:max(8px,var(--sc-safe-left));
+    right:max(8px,var(--sc-safe-right));
+    bottom:calc(58px + var(--sc-safe-bottom));
     width:auto;
-    max-height:calc(100dvh - var(--topbar-h) - 68px - env(safe-area-inset-bottom));
+    max-height:calc(100dvh - var(--topbar-h) - 68px - var(--sc-safe-bottom));
   }
 }
 
@@ -1394,7 +1407,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 .diagram-stack-panel.moment .diagram-stack-panel-title { fill:var(--moment); }
 
 @media (max-width:1023px) {
-  .canvas-evidence-rail { left:max(8px,env(safe-area-inset-left)); right:max(84px,env(safe-area-inset-right)); bottom:8px; max-width:none; transform:none; }
+  .canvas-evidence-rail { left:max(8px,var(--sc-safe-left)); right:max(84px,var(--sc-safe-right)); bottom:8px; max-width:none; transform:none; }
   .canvas-evidence-layer { min-height:30px; padding-inline:8px; }
 }
 
@@ -1661,7 +1674,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
    la izquierda, que en esta franja está libre, con holgura garantizada. */
 @media (max-width:640px) {
   .canvas-status {
-    left:max(8px,env(safe-area-inset-left));
+    left:max(8px,var(--sc-safe-left));
     right:auto;
     transform:none;
     max-width:calc(100% - 168px);
@@ -1940,18 +1953,18 @@ body:has(.structural-edit-surface) .app-shell .tool-rail.is-floating-dock {
 @media (max-width: 700px) {
   .structural-edit-launcher {
     right: 10px;
-    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(72px + var(--sc-safe-bottom));
   }
 
   .structural-edit-launcher.structural-edit-offset-for-repeat {
-    bottom: calc(126px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(126px + var(--sc-safe-bottom));
   }
 
   .structural-edit-surface {
     position:fixed;
     top:auto;
     right: 8px;
-    bottom: calc(68px + env(safe-area-inset-bottom, 0px) + var(--sc-visual-viewport-bottom, 0px));
+    bottom: calc(68px + var(--sc-safe-bottom) + var(--sc-visual-viewport-bottom, 0px));
     left:8px;
     width: calc(100% - 16px);
     max-height: min(68dvh, calc(var(--sc-visual-viewport-height, 100dvh) - 80px));
@@ -1961,7 +1974,7 @@ body:has(.structural-edit-surface) .app-shell .tool-rail.is-floating-dock {
   }
 
   .structural-edit-surface.structural-edit-offset-for-repeat {
-    bottom: calc(68px + env(safe-area-inset-bottom, 0px) + var(--sc-visual-viewport-bottom, 0px));
+    bottom: calc(68px + var(--sc-safe-bottom) + var(--sc-visual-viewport-bottom, 0px));
   }
 
   /* The selected Clay segment is intentionally pressed/scaled. Give its
@@ -2085,7 +2098,7 @@ body:has(.structural-edit-surface) .app-shell .tool-rail.is-floating-dock {
 .candidate-picker [role='option'][aria-selected='true'] { border-style:dashed; border-color:var(--focus); outline:1px solid var(--focus); outline-offset:1px; }
 .candidate-picker footer { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
 .candidate-picker footer button:last-child { background:var(--accent-fill); color:var(--accent-foreground); text-align:center; }
-.candidate-picker-sheet { left:8px!important; right:8px; top:auto!important; bottom:calc(8px + env(safe-area-inset-bottom)); width:auto; max-width:none; }
+.candidate-picker-sheet { left:8px!important; right:8px; top:auto!important; bottom:calc(8px + var(--sc-safe-bottom)); width:auto; max-width:none; }
 
 /* El reposo/hover/activo del volumen los define `.sc-tool-button` en
    `design-system/components/ui.css` (CRI-98): reposo `RAISED`, activo

@@ -66,6 +66,9 @@ describe('bulk edit styles', () => {
   });
 
   it('keeps the actions clear of the mobile safe area', () => {
-    expect(bulkCss).toContain('env(safe-area-inset-bottom');
+    // El inset ya no se lee con `env()` en cada feature: se consume el token
+    // que `design-system/tokens.css` resuelve a `env()` y que el anfitrión
+    // nativo puede sobrescribir con el inset real de su ventana.
+    expect(bulkCss).toContain('var(--sc-safe-bottom)');
   });
 });

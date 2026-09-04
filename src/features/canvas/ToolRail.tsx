@@ -36,6 +36,7 @@ import {
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { useShellComposition } from '../workspace/useShellComposition';
 import { SurfacePresentationContext } from '../workspace/SurfacePresentationContext';
+import { haptics } from '../../platform/haptics';
 
 const toolIcons: Record<Tool, LucideIcon> = {
   select: MousePointer2,
@@ -288,6 +289,10 @@ export const ToolRail = () => {
   }, [generatorOpen, setActiveTool]);
 
   const selectTool = (tool: Tool) => {
+    // Cambiar de herramienta es el gesto más repetido de la mesa y el que peor
+    // se confirma en un teléfono: la tecla queda debajo del pulgar, tapada.
+    // La háptica de selección es justo la que UIKit usa para un `UIPickerView`.
+    if (tool !== activeTool) haptics.selection();
     setActiveTool(tool);
     if (mobileMenu) closeMobileMenu();
     else setMobileMenu(null);

@@ -23,7 +23,7 @@
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   gap: var(--sc-space-3);
-  padding-block-end: max(var(--sc-space-3), env(safe-area-inset-bottom));
+  padding-block-end: max(var(--sc-space-3), var(--sc-safe-bottom));
   color: var(--sc-color-text-primary);
   background:
     radial-gradient(1200px 520px at 78% -12%, color-mix(in srgb, var(--sc-color-brand-secondary) 8%, transparent), transparent 68%),
@@ -41,10 +41,10 @@
   justify-content: space-between;
   gap: var(--sc-space-3);
   padding:
-    max(var(--sc-space-3), env(safe-area-inset-top))
-    max(var(--sc-space-5), env(safe-area-inset-right))
+    max(var(--sc-space-3), var(--sc-safe-top))
+    max(var(--sc-space-5), var(--sc-safe-right))
     var(--sc-space-3)
-    max(var(--sc-space-5), env(safe-area-inset-left));
+    max(var(--sc-space-5), var(--sc-safe-left));
   background: var(--sc-color-surface-toolbar);
   border-block-end: var(--sc-clay-edge);
   box-shadow: var(--sc-shadow-clay-xs);
@@ -147,7 +147,7 @@
 
 .space3d-experimental {
   margin: 0;
-  padding: var(--sc-space-2) max(var(--sc-space-5), env(safe-area-inset-left));
+  padding: var(--sc-space-2) max(var(--sc-space-5), var(--sc-safe-left));
   font-size: var(--sc-font-size-technical);
   color: var(--sc-color-state-warning-foreground);
   background: color-mix(in srgb, var(--sc-color-state-warning) 12%, var(--sc-color-surface-1));
@@ -161,7 +161,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--sc-space-3);
-  padding-inline: max(var(--sc-space-5), env(safe-area-inset-left)) max(var(--sc-space-5), env(safe-area-inset-right));
+  padding-inline: max(var(--sc-space-5), var(--sc-safe-left)) max(var(--sc-space-5), var(--sc-safe-right));
 }
 
 /* Bandeja hundida con herramientas salidas: la combinación que da la sensación
@@ -274,7 +274,7 @@
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas: "stage";
   gap: var(--sc-space-4);
-  padding-inline: max(var(--sc-space-5), env(safe-area-inset-left)) max(var(--sc-space-5), env(safe-area-inset-right));
+  padding-inline: max(var(--sc-space-5), var(--sc-safe-left)) max(var(--sc-space-5), var(--sc-safe-right));
   position: relative;
 }
 
@@ -956,7 +956,7 @@
 }
 
 .space3d-notice--error {
-  margin-inline: max(var(--sc-space-5), env(safe-area-inset-left));
+  margin-inline: max(var(--sc-space-5), var(--sc-safe-left));
   background: color-mix(in srgb, var(--sc-color-state-error) 12%, var(--sc-color-surface-1));
   color: var(--sc-color-state-error-foreground);
   border: 1px solid color-mix(in srgb, var(--sc-color-state-error) 34%, transparent);
@@ -1055,7 +1055,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--sc-space-2);
-  margin-inline: max(var(--sc-space-5), env(safe-area-inset-left)) max(var(--sc-space-5), env(safe-area-inset-right));
+  margin-inline: max(var(--sc-space-5), var(--sc-safe-left)) max(var(--sc-space-5), var(--sc-safe-right));
   padding: var(--sc-space-3);
   border: var(--sc-clay-edge);
   border-inline-start: 3px solid var(--sc-color-brand-secondary);
@@ -1084,7 +1084,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--sc-space-2);
-  margin-inline: max(var(--sc-space-5), env(safe-area-inset-left)) max(var(--sc-space-5), env(safe-area-inset-right));
+  margin-inline: max(var(--sc-space-5), var(--sc-safe-left)) max(var(--sc-space-5), var(--sc-safe-right));
   padding: var(--sc-space-3);
   border: var(--sc-clay-edge);
   border-radius: var(--sc-radius-lg);
@@ -1096,7 +1096,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--sc-space-4);
-  margin-inline: max(var(--sc-space-5), env(safe-area-inset-left)) max(var(--sc-space-5), env(safe-area-inset-right));
+  margin-inline: max(var(--sc-space-5), var(--sc-safe-left)) max(var(--sc-space-5), var(--sc-safe-right));
   padding: var(--sc-space-2) var(--sc-space-4);
   border: 1px solid var(--sc-color-border-soft);
   border-radius: var(--sc-radius-pill);
@@ -1252,7 +1252,7 @@
     border-block-end: 0;
     justify-content: space-between;
     padding-inline: var(--sc-space-2);
-    padding-block-end: max(6px, env(safe-area-inset-bottom));
+    padding-block-end: max(6px, var(--sc-safe-bottom));
   }
   .space3d-rail-vertical-group { flex: 1; flex-direction: row; justify-content: space-around; }
   .space3d-rail-vertical-group--history {
@@ -1380,7 +1380,7 @@
   }
 
   .space3d-header {
-    padding: max(7px, env(safe-area-inset-top)) 10px 7px;
+    padding: max(7px, var(--sc-safe-top)) 10px 7px;
     gap: 5px;
   }
 

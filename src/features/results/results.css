@@ -138,7 +138,7 @@
      vive dentro de `actions`, pero `document` / `actions` / `status` siguen
      siendo tres hijos de grid siempre presentes — incluso con `context`
      oculto, `actions` conserva su clúster de comandos. */
-  .topbar { grid-template-columns: minmax(0,1fr) max-content max-content; padding: env(safe-area-inset-top) 10px 0; height: calc(var(--topbar-h) + env(safe-area-inset-top)); flex-basis: calc(var(--topbar-h) + env(safe-area-inset-top)); }
+  .topbar { grid-template-columns: minmax(0,1fr) max-content max-content; padding: var(--sc-safe-top) 10px 0; height: calc(var(--topbar-h) + var(--sc-safe-top)); flex-basis: calc(var(--topbar-h) + var(--sc-safe-top)); }
   .topbar-context-zone { display:none; }
   .history-controls { display:none; }
   .brand-name { display:none; }
@@ -157,17 +157,17 @@
   .analyze-button { min-width:var(--sc-control-height-touch); width:var(--sc-control-height-touch); height:var(--sc-control-height-touch); padding:0; }
   .analyze-button > .sc-button__label { display:none; }
   .workspace { grid-template-columns: 1fr; grid-template-rows:minmax(0,1fr) auto; }
-  .toolbar { position:absolute; z-index:25; left:10px; right:10px; bottom:calc(30px + env(safe-area-inset-bottom)); height:52px; border-radius:13px; flex-direction:row; gap:2px; padding:4px; overflow-x:auto; overflow-y:hidden; }
+  .toolbar { position:absolute; z-index:25; left:10px; right:10px; bottom:calc(30px + var(--sc-safe-bottom)); height:52px; border-radius:13px; flex-direction:row; gap:2px; padding:4px; overflow-x:auto; overflow-y:hidden; }
   .tool-button { min-width:44px; width:44px; height:44px; min-height:44px; }
   .toolbar .tool-button svg { width:19px; height:19px; }
   .toolbar-spacer,.selection-tip { display:none; }
   .center-stage { grid-column:1; grid-row:1 / span 2; }
-  .inspector-panel { position:absolute; z-index:31; left:0; right:0; top:auto; bottom:0; width:100%; height:min(72vh,660px); --inspector-clay-border-width:1px 1px 0; border-radius:18px 18px 0 0; display:none; padding-bottom:env(safe-area-inset-bottom); }
+  .inspector-panel { position:absolute; z-index:31; left:0; right:0; top:auto; bottom:0; width:100%; height:min(72vh,660px); --inspector-clay-border-width:1px 1px 0; border-radius:18px 18px 0 0; display:none; padding-bottom:var(--sc-safe-bottom); }
   .inspector-panel::before { content:''; width:42px; height:5px; border-radius:4px; background:var(--border); position:absolute; left:50%; top:7px; transform:translateX(-50%); }
   .inspector-tabs { grid-template-columns:repeat(3,minmax(0,1fr)) 46px; padding-top:10px;height:60px;flex-basis:60px; }.mobile-inspector-close { display:grid!important; place-items:center; width:36px; height:36px; align-self:center; justify-self:center; border-radius:9px!important; color:var(--muted)!important; }.mobile-inspector-close:hover { background:var(--surface-2)!important; color:var(--text)!important; }.mobile-inspector-close::after { display:none; }
   .mobile-inspector-backdrop { display:block; position:absolute; z-index:var(--sc-z-topbar); inset:0; border:0; background:var(--sc-color-overlay-soft); }
   .results-panel { min-height:180px; max-height:58dvh; }
-  .results-body { padding-bottom:calc(70px + env(safe-area-inset-bottom)); }
+  .results-body { padding-bottom:calc(70px + var(--sc-safe-bottom)); }
   .diagram-result-layout { grid-template-columns:1fr; }
   .diagram-guidance { display:none; }
   .results-metric-cards { grid-template-columns:1fr; margin:8px 10px 0; gap:5px; }
@@ -177,10 +177,10 @@
   .result-tabs button { min-width:76px;padding:0 12px;scroll-snap-align:start; }
   .diagram-chart-heading small{display:none}.diagram-chart svg{height:188px}.diagram-cursor-readout{grid-template-columns:repeat(2,minmax(0,1fr))}.diagram-cursor-readout small{grid-column:1/-1}
   .learning-toolbar{align-items:stretch;flex-direction:column;gap:8px}.learning-level{display:grid;grid-template-columns:repeat(3,1fr)}.learning-level button{min-height:34px}.learning-content{padding:0 16px 13px 45px}
-  .canvas-controls { bottom:calc(82px + env(safe-area-inset-bottom)); }
+  .canvas-controls { bottom:calc(82px + var(--sc-safe-bottom)); }
   .canvas-controls button { width:var(--sc-control-height-touch); height:var(--sc-control-height-touch); }
-  .canvas-status { bottom:calc(80px + env(safe-area-inset-bottom)); }
-  .welcome-header { min-height:64px; padding-inline:max(20px,env(safe-area-inset-left)) max(20px,env(safe-area-inset-right)); }
+  .canvas-status { bottom:calc(80px + var(--sc-safe-bottom)); }
+  .welcome-header { min-height:64px; padding-inline:max(20px,var(--sc-safe-left)) max(20px,var(--sc-safe-right)); }
   .welcome-brand { font-size:18px; }
   .welcome-content { width:min(100% - 36px,760px); padding:44px 0 36px; gap:36px; }
   /* Con una sola columna la figura pasa de compañera del titular a remate de
@@ -191,7 +191,7 @@
   .welcome-workflow { padding:24px 20px; }
   .welcome-workflow-steps { gap:22px; }
   .welcome-workflow-step:not(:last-child)::after { right:-22px; }
-  .welcome-footer { padding-bottom:calc(9px + env(safe-area-inset-bottom)); }
+  .welcome-footer { padding-bottom:calc(9px + var(--sc-safe-bottom)); }
 }
 .diagram-value-layer { pointer-events: none; font-size: 10px; font-weight: 700; }
 .diagram-value-layer circle { fill: currentColor; stroke: var(--canvas-bg); stroke-width: 1.5; }
@@ -206,9 +206,9 @@
   .autosave-state { display:none; }
   .brand-mark { width:26px; font-size:25px; }.topbar { padding-left:8px; padding-right:8px; }.top-actions { gap:3px; }.analyze-button { width:44px; height:44px; justify-content:center; padding:0; }.mobile-more-button { width:44px; height:44px; }
   .popover.project-menu { left:0; width:min(310px,calc(100vw - 20px)); }
-  .toolbar { left:8px; right:8px; height:52px; padding:3px; border-radius:12px; }.tool-button { min-width:44px; width:44px; height:44px; min-height:44px; }.toolbar .tool-button svg { width:19px; height:19px; }.canvas-controls { bottom:calc(80px + env(safe-area-inset-bottom)); }.canvas-status { right:8px; bottom:calc(78px + env(safe-area-inset-bottom)); font-size:var(--sc-font-size-technical); padding:5px 7px; }.mobile-inspector-toggle { width:44px; height:44px; right:10px; bottom:calc(90px + env(safe-area-inset-bottom)); }
+  .toolbar { left:8px; right:8px; height:52px; padding:3px; border-radius:12px; }.tool-button { min-width:44px; width:44px; height:44px; min-height:44px; }.toolbar .tool-button svg { width:19px; height:19px; }.canvas-controls { bottom:calc(80px + var(--sc-safe-bottom)); }.canvas-status { right:8px; bottom:calc(78px + var(--sc-safe-bottom)); font-size:var(--sc-font-size-technical); padding:5px 7px; }.mobile-inspector-toggle { width:44px; height:44px; right:10px; bottom:calc(90px + var(--sc-safe-bottom)); }
   .canvas-hint { left:10px; top:auto; bottom:10px; transform:none; max-width:176px; border-radius:var(--sc-radius-control); padding:6px 6px 6px 9px; font-size:var(--sc-font-size-label); line-height:1.25; }.canvas-hint button { width:var(--sc-control-height-touch); height:var(--sc-control-height-touch); flex:0 0 var(--sc-control-height-touch); }
-  .results-panel { min-height:164px; max-height:58dvh; }.results-body { padding-bottom:calc(64px + env(safe-area-inset-bottom)); }.result-tabs{height:44px;flex-basis:44px}.result-tabs button{height:44px;min-width:72px;font-size:var(--sc-font-size-label)}
+  .results-panel { min-height:164px; max-height:58dvh; }.results-body { padding-bottom:calc(64px + var(--sc-safe-bottom)); }.result-tabs{height:44px;flex-basis:44px}.result-tabs button{height:44px;min-width:72px;font-size:var(--sc-font-size-label)}
   .professional-note { flex-basis:18px; font-size:8px; line-height:1.15; }
   .diagram-chart { padding:9px 10px 8px; }
   .diagram-chart-heading{gap:7px}.diagram-chart-heading label span{display:none}.diagram-chart-heading strong{font-size:10px}.diagram-chart svg{height:202px}
@@ -586,12 +586,12 @@
     padding-top:0;
   }
   .results-panel:not(.mobile-collapsed) .results-body {
-    padding-bottom:max(18px,env(safe-area-inset-bottom));
-    scroll-padding-bottom:max(24px,env(safe-area-inset-bottom));
+    padding-bottom:max(18px,var(--sc-safe-bottom));
+    scroll-padding-bottom:max(24px,var(--sc-safe-bottom));
   }
   .mobile-inspector-toggle {
     top:auto;
-    bottom:calc(72px + env(safe-area-inset-bottom));
+    bottom:calc(72px + var(--sc-safe-bottom));
   }
   .inspector-panel.mobile-open {
     position:fixed;

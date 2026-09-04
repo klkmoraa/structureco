@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Box, Folder, GraduationCap, Home, Image as ImageIcon, LayoutTemplate, LibraryBig, Menu, Moon, Play, Settings, Sun, Upload, X } from 'lucide-react';
+import { ArrowRight, Box, Folder, GraduationCap, Home, Image as ImageIcon, LayoutTemplate, LibraryBig, Menu, Moon, Play, Plus, Settings, Sun, Upload, X } from 'lucide-react';
 import { m, useReducedMotion } from 'motion/react';
 import { createBlankProject, exampleProjects } from '../../data/defaultProject';
 import { useProject, useWorkspaceUI } from '../../store/ProjectContext';
@@ -20,6 +20,8 @@ import { PersonalLibraryView } from '../library/PersonalLibraryView';
 import { readCanvasViewSettings } from '../view/canvasViewSettings';
 import { useModalFocus } from '../../design-system/components/modalFocus';
 import { clearLocalMetrics, exportLocalMetrics, getLocalMetrics, setLocalMetricsOptIn, type LocalMetricsStore } from '../../analytics/localMetrics';
+import { COMPACT_HOME_QUERY, useMediaQuery } from '../../platform/useMediaQuery';
+import { haptics } from '../../platform/haptics';
 import './totalHome.css';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
@@ -130,6 +132,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
   const text = copy[language];
   const [view, setView] = useState<HomeView>(initialView);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const compactHome = useMediaQuery(COMPACT_HOME_QUERY);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [studioOpen, setStudioOpen] = useState(false);
   const [exerciseDialogOpen, setExerciseDialogOpen] = useState(false);
@@ -223,7 +226,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
         <p>{text.current}</p><h2 id="home-current-project">{project.name}</h2>
         <div className="sc-home-primary-buttons">
           <button type="button" className="sc-home-continue" onClick={onOpenWorkspace} aria-label={text.continue}><Play size={17} fill="currentColor" /><span>{text.continue}</span></button>
-          <button type="button" className="sc-home-new" onClick={openBlankProject} aria-label={text.create}><span aria-hidden="true">＋</span>{text.create}</button>
+          <button type="button" className="sc-home-new" onClick={openBlankProject} aria-label={text.create}><Plus size={17} strokeWidth={2.6} aria-hidden="true" /><span>{text.create}</span></button>
         </div>
         <small>{text.local}</small>
       </div>
@@ -300,11 +303,41 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
               </div>
             </section>;
 
+  /*
+   * Idioma y tema son los mismos dos controles en las dos composiciones, pero
+   * no viven en el mismo sitio: en escritorio acompañan al título de la vista,
+   * y en teléfono suben a la barra compacta para que Inicio no gaste 118 px de
+   * pantalla en dos franjas de chrome apiladas. Se renderizan una sola vez y se
+   * mueven — duplicarlos con `display:none` dejaría dos `<select>` reales en el
+   * árbol de accesibilidad y un lector de pantalla los anunciaría los dos.
+   */
+  const appearanceControls = <div className="sc-home-appearance">
+    <label>
+      <span className="sr-only">{t('language.label')}</span>
+      <select value={language} onChange={(event) => updateLanguage(event.target.value as 'es' | 'en')}><option value="es">ES</option><option value="en">EN</option></select>
+    </label>
+    <button
+      type="button"
+      onClick={() => { haptics.selection(); setTheme(theme === 'light' ? 'dark' : 'light'); }}
+      aria-label={theme === 'light' ? t('theme.dark') : t('theme.light')}
+    >{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</button>
+  </div>;
+
   return <><main ref={homeRef} className="sc-home" data-testid="welcome-screen">
     <aside className="sc-home-sidebar"><div className="sc-home-wordmark"><BrandMark size={30} /><strong><span>structure</span>Co</strong></div>{renderNavigation()}<button type="button" className="sc-home-settings" onClick={(event) => openPreferences(event.currentTarget)}><Settings size={19} /><span>{text.settings}</span></button></aside>
-    <header className="sc-home-mobile-header"><div className="sc-home-wordmark"><BrandMark size={27} /><strong><span>structure</span>Co</strong></div><button ref={mobileMenuButtonRef} type="button" aria-label={mobileNavOpen ? text.closeMenu : text.menu} aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen((open) => !open)}><Menu size={20} /></button></header>
+    <header className="sc-home-mobile-header">
+      <button ref={mobileMenuButtonRef} type="button" className="sc-home-menu-toggle" aria-label={mobileNavOpen ? text.closeMenu : text.menu} aria-expanded={mobileNavOpen} onClick={() => { haptics.selection(); setMobileNavOpen((open) => !open); }}>{mobileNavOpen ? <X size={20} /> : <Menu size={20} />}</button>
+      <div className="sc-home-wordmark"><BrandMark size={25} /><strong><span>structure</span>Co</strong></div>
+      {compactHome ? appearanceControls : <span aria-hidden="true" className="sc-home-mobile-header__spacer" />}
+    </header>
     {mobileNavOpen ? renderNavigation(true) : null}
-    <div className="sc-home-main"><header className="sc-home-topline"><span>{text[view]}</span><div><label><span className="sr-only">{t('language.label')}</span><select value={language} onChange={(event) => updateLanguage(event.target.value as 'es' | 'en')}><option value="es">ES</option><option value="en">EN</option></select></label><button type="button" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} aria-label={theme === 'light' ? t('theme.dark') : t('theme.light')}>{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</button></div></header><div className="sc-home-content">{content}</div></div>
+    <div className="sc-home-main"><header className="sc-home-topline"><span>{text[view]}</span>{compactHome ? null : appearanceControls}</header>{/*
+      * `data-stagger` es la entrada escalonada declarativa de `platform/native.css`:
+      * cada sección de la vista llega 40 ms después de la anterior, en pasos que
+      * se congelan a partir de la sexta. La clave por vista es lo que hace que
+      * la animación se repita al navegar, y no sólo la primera vez.
+      */}
+      <div className="sc-home-content" data-stagger key={view}>{content}</div></div>
     {importCenterOpen ? <Suspense fallback={null}><PortableImportCenter open currentProjectName={project.name} onClose={() => setImportCenterOpen(false)} onSaveCurrent={() => exportProjectJson(project)} onImported={(outcome) => { replaceProject({ ...outcome.project, settings: { ...outcome.project.settings, language } }, outcome.restoredAnalysis); setImportCenterOpen(false); onOpenWorkspace(); }} /></Suspense> : null}
     <NewExerciseDialog open={exerciseDialogOpen} initialTemplateId={exerciseTemplateId} onClose={() => setExerciseDialogOpen(false)} onCreate={(next) => { replaceProject({ ...next, settings: { ...next.settings, language } }); setExerciseDialogOpen(false); onOpenWorkspace(); }} />
   </main>{preferencesOpen ? <WelcomePreferences language={language} theme={theme} onLanguageChange={updateLanguage} onThemeChange={setTheme} onClose={closePreferences} /> : null}{studioOpen ? <IllustrationStudio language={language} initialTheme={theme} onClose={closeStudio} /> : null}</>;
