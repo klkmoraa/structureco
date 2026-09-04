@@ -3,7 +3,13 @@ export interface SnapTarget {
   y: number;
 }
 
-export type SnapKind = 'node' | 'midpoint' | 'intersection' | 'perpendicular' | 'target' | 'grid';
+/**
+ * `angle` no lo produce `resolveSnap`: lo emite el lienzo cuando la traza está
+ * restringida a un múltiplo angular (Mayús). Vive en esta unión para que el
+ * glifo, su rótulo y su color sean los mismos que los de cualquier otra
+ * referencia de dibujo.
+ */
+export type SnapKind = 'node' | 'midpoint' | 'intersection' | 'perpendicular' | 'target' | 'grid' | 'angle';
 
 export interface SnapCandidate extends SnapTarget {
   kind: Exclude<SnapKind, 'grid'>;

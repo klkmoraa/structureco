@@ -6,6 +6,20 @@ export type SmartLabelTone = 'neutral' | 'selection' | 'force' | 'shear' | 'mome
 export interface SmartLabelCandidate {
   id: string;
   text: string;
+  /**
+   * Segunda línea opcional del rótulo. Los sellos de extremo crítico la usan
+   * para llevar la estación (`x 4.00 m`) bajo el valor, dentro de la **misma**
+   * caja: así el sello entra en el mismo reparto anticolisión que el resto de
+   * las etiquetas en vez de dibujarse encima de ellas.
+   */
+  subtext?: string;
+  /**
+   * Dos rótulos con la misma clave y anclados casi al mismo punto dicen lo
+   * mismo dos veces: el momento en la cara de un nudo es el mismo que en la
+   * cara de la barra que llega a él, y el diagrama emitía ambos. Se conserva el
+   * de mayor prioridad y el otro no llega a pedir hueco.
+   */
+  dedupeKey?: string;
   anchor: { x: number; y: number };
   priority: SmartLabelPriority;
   tone?: SmartLabelTone;
@@ -29,7 +43,14 @@ export interface PlacedSmartLabel extends SmartLabelCandidate {
 export type SmartLabelDetail = 'essential' | 'standard' | 'detailed';
 
 const LABEL_HEIGHT = 22;
+const LABEL_LINE_HEIGHT = 11;
 const LABEL_GAP = 8;
+/** Radio dentro del cual dos rótulos con la misma clave se leen como uno solo. */
+const DEDUPE_RADIUS = 30;
+
+/** Alto de la caja según tenga una o dos líneas. */
+export const smartLabelHeight = (candidate: Pick<SmartLabelCandidate, 'subtext'>): number =>
+  (candidate.subtext ? LABEL_HEIGHT + LABEL_LINE_HEIGHT : LABEL_HEIGHT);
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
@@ -49,13 +70,18 @@ const defaultMinimumScale = (priority: SmartLabelPriority): number => {
 const estimatedWidth = (text: string, availableWidth: number): number =>
   Math.min(availableWidth, Math.max(34, text.length * 6.5 + 18));
 
+const candidateWidth = (candidate: SmartLabelCandidate, availableWidth: number): number => Math.max(
+  estimatedWidth(candidate.text, availableWidth),
+  candidate.subtext ? estimatedWidth(candidate.subtext, availableWidth) : 0,
+);
+
 const rectAt = (
   candidate: SmartLabelCandidate,
   offset: { x: number; y: number },
   bounds: CanvasSafeRect,
 ): SmartLabelRect => {
-  const width = estimatedWidth(candidate.text, bounds.width);
-  const height = Math.min(LABEL_HEIGHT, bounds.height);
+  const width = candidateWidth(candidate, bounds.width);
+  const height = Math.min(smartLabelHeight(candidate), bounds.height);
   const desiredX = candidate.anchor.x + offset.x - width / 2;
   const desiredY = candidate.anchor.y + offset.y - height / 2;
   return {
@@ -126,8 +152,12 @@ export const layoutSmartLabels = (
     .filter((candidate) => candidate.forceVisible || scale >= (candidate.minScale ?? defaultMinimumScale(candidate.priority)))
     .sort((first, second) => first.priority - second.priority || first.id.localeCompare(second.id));
   const placed: PlacedSmartLabel[] = [];
+  const kept: SmartLabelCandidate[] = [];
 
   for (const candidate of ordered) {
+    if (candidate.dedupeKey && kept.some((other) => other.dedupeKey === candidate.dedupeKey
+      && Math.hypot(other.anchor.x - candidate.anchor.x, other.anchor.y - candidate.anchor.y) <= DEDUPE_RADIUS)) continue;
+    kept.push(candidate);
     const preferred = candidate.preferredOffset && finite(candidate.preferredOffset.x) && finite(candidate.preferredOffset.y)
       ? candidate.preferredOffset
       : { x: 18, y: -18 };

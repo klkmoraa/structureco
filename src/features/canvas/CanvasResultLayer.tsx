@@ -71,7 +71,8 @@ export const diagramPixelScaleFor = (project: ProjectModel, resultTab: ResultTab
  * etiquetas —incluidas las de los tramos que apenas trabajan— y el sello deja
  * de señalar nada. Con él quedan los picos que de verdad gobiernan.
  */
-const CRITICAL_MARKER_MIN_SHARE = 0.15;
+// oxlint-disable-next-line react/only-export-components
+export const CRITICAL_MARKER_MIN_SHARE = 0.15;
 
 /** Extremos M/V ya resueltos por el análisis, listos para sellar sobre la barra. */
 // oxlint-disable-next-line react/only-export-components
@@ -93,6 +94,23 @@ export const criticalExtremesFor = (
   }
   return marks;
 };
+
+/**
+ * Texto del extremo crítico. Vive junto a `criticalExtremesFor` porque el
+ * marcador sobre la curva y el rótulo que lo nombra en la capa de etiquetas
+ * tienen que decir literalmente lo mismo.
+ */
+// oxlint-disable-next-line react/only-export-components
+export const criticalExtremeLabel = (
+  symbol: string,
+  extreme: 'max' | 'min',
+  value: string,
+  unit: string,
+): string => `${symbol}${extreme} ${value} ${unit}`;
+
+/** Estación del extremo crítico, la segunda línea del mismo rótulo. */
+// oxlint-disable-next-line react/only-export-components
+export const criticalStationLabel = (station: string, lengthUnit: string): string => `x ${station} ${lengthUnit}`;
 
 const CanvasResultLayerImpl = ({
   slot, project, analysis, resultTab, resultsAllowed, resultCursor, influenceCanvasState, modeShapeState, camera, toScreen,
@@ -230,13 +248,19 @@ const CanvasResultLayerImpl = ({
   };
 
   /**
-   * Sellos de Mmax/Mmin y Vmax/Vmin sobre la propia barra.
+   * Marcas de Mmax/Mmin y Vmax/Vmin sobre la propia curva.
    *
    * Los valores y sus estaciones ya vienen resueltos en `criticalPoints`: aquí
    * no se recalcula ni se re-muestrea nada, sólo se llevan a pantalla con la
    * misma escala y el mismo lado que el diagrama que se está mirando. Antes el
    * pico había que cazarlo moviendo el cursor sobre la curva o buscándolo en la
    * tabla; ahora está donde ocurre.
+   *
+   * Esta capa dibuja **sólo** el punto y su tallo hasta la barra. El rótulo con
+   * el valor y la estación lo coloca la capa de etiquetas inteligentes, que es
+   * la única que sabe qué otras cajas hay ya en pantalla: cuando el sello
+   * llevaba su propio recuadro se dibujaba encima de las etiquetas de carga y de
+   * los valores del diagrama, y en un pórtico normal el resultado era ilegible.
    */
   const renderCriticalPoints = () => {
     if (!resultsAllowed || !analysis?.success || !view.showResultOverlay) return null;
@@ -265,14 +289,8 @@ const CanvasResultLayerImpl = ({
         const offsetModel = (point.value * diagramPixelScale) / camera.scale;
         const base = toScreen(baseX, baseY);
         const tip = toScreen(baseX + nx * offsetModel, baseY + ny * offsetModel);
-        const value = `${symbol}${extreme === 'max' ? 'max' : 'min'} ${formatFixed(toDisplay(point.value, units, displayQuantity), 2)} ${valueUnit}`;
-        const station = `x ${formatFixed(toDisplay(point.x, units, 'length'), 2)} ${lengthLabel}`;
-        // El sello se aparta hacia el lado libre del diagrama, nunca hacia la
-        // barra: ahí es donde ya hay geometría y etiquetas de modelo.
-        const away = Math.sign(offsetModel) || 1;
-        const width = Math.max(value.length, station.length) * 5.1 + 11;
-        const anchorX = Math.min(Math.max(tip.x + nx * away * 9, 4), Math.max(size.width - width - 4, 4));
-        const anchorY = Math.min(Math.max(tip.y + ny * away * 9 - 11, 4), Math.max(size.height - 30, 4));
+        const value = criticalExtremeLabel(symbol, extreme, formatFixed(toDisplay(point.value, units, displayQuantity), 2), valueUnit);
+        const station = criticalStationLabel(formatFixed(toDisplay(point.x, units, 'length'), 2), lengthLabel);
         return <g
           key={`${member.id}-${key}-${extreme}`}
           className={`critical-point-marker is-${extreme}`}
@@ -282,11 +300,6 @@ const CanvasResultLayerImpl = ({
           <title>{`${member.id} · ${value} · ${station}`}</title>
           <line className="critical-point-stem" x1={base.x} y1={base.y} x2={tip.x} y2={tip.y} />
           <circle className="critical-point-dot" cx={tip.x} cy={tip.y} r="3.2" />
-          <g transform={`translate(${anchorX} ${anchorY})`}>
-            <rect className="critical-point-stamp" width={width} height="25" rx="6" />
-            <text className="critical-point-value" x="6" y="11">{value}</text>
-            <text className="critical-point-station" x="6" y="20">{station}</text>
-          </g>
         </g>;
       });
     });

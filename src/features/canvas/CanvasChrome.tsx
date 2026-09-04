@@ -7,9 +7,13 @@ import { CanvasLayers } from './CanvasLayers';
 import { CanvasEvidenceRail } from './CanvasEvidenceRail';
 import type { StackQuantity } from './diagramStack';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
-import { formatFixed } from '../../utils/numberFormat';
 import { onWorkspaceCommand } from '../workspace/workspaceCommands';
+import { planScaleBar, scaleBarLabel } from './scaleBar';
 import './mobileCanvasDensity.css';
+
+/** Ancho máximo de la regla: cabe en la píldora de estado sin empujar las coordenadas. */
+const SCALE_BAR_MAX_PX = 108;
+const SCALE_BAR_HEIGHT_PX = 9;
 
 export interface CanvasChromeProps {
   modeLabel: string;
@@ -24,7 +28,8 @@ export interface CanvasChromeProps {
   gridEnabled: boolean;
   coordinateReadoutRef: RefObject<HTMLOutputElement | null>;
   lengthLabel: string;
-  scale: number;
+  /** Píxeles que mide una unidad de longitud **de presentación** en el zoom actual. */
+  pixelsPerLengthUnit: number;
   onCancelPlacement: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -50,7 +55,7 @@ export const CanvasChrome = ({
   gridEnabled,
   coordinateReadoutRef,
   lengthLabel,
-  scale,
+  pixelsPerLengthUnit,
   onCancelPlacement,
   onZoomIn,
   onZoomOut,
@@ -62,6 +67,10 @@ export const CanvasChrome = ({
   onStackQuantityToggle,
 }: CanvasChromeProps) => {
   const { t } = useI18n();
+  // Una barra de escala se mide con la regla del propio dibujo. El cociente
+  // «1.57×» que ocupaba este sitio comparaba el zoom con una referencia interna
+  // que no significa nada fuera del código.
+  const scaleBar = planScaleBar(pixelsPerLengthUnit, SCALE_BAR_MAX_PX);
 
   useEffect(() => {
     return onWorkspaceCommand('fit-canvas', () => onFit());
@@ -91,7 +100,23 @@ export const CanvasChrome = ({
       <Crosshair size={14} aria-hidden="true" />
       <output ref={coordinateReadoutRef} className="canvas-coordinate-output" aria-label={t('canvas.coordinates')}>X — · Y — {lengthLabel}</output>
       <span className="canvas-status-divider" aria-hidden="true">·</span>
-      <span className="canvas-scale-output">{t('canvas.scale')} {formatFixed((scale / 85), 2)}×</span>
+      <span
+        className="canvas-scale-bar"
+        role="img"
+        aria-label={`${t('canvas.scale')} ${scaleBar ? scaleBarLabel(scaleBar.length, lengthLabel) : '—'}`}
+        data-scale-bar-px={scaleBar ? Math.round(scaleBar.widthPx) : 0}
+      >
+        {scaleBar ? <svg
+          className="canvas-scale-bar-rule"
+          width={Math.round(scaleBar.widthPx)}
+          height={SCALE_BAR_HEIGHT_PX}
+          viewBox={`0 0 ${Math.round(scaleBar.widthPx)} ${SCALE_BAR_HEIGHT_PX}`}
+          aria-hidden="true"
+        >
+          <path d={`M0.5 1V${SCALE_BAR_HEIGHT_PX - 1}M${Math.round(scaleBar.widthPx) - 0.5} 1V${SCALE_BAR_HEIGHT_PX - 1}M0.5 ${SCALE_BAR_HEIGHT_PX / 2}H${Math.round(scaleBar.widthPx) - 0.5}`} />
+        </svg> : null}
+        <span className="canvas-scale-output">{scaleBar ? scaleBarLabel(scaleBar.length, lengthLabel) : `— ${lengthLabel}`}</span>
+      </span>
     </div>
   </>;
 };

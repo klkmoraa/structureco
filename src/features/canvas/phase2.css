@@ -10,7 +10,13 @@
 .classroom-journey.is-compact .classroom-journey__steps { grid-template-columns:1fr; }.classroom-journey.is-compact .classroom-journey__steps small { display:block; }
 .canvas-host { min-height: 180px; flex: 1 1 auto; position: relative; overflow: hidden; background: var(--canvas-bg); }
 .structural-canvas.tool-pan,.structural-canvas.space-pan-ready,.structural-canvas.tool-pan [data-structure-object],.structural-canvas.space-pan-ready [data-structure-object] { cursor:grab; }
-.grid-lines line { stroke: var(--grid); stroke-width: 1; }
+/* Retícula adaptativa: la división menor sólo orienta, la mayor da la lectura
+   métrica y los ejes del modelo (X = 0, Y = 0) dicen dónde está el origen. Los
+   tres son un único `path` cada uno, no un `line` por división. */
+.grid-line { fill:none; vector-effect:non-scaling-stroke; }
+.grid-line--minor { stroke:var(--grid); stroke-width:1; opacity:.62; }
+.grid-line--major { stroke:var(--grid); stroke-width:1.25; opacity:1; }
+.grid-line--axis { stroke:color-mix(in srgb,var(--muted) 52%,var(--grid)); stroke-width:1.4; }
 .member-line { stroke: var(--member); stroke-width: 3; stroke-linecap: round; transition: stroke var(--motion-fast) var(--ease-native), stroke-width var(--motion-fast) var(--ease-native); }
 .member-hit { stroke: transparent; stroke-width: 18; }
 .member-object:hover:not(.selected) .member-line { stroke: var(--accent); }
@@ -29,6 +35,10 @@
 .selection-marquee-label rect { fill:color-mix(in srgb,var(--surface) 92%,transparent); stroke:var(--border); }
 .selection-marquee-label text { fill:var(--text); font-size:10px; font-weight:750; }
 .member-preview line { stroke:var(--accent); stroke-width:2; stroke-dasharray:7 5; }
+.member-preview.is-angle-locked line { stroke:var(--dimension); }
+.member-preview.is-angle-locked text { fill:var(--dimension); }
+/* El rayo polar sólo orienta: se ve, pero nunca compite con la traza. */
+.member-preview-guide { stroke:var(--dimension); stroke-width:1; stroke-dasharray:2 6; opacity:.5; }
 .member-preview text { fill:var(--accent); font-size:10px; font-weight:750; paint-order:stroke; stroke:var(--canvas-bg); stroke-width:4px; }
 .member-object.truss .member-line { stroke-dasharray: 0; }
 .member-object.rigid .member-line { stroke: var(--axis); stroke-width: 5; }
@@ -112,6 +122,8 @@
 .quick-entry-heading { flex:0 0 auto; display:flex; align-items:center; gap:6px; }.quick-entry-heading>strong { font-size:9px; font-weight:700; color:var(--muted); white-space:nowrap; }.quick-entry-mode { display:flex; gap:2px; padding:2px; border-radius:8px; background:var(--surface-2); box-shadow:var(--sc-shadow-clay-pressed); }.quick-entry-mode button { min-height:24px; padding:0 7px; border:0; border-radius:6px; background:var(--surface); color:var(--muted); font-size:8px; box-shadow:var(--sc-shadow-clay-xs); }.quick-entry-mode button:not([aria-pressed='true']):hover { box-shadow:var(--sc-shadow-clay-sm); }.quick-entry-mode button[aria-pressed='true'] { background:var(--surface-3); color:var(--accent); font-weight:700; box-shadow:var(--sc-shadow-clay-pressed); }
 .quick-entry-bar>label { flex:0 0 auto; width:92px; min-width:0; display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; border:1px solid var(--border-soft); border-radius:8px; background:var(--surface-2); box-shadow:var(--sc-shadow-clay-pressed); overflow:hidden; }.quick-entry-bar>label>span,.quick-entry-bar>label>small { padding:0 6px; color:var(--muted); font-size:8px; }.quick-entry-bar input { width:100%; min-width:0; height:32px; border:0; outline:0; background:transparent; color:var(--text); font-variant-numeric:tabular-nums; }.quick-entry-bar>button[type='submit'] { flex:0 0 auto; min-height:32px; padding:0 11px; border:0; border-radius:8px; background: var(--accent-fill); color:var(--accent-foreground); font-size:9px; font-weight:750; white-space:nowrap; box-shadow:var(--sc-shadow-clay-action); }.quick-entry-bar>button[type='submit']:hover { box-shadow:var(--sc-shadow-clay-action-hover); }.quick-entry-bar>button[type='submit']:active { box-shadow:var(--sc-shadow-clay-action-pressed); }.quick-entry-error { position:absolute; left:0; top:100%; margin-top:4px; color:var(--danger); font-size:9px; white-space:nowrap; }
 .canvas-hint { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); border-radius: var(--sc-radius-pill); padding: 7px 9px 7px 13px; font-size: 12px; display:flex; align-items:center; gap:8px; pointer-events:none; }.canvas-hint button { width:24px; height:24px; display:grid; place-items:center; border:0; border-radius:50%; background:var(--surface-2); color:var(--muted); pointer-events:auto; }.canvas-hint button:hover { color:var(--text); background:var(--border-soft); }
+.canvas-hint-shortcut { color:var(--muted); font-size:11px; }
+@media (max-width:640px) { .canvas-hint-shortcut { display:none; } }
 .cut-tooltip { position: absolute; z-index: 28; width:min(340px,calc(100% - 20px)); max-height:min(380px,calc(100% - 20px)); overflow:auto; border-radius: var(--sc-radius-card); padding: 11px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 11px; pointer-events: none; }
 .support-placement-popover { position:absolute; z-index:30; width:min(250px,calc(100% - 16px)); display:grid; gap:8px; padding:11px; border:1px solid var(--border); border-radius:var(--sc-radius-card); background:var(--surface); color:var(--text); box-shadow:var(--sc-shadow-clay-lg); }
 .support-placement-popover header { display:flex; align-items:center; justify-content:space-between; gap:10px; }
@@ -624,6 +636,11 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 }
 .canvas-coordinate-output { color:var(--text); font-variant-numeric:tabular-nums; }
 .canvas-scale-output { color:var(--muted); font-variant-numeric:tabular-nums; }
+/* Regla gráfica: el trazo se mide con el propio dibujo, así que su ancho en
+   píxeles es información y no decoración. */
+.canvas-scale-bar { display:inline-flex; align-items:center; gap:6px; }
+.canvas-scale-bar-rule { display:block; overflow:visible; }
+.canvas-scale-bar-rule path { stroke:var(--muted); stroke-width:1.1; fill:none; vector-effect:non-scaling-stroke; }
 .canvas-feedback { top:calc(var(--canvas-safe-top) + 8px); }
 .canvas-result-legend { top:calc(var(--canvas-safe-top) + 8px); left:12px; }
 .canvas-hint { top:calc(var(--canvas-safe-top) + 8px); }
@@ -649,10 +666,13 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
     white-space:nowrap;
   }
   .canvas-result-legend {
-    width:min(156px,calc(100% - 32px));
-    padding:7px 8px;
+    /* 156 px cortaban «Curva exacta · común» a media palabra. La nota de escala
+       baja a su propia fila: cabe entera sin robarle sitio al dibujo. */
+    width:min(210px,calc(100% - 32px));
+    padding:7px 9px;
     gap:3px 6px;
   }
+  .canvas-result-legend span { grid-column:1/-1; }
   .canvas-result-legend small {
     position:absolute;
     width:1px;
@@ -706,6 +726,9 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 @media (pointer:coarse) {
   .canvas-coordinate-output,.canvas-status-divider { display:none; }
   .canvas-status { min-width:86px; justify-content:center; }
+  /* La píldora compacta no tiene ancho para una regla de 108 px. Se conserva la
+     longitud rotulada, que ya es una medida del dibujo y no un factor de zoom. */
+  .canvas-scale-bar-rule { display:none; }
 }
 
 @media (max-width:460px) {
@@ -1555,24 +1578,9 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 .critical-point-stem { stroke:var(--critical-color); stroke-width:1; stroke-dasharray:3 2; opacity:.6; }
 .critical-point-dot { fill:var(--critical-color); stroke:var(--canvas-bg); stroke-width:1.2; }
 .critical-point-marker.is-min .critical-point-dot { fill:var(--canvas-bg); stroke:var(--critical-color); stroke-width:2; }
-.critical-point-stamp {
-  fill:var(--sc-color-surface-elevated);
-  stroke:var(--sc-color-border-canvas-chrome);
-  stroke-width:1;
-}
-.critical-point-value {
-  fill:var(--critical-color);
-  font-family:var(--sc-font-mono);
-  font-size:9px;
-  font-weight:700;
-  font-variant-numeric:var(--sc-numeric-variant);
-}
-.critical-point-station {
-  fill:var(--muted);
-  font-family:var(--sc-font-mono);
-  font-size:8px;
-  font-variant-numeric:var(--sc-numeric-variant);
-}
+/* El valor y la estación del extremo crítico los rotula ya la capa de
+   etiquetas inteligentes (`.smart-label.has-subtext`): aquí sólo queda la marca
+   sobre la curva. */
 
 /* --- Tarjeta contextual del corte: η y estación ------------------------ */
 .cut-demand-badge {
@@ -1982,6 +1990,11 @@ body:has(.structural-edit-surface) .app-shell .tool-rail.is-floating-dock {
 .snap-glyph.perpendicular circle { stroke:var(--shear); }
 .snap-glyph.perpendicular path { stroke:var(--shear); }
 .snap-glyph.perpendicular text { fill:var(--shear); }
+/* Dirección fijada con Mayús: comparte la tinta de cota porque lo que restringe
+   es geometría de tablero, no un objeto del modelo. */
+.snap-glyph.angle circle { stroke:var(--dimension); }
+.snap-glyph.angle path { stroke:var(--dimension); }
+.snap-glyph.angle text { fill:var(--dimension); }
 .member-label, .dimension-label { font-size: 11px; fill: var(--muted); paint-order: stroke; stroke: var(--canvas-bg); stroke-width: 4px; }
 .dimension-label { fill: var(--dimension); }
 .smart-label { color:var(--muted); }
@@ -2002,6 +2015,10 @@ body:has(.structural-edit-surface) .app-shell .tool-rail.is-floating-dock {
 .smart-label.tone-moment { color:var(--moment); }
 .smart-label.tone-dimension { color:var(--dimension); }
 .smart-label.tone-axial { color:var(--axial); }
+/* Rótulo de dos líneas del extremo crítico: el valor manda, la estación es la
+   coordenada que lo sitúa sobre la barra. */
+.smart-label.has-subtext text { font-family:var(--sc-font-mono); font-size:9.5px; }
+.smart-label-subtext { fill:var(--muted); font-size:8.5px; font-weight:600; }
 .node-object { cursor: pointer; }
 .node-object:focus-visible { outline:none; }
 .node-object text { font-size: 12px; font-weight: 600; fill: var(--text); paint-order: stroke; stroke: var(--canvas-bg); stroke-width: 4px; }

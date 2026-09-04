@@ -165,6 +165,7 @@
     border-radius:9px;
   }
   .canvas-status > svg,
+  .canvas-scale-bar-rule,
   .canvas-coordinate-output,
   .canvas-status-divider { display:none; }
   .canvas-scale-output { font-size:10px; }
