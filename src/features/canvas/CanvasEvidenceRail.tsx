@@ -2,7 +2,7 @@ import type { Dispatch } from 'react';
 import { useI18n } from '../../i18n/useI18n';
 import type { ResultTab } from '../../store/ProjectContext';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
-import { applyEvidenceLayerChoice, EVIDENCE_LAYERS, isEvidenceLayerActive } from './evidenceLayers';
+import { activateEvidenceLayer, applyEvidenceLayerChoice, EVIDENCE_LAYERS, isEvidenceLayerActive } from './evidenceLayers';
 import { STACK_QUANTITIES, STACK_SYMBOLS, type StackQuantity } from './diagramStack';
 
 const stackLabelKeys: Readonly<Record<StackQuantity, 'results.axial' | 'results.shear' | 'results.moment'>> = {
@@ -43,16 +43,28 @@ export const CanvasEvidenceRail = ({
 }) => {
   const { t } = useI18n();
   if (!visible) return null;
-  return <div className="canvas-evidence-rail" role="group" aria-label={t('canvas.evidenceLayers')} data-canvas-chrome="evidence">
-    <span className="canvas-evidence-rail__label" aria-hidden="true">Resultados</span>
+  const chooseEvidence = (id: typeof primaryEvidence[number]['id'] | typeof secondaryEvidence[number]['id']) => {
+    // A direct quantity is an exit from comparison, not a hidden update behind
+    // the ACM sheet. Force it on so choosing the already-current result (for
+    // example M after ACM) cannot accidentally leave the canvas empty.
+    if (stackActive) {
+      onStackToggle?.();
+      activateEvidenceLayer(id, { setResultTab, dispatchLayers: dispatch });
+      return;
+    }
+    applyEvidenceLayerChoice(id, { resultTab, layers }, { setResultTab, dispatchLayers: dispatch });
+  };
+  return <div className="canvas-evidence-rail" role="group" aria-label={t('canvas.evidenceLayers')} data-canvas-chrome="evidence" data-reading-mode={stackActive ? 'compare' : 'single'}>
+    <span className="canvas-evidence-rail__label" aria-hidden="true">{t('canvas.evidenceResults')}</span>
     <div className="canvas-evidence-rail__primary">
       {primaryEvidence.map(({ id, labelKey }) => <button
         key={id}
         type="button"
         className={`canvas-evidence-layer canvas-evidence-layer--${id}`}
-        aria-pressed={isEvidenceLayerActive(id, resultTab, layers)}
+        aria-label={t(labelKey)}
+        aria-pressed={!stackActive && isEvidenceLayerActive(id, resultTab, layers)}
         data-evidence-layer={id}
-        onClick={() => applyEvidenceLayerChoice(id, { resultTab, layers }, { setResultTab, dispatchLayers: dispatch })}
+        onClick={() => chooseEvidence(id)}
       ><span className="canvas-evidence-layer__symbol" aria-hidden="true">{evidenceSymbols[id]}</span><span>{t(labelKey)}</span></button>)}
     </div>
     <button
@@ -63,15 +75,16 @@ export const CanvasEvidenceRail = ({
       disabled={!stackAvailable}
       data-evidence-layer="stack"
       onClick={onStackToggle}
-    ><span className="canvas-evidence-layer__symbol" aria-hidden="true">NVM</span><span>Comparar</span></button>
+    ><span className="canvas-evidence-layer__symbol" aria-hidden="true">ACM</span><span>{t('canvas.evidenceCompare')}</span></button>
     {secondaryEvidence.map(({ id, labelKey }) => <button
       key={id}
       type="button"
       className={`canvas-evidence-layer canvas-evidence-layer--${id} canvas-evidence-layer--secondary`}
-      aria-pressed={isEvidenceLayerActive(id, resultTab, layers)}
+      aria-label={t(labelKey)}
+      aria-pressed={!stackActive && isEvidenceLayerActive(id, resultTab, layers)}
       data-evidence-layer={id}
-      onClick={() => applyEvidenceLayerChoice(id, { resultTab, layers }, { setResultTab, dispatchLayers: dispatch })}
-    >{t(labelKey)}</button>)}
+      onClick={() => chooseEvidence(id)}
+    ><span className="canvas-evidence-layer__symbol" aria-hidden="true">δ</span><span>{t(labelKey)}</span></button>)}
     {stackActive ? <div className="canvas-evidence-stack-choices" role="group" aria-label={t('canvas.evidenceStack')}>
       {STACK_QUANTITIES.map((quantity) => {
         const selected = stackQuantities.includes(quantity);

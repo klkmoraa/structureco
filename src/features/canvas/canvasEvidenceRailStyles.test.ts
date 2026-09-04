@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const styles = readFileSync(new URL('./phase2.css', import.meta.url), 'utf8');
+const mobileStyles = readFileSync(new URL('./mobileCanvasDensity.css', import.meta.url), 'utf8');
 
 describe('canvas evidence rail styles', () => {
   it('preserves the shared touch target on any coarse pointer', () => {
@@ -22,5 +23,9 @@ describe('canvas evidence rail styles', () => {
     expect(styles).toMatch(
       /@media \(max-width:700px\) and \(any-pointer:coarse\)[\s\S]*?\.canvas-host:has\(\.canvas-evidence-rail\) \.canvas-result-legend\s*\{[\s\S]*?top:68px/,
     );
+    expect(styles).toMatch(
+      /\.canvas-host:has\(\.canvas-evidence-rail\) \.canvas-status\s*\{[\s\S]*?top:12px;[\s\S]*?bottom:auto;/,
+    );
+    expect(mobileStyles).not.toMatch(/\.canvas-evidence-layer--secondary[\s\S]{0,120}display:none/);
   });
 });
