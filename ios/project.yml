@@ -34,6 +34,9 @@ targets:
     sources:
       - path: StructureCo/Sources
       - path: StructureCo/Resources/Assets.xcassets
+      # Apple lo exige para publicar desde mayo de 2024, y tiene que llegar al
+      # paquete como recurso: si no está, la subida se rechaza.
+      - path: StructureCo/Resources/PrivacyInfo.xcprivacy
       # El build de Vite. Va como carpeta-referencia (`folder`) y no como grupo:
       # tiene que llegar al paquete con su árbol intacto, porque las rutas de
       # los `import` del bundle son relativas a él. Un grupo aplanaría

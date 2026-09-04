@@ -160,26 +160,27 @@ export const installNativeShell = (): (() => void) => {
   });
 
   /*
-   * Safari en iOS hace zoom con doble toque incluso con `touch-action`
-   * declarado, y en una mesa de dibujo eso interrumpe el trazo. Sólo se anula
-   * el segundo toque rápido: el pellizco para acercar sigue funcionando, que es
-   * el gesto que el lienzo sí quiere.
+   * El zoom por doble toque lo desactiva `touch-action: manipulation` desde el
+   * CSS (`platform/native.css`), no un oyente.
+   *
+   * La primera versión de esta capa cancelaba en JavaScript el segundo
+   * `touchend` rápido, y eso tenía un daño colateral serio: `preventDefault` en
+   * `touchend` cancela también el `click` sintético, así que tocar dos veces
+   * seguidas el «+» del zoom perdía la segunda pulsación. La regla de CSS hace
+   * exactamente lo que hay que hacer —quita el doble toque y deja intacto el
+   * clic— y es además la que entiende el compositor, sin un oyente por toque.
+   *
+   * Lo que sí necesita un oyente es el pellizco de Safari sobre el chrome:
+   * `touch-action: manipulation` lo sigue permitiendo, y ampliar la barra
+   * superior o el inspector sólo los desalinea. El lienzo no se ve afectado
+   * porque declara `touch-action: none` y resuelve su propio pellizco con
+   * eventos de puntero, no con los `gesture*` de WebKit.
    */
-  let lastTouchEnd = 0;
-  const blockDoubleTapZoom = (event: TouchEvent) => {
-    const now = Date.now();
-    if (now - lastTouchEnd <= 320) event.preventDefault();
-    lastTouchEnd = now;
-  };
-  document.addEventListener('touchend', blockDoubleTapZoom, { passive: false });
-
-  /* El pellizco de Safari sobre el chrome (no sobre el lienzo) sólo desalinea. */
   const blockGestureZoom = (event: Event) => event.preventDefault();
   document.addEventListener('gesturestart', blockGestureZoom);
 
   return () => {
     pointerQuery?.removeEventListener('change', syncPointer);
-    document.removeEventListener('touchend', blockDoubleTapZoom);
     document.removeEventListener('gesturestart', blockGestureZoom);
     stopMessages();
     stopViewport();

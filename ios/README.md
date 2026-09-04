@@ -27,6 +27,7 @@ equipo es una credencial de cada quien, no del repositorio.
 | `AppSchemeHandler.swift` | Sirve el build web bajo `structureco://app`. |
 | `Haptics.swift` | Traducción al motor táptico. |
 | `Sharing.swift` | Hoja de compartir del sistema. |
+| `Resources/PrivacyInfo.xcprivacy` | Manifiesto de privacidad: sin recolección, sin seguimiento. |
 
 **No** hay navegación nativa, ni pestañas, ni pantallas propias, ni almacén
 nativo. Todo eso lo tiene ya la web, y duplicarlo crearía una segunda fuente de

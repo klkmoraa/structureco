@@ -23,6 +23,13 @@ html {
      mitad de lectura. */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* `manipulation` retira el zoom por doble toque de todo el documento y deja
+     intactos el clic y el desplazamiento. Es lo que hay que usar y no un
+     `preventDefault` sobre `touchend`: cancelar ese evento cancela también el
+     `click` sintético, y tocar dos veces seguidas el «+» del zoom perdería la
+     segunda pulsación. El lienzo declara `touch-action: none` por su cuenta y
+     resuelve su propio pellizco con eventos de puntero. */
+  touch-action: manipulation;
   /* El rebote elástico del documento entero delata el marco web: la barra
      superior se despega del borde y debajo aparece el fondo del navegador.
      Las superficies que sí se desplazan lo declaran ellas mismas. */

@@ -65,6 +65,17 @@ sin origen web, se comparte el proyecto como archivo —la misma intención por 
 único camino que funciona—, y con origen web pero sin portapapeles queda la hoja
 de compartir en vez de un error.
 
+**El zoom por doble toque lo quita el CSS, no un oyente.** La primera versión de
+esta capa cancelaba en JavaScript el segundo `touchend` rápido, y eso cancelaba
+también el `click` sintético: tocar dos veces seguidas el «+» del zoom perdía la
+segunda pulsación. `touch-action: manipulation` en la raíz hace justo lo que hay
+que hacer y deja el clic intacto.
+
+**`PrivacyInfo.xcprivacy`.** Apple lo exige desde mayo de 2024 y su contenido es
+una declaración, no un trámite: sin recolección, sin seguimiento y sin APIs de
+las que haya que justificar el uso, porque no hay backend, ni SDK de terceros,
+ni red obligatoria.
+
 **El service worker no se registra dentro del shell.** El contenido viaja en el
 paquete y lo renueva la App Store; un worker ahí sólo añadiría una segunda copia
 del build y un aviso de «hay una versión nueva» que no puede ser cierto.
@@ -116,7 +127,9 @@ PWA, **paridad del puente nativo**, i18n, estilos, 2741 pruebas, build, chunk de
 entrada y presupuesto de rendimiento (1 330 416 / 366 413 gzip, límites
 1 400 000 / 380 000). No se añadió ninguna prueba nueva.
 
-`npm run qa:native-shell`: 12 comprobaciones del puente en verde.
+`npm run qa:native-shell`: 14 comprobaciones en verde, incluido el arrastre de
+hoja con toques reales — `touch-action` en la raíz podría anularlo sin que se
+notara en ninguna otra prueba.
 
 Comprobado además en navegador real (Chromium, iPhone 15 Pro e iPad emulados,
 Día y Noche): el arrastre de hoja descarta a 216 px y vuelve a su sitio a 30 px.

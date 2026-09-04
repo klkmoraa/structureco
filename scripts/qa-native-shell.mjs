@@ -143,10 +143,27 @@ try {
   );
   check('la hoja se presenta con asa', (await page.locator('.sc-modal-surface__grabber').count()) === 1);
 
-  await page.locator('.sc-modal-surface__close').first().click();
-  await page.waitForTimeout(700);
+  // Arrastre para descartar, con toques reales: `touch-action` en la raíz o en
+  // la propia hoja puede anularlo sin que se note en ninguna otra prueba.
+  const cdp = await context.newCDPSession(page);
+  const header = await page.locator('.sc-modal-surface__header').first().boundingBox();
+  const swipe = async (steps, stepPx, pause) => {
+    const x = header.x + header.width / 2;
+    const y = header.y + 20;
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    for (let step = 1; step <= steps; step += 1) {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y + step * stepPx }] });
+      await page.waitForTimeout(pause);
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForTimeout(900);
+    return page.locator('.sc-modal-surface--sheet').count();
+  };
+
+  check('un arrastre corto la devuelve a su sitio', (await swipe(3, 10, 90)) === 1);
+  check('un arrastre largo la descarta', (await swipe(12, 18, 16)) === 0);
   check(
-    'al cerrarla lo devuelve',
+    'al cerrarla devuelve el desplazamiento',
     await page.evaluate(() => window.__nativeMessages.some((m) => m.kind === 'scroll.lock' && m.locked === false)),
   );
 
