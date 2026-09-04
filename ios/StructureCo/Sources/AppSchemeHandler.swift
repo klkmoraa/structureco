@@ -5,29 +5,27 @@ import WebKit
  * Sirve el `dist/` empaquetado bajo un origen propio.
  *
  * Es la pieza que decide si la aplicación arranca o no, y por qué no basta con
- * `loadFileURL`: structureCo se compila a módulos ES y usa Web Workers para el
- * solver. WebKit aplica CORS a `file://` y trata cada archivo como un origen
- * opaco distinto, así que sobre `file://` los `import` fallan, los workers no
+ * cargar un `file://`: structureCo se compila a módulos ES y usa Web Workers
+ * para el solver. WebKit aplica CORS a `file://` y trata cada archivo como un
+ * origen opaco distinto, así que ahí los `import` fallan, los workers no
  * arrancan e IndexedDB —donde vive el Project Hub— no persiste entre sesiones.
  * No es una limitación que se pueda relajar con una bandera.
  *
- * Un `WKURLSchemeHandler` da un origen real (`structureco://app`). Con él los
+ * Un manejador de esquema da un origen real (`structureco://app`). Con él los
  * módulos cargan, los workers arrancan y el almacenamiento es estable. El
  * esquema tiene que ser propio: WebKit no deja interceptar `http` ni `https`.
+ *
+ * `nonisolated` a propósito: el proyecto aísla todo al actor principal por
+ * defecto, y leer archivos del paquete no tiene por qué hacerlo desde ahí.
  */
-final class AppSchemeHandler: NSObject, WKURLSchemeHandler {
+nonisolated struct AppSchemeHandler: URLSchemeHandler {
     static let scheme = "structureco"
     static let host = "app"
     static var indexURL: URL { URL(string: "\(scheme)://\(host)/index.html")! }
 
     /// Carpeta del build web dentro del paquete (`ios/Scripts/sync-web.sh` la llena).
-    private let root: URL
-
-    override init() {
-        root = Bundle.main.url(forResource: "Web", withExtension: nil)
-            ?? Bundle.main.bundleURL.appendingPathComponent("Web")
-        super.init()
-    }
+    private let root: URL = Bundle.main.url(forResource: "Web", withExtension: nil)
+        ?? Bundle.main.bundleURL.appendingPathComponent("Web")
 
     private static let mimeTypes: [String: String] = [
         "html": "text/html; charset=utf-8",
@@ -49,47 +47,60 @@ final class AppSchemeHandler: NSObject, WKURLSchemeHandler {
         "map": "application/json; charset=utf-8",
     ]
 
-    func webView(_ webView: WKWebView, start urlSchemeTask: WKURLSchemeTask) {
-        guard let url = urlSchemeTask.request.url else {
-            urlSchemeTask.didFailWithError(URLError(.badURL))
-            return
-        }
+    /**
+     * La respuesta es una secuencia: primero la cabecera, después el cuerpo.
+     *
+     * Los archivos del paquete se leen enteros de disco local, así que la
+     * secuencia siempre emite dos elementos y termina. La forma asíncrona no es
+     * un rodeo: es lo que permitiría servir por partes un expediente grande sin
+     * cambiar nada de lo que hay aquí.
+     */
+    func reply(for request: URLRequest) -> AsyncThrowingStream<URLSchemeTaskResult, any Error> {
+        AsyncThrowingStream { continuation in
+            guard let url = request.url else {
+                continuation.finish(throwing: URLError(.badURL))
+                return
+            }
 
-        var relative = url.path
-        if relative.isEmpty || relative == "/" { relative = "/index.html" }
+            var relative = url.path
+            if relative.isEmpty || relative == "/" { relative = "/index.html" }
 
-        // `..` en la ruta pedida no puede salir de la carpeta servida: es el
-        // único control de acceso que hay entre la web y el resto del paquete.
-        let candidate = root.appendingPathComponent(relative).standardizedFileURL
-        guard candidate.path.hasPrefix(root.standardizedFileURL.path) else {
-            urlSchemeTask.didFailWithError(URLError(.noPermissionsToReadFile))
-            return
-        }
+            // `..` en la ruta pedida no puede salir de la carpeta servida: es el
+            // único control de acceso entre la web y el resto del paquete.
+            let candidate = root.appendingPathComponent(relative).standardizedFileURL
+            guard candidate.path.hasPrefix(root.standardizedFileURL.path) else {
+                continuation.finish(throwing: URLError(.noPermissionsToReadFile))
+                return
+            }
 
-        guard let data = try? Data(contentsOf: candidate) else {
+            if let data = try? Data(contentsOf: candidate) {
+                let type = Self.mimeTypes[candidate.pathExtension.lowercased()] ?? "application/octet-stream"
+                Self.emit(data: data, url: url, mimeType: type, into: continuation)
+                return
+            }
+
             // Una SPA resuelve sus propias rutas, así que una ruta *sin
             // extensión* que no existe es navegación y se responde con el
             // documento de entrada. Un `.js` o un `.css` que falta es otra cosa
             // —un error real— y devolver HTML ahí lo enmascararía tras un fallo
             // de tipo MIME imposible de diagnosticar.
-            if candidate.pathExtension.isEmpty,
-               let fallback = try? Data(contentsOf: root.appendingPathComponent("index.html")) {
-                respond(task: urlSchemeTask, url: url, data: fallback, mimeType: "text/html; charset=utf-8")
-            } else {
-                urlSchemeTask.didFailWithError(URLError(.fileDoesNotExist))
+            guard
+                candidate.pathExtension.isEmpty,
+                let fallback = try? Data(contentsOf: root.appendingPathComponent("index.html"))
+            else {
+                continuation.finish(throwing: URLError(.fileDoesNotExist))
+                return
             }
-            return
+            Self.emit(data: fallback, url: url, mimeType: "text/html; charset=utf-8", into: continuation)
         }
-
-        let type = Self.mimeTypes[candidate.pathExtension.lowercased()] ?? "application/octet-stream"
-        respond(task: urlSchemeTask, url: url, data: data, mimeType: type)
     }
 
-    func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {
-        // Las respuestas son síncronas y completas: no hay trabajo que cancelar.
-    }
-
-    private func respond(task: WKURLSchemeTask, url: URL, data: Data, mimeType: String) {
+    private static func emit(
+        data: Data,
+        url: URL,
+        mimeType: String,
+        into continuation: AsyncThrowingStream<URLSchemeTaskResult, any Error>.Continuation
+    ) {
         let response = HTTPURLResponse(
             url: url,
             statusCode: 200,
@@ -103,8 +114,8 @@ final class AppSchemeHandler: NSObject, WKURLSchemeHandler {
                 "Cache-Control": "no-cache",
             ]
         )!
-        task.didReceive(response)
-        task.didReceive(data)
-        task.didFinish()
+        continuation.yield(.response(response))
+        continuation.yield(.data(data))
+        continuation.finish()
     }
 }

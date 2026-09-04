@@ -1,23 +1,29 @@
 import Observation
 import SwiftUI
+import WebKit
 
 /**
- * Estado del puente, observable.
+ * El puente, y la página que lo habla.
  *
  * Es el único punto donde se traduce el vocabulario de
  * `src/platform/nativeBridge.ts` a estado de SwiftUI. Un mensaje del anfitrión
  * entra por `receive(...)` y sale convertido en una propiedad; a partir de ahí
  * la vista reacciona sola y nadie tiene que llamar a `setNeedsX` ni recordar
- * qué hay que refrescar. Ése es exactamente el trabajo que en UIKit había que
- * escribir a mano.
+ * qué hay que refrescar.
+ *
+ * El modelo es además dueño del `WebPage`. No es una comodidad: la página tiene
+ * que existir configurada —con su manejador de esquema y su canal de
+ * mensajes— antes de que la vista la pinte, y `WebPage` es ya observable, así
+ * que sostenerla aquí evita un segundo objeto que sincronizar con éste.
  */
 @Observable
+@MainActor
 final class NativeBridgeModel {
     /// Contenido de la barra de estado. `nil` deja decidir al sistema.
     var interfaceScheme: ColorScheme?
     /// Archivo o enlace pendiente de compartir; presenta la hoja del sistema.
     var shareItem: ShareItem?
-    /// El desplazamiento del `WKScrollView` mientras hay una hoja abierta.
+    /// El desplazamiento del anfitrión mientras hay una hoja abierta.
     var scrollLocked = false
     /// Retroalimentación háptica pendiente y su disparador.
     private(set) var feedback: SensoryFeedback?
@@ -26,27 +32,38 @@ final class NativeBridgeModel {
     /// `true` en cuanto la web responde `app.ready` con una versión compatible.
     private(set) var ready = false
 
+    /// La página web. La vista la pinta; nadie más la toca.
+    let page: WebPage
+
     /// Alto de la ventana, para medir cuánto tapa el teclado.
     @ObservationIgnored var windowHeight: CGFloat = 0
-    /// Puente hacia la web. Lo instala `WebView` al crear el `WKWebView`.
-    @ObservationIgnored var send: (([String: Any]) -> Void)?
     /// Archivo que llegó antes de que la web pudiera recibirlo.
     @ObservationIgnored private var pendingOpen: URL?
+    @ObservationIgnored private let relay = MessageRelay()
 
     struct ShareItem: Identifiable {
         let id = UUID()
         let items: [Any]
     }
 
+    init() {
+        var configuration = WebPage.Configuration()
+        if let scheme = URLScheme(AppSchemeHandler.scheme) {
+            configuration.urlSchemeHandlers[scheme] = AppSchemeHandler()
+        }
+        configuration.userContentController.add(relay, name: "structureco")
+        page = WebPage(configuration: configuration, navigationDecider: ExternalLinkDecider())
+        relay.model = self
+        page.load(URLRequest(url: AppSchemeHandler.indexURL))
+    }
+
     // MARK: - Web → nativo
 
     /**
-     * Un mensaje del `WKScriptMessageHandler`. Devuelve `false` cuando el
-     * cuerpo no es del puente, para que quien llama pueda ignorarlo en vez de
-     * adivinar.
+     * Un mensaje del canal. Devuelve `false` cuando el cuerpo no es del puente,
+     * para que quien llama pueda ignorarlo en vez de adivinar.
      */
     @discardableResult
-    @MainActor
     func receive(_ body: [String: Any]) -> Bool {
         guard let kind = body["kind"] as? String else { return false }
 
@@ -115,8 +132,8 @@ final class NativeBridgeModel {
      * estilo: `verify:native-bridge` lee los `case "…"` del shell como los
      * mensajes del puente que atiende. Un `switch` sobre un valor de estilo
      * («heavy», «warning») entraría ahí como un mensaje que la web no declara y
-     * el gate fallaría con seis desajustes inventados. En este shell, un
-     * `case "…"` significa exactamente una cosa: un `kind` del contrato.
+     * el gate fallaría con desajustes inventados. En este shell, un `case "…"`
+     * significa exactamente una cosa: un `kind` del contrato.
      */
     private static let impactWeights: [String: SensoryFeedback.Weight] = [
         "light": .light,
@@ -142,8 +159,24 @@ final class NativeBridgeModel {
 
     // MARK: - Nativo → web
 
+    /**
+     * Entrega un mensaje a la web.
+     *
+     * Va por `callJavaScript` y no por una cadena concatenada: los argumentos
+     * viajan tipados y la carga —un expediente en base64 puede pesar megas— no
+     * tiene que atravesar el analizador de JavaScript como texto fuente.
+     */
+    private func send(_ message: [String: Any]) {
+        Task {
+            try? await page.callJavaScript(
+                "window.StructureCoNative?.receive(message)",
+                arguments: ["message": message]
+            )
+        }
+    }
+
     func publishSafeArea(_ insets: EdgeInsets) {
-        send?([
+        send([
             "kind": "safeArea",
             "insets": [
                 "top": insets.top,
@@ -155,15 +188,14 @@ final class NativeBridgeModel {
     }
 
     func publishKeyboard(height: CGFloat) {
-        send?(["kind": "keyboard", "height": max(0, height)])
+        send(["kind": "keyboard", "height": max(0, height)])
     }
 
     func publishLifecycle(phase: String) {
-        send?(["kind": "lifecycle", "phase": phase])
+        send(["kind": "lifecycle", "phase": phase])
     }
 
     /// «Abrir con structureCo» desde Archivos, Correo o AirDrop.
-    @MainActor
     func open(url: URL) {
         guard ready else {
             pendingOpen = url
@@ -178,7 +210,7 @@ final class NativeBridgeModel {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let data = try? Data(contentsOf: url) else { return }
-        send?([
+        send([
             "kind": "openFile",
             "filename": url.lastPathComponent,
             "mimeType": Self.mimeTypes[url.pathExtension.lowercased()] ?? "application/octet-stream",
@@ -186,7 +218,6 @@ final class NativeBridgeModel {
         ])
     }
 
-    /// Diccionario y no `switch`: el gate de paridad lee los `case` del puente.
     private static let mimeTypes: [String: String] = [
         "json": "application/json",
         "structureco": "application/x-structureco",
@@ -210,5 +241,45 @@ final class NativeBridgeModel {
         } catch {
             return nil
         }
+    }
+}
+
+/**
+ * El canal web → nativo sigue siendo `WKUserContentController`, que pide un
+ * objeto Objective-C. Este relevo es lo único que queda de esa forma: recibe y
+ * reenvía, sin lógica propia, para que el modelo pueda ser una clase Swift
+ * normal y observable.
+ */
+private final class MessageRelay: NSObject, WKScriptMessageHandler {
+    nonisolated(unsafe) weak var model: NativeBridgeModel?
+
+    // `nonisolated` porque el requisito del protocolo lo es, y el proyecto aísla
+    // todo al actor principal por defecto. WebKit sí entrega estos mensajes en
+    // el hilo principal, y `assumeIsolated` lo afirma donde importa.
+    nonisolated func userContentController(
+        _ controller: WKUserContentController,
+        didReceive message: WKScriptMessage
+    ) {
+        guard let body = message.body as? [String: Any] else { return }
+        MainActor.assumeIsolated { model?.receive(body) }
+    }
+}
+
+/**
+ * La aplicación vive entera en su propio esquema. Cualquier otra cosa es un
+ * enlace externo y va a Safari: abrirlo dentro dejaría al usuario atrapado en
+ * una web sin barra de direcciones ni botón de volver.
+ */
+private struct ExternalLinkDecider: WebPage.NavigationDeciding {
+    func decidePolicy(
+        for action: WebPage.NavigationAction,
+        preferences: inout WebPage.NavigationPreferences
+    ) async -> WKNavigationActionPolicy {
+        guard let url = action.request.url, let scheme = url.scheme else { return .allow }
+        if scheme == AppSchemeHandler.scheme || scheme == "about" { return .allow }
+        if ["http", "https", "mailto", "tel"].contains(scheme) {
+            await UIApplication.shared.open(url)
+        }
+        return .cancel
     }
 }

@@ -1,9 +1,9 @@
-import Combine
 import SwiftUI
+import WebKit
 
 /**
- * La pantalla. Es toda la interfaz nativa que existe: un `WKWebView` a sangre
- * completa y seis modificadores.
+ * La pantalla. Es toda la interfaz nativa que existe: la página web a sangre
+ * completa y ocho modificadores.
  *
  * Ese recuento es la decisión de arquitectura, no una casualidad. La interfaz
  * entera de structureCo es la web; aquí no hay navegación, ni pestañas, ni
@@ -17,7 +17,17 @@ struct RootView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            WebView(bridge: bridge, scrollLocked: bridge.scrollLocked)
+            WebView(bridge.page)
+                // El fondo lo pinta la propia web. Sin esto, WebKit dibuja el
+                // suyo por debajo y en Noche asoma una lámina clara al rebotar.
+                .webViewContentBackground(.hidden)
+                // El documento no se desplaza: lo hacen sus paneles, que ya
+                // contienen su propio gesto. Con una hoja abierta se desactiva
+                // del todo, o arrastrarla movería además la vista entera.
+                .webViewScrollInputBehavior(bridge.scrollLocked ? .disabled : .enabled, for: .scroll)
+                // El lienzo estructural resuelve su propio pellizco con eventos
+                // de puntero; el zoom del anfitrión sólo lo desalinearía.
+                .webViewMagnificationGestures(.disabled)
                 // La aplicación llega al borde físico; el inset lo reparte el
                 // CSS con los valores que publica el puente.
                 .ignoresSafeArea()

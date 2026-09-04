@@ -12,24 +12,32 @@
 name: StructureCo
 options:
   bundleIdPrefix: co.structure
-  # iOS 17 es el suelo porque el shell usa `@Observable`, `onChange(of:initial:)`
-  # y `.sensoryFeedback`: las tres son la forma nativa de SwiftUI de hacer lo
-  # que este shell hace, y bajar el suelo obligaría a reintroducir por cada una
-  # el andamiaje UIKit que esta versión retira.
+  # El código usa `WebView`/`WebPage` —la vista web nativa de SwiftUI, de
+  # iOS 26— además de `@Observable`, `onChange(of:initial:)` y
+  # `.sensoryFeedback`. El suelo se declara en 27.0 porque es la versión en la
+  # que se publica; bajarlo a 26.0 no requiere tocar una línea del shell, y por
+  # debajo de ahí habría que reintroducir el `UIViewRepresentable` que esta
+  # versión retira.
   deploymentTarget:
-    iOS: "17.0"
+    iOS: "27.0"
   createIntermediateGroups: true
   generateEmptyDirectories: false
 
 settings:
   base:
-    SWIFT_VERSION: "5.9"
+    SWIFT_VERSION: "6.0"
     MARKETING_VERSION: "0.8.2"
     CURRENT_PROJECT_VERSION: "1"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
     ENABLE_USER_SCRIPT_SANDBOXING: NO
-    SWIFT_STRICT_CONCURRENCY: minimal
+    # Concurrencia estricta de verdad. Con el aislamiento al actor principal por
+    # defecto, un shell de interfaz como éste no necesita anotar `@MainActor` en
+    # cada tipo: lo está todo salvo lo que se marque explícitamente, que es
+    # exactamente el reparto correcto aquí.
+    SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
 
 targets:
   StructureCo:

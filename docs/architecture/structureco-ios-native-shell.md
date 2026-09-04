@@ -82,7 +82,6 @@ declare.
 El estilo de la barra de estado se envía en la convención de UIKit: cuando la
 aplicación está en Noche, el contenido de la barra tiene que ser **claro**, así
 que la web manda `style: 'light'` con tema oscuro. No es un error de signo.
-
 ## 3 · El lado Swift
 
 El shell es **SwiftUI**. `ios/StructureCo/Sources/` es la implementación real y
@@ -92,8 +91,10 @@ los archivos. El detalle de puesta en marcha está en
 
 Todo lo que en una versión UIKit serían delegados es aquí una modificación
 declarativa: `.onOpenURL`, `scenePhase`, `.preferredColorScheme`,
-`.sensoryFeedback`. No hay `AppDelegate`, ni `SceneDelegate`, ni una llamada a
-`setNeedsStatusBarAppearanceUpdate`.
+`.sensoryFeedback`. La vista web es la de SwiftUI —`WebView` sobre un `WebPage`
+observable—, así que tampoco hay `UIViewRepresentable`, ni coordinador, ni ida
+y vuelta manual de estado entre SwiftUI y UIKit. Queda un solo envoltorio,
+`ShareSheet`, por la razón que se explica al final.
 
 **Por qué un esquema propio y no `file://`.** structureCo se compila a módulos
 ES y mueve el solver a Web Workers. WebKit aplica CORS a `file://` y trata cada
@@ -102,21 +103,32 @@ arrancan e IndexedDB no persiste entre sesiones. `AppSchemeHandler` sirve el
 build bajo `structureco://app`, que sí es un origen real. No es una preferencia
 de estilo: sobre `file://` la aplicación no arranca.
 
-### El estado del puente
+### El puente y la página
+
+El modelo es dueño del `WebPage`: la página tiene que existir configurada —con
+su manejador de esquema y su canal de mensajes— antes de que la vista la pinte.
 
 ```swift
 @Observable
+@MainActor
 final class NativeBridgeModel {
     var interfaceScheme: ColorScheme?      // barra de estado
     var shareItem: ShareItem?              // hoja de compartir pendiente
     var scrollLocked = false               // desplazamiento del anfitrión
-    private(set) var feedback: SensoryFeedback?
-    private(set) var feedbackTick = 0
+    let page: WebPage
 
-    @ObservationIgnored var send: (([String: Any]) -> Void)?
+    init() {
+        var configuration = WebPage.Configuration()
+        if let scheme = URLScheme(AppSchemeHandler.scheme) {
+            configuration.urlSchemeHandlers[scheme] = AppSchemeHandler()
+        }
+        configuration.userContentController.add(relay, name: "structureco")
+        page = WebPage(configuration: configuration, navigationDecider: ExternalLinkDecider())
+        relay.model = self
+        page.load(URLRequest(url: AppSchemeHandler.indexURL))
+    }
 
     @discardableResult
-    @MainActor
     func receive(_ body: [String: Any]) -> Bool {
         guard let kind = body["kind"] as? String else { return false }
         switch kind {
@@ -134,15 +146,6 @@ final class NativeBridgeModel {
             // en Noche pide `light`, y eso es declarar el esquema oscuro.
             interfaceScheme = (body["style"] as? String) == "light" ? .dark : .light
 
-        case "share.file":
-            guard
-                let base64 = body["base64"] as? String,
-                let data = Data(base64Encoded: base64),
-                let filename = body["filename"] as? String,
-                let staged = Self.stage(data: data, filename: filename)
-            else { return true }
-            shareItem = ShareItem(items: [staged])
-
         case "scroll.lock":
             scrollLocked = (body["locked"] as? Bool) ?? false
 
@@ -150,6 +153,17 @@ final class NativeBridgeModel {
             return false
         }
         return true
+    }
+
+    /// Argumentos tipados, no una cadena concatenada: un expediente en base64
+    /// puede pesar megas y no tiene por qué atravesar el analizador como texto.
+    private func send(_ message: [String: Any]) {
+        Task {
+            try? await page.callJavaScript(
+                "window.StructureCoNative?.receive(message)",
+                arguments: ["message": message]
+            )
+        }
     }
 }
 ```
@@ -168,7 +182,10 @@ struct RootView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            WebView(bridge: bridge, scrollLocked: bridge.scrollLocked)
+            WebView(bridge.page)
+                .webViewContentBackground(.hidden)
+                .webViewScrollInputBehavior(bridge.scrollLocked ? .disabled : .enabled, for: .scroll)
+                .webViewMagnificationGestures(.disabled)
                 .ignoresSafeArea()
                 .onChange(of: proxy.safeAreaInsets, initial: true) { _, insets in
                     bridge.windowHeight = proxy.size.height + insets.top + insets.bottom
@@ -187,43 +204,27 @@ struct RootView: View {
 }
 ```
 
-### La vista web
+El desplazamiento, el zoom y el fondo son modificadores: lo que antes eran tres
+propiedades del `UIScrollView` ajustadas desde `updateUIView`.
 
-```swift
-struct WebView: UIViewRepresentable {
-    let bridge: NativeBridgeModel
-    let scrollLocked: Bool
+### Lo que sigue siendo UIKit, y por qué
 
-    func makeUIView(context: Context) -> WKWebView {
-        let configuration = WKWebViewConfiguration()
-        configuration.setURLSchemeHandler(AppSchemeHandler(), forURLScheme: AppSchemeHandler.scheme)
-        configuration.userContentController.add(context.coordinator, name: "structureco")
+- **`ShareSheet`** — `ShareLink` es declarativo y pide conocer lo que se
+  comparte al construir la vista; aquí el archivo llega en un mensaje del puente
+  mucho después. Para algo que aparece por un evento y no por un botón,
+  `UIActivityViewController` desde un `.sheet(item:)` es lo correcto.
+- **`MessageRelay`** — el canal web → nativo sigue pidiendo un objeto
+  Objective-C. Son seis líneas que reciben y reenvían, sin lógica propia, para
+  que el modelo pueda ser una clase Swift normal y observable.
 
-        let webView = WKWebView(frame: .zero, configuration: configuration)
-        // El rebote elástico despega la barra superior del borde y delata el
-        // marco web; el documento no se desplaza, lo hacen sus paneles.
-        webView.scrollView.bounces = false
-        webView.scrollView.contentInsetAdjustmentBehavior = .never
-        context.coordinator.attach(webView: webView)
-        webView.load(URLRequest(url: AppSchemeHandler.indexURL))
-        return webView
-    }
+### Versión mínima y concurrencia
 
-    func updateUIView(_ webView: WKWebView, context: Context) {
-        webView.scrollView.isScrollEnabled = !scrollLocked
-    }
-}
-```
-
-El envío hacia la web es una clausura que el coordinador instala en el modelo:
-serializa el diccionario y llama a `window.StructureCoNative?.receive(json)` con
-`evaluateJavaScript`.
-
-Quedan **dos** envoltorios de UIKit y ninguno por comodidad: `WebView`, porque
-SwiftUI no tiene vista web propia en este objetivo de despliegue; y
-`ShareSheet`, porque `ShareLink` es declarativo y pide conocer lo que se
-comparte al construir la vista, mientras que aquí el archivo llega en un mensaje
-del puente mucho después.
+El suelo declarado es **iOS 27**. El código usa APIs de **iOS 26** —`WebView`,
+`WebPage`, `URLSchemeHandler`—, así que bajarlo a 26.0 no requiere tocar una
+línea. El proyecto compila en **Swift 6** con concurrencia estricta completa y
+aislamiento al actor principal por defecto; `AppSchemeHandler` y el relevo de
+mensajes se marcan `nonisolated` porque servir archivos y recibir un mensaje del
+protocolo no tienen por qué ocupar ese actor.
 
 ## 4 · Lo que el shell nativo **no** debe hacer
 

@@ -22,9 +22,8 @@ equipo es una credencial de cada quien, no del repositorio.
 | Archivo | Responsabilidad |
 |---|---|
 | `StructureCoApp.swift` | `App` de SwiftUI con su `WindowGroup`. Nada más. |
-| `RootView.swift` | La pantalla: la vista web y seis modificadores. |
-| `NativeBridgeModel.swift` | Estado observable; traduce el puente a propiedades. |
-| `WebView.swift` | `UIViewRepresentable` del `WKWebView` y su coordinador. |
+| `RootView.swift` | La pantalla: la vista web y ocho modificadores. |
+| `NativeBridgeModel.swift` | Estado observable y dueño del `WebPage`. |
 | `AppSchemeHandler.swift` | Sirve el build web bajo `structureco://app`. |
 | `ShareSheet.swift` | `UIActivityViewController` presentado desde `.sheet`. |
 | `Resources/PrivacyInfo.xcprivacy` | Manifiesto de privacidad: sin recolección, sin seguimiento. |
@@ -35,28 +34,44 @@ verdad que se desincroniza.
 
 ## SwiftUI, y qué queda de UIKit
 
-Todo lo que era un delegado es ahora una modificación declarativa: la apertura
-de archivos es `.onOpenURL`, el segundo plano es `scenePhase`, la barra de
-estado es `.preferredColorScheme` y las hápticas son `.sensoryFeedback`. No hay
+Todo lo que era un delegado es una modificación declarativa: la apertura de
+archivos es `.onOpenURL`, el segundo plano es `scenePhase`, la barra de estado
+es `.preferredColorScheme` y las hápticas son `.sensoryFeedback`. No hay
 `AppDelegate`, ni `SceneDelegate`, ni `UIWindow` montada a mano, ni una sola
 llamada a `setNeedsStatusBarAppearanceUpdate`.
 
-Quedan **dos** envoltorios de UIKit, y ninguno por comodidad:
+La vista web es la de SwiftUI: `WebView(page)` sobre un `WebPage` observable, no
+un `UIViewRepresentable` alrededor de `WKWebView`. Con eso desaparecen el
+coordinador, `makeUIView`/`updateUIView` y el ida y vuelta manual de estado
+entre SwiftUI y UIKit; el desplazamiento, el zoom y el fondo pasan a ser
+modificadores (`webViewScrollInputBehavior`, `webViewMagnificationGestures`,
+`webViewContentBackground`), y el envío al JavaScript va por
+`page.callJavaScript` con argumentos tipados en vez de una cadena concatenada.
 
-- **`WebView`** — SwiftUI no tiene vista web propia en este objetivo de
-  despliegue. `UIViewRepresentable` es la forma correcta de usar `WKWebView`, y
-  el envoltorio se mantiene fino a propósito: todo el estado vive en
-  `NativeBridgeModel` y aquí sólo quedan la creación de la vista y el despacho.
-- **`ShareSheet`** — `ShareLink` existe, pero es declarativo: pide conocer lo
-  que se comparte al construir la vista, y aquí el archivo llega en un mensaje
-  del puente mucho después. Para compartir algo que aparece por un evento y no
-  por un botón, `UIActivityViewController` desde un `.sheet(item:)` es lo
-  correcto.
+Queda **un** envoltorio de UIKit, y no por comodidad: **`ShareSheet`**.
+`ShareLink` existe, pero es declarativo —pide conocer lo que se comparte al
+construir la vista— y aquí el archivo llega en un mensaje del puente mucho
+después. Para compartir algo que aparece por un evento y no por un botón,
+`UIActivityViewController` desde un `.sheet(item:)` es lo correcto.
 
-El suelo es **iOS 17** porque `@Observable`, `onChange(of:initial:)` y
-`.sensoryFeedback` son la forma nativa de SwiftUI de hacer lo que este shell
-hace. Bajarlo obligaría a reintroducir, una por una, el andamiaje UIKit que
-esta versión retira.
+El canal web → nativo sigue siendo `WKUserContentController`, que pide un objeto
+Objective-C; `MessageRelay` es un relevo de seis líneas que recibe y reenvía,
+para que el modelo pueda ser una clase Swift normal y observable.
+
+## Versión mínima y concurrencia
+
+El suelo declarado es **iOS 27**, la versión en la que se publica. El código usa
+APIs de **iOS 26** —`WebView`, `WebPage`, `URLSchemeHandler`— además de
+`@Observable`, `onChange(of:initial:)` y `.sensoryFeedback`, así que bajar el
+suelo a 26.0 no requiere tocar una línea. Por debajo de ahí habría que
+reintroducir el `UIViewRepresentable` que esta versión retira.
+
+El proyecto compila en **Swift 6 con concurrencia estricta completa** y
+aislamiento al actor principal por defecto
+(`SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor`). Un shell de interfaz como éste lo
+está entero salvo lo que se marque: `AppSchemeHandler` es `nonisolated` porque
+leer archivos del paquete no tiene por qué ocupar el actor principal, y el
+relevo de mensajes también, porque el requisito del protocolo lo es.
 
 ## Las tres decisiones que importan
 

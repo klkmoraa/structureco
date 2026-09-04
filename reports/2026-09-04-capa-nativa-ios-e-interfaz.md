@@ -40,7 +40,7 @@ y al fondo real de la aplicación.
 
 ## Segundo tramo · el shell existe y el puente se comprueba
 
-**`ios/` es una aplicación real, en SwiftUI.** Seis archivos: `WKWebView` a
+**`ios/` es una aplicación real, en SwiftUI.** Cinco archivos: `WKWebView` a
 pantalla completa, insets, teclado, hápticas, hoja de compartir, barra de estado,
 bloqueo de desplazamiento y apertura de archivos del sistema. El
 `.xcodeproj` no se versiona —lo genera XcodeGen desde `ios/project.yml`— ni el
@@ -49,13 +49,22 @@ build web dentro del paquete —lo copia `ios/Scripts/sync-web.sh`—.
 Todo lo que sería un delegado es una modificación declarativa: `.onOpenURL`,
 `scenePhase`, `.preferredColorScheme`, `.sensoryFeedback`. No hay `AppDelegate`,
 ni `SceneDelegate`, ni `UIWindow` montada a mano, ni una llamada a
-`setNeedsStatusBarAppearanceUpdate`. Quedan dos envoltorios de UIKit y ninguno
-por comodidad: `WebView`, porque SwiftUI no tiene vista web propia en este
-objetivo de despliegue; y `ShareSheet`, porque `ShareLink` es declarativo y pide
-conocer lo que se comparte al construir la vista, mientras que aquí el archivo
-llega en un mensaje del puente mucho después. El suelo es iOS 17 porque
-`@Observable`, `onChange(of:initial:)` y `.sensoryFeedback` son la forma nativa
-de hacer lo que este shell hace.
+`setNeedsStatusBarAppearanceUpdate`.
+
+La vista web es la de SwiftUI —`WebView` sobre un `WebPage` observable—, así que
+tampoco hay `UIViewRepresentable`, ni coordinador, ni `makeUIView`/`updateUIView`,
+ni ida y vuelta manual de estado entre SwiftUI y UIKit. El desplazamiento, el
+zoom y el fondo son modificadores, y el envío al JavaScript va por
+`page.callJavaScript` con argumentos tipados en vez de una cadena concatenada.
+Queda un solo envoltorio, `ShareSheet`, porque `ShareLink` es declarativo y pide
+conocer lo que se comparte al construir la vista mientras que aquí el archivo
+llega en un mensaje del puente mucho después; más `MessageRelay`, seis líneas
+porque el canal web → nativo sigue pidiendo un objeto Objective-C.
+
+El suelo declarado es iOS 27. El código usa APIs de iOS 26 —`WebView`,
+`WebPage`, `URLSchemeHandler`—, así que bajarlo a 26.0 no requiere tocar una
+línea. El proyecto compila en Swift 6 con concurrencia estricta completa y
+aislamiento al actor principal por defecto.
 
 La decisión que decide si arranca o no: **esquema propio, no `file://`**.
 structureCo se compila a módulos ES y mueve el solver a Web Workers; WebKit
@@ -148,8 +157,10 @@ Día y Noche): el arrastre de hoja descarta a 216 px y vuelve a su sitio a 30 px
 ## Abierto
 
 - **El shell iOS no se ha compilado nunca.** No hay macOS aquí ni en CI, así que
-  los seis archivos Swift están escritos contra la documentación de SwiftUI y
-  WebKit pero sin pasar por un compilador. Lo que sí está verificado es el lado
+  los cinco archivos Swift están escritos contra la documentación de SwiftUI y
+  WebKit pero sin pasar por un compilador. El riesgo se concentra ahora en
+  `WebView`/`WebPage`: son las APIs más recientes que usa el shell y las que
+  más probablemente necesiten un ajuste de firma en el primer build. Lo que sí está verificado es el lado
   web del puente, que es donde una regresión pasaría inadvertida. La primera
   ejecución en Xcode puede necesitar retoques.
 - `DEVELOPMENT_TEAM` va vacío en `ios/project.yml`: un identificador de equipo
