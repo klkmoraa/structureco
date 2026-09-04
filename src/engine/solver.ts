@@ -31,15 +31,18 @@ import { classifyAnalysisReliability } from './reliability';
 import {
   addToMatrix,
   addToVector,
+  factorizeLinearSystem,
   findNullSpaceVector,
   maxAbs,
   multiply,
   multiplyMatrixVector,
+  solveFactorized,
   solveLinearSystem,
   submatrix,
   subvector,
   transpose,
   zeros,
+  type FactorizationCache,
   type Matrix,
 } from './math';
 
@@ -592,9 +595,12 @@ export const condenseConnections = (
   const fb = subvector(augmentedF, internal);
   // Static condensation without forming Kbb^-1 explicitly:
   // Kbar = Kaa - Kab X, with Kbb X = Kba.
-  const solvedColumns = transpose(kba).map((column) => solveLinearSystem(kbb, column, { backend: linearBackend }).x);
+  // Kbb es la misma matriz para las seis columnas y para fb: se factoriza una
+  // vez y se resuelve siete veces, en lugar de refactorizarla en cada columna.
+  const kbbFactorization = factorizeLinearSystem(kbb, { backend: linearBackend });
+  const solvedColumns = transpose(kba).map((column) => solveFactorized(kbbFactorization, column).x);
   const kbbInverseTimesKba = transpose(solvedColumns);
-  const kbbInverseTimesFb = solveLinearSystem(kbb, fb, { backend: linearBackend }).x;
+  const kbbInverseTimesFb = solveFactorized(kbbFactorization, fb).x;
   const correctionK = multiply(kab, kbbInverseTimesKba);
   const correctionF = multiplyMatrixVector(kab, kbbInverseTimesFb);
   const condensedK = kaa.map((row, i) => row.map((value, j) => value - correctionK[i][j]));
@@ -1479,6 +1485,15 @@ export interface AnalyzeProjectOptions {
   includeEducationTrace?: boolean;
   /** Internal run-wide policy; P-Delta uses `dense` to stay isolated from sparse. */
   linearBackend?: LinearSolverPolicy;
+  /**
+   * Caché de factorización compartida por una serie de análisis que sabe que
+   * comparten rigidez —una envolvente de combinaciones, un barrido de línea de
+   * influencia—, donde sólo cambia el término independiente. La caché comprueba
+   * la igualdad exacta de la matriz antes de reutilizar nada, así que pasarla
+   * cuando la rigidez *sí* cambia sólo cuesta una comparación y nunca devuelve
+   * una factorización ajena.
+   */
+  factorizationCache?: FactorizationCache;
 }
 
 export const analyzeProject = (
@@ -1826,10 +1841,13 @@ export const analyzeProject = (
     }
     const scaledB = b.map((value, i) => value * diagonalScale[i]);
     profileEnd('assembly', assemblyStart);
-    let solved: ReturnType<typeof solveLinearSystem>;
+    let solved: ReturnType<typeof solveFactorized>;
     const linearSolveStart = profileStart();
     try {
-      solved = solveLinearSystem(scaledA, scaledB, { backend: options?.linearBackend });
+      const factorization = options?.factorizationCache
+        ? options.factorizationCache.acquire(scaledA, { backend: options?.linearBackend })
+        : factorizeLinearSystem(scaledA, { backend: options?.linearBackend });
+      solved = solveFactorized(factorization, scaledB);
     } catch (error) {
       const nullSpace = findNullSpaceVector(scaledA, ndof);
       if (nullSpace.vector) {

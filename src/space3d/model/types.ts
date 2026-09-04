@@ -22,15 +22,15 @@
  *   · Acciones internas de una estación: `N` positivo en tracción y el resto
  *     medidos sobre la cara positiva del corte (normal saliente `+x`).
  */
-import type { UnitSystemId } from '../../types';
+import type { CustomUnitSystem, UnitSystemId } from '../../types';
 
-export const SPACE3D_SCHEMA_VERSION = 2 as const;
+export const SPACE3D_SCHEMA_VERSION = 3 as const;
 /**
- * Versiones que el lector portable acepta. La 1 (S3D-1) se migra al abrirse:
- * un archivo antiguo nunca se rechaza por ser antiguo, se completa con los
- * neutros del esquema actual.
+ * Versiones que el lector portable acepta. S3D-1 y S3D-2 se migran al abrirse:
+ * un archivo antiguo nunca se rechaza por ser antiguo y se completa con los
+ * neutros o metadatos del esquema actual.
  */
-export const SPACE3D_READABLE_SCHEMA_VERSIONS = Object.freeze([1, 2] as const);
+export const SPACE3D_READABLE_SCHEMA_VERSIONS = Object.freeze([1, 2, 3] as const);
 export const SPACE3D_ANALYSIS_SPACE = 'space-3d' as const;
 
 /** Aceleración de la gravedad, m/s². Fija: el peso propio no es un ajuste de usuario. */
@@ -237,6 +237,8 @@ export interface Space3DProject {
   readonly id: string;
   readonly name: string;
   readonly units: UnitSystemId;
+  /** Definiciones portables para cualquier identificador `custom:*` activo. */
+  readonly customUnitSystems: readonly CustomUnitSystem[];
   readonly nodes: readonly Space3DNode[];
   readonly members: readonly Space3DFrameMember[];
   readonly nodalLoads: readonly Space3DNodalLoad[];

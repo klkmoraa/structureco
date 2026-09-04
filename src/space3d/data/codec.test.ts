@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { parseSpace3DProject, serializeSpace3DProject } from './codec';
 import { createBlankSpace3DProject, createSpace3DPortalExample } from '../model/defaultProject';
-import { SPACE3D_LIMITS } from '../model/types';
+import { SPACE3D_LIMITS, SPACE3D_SCHEMA_VERSION } from '../model/types';
+import { MAX_CUSTOM_UNIT_SYSTEMS } from '../../engine/unitSystems';
 
 const project = createSpace3DPortalExample();
 
@@ -50,12 +51,64 @@ describe('Space3D portable codec', () => {
     };
 
     const migrated = parseSpace3DProject(JSON.stringify(legacy));
-    expect(migrated.schemaVersion).toBe(2);
+    expect(migrated.schemaVersion).toBe(SPACE3D_SCHEMA_VERSION);
+    expect(migrated.customUnitSystems).toEqual([]);
     expect(migrated.memberLoads).toEqual([]);
     expect(migrated.settlements).toEqual([]);
     expect(migrated.nodes.every((node) => node.springs.uy === 0)).toBe(true);
     expect(migrated.members.every((member) => member.density === 0 && !member.releases.iMz)).toBe(true);
     expect(migrated.loadCases.every((item) => item.selfWeightFactor === 0)).toBe(true);
+  });
+
+  it('migra S3D-2 y aplica el fallback seguro a un id propio que no podía definir', () => {
+    const { customUnitSystems: _customUnitSystems, ...schema2 } = project;
+    const migrated = parseSpace3DProject(JSON.stringify({
+      ...schema2,
+      schemaVersion: 2,
+      units: 'custom:legacy-without-definition',
+    }));
+
+    expect(migrated.schemaVersion).toBe(SPACE3D_SCHEMA_VERSION);
+    expect(migrated.units).toBe('kN-m');
+    expect(migrated.customUnitSystems).toEqual([]);
+  });
+
+  it('hace round-trip de la definición completa de un sistema propio', () => {
+    const custom = {
+      ...project,
+      units: 'custom:site' as const,
+      customUnitSystems: [{
+        id: 'custom:site' as const,
+        name: 'Obra métrica',
+        force: 'tonf' as const,
+        length: 'm' as const,
+        sectionLength: 'cm' as const,
+        sectionDimension: 'mm' as const,
+        modulus: 'MPa' as const,
+        density: 't/m3' as const,
+      }],
+    };
+
+    expect(parseSpace3DProject(serializeSpace3DProject(custom))).toEqual(custom);
+  });
+
+  it('rechaza ids propios huérfanos y más definiciones de las que puede persistir', () => {
+    expect(() => parseSpace3DProject(JSON.stringify({
+      ...project,
+      units: 'custom:missing',
+    }))).toThrow(/invalid-model/);
+
+    const customUnitSystems = Array.from({ length: MAX_CUSTOM_UNIT_SYSTEMS + 1 }, (_, index) => ({
+      id: `custom:test-${index}`,
+      name: `Test ${index}`,
+      force: 'kN',
+      length: 'm',
+      sectionLength: 'm',
+      sectionDimension: 'mm',
+      modulus: 'MPa',
+      density: 'kg/m3',
+    }));
+    expect(() => parseSpace3DProject(JSON.stringify({ ...project, customUnitSystems }))).toThrow(/limit-exceeded/);
   });
 
 

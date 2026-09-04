@@ -1,4 +1,6 @@
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { PRESET_UNIT_SYSTEM_IDS } from '../../engine/unitSystems';
+import { unitSystemLabel } from '../../engine/units';
 import {
   Check,
   ChevronDown,
@@ -167,12 +169,7 @@ export function TopBarConceptLab({ locale, onEvent }: TopBarConceptLabProps) {
     { value: 'complete', label: t.complete },
     { value: 'classroom', label: t.classroom },
   ];
-  const unitOptions = [
-    { value: 'kN-m', label: 'kN · m' },
-    { value: 'N-mm', label: 'N · mm' },
-    { value: 'kgf-m', label: 'kgf · m' },
-    { value: 'kip-ft', label: 'kip · ft' },
-  ];
+  const unitOptions = PRESET_UNIT_SYSTEM_IDS.map((id) => ({ value: id, label: unitSystemLabel(id) }));
 
   const setContextValue = (
     setter: (value: string) => void,

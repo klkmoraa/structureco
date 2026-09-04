@@ -192,4 +192,39 @@ describe('P-Delta settings survive normalization', () => {
     const broken = { ...source, settings: { ...source.settings, analysisMode: 'segundo-orden' } };
     expect(() => normalizeProject(JSON.parse(JSON.stringify(broken)))).toThrow();
   });
+
+  it('conserva los sistemas de unidades propios del proyecto y el que está activo', () => {
+    const source = createDefaultProject();
+    const custom = {
+      id: 'custom:tn-m', name: 'Tn · m de obra', force: 'tonf', length: 'm',
+      sectionLength: 'cm', sectionDimension: 'cm', modulus: 'kgf/cm2', density: 't/m3',
+    };
+    const withCustom = { ...source, settings: { ...source.settings, units: 'custom:tn-m', customUnitSystems: [custom] } };
+
+    const normalized = normalizeProject(JSON.parse(JSON.stringify(withCustom)));
+
+    expect(normalized.settings.units).toBe('custom:tn-m');
+    expect(normalized.settings.customUnitSystems).toEqual([custom]);
+  });
+
+  it('sólo admite unidades elementales del catálogo, no factores arbitrarios', () => {
+    const source = createDefaultProject();
+    const forged = {
+      ...source,
+      settings: {
+        ...source.settings,
+        customUnitSystems: [{
+          id: 'custom:forjado', name: 'Forjado', force: 'kN', length: 'parsec',
+          sectionLength: 'cm', sectionDimension: 'cm', modulus: 'MPa', density: 'kg/m3',
+        }],
+      },
+    };
+    expect(() => normalizeProject(JSON.parse(JSON.stringify(forged)))).toThrow(/customUnitSystems\[0\]\.length/);
+  });
+
+  it('devuelve al sistema por defecto cuando el activo ya no está declarado', () => {
+    const source = createDefaultProject();
+    const orphan = { ...source, settings: { ...source.settings, units: 'custom:borrado' } };
+    expect(normalizeProject(JSON.parse(JSON.stringify(orphan))).settings.units).toBe(source.settings.units);
+  });
 });

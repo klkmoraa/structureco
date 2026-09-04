@@ -54,6 +54,7 @@ const buildLattice = (nodeCount: number, memberCount: number): Space3DProject =>
     id: `capacity-${nodeCount}`,
     name: `capacity-${nodeCount}`,
     units: 'kN-m',
+    customUnitSystems: [],
     nodes,
     members,
     nodalLoads: [{

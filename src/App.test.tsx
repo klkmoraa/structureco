@@ -154,9 +154,9 @@ const openUtilityMenu = async (user: ReturnType<typeof userEvent.setup>) => {
 };
 
 /**
- * CRI-94 / CRI-101 · Resultados es una superficie INVOCADA, no residente:
- * analizar ya no la monta sola, el broker sólo la retiene mientras está pedida.
- * Pedirla es parte del contrato, no un rodeo de la prueba.
+ * CRI-94 / CRI-101 · Resultados es una superficie INVOCADA, no residente. Un
+ * análisis exitoso pide automáticamente su resumen; este helper cubre los
+ * demás flujos que la invocan de forma explícita desde la paleta.
  */
 const openResults = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.keyboard('{Control>}k{/Control}');
@@ -401,10 +401,15 @@ describe('structureCo app shell', () => {
 
     await user.click(screen.getByRole('button', { name: /^analizar$/i }));
 
-    // CRI-94 · analizar NO monta Resultados: la superficie se pide. Que no esté
-    // antes de pedirla es parte del contrato, no un descuido.
-    expect(document.querySelector('.results-panel')).toBeNull();
-    await openResults(user);
+    // Un cálculo nuevo invoca su resumen automáticamente y lo deja recogido en
+    // desktop; la aserción espera el efecto que publica el resultado en vez de
+    // competir con él en el mismo tick.
+    await waitFor(() => expect(document.querySelector('.results-panel')).not.toBeNull());
+    const results = document.querySelector('.results-panel') as HTMLElement;
+    expect(results.classList.contains('desktop-collapsed')).toBe(true);
+    expect(within(results).getByTestId('results-collapsed-status').textContent).toMatch(/resuelto.*actualizado/i);
+    await user.click(within(results).getByRole('button', { name: /abrir resultados/i }));
+    await user.click(await within(results).findByRole('tab', { name: /momento/i }));
 
     await screen.findByTestId('diagram-chart', {}, { timeout: 5_000 });
 

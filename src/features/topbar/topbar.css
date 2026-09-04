@@ -723,6 +723,13 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .topbar--atelier .topbar-panel-field input:focus-visible,
 .topbar--atelier .topbar-panel-field select:focus-visible { outline:none; box-shadow:var(--sc-shadow-clay-pressed),var(--sc-ring-focus); }
 .topbar--atelier .topbar-analysis-panel > p { margin:4px 6px 9px; color:var(--subtle); font-family:var(--sc-font-mono); font-size:9px; font-weight:750; letter-spacing:.08em; text-transform:uppercase; }
+.topbar--atelier .topbar-units { display:grid; gap:4px; }
+.topbar--atelier .topbar-units-summary { margin:0 6px; color:var(--subtle); font-family:var(--sc-font-mono); font-size:9px; font-weight:700; letter-spacing:.06em; text-transform:none; }
+.topbar--atelier .topbar-units-list { display:grid; gap:2px; margin:2px 4px; padding:0; list-style:none; }
+.topbar--atelier .topbar-units-list li { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:2px 4px 2px 8px; border-radius:9px; background:var(--sc-color-surface-inset); font-size:12px; font-weight:650; }
+.topbar--atelier .topbar-units-editor { display:grid; gap:2px; margin:4px; padding:8px 4px; border-top:1px solid var(--sc-color-border-soft); }
+.topbar--atelier .topbar-units-actions { display:flex; gap:6px; margin:6px 4px 0; }
+
 .topbar--atelier .topbar-panel-actions { display:grid; gap:3px; margin-top:9px; padding-top:8px; border-top:1px solid var(--sc-color-border-soft); }
 .topbar--atelier .topbar-project-panel .topbar-panel-actions button,
 .topbar--atelier .topbar-project-compact-utilities button { min-height:40px; }

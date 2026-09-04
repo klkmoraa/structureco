@@ -22,7 +22,7 @@ describe('ViewFavoritesPanel', () => {
     render(<ViewFavoritesPanel language="es" units="kN-m" theme="light" view={readCanvasViewSettings(project)} onApply={onApply} />);
 
     expect(onApply).not.toHaveBeenCalled();
-    expect(screen.getByRole('option', { name: /Revisión limpia.*N-mm/ })).toBeTruthy();
+    expect(screen.getByRole('option', { name: /Revisión limpia.*N · mm/ })).toBeTruthy();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Aplicar vista' }));
     expect(onApply).toHaveBeenCalledOnce();
     expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ kind: 'view', theme: 'dark', view: savedView }));

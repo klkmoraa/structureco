@@ -21,9 +21,18 @@ import {
   type Space3DValidationIssue,
   type Space3DVector,
 } from './types';
+import { isCustomUnitSystemId, isUnitSystemId } from '../../engine/units';
+import {
+  DENSITY_UNITS,
+  FORCE_UNITS,
+  LENGTH_UNITS,
+  MAX_CUSTOM_UNIT_SYSTEMS,
+  STRESS_UNITS,
+} from '../../engine/unitSystems';
 import { buildMemberOrientation, memberLength } from '../engine/orientation';
 
-const PROJECT_FIELDS = ['analysisSpace', 'schemaVersion', 'id', 'name', 'units', 'nodes', 'members', 'nodalLoads', 'memberLoads', 'settlements', 'loadCases', 'loadCombinations'];
+const PROJECT_FIELDS = ['analysisSpace', 'schemaVersion', 'id', 'name', 'units', 'customUnitSystems', 'nodes', 'members', 'nodalLoads', 'memberLoads', 'settlements', 'loadCases', 'loadCombinations'];
+const CUSTOM_UNIT_SYSTEM_FIELDS = ['id', 'name', 'force', 'length', 'sectionLength', 'sectionDimension', 'modulus', 'density'];
 const NODE_FIELDS = ['id', 'x', 'y', 'z', 'restraints', 'springs'];
 const RESTRAINT_FIELDS = ['ux', 'uy', 'uz', 'rx', 'ry', 'rz'];
 const MEMBER_FIELDS = ['id', 'i', 'j', 'E', 'G', 'A', 'Iy', 'Iz', 'J', 'shearAreaY', 'shearAreaZ', 'density', 'releases', 'orientation'];
@@ -40,7 +49,6 @@ const TERM_FIELDS = ['caseId', 'factor'];
 const MEMBER_PROPERTY_FIELDS = ['A', 'E', 'G', 'Iy', 'Iz', 'J'] as const;
 const MEMBER_NON_NEGATIVE_FIELDS = ['shearAreaY', 'shearAreaZ', 'density'] as const;
 
-const UNIT_SYSTEMS = ['kN-m', 'N-mm', 'kgf-m', 'kip-ft'];
 
 const isPositiveFinite = (value: unknown): boolean => typeof value === 'number' && Number.isFinite(value) && value > 0;
 const isNonNegativeFinite = (value: unknown): boolean => typeof value === 'number' && Number.isFinite(value) && value >= 0;
@@ -105,9 +113,36 @@ export const validateSpace3DProject = (project: Space3DProject): readonly Space3
   unknownFields(collect, project, PROJECT_FIELDS, 'project', '');
   if (project.analysisSpace !== SPACE3D_ANALYSIS_SPACE) collect.push('invalid-property', 'project', '', 'analysisSpace');
   if (project.schemaVersion !== SPACE3D_SCHEMA_VERSION) collect.push('invalid-property', 'project', '', 'schemaVersion');
-  if (!UNIT_SYSTEMS.includes(project.units)) collect.push('invalid-property', 'project', '', 'units');
+  if (!isUnitSystemId(project.units)) collect.push('invalid-property', 'project', '', 'units');
   if (typeof project.id !== 'string' || project.id === '') collect.push('empty-id', 'project', '', 'id');
   if (typeof project.name !== 'string') collect.push('invalid-property', 'project', '', 'name');
+
+  const customUnitSystems = Array.isArray(project.customUnitSystems) ? project.customUnitSystems : [];
+  if (!Array.isArray(project.customUnitSystems)) collect.push('invalid-property', 'project', '', 'customUnitSystems');
+  if (customUnitSystems.length > MAX_CUSTOM_UNIT_SYSTEMS) collect.push('limit-exceeded', 'project', '', 'customUnitSystems');
+  const customUnitSystemIds = new Set<string>();
+  const forceIds = new Set(FORCE_UNITS.map((unit) => unit.id));
+  const lengthIds = new Set(LENGTH_UNITS.map((unit) => unit.id));
+  const stressIds = new Set(STRESS_UNITS.map((unit) => unit.id));
+  const densityIds = new Set(DENSITY_UNITS.map((unit) => unit.id));
+  for (const system of customUnitSystems) {
+    const id = typeof system?.id === 'string' ? system.id : '';
+    unknownFields(collect, system, CUSTOM_UNIT_SYSTEM_FIELDS, 'project', id);
+    checkIdentity(collect, system?.id, customUnitSystemIds, 'project');
+    if (!isCustomUnitSystemId(system?.id)) collect.push('invalid-property', 'project', id, 'customUnitSystems.id');
+    if (typeof system?.name !== 'string' || system.name.trim() === '' || system.name.length > 60) {
+      collect.push('invalid-property', 'project', id, 'customUnitSystems.name');
+    }
+    if (!forceIds.has(system?.force)) collect.push('invalid-property', 'project', id, 'customUnitSystems.force');
+    if (!lengthIds.has(system?.length)) collect.push('invalid-property', 'project', id, 'customUnitSystems.length');
+    if (!lengthIds.has(system?.sectionLength)) collect.push('invalid-property', 'project', id, 'customUnitSystems.sectionLength');
+    if (!lengthIds.has(system?.sectionDimension)) collect.push('invalid-property', 'project', id, 'customUnitSystems.sectionDimension');
+    if (!stressIds.has(system?.modulus)) collect.push('invalid-property', 'project', id, 'customUnitSystems.modulus');
+    if (!densityIds.has(system?.density)) collect.push('invalid-property', 'project', id, 'customUnitSystems.density');
+  }
+  if (isCustomUnitSystemId(project.units) && !customUnitSystemIds.has(project.units)) {
+    collect.push('invalid-property', 'project', '', 'units');
+  }
 
   const nodes = Array.isArray(project.nodes) ? project.nodes : [];
   const members = Array.isArray(project.members) ? project.members : [];

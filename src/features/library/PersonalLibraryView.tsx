@@ -3,6 +3,7 @@ import { Copy, Pencil, RotateCcw, Search, Trash2, X } from 'lucide-react';
 import { standardMaterials } from '../../data/standardMaterials';
 import { standardSections } from '../../data/standardSections';
 import type { ThemeMode, UnitSystemId } from '../../types';
+import { unitSystemLabel } from '../../engine/units';
 import type { CanvasViewSettings } from '../view/canvasViewSettings';
 import {
   searchFavorites,
@@ -46,7 +47,7 @@ const favoriteDetails = (favorite: PersonalFavorite, copy: typeof COPY.es | type
   if (favorite.kind === 'material') return `${copy.catalog} · ${favorite.materialId}`;
   if (favorite.kind === 'section') return `${copy.catalog} · ${favorite.sectionId}`;
   if (favorite.kind === 'pair') return `${copy.catalog} · ${favorite.materialId} + ${favorite.sectionId}`;
-  return `${favorite.theme === 'light' ? copy.day : copy.night} · ${copy.units} ${favorite.unitsAtSave}`;
+  return `${favorite.theme === 'light' ? copy.day : copy.night} · ${copy.units} ${unitSystemLabel(favorite.unitsAtSave)}`;
 };
 
 const feedbackFor = (result: LibraryOperationResult, success: string, copy: typeof COPY.es | typeof COPY.en) => result.ok

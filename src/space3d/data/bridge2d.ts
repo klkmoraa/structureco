@@ -374,6 +374,7 @@ export const deriveSpace3DFromPlanarProject = (source: ProjectModel): Space3DBri
     id: derivedSpace3DId(source.id),
     name: source.name,
     units: source.settings.units,
+    customUnitSystems: (source.settings.customUnitSystems ?? []).map((system) => ({ ...system })),
     nodes,
     members,
     nodalLoads,
@@ -442,6 +443,20 @@ export const space3dMatchesPlanarSource = (project: Space3DProject, source: Proj
   if (project.id !== derivedSpace3DId(source.id)) return false;
 
   const expected = deriveSpace3DFromPlanarProject(source).project;
+  if (project.units !== expected.units) return false;
+  for (const system of expected.customUnitSystems) {
+    const twin = project.customUnitSystems.find((candidate) => candidate.id === system.id);
+    if (
+      !twin
+      || twin.name !== system.name
+      || twin.force !== system.force
+      || twin.length !== system.length
+      || twin.sectionLength !== system.sectionLength
+      || twin.sectionDimension !== system.sectionDimension
+      || twin.modulus !== system.modulus
+      || twin.density !== system.density
+    ) return false;
+  }
 
   const nodeById = new Map(project.nodes.map((node) => [node.id, node]));
   for (const node of expected.nodes) {

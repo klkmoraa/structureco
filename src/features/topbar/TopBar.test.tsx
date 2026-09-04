@@ -8,6 +8,8 @@ import { ClassroomSessionProvider } from '../../store/ClassroomSessionContext';
 import { ProjectProvider } from '../../store/ProjectContext';
 import { TopBar } from './TopBar';
 import { onWorkspaceCommand } from '../workspace/workspaceCommands';
+import { MAX_CUSTOM_UNIT_SYSTEMS } from '../../engine/unitSystems';
+import type { CustomUnitSystem } from '../../types';
 
 const TopBarHarness = ({ children }: { children: React.ReactNode }) => <ProjectProvider><ClassroomSessionProvider projectId="topbar-test">{children}</ClassroomSessionProvider></ProjectProvider>;
 
@@ -128,6 +130,32 @@ describe('TopBar portable export', () => {
     await user.click(screen.getByRole('button', { name: 'Configuración de análisis' }));
     expect(screen.queryByRole('combobox', { name: 'Método de procedimiento' })).toBeNull();
     expect(screen.getByRole('combobox', { name: 'Caso o combinación' })).toBeTruthy();
+  });
+
+  it('impide crear más sistemas de unidades de los que el archivo puede guardar', async () => {
+    const user = userEvent.setup();
+    const project = createDefaultProject();
+    project.settings = {
+      ...project.settings,
+      customUnitSystems: Array.from({ length: MAX_CUSTOM_UNIT_SYSTEMS }, (_, index): CustomUnitSystem => ({
+        id: `custom:test-${index}`,
+        name: `Sistema ${index + 1}`,
+        force: 'kN',
+        length: 'm',
+        sectionLength: 'cm',
+        sectionDimension: 'mm',
+        modulus: 'MPa',
+        density: 'kg/m3',
+      })),
+    };
+    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
+
+    await user.click(screen.getByRole('button', { name: 'Configuración de análisis' }));
+    const create = screen.getByRole('button', { name: 'Crear sistema propio' }) as HTMLButtonElement;
+
+    expect(create.disabled).toBe(true);
+    expect(create.title).toContain(String(MAX_CUSTOM_UNIT_SYSTEMS));
   });
 
   it('previews the generated PDF before sharing or downloading that same artifact', async () => {
@@ -320,6 +348,29 @@ describe('TopBar information architecture', () => {
     expect(screen.getByRole('combobox', { name: 'Modo de cálculo' })).toBeTruthy();
     expect(screen.getByRole('combobox', { name: 'Orden del análisis' })).toBeTruthy();
     expect(screen.getByRole('combobox', { name: 'Unidades' })).toBeTruthy();
+  });
+
+  it('compone un sistema de unidades propio y lo deja activo en el proyecto', async () => {
+    const user = userEvent.setup();
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
+
+    await user.click(screen.getByRole('button', { name: 'Configuración de análisis' }));
+    const units = screen.getByRole('combobox', { name: 'Unidades' }) as HTMLSelectElement;
+    // Los presets de fábrica incluyen el sistema tonelada-metro.
+    expect(within(units).getByRole('option', { name: 'Tn · m' })).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: /crear sistema propio/i }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Fuerza' }), 'kgf');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Longitud' }), 'cm');
+    await user.type(screen.getByRole('textbox', { name: 'Nombre' }), 'Taller');
+    await user.click(screen.getByRole('button', { name: 'Añadir sistema' }));
+
+    // Queda guardado, seleccionado y con sus magnitudes derivadas de la
+    // combinación: kgf·cm para el momento, kgf/cm para la carga distribuida.
+    const updated = screen.getByRole('combobox', { name: 'Unidades' }) as HTMLSelectElement;
+    await waitFor(() => expect(within(updated).getByRole('option', { name: 'Taller' })).toBeTruthy());
+    expect(updated.value.startsWith('custom:')).toBe(true);
+    expect(document.querySelector('.topbar-units-summary')?.textContent).toContain('kgf·cm');
   });
 
   it('places Model Doctor and Estado in the protected status zone and opens the Doctor directly', async () => {

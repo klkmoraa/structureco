@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { __testables, findNullSpaceVector, multiplyMatrixVector, solveLinearSystem, zeros, type Matrix } from './math';
+import { __testables, createFactorizationCache, findNullSpaceVector, multiplyMatrixVector, solveLinearSystem, zeros, type Matrix } from './math';
 
 const close = (actual: number, expected: number, tolerance = 1e-11) => {
   expect(Math.abs(actual - expected)).toBeLessThanOrEqual(tolerance * Math.max(1, Math.abs(expected)));
@@ -263,5 +263,45 @@ describe('solucionador lineal robusto', () => {
     const vector = result.vector!;
     close(vector[0] / vector[1], 1);
     close(vector[2] / vector[1], 1);
+  });
+
+  it('reutiliza la factorización sólo mientras la matriz es la misma', () => {
+    const matrix = augmentedSystem(80, [{ terms: [[0, 1]] }, { terms: [[79, 1]] }]);
+    const cache = createFactorizationCache();
+    const rhs = (seed: number) => Array.from({ length: matrix.length }, (_, index) => Math.sin(seed + index));
+
+    const direct = [1, 2, 3].map((seed) => solveLinearSystem(matrix, rhs(seed)));
+    const cached = [1, 2, 3].map((seed) => {
+      const factorization = cache.acquire(matrix);
+      return { factorization, solved: solveLinearSystem(factorization.matrix, rhs(seed)) };
+    });
+    // Una sola factorización para los tres términos independientes, y la misma
+    // solución bit a bit que factorizando cada vez.
+    expect(cache.factorizationCount).toBe(1);
+    expect(cache.reuseCount).toBe(2);
+    direct.forEach((expected, index) => expect(cached[index].solved.x).toEqual(expected.x));
+
+    // Cambiar un solo coeficiente obliga a factorizar de nuevo: la identidad se
+    // comprueba elemento a elemento, no con una firma que pudiera colisionar.
+    const modified = matrix.map((row) => [...row]);
+    modified[5][5] += 1e-9;
+    cache.acquire(modified);
+    expect(cache.factorizationCount).toBe(2);
+  });
+
+  it('mide el residuo con productos exactos, sin el ruido del producto escalar', () => {
+    // Coeficientes de magnitudes muy distintas: la suma ingenua del residuo
+    // pierde los dígitos bajos y publica un residuo que es su propio error.
+    const matrix: Matrix = [
+      [1e8, 1, 1],
+      [1, 1e-4, 1],
+      [1, 1, 1e8],
+    ];
+    const vector = [1e8 + 2, 2 + 1e-4, 1e8 + 2];
+    const solved = solveLinearSystem(matrix, vector);
+    solved.x.forEach((value) => close(value, 1, 1e-9));
+    expect(solved.relativeResidual).toBeLessThan(1e-15);
+    const residual = multiplyMatrixVector(matrix, solved.x).map((value, index) => vector[index] - value);
+    residual.forEach((value) => expect(Math.abs(value)).toBeLessThan(1e-6));
   });
 });

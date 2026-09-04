@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { ThemeMode, UnitSystemId } from '../../types';
+import { unitSystemLabel } from '../../engine/units';
 import type { CanvasViewSettings } from '../view/canvasViewSettings';
 import type { PersonalViewFavorite } from './personalLibrary';
 import { usePersonalLibrary, type LibraryOperationResult } from './usePersonalLibrary';
@@ -67,7 +68,7 @@ export const ViewFavoritesPanel = ({
   return <section className="member-favorites view-favorites" aria-labelledby="view-favorites-title">
     <header><h3 id="view-favorites-title">{copy.title}</h3><p>{copy.body}</p></header>
     <label><span>{copy.favorite}</span><select aria-label={copy.favorite} value={selected?.id ?? ''} onChange={(event) => setSelectedId(event.currentTarget.value)} disabled={!favorites.length}>
-      {!favorites.length ? <option value="">{copy.none}</option> : favorites.map((favorite) => <option key={favorite.id} value={favorite.id}>{favorite.name} · {favorite.theme === 'light' ? copy.day : copy.night} · {favorite.unitsAtSave}</option>)}
+      {!favorites.length ? <option value="">{copy.none}</option> : favorites.map((favorite) => <option key={favorite.id} value={favorite.id}>{favorite.name} · {favorite.theme === 'light' ? copy.day : copy.night} · {unitSystemLabel(favorite.unitsAtSave)}</option>)}
     </select></label>
     <button type="button" className="member-favorites__apply" disabled={!selected} onClick={apply}>{copy.apply}</button>
     <div className="member-favorites__save">

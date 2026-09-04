@@ -79,7 +79,9 @@ describe('PersonalLibraryView', () => {
     await user.type(screen.getByLabelText('Nombre del favorito'), 'Vista limpia');
     await user.click(screen.getByRole('button', { name: 'Guardar favorito' }));
     const item = screen.getByRole('listitem', { name: /Vista limpia/ });
-    expect(item.textContent).toMatch(/Vista.*Día.*kN-m/);
+    // El favorito muestra el nombre legible del sistema, no su identificador:
+    // un sistema propio se guarda como «custom:u1» y eso no es una unidad.
+    expect(item.textContent).toMatch(/Vista.*Día.*kN · m/);
   });
 
   it('keeps the empty state and reports storage failure without pretending it saved', async () => {

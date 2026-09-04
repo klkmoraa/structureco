@@ -1,97 +1,89 @@
-import type { UnitSystemId } from '../types';
+import type { CustomUnitSystem, UnitSystemId } from '../types';
+import {
+  composeUnitDefinition,
+  compositionMenuLabel,
+  describeComposition,
+  PRESET_UNIT_SYSTEM_IDS,
+  UNIT_SYSTEM_PRESETS,
+  type PresetUnitSystemId,
+  type UnitDefinition,
+  type UnitQuantity,
+  type UnitSystemComposition,
+} from './unitSystems';
 
-export type UnitQuantity =
-  | 'length'
-  | 'force'
-  | 'moment'
-  | 'distributedForce'
-  | 'elasticModulus'
-  | 'area'
-  | 'inertia'
-  /** Módulo elástico de sección W (un volumen). Sólo presentación: η usa la base. */
-  | 'sectionModulus'
-  /** Canto, ancho y espesores de perfiles, presentados en la unidad habitual del catálogo. */
-  | 'sectionDimension'
-  | 'translationalStiffness'
-  | 'rotationalStiffness'
-  | 'density';
+export type { UnitQuantity } from './unitSystems';
+export type { PresetUnitSystemId, UnitSystemComposition } from './unitSystems';
 
-interface UnitDefinition {
-  labels: Record<UnitQuantity, string>;
-  factors: Record<UnitQuantity, number>;
-}
+/**
+ * Internal base units are kN, m, kN·m, kN/m, kN/m², m² and m⁴.
+ *
+ * Cada definición se deriva de su combinación en `unitSystems`, de modo que
+ * momento, carga distribuida y rigideces son siempre productos y cocientes
+ * consistentes de la fuerza y la longitud elegidas.
+ */
+const presetDefinitions = Object.fromEntries(
+  PRESET_UNIT_SYSTEM_IDS.map((id) => [id, composeUnitDefinition(UNIT_SYSTEM_PRESETS[id])]),
+) as Record<PresetUnitSystemId, UnitDefinition>;
 
-/** Internal base units are kN, m, kN·m, kN/m, kN/m², m² and m⁴. */
-const definitions: Record<UnitSystemId, UnitDefinition> = {
-  'kN-m': {
-    labels: {
-      length: 'm', force: 'kN', moment: 'kN·m', distributedForce: 'kN/m',
-      elasticModulus: 'MPa', area: 'm²', inertia: 'm⁴', sectionModulus: 'm³',
-      sectionDimension: 'mm',
-      translationalStiffness: 'kN/m', rotationalStiffness: 'kN·m/rad', density: 'kg/m³',
-    },
-    factors: {
-      length: 1, force: 1, moment: 1, distributedForce: 1,
-      elasticModulus: 1 / 1000, area: 1, inertia: 1, sectionModulus: 1,
-      sectionDimension: 1000,
-      translationalStiffness: 1, rotationalStiffness: 1, density: 1,
-    },
-  },
-  'N-mm': {
-    labels: {
-      length: 'mm', force: 'N', moment: 'N·mm', distributedForce: 'N/mm',
-      elasticModulus: 'MPa', area: 'mm²', inertia: 'mm⁴', sectionModulus: 'mm³',
-      sectionDimension: 'mm',
-      translationalStiffness: 'N/mm', rotationalStiffness: 'N·mm/rad', density: 'kg/m³',
-    },
-    factors: {
-      length: 1000, force: 1000, moment: 1_000_000, distributedForce: 1,
-      elasticModulus: 1 / 1000, area: 1_000_000, inertia: 1_000_000_000_000, sectionModulus: 1_000_000_000,
-      sectionDimension: 1000,
-      translationalStiffness: 1, rotationalStiffness: 1_000_000, density: 1,
-    },
-  },
-  'kgf-m': {
-    labels: {
-      length: 'm', force: 'kgf', moment: 'kgf·m', distributedForce: 'kgf/m',
-      elasticModulus: 'kgf/cm²', area: 'cm²', inertia: 'cm⁴', sectionModulus: 'cm³',
-      sectionDimension: 'cm',
-      translationalStiffness: 'kgf/m', rotationalStiffness: 'kgf·m/rad', density: 'kg/m³',
-    },
-    factors: {
-      length: 1, force: 101.9716212978, moment: 101.9716212978, distributedForce: 101.9716212978,
-      elasticModulus: 0.01019716212978, area: 10_000, inertia: 100_000_000, sectionModulus: 1_000_000,
-      sectionDimension: 100,
-      translationalStiffness: 101.9716212978, rotationalStiffness: 101.9716212978, density: 1,
-    },
-  },
-  'kip-ft': {
-    labels: {
-      length: 'ft', force: 'kip', moment: 'kip·ft', distributedForce: 'kip/ft',
-      elasticModulus: 'ksi', area: 'in²', inertia: 'in⁴', sectionModulus: 'in³',
-      sectionDimension: 'in',
-      translationalStiffness: 'kip/ft', rotationalStiffness: 'kip·ft/rad', density: 'lb/ft³',
-    },
-    factors: {
-      length: 3.28083989501312,
-      force: 0.22480894387096,
-      moment: 0.73756214927727,
-      distributedForce: 0.06852176585679,
-      elasticModulus: 1.45037737730209e-4,
-      area: 1550.0031000062,
-      inertia: 2_402_509.60999038,
-      sectionModulus: 61_023.7440947323,
-      sectionDimension: 39.3700787401575,
-      translationalStiffness: 0.06852176585679,
-      rotationalStiffness: 0.73756214927727,
-      density: 0.0624279605761,
-    },
-  },
+/**
+ * Sistemas definidos por la persona usuaria, resueltos a definiciones.
+ *
+ * Es un registro de módulo porque `unitLabel`/`toDisplay` se llaman desde
+ * decenas de superficies de presentación que sólo conocen el identificador del
+ * sistema, nunca el proyecto. Es estado *de presentación*: el solver, los
+ * workers y la persistencia siguen trabajando en unidades base y jamás lo leen,
+ * así que un registro vacío no cambia ningún resultado, sólo las etiquetas.
+ * `ProjectUnitSystemsSync` lo mantiene alineado con `settings.customUnitSystems`.
+ */
+let customDefinitions: ReadonlyMap<string, UnitDefinition> = new Map();
+let customCompositions: ReadonlyMap<string, CustomUnitSystem> = new Map();
+
+export const registerCustomUnitSystems = (systems: readonly CustomUnitSystem[]): void => {
+  customDefinitions = new Map(systems.map((system) => [system.id, composeUnitDefinition(system)]));
+  customCompositions = new Map(systems.map((system) => [system.id, system]));
 };
 
-export const unitLabel = (system: UnitSystemId, quantity: UnitQuantity): string => definitions[system].labels[quantity];
-export const toDisplay = (value: number, system: UnitSystemId, quantity: UnitQuantity): number => value * definitions[system].factors[quantity];
-export const fromDisplay = (value: number, system: UnitSystemId, quantity: UnitQuantity): number => value / definitions[system].factors[quantity];
+export const isPresetUnitSystemId = (value: unknown): value is PresetUnitSystemId =>
+  typeof value === 'string' && Object.prototype.hasOwnProperty.call(UNIT_SYSTEM_PRESETS, value);
+
+/** Un identificador personalizado es `custom:` más un sufijo estable y sin espacios. */
+export const isCustomUnitSystemId = (value: unknown): value is `custom:${string}` =>
+  typeof value === 'string' && /^custom:[A-Za-z0-9_-]{1,64}$/.test(value);
+
+export const isUnitSystemId = (value: unknown): value is UnitSystemId =>
+  isPresetUnitSystemId(value) || isCustomUnitSystemId(value);
+
+/**
+ * Definición vigente de un sistema. Un identificador personalizado que ya no
+ * está registrado (un proyecto abierto en otra sesión, un favorito guardado con
+ * un sistema borrado) cae en kN·m en vez de romper la presentación.
+ */
+const definitionOf = (system: UnitSystemId): UnitDefinition => (
+  isPresetUnitSystemId(system)
+    ? presetDefinitions[system]
+    : customDefinitions.get(system) ?? presetDefinitions['kN-m']
+);
+
+export const unitSystemComposition = (system: UnitSystemId): UnitSystemComposition => (
+  isPresetUnitSystemId(system)
+    ? UNIT_SYSTEM_PRESETS[system]
+    : customCompositions.get(system) ?? UNIT_SYSTEM_PRESETS['kN-m']
+);
+
+/** Nombre corto para menús: el que dio la persona usuaria, o «fuerza · longitud». */
+export const unitSystemLabel = (system: UnitSystemId): string => (
+  isPresetUnitSystemId(system)
+    ? compositionMenuLabel(UNIT_SYSTEM_PRESETS[system])
+    : customCompositions.get(system)?.name ?? compositionMenuLabel(unitSystemComposition(system))
+);
+
+export const unitSystemSummary = (system: UnitSystemId): string => describeComposition(unitSystemComposition(system));
+
+export const registeredCustomUnitSystems = (): readonly CustomUnitSystem[] => [...customCompositions.values()];
+
+export const unitLabel = (system: UnitSystemId, quantity: UnitQuantity): string => definitionOf(system).labels[quantity];
+export const toDisplay = (value: number, system: UnitSystemId, quantity: UnitQuantity): number => value * definitionOf(system).factors[quantity];
+export const fromDisplay = (value: number, system: UnitSystemId, quantity: UnitQuantity): number => value / definitionOf(system).factors[quantity];
 
 export const formatDisplay = (
   value: number,

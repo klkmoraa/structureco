@@ -1,6 +1,6 @@
 import type { AnalysisResult, DiagramQuantity, MemberModel, ProjectModel, ReliabilityLevel } from '../types';
 import { evaluateDiagramAt, evaluatePolynomial, rootsInInterval } from './diagram';
-import { solveLinearSystem } from './math';
+import { createFactorizationCache, solveLinearSystem, type FactorizationCache } from './math';
 import { isTrustedForCombination, resolveReliability, worstLevel } from './reliability';
 import { analyzeProject } from './solver';
 
@@ -354,6 +354,7 @@ const solveUnitResponse = (
   pathPosition: number,
   target: InfluenceTarget,
   diagnostics: AnalysisAccumulator,
+  factorizationCache?: FactorizationCache,
 ): number => {
   const memberX = memberXAt(pathMember, pathPosition);
   const loaded: ProjectModel = {
@@ -375,7 +376,7 @@ const solveUnitResponse = (
   // Only a single scalar ordinate is read from `result` below; the influence
   // sweep calls this once per sample point along the path, so skipping the
   // education trace here removes a large, entirely unused cost.
-  const result = analyzeProject(loaded, undefined, { includeEducationTrace: false });
+  const result = analyzeProject(loaded, undefined, { includeEducationTrace: false, factorizationCache });
   const level = recordAnalysis(diagnostics, result);
   if (!result.success || !isTrustedForCombination(level)) {
     const reliability = resolveReliability(result);
@@ -508,6 +509,10 @@ export const buildInfluenceLine = (
     minReliableDigits: Number.POSITIVE_INFINITY,
     worstReliability: 'reliable',
   };
+  // Cada muestra del barrido mueve una carga unitaria sobre el *mismo* modelo:
+  // la matriz de rigidez ensamblada es idéntica en todas y sólo cambia el
+  // término independiente. Una única factorización sirve para todo el barrido.
+  const factorizationCache = createFactorizationCache();
   const validations: InfluenceValidationPoint[] = [];
   const segments: InfluenceSegment[] = [];
   const rejectedIntervals: RejectedInfluenceInterval[] = [];
@@ -533,7 +538,7 @@ export const buildInfluenceLine = (
     maxSubdivisionDepth = Math.max(maxSubdivisionDepth, depth);
     const fitPositions = FIT_ABSCISSAE.map((fraction) => pathStart + fraction * length);
     const fitValues = fitPositions.map((position) =>
-      solveUnitResponse(base, pathMember, position, normalizedTarget, analysisDiagnostics));
+      solveUnitResponse(base, pathMember, position, normalizedTarget, analysisDiagnostics, factorizationCache));
     const fitted = fitCubic(fitPositions, fitValues, pathStart, length);
     const segment: InfluenceSegment = {
       memberId: pathMember.memberId,
@@ -546,7 +551,7 @@ export const buildInfluenceLine = (
 
     const checks: InfluenceValidationPoint[] = VALIDATION_ABSCISSAE.map((fraction) => {
       const position = pathStart + fraction * length;
-      const expected = solveUnitResponse(base, pathMember, position, normalizedTarget, analysisDiagnostics);
+      const expected = solveUnitResponse(base, pathMember, position, normalizedTarget, analysisDiagnostics, factorizationCache);
       const predicted = segmentValue(segment, position);
       const absoluteError = Math.abs(expected - predicted);
       return {

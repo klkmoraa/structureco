@@ -589,6 +589,73 @@ export const evaluateDiagramAt = (
   return point;
 };
 
+const polynomialDerivativeCoefficients = (coefficients: readonly number[]): number[] =>
+  coefficients.slice(1).map((coefficient, index) => coefficient * (index + 1));
+
+interface CurvatureProfile {
+  readonly secondDerivative: readonly number[];
+  /** Puntos donde |p''| puede alcanzar un máximo interior. */
+  readonly extrema: readonly number[];
+}
+
+/**
+ * Perfil necesario para acotar de forma rigurosa el error de una cuerda.
+ *
+ * Para una interpolación lineal en [a,b], el error está acotado por
+ * `(b-a)² max|p''| / 8`. Los máximos de `|p''|` sólo pueden estar en los
+ * extremos o donde `p''' = 0`; esas raíces se calculan una vez por tramo y se
+ * reutilizan en toda la subdivisión.
+ */
+const curvatureProfile = (coefficients: readonly number[], h: number): CurvatureProfile => {
+  const secondDerivative = polynomialDerivativeCoefficients(polynomialDerivativeCoefficients(coefficients));
+  return {
+    secondDerivative,
+    extrema: rootsInInterval(polynomialDerivativeCoefficients(secondDerivative), h),
+  };
+};
+
+const interpolationErrorBound = (
+  profile: CurvatureProfile,
+  left: number,
+  right: number,
+): number => {
+  if (!profile.secondDerivative.length || right <= left) return 0;
+  let maximum = Math.max(
+    Math.abs(evaluatePolynomial(profile.secondDerivative, left)),
+    Math.abs(evaluatePolynomial(profile.secondDerivative, right)),
+    Math.abs(evaluatePolynomial(profile.secondDerivative, 0.5 * (left + right))),
+  );
+  for (const point of profile.extrema) {
+    if (point > left && point < right) {
+      maximum = Math.max(maximum, Math.abs(evaluatePolynomial(profile.secondDerivative, point)));
+    }
+  }
+  return (right - left) ** 2 * maximum / 8;
+};
+
+/**
+ * Densidad de la deformada dibujada, como fracción de su propia flexión.
+ *
+ * La poligonal `points` es una representación *para dibujar*: la deformada
+ * exacta vive en `segments`, que guarda los polinomios, y toda lectura numérica
+ * (extremos, cortes, `evaluateDeformationAt`) sale de ellos o de las raíces
+ * exactas de `deformationCriticalPoints`. El criterio anterior comparaba el
+ * error contra `max(1, L, |u|, |v|)`, es decir contra una escala absoluta que
+ * no tiene relación con la forma dibujada: en un modelo en metros con flechas de
+ * centímetros exigía 1e-9 m de error de cuerda y bajaba hasta la profundidad
+ * máxima, unos 2000 puntos por miembro, para una curva que en pantalla ocupa
+ * unos cientos de píxeles. En un modelo de 300 miembros eso era la mitad del
+ * tiempo de análisis y cientos de miles de objetos que además cruzan el
+ * `postMessage` del worker en cada corrida.
+ *
+ * Medido contra la flexión propia del tramo el criterio es invariante de escala
+ * y de unidades: 1e-4 de la separación entre la curva y su cuerda es del orden
+ * de una centésima de píxel en cualquier zoom razonable, y un miembro recto
+ * sigue resolviéndose con dos puntos. Se mantiene el tope de profundidad como
+ * salvaguarda.
+ */
+const DEFORMATION_SHAPE_TOLERANCE = 1e-4;
+
 export const buildDeformationCurve = (
   segments: DiagramSegment[],
   member: MemberModel,
@@ -661,14 +728,39 @@ export const buildDeformationCurve = (
     const start = at(0);
     const end = at(h);
     if (!points.length) points.push(start);
+    // Escala frente a la que se mide el refinamiento: cuánto se separa la curva
+    // de su propia cuerda. Los términos constante y lineal se excluyen porque la
+    // poligonal los reproduce exactos —el primero es el movimiento de sólido
+    // rígido del miembro y el segundo es la cuerda misma—, así que sólo el resto
+    // del polinomio genera error de interpolación.
+    const uCurvature = curvatureProfile(uCoefficients, h);
+    const vCurvature = curvatureProfile(vCoefficients, h);
+    const thetaCurvature = curvatureProfile(thetaCoefficients, h);
+    const bendingScale = Math.max(
+      interpolationErrorBound(uCurvature, 0, h),
+      interpolationErrorBound(vCurvature, 0, h),
+      h * interpolationErrorBound(thetaCurvature, 0, h),
+    );
+    const motionScale = Math.max(h, Math.abs(start.u), Math.abs(start.v), Math.abs(end.u), Math.abs(end.v));
+    const tolerance = Math.max(DEFORMATION_SHAPE_TOLERANCE * bendingScale, 1e-12 * motionScale);
     const addAdaptive = (left: DeformationPoint, right: DeformationPoint, depth: number) => {
       const midpoint = at(0.5 * (left.x + right.x) - segment.x0);
       const chordU = 0.5 * (left.u + right.u);
       const chordV = 0.5 * (left.v + right.v);
       const chordTheta = 0.5 * (left.theta + right.theta);
-      const scale = Math.max(1, h, Math.abs(left.u), Math.abs(right.u), Math.abs(left.v), Math.abs(right.v));
-      const error = Math.max(Math.abs(midpoint.u - chordU), Math.abs(midpoint.v - chordV), h * Math.abs(midpoint.theta - chordTheta));
-      if (depth >= 12 || error <= 1e-9 * scale) {
+      // El error observado en el punto medio es barato y preciso; la cota de
+      // curvatura evita su único punto ciego: una curva de grado 4 o 5 puede
+      // cruzar su cuerda exactamente en el centro y arquearse entre medias.
+      const observedError = Math.max(Math.abs(midpoint.u - chordU), Math.abs(midpoint.v - chordV), h * Math.abs(midpoint.theta - chordTheta));
+      const leftXi = left.x - segment.x0;
+      const rightXi = right.x - segment.x0;
+      const error = Math.max(
+        observedError,
+        interpolationErrorBound(uCurvature, leftXi, rightXi),
+        interpolationErrorBound(vCurvature, leftXi, rightXi),
+        h * interpolationErrorBound(thetaCurvature, leftXi, rightXi),
+      );
+      if (depth >= 12 || error <= tolerance) {
         points.push(right);
         return;
       }

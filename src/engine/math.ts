@@ -44,7 +44,7 @@ export const addToVector = (target: number[], source: number[], indices: number[
   for (let i = 0; i < indices.length; i += 1) target[indices[i]] += source[i];
 };
 
-export const maxAbs = (values: number[]): number =>
+export const maxAbs = (values: readonly number[]): number =>
   values.reduce((max, value) => Math.max(max, Math.abs(value)), 0);
 
 export interface LinearSolveResult {
@@ -561,20 +561,97 @@ const estimateInverseOneNorm = (solver: GenericSolver, n: number): number => {
   return estimate;
 };
 
-const relativeResidual = (matrix: Matrix, x: number[], vector: number[]): number => {
-  const residual = multiplyMatrixVector(matrix, x).map((value, index) => vector[index] - value);
-  const numerator = maxAbs(residual);
-  const matrixInfinityNorm = matrix.reduce(
-    (maximum, row) => Math.max(maximum, row.reduce((sum, value) => sum + Math.abs(value), 0)),
-    0,
-  );
-  return numerator / Math.max(Number.MIN_VALUE, matrixInfinityNorm * maxAbs(x) + maxAbs(vector));
+/** 2^27 + 1: constante de partición de Dekker para un producto exacto sin FMA. */
+const DEKKER_SPLIT = 134217729;
+
+/**
+ * Producto exacto `a*b = p + e`: `p` es el redondeo doble habitual y `e` es
+ * exactamente el resto que ese redondeo tiró.
+ */
+const productError = (a: number, b: number, p: number): number => {
+  const aSplit = DEKKER_SPLIT * a;
+  const aHigh = aSplit - (aSplit - a);
+  const aLow = a - aHigh;
+  const bSplit = DEKKER_SPLIT * b;
+  const bHigh = bSplit - (bSplit - b);
+  const bLow = b - bHigh;
+  return ((aHigh * bHigh - p) + aHigh * bLow + aLow * bHigh) + aLow * bLow;
 };
 
 /**
- * Solves the system with Hager 1-norm condition estimation and iterative
- * refinement. The condition estimate refers to the matrix supplied to this
- * function; callers should scale mixed-unit systems.
+ * Residuo `b - A x` con productos exactos y suma compensada (Neumaier).
+ *
+ * Un producto escalar ingenuo acumula un error del orden de n·ε·Σ|aᵢⱼxⱼ|, que
+ * para un sistema equilibrado de mil grados de libertad es ya mayor que el
+ * propio residuo que se quiere medir. Eso tenía dos consecuencias: el residuo
+ * relativo publicado era en realidad el ruido de su propio cálculo —y disparaba
+ * el aviso «precisión limitada del sistema lineal» en modelos correctos— y el
+ * refinamiento iterativo se alimentaba de esa misma corrección ruidosa, así que
+ * se estancaba mucho antes de lo que la factorización permitía.
+ *
+ * Con el residuo calculado de esta forma el refinamiento gana los dígitos que
+ * la factorización ya tenía y el aviso vuelve a señalar sólo sistemas
+ * genuinamente mal resueltos. Cuesta cuatro multiplicaciones extra por término
+ * en una pasada O(n²) que se ejecuta como mucho cuatro veces por solución,
+ * frente a la O(n³) de la factorización.
+ */
+const compensatedResidual = (matrix: Matrix, x: readonly number[], vector: readonly number[]): number[] => {
+  const n = matrix.length;
+  const residual = new Array<number>(n);
+  for (let i = 0; i < n; i += 1) {
+    const row = matrix[i];
+    let sum = vector[i];
+    let correction = 0;
+    for (let j = 0; j < row.length; j += 1) {
+      const coefficient = row[j];
+      if (coefficient === 0) continue;
+      const product = coefficient * x[j];
+      const total = sum - product;
+      correction += Math.abs(sum) >= Math.abs(product)
+        ? (sum - total) - product
+        : (-product - total) + sum;
+      correction -= productError(coefficient, x[j], product);
+      sum = total;
+    }
+    residual[i] = sum + correction;
+  }
+  return residual;
+};
+
+const infinityNormOf = (matrix: Matrix): number => matrix.reduce(
+  (maximum, row) => Math.max(maximum, row.reduce((sum, value) => sum + Math.abs(value), 0)),
+  0,
+);
+
+const scaledResidual = (
+  residual: readonly number[],
+  infinityNorm: number,
+  x: readonly number[],
+  vector: readonly number[],
+): number => maxAbs(residual) / Math.max(Number.MIN_VALUE, infinityNorm * maxAbs(x) + maxAbs(vector));
+
+/**
+ * A factorized matrix, reusable for any number of right-hand sides.
+ *
+ * Todo lo que sólo depende de la matriz —la factorización, la estimación de
+ * condición de Hager y las normas— vive aquí; lo que depende del término
+ * independiente se calcula en `solveFactorized`. Separarlos es lo que permite
+ * que una envolvente de combinaciones o un barrido de línea de influencia,
+ * donde la rigidez es idéntica y sólo cambian las cargas, paguen una sola
+ * factorización en vez de una por análisis.
+ */
+export interface LinearFactorization {
+  /** La matriz factorizada. Se conserva para el residuo y para verificar reúso. */
+  readonly matrix: Matrix;
+  readonly conditionEstimate: number;
+  readonly pivotRatio: number;
+  readonly diagnostics: LinearSolverDiagnostics;
+  readonly solve: (vector: readonly number[]) => number[];
+  readonly infinityNorm: number;
+}
+
+/**
+ * Factoriza la matriz con estimación de condición de Hager.
  *
  * Two factorizations back it. A symmetric augmented system whose constraints
  * fix individual degrees of freedom is reduced to a positive definite block and
@@ -582,17 +659,19 @@ const relativeResidual = (matrix: Matrix, x: number[], vector: number[]): number
  * suspicious — uses dense LU with scaled partial pivoting. Both are measured by
  * the same residual against the original matrix, so the choice is invisible to
  * the caller.
+ *
+ * The condition estimate refers to the matrix supplied to this function;
+ * callers should scale mixed-unit systems.
  */
-export const solveLinearSystem = (
+export const factorizeLinearSystem = (
   matrix: Matrix,
-  vector: number[],
   options: { backend?: LinearSolverPolicy } = {},
-): LinearSolveResult => {
+): LinearFactorization => {
   const n = matrix.length;
-  if (n === 0 || matrix.some((row) => row.length !== n) || vector.length !== n) {
+  if (n === 0 || matrix.some((row) => row.length !== n)) {
     throw new Error('El sistema lineal no es cuadrado.');
   }
-  if (matrix.some((row) => row.some((value) => !Number.isFinite(value))) || vector.some((value) => !Number.isFinite(value))) {
+  if (matrix.some((row) => row.some((value) => !Number.isFinite(value)))) {
     throw new Error('El sistema lineal contiene valores no finitos.');
   }
 
@@ -614,23 +693,119 @@ export const solveLinearSystem = (
         dimension: n,
         ...(hybridAttempt?.reducedDimension === undefined ? {} : { reducedDimension: hybridAttempt.reducedDimension }),
       };
-  let x = solver.solve(vector);
-  let residual = relativeResidual(matrix, x, vector);
+  return {
+    matrix,
+    conditionEstimate: matrixOneNorm(matrix) * estimateInverseOneNorm(solver, n),
+    pivotRatio: solver.maxPivot / Math.max(solver.minPivot, Number.MIN_VALUE),
+    diagnostics,
+    solve: (vector) => solver.solve([...vector]),
+    infinityNorm: infinityNormOf(matrix),
+  };
+};
+
+/** Resuelve un término independiente sobre una factorización ya construida. */
+export const solveFactorized = (
+  factorization: LinearFactorization,
+  vector: number[],
+): LinearSolveResult => {
+  const { matrix, infinityNorm } = factorization;
+  if (vector.length !== matrix.length) throw new Error('El sistema lineal no es cuadrado.');
+  if (vector.some((value) => !Number.isFinite(value))) {
+    throw new Error('El sistema lineal contiene valores no finitos.');
+  }
+
+  let x = factorization.solve(vector);
+  let residualVector = compensatedResidual(matrix, x, vector);
+  let residual = scaledResidual(residualVector, infinityNorm, x, vector);
   let refinementIterations = 0;
   for (let iteration = 0; iteration < 3 && residual > 5e-15; iteration += 1) {
-    const correctionRhs = multiplyMatrixVector(matrix, x).map((value, index) => vector[index] - value);
-    const correction = solver.solve(correctionRhs);
+    // El residuo compensado que ya mide la solución actual es exactamente el
+    // término independiente de la corrección, así que el refinamiento no
+    // vuelve a multiplicar la matriz por el vector.
+    const correction = factorization.solve(residualVector);
     const candidate = x.map((value, index) => value + correction[index]);
-    const candidateResidual = relativeResidual(matrix, candidate, vector);
+    const candidateResidualVector = compensatedResidual(matrix, candidate, vector);
+    const candidateResidual = scaledResidual(candidateResidualVector, infinityNorm, candidate, vector);
     if (candidateResidual >= residual) break;
     x = candidate;
+    residualVector = candidateResidualVector;
     residual = candidateResidual;
     refinementIterations += 1;
   }
 
-  const pivotRatio = solver.maxPivot / Math.max(solver.minPivot, Number.MIN_VALUE);
-  const conditionEstimate = matrixOneNorm(matrix) * estimateInverseOneNorm(solver, n);
-  return { x, conditionEstimate, pivotRatio, relativeResidual: residual, refinementIterations, diagnostics };
+  return {
+    x,
+    conditionEstimate: factorization.conditionEstimate,
+    pivotRatio: factorization.pivotRatio,
+    relativeResidual: residual,
+    refinementIterations,
+    diagnostics: factorization.diagnostics,
+  };
+};
+
+/**
+ * Solves the system with Hager 1-norm condition estimation and iterative
+ * refinement. Equivale a factorizar y resolver de una vez.
+ */
+export const solveLinearSystem = (
+  matrix: Matrix,
+  vector: number[],
+  options: { backend?: LinearSolverPolicy } = {},
+): LinearSolveResult => solveFactorized(factorizeLinearSystem(matrix, options), vector);
+
+/** Igualdad exacta elemento a elemento. */
+const sameMatrix = (a: Matrix, b: Matrix): boolean => {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    const rowA = a[i];
+    const rowB = b[i];
+    if (rowA.length !== rowB.length) return false;
+    for (let j = 0; j < rowA.length; j += 1) if (rowA[j] !== rowB[j]) return false;
+  }
+  return true;
+};
+
+export interface FactorizationCache {
+  /** Factoriza, o devuelve la factorización previa si la matriz es la misma. */
+  acquire: (matrix: Matrix, options?: { backend?: LinearSolverPolicy }) => LinearFactorization;
+  /** Cuántas veces se evitó factorizar. Sólo para diagnóstico y pruebas. */
+  readonly reuseCount: number;
+  readonly factorizationCount: number;
+}
+
+/**
+ * Caché de una sola entrada para análisis consecutivos con la misma rigidez.
+ *
+ * La identidad se comprueba comparando la matriz elemento a elemento, no con una
+ * firma ni con un hash: una colisión de firma devolvería la factorización de
+ * *otra* estructura y publicaría desplazamientos falsos sin ningún síntoma. La
+ * comparación cuesta O(n²) frente a la O(n³) —o la O(n^1,5) dispersa más la
+ * estimación de condición, que son ocho resoluciones— que evita.
+ *
+ * Es explícita y de ámbito acotado: la crea quien sabe que va a resolver la
+ * misma rigidez varias veces (envolventes, líneas de influencia) y muere con
+ * ese recorrido, de modo que no retiene una matriz densa más de lo necesario.
+ */
+export const createFactorizationCache = (): FactorizationCache => {
+  let entry: { factorization: LinearFactorization; policy: LinearSolverPolicy } | null = null;
+  let reuseCount = 0;
+  let factorizationCount = 0;
+  return {
+    acquire: (matrix, options = {}) => {
+      const policy = options.backend ?? 'auto';
+      if (entry && entry.policy === policy && sameMatrix(entry.factorization.matrix, matrix)) {
+        reuseCount += 1;
+        return entry.factorization;
+      }
+      const factorization = factorizeLinearSystem(matrix, options);
+      factorizationCount += 1;
+      entry = { factorization, policy };
+      return factorization;
+    },
+    get reuseCount() { return reuseCount; },
+    get factorizationCount() { return factorizationCount; },
+  };
 };
 
 export interface NullSpaceResult {
