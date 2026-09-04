@@ -11,7 +11,15 @@
  * lector exige `typeof value === 'number' && Number.isFinite(value)`.
  */
 import { validateSpace3DProject } from '../model/validation';
-import { isUnitSystemId } from '../../engine/units';
+import { isCustomUnitSystemId, isUnitSystemId } from '../../engine/units';
+import {
+  DENSITY_UNITS,
+  FORCE_UNITS,
+  LENGTH_UNITS,
+  MAX_CUSTOM_UNIT_SYSTEMS,
+  STRESS_UNITS,
+} from '../../engine/unitSystems';
+import type { CustomUnitSystem } from '../../types';
 import {
   SPACE3D_ANALYSIS_SPACE,
   SPACE3D_LIMITS,
@@ -147,6 +155,37 @@ const choice = <T extends string>(source: Raw, key: string, allowed: readonly T[
     fail('not-a-choice', `${path}.${key} «${String(value)}»`);
   }
   return value as T;
+};
+
+const CUSTOM_UNIT_SYSTEM_KEYS = [
+  'id',
+  'name',
+  'force',
+  'length',
+  'sectionLength',
+  'sectionDimension',
+  'modulus',
+  'density',
+] as const;
+
+const readCustomUnitSystem = (value: unknown, index: number): CustomUnitSystem => {
+  const path = `customUnitSystems[${index}]`;
+  const source = object(value, path);
+  exactKeys(source, CUSTOM_UNIT_SYSTEM_KEYS, path);
+  const id = text(source, 'id', path);
+  const name = text(source, 'name', path);
+  if (!isCustomUnitSystemId(id)) fail('not-a-choice', `${path}.id «${id}»`);
+  if (name.trim() === '' || name.length > 60) fail('invalid-model', `${path}.name`);
+  return {
+    id: id as CustomUnitSystem['id'],
+    name,
+    force: choice(source, 'force', FORCE_UNITS.map((unit) => unit.id), path),
+    length: choice(source, 'length', LENGTH_UNITS.map((unit) => unit.id), path),
+    sectionLength: choice(source, 'sectionLength', LENGTH_UNITS.map((unit) => unit.id), path),
+    sectionDimension: choice(source, 'sectionDimension', LENGTH_UNITS.map((unit) => unit.id), path),
+    modulus: choice(source, 'modulus', STRESS_UNITS.map((unit) => unit.id), path),
+    density: choice(source, 'density', DENSITY_UNITS.map((unit) => unit.id), path),
+  };
 };
 
 const readNode = (legacy: boolean) => (value: unknown, index: number): Space3DNode => {
@@ -300,21 +339,37 @@ export const parseSpace3DProject = (json: string, options: Space3DParseOptions =
     fail('schema-version', `se esperaba ${SPACE3D_READABLE_SCHEMA_VERSIONS.join(' o ')} y llegó ${String(source.schemaVersion)}`);
   }
 
-  // Un archivo S3D-1 se migra al abrirse: las capacidades que aún no existían
-  // entran con su valor neutro —sin muelles, sin liberaciones, sin peso propio,
-  // sin cargas de barra— de modo que el modelo se lee exactamente igual que
-  // antes y sólo después se le pueden añadir las nuevas.
+  // S3D-1 completa con neutros las capacidades estructurales añadidas en S3D-2.
+  // S3D-1 y S3D-2 tampoco tenían definiciones portables para unidades propias;
+  // desde S3D-3 el identificador y su composición viajan siempre juntos.
   const legacy = source.schemaVersion === 1;
+  const hasPortableCustomUnits = source.schemaVersion === SPACE3D_SCHEMA_VERSION;
   exactKeys(
     source,
     legacy
       ? ['analysisSpace', 'schemaVersion', 'id', 'name', 'units', 'nodes', 'members', 'nodalLoads', 'loadCases', 'loadCombinations']
-      : ['analysisSpace', 'schemaVersion', 'id', 'name', 'units', 'nodes', 'members', 'nodalLoads', 'memberLoads', 'settlements', 'loadCases', 'loadCombinations'],
+      : hasPortableCustomUnits
+        ? ['analysisSpace', 'schemaVersion', 'id', 'name', 'units', 'customUnitSystems', 'nodes', 'members', 'nodalLoads', 'memberLoads', 'settlements', 'loadCases', 'loadCombinations']
+        : ['analysisSpace', 'schemaVersion', 'id', 'name', 'units', 'nodes', 'members', 'nodalLoads', 'memberLoads', 'settlements', 'loadCases', 'loadCombinations'],
     'project',
   );
 
-  const units = text(source, 'units', 'project');
-  if (!isUnitSystemId(units)) fail('not-a-string', `project.units «${units}»`);
+  const parsedUnits = text(source, 'units', 'project');
+  if (!isUnitSystemId(parsedUnits)) fail('not-a-string', `project.units «${parsedUnits}»`);
+  const customUnitSystems = hasPortableCustomUnits
+    ? list(source, 'customUnitSystems', 'project', MAX_CUSTOM_UNIT_SYSTEMS).map(readCustomUnitSystem)
+    : [];
+  if (new Set(customUnitSystems.map((system) => system.id)).size !== customUnitSystems.length) {
+    fail('invalid-model', 'project.customUnitSystems contiene identificadores duplicados');
+  }
+  const hasActiveDefinition = customUnitSystems.some((system) => system.id === parsedUnits);
+  if (hasPortableCustomUnits && isCustomUnitSystemId(parsedUnits) && !hasActiveDefinition) {
+    fail('invalid-model', `project.units «${parsedUnits}» no tiene definición portable`);
+  }
+  // Los esquemas anteriores podían guardar sólo un id personalizado. Su
+  // significado no se puede reconstruir; se conserva la apertura segura con el
+  // mismo fallback histórico a kN·m.
+  const units = !hasPortableCustomUnits && isCustomUnitSystemId(parsedUnits) ? 'kN-m' : parsedUnits;
 
   const project: Space3DProject = {
     analysisSpace: SPACE3D_ANALYSIS_SPACE,
@@ -322,6 +377,7 @@ export const parseSpace3DProject = (json: string, options: Space3DParseOptions =
     id: text(source, 'id', 'project'),
     name: text(source, 'name', 'project'),
     units: units as Space3DProject['units'],
+    customUnitSystems,
     nodes: list(source, 'nodes', 'project', SPACE3D_LIMITS.maxNodes).map(readNode(legacy)),
     members: list(source, 'members', 'project', SPACE3D_LIMITS.maxMembers).map(readMember(legacy)),
     nodalLoads: list(source, 'nodalLoads', 'project').map(readLoad),
@@ -352,6 +408,16 @@ export const serializeSpace3DProject = (project: Space3DProject): string => JSON
   id: project.id,
   name: project.name,
   units: project.units,
+  customUnitSystems: project.customUnitSystems.map((system) => ({
+    id: system.id,
+    name: system.name,
+    force: system.force,
+    length: system.length,
+    sectionLength: system.sectionLength,
+    sectionDimension: system.sectionDimension,
+    modulus: system.modulus,
+    density: system.density,
+  })),
   nodes: project.nodes.map((node) => ({
     id: node.id, x: node.x, y: node.y, z: node.z,
     restraints: {

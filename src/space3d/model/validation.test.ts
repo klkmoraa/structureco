@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createBlankSpace3DProject, createSpace3DPortalExample } from './defaultProject';
 import { validateSpace3DProject } from './validation';
 import { SPACE3D_LIMITS, fixedSpace3DRestraints, freeSpace3DRestraints, noSpace3DSprings, type Space3DFrameMember, type Space3DNode, type Space3DProject } from './types';
+import { MAX_CUSTOM_UNIT_SYSTEMS } from '../../engine/unitSystems';
 
 const codesOf = (project: Space3DProject) => validateSpace3DProject(project).map((issue) => issue.code);
 
@@ -35,6 +36,32 @@ describe('Space3D project validation', () => {
     const codes = codesOf(broken as unknown as Space3DProject);
     expect(codes).toContain('duplicate-id');
     expect(codes).toContain('empty-id');
+  });
+
+  it('exige que cada id de unidades propio tenga una definición válida y acotada', () => {
+    const orphan = { ...createBlankSpace3DProject(), units: 'custom:missing' as const };
+    expect(validateSpace3DProject(orphan).some((issue) => issue.field === 'units')).toBe(true);
+
+    const template = {
+      id: 'custom:template' as const,
+      name: 'Template',
+      force: 'kN' as const,
+      length: 'm' as const,
+      sectionLength: 'cm' as const,
+      sectionDimension: 'mm' as const,
+      modulus: 'MPa' as const,
+      density: 'kg/m3' as const,
+    };
+    const oversized = {
+      ...createBlankSpace3DProject(),
+      customUnitSystems: Array.from({ length: MAX_CUSTOM_UNIT_SYSTEMS + 1 }, (_, index) => ({
+        ...template,
+        id: `custom:test-${index}` as const,
+      })),
+    };
+    expect(validateSpace3DProject(oversized).some((issue) => (
+      issue.code === 'limit-exceeded' && issue.field === 'customUnitSystems'
+    ))).toBe(true);
   });
 
   it('detecta coordenadas no finitas y fuera de rango', () => {

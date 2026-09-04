@@ -21,7 +21,13 @@ import type {
   SupportDefinition,
   UnitSystemId,
 } from '../types';
-import { DENSITY_UNITS, FORCE_UNITS, LENGTH_UNITS, STRESS_UNITS } from '../engine/unitSystems';
+import {
+  DENSITY_UNITS,
+  FORCE_UNITS,
+  LENGTH_UNITS,
+  MAX_CUSTOM_UNIT_SYSTEMS,
+  STRESS_UNITS,
+} from '../engine/unitSystems';
 import { isCustomUnitSystemId, isPresetUnitSystemId } from '../engine/units';
 import { createId } from '../utils/id';
 
@@ -145,8 +151,6 @@ const normalizeSupport = (input: unknown, path: string): SupportDefinition => {
     prescribed,
   };
 };
-
-const MAX_CUSTOM_UNIT_SYSTEMS = 32;
 
 /**
  * Sistemas de unidades propios del proyecto.

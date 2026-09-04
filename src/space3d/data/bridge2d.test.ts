@@ -17,10 +17,26 @@ const codesOf = (source: ProjectModel) => deriveSpace3DFromPlanarProject(source)
 describe('2D to Space 3D bridge', () => {
   it('conserva nombre, unidades y una identidad derivada del proyecto fuente', () => {
     const source = planar();
+    source.settings = {
+      ...source.settings,
+      units: 'custom:bridge',
+      customUnitSystems: [{
+        id: 'custom:bridge',
+        name: 'Puente métrico',
+        force: 'tonf',
+        length: 'm',
+        sectionLength: 'cm',
+        sectionDimension: 'mm',
+        modulus: 'MPa',
+        density: 't/m3',
+      }],
+    };
     const { project } = deriveSpace3DFromPlanarProject(source);
     expect(project.analysisSpace).toBe('space-3d');
     expect(project.name).toBe(source.name);
     expect(project.units).toBe(source.settings.units);
+    expect(project.customUnitSystems).toEqual(source.settings.customUnitSystems);
+    expect(project.customUnitSystems).not.toBe(source.settings.customUnitSystems);
     expect(project.id).toBe(derivedSpace3DId(source.id));
     expect(project.id).not.toBe(source.id);
   });
@@ -211,6 +227,25 @@ describe('2D to Space 3D bridge', () => {
     const source = planar();
     const { project } = deriveSpace3DFromPlanarProject(source);
     expect(space3dMatchesPlanarSource(project, source)).toBe(true);
+
+    const customSource = planar();
+    customSource.settings = {
+      ...customSource.settings,
+      units: 'custom:bridge',
+      customUnitSystems: [{
+        id: 'custom:bridge', name: 'Puente', force: 'kN', length: 'm',
+        sectionLength: 'cm', sectionDimension: 'mm', modulus: 'MPa', density: 'kg/m3',
+      }],
+    };
+    const customProject = deriveSpace3DFromPlanarProject(customSource).project;
+    expect(space3dMatchesPlanarSource(customProject, customSource)).toBe(true);
+    expect(space3dMatchesPlanarSource(customProject, {
+      ...customSource,
+      settings: {
+        ...customSource.settings,
+        customUnitSystems: customSource.settings.customUnitSystems?.map((system) => ({ ...system, force: 'tonf' })),
+      },
+    })).toBe(false);
 
     // Completar propiedades 3D no rompe la correspondencia: es trabajo del usuario.
     const completed = {

@@ -61,6 +61,7 @@ export const esWorkspace = {
   'units.customAdd': 'Añadir sistema',
   'units.customCancel': 'Cancelar',
   'units.customRemove': 'Eliminar el sistema {name}',
+  'units.customLimit': 'Se alcanzó el límite de {count} sistemas propios.',
   'units.preview': 'Vista previa: {summary}',
   'language.label': 'Idioma',
   'language.es': 'Español',

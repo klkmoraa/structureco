@@ -589,19 +589,48 @@ export const evaluateDiagramAt = (
   return point;
 };
 
+const polynomialDerivativeCoefficients = (coefficients: readonly number[]): number[] =>
+  coefficients.slice(1).map((coefficient, index) => coefficient * (index + 1));
+
+interface CurvatureProfile {
+  readonly secondDerivative: readonly number[];
+  /** Puntos donde |p''| puede alcanzar un máximo interior. */
+  readonly extrema: readonly number[];
+}
+
 /**
- * Cota superior de la separación entre el polinomio y su cuerda en [0, h]:
- * la suma de los términos de grado ≥ 2, que son los únicos que la interpolación
- * lineal no reproduce.
+ * Perfil necesario para acotar de forma rigurosa el error de una cuerda.
+ *
+ * Para una interpolación lineal en [a,b], el error está acotado por
+ * `(b-a)² max|p''| / 8`. Los máximos de `|p''|` sólo pueden estar en los
+ * extremos o donde `p''' = 0`; esas raíces se calculan una vez por tramo y se
+ * reutilizan en toda la subdivisión.
  */
-const curvatureBound = (coefficients: readonly number[], h: number): number => {
-  let bound = 0;
-  let power = h * h;
-  for (let degree = 2; degree < coefficients.length; degree += 1) {
-    bound += Math.abs(coefficients[degree]) * power;
-    power *= h;
+const curvatureProfile = (coefficients: readonly number[], h: number): CurvatureProfile => {
+  const secondDerivative = polynomialDerivativeCoefficients(polynomialDerivativeCoefficients(coefficients));
+  return {
+    secondDerivative,
+    extrema: rootsInInterval(polynomialDerivativeCoefficients(secondDerivative), h),
+  };
+};
+
+const interpolationErrorBound = (
+  profile: CurvatureProfile,
+  left: number,
+  right: number,
+): number => {
+  if (!profile.secondDerivative.length || right <= left) return 0;
+  let maximum = Math.max(
+    Math.abs(evaluatePolynomial(profile.secondDerivative, left)),
+    Math.abs(evaluatePolynomial(profile.secondDerivative, right)),
+    Math.abs(evaluatePolynomial(profile.secondDerivative, 0.5 * (left + right))),
+  );
+  for (const point of profile.extrema) {
+    if (point > left && point < right) {
+      maximum = Math.max(maximum, Math.abs(evaluatePolynomial(profile.secondDerivative, point)));
+    }
   }
-  return bound;
+  return (right - left) ** 2 * maximum / 8;
 };
 
 /**
@@ -704,10 +733,13 @@ export const buildDeformationCurve = (
     // poligonal los reproduce exactos —el primero es el movimiento de sólido
     // rígido del miembro y el segundo es la cuerda misma—, así que sólo el resto
     // del polinomio genera error de interpolación.
+    const uCurvature = curvatureProfile(uCoefficients, h);
+    const vCurvature = curvatureProfile(vCoefficients, h);
+    const thetaCurvature = curvatureProfile(thetaCoefficients, h);
     const bendingScale = Math.max(
-      curvatureBound(uCoefficients, h),
-      curvatureBound(vCoefficients, h),
-      h * curvatureBound(thetaCoefficients, h),
+      interpolationErrorBound(uCurvature, 0, h),
+      interpolationErrorBound(vCurvature, 0, h),
+      h * interpolationErrorBound(thetaCurvature, 0, h),
     );
     const motionScale = Math.max(h, Math.abs(start.u), Math.abs(start.v), Math.abs(end.u), Math.abs(end.v));
     const tolerance = Math.max(DEFORMATION_SHAPE_TOLERANCE * bendingScale, 1e-12 * motionScale);
@@ -716,7 +748,18 @@ export const buildDeformationCurve = (
       const chordU = 0.5 * (left.u + right.u);
       const chordV = 0.5 * (left.v + right.v);
       const chordTheta = 0.5 * (left.theta + right.theta);
-      const error = Math.max(Math.abs(midpoint.u - chordU), Math.abs(midpoint.v - chordV), h * Math.abs(midpoint.theta - chordTheta));
+      // El error observado en el punto medio es barato y preciso; la cota de
+      // curvatura evita su único punto ciego: una curva de grado 4 o 5 puede
+      // cruzar su cuerda exactamente en el centro y arquearse entre medias.
+      const observedError = Math.max(Math.abs(midpoint.u - chordU), Math.abs(midpoint.v - chordV), h * Math.abs(midpoint.theta - chordTheta));
+      const leftXi = left.x - segment.x0;
+      const rightXi = right.x - segment.x0;
+      const error = Math.max(
+        observedError,
+        interpolationErrorBound(uCurvature, leftXi, rightXi),
+        interpolationErrorBound(vCurvature, leftXi, rightXi),
+        h * interpolationErrorBound(thetaCurvature, leftXi, rightXi),
+      );
       if (depth >= 12 || error <= tolerance) {
         points.push(right);
         return;

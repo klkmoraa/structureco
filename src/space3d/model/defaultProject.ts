@@ -97,6 +97,7 @@ export const createBlankSpace3DProject = (): Space3DProject => ({
   id: 'space3d-project',
   name: 'Space 3D',
   units: 'kN-m',
+  customUnitSystems: [],
   nodes: [],
   members: [],
   nodalLoads: [],
@@ -120,6 +121,7 @@ export const createSpace3DPortalExample = (): Space3DProject => ({
   id: 'space3d-portal',
   name: 'Pórtico espacial',
   units: 'kN-m',
+  customUnitSystems: [],
   nodes: [
     node('N1', 0, 0, 0, fixedSpace3DRestraints()),
     node('N2', 5, 0, 0, fixedSpace3DRestraints()),

@@ -37,6 +37,9 @@ export type {
   StressUnitId,
 } from '../types';
 
+/** Límite portable compartido por la interfaz y todos los códecs de proyecto. */
+export const MAX_CUSTOM_UNIT_SYSTEMS = 32;
+
 export interface AtomicUnit<Id extends string> {
   readonly id: Id;
   /** Etiqueta impresa junto al número. */

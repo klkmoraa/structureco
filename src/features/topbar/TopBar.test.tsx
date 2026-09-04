@@ -8,6 +8,8 @@ import { ClassroomSessionProvider } from '../../store/ClassroomSessionContext';
 import { ProjectProvider } from '../../store/ProjectContext';
 import { TopBar } from './TopBar';
 import { onWorkspaceCommand } from '../workspace/workspaceCommands';
+import { MAX_CUSTOM_UNIT_SYSTEMS } from '../../engine/unitSystems';
+import type { CustomUnitSystem } from '../../types';
 
 const TopBarHarness = ({ children }: { children: React.ReactNode }) => <ProjectProvider><ClassroomSessionProvider projectId="topbar-test">{children}</ClassroomSessionProvider></ProjectProvider>;
 
@@ -128,6 +130,32 @@ describe('TopBar portable export', () => {
     await user.click(screen.getByRole('button', { name: 'Configuración de análisis' }));
     expect(screen.queryByRole('combobox', { name: 'Método de procedimiento' })).toBeNull();
     expect(screen.getByRole('combobox', { name: 'Caso o combinación' })).toBeTruthy();
+  });
+
+  it('impide crear más sistemas de unidades de los que el archivo puede guardar', async () => {
+    const user = userEvent.setup();
+    const project = createDefaultProject();
+    project.settings = {
+      ...project.settings,
+      customUnitSystems: Array.from({ length: MAX_CUSTOM_UNIT_SYSTEMS }, (_, index): CustomUnitSystem => ({
+        id: `custom:test-${index}`,
+        name: `Sistema ${index + 1}`,
+        force: 'kN',
+        length: 'm',
+        sectionLength: 'cm',
+        sectionDimension: 'mm',
+        modulus: 'MPa',
+        density: 'kg/m3',
+      })),
+    };
+    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(project));
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
+
+    await user.click(screen.getByRole('button', { name: 'Configuración de análisis' }));
+    const create = screen.getByRole('button', { name: 'Crear sistema propio' }) as HTMLButtonElement;
+
+    expect(create.disabled).toBe(true);
+    expect(create.title).toContain(String(MAX_CUSTOM_UNIT_SYSTEMS));
   });
 
   it('previews the generated PDF before sharing or downloading that same artifact', async () => {

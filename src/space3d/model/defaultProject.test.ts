@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { createBlankSpace3DProject, createSpace3DPortalExample } from './defaultProject';
+import { SPACE3D_SCHEMA_VERSION } from './types';
 
 describe('Space3D project defaults', () => {
   it('crea un proyecto discriminado sin compartir arrays', () => {
     const a = createBlankSpace3DProject();
     const b = createBlankSpace3DProject();
     expect(a.analysisSpace).toBe('space-3d');
-    expect(a.schemaVersion).toBe(2);
+    expect(a.schemaVersion).toBe(SPACE3D_SCHEMA_VERSION);
     expect(a.units).toBe('kN-m');
+    expect(a.customUnitSystems).not.toBe(b.customUnitSystems);
     expect(a.nodes).not.toBe(b.nodes);
     expect(a.members).not.toBe(b.members);
   });

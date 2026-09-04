@@ -50,6 +50,7 @@ import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { resolveTopBarCommand, type TopBarCommandContext } from '../workspace/commandRegistry';
 import { PDeltaAdvancedConfig, TopBarHistoryControls } from './TopBarControlGroups';
 import { UnitSystemPicker } from './UnitSystemPicker';
+import { MAX_CUSTOM_UNIT_SYSTEMS } from '../../engine/unitSystems';
 import type { ToolDockPosition } from '../workspace/useWorkspaceLayoutPreferences';
 import type { PdfPreviewArtifact } from '../pdf-preview/PdfPreviewDialog';
 import {
@@ -639,14 +640,18 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
                 units={project.settings.units}
                 customSystems={project.settings.customUnitSystems ?? []}
                 onSelect={(unitSystem) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, units: unitSystem } }))}
-                onCreate={(system) => updateProjectView((draft) => ({
-                  ...draft,
-                  settings: {
-                    ...draft.settings,
-                    customUnitSystems: [...(draft.settings.customUnitSystems ?? []), system],
-                    units: system.id,
-                  },
-                }))}
+                onCreate={(system) => updateProjectView((draft) => {
+                  const customUnitSystems = draft.settings.customUnitSystems ?? [];
+                  if (customUnitSystems.length >= MAX_CUSTOM_UNIT_SYSTEMS) return draft;
+                  return {
+                    ...draft,
+                    settings: {
+                      ...draft.settings,
+                      customUnitSystems: [...customUnitSystems, system],
+                      units: system.id,
+                    },
+                  };
+                })}
                 onRemove={(id) => updateProjectView((draft) => {
                   const remaining = (draft.settings.customUnitSystems ?? []).filter((system) => system.id !== id);
                   return {

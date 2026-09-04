@@ -5,6 +5,7 @@ import {
   DENSITY_UNITS,
   FORCE_UNITS,
   LENGTH_UNITS,
+  MAX_CUSTOM_UNIT_SYSTEMS,
   PRESET_UNIT_SYSTEM_IDS,
   STRESS_UNITS,
   compositionMenuLabel,
@@ -72,8 +73,10 @@ export const UnitSystemPicker = ({ units, customSystems, onSelect, onCreate, onR
   const [draft, setDraft] = useState<Draft>(INITIAL_DRAFT);
   const preview = useMemo(() => describeComposition(draft), [draft]);
   const suggestedName = compositionMenuLabel(draft);
+  const canCreate = customSystems.length < MAX_CUSTOM_UNIT_SYSTEMS;
 
   const submit = () => {
+    if (!canCreate) return;
     onCreate({
       ...draft,
       id: nextCustomId(),
@@ -138,13 +141,25 @@ export const UnitSystemPicker = ({ units, customSystems, onSelect, onCreate, onR
           <UnitSelect label={t('units.customModulus')} value={draft.modulus} units={STRESS_UNITS} onChange={(modulus) => setDraft((current) => ({ ...current, modulus }))} />
           <UnitSelect label={t('units.customDensity')} value={draft.density} units={DENSITY_UNITS} onChange={(density) => setDraft((current) => ({ ...current, density }))} />
           <p className="topbar-units-summary">{t('units.preview', { summary: preview })}</p>
+          {!canCreate ? (
+            <p className="topbar-units-summary" role="status">
+              {t('units.customLimit', { count: MAX_CUSTOM_UNIT_SYSTEMS })}
+            </p>
+          ) : null}
           <div className="topbar-units-actions">
-            <Button variant="primary" size="sm" onClick={submit}>{t('units.customAdd')}</Button>
+            <Button variant="primary" size="sm" disabled={!canCreate} onClick={submit}>{t('units.customAdd')}</Button>
             <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>{t('units.customCancel')}</Button>
           </div>
         </div>
       ) : (
-        <Button variant="secondary" size="sm" leadingIcon={<Plus size={14} />} onClick={() => setEditing(true)}>
+        <Button
+          variant="secondary"
+          size="sm"
+          leadingIcon={<Plus size={14} />}
+          disabled={!canCreate}
+          title={!canCreate ? t('units.customLimit', { count: MAX_CUSTOM_UNIT_SYSTEMS }) : undefined}
+          onClick={() => setEditing(true)}
+        >
           {t('units.customToggle')}
         </Button>
       )}

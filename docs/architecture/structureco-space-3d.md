@@ -30,7 +30,7 @@ importar y exportar. Vive completo bajo `src/space3d/**` y
 - Reacciones, acciones de extremo en ejes locales, **diagramas de acciones
   internas muestreados a lo largo del vano** y auditoría de equilibrio 6D.
 - Worker aislado con protocolo versionado y cancelación real.
-- Códec portable estricto con migración desde el esquema 1, almacenamiento con
+- Códec portable estricto con migración desde los esquemas 1 y 2, almacenamiento con
   copia de seguridad, comandos reversibles e historial.
 - Escena Three.js con rejilla, ejes globales, apoyos, cargas nodales y de
   barra, triada local del miembro seleccionado, picking por identificador y
@@ -50,7 +50,7 @@ importar y exportar. Vive completo bajo `src/space3d/**` y
 | Cortante | `phi = 12·E·I / (G·As·L²)`; `As = 0` ⇒ Euler–Bernoulli exacto |
 | Repartidas | intensidad **por metro de barra**, no de proyección |
 | Acciones internas | `N` positivo en tracción; `dMz/dx = Vy` y `dMy/dx = -Vz` |
-| Esquema portable | versión 2; la 1 se migra al abrirse |
+| Esquema portable | versión 3; la 1 y la 2 se migran al abrirse |
 | Capacidad | 150 nudos / 300 barras, medida (ver más abajo) |
 
 ## Cargas sobre barra y acciones internas
@@ -171,8 +171,9 @@ El botón 3D de la mesa 2D abre el proyecto abierto convertido al dominio
 espacial por `src/space3d/data/bridge2d.ts`. Es un adaptador explícito y de una
 sola dirección: los stores no se acoplan y el solver no se vuelve híbrido.
 
-Se conservan nombre, identificadores, unidades, topología, apoyos planos,
-cargas nodales, casos y combinaciones; los nudos se levantan a `z = 0`.
+Se conservan nombre, identificadores, unidades —incluidas las definiciones de
+los sistemas propios—, topología, apoyos planos, cargas nodales, casos y
+combinaciones; los nudos se levantan a `z = 0`.
 
 Desde S3D-2 el puente también traduce, en vez de perder: **cargas de barra**
 —incluida la conversión de una intensidad medida sobre proyección horizontal o

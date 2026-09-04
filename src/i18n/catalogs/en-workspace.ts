@@ -61,6 +61,7 @@ export const enWorkspace = {
   'units.customAdd': 'Add system',
   'units.customCancel': 'Cancel',
   'units.customRemove': 'Remove the {name} system',
+  'units.customLimit': 'The limit of {count} custom systems has been reached.',
   'units.preview': 'Preview: {summary}',
   'language.label': 'Language',
   'language.es': 'Español',

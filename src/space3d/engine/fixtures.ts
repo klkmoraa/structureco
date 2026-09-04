@@ -81,6 +81,7 @@ const cantilever = (
   id,
   name: id,
   units: 'kN-m',
+  customUnitSystems: [],
   nodes: [
     { id: 'I', x: 0, y: 0, z: 0, restraints: fixedSpace3DRestraints(), springs: noSpace3DSprings() },
     { id: 'J', x: options.L, y: 0, z: 0, restraints: freeSpace3DRestraints(), springs: noSpace3DSprings() },

@@ -257,4 +257,27 @@ describe('motor exacto de diagramas', () => {
     }
     expect(worst / deflection).toBeLessThan(1e-3);
   });
+
+  it('no confunde con una recta una deformada que cruza su cuerda en el punto medio', () => {
+    const member: MemberModel = { id: 'M', i: 'A', j: 'B', type: 'frame', E: 1, A: 1, I: 1 };
+    const segment = {
+      x0: 0,
+      x1: 1,
+      axial: [0, 0, 0] as [number, number, number],
+      shear: [24, -48, 0] as [number, number, number],
+      moment: [-5, 24, -24, 0] as [number, number, number, number],
+      distributedAxial: [0, 0] as [number, number],
+      distributedTransverse: [48, 0] as [number, number],
+    };
+
+    // v(x) = 0,5x − 2,5x² + 4x³ − 2x⁴. Tanto v como θ coinciden con
+    // sus cuerdas en x=0,5, aunque entre 0 y 0,5 la barra sí se arquea.
+    const curve = buildDeformationCurve([segment], member, [0, 0, 0.5, 0, 0, -0.5]);
+    const quarter = evaluateDeformationAt(curve.segments, 0.25)!;
+
+    expect(curve.compatibilityError).toBeLessThan(1e-12);
+    expect(Math.abs(quarter.v)).toBeGreaterThan(0.02);
+    expect(curve.points.length).toBeGreaterThan(2);
+    expect(curve.points.some((point) => Math.abs(point.v) > 0.02)).toBe(true);
+  });
 });
