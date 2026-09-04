@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { MemberModel, MemberResult, NodeModel, ProjectModel } from '../../types';
 import { CanvasDiagramStack } from './CanvasDiagramStack';
@@ -41,7 +41,11 @@ describe('CanvasDiagramStack', () => {
     expect(container.querySelectorAll('[data-stack-panel]').length).toBe(3);
     expect(container.querySelectorAll('.diagram-stack-replica-member').length).toBe(9);
     expect(container.querySelectorAll('.diagram-stack-panel-frame')).toHaveLength(0);
+    expect(container.querySelectorAll('.diagram-stack-panel-surface')).toHaveLength(0);
+    expect(container.querySelectorAll('.diagram-stack-panel-rule')).toHaveLength(2);
+    expect(container.querySelector('[data-canvas-layer="diagram-stack"]')?.getAttribute('data-stack-layout')).toBe('rows');
     expect(container.querySelectorAll('[data-stack-reading]')).toHaveLength(0);
+    expect(container.querySelector('[data-stack-panel="moment"] .diagram-stack-panel-unit')?.textContent).toBe('kN·m');
   });
 
   it('keeps a single selected response in one exterior replica rather than over the editable member', () => {
@@ -79,7 +83,7 @@ describe('CanvasDiagramStack', () => {
     expect(new Set(starts.map((value) => Math.round(value))).size).toBe(1);
   });
 
-  it('usa el ancho del lienzo para tres pórticos completos en un área apaisada', () => {
+  it('conserva el ancho completo de cada lectura incluso en un área apaisada', () => {
     const { container } = render(<svg><CanvasDiagramStack
       project={project}
       results={members.map((member) => result(member.id))}
@@ -91,6 +95,31 @@ describe('CanvasDiagramStack', () => {
 
     const starts = replicaStarts(container);
     expect(starts).toHaveLength(3);
-    expect(new Set(starts.map((value) => Math.round(value))).size).toBe(3);
+    expect(new Set(starts.map((value) => Math.round(value))).size).toBe(1);
+  });
+
+  it('links the same member station across N, V, and M while probing the sheet', () => {
+    const projectNmm = { ...project, settings: { ...project.settings, units: 'N-mm' } } as ProjectModel;
+    const { container } = render(<svg viewBox="0 0 640 520"><CanvasDiagramStack
+      project={projectNmm}
+      results={members.map((member) => result(member.id))}
+      quantities={['axial', 'shear', 'moment']}
+      nodeMap={new Map(nodes.map((node) => [node.id, node]))}
+      size={{ width: 640, height: 520 }}
+      t={((key: string) => key) as never}
+    /></svg>);
+    const svg = container.querySelector('svg') as SVGSVGElement;
+    Object.defineProperty(svg, 'getBoundingClientRect', { value: () => ({
+      x: 0, y: 0, left: 0, top: 0, right: 640, bottom: 520, width: 640, height: 520, toJSON: () => ({}),
+    }) });
+    const hit = container.querySelector('[data-stack-panel="axial"] [data-stack-probe-hit="BC"]') as SVGLineElement;
+    const x = (Number(hit.getAttribute('x1')) + Number(hit.getAttribute('x2'))) / 2;
+    const y = (Number(hit.getAttribute('y1')) + Number(hit.getAttribute('y2'))) / 2;
+
+    fireEvent.pointerMove(hit, { clientX: x, clientY: y, pointerType: 'mouse' });
+
+    expect(container.querySelectorAll('[data-stack-probe="BC:axial"], [data-stack-probe="BC:shear"], [data-stack-probe="BC:moment"]')).toHaveLength(3);
+    expect(container.querySelector('.diagram-stack-probe-summary')?.textContent).toContain('BC · x 2500.00 mm');
+    expect(container.querySelector('[data-stack-probe="BC:moment"] .diagram-stack-probe-value')?.textContent).toBe('7.5e+6 N·mm');
   });
 });

@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const styles = readFileSync(new URL('./phase2.css', import.meta.url), 'utf8');
+const mobileStyles = readFileSync(new URL('./mobileCanvasDensity.css', import.meta.url), 'utf8');
 
 describe('canvas evidence rail styles', () => {
   it('preserves the shared touch target on any coarse pointer', () => {
@@ -13,11 +14,18 @@ describe('canvas evidence rail styles', () => {
     expect(coarsePointerRules.slice(0, blockEnd)).toMatch(
       /@media \(any-pointer:coarse\)[\s\S]*?\.canvas-evidence-layer\s*\{[\s\S]*?min-height:var\(--sc-control-height-touch\)/,
     );
-    expect(coarsePointerRules.slice(0, blockEnd)).toMatch(
-      /\.canvas-evidence-layer\[aria-pressed='true'\]\s*\{[\s\S]*?transform:var\(--sc-clay-press-transform-flat\)/,
+    expect(styles).toMatch(
+      /\.canvas-evidence-rail\s*\{[\s\S]*?bottom:12px;[\s\S]*?left:50%;[\s\S]*?transform:translateX\(-50%\)/,
+    );
+    expect(styles).toMatch(
+      /\.canvas-evidence-layer\[aria-pressed='true'\]\s*\{[\s\S]*?background:color-mix/,
     );
     expect(styles).toMatch(
       /@media \(max-width:700px\) and \(any-pointer:coarse\)[\s\S]*?\.canvas-host:has\(\.canvas-evidence-rail\) \.canvas-result-legend\s*\{[\s\S]*?top:68px/,
     );
+    expect(styles).toMatch(
+      /\.canvas-host:has\(\.canvas-evidence-rail\) \.canvas-status\s*\{[\s\S]*?top:12px;[\s\S]*?bottom:auto;/,
+    );
+    expect(mobileStyles).not.toMatch(/\.canvas-evidence-layer--secondary[\s\S]{0,120}display:none/);
   });
 });

@@ -5,12 +5,6 @@
 
 .diagram-stack-layer--canvas { pointer-events:none; }
 .diagram-stack-layer--canvas ~ g { display:none; }
-.diagram-stack-panel-surface {
-  fill:color-mix(in srgb,var(--surface) 24%,var(--canvas-bg));
-  stroke:color-mix(in srgb,var(--border) 66%,transparent);
-  stroke-width:1;
-  vector-effect:non-scaling-stroke;
-}
 .diagram-stack-layer--canvas .diagram-stack-panel-title {
   font-weight:800;
   letter-spacing:.02em;
@@ -31,10 +25,11 @@
     display:none;
   }
 
-  /* Result modes become a compact, horizontally scrollable strip instead of a
-     large second toolbar. The layer launcher occupies the reserved right edge. */
+  /* Results stay at the lower edge like an instrument readout. The top edge
+     remains free for model identity and the layer launcher. */
   .canvas-evidence-rail {
-    top:7px;
+    top:auto;
+    bottom:7px;
     left:7px;
     right:54px;
     width:auto;
@@ -60,6 +55,11 @@
     line-height:1;
     white-space:nowrap;
   }
+  .canvas-evidence-rail__label,
+  .canvas-evidence-layer > span:not(.canvas-evidence-layer__symbol) {
+    display:none;
+  }
+  .canvas-evidence-layer__symbol { margin-right:0; }
   .canvas-evidence-stack-choices {
     flex:0 0 auto;
     gap:2px;
@@ -155,9 +155,10 @@
   /* Coordinates are useful with a mouse/pen but are noisy under a finger. Keep
      scale visible so the user still knows whether the camera is zoomed. */
   .canvas-status {
+    top:7px;
     left:7px;
     right:auto;
-    bottom:7px;
+    bottom:auto;
     min-height:34px;
     max-width:118px;
     transform:none;
@@ -177,6 +178,8 @@
   .diagram-stack-layer--canvas .diagram-stack-member-line { stroke-width:1.7; }
   .diagram-stack-layer--canvas .diagram-stack-replica-member { stroke-width:1.4; opacity:.75; }
   .diagram-stack-layer--canvas .diagram-stack-member-fill { opacity:.12; }
+  .diagram-stack-layer--canvas .diagram-stack-member-hit { stroke-width:24; }
+  .diagram-stack-probe-summary { font-size:8.5px; }
 }
 
 @media (max-width:420px) {

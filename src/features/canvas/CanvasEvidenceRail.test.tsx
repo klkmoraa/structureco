@@ -36,14 +36,19 @@ describe('CanvasEvidenceRail', () => {
 
     const stack = screen.getByRole('button', { name: 'Diagramas N, V y M simultáneos' });
     expect(stack.getAttribute('aria-pressed')).toBe('false');
+    expect(stack.textContent).toBe('ACMComparar');
     await user.click(stack);
     expect(onStackToggle).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Axial' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Cortante' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Momento' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Deformada' }).textContent).toBe('δDeformada');
   });
 
   it('lets the active ACM choose lanes without allowing an empty stack', async () => {
     const user = userEvent.setup();
     const onStackQuantityToggle = vi.fn();
-    render(<ProjectProvider><CanvasEvidenceRail
+    const { container } = render(<ProjectProvider><CanvasEvidenceRail
       layers={createEditorLayerState()}
       dispatch={vi.fn()}
       resultTab="moment"
@@ -54,8 +59,33 @@ describe('CanvasEvidenceRail', () => {
       stackQuantities={['moment']}
       onStackQuantityToggle={onStackQuantityToggle}
     /></ProjectProvider>);
-    expect((document.querySelector('[data-evidence-stack-quantity="moment"]') as HTMLButtonElement).disabled).toBe(true);
-    await user.click(document.querySelector('[data-evidence-stack-quantity="axial"]') as HTMLButtonElement);
+    expect((container.querySelector('[data-evidence-stack-quantity="moment"]') as HTMLButtonElement).disabled).toBe(true);
+    await user.click(container.querySelector('[data-evidence-stack-quantity="axial"]') as HTMLButtonElement);
     expect(onStackQuantityToggle).toHaveBeenCalledWith('axial');
+  });
+
+  it('switches directly from ACM comparison to one visible result', async () => {
+    const user = userEvent.setup();
+    const onStackToggle = vi.fn();
+    const setResultTab = vi.fn();
+    const dispatch = vi.fn();
+    const { container } = render(<ProjectProvider><CanvasEvidenceRail
+      layers={createEditorLayerState()}
+      dispatch={dispatch}
+      resultTab="moment"
+      setResultTab={setResultTab}
+      visible
+      stackActive
+      stackAvailable
+      onStackToggle={onStackToggle}
+    /></ProjectProvider>);
+
+    const moment = container.querySelector('[data-evidence-layer="moment"]') as HTMLButtonElement;
+    expect(moment.getAttribute('aria-pressed')).toBe('false');
+    await user.click(moment);
+
+    expect(onStackToggle).toHaveBeenCalledOnce();
+    expect(setResultTab).toHaveBeenCalledWith('moment');
+    expect(dispatch).toHaveBeenCalledWith({ type: 'set', layer: 'results', visible: true });
   });
 });

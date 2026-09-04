@@ -1256,56 +1256,89 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
   transform:var(--sc-clay-press-transform);
 }
 
-/* Evidencia es un riel del dibujo: elegir una opción enciende sólo la capa
-   sobre el canvas y no obliga a abrir el panel de capas. */
+/* Evidencia es una lectura del dibujo. El resultado queda a un clic y ocupa
+   una franja técnica discreta, no una segunda barra decorativa. */
 .canvas-evidence-rail {
   position:absolute;
   z-index:8;
-  top:8px;
-  left:8px;
-  right:8px;
+  bottom:12px;
+  left:50%;
   display:flex;
   align-items:center;
-  gap:5px;
-  max-width:none;
+  gap:4px;
+  width:max-content;
+  max-width:calc(100% - 156px);
   min-width:0;
-  justify-content:center;
-  padding:3px;
+  padding:4px 5px;
   overflow-x:auto;
   overscroll-behavior-x:contain;
   scrollbar-width:none;
-  border:var(--sc-clay-edge);
-  border-radius:13px;
-  background:var(--sc-color-surface-1);
-  box-shadow:var(--sc-shadow-clay-xs);
+  border:1px solid color-mix(in srgb,var(--border) 84%,transparent);
+  border-radius:9px;
+  background:color-mix(in srgb,var(--canvas-bg) 94%,var(--surface));
+  box-shadow:0 3px 8px color-mix(in srgb,var(--text) 13%,transparent);
+  transform:translateX(-50%);
 }
 .canvas-evidence-rail::-webkit-scrollbar { display:none; }
+.canvas-evidence-rail__label {
+  padding:0 5px 0 4px;
+  color:var(--subtle);
+  font-family:var(--sc-font-mono);
+  font-size:9px;
+  font-weight:750;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.canvas-evidence-rail__primary { display:flex; align-items:center; gap:3px; }
 .canvas-evidence-layer {
   min-width:max-content;
-  min-height:30px;
+  min-height:29px;
   padding:0 8px;
-  border:1px solid var(--sc-color-border-soft);
-  border-radius:9px;
-  background:var(--sc-color-surface-elevated);
-  color:var(--sc-color-text-secondary);
+  border:1px solid transparent;
+  border-radius:6px;
+  background:transparent;
+  color:var(--muted);
   font:inherit;
   font-size:10px;
-  font-weight:700;
+  font-weight:650;
   cursor:pointer;
   transition:var(--sc-transition-control);
 }
-.canvas-evidence-layer:hover { color:var(--sc-color-text-primary); box-shadow:var(--sc-shadow-clay-xs); transform:translateY(-1px); }
-.canvas-evidence-layer[aria-pressed='true'] { color:var(--accent); border-color:color-mix(in srgb,var(--accent) 42%,var(--sc-color-border-soft)); background:var(--sc-color-surface-inset); box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
-.canvas-evidence-layer--axial[aria-pressed='true'] { color:var(--axial); border-color:color-mix(in srgb,var(--axial) 46%,var(--sc-color-border-soft)); }
-.canvas-evidence-layer--shear[aria-pressed='true'] { color:var(--shear); border-color:color-mix(in srgb,var(--shear) 46%,var(--sc-color-border-soft)); }
-.canvas-evidence-layer--moment[aria-pressed='true'] { color:var(--moment); border-color:color-mix(in srgb,var(--moment) 46%,var(--sc-color-border-soft)); }
-.canvas-evidence-layer--deformed[aria-pressed='true'] { color:var(--deformed); border-color:color-mix(in srgb,var(--deformed) 46%,var(--sc-color-border-soft)); }
-.canvas-evidence-layer--stack[aria-pressed='true'] { color:var(--moment); border-color:color-mix(in srgb,var(--moment) 46%,var(--sc-color-border-soft)); }
-.canvas-evidence-stack-choices { display:flex; gap:2px; padding-left:2px; }
-.canvas-evidence-stack-choice { min-width:26px; height:26px; padding:0 6px; border:1px solid var(--sc-color-border-soft); border-radius:7px; color:var(--muted); background:var(--surface); font-size:11px; font-weight:750; }
-.canvas-evidence-stack-choice[aria-pressed='true'] { color:var(--accent-on-soft); border-color:color-mix(in srgb,var(--accent) 44%,var(--sc-color-border-soft)); background:var(--accent-soft); }
+.canvas-evidence-layer:hover:not(:disabled) { color:var(--text); background:color-mix(in srgb,var(--surface) 72%,transparent); }
+.canvas-evidence-layer[aria-pressed='true'] { border-color:color-mix(in srgb,currentColor 32%,var(--border)); background:color-mix(in srgb,currentColor 12%,var(--canvas-bg)); }
+.canvas-evidence-layer--axial[aria-pressed='true'] { color:var(--axial); }
+.canvas-evidence-layer--shear[aria-pressed='true'] { color:var(--shear); }
+.canvas-evidence-layer--moment[aria-pressed='true'] { color:var(--moment); }
+.canvas-evidence-layer--deformed[aria-pressed='true'] { color:var(--deformed); }
+.canvas-evidence-layer--stack[aria-pressed='true'] { color:var(--text); }
+.canvas-evidence-layer__symbol { margin-right:5px; font-family:var(--sc-font-mono); font-size:11px; font-weight:800; }
+.canvas-evidence-layer--stack { position:relative; border-left-color:var(--border-soft); margin-left:1px; }
+.canvas-evidence-layer--stack[aria-pressed='true']::after {
+  position:absolute;
+  right:7px;
+  bottom:3px;
+  left:7px;
+  height:2px;
+  background:linear-gradient(90deg,var(--axial) 0 33.33%,var(--shear) 33.33% 66.66%,var(--moment) 66.66% 100%);
+  content:'';
+}
+.canvas-evidence-layer--secondary { color:var(--subtle); }
+.canvas-evidence-stack-choices { display:flex; gap:2px; padding-left:2px; border-left:1px solid var(--border-soft); }
+.canvas-evidence-stack-choice { min-width:25px; height:25px; padding:0 5px; border:1px solid transparent; border-radius:5px; color:var(--muted); background:transparent; font-family:var(--sc-font-mono); font-size:10px; font-weight:800; }
+.canvas-evidence-stack-choice:hover:not(:disabled) { color:var(--text); background:var(--surface); }
+.canvas-evidence-stack-choice[aria-pressed='true'] { color:var(--text); border-color:var(--border); background:var(--surface); }
 .canvas-evidence-stack-choice:disabled { opacity:.52; cursor:not-allowed; }
 .canvas-host:has(.canvas-evidence-rail) .canvas-mode-badge:not(.placing-load) { display:none; }
+.canvas-host:has(.canvas-evidence-rail) .canvas-status {
+  top:12px;
+  bottom:auto;
+  left:12px;
+  right:auto;
+  max-width:min(320px,calc(100% - 160px));
+  transform:none;
+}
+.canvas-host:has(.canvas-evidence-rail[data-reading-mode='compare']) .canvas-result-legend { display:none; }
 
 /* ACM is a read-only extension of the solved diagrams. Each lane keeps its
    own scale so a small axial action never vanishes beside a large moment. */
@@ -1331,7 +1364,11 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
    the complete structure repeats down the canvas for N, V and M. There are no
    cards, frames or miniatures competing with the structural diagrams. */
 .diagram-stack-layer--external { pointer-events:none; }
+.diagram-stack-kicker { fill:var(--text); font-family:var(--sc-font-mono); font-size:11px; font-weight:850; letter-spacing:.12em; }
+.diagram-stack-probe-summary { fill:var(--subtle); font-family:var(--sc-font-mono); font-size:9px; font-weight:600; letter-spacing:.015em; }
+.diagram-stack-panel-rule { stroke:color-mix(in srgb,var(--border) 72%,transparent); stroke-width:1; vector-effect:non-scaling-stroke; }
 .diagram-stack-panel-title { fill:var(--muted); font-size:11px; font-weight:750; letter-spacing:.02em; paint-order:stroke; stroke:var(--canvas-bg); stroke-width:4px; }
+.diagram-stack-panel-unit { fill:var(--subtle); font-family:var(--sc-font-mono); font-size:9px; font-weight:600; }
 .diagram-stack-member-label { fill:var(--subtle); font-size:9px; font-weight:700; paint-order:stroke; stroke:var(--canvas-bg); stroke-width:3px; }
 .diagram-stack-replica-member { stroke:var(--text); stroke-width:1.15; opacity:.72; }
 .diagram-stack-member-baseline { fill:none; stroke:var(--border-soft); stroke-width:1; stroke-dasharray:3 3; opacity:.8; }
@@ -1339,23 +1376,31 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 .diagram-stack-member-line { fill:none; stroke-width:2.4; stroke-linejoin:round; stroke-linecap:round; }
 .diagram-stack-reading circle { stroke:var(--canvas-bg); stroke-width:1.25; }
 .diagram-stack-reading text { font-size:8.5px; font-weight:750; paint-order:stroke; stroke:var(--canvas-bg); stroke-width:3px; }
+.diagram-stack-member-hit { fill:none; stroke:transparent; stroke-width:18; pointer-events:stroke; cursor:crosshair; }
+.diagram-stack-probe-ordinate { stroke:var(--muted); stroke-width:1; stroke-dasharray:2 2; opacity:.8; vector-effect:non-scaling-stroke; }
+.diagram-stack-probe-point { stroke:var(--canvas-bg); stroke-width:1.5; vector-effect:non-scaling-stroke; }
+.diagram-stack-probe-value { font-family:var(--sc-font-mono); font-size:9px; font-weight:800; paint-order:stroke; stroke:var(--canvas-bg); stroke-width:3px; }
 .diagram-stack-member-lane.axial .diagram-stack-member-line { stroke:var(--axial); }
 .diagram-stack-member-lane.axial .diagram-stack-member-fill,.diagram-stack-member-lane.axial .diagram-stack-reading circle,.diagram-stack-member-lane.axial .diagram-stack-reading text { fill:var(--axial); }
+.diagram-stack-probe.axial .diagram-stack-probe-point,.diagram-stack-probe.axial .diagram-stack-probe-value { fill:var(--axial); }
 .diagram-stack-member-lane.shear .diagram-stack-member-line { stroke:var(--shear); }
 .diagram-stack-member-lane.shear .diagram-stack-member-fill,.diagram-stack-member-lane.shear .diagram-stack-reading circle,.diagram-stack-member-lane.shear .diagram-stack-reading text { fill:var(--shear); }
+.diagram-stack-probe.shear .diagram-stack-probe-point,.diagram-stack-probe.shear .diagram-stack-probe-value { fill:var(--shear); }
 .diagram-stack-member-lane.moment .diagram-stack-member-line { stroke:var(--moment); }
 .diagram-stack-member-lane.moment .diagram-stack-member-fill,.diagram-stack-member-lane.moment .diagram-stack-reading circle,.diagram-stack-member-lane.moment .diagram-stack-reading text { fill:var(--moment); }
+.diagram-stack-probe.moment .diagram-stack-probe-point,.diagram-stack-probe.moment .diagram-stack-probe-value { fill:var(--moment); }
 .diagram-stack-panel.axial .diagram-stack-panel-title { fill:var(--axial); }
 .diagram-stack-panel.shear .diagram-stack-panel-title { fill:var(--shear); }
 .diagram-stack-panel.moment .diagram-stack-panel-title { fill:var(--moment); }
 
 @media (max-width:1023px) {
-  .canvas-evidence-rail { top:8px; left:max(8px,env(safe-area-inset-left)); right:max(8px,env(safe-area-inset-right)); max-width:none; }
+  .canvas-evidence-rail { left:max(8px,env(safe-area-inset-left)); right:max(84px,env(safe-area-inset-right)); bottom:8px; max-width:none; transform:none; }
   .canvas-evidence-layer { min-height:30px; padding-inline:8px; }
 }
 
 @media (max-width:460px) {
-  .canvas-evidence-rail { top:8px; left:8px; right:8px; max-width:none; }
+  .canvas-evidence-rail { left:8px; right:58px; bottom:8px; max-width:none; }
+  .canvas-evidence-rail__label { display:none; }
 }
 
 /* El riel compacto no debe encoger también el área táctil. En pantallas
@@ -1367,7 +1412,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
     padding-inline:10px;
   }
   .canvas-evidence-layer[aria-pressed='true'] {
-    transform:var(--sc-clay-press-transform-flat);
+    transform:none;
   }
 }
 
