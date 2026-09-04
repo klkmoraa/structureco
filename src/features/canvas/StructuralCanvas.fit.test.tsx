@@ -37,7 +37,12 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-const canvasScale = () => document.querySelector('.canvas-scale-output')?.textContent ?? '';
+/**
+ * Ancho en píxeles de la regla de escala. Es la lectura de cámara que sí cambia
+ * al encajar: el rótulo («1 m») puede repetirse entre dos zooms distintos
+ * porque siempre es un número redondo, pero su longitud en pantalla no.
+ */
+const scaleBarPixels = () => document.querySelector('.canvas-scale-bar')?.getAttribute('data-scale-bar-px') ?? '';
 
 const numericAttributes = (selector: string, attributes: readonly string[]) => [...document.querySelectorAll<SVGElement>(selector)].flatMap((element) => (
   attributes.map((attribute) => ({ attribute, value: element.getAttribute(attribute) }))
@@ -59,13 +64,13 @@ describe('StructuralCanvas fit', () => {
     const user = userEvent.setup();
     render(<ProjectProvider><StructuralCanvas layers={createEditorLayerState()} dispatchLayers={() => undefined} /></ProjectProvider>);
     const beforeModel = localStorage.getItem(PROJECT_STORAGE_KEY);
-    const initialScale = canvasScale();
+    const initialScale = scaleBarPixels();
 
     await user.click(screen.getByRole('button', { name: 'Ajustar modelo a la vista' }));
 
     await waitFor(() => {
-      expect(canvasScale()).not.toBe(initialScale);
-      expect(canvasScale()).not.toContain('—×');
+      expect(scaleBarPixels()).not.toBe(initialScale);
+      expect(Number(scaleBarPixels())).toBeGreaterThan(0);
     });
 
     expect(document.querySelectorAll('[data-structure-kind="node"]')).toHaveLength(3);

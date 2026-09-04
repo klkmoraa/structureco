@@ -6,6 +6,10 @@ import type { SnapKind } from '../../utils/snapping';
 import { toDisplay } from '../../engine/units';
 import { formatFixed } from '../../utils/numberFormat';
 import type { TranslationKey } from '../../i18n/catalogs';
+import { normalizeAngleDeg } from './angleConstraint';
+
+/** Cuánto se prolonga el rayo polar más allá del punto en curso. */
+const GUIDE_RAY_FACTOR = 6;
 
 type Units = ProjectModel['settings']['units'];
 type Translate = (key: TranslationKey, variables?: Record<string, string | number>) => string;
@@ -22,6 +26,7 @@ const snapLabelKeys: Record<SnapKind, TranslationKey> = {
   perpendicular: 'canvas.snapPerpendicular',
   target: 'canvas.snapTarget',
   grid: 'canvas.snapGrid',
+  angle: 'canvas.snapAngle',
 };
 
 /** Presentation-only, ephemeral interaction feedback: snap glyph, marquee box, member draft, multi-selection badge. */
@@ -65,7 +70,25 @@ const CanvasInteractionLayerImpl = ({
         if (!startNode) return null;
         const start = toScreen(startNode.x, startNode.y);
         const end = toScreen(snapPreview.x, snapPreview.y);
-        return <g className="member-preview" pointerEvents="none"><line x1={start.x} y1={start.y} x2={end.x} y2={end.y} /><text x={(start.x + end.x) / 2} y={(start.y + end.y) / 2 - 10}>{formatFixed(toDisplay(Math.hypot(snapPreview.x - startNode.x, snapPreview.y - startNode.y), units, 'length'), 3)} {lengthLabel}</text></g>;
+        const dx = snapPreview.x - startNode.x;
+        const dy = snapPreview.y - startNode.y;
+        const length = Math.hypot(dx, dy);
+        // El ángulo es la mitad del dato que define una barra y hasta ahora
+        // sólo se podía escribir, nunca leer mientras se traza.
+        const angle = length > 1e-12 ? normalizeAngleDeg((Math.atan2(dy, dx) * 180) / Math.PI) : 0;
+        const constrained = snapPreview.kind === 'angle';
+        // Rayo polar: prolonga la dirección fijada más allá del punto para que
+        // se vea sobre qué recta se está trabajando, como en cualquier tablero.
+        const guide = constrained && length > 1e-12
+          ? { x: start.x + (end.x - start.x) * GUIDE_RAY_FACTOR, y: start.y + (end.y - start.y) * GUIDE_RAY_FACTOR }
+          : null;
+        return <g className={`member-preview${constrained ? ' is-angle-locked' : ''}`} pointerEvents="none">
+          {guide ? <line className="member-preview-guide" x1={start.x} y1={start.y} x2={guide.x} y2={guide.y} /> : null}
+          <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} />
+          <text x={(start.x + end.x) / 2} y={(start.y + end.y) / 2 - 10}>
+            {formatFixed(toDisplay(length, units, 'length'), 3)} {lengthLabel} · {formatFixed(angle, 1)}°
+          </text>
+        </g>;
       })() : null}
     </>;
   }

@@ -32,7 +32,7 @@ describe('CanvasChrome', () => {
       gridEnabled={false}
       coordinateReadoutRef={coordinateReadoutRef}
       lengthLabel="m"
-      scale={102}
+      pixelsPerLengthUnit={102}
       onCancelPlacement={onCancelPlacement}
       onZoomIn={onZoomIn}
       onZoomOut={onZoomOut}
@@ -47,6 +47,10 @@ describe('CanvasChrome', () => {
     expect(screen.getByText('SNAP activo')).toBeTruthy();
     expect(screen.getByText('GRID inactivo')).toBeTruthy();
     expect(coordinateReadoutRef.current?.textContent).toContain('X — · Y — m');
+    // La barra de escala rotula una longitud redonda del modelo, no un cociente
+    // de zoom: a 102 px por metro la mayor que cabe en la píldora es 1 m.
+    expect(container.querySelector('.canvas-scale-output')?.textContent).toBe('1 m');
+    expect(container.querySelector('.canvas-scale-bar')?.getAttribute('data-scale-bar-px')).toBe('102');
 
     await user.click(screen.getByRole('button', { name: 'Acercar' }));
     await user.click(screen.getByRole('button', { name: 'Alejar' }));

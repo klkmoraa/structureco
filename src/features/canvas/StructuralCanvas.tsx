@@ -41,6 +41,9 @@ import {
   type ScreenPoint,
 } from './canvasInteraction';
 import { toolFromShortcut } from './toolRegistry';
+import { planCanvasGrid } from './canvasGrid';
+import { ANGLE_CONSTRAINT_STEP_DEG, constrainToAngleStep } from './angleConstraint';
+import { canvasFitReserve, insetsWithFitReserve } from './fitReserve';
 import { cameraToFitBounds, canvasSafeInsetsFor, canvasSafeRect } from './canvasChromeGeometry';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { CanvasChrome } from './CanvasChrome';
@@ -57,7 +60,15 @@ import {
   pointAtGrossRatio,
   toGlobalVector,
 } from '../../graphics/structureGeometry';
-import { CanvasResultLayer, diagramPixelScaleFor, reactionClearanceFor } from './CanvasResultLayer';
+import {
+  CanvasResultLayer,
+  CRITICAL_MARKER_MIN_SHARE,
+  criticalExtremeLabel,
+  criticalExtremesFor,
+  criticalStationLabel,
+  diagramPixelScaleFor,
+  reactionClearanceFor,
+} from './CanvasResultLayer';
 import { CanvasInteractionLayer } from './CanvasInteractionLayer';
 import { CanvasMiniMap } from './CanvasMiniMap';
 import { CanvasDiagramStack, externalStackBottomReserve } from './CanvasDiagramStack';
@@ -664,12 +675,35 @@ export const StructuralCanvas = ({
       : 0;
     const viewport = { width: size.width, height: size.height };
     const insets = canvasSafeInsetsFor(viewport);
+    // Encajar la envolvente de los nudos y nada más recortaba todo lo que
+    // cuelga de ellos —flechas, apoyos, la ordenada del diagrama—, que se
+    // dibuja en píxeles y no encoge con el zoom. La reserva lo mide y lo suma.
+    const reserved = insetsWithFitReserve(insets, canvasFitReserve(project, {
+      loadsVisible: loadsLayerVisible && view.showLoads && resultTab !== 'influence',
+      diagramVisible: layers.results && resultsAllowed && view.showResultOverlay
+        && ['axial', 'shear', 'moment'].includes(resultTab),
+      reactionsVisible: layers.results && resultsAllowed && view.showResultValues && analysis?.success === true,
+      diagramScale: view.diagramScale,
+    }), viewport);
     updateCamera(cameraToFitBounds(
       modelBounds(project.nodes),
       viewport,
-      { ...insets, bottom: insets.bottom + safeBottomReserve },
+      { ...reserved, bottom: reserved.bottom + safeBottomReserve },
     ));
-  }, [project.nodes, size, updateCamera]);
+  }, [
+    analysis?.success,
+    layers.results,
+    loadsLayerVisible,
+    project,
+    resultTab,
+    resultsAllowed,
+    size,
+    updateCamera,
+    view.diagramScale,
+    view.showLoads,
+    view.showResultOverlay,
+    view.showResultValues,
+  ]);
 
   const navigateMinimapTo = useCallback((point: ModelPoint) => {
     updateCamera((current) => ({
@@ -787,12 +821,48 @@ export const StructuralCanvas = ({
     const nextPreview = result.kind === 'none' ? null : { ...result.point, kind: result.kind };
     setSnapPreview((current) => current?.kind === nextPreview?.kind && current?.x === nextPreview?.x && current?.y === nextPreview?.y ? current : nextPreview);
     return result.point;
-  }, [baseSnapCandidates, camera.scale, drawingOrigin, perpendicularSnapCandidates, view]);
+    // `view` se reconstruye en cada render, así que dependía de un objeto nuevo
+    // cada vez y el memo no retenía nada. Con los valores que de verdad lee, la
+    // resolución de imantación —que corre por movimiento de puntero— conserva su
+    // identidad mientras los ajustes no cambien.
+  }, [
+    baseSnapCandidates,
+    camera.scale,
+    drawingOrigin,
+    perpendicularSnapCandidates,
+    view.gridSize,
+    view.snap,
+    view.snapTargets,
+  ]);
 
-  const modelPointFromClient = useCallback((clientX: number, clientY: number, excludedNodeIds?: string | ReadonlySet<string>) => {
+  /**
+   * Punto de modelo bajo el puntero, ya resuelto.
+   *
+   * Con `constrainAngle` y un origen de trazo activo la dirección manda sobre
+   * cualquier imantación: el punto cae sobre el múltiplo de 15° más cercano y
+   * la longitud sigue siendo redonda si la retícula está encendida. Es la
+   * diferencia entre dibujar una columna vertical y dibujarla a 89.6°.
+   */
+  const modelPointFromClient = useCallback((
+    clientX: number,
+    clientY: number,
+    excludedNodeIds?: string | ReadonlySet<string>,
+    constrainAngle = false,
+  ) => {
     const local = localScreenPoint(clientX, clientY);
-    return snapPoint(screenToModelPoint(local, cameraRef.current), excludedNodeIds);
-  }, [localScreenPoint, snapPoint]);
+    const raw = screenToModelPoint(local, cameraRef.current);
+    if (constrainAngle && drawingOrigin) {
+      const constrained = constrainToAngleStep(drawingOrigin, raw, {
+        radiusStep: view.snap && view.snapTargets.grid ? view.gridSize : 0,
+      });
+      const point = { x: constrained.x, y: constrained.y };
+      setSnapPreview((current) => current?.kind === 'angle' && current.x === point.x && current.y === point.y
+        ? current
+        : { ...point, kind: 'angle' });
+      return point;
+    }
+    return snapPoint(raw, excludedNodeIds);
+  }, [drawingOrigin, localScreenPoint, snapPoint, view.gridSize, view.snap, view.snapTargets.grid]);
 
   const nodeDragPointFromClient = useCallback((
     clientX: number,
@@ -1514,7 +1584,7 @@ export const StructuralCanvas = ({
       return;
     }
     if (activeTool === 'node') addNode(modelPointFromClient(event.clientX, event.clientY));
-    else if (activeTool === 'member') void createMemberEndpoint(modelPointFromClient(event.clientX, event.clientY));
+    else if (activeTool === 'member') void createMemberEndpoint(modelPointFromClient(event.clientX, event.clientY, undefined, event.shiftKey));
     else if (activeTool === 'select') {
       const start = screenToModelPoint(localScreenPoint(event.clientX, event.clientY), cameraRef.current);
       capturePointer(event.pointerId);
@@ -1620,7 +1690,7 @@ export const StructuralCanvas = ({
     const current = interactionRef.current;
     syncTouchLoupe(event.pointerType, current, event.clientX, event.clientY);
     if (current.kind === 'idle' && (activeTool === 'node' || activeTool === 'member')) {
-      modelPointFromClient(event.clientX, event.clientY);
+      modelPointFromClient(event.clientX, event.clientY, undefined, event.shiftKey);
     }
     if (current.kind === 'pinch') {
       const first = activePointersRef.current.get(current.pointerIds[0]);
@@ -2030,16 +2100,25 @@ export const StructuralCanvas = ({
     for (const node of mechanismMap.values()) maximum = Math.max(maximum, Math.hypot(node.ux, node.uy));
     return maximum > 1e-14 ? 72 / maximum : 0;
   }, [mechanismMap]);
+  /**
+   * Retícula adaptativa en tres trazos.
+   *
+   * Antes era un `<line>` por división a la separación exacta del snap: se
+   * apagaba entera por debajo de 8 px —dejando el dibujo sin referencia
+   * métrica justo al alejar— y reconstruía cientos de nodos del DOM en cada
+   * fotograma de desplazamiento. Ahora `planCanvasGrid` engorda la separación
+   * por múltiplos enteros del paso de imantación y devuelve tres `d`, así que
+   * la retícula completa son tres nodos.
+   */
   const grid = useMemo(() => {
     if (!view.showGrid) return null;
-    const step = view.gridSize * camera.scale;
-    if (step < 8) return null;
-    const lines = [];
-    const startX = ((camera.x % step) + step) % step;
-    const startY = ((camera.y % step) + step) % step;
-    for (let x = startX; x < size.width; x += step) lines.push(<line key={`gx-${x}`} x1={x} y1={0} x2={x} y2={size.height} />);
-    for (let y = startY; y < size.height; y += step) lines.push(<line key={`gy-${y}`} x1={0} y1={y} x2={size.width} y2={y} />);
-    return <g className="grid-lines">{lines}</g>;
+    const plan = planCanvasGrid(camera, size, view.gridSize);
+    if (!plan) return null;
+    return <g className="grid-lines" data-grid-step={plan.step} data-grid-major-every={plan.majorEvery} aria-hidden="true">
+      {plan.minor ? <path className="grid-line grid-line--minor" d={plan.minor} /> : null}
+      {plan.major ? <path className="grid-line grid-line--major" d={plan.major} /> : null}
+      {plan.axes ? <path className="grid-line grid-line--axis" d={plan.axes} /> : null}
+    </g>;
   }, [camera, size, view.gridSize, view.showGrid]);
 
   const handleObjectKeyDown = useStableCanvasEvent((event: ReactKeyboardEvent<SVGGElement>, target: Exclude<StructuralTarget, { kind: 'background' }>) => {
@@ -2246,8 +2325,13 @@ export const StructuralCanvas = ({
         const ny = axis.normal.y * side;
         const quantityUnit = quantity === 'moment' ? momentLabel : forceLabel;
         const displayQuantity = quantity === 'moment' ? 'moment' as const : 'force' as const;
+        // Los extremos de V y M ya tienen su propio rótulo de dos líneas
+        // —valor y estación— más abajo. Volver a emitirlos aquí producía dos
+        // cajas con el mismo número peleando por el mismo hueco.
+        const extremeHandledByStamp = quantity === 'shear' || quantity === 'moment';
         const points = result.criticalPoints
           .filter((point) => point.quantity === quantity && ['maximum', 'minimum', 'end', 'jump'].includes(point.kind))
+          .filter((point) => !(extremeHandledByStamp && (point.kind === 'maximum' || point.kind === 'minimum')))
           .filter((point, index, all) => all.findIndex((candidate) => Math.abs(candidate.x - point.x) <= Math.max(1, length) * 1e-7 && Math.abs(candidate.value - point.value) <= Math.max(1, Math.abs(point.value)) * 1e-7) === index)
           .sort((first, second) => {
             const rank = (kind: typeof first.kind) => kind === 'maximum' || kind === 'minimum' ? 0 : kind === 'jump' ? 1 : 2;
@@ -2255,6 +2339,11 @@ export const StructuralCanvas = ({
           })
           .slice(0, size.width < 520 ? 2 : 6);
         for (const [index, point] of points.entries()) {
+          const displayValue = formatFixed(toDisplay(point.value, units, displayQuantity), 2);
+          /* Un cero en el extremo de una barra articulada no informa de nada
+             que el propio dibujo no diga ya, y en un pórtico son varias cajas
+             ocupando el sitio de los valores que sí gobiernan. */
+          if (point.kind !== 'maximum' && point.kind !== 'minimum' && Number(displayValue) === 0) continue;
           const grossX = (result.startOffset ?? 0) + point.x;
           const baseX = ni.x + tx * grossX;
           const baseY = ni.y + ty * grossX;
@@ -2263,13 +2352,41 @@ export const StructuralCanvas = ({
           const outward = point.value * side >= 0 ? 1 : -1;
           smartLabelCandidates.push({
             id: `result:${member.id}:${quantity}:${point.kind}:${index}`,
-            text: `${quantity === 'axial' ? 'N' : quantity === 'shear' ? 'V' : 'M'} = ${formatFixed(toDisplay(point.value, units, displayQuantity), 2)} ${quantityUnit}`,
+            text: `${quantity === 'axial' ? 'N' : quantity === 'shear' ? 'V' : 'M'} = ${displayValue} ${quantityUnit}`,
+            dedupeKey: `${quantity}:${displayValue}`,
             anchor,
             priority: point.kind === 'maximum' || point.kind === 'minimum' ? 2 : 3,
             forceVisible: point.kind === 'maximum' || point.kind === 'minimum',
             tone: quantity,
             preferredOffset: { x: nx * outward * 28, y: -ny * outward * 28 - 6 },
           });
+        }
+
+        /* El sello del extremo crítico entra por la misma puerta que el resto
+           de las etiquetas. Dibujaba antes su propio recuadro contra el borde
+           del lienzo, sin mirar qué había debajo, y en cuanto el pórtico tenía
+           cargas se superponía con ellas. */
+        if (extremeHandledByStamp) {
+          const symbol = quantity === 'shear' ? 'V' : 'M';
+          const floor = Math.max(globalDiagramMax * CRITICAL_MARKER_MIN_SHARE, 1e-9);
+          for (const { point, extreme } of criticalExtremesFor(result.criticalPoints, quantity, floor)) {
+            const grossX = (result.startOffset ?? 0) + point.x;
+            const offsetModel = point.value * diagramPixelScaleFor(project, resultTab, globalDiagramMax, result) / camera.scale;
+            const anchor = toScreen(ni.x + tx * grossX + nx * offsetModel, ni.y + ty * grossX + ny * offsetModel);
+            const outward = point.value * side >= 0 ? 1 : -1;
+            const displayValue = formatFixed(toDisplay(point.value, units, displayQuantity), 2);
+            smartLabelCandidates.push({
+              id: `critical:${member.id}:${quantity}:${extreme}`,
+              text: criticalExtremeLabel(symbol, extreme, displayValue, quantityUnit),
+              dedupeKey: `${quantity}:${displayValue}`,
+              subtext: criticalStationLabel(formatFixed(toDisplay(point.x, units, 'length'), 2), lengthLabel),
+              anchor,
+              priority: 0,
+              forceVisible: true,
+              tone: quantity,
+              preferredOffset: { x: nx * outward * 34, y: -ny * outward * 34 - 8 },
+            });
+          }
         }
       }
     }
@@ -2646,7 +2763,7 @@ export const StructuralCanvas = ({
         gridEnabled={view.showGrid}
         coordinateReadoutRef={coordinateReadoutRef}
         lengthLabel={lengthLabel}
-        scale={camera.scale}
+        pixelsPerLengthUnit={camera.scale / toDisplay(1, units, 'length')}
         onCancelPlacement={() => setActiveTool('select')}
         onZoomIn={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1.15))}
         onZoomOut={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1 / 1.15))}
@@ -2700,7 +2817,7 @@ export const StructuralCanvas = ({
           max: formatFixed(demandLegend.maxRatio ?? 0, 2),
         })}</small> : null}
       </div> : null}
-      {memberStart ? <div className="canvas-hint" role="status"><span>{t('canvas.touchDestinationNode')}</span><button type="button" onClick={() => setMemberStart(null)} aria-label={t('canvas.cancelMemberCreation')}><X size={14} /></button></div> : null}
+      {memberStart ? <div className="canvas-hint" role="status"><span>{t('canvas.touchDestinationNode')}</span><span className="canvas-hint-shortcut">{t('canvas.angleConstraintHint', { step: ANGLE_CONSTRAINT_STEP_DEG })}</span><button type="button" onClick={() => setMemberStart(null)} aria-label={t('canvas.cancelMemberCreation')}><X size={14} /></button></div> : null}
       {activeTool === 'node' || (activeTool === 'member' && memberStart) ? <form className="quick-entry-bar" aria-label={t('canvas.cadEntry')} onSubmit={(event) => { event.preventDefault(); submitQuickEntry(); }}>
         <div className="quick-entry-heading"><strong>{t(activeTool === 'node' ? 'canvas.nodeByCoordinates' : 'canvas.memberEndpoint')}</strong>{activeTool === 'member' ? <div className="quick-entry-mode"><button type="button" aria-pressed={quickEntryMode === 'delta'} onClick={() => setQuickEntryMode('delta')}>ΔX · ΔY</button><button type="button" aria-pressed={quickEntryMode === 'polar'} onClick={() => setQuickEntryMode('polar')}>L · ∠</button></div> : null}</div>
         <label><span>{activeTool === 'node' ? 'X' : quickEntryMode === 'delta' ? 'ΔX' : 'L'}</span><input type="text" inputMode="decimal" autoComplete="off" value={quickEntry.first} onChange={(event) => { setQuickEntry((current) => ({ ...current, first: event.target.value })); setQuickEntryError(''); }} /><small>{lengthLabel}</small></label>

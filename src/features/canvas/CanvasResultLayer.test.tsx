@@ -75,18 +75,19 @@ const renderLayer = (resultTab: ResultTab, overrides: Record<string, unknown> = 
 
 const stamps = () => [...document.querySelectorAll('[data-critical-point]')];
 
-describe('CanvasResultLayer critical M/V stamps', () => {
+describe('CanvasResultLayer critical M/V marks', () => {
   it('marks Mmax and Mmin with the value and the station the analysis reported', () => {
     renderLayer('moment');
     expect(stamps().map((stamp) => stamp.getAttribute('data-critical-point')))
       .toEqual(['B1:moment:max', 'B1:moment:min']);
 
-    const texts = [...document.querySelectorAll('.critical-point-value, .critical-point-station')]
-      .map((element) => element.textContent);
-    expect(texts).toEqual([
-      'Mmax 45.00 kN·m', 'x 3.00 m',
-      'Mmin -12.00 kN·m', 'x 6.00 m',
+    // El rótulo visible lo coloca la capa de etiquetas inteligentes; lo que esta
+    // capa sigue debiendo es el mismo texto en el nombre accesible de la marca.
+    expect(stamps().map((stamp) => stamp.querySelector('title')?.textContent)).toEqual([
+      'B1 · Mmax 45.00 kN·m · x 3.00 m',
+      'B1 · Mmin -12.00 kN·m · x 6.00 m',
     ]);
+    expect(document.querySelector('.critical-point-stamp')).toBeNull();
   });
 
   it('anchors the stamp on the diagram ordinate, not on the bare member axis', () => {
@@ -101,7 +102,7 @@ describe('CanvasResultLayer critical M/V stamps', () => {
   it('follows the tab: shear is stamped as V, and axial gets no stamps', () => {
     renderLayer('shear');
     expect(document.querySelector('.critical-point-layer')?.getAttribute('class')).toContain('is-shear');
-    expect(document.querySelector('.critical-point-value')?.textContent).toBe('Vmax 30.00 kN');
+    expect(document.querySelector('[data-critical-point] title')?.textContent).toBe('B1 · Vmax 30.00 kN · x 0.00 m');
     cleanup();
 
     renderLayer('axial');
