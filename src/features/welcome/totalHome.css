@@ -1,4 +1,9 @@
 .sc-home {
+  /* Entrada de pantalla. Inicio y la mesa de trabajo son dos pantallas, no dos
+     estados de una: cada una llega con la misma escala corta de UIKit para que
+     el salto entre ellas se lea como una navegación y no como un recambio de
+     DOM. */
+  animation: sc-native-screen-in var(--sc-motion-standard) var(--sc-ease-ios-out) both;
   --home-max: 1440px;
   height: 100dvh;
   min-height: 100dvh;
@@ -121,10 +126,13 @@
   font-weight: 720;
 }
 
-.sc-home-topline > div { display: flex; align-items: center; gap: 8px; }
+/* Idioma y tema. La clase es propia y no `> div` porque el bloque se mueve
+   entre dos padres —la línea superior en escritorio, la barra compacta en
+   teléfono— y un selector de posición dejaría de encontrarlo al mudarse. */
+.sc-home-appearance { display: flex; align-items: center; gap: 8px; }
 
-.sc-home-topline select,
-.sc-home-topline button {
+.sc-home-appearance select,
+.sc-home-appearance button {
   min-width: 44px;
   height: 40px;
   padding: 0 11px;
@@ -193,18 +201,24 @@
   line-height: .98;
 }
 
+/* Las columnas se dimensionan por su contenido y no por una fracción
+   inventada: con `1.18fr 1fr` sobre 410 px, «Nuevo proyecto» partía en dos
+   líneas dentro de su botón y la pareja quedaba descuadrada. `max-content`
+   deja que cada acción pida lo que su etiqueta mide —que cambia con el idioma—
+   y el ancho total sigue acotado por el contenedor. */
 .sc-home-primary-buttons {
-  width: min(100%, 410px);
+  width: max-content;
   min-width: 0;
-  max-width: 100%;
+  max-width: min(100%, 520px);
   margin-top: 31px;
   display: grid;
-  grid-template-columns: 1.18fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, max-content));
   gap: 10px;
 }
 
 .sc-home-continue,
 .sc-home-new {
+  white-space: nowrap;
   min-height: 50px;
   padding: 0 17px;
   display: inline-flex;
@@ -238,7 +252,12 @@
   box-shadow: var(--sc-shadow-clay-sm, 0 5px 12px rgb(31 40 37 / .14));
 }
 
-.sc-home-new > span { font-size: 21px; line-height: 1; }
+/* La cruz era el glifo tipográfico `＋` a 21 px: más ancho que el icono de la
+   acción primaria, con otro peso de trazo y sin alinear con él. Ahora las dos
+   acciones de Inicio llevan icono del mismo juego y del mismo tamaño, y la
+   etiqueta va en su propio `span` para poder recortarse en vez de partirse en
+   dos líneas dentro del botón. */
+.sc-home-new > span { min-width: 0; }
 
 .sc-home-continue:hover,
 .sc-home-new:hover { transform: translateY(-2px); }
@@ -545,34 +564,66 @@
 @media (max-width: 760px), (max-device-width: 760px), (hover: none) and (pointer: coarse) and (max-width: 1023px) {
   .sc-home { display: block; }
   .sc-home-sidebar { display: none; }
+  /*
+   * Una sola barra, no dos.
+   *
+   * Antes había una franja de marca (62 px) y debajo otra con el nombre de la
+   * vista y los controles de apariencia (56 px): 118 px de chrome fijo sobre
+   * una pantalla de 6 pulgadas, con la marca escrita dos veces en la misma
+   * mirada. Ahora la barra compacta lleva el menú, la marca y los controles, y
+   * el nombre de la vista pasa a ser un título grande que se desplaza con el
+   * contenido, como una `UINavigationBar` con `prefersLargeTitles`.
+   *
+   * La rejilla de tres columnas —botón, marca, controles— es lo que mantiene
+   * la marca ópticamente centrada aunque el bloque de la derecha cambie de
+   * ancho al pasar de ES a EN.
+   */
   .sc-home-mobile-header {
     position: sticky;
     inset-block-start: 0;
     z-index: 40;
-    min-height: 62px;
-    padding: 9px 15px;
-    display: flex;
+    min-height: 54px;
+    padding: 6px 12px;
+    padding-top: calc(6px + var(--sc-safe-top));
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
+    gap: 10px;
     border-block-end: 1px solid var(--sc-color-border-soft, #d8d0c4);
-    background: var(--sc-color-surface-1, #f7f1e8);
+    background: color-mix(in srgb, var(--sc-color-surface-1, #f7f1e8) 88%, transparent);
+    /* El desenfoque es lo que hace que el contenido pase *por debajo* de la
+       barra en vez de desaparecer bajo una tapa opaca. Sólo se aplica donde el
+       navegador lo soporta; si no, queda la superficie sólida de arriba. */
+    backdrop-filter: saturate(180%) blur(18px);
+    -webkit-backdrop-filter: saturate(180%) blur(18px);
   }
-  .sc-home-mobile-header > button {
-    width: 44px;
-    height: 44px;
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .sc-home-mobile-header { background: var(--sc-color-surface-1, #f7f1e8); }
+  }
+  .sc-home-mobile-header .sc-home-wordmark { justify-content: center; gap: 8px; }
+  .sc-home-mobile-header .sc-home-wordmark strong { font-size: 15px; }
+  .sc-home-mobile-header__spacer { width: 0; }
+  .sc-home-menu-toggle {
+    width: 42px;
+    height: 42px;
     display: grid;
     place-items: center;
     border: 1px solid var(--sc-color-border-soft, #d8d0c4);
-    border-radius: 11px;
+    border-radius: 12px;
     background: var(--sc-color-surface-elevated, #fbf8f2);
     box-shadow: var(--sc-shadow-clay-xs, 0 2px 5px rgb(32 42 39 / .12));
+    transition: transform var(--sc-motion-control) var(--sc-ease-ios-out), box-shadow var(--sc-motion-control) var(--sc-ease-ios-out);
+  }
+  .sc-home-menu-toggle[aria-expanded='true'] {
+    background: var(--sc-color-surface-inset, #ece3d6);
+    box-shadow: var(--sc-shadow-clay-pressed);
   }
   .sc-home-nav--mobile {
     position: fixed;
     z-index: 39;
-    inset: 62px 0 auto;
-    max-height: calc(100dvh - 62px);
-    padding: 11px 14px 16px;
+    inset: calc(54px + var(--sc-safe-top)) 0 auto;
+    max-height: calc(100dvh - 54px - var(--sc-safe-top));
+    padding: 11px 12px calc(16px + var(--sc-safe-bottom));
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
@@ -580,12 +631,31 @@
     border-block-end: 1px solid var(--sc-color-border, #c8bfb2);
     background: var(--sc-color-surface-1, #f7f1e8);
     box-shadow: var(--sc-shadow-clay-lg, 0 18px 35px rgb(19 28 26 / .24));
+    /* El menú cae desde debajo de la barra, no aparece de golpe. */
+    animation: sc-home-menu-drop var(--sc-motion-standard) var(--sc-ease-ios-out) both;
+    transform-origin: top center;
   }
-  .sc-home-topline { min-height: 56px; padding: 6px 15px; }
-  .sc-home-topline > span { font-size: 11px; }
-  .sc-home-topline select,
-  .sc-home-topline button { height: 44px; min-width: 44px; }
-  .sc-home-content { padding: 16px 14px 32px; gap: 25px; }
+  @keyframes sc-home-menu-drop {
+    from { opacity: 0; transform: translate3d(0, -10px, 0) scale(.985); }
+    to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  }
+
+  /* Título grande de la vista: ya no es una barra, es la primera línea del
+     contenido y se va con él al desplazarse. */
+  .sc-home-topline {
+    min-height: 0;
+    padding: 16px 16px 2px;
+    border-block-end: 0;
+    background: transparent;
+  }
+  .sc-home-topline > span {
+    font-size: 27px;
+    font-weight: 750;
+    letter-spacing: var(--sc-tracking-tight, -.025em);
+  }
+  .sc-home-appearance select,
+  .sc-home-appearance button { height: 40px; min-width: 40px; padding-inline: 8px; }
+  .sc-home-content { padding: 8px 14px calc(32px + var(--sc-safe-bottom)); gap: 25px; }
   .sc-home-hero {
     min-height: 0;
     grid-template-columns: 1fr;
@@ -611,9 +681,25 @@
   }
   .sc-home-primary-actions { grid-row: 2; padding: 20px 18px; }
   .sc-home-primary-actions h2 { font-size: clamp(28px, 8vw, 38px); }
-  .sc-home-primary-buttons { width: 100%; margin-top: 20px; grid-template-columns: 1fr 1fr; }
+  /* El reparto no es mitad y mitad: la etiqueta primaria («Continuar proyecto»)
+     es casi el doble de larga que la secundaria y lleva además un icono. Con
+     columnas iguales se recortaba con puntos suspensivos justo en la acción
+     principal de la pantalla. */
+  .sc-home-primary-buttons { width: 100%; max-width: 100%; margin-top: 20px; grid-template-columns: minmax(0, 1.24fr) minmax(0, 1fr); gap: 8px; }
+  /* `Continuar proyecto` partía en dos líneas dentro de su botón y dejaba la
+     pareja descuadrada. Con el texto en una sola línea y elipsis, los dos
+     botones vuelven a medir lo mismo y el icono no se despega de su etiqueta. */
   .sc-home-continue,
-  .sc-home-new { min-height: 48px; padding-inline: 10px; font-size: 11px; }
+  .sc-home-new { min-height: 50px; padding-inline: 10px; gap: 7px; font-size: 12px; }
+  .sc-home-continue,
+  .sc-home-new { overflow: hidden; }
+  .sc-home-continue > span,
+  .sc-home-new > span:last-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .sc-home-quick-row {
     margin-inline: 0;
     padding-inline: 0;
@@ -673,8 +759,23 @@
   .sc-home-focused > header h2 { font-size: 30px; }
 }
 
+/*
+ * Teléfono: las dos acciones se apilan a ancho completo.
+ *
+ * Lado a lado no caben honestamente. «Continuar proyecto» y «Nuevo proyecto»
+ * miden juntas más que el ancho útil de un iPhone con sus iconos y sus
+ * márgenes, y el reparto sólo elegía a cuál de las dos se le comían el final
+ * los puntos suspensivos. Apiladas son además el patrón de una hoja de acción
+ * de iOS: la principal arriba, a ancho completo y con un objetivo táctil que
+ * no se falla.
+ */
+@media (max-width: 480px) {
+  .sc-home-primary-buttons { grid-template-columns: minmax(0, 1fr); gap: 9px; }
+  .sc-home-continue,
+  .sc-home-new { min-height: 52px; font-size: 13px; }
+}
+
 @media (max-width: 340px) {
-  .sc-home-primary-buttons { grid-template-columns: 1fr; }
   .sc-home-quick-row { grid-template-columns: 1fr; }
   .sc-home-wordmark strong { font-size: 16px; }
 }
@@ -691,8 +792,8 @@
 }
 
 @media (pointer: coarse) {
-  .sc-home-topline select,
-  .sc-home-topline button { min-width: 44px; height: 44px; }
+  .sc-home-appearance select,
+  .sc-home-appearance button { min-width: 44px; height: 44px; }
 }
 
 

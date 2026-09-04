@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>es</string>
+  <key>CFBundleDisplayName</key>
+  <string>structureCo</string>
+  <key>CFBundleName</key>
+  <string>structureCo</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+
+  <!-- Ciclo de vida de SwiftUI: la escena la declara `StructureCoApp` con su
+       `WindowGroup`, así que aquí no hay delegado ni configuración que nombrar.
+       La clave se conserva sólo para declarar que la aplicación es de una sola
+       ventana. -->
+  <key>UIApplicationSceneManifest</key>
+  <dict>
+    <key>UIApplicationSupportsMultipleScenes</key>
+    <false/>
+  </dict>
+
+  <!-- Pantalla de lanzamiento por diccionario: un color plano igual al fondo de
+       la aplicación. Cualquier dibujo aquí sería una segunda identidad que
+       mantener y que se vería desalineada con la web durante medio segundo. -->
+  <key>UILaunchScreen</key>
+  <dict>
+    <key>UIColorName</key>
+    <string>AppBackground</string>
+  </dict>
+
+  <key>UISupportedInterfaceOrientations</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
+  <key>UISupportedInterfaceOrientations~ipad</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationPortraitUpsideDown</string>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
+
+  <!-- Expedientes y proyectos: sin esto, «Abrir con structureCo» no aparece en
+       Archivos ni en el Correo y la aplicación queda aislada del sistema. -->
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key>
+      <string>Expediente structureCo</string>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>LSHandlerRank</key>
+      <string>Owner</string>
+      <key>LSItemContentTypes</key>
+      <array>
+        <string>co.structure.project</string>
+      </array>
+    </dict>
+    <dict>
+      <key>CFBundleTypeName</key>
+      <string>Proyecto structureCo (JSON)</string>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>LSHandlerRank</key>
+      <string>Alternate</string>
+      <key>LSItemContentTypes</key>
+      <array>
+        <string>public.json</string>
+      </array>
+    </dict>
+  </array>
+
+  <key>UTExportedTypeDeclarations</key>
+  <array>
+    <dict>
+      <key>UTTypeIdentifier</key>
+      <string>co.structure.project</string>
+      <key>UTTypeDescription</key>
+      <string>Expediente structureCo</string>
+      <key>UTTypeConformsTo</key>
+      <array>
+        <string>public.data</string>
+      </array>
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key>
+        <array>
+          <string>structureco</string>
+        </array>
+      </dict>
+    </dict>
+  </array>
+
+  <key>ITSAppUsesNonExemptEncryption</key>
+  <false/>
+</dict>
+</plist>

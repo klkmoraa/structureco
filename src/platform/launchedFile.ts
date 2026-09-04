@@ -21,6 +21,20 @@ export const claimLaunchedFile = (): LaunchedFile | null => {
   return claimed;
 };
 
+/**
+ * Entrega un archivo al mismo buzón que usa la cola del sistema operativo.
+ *
+ * Lo consume el shell nativo: en iOS, «Abrir con structureCo» desde Archivos o
+ * el Correo no llega por `launchQueue` —esa API no existe en WKWebView— sino
+ * como un mensaje del puente. El destino es idéntico: el importador con
+ * revisión y confirmación explícita, nunca una sustitución silenciosa del
+ * proyecto abierto.
+ */
+export const emitLaunchedFile = (launched: LaunchedFile): void => {
+  if (listeners.size) { listeners.forEach((listener) => listener(launched)); return; }
+  pending = launched;
+};
+
 export const onLaunchedFile = (listener: (launched: LaunchedFile) => void): (() => void) => {
   listeners.add(listener);
   const waiting = claimLaunchedFile();

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Manifiesto de privacidad. Apple lo exige para publicar en la App Store desde
+  mayo de 2024, y su contenido tiene que ser cierto: es una declaración, no un
+  trámite.
+
+  structureCo no recoge nada. Los proyectos viven en IndexedDB dentro del
+  contenedor de la aplicación, las métricas locales son opcionales y no salen
+  del dispositivo, y no hay backend, ni SDK de terceros, ni red obligatoria.
+  Por eso las tres listas van vacías: no hay recolección que declarar, no hay
+  seguimiento y no se usa ninguna API de las que Apple obliga a justificar.
+
+  Si algún día se añade un servicio remoto, una analítica o un SDK, este archivo
+  es lo primero que hay que actualizar — antes que el código.
+-->
+<plist version="1.0">
+<dict>
+  <key>NSPrivacyTracking</key>
+  <false/>
+  <key>NSPrivacyTrackingDomains</key>
+  <array/>
+  <key>NSPrivacyCollectedDataTypes</key>
+  <array/>
+  <key>NSPrivacyAccessedAPITypes</key>
+  <array/>
+</dict>
+</plist>

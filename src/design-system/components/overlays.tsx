@@ -7,10 +7,15 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react';
+import type React from 'react';
 import { createPortal } from 'react-dom';
 import { Maximize2, X } from 'lucide-react';
-import { AnimatePresence, m, useReducedMotion } from 'motion/react';
+import { AnimatePresence, m, useDragControls, useReducedMotion, type PanInfo } from 'motion/react';
 import { useModalFocus } from './modalFocus';
+import { easeOutIos, popIn, springs } from '../motion';
+import { haptics } from '../../platform/haptics';
+import { holdScrollLock } from '../../platform/scrollLock';
+import { useMediaQuery } from '../../platform/useMediaQuery';
 
 export interface TooltipProps {
   content: ReactNode;
@@ -97,10 +102,11 @@ export const Popover = ({
         <m.section
           key={id}
           id={id}
-          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.96 }}
-          animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-          exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -4, scale: 0.96 }}
-          transition={reducedMotion ? { duration: 0.01 } : { duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+          variants={reducedMotion ? undefined : popIn}
+          initial={reducedMotion ? { opacity: 0 } : 'hidden'}
+          animate={reducedMotion ? { opacity: 1 } : 'visible'}
+          exit={reducedMotion ? { opacity: 0 } : 'exit'}
+          transition={reducedMotion ? { duration: 0.01 } : easeOutIos}
           className="sc-popover__surface"
           role="dialog"
           aria-label={label}
@@ -179,31 +185,100 @@ const ModalSurface = ({
     onSurfaceReady?.(true);
     return () => onSurfaceReady?.(false);
   }, [onSurfaceReady, open]);
+  // El `scrollView` del anfitrión nativo sigue vivo bajo el documento: sin esto,
+  // arrastrar sobre una hoja mueve además la vista entera de la aplicación.
+  // `peek` no bloquea porque su propósito es justamente dejar usar el lienzo.
+  useEffect(() => {
+    if (!open || extent === 'peek') return undefined;
+    return holdScrollLock();
+  }, [open, extent]);
   const reducedMotion = useReducedMotion();
+  const dragControls = useDragControls();
+  /*
+   * Por debajo de 700 px el CSS presenta como hoja inferior TODO lo que se
+   * abre: el diálogo, el cajón izquierdo y el derecho. El componente tiene que
+   * saberlo para poner el asa donde de verdad está el borde de arrastre —si se
+   * fiara sólo de `side`, un cajón derecho en un teléfono se dibujaría como
+   * hoja y no se podría arrastrar.
+   */
+  const compact = useMediaQuery('(max-width: 700px)');
 
   if (typeof document === 'undefined') return null;
 
   const isDrawer = kind === 'drawer';
+  /**
+   * Presentada como hoja que nace del borde inferior.
+   *
+   * En un teléfono lo son las tres presentaciones: el CSS ya convertía el
+   * diálogo y los cajones laterales en hoja, y la pantalla completa pasa a ser
+   * una *page sheet* —el modal de iOS 13 en adelante: separada del borde
+   * superior por el área segura, con las esquinas de arriba redondeadas y
+   * arrastrable hacia abajo— en vez de una lámina a sangre que tapaba la
+   * barra de estado y no dejaba ver de dónde venía.
+   */
+  const isSheet = !peeked && (compact || (isDrawer && side === 'bottom'));
   const drawerAxis: Record<NonNullable<ModalSurfaceProps['side']>, { hidden: Record<string, string>; visible: Record<string, number> }> = {
     right: { hidden: { x: '100%' }, visible: { x: 0 } },
     left: { hidden: { x: '-100%' }, visible: { x: 0 } },
     bottom: { hidden: { y: '100%' }, visible: { y: 0 } },
   };
+  const enterAxis = isSheet ? drawerAxis.bottom : drawerAxis[side];
   const surfaceMotionProps = reducedMotion
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.01 } }
-    : isDrawer
+    : isDrawer || isSheet
       ? {
-        initial: drawerAxis[side].hidden,
-        animate: drawerAxis[side].visible,
-        exit: drawerAxis[side].hidden,
-        transition: { type: 'spring' as const, stiffness: 380, damping: 32 },
+        initial: enterAxis.hidden,
+        animate: enterAxis.visible,
+        exit: enterAxis.hidden,
+        transition: springs.sheet,
       }
       : {
         initial: { opacity: 0, scale: 0.94, y: 8 },
         animate: { opacity: 1, scale: 1, y: 0 },
         exit: { opacity: 0, scale: 0.94, y: 8 },
-        transition: { type: 'spring' as const, stiffness: 400, damping: 30 },
+        transition: springs.snappy,
       };
+
+  /*
+   * Arrastrar para descartar.
+   *
+   * El gesto no se escucha en toda la superficie sino sólo en la cabecera y el
+   * asa (`dragListener={false}` + `dragControls`): si la hoja entera fuera
+   * arrastrable, cualquier desplazamiento dentro de una lista larga la
+   * cerraría a media lectura.
+   *
+   * El umbral combina recorrido y velocidad, como UIKit: 96 px de arrastre, o
+   * un lanzamiento a más de 520 px/s aunque apenas se haya movido. Un tirón
+   * corto y rápido cierra; un arrastre largo y dudoso, que se suelta a medio
+   * camino, vuelve a su sitio.
+   */
+  const DISMISS_DISTANCE = 96;
+  const DISMISS_VELOCITY = 520;
+  const draggable = isSheet && !reducedMotion;
+  const onDragEnd = (_event: PointerEvent | MouseEvent | TouchEvent, info: PanInfo) => {
+    if (info.offset.y > DISMISS_DISTANCE || info.velocity.y > DISMISS_VELOCITY) {
+      haptics.impact('light');
+      onOpenChange(false);
+    }
+  };
+  const startDrag = (event: React.PointerEvent) => {
+    if (!draggable) return;
+    // Un puntero fino ya tiene la aspa y el `Esc`; arrastrar con el ratón desde
+    // la cabecera compite con seleccionar su texto.
+    if (event.pointerType === 'mouse') return;
+    dragControls.start(event);
+  };
+  const dragProps = draggable
+    ? {
+      drag: 'y' as const,
+      dragListener: false,
+      dragControls,
+      dragConstraints: { top: 0, bottom: 0 },
+      dragElastic: { top: 0, bottom: 0.55 },
+      dragMomentum: false,
+      onDragEnd,
+    }
+    : {};
 
   return createPortal(
     <AnimatePresence>
@@ -224,7 +299,8 @@ const ModalSurface = ({
           <m.section
             ref={surfaceRef}
             {...surfaceMotionProps}
-            className={`sc-modal-surface sc-modal-surface--${kind}${kind === 'drawer' ? ` sc-modal-surface--${side}` : ''}${peeked ? ' sc-modal-surface--peek' : ''}${className ? ` ${className}` : ''}`}
+            {...dragProps}
+            className={`sc-modal-surface sc-modal-surface--${kind}${kind === 'drawer' ? ` sc-modal-surface--${side}` : ''}${isSheet ? ' sc-modal-surface--sheet' : ''}${peeked ? ' sc-modal-surface--peek' : ''}${className ? ` ${className}` : ''}`}
             data-level={kind === 'drawer' ? 'sheet' : 'modal'}
             data-workspace-surface={surfaceId}
             data-surface-extent={extent}
@@ -246,7 +322,14 @@ const ModalSurface = ({
                 <span>{title}</span>
               </button>
             ) : (
-              <header className="sc-modal-surface__header">
+              <header className="sc-modal-surface__header" onPointerDown={startDrag}>
+                {/*
+                  * El asa de una hoja de iOS no es un botón: es la señal de que
+                  * el borde se puede arrastrar, y quien no puede arrastrar
+                  * (teclado, lector de pantalla) tiene la aspa justo al lado.
+                  * Por eso es decorativa y no entra en el orden de foco.
+                  */}
+                {isSheet ? <span className="sc-modal-surface__grabber" aria-hidden="true" /> : null}
                 <div>
                   <h2 id={titleId}>{title}</h2>
                   {description ? <p id={descriptionId}>{description}</p> : null}

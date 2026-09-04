@@ -3,9 +3,9 @@
 }
 
 .model-doctor-surface {
-  --model-doctor-safe-area-bottom: env(safe-area-inset-bottom, 0px);
-  --model-doctor-safe-area-left: env(safe-area-inset-left, 0px);
-  --model-doctor-safe-area-right: env(safe-area-inset-right, 0px);
+  --model-doctor-safe-area-bottom: var(--sc-safe-bottom);
+  --model-doctor-safe-area-left: var(--sc-safe-left);
+  --model-doctor-safe-area-right: var(--sc-safe-right);
 }
 
 .model-doctor-surface .sc-modal-surface__body {
@@ -41,11 +41,22 @@
 .model-doctor-health strong { color: var(--sc-color-text-primary); }
 .model-doctor-health span { margin-top: var(--sc-space-1); color: var(--sc-color-text-secondary); font-size: var(--sc-font-size-label); line-height: var(--sc-line-height-compact); }
 
+/*
+ * `flex: 0 0 auto` no es cosmético: la fila es un contenedor de scroll
+ * (`overflow-x: auto`) y, dentro del cuerpo en columna de la hoja, eso hace
+ * que su `min-height: auto` resuelva a 0 y el flex la aplaste. Medía 4 px de
+ * alto en un teléfono: las tres pastillas de filtro salían cortadas por la
+ * mitad y no se podían pulsar.
+ */
 .model-doctor-filters {
+  flex: 0 0 auto;
+  min-height: var(--sc-control-height-touch);
   display: flex;
+  align-items: center;
   gap: var(--sc-space-2);
   padding-bottom: var(--sc-space-1);
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   scrollbar-width: thin;
 }
 

@@ -1,8 +1,8 @@
 .pwa-update-notice {
   position: fixed;
   z-index: 1200;
-  right: max(18px, env(safe-area-inset-right));
-  bottom: max(18px, env(safe-area-inset-bottom));
+  right: max(18px, var(--sc-safe-right));
+  bottom: max(18px, var(--sc-safe-bottom));
   width: min(430px, calc(100vw - 28px));
   display: grid;
   grid-template-columns: auto 1fr auto auto;

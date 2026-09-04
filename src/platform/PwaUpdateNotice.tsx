@@ -3,6 +3,7 @@ import { DownloadCloud, X } from 'lucide-react';
 import { usePhase2I18n } from '../i18n/usePhase2I18n';
 import { useI18n } from '../i18n/useI18n';
 import { watchForPwaUpdates, type PwaUpdateController } from './pwaLifecycle';
+import { isNativeHost } from './nativeBridge';
 import './pwa.css';
 
 export const PwaUpdateNotice = () => {
@@ -12,7 +13,11 @@ export const PwaUpdateNotice = () => {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    if (!('serviceWorker' in navigator) || import.meta.env.DEV) return;
+    // Dentro del shell nativo no hay actualización que vigilar: el contenido
+    // viaja en el paquete de la aplicación y lo renueva la App Store, no un
+    // worker. Registrarlo ahí sólo añadiría una segunda copia del build y un
+    // aviso de «hay una versión nueva» que no puede ser cierto.
+    if (!('serviceWorker' in navigator) || import.meta.env.DEV || isNativeHost()) return;
     let reloading = false;
     let disposed = false;
     let lifecycle: PwaUpdateController | null = null;

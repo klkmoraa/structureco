@@ -2,6 +2,7 @@ import { findStandardMaterial } from '../../data/standardMaterials';
 import { findStandardSection } from '../../data/standardSections';
 import { formatMachineNumber } from '../../utils/numberFormat';
 import type { MemberModel, MemberPropertyOrigin, ProjectModel } from '../../types';
+import { deliverFileSync } from '../../platform/fileDelivery';
 
 const STANDARD_GRAVITY_M_S2 = 9.80665;
 const QUANTITY_RELATIVE_TOLERANCE = 1e-9;
@@ -314,13 +315,9 @@ export const createStructuralBomCsvBlob = (bom: StructuralBom): Blob => (
 );
 
 export const downloadStructuralBomCsv = (project: Pick<ProjectModel, 'name'>, bom: StructuralBom): void => {
-  const url = URL.createObjectURL(createStructuralBomCsvBlob(bom));
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = structuralBomCsvFilename(project);
-  anchor.style.display = 'none';
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  deliverFileSync(
+    createStructuralBomCsvBlob(bom),
+    structuralBomCsvFilename(project),
+    'text/csv;charset=utf-8',
+  );
 };

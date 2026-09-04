@@ -17,6 +17,7 @@ import {
 } from '../../data/personalSections';
 import { fromDisplay, toDisplay, unitLabel } from '../../engine/units';
 import type { UnitSystemId } from '../../types';
+import { deliverFileSync } from '../../platform/fileDelivery';
 
 type Language = 'es' | 'en';
 
@@ -96,12 +97,7 @@ const SectionPreview = ({ definition, label }: { definition: ParametricSectionDe
 };
 
 const defaultDownload = (serialized: string, filename: string) => {
-  const url = URL.createObjectURL(new Blob([serialized], { type: 'application/json' }));
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
+  deliverFileSync(new Blob([serialized], { type: 'application/json' }), filename, 'application/json');
 };
 
 const format = (value: number, language: Language, maximumFractionDigits = 6) => new Intl.NumberFormat(language === 'es' ? 'es-MX' : 'en-US', {

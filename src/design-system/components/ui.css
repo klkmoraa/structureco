@@ -752,11 +752,11 @@
   .sc-banner__dismiss { width: var(--sc-control-height-touch); height: var(--sc-control-height-touch); }
   .sc-segmented { width: 100%; grid-auto-columns: minmax(0, 1fr); }
   .sc-segmented button { min-width: 0; min-height: var(--sc-control-height-touch); overflow: hidden; text-overflow: ellipsis; }
-  .sc-popover__surface { position: fixed; left: var(--sc-space-3) !important; right: var(--sc-space-3) !important; top: auto; bottom: calc(var(--sc-space-3) + env(safe-area-inset-bottom)); width: auto; transform: none !important; }
+  .sc-popover__surface { position: fixed; left: var(--sc-space-3) !important; right: var(--sc-space-3) !important; top: auto; bottom: calc(var(--sc-space-3) + var(--sc-safe-bottom)); width: auto; transform: none !important; }
   .sc-overlay { padding: 0; place-items: end center; }
-  .sc-modal-surface--dialog { width: 100%; max-height: calc(100dvh - env(safe-area-inset-top)); border-width: var(--sc-border-width) 0 0; border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
+  .sc-modal-surface--dialog { width: 100%; max-height: calc(100dvh - var(--sc-safe-top)); border-width: var(--sc-border-width) 0 0; border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
   .sc-modal-surface--right,
-  .sc-modal-surface--left { inset: auto 0 0; width: 100%; max-height: calc(100dvh - env(safe-area-inset-top)); border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
+  .sc-modal-surface--left { inset: auto 0 0; width: 100%; max-height: calc(100dvh - var(--sc-safe-top)); border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0; }
   .sc-tabs--vertical { grid-template-columns: 1fr; }
   .sc-tabs--vertical .sc-tabs__list { flex-direction: row; border-right: 0; border-bottom: var(--sc-border-width) solid var(--sc-color-border); }
   .sc-tabs--vertical .sc-tabs__list button::after { inset: auto var(--sc-space-2) 0; width: auto; height: var(--sc-border-width-strong); }
@@ -785,3 +785,113 @@
    —no lazy, la única que usa `<Surface>` por ahora— necesita esa materia en el
    primer pintado, no cuando gane la carrera del precalentamiento. Ver el
    comentario junto a `.sc-surface` en `styles.css` para el detalle. */
+
+/* Hoja modal · presentación nativa ------------------------------------------
+ *
+ * Una hoja no es un diálogo pegado abajo. Lo que la separa es que nace del
+ * borde, que se puede arrastrar de vuelta a él y que deja ver de dónde vino.
+ * Estas reglas dan las tres cosas:
+ *
+ *   · El asa (`__grabber`) es la única affordance de arrastre. Va centrada
+ *     sobre la cabecera y no ocupa fila propia: robar 20 px de alto a una hoja
+ *     de teléfono para dibujar una barrita es caro.
+ *   · La cabecera es la zona de arrastre, así que su cursor y su selección de
+ *     texto lo dicen.
+ *   · El pie respeta el indicador de inicio del iPhone. Es el único sitio del
+ *     sistema donde eso se declara para todas las hojas a la vez.
+ *
+ * `--sc-motion-distance-factor` vale 0 con movimiento reducido, y con él el
+ * arrastre queda desactivado desde el propio componente: aquí sólo se apaga la
+ * señal visual para que no prometa un gesto que ya no existe.
+ */
+.sc-modal-surface--sheet {
+  border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0;
+  /* El arrastre lo mueve el compositor; sin esta promesa Safari repinta la
+     hoja entera en cada fotograma y el gesto se siente pegajoso. */
+  will-change: transform;
+  touch-action: none;
+}
+.sc-modal-surface--sheet .sc-modal-surface__header {
+  position: relative;
+  padding-top: calc(var(--sc-space-4) + var(--sc-space-3));
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.sc-modal-surface--sheet .sc-modal-surface__header:active { cursor: grabbing; }
+.sc-modal-surface--sheet .sc-modal-surface__header h2,
+.sc-modal-surface--sheet .sc-modal-surface__header p { -webkit-user-select: text; user-select: text; }
+.sc-modal-surface__grabber {
+  position: absolute;
+  inset-block-start: var(--sc-space-2);
+  inset-inline-start: 50%;
+  width: 36px;
+  height: 5px;
+  transform: translateX(-50%);
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-color-border-strong);
+  opacity: .55;
+}
+.sc-modal-surface--sheet .sc-modal-surface__footer {
+  padding-bottom: calc(var(--sc-space-4) + var(--sc-safe-bottom));
+}
+.sc-modal-surface--sheet .sc-modal-surface__body:last-child {
+  padding-bottom: calc(var(--sc-space-5) + var(--sc-safe-bottom));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-modal-surface--sheet { touch-action: auto; will-change: auto; }
+  .sc-modal-surface--sheet .sc-modal-surface__header { cursor: default; }
+  .sc-modal-surface__grabber { display: none; }
+}
+
+/* Superficies compactas: la hoja llega al borde y el contenido respira -------
+ *
+ * El bloque `@media (max-width: 700px)` de arriba ya convierte diálogos y
+ * cajones en hojas. Lo que faltaba era el borde físico: sin estas dos reglas,
+ * en un iPhone la aspa de cerrar cae bajo el recorte de la cámara cuando la
+ * hoja llega a pantalla completa, y el último elemento de una lista queda
+ * debajo del indicador de inicio.
+ */
+@media (max-width: 700px) {
+  .sc-modal-surface--dialog,
+  .sc-modal-surface--right,
+  .sc-modal-surface--left {
+    max-height: calc(100dvh - var(--sc-safe-top) - var(--sc-space-6));
+  }
+  .sc-popover__surface {
+    bottom: calc(var(--sc-space-3) + var(--sc-safe-bottom));
+    max-height: min(62dvh, calc(100dvh - var(--sc-safe-top) - 96px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* Superficie que se retira: la sombra de la hoja no puede quedar recortada
+   contra el borde del viewport mientras el muelle todavía la mueve. */
+.sc-overlay--drawer,
+.sc-overlay--fullscreen { overflow: hidden; }
+
+/*
+ * Pantalla completa en teléfono = *page sheet* de iOS.
+ *
+ * `--fullscreen` es una lámina a sangre: `inset: 0`, sin radio y sin margen.
+ * En un escritorio eso es correcto —es una pantalla dentro de la pantalla—,
+ * pero en un iPhone tapaba la barra de estado, escribía su título debajo del
+ * recorte de la cámara y no dejaba ninguna pista de qué había detrás.
+ *
+ * Aquí baja hasta debajo del área segura y se queda a 10 px del borde: es la
+ * presentación modal que iOS usa desde la 13, y la que hace que el asa y el
+ * arrastre hacia abajo tengan sentido.
+ */
+@media (max-width: 700px) {
+  .sc-modal-surface--fullscreen.sc-modal-surface--sheet {
+    inset: calc(var(--sc-safe-top) + 10px) 0 0;
+    height: auto;
+    border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0;
+    border-width: var(--sc-border-width) 0 0;
+  }
+  /* La pizca de pantalla que queda arriba tiene que leerse como la vista de
+     debajo, no como un hueco: se oscurece igual que cualquier otro modal. */
+  .sc-overlay--fullscreen { background: var(--sc-color-overlay-sheet); }
+}

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, CircleAlert, Info, TriangleAlert, X } from 'lucide-react';
 import { AnimatePresence, m, useReducedMotion } from 'motion/react';
 import { useI18n } from '../../i18n/useI18n';
+import { springs } from '../../design-system/motion';
+import { haptics } from '../../platform/haptics';
 import { onWorkspaceCommand } from './workspaceCommands';
 
 export interface ToastItem {
@@ -29,6 +31,12 @@ export const ToastNotification = () => {
     };
 
     setToasts((previous) => [...previous.slice(-3), toast]);
+    // Un aviso que confirma o que avisa es exactamente el caso de una háptica:
+    // el usuario provocó algo cuyo resultado aparece fuera de donde mira. Los
+    // informativos no vibran — serían ruido.
+    if (toast.tone === 'success') haptics.notification('success');
+    else if (toast.tone === 'warning') haptics.notification('warning');
+    else if (toast.tone === 'error') haptics.notification('error');
 
     if (toast.durationMs > 0) {
       window.setTimeout(() => {
@@ -49,10 +57,10 @@ export const ToastNotification = () => {
             <m.div
               key={toast.id}
               layout
-              initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.94 }}
+              initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.94 }}
               animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-              exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: -10 }}
-              transition={reducedMotion ? { duration: 0.01 } : { type: 'spring', stiffness: 420, damping: 28 }}
+              exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94, y: 10 }}
+              transition={reducedMotion ? { duration: 0.01 } : springs.snappy}
               className={`sc-toast-card sc-toast-card--${toast.tone}`}
               role="status"
               aria-live="polite"

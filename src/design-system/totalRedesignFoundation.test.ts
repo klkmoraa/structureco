@@ -105,10 +105,12 @@ describe('StructureCo total-redesign foundation', () => {
     expect(fontsCss).toContain("font-family: 'Geist Mono'");
     expect(fontsCss).toContain("url('/fonts/geist-mono-variable.woff2')");
     expect(fontsCss).not.toMatch(/https?:\/\//);
-    expect(fontsCss.match(/font-display:\s*swap/g)).toHaveLength(2);
-    expect(root.get('--sc-font-display')).toBe('"Instrument Sans", ui-sans-serif, system-ui, sans-serif');
-    expect(root.get('--sc-font-ui')).toBe('"Instrument Sans", ui-sans-serif, system-ui, sans-serif');
-    expect(root.get('--sc-font-mono')).toBe('"Geist Mono", ui-monospace, "Cascadia Mono", monospace');
+    // Cuatro caras: recta e itálica de Instrument Sans (partida en dos
+    // subconjuntos) más Geist Mono.
+    expect(fontsCss.match(/font-display:\s*swap/g)).toHaveLength(4);
+    expect(root.get('--sc-font-display')).toBe('"Instrument Sans", "Instrument Sans Fallback", ui-sans-serif, system-ui, sans-serif');
+    expect(root.get('--sc-font-ui')).toBe('"Instrument Sans", "Instrument Sans Fallback", ui-sans-serif, system-ui, sans-serif');
+    expect(root.get('--sc-font-mono')).toBe('"Geist Mono", "Geist Mono Fallback", ui-monospace, "Cascadia Mono", monospace');
 
     expectWoff2('instrument-sans-variable.woff2');
     expectWoff2('geist-mono-variable.woff2');

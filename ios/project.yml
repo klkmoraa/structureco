@@ -1,0 +1,67 @@
+# Especificación de XcodeGen.
+#
+# El proyecto de Xcode NO se versiona: un `.pbxproj` escrito a mano es un
+# formato que nadie revisa de verdad, que provoca conflictos ilegibles en cada
+# fusión y que se rompe en silencio. Esta especificación es la fuente de verdad
+# y `xcodegen generate` produce el `.xcodeproj` a partir de ella.
+#
+#   brew install xcodegen
+#   npm run ios:sync        # compila la web y la copia al paquete
+#   cd ios && xcodegen generate && open StructureCo.xcodeproj
+
+name: StructureCo
+options:
+  bundleIdPrefix: co.structure
+  # El código usa `WebView`/`WebPage` —la vista web nativa de SwiftUI, de
+  # iOS 26— además de `@Observable`, `onChange(of:initial:)` y
+  # `.sensoryFeedback`. El suelo se declara en 27.0 porque es la versión en la
+  # que se publica; bajarlo a 26.0 no requiere tocar una línea del shell, y por
+  # debajo de ahí habría que reintroducir el `UIViewRepresentable` que esta
+  # versión retira.
+  deploymentTarget:
+    iOS: "27.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: false
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.8.2"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    # Concurrencia estricta de verdad. Con el aislamiento al actor principal por
+    # defecto, un shell de interfaz como éste no necesita anotar `@MainActor` en
+    # cada tipo: lo está todo salvo lo que se marque explícitamente, que es
+    # exactamente el reparto correcto aquí.
+    SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+
+targets:
+  StructureCo:
+    type: application
+    platform: iOS
+    sources:
+      - path: StructureCo/Sources
+      - path: StructureCo/Resources/Assets.xcassets
+      # Apple lo exige para publicar desde mayo de 2024, y tiene que llegar al
+      # paquete como recurso: si no está, la subida se rechaza.
+      - path: StructureCo/Resources/PrivacyInfo.xcprivacy
+      # El build de Vite. Va como carpeta-referencia (`folder`) y no como grupo:
+      # tiene que llegar al paquete con su árbol intacto, porque las rutas de
+      # los `import` del bundle son relativas a él. Un grupo aplanaría
+      # `assets/` sobre la raíz y ningún módulo resolvería.
+      - path: StructureCo/Web
+        type: folder
+        optional: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: co.structure.app
+        INFOPLIST_FILE: StructureCo/Resources/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+        # La aplicación llega al borde físico y reparte el inset ella misma.
+        CODE_SIGN_ENTITLEMENTS: ""

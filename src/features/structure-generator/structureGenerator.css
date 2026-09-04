@@ -44,7 +44,7 @@
   right: 8px;
   left: 8px;
   top: auto;
-  bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(68px + var(--sc-safe-bottom));
   width: auto;
   max-height: min(54vh, calc(100% - 88px));
   border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) var(--sc-radius-sm) var(--sc-radius-sm);
@@ -271,7 +271,7 @@
     right: 8px;
     left: 8px;
     top: auto;
-    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(68px + var(--sc-safe-bottom));
     width: auto;
     /*
      * La mitad de la pantalla, y no lo que quepa: la bandeja tiene que dejar

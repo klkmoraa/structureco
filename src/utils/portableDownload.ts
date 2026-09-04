@@ -1,32 +1,28 @@
-export const downloadPortableBytes =(bytes: Uint8Array, filename: string, mimeType: string): void => {
-  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: mimeType }));
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.style.display = 'none';
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  // iOS Safari may still be consuming the object URL after the synthetic click.
-  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+import { deliverFile, deliverFileSync } from '../platform/fileDelivery';
+
+export const downloadPortableBytes = (bytes: Uint8Array, filename: string, mimeType: string): void => {
+  deliverFileSync(new Blob([bytes as BlobPart], { type: mimeType }), filename, mimeType);
 };
 
+/**
+ * Comparte cuando el anfitrión sabe hacerlo y descarga cuando no.
+ *
+ * El orden lo decide `platform/fileDelivery`: shell nativo → hoja de compartir
+ * de iOS, `navigator.share` → hoja del navegador, y `<a download>` al final.
+ * Aquí sólo queda la traducción al vocabulario que ya usaban los llamadores.
+ */
 export const shareOrDownloadPortableBytes = async (
   bytes: Uint8Array,
   filename: string,
   mimeType: string,
   title = 'Expediente structureCo',
 ): Promise<'shared' | 'downloaded' | 'cancelled'> => {
-  const file = new File([bytes as BlobPart], filename, { type: mimeType });
-  if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title });
-      return 'shared';
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled';
-      // Safari can reject after an async export loses transient user activation.
-    }
-  }
-  downloadPortableBytes(bytes, filename, mimeType);
-  return 'downloaded';
+  const outcome = await deliverFile({
+    blob: new Blob([bytes as BlobPart], { type: mimeType }),
+    filename,
+    mimeType,
+    title,
+  });
+  if (outcome === 'native') return 'shared';
+  return outcome;
 };

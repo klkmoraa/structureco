@@ -9,10 +9,12 @@ import { useI18n } from './i18n/useI18n';
 import { rememberLanguage } from './i18n/languagePreference';
 import { Space3DEntryDialog, type Space3DEntryOrigin } from './features/space3d/Space3DEntryDialog';
 import { onLaunchedFile } from './platform/launchedFile';
+import { installNativeShell, syncStatusBarTheme } from './platform/nativeShell';
 import { safeProjectFilename } from './utils/export';
 import { decodeProjectFragment } from './utils/shareLink';
 import './styles.css';
 import './design-system/material.css';
+import './platform/native.css';
 
 const loadWorkspaceShell = () => import('./features/workspace/WorkspaceShell');
 const WorkspaceShell = lazy(loadWorkspaceShell);
@@ -41,13 +43,29 @@ const AppShell = () => {
   // Inicio en la misma sesión, el usuario debe poder ver de verdad las rutas
   // de recuperación, importación y ejemplos.
   const [directResumeAvailable, setDirectResumeAvailable] = useState(true);
-  const { project, analysis, replaceProject } = useProject();
+  const { project, analysis, replaceProject, theme } = useProject();
   const { t } = useI18n();
 
   useEffect(() => {
     document.documentElement.lang = project.settings.language;
     rememberLanguage(project.settings.language);
   }, [project.settings.language]);
+
+  // La capa de plataforma se monta una vez y vive lo que vive la aplicación:
+  // publica los atributos del dispositivo, sigue el teclado y el área segura, y
+  // abre el puente con un anfitrión nativo si lo hay.
+  useEffect(() => installNativeShell(), []);
+
+  // La barra de estado de iOS se tiñe con el fondo de la aplicación. Sin esto,
+  // Noche deja una franja clara arriba que delata el marco web.
+  //
+  // Va dentro de un fotograma porque quien escribe `data-theme` en `<html>` es
+  // un efecto del proveedor, y los efectos del hijo corren antes que los del
+  // padre: leer el color aquí y ahora devolvería el del tema anterior.
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => syncStatusBarTheme(theme === 'dark' ? 'dark' : 'light'));
+    return () => window.cancelAnimationFrame(frame);
+  }, [theme]);
 
   useEffect(() => {
     const preload = () => { void loadWorkspaceShell(); };

@@ -4,7 +4,7 @@
   z-index: 1000;
   display: grid;
   place-items: center;
-  padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+  padding: max(18px, var(--sc-safe-top)) max(18px, var(--sc-safe-right)) max(18px, var(--sc-safe-bottom)) max(18px, var(--sc-safe-left));
   background: rgb(10 18 22 / 62%);
 }
 
@@ -284,12 +284,12 @@
 @media (max-width: 720px) {
   .new-exercise-backdrop {
     place-items: end center;
-    padding: max(8px, env(safe-area-inset-top)) 0 0;
+    padding: max(8px, var(--sc-safe-top)) 0 0;
   }
 
   .new-exercise-dialog {
     width: 100%;
-    max-height: calc(100dvh - max(8px, env(safe-area-inset-top)));
+    max-height: calc(100dvh - max(8px, var(--sc-safe-top)));
     border-radius: 22px 22px 0 0;
     border-block-end: 0;
   }
@@ -307,7 +307,7 @@
   .new-exercise-form {
     display: block;
     max-height: calc(100dvh - 118px);
-    padding: 13px 0 max(22px, env(safe-area-inset-bottom));
+    padding: 13px 0 max(22px, var(--sc-safe-bottom));
     overflow-y: auto;
   }
 

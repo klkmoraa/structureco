@@ -548,10 +548,10 @@
   /* 6 · TIPOGRAFÍA (Instrumento de Precisión)                           */
   /* ------------------------------------------------------------------ */
   /* Interface, display and measured values are self-hosted. */
-  --sc-font-display: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
-  --sc-font-ui: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --sc-font-display: "Instrument Sans", "Instrument Sans Fallback", ui-sans-serif, system-ui, sans-serif;
+  --sc-font-ui: "Instrument Sans", "Instrument Sans Fallback", ui-sans-serif, system-ui, sans-serif;
   --sc-font-heading: var(--sc-font-display);
-  --sc-font-mono: "Geist Mono", ui-monospace, "Cascadia Mono", monospace;
+  --sc-font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, "Cascadia Mono", monospace;
   --sc-font-weight-regular: 400;
   --sc-font-weight-medium: 550;
   --sc-font-weight-semibold: 650;
@@ -599,6 +599,28 @@
   --sc-layout-gutter: 18px;
   --sc-layout-reading: 1200px;
 
+  /* ---- Área segura y teclado · capa nativa ---------------------------
+     `env(safe-area-inset-*)` sólo existe cuando el navegador lo publica, y
+     dentro del shell Swift el WKWebView puede estar recortado de otra manera
+     (una hoja modal presentada a media altura no tiene el mismo inset que la
+     ventana). Estos cuatro tokens son el único sitio donde la interfaz
+     pregunta por el borde físico: por defecto resuelven a `env()`, y
+     `platform/nativeShell.ts` los sobrescribe en línea sobre `:root` cuando el
+     anfitrión nativo publica los suyos, que ganan por especificidad sin que
+     ningún consumidor cambie.
+
+     `--sc-keyboard-inset` no tiene equivalente en CSS: el teclado de iOS tapa
+     el viewport en vez de reducirlo, así que sólo `visualViewport` lo ve. */
+  --sc-safe-top: env(safe-area-inset-top, 0px);
+  --sc-safe-right: env(safe-area-inset-right, 0px);
+  --sc-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --sc-safe-left: env(safe-area-inset-left, 0px);
+  --sc-keyboard-inset: 0px;
+  /* Holgura mínima frente al indicador de inicio del iPhone: 8 px reales por
+     debajo del inset, para que una barra de herramientas no quede pegada a la
+     línea que el sistema dibuja. */
+  --sc-safe-bottom-gutter: calc(var(--sc-safe-bottom) + 8px);
+
   /* Densidades: la profesional es compacta pero legible; la táctil se
      activa por breakpoint/pointer, Aula usa la cómoda. */
   --sc-density-row-compact: 30px;
@@ -624,6 +646,26 @@
   --sc-motion-morph-duration: var(--sc-motion-standard);
   --sc-motion-dock-scale: 1.16;
   --sc-ease-standard: cubic-bezier(.22, 1, .36, 1);
+  /* ---- Curvas de iOS -------------------------------------------------
+     No son un capricho de marca: son las tres curvas con las que UIKit mueve
+     todo lo que el usuario ve en un iPhone, y cualquier interfaz que quiera
+     leerse como nativa en ese dispositivo tiene que compartirlas.
+
+       ios          la curva por defecto de una transición de UIKit
+       ios-out      salida: arranca a velocidad y frena hasta parar
+       ios-in       entrada rápida, para lo que se retira sin ceremonia
+       ios-spring   el aterrizaje con un único rebote mínimo de una hoja
+
+     Se declaran junto a las genéricas y no las sustituyen: el resto del
+     producto sigue usando `--sc-ease-standard`, y estas cuatro son para la
+     capa que se presenta (hojas, barras, tarjetas), que es donde el usuario
+     compara con su sistema operativo. */
+  --sc-ease-ios: cubic-bezier(.25, .1, .25, 1);
+  --sc-ease-ios-out: cubic-bezier(.32, .72, 0, 1);
+  --sc-ease-ios-in: cubic-bezier(.4, 0, 1, 1);
+  --sc-ease-ios-spring: cubic-bezier(.16, 1.06, .28, 1);
+  /* Duración de una presentación de hoja completa en iOS. */
+  --sc-motion-sheet: 420ms;
   --sc-ease-enter: cubic-bezier(.22, 1, .36, 1);
   --sc-ease-exit: cubic-bezier(.4, 0, 1, 1);
   --sc-ease-press: cubic-bezier(.2, .8, .2, 1);
@@ -872,6 +914,7 @@
     --sc-motion-slow: 0.001ms;
     --sc-motion-reveal: 0.001ms;
     --sc-motion-loading: 0.001ms;
+    --sc-motion-sheet: 0.001ms;
     --sc-motion-distance-factor: 0;
     --sc-motion-morph-duration: 0.001ms;
     --sc-motion-dock-scale: 1;

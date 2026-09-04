@@ -54,6 +54,8 @@ export const esInterchange = {
   'export.shareLinkCopied': 'Enlace copiado al portapapeles',
   'export.shareFailed': 'No se pudo copiar el enlace.',
   'export.shareTooLarge': 'Este modelo es demasiado grande para un enlace ({characters} de {limit} caracteres). Usa Guardar en el disco o el expediente .structureco.',
+  'export.shareSheetOpened': 'Compartido con el sistema',
+  'export.sharedAsFile': 'Compartido como proyecto',
   'export.copySuccessful': '¡Copiado!',
   'export.copyFallbackDownloaded': 'Portapapeles no disponible: se descargó el archivo',
   'export.completed': 'Exportación lista',

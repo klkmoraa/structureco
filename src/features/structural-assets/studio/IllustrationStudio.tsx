@@ -22,6 +22,7 @@ import {
 } from './presetRepository';
 import { buildStudioScene, disposeStudioScene, renderStudioPng, serializeStudioSvg, type StudioExportScale } from './studioScene';
 import './illustrationStudio.css';
+import { deliverFile } from '../../../platform/fileDelivery';
 
 type StudioSection = 'proportions' | 'material' | 'camera' | 'detail' | 'view';
 type StudioLanguage = 'es' | 'en';
@@ -91,11 +92,16 @@ function StudioPreview({ parameters, label }: { parameters: StudioParameters; la
   </div>;
 }
 
-const download = (href: string, filename: string) => {
-  const anchor = document.createElement('a');
-  anchor.href = href;
-  anchor.download = filename;
-  anchor.click();
+/**
+ * El Estudio produce sus salidas como URL —de objeto para el SVG, de datos para
+ * el PNG—, así que se releen a bytes antes de entregarlas. Ese rodeo es lo que
+ * permite que pasen por `platform/fileDelivery`, y con él por la hoja de
+ * compartir cuando la aplicación corre dentro del shell nativo: un
+ * `<a download>` allí no guarda nada y el botón parecía no hacer nada.
+ */
+const download = async (href: string, filename: string, mimeType: string) => {
+  const blob = await (await fetch(href)).blob();
+  await deliverFile({ blob, filename, mimeType, allowWebShare: false });
 };
 
 export function IllustrationStudio({ language = 'es', initialTheme = 'light', onClose }: { language?: StudioLanguage; initialTheme?: StudioPreviewTheme; onClose: () => void }) {
@@ -184,11 +190,11 @@ export function IllustrationStudio({ language = 'es', initialTheme = 'light', on
       setFeedback({ kind: 'error', message: renameDraft.trim() ? t.duplicateName : t.nameRequired });
     }
   };
-  const exportSvg = () => {
+  const exportSvg = async () => {
     let objectUrl: string | undefined;
     try {
       objectUrl = URL.createObjectURL(new Blob([serializeStudioSvg(parameters)], { type: 'image/svg+xml' }));
-      download(objectUrl, `${parameters.assetId.replace(':', '-')}.svg`);
+      await download(objectUrl, `${parameters.assetId.replace(':', '-')}.svg`, 'image/svg+xml');
     } catch {
       setFeedback({ kind: 'error', message: t.exportError });
     } finally {
@@ -197,7 +203,7 @@ export function IllustrationStudio({ language = 'es', initialTheme = 'light', on
   };
   const exportPng = async () => {
     try {
-      download(await renderStudioPng(parameters, scale), `${parameters.assetId.replace(':', '-')}-${scale}x.png`);
+      await download(await renderStudioPng(parameters, scale), `${parameters.assetId.replace(':', '-')}-${scale}x.png`, 'image/png');
     } catch {
       setFeedback({ kind: 'error', message: t.exportError });
     }

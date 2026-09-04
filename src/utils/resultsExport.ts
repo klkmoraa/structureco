@@ -2,6 +2,7 @@ import type { AnalysisResult, ProjectModel } from '../types';
 import { toDisplay, unitLabel, type UnitQuantity } from '../engine/units';
 import { summarizeAnalysisResults } from '../engine/resultSummary';
 import { formatMachineNumber } from './numberFormat';
+import { deliverFileSync } from '../platform/fileDelivery';
 
 export interface ResultsCsvOptions {
   scenarioName?: string;
@@ -115,13 +116,12 @@ export const downloadResultsCsv = (
   analysis: AnalysisResult,
   options?: ResultsCsvOptions,
 ): void => {
-  const url = URL.createObjectURL(createResultsCsvBlob(project, analysis, options));
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = resultsCsvFilename(project);
-  anchor.style.display = 'none';
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  // La salida pasa por `platform/fileDelivery`: un `<a download>` no entrega
+  // nada dentro de un `WKWebView`, y una tabla de resultados exportada en
+  // silencio es peor que un error.
+  deliverFileSync(
+    createResultsCsvBlob(project, analysis, options),
+    resultsCsvFilename(project),
+    'text/csv;charset=utf-8',
+  );
 };
