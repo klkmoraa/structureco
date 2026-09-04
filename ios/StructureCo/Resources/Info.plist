@@ -11,23 +11,14 @@
   <key>CFBundlePackageType</key>
   <string>APPL</string>
 
-  <!-- Sin storyboard: el controlador raíz lo monta `SceneDelegate`. -->
+  <!-- Ciclo de vida de SwiftUI: la escena la declara `StructureCoApp` con su
+       `WindowGroup`, así que aquí no hay delegado ni configuración que nombrar.
+       La clave se conserva sólo para declarar que la aplicación es de una sola
+       ventana. -->
   <key>UIApplicationSceneManifest</key>
   <dict>
     <key>UIApplicationSupportsMultipleScenes</key>
     <false/>
-    <key>UISceneConfigurations</key>
-    <dict>
-      <key>UIWindowSceneSessionRoleApplication</key>
-      <array>
-        <dict>
-          <key>UISceneConfigurationName</key>
-          <string>Default</string>
-          <key>UISceneDelegateClassName</key>
-          <string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
-        </dict>
-      </array>
-    </dict>
   </dict>
 
   <!-- Pantalla de lanzamiento por diccionario: un color plano igual al fondo de
@@ -52,11 +43,6 @@
     <string>UIInterfaceOrientationLandscapeLeft</string>
     <string>UIInterfaceOrientationLandscapeRight</string>
   </array>
-
-  <!-- La barra de estado la tiñe `WebHostController` cuando el puente lo pide;
-       declararla controlada por el controlador es lo que lo hace posible. -->
-  <key>UIViewControllerBasedStatusBarAppearance</key>
-  <true/>
 
   <!-- Expedientes y proyectos: sin esto, «Abrir con structureCo» no aparece en
        Archivos ni en el Correo y la aplicación queda aislada del sistema. -->

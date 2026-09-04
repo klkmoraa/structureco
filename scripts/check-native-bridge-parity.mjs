@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(import.meta.dirname, '..');
 const BRIDGE = 'src/platform/nativeBridge.ts';
-const SHELL = 'ios/StructureCo/Sources/WebHostController.swift';
+const SHELL = 'ios/StructureCo/Sources';
 
 /** Recorta la declaración de un tipo unión hasta la línea en blanco siguiente. */
 const unionBlock = (source, typeName) => {
@@ -37,14 +37,36 @@ const unionBlock = (source, typeName) => {
 
 const kindsIn = (block) => new Set([...block.matchAll(/kind:\s*'([^']+)'/g)].map((match) => match[1]));
 
-/** Los `case` del `switch` que despacha los mensajes entrantes en Swift. */
-const swiftHandledKinds = (source) => {
-  const start = source.indexOf('func userContentController');
-  if (start === -1) return new Set();
-  const end = source.indexOf('\n    // MARK:', start);
-  const block = source.slice(start, end === -1 ? source.length : end);
-  return new Set([...block.matchAll(/case\s+"([^"]+)"/g)].map((match) => match[1]));
+/**
+ * Todo el Swift del shell, concatenado.
+ *
+ * Se lee el directorio entero y no un archivo concreto porque el reparto entre
+ * archivos es una decisión de estilo del shell —cambió al pasar de UIKit a
+ * SwiftUI— y un gate que dependiera de ella se rompería en cada reorganización
+ * sin que el contrato hubiera cambiado.
+ */
+const swiftSources = (root) => {
+  const directory = path.join(root, SHELL);
+  if (!existsSync(directory)) return null;
+  return readdirSync(directory, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.swift'))
+    .map((entry) => readFileSync(path.join(directory, entry.name), 'utf8'))
+    .join('\n');
 };
+
+/**
+ * Los `case` que despachan un mensaje entrante.
+ *
+ * La regla exige que el shell no use `switch` sobre cadenas para nada más: un
+ * `case "json"` de un mapeo de tipos MIME entraría aquí como un mensaje del
+ * puente que la web no declara. Por eso esos mapeos son diccionarios en el
+ * shell, y el gate se apoya en esa convención en vez de intentar adivinar el
+ * contexto de cada `switch`.
+ */
+const swiftHandledKinds = (source) =>
+  // Anclado a principio de línea y con sus dos puntos: así una prosa que
+  // mencione `case "…"` dentro de un comentario no se cuela como un mensaje.
+  new Set([...source.matchAll(/^\s*case\s+"([^"]+)"\s*:/gm)].map((match) => match[1]));
 
 /** Los `kind` que Swift construye para enviárselos a la web. */
 const swiftSentKinds = (source) =>
@@ -67,14 +89,13 @@ export const checkBridgeParity = (root = ROOT) => {
   const outbound = kindsIn(outboundBlock);
   const inbound = kindsIn(inboundBlock);
 
-  const shellPath = path.join(root, SHELL);
-  if (!existsSync(shellPath)) {
+  const shell = swiftSources(root);
+  if (shell === null) {
     // Sin shell no hay nada que contrastar, y eso es un estado legítimo: el
     // contrato web existe por sí solo.
     notes.push(`${SHELL} no existe; sólo se comprobó que el contrato está bien formado.`);
     return { problems, notes, outbound, inbound };
   }
-  const shell = readFileSync(shellPath, 'utf8');
 
   const handled = swiftHandledKinds(shell);
   const sent = swiftSentKinds(shell);

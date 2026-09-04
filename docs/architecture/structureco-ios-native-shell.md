@@ -85,10 +85,15 @@ que la web manda `style: 'light'` con tema oscuro. No es un error de signo.
 
 ## 3 · El lado Swift
 
-`ios/StructureCo/Sources/WebHostController.swift` es la implementación real y
-completa; lo que sigue es su núcleo, recortado, para leer el mecanismo sin
-abrir el archivo. El detalle de puesta en marcha está en
+El shell es **SwiftUI**. `ios/StructureCo/Sources/` es la implementación real y
+completa; lo que sigue es su núcleo, recortado, para leer el mecanismo sin abrir
+los archivos. El detalle de puesta en marcha está en
 [ios/README.md](../../ios/README.md).
+
+Todo lo que en una versión UIKit serían delegados es aquí una modificación
+declarativa: `.onOpenURL`, `scenePhase`, `.preferredColorScheme`,
+`.sensoryFeedback`. No hay `AppDelegate`, ni `SceneDelegate`, ni una llamada a
+`setNeedsStatusBarAppearanceUpdate`.
 
 **Por qué un esquema propio y no `file://`.** structureCo se compila a módulos
 ES y mueve el solver a Web Workers. WebKit aplica CORS a `file://` y trata cada
@@ -97,115 +102,128 @@ arrancan e IndexedDB no persiste entre sesiones. `AppSchemeHandler` sirve el
 build bajo `structureco://app`, que sí es un origen real. No es una preferencia
 de estilo: sobre `file://` la aplicación no arranca.
 
+### El estado del puente
+
 ```swift
-import UIKit
-import WebKit
+@Observable
+final class NativeBridgeModel {
+    var interfaceScheme: ColorScheme?      // barra de estado
+    var shareItem: ShareItem?              // hoja de compartir pendiente
+    var scrollLocked = false               // desplazamiento del anfitrión
+    private(set) var feedback: SensoryFeedback?
+    private(set) var feedbackTick = 0
 
-final class StructureCoViewController: UIViewController, WKScriptMessageHandler {
-    private var webView: WKWebView!
-    private var statusBarStyle: UIStatusBarStyle = .darkContent
+    @ObservationIgnored var send: (([String: Any]) -> Void)?
 
-    override var preferredStatusBarStyle: UIStatusBarStyle { statusBarStyle }
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-
-        let configuration = WKWebViewConfiguration()
-        configuration.userContentController.add(self, name: "structureco")
-        // El lienzo hace pellizco y arrastre: sin esto, iOS se queda el gesto.
-        configuration.allowsInlineMediaPlayback = true
-
-        webView = WKWebView(frame: .zero, configuration: configuration)
-        // El rebote elástico del documento delata el marco web.
-        webView.scrollView.bounces = false
-        webView.scrollView.contentInsetAdjustmentBehavior = .never
-        // La aplicación llega al borde físico; el inset lo reparte el CSS.
-        webView.insetsLayoutMarginsFromSafeArea = false
-        view.addSubview(webView)
-
-        let index = Bundle.main.url(forResource: "index", withExtension: "html", subdirectory: "web")!
-        webView.loadFileURL(index, allowingReadAccessTo: index.deletingLastPathComponent())
-    }
-
-    override func viewSafeAreaInsetsDidChange() {
-        super.viewSafeAreaInsetsDidChange()
-        publishSafeArea()
-    }
-
-    private func publishSafeArea() {
-        let insets = view.safeAreaInsets
-        send([
-            "kind": "safeArea",
-            "insets": [
-                "top": insets.top, "right": insets.right,
-                "bottom": insets.bottom, "left": insets.left,
-            ],
-        ])
-    }
-
-    private func send(_ message: [String: Any]) {
-        guard let data = try? JSONSerialization.data(withJSONObject: message),
-              let json = String(data: data, encoding: .utf8) else { return }
-        webView.evaluateJavaScript("window.StructureCoNative?.receive(\(json))")
-    }
-
-    // MARK: - Web → nativo
-
-    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard let body = message.body as? [String: Any],
-              let kind = body["kind"] as? String else { return }
-
+    @discardableResult
+    @MainActor
+    func receive(_ body: [String: Any]) -> Bool {
+        guard let kind = body["kind"] as? String else { return false }
         switch kind {
         case "app.ready":
             // El contrato es 1.x; una mayor distinta significa que este shell
             // se quedó atrás y hay que actualizarlo, no adivinar.
-            guard let version = body["version"] as? String, version.hasPrefix("1.") else { return }
-            publishSafeArea()
-
-        case "haptic.impact":
-            let style: UIImpactFeedbackGenerator.FeedbackStyle
-            switch body["style"] as? String {
-            case "heavy": style = .heavy
-            case "medium": style = .medium
-            case "rigid": style = .rigid
-            case "soft": style = .soft
-            default: style = .light
-            }
-            UIImpactFeedbackGenerator(style: style).impactOccurred()
+            guard let version = body["version"] as? String, version.hasPrefix("1.") else { return true }
+            ready = true
 
         case "haptic.selection":
-            UISelectionFeedbackGenerator().selectionChanged()
-
-        case "haptic.notification":
-            let type: UINotificationFeedbackGenerator.FeedbackType
-            switch body["style"] as? String {
-            case "warning": type = .warning
-            case "error": type = .error
-            default: type = .success
-            }
-            UINotificationFeedbackGenerator().notificationOccurred(type)
+            fire(.selection)
 
         case "statusBar.style":
-            statusBarStyle = (body["style"] as? String) == "light" ? .lightContent : .darkContent
-            setNeedsStatusBarAppearanceUpdate()
+            // La web envía el color que debe tener el CONTENIDO de la barra:
+            // en Noche pide `light`, y eso es declarar el esquema oscuro.
+            interfaceScheme = (body["style"] as? String) == "light" ? .dark : .light
 
-        case "share":
-            let items: [Any] = [body["url"], body["text"], body["title"]].compactMap { $0 }
-            present(UIActivityViewController(activityItems: items, applicationActivities: nil), animated: true)
+        case "share.file":
+            guard
+                let base64 = body["base64"] as? String,
+                let data = Data(base64Encoded: base64),
+                let filename = body["filename"] as? String,
+                let staged = Self.stage(data: data, filename: filename)
+            else { return true }
+            shareItem = ShareItem(items: [staged])
 
         case "scroll.lock":
-            webView.scrollView.isScrollEnabled = !((body["locked"] as? Bool) ?? false)
+            scrollLocked = (body["locked"] as? Bool) ?? false
 
         default:
-            break
+            return false
         }
+        return true
     }
 }
 ```
 
-El teclado se puede publicar además desde `keyboardWillChangeFrameNotification`
-con `{"kind": "keyboard", "height": …}`; sin eso, la web ya lo sigue por
-`visualViewport`, que dentro de un `WKWebView` funciona igual que en Safari.
+Los mapeos de valores —tipos MIME, estilos de háptica— se escriben como
+diccionarios y no como `switch`. Es una convención que el gate de la §5 da por
+hecha: en este shell un `case "…":` significa exactamente un `kind` del
+contrato.
+
+### La pantalla
+
+```swift
+struct RootView: View {
+    @State private var bridge = NativeBridgeModel()
+    @Environment(\.scenePhase) private var scenePhase
+
+    var body: some View {
+        GeometryReader { proxy in
+            WebView(bridge: bridge, scrollLocked: bridge.scrollLocked)
+                .ignoresSafeArea()
+                .onChange(of: proxy.safeAreaInsets, initial: true) { _, insets in
+                    bridge.windowHeight = proxy.size.height + insets.top + insets.bottom
+                    bridge.publishSafeArea(insets)
+                }
+        }
+        // El teclado NO empuja la vista: taparía el lienzo. Su alto se publica
+        // y lo reparte el CSS donde hace falta.
+        .ignoresSafeArea(.keyboard)
+        .preferredColorScheme(bridge.interfaceScheme)
+        .sensoryFeedback(trigger: bridge.feedbackTick) { _, _ in bridge.feedback }
+        .sheet(item: $bridge.shareItem) { ShareSheet(items: $0.items) }
+        .onOpenURL { url in bridge.open(url: url) }
+        .onChange(of: scenePhase) { _, phase in /* lifecycle */ }
+    }
+}
+```
+
+### La vista web
+
+```swift
+struct WebView: UIViewRepresentable {
+    let bridge: NativeBridgeModel
+    let scrollLocked: Bool
+
+    func makeUIView(context: Context) -> WKWebView {
+        let configuration = WKWebViewConfiguration()
+        configuration.setURLSchemeHandler(AppSchemeHandler(), forURLScheme: AppSchemeHandler.scheme)
+        configuration.userContentController.add(context.coordinator, name: "structureco")
+
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        // El rebote elástico despega la barra superior del borde y delata el
+        // marco web; el documento no se desplaza, lo hacen sus paneles.
+        webView.scrollView.bounces = false
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        context.coordinator.attach(webView: webView)
+        webView.load(URLRequest(url: AppSchemeHandler.indexURL))
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        webView.scrollView.isScrollEnabled = !scrollLocked
+    }
+}
+```
+
+El envío hacia la web es una clausura que el coordinador instala en el modelo:
+serializa el diccionario y llama a `window.StructureCoNative?.receive(json)` con
+`evaluateJavaScript`.
+
+Quedan **dos** envoltorios de UIKit y ninguno por comodidad: `WebView`, porque
+SwiftUI no tiene vista web propia en este objetivo de despliegue; y
+`ShareSheet`, porque `ShareLink` es declarativo y pide conocer lo que se
+comparte al construir la vista, mientras que aquí el archivo llega en un mensaje
+del puente mucho después.
 
 ## 4 · Lo que el shell nativo **no** debe hacer
 

@@ -40,11 +40,22 @@ y al fondo real de la aplicación.
 
 ## Segundo tramo · el shell existe y el puente se comprueba
 
-**`ios/` es una aplicación real.** Seis archivos Swift sobre UIKit: `WKWebView` a
+**`ios/` es una aplicación real, en SwiftUI.** Seis archivos: `WKWebView` a
 pantalla completa, insets, teclado, hápticas, hoja de compartir, barra de estado,
 bloqueo de desplazamiento y apertura de archivos del sistema. El
 `.xcodeproj` no se versiona —lo genera XcodeGen desde `ios/project.yml`— ni el
 build web dentro del paquete —lo copia `ios/Scripts/sync-web.sh`—.
+
+Todo lo que sería un delegado es una modificación declarativa: `.onOpenURL`,
+`scenePhase`, `.preferredColorScheme`, `.sensoryFeedback`. No hay `AppDelegate`,
+ni `SceneDelegate`, ni `UIWindow` montada a mano, ni una llamada a
+`setNeedsStatusBarAppearanceUpdate`. Quedan dos envoltorios de UIKit y ninguno
+por comodidad: `WebView`, porque SwiftUI no tiene vista web propia en este
+objetivo de despliegue; y `ShareSheet`, porque `ShareLink` es declarativo y pide
+conocer lo que se comparte al construir la vista, mientras que aquí el archivo
+llega en un mensaje del puente mucho después. El suelo es iOS 17 porque
+`@Observable`, `onChange(of:initial:)` y `.sensoryFeedback` son la forma nativa
+de hacer lo que este shell hace.
 
 La decisión que decide si arranca o no: **esquema propio, no `file://`**.
 structureCo se compila a módulos ES y mueve el solver a Web Workers; WebKit
@@ -137,7 +148,7 @@ Día y Noche): el arrastre de hoja descarta a 216 px y vuelve a su sitio a 30 px
 ## Abierto
 
 - **El shell iOS no se ha compilado nunca.** No hay macOS aquí ni en CI, así que
-  los seis archivos Swift están escritos contra la documentación de UIKit y
+  los seis archivos Swift están escritos contra la documentación de SwiftUI y
   WebKit pero sin pasar por un compilador. Lo que sí está verificado es el lado
   web del puente, que es donde una regresión pasaría inadvertida. La primera
   ejecución en Xcode puede necesitar retoques.
@@ -147,3 +158,6 @@ Día y Noche): el arrastre de hoja descarta a 216 px y vuelve a su sitio a 30 px
   vibración. Es un límite de la plataforma, no una tarea pendiente.
 - `appearance` está declarado como mensaje entrante y todavía sin emisor: el
   tema lo decide la web. El gate lo informa sin fallar.
+- El gate de paridad da por hecha una convención del shell: un `case "…":` es un
+  `kind` del contrato, y los mapeos de valores se escriben como diccionarios.
+  Está anotada en `ios/README.md` y en el propio código.

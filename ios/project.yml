@@ -12,8 +12,12 @@
 name: StructureCo
 options:
   bundleIdPrefix: co.structure
+  # iOS 17 es el suelo porque el shell usa `@Observable`, `onChange(of:initial:)`
+  # y `.sensoryFeedback`: las tres son la forma nativa de SwiftUI de hacer lo
+  # que este shell hace, y bajar el suelo obligaría a reintroducir por cada una
+  # el andamiaje UIKit que esta versión retira.
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "17.0"
   createIntermediateGroups: true
   generateEmptyDirectories: false
 
