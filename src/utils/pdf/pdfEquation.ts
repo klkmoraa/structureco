@@ -15,7 +15,8 @@
  * still gate every block on `agrees(...)`, so a relation whose own numbers do not close is not
  * drawn at all.
  */
-import { unitLabel, type UnitQuantity } from '../../engine/units';
+import { registeredCustomUnitSystems, unitLabel, type UnitQuantity } from '../../engine/units';
+import { PRESET_UNIT_SYSTEM_IDS } from '../../engine/unitSystems';
 import { translateExpression } from './mathLatex';
 import { drawMathBlock, hasFraction, mathWidth } from './pdfMath';
 import type { PdfLayout } from './pdfBuilder';
@@ -38,19 +39,28 @@ export interface WorkedEquation {
 export type EquationInput = WorkedEquation | string;
 
 /**
- * Every unit label the product can print, across all four unit systems.
+ * Every unit label the product can print, across every bundled unit system.
  *
  * Closed and computed once from `engine/units`, which is the single source of these strings —
  * not a hand-written list that could drift from it. It exists so a pre-built relation ending
  * in `… = 17.5 kN` can have its unit set upright without a shape heuristic deciding that some
  * trailing word "looks like" a unit and italicising a variable by mistake.
  */
-const UNIT_LABELS: ReadonlySet<string> = new Set([
+const UNIT_QUANTITIES: readonly UnitQuantity[] = [
+  'length', 'force', 'moment', 'distributedForce', 'elasticModulus', 'area', 'inertia',
+  'sectionModulus', 'sectionDimension', 'translationalStiffness', 'rotationalStiffness', 'density',
+];
+
+/**
+ * Se recalcula en cada relación en vez de congelarse al cargar el módulo: un
+ * sistema de unidades propio del proyecto se registra cuando el proyecto se
+ * abre, después de este módulo, y sus etiquetas («Tn·m», «kgf/ft») deben
+ * componerse igual que las de fábrica.
+ */
+const unitLabels = (): ReadonlySet<string> => new Set([
   'rad',
-  ...(['kN-m', 'N-mm', 'kgf-m', 'kip-ft'] as const).flatMap((system) => ([
-    'length', 'force', 'moment', 'distributedForce', 'elasticModulus', 'area', 'inertia',
-    'sectionModulus', 'sectionDimension', 'translationalStiffness', 'rotationalStiffness', 'density',
-  ] as UnitQuantity[]).map((quantity) => unitLabel(system, quantity))),
+  ...[...PRESET_UNIT_SYSTEM_IDS, ...registeredCustomUnitSystems().map((system) => system.id)]
+    .flatMap((system) => UNIT_QUANTITIES.map((quantity) => unitLabel(system, quantity))),
 ]);
 
 /**
@@ -84,7 +94,7 @@ export const asWorkedEquation = (input: EquationInput): WorkedEquation => {
   // prints as a unit qualifies, so `= 0 en A` keeps its `A` as the node it names.
   const lastSpace = rest.lastIndexOf(' ');
   const tail = lastSpace === -1 ? '' : rest.slice(lastSpace + 1);
-  return UNIT_LABELS.has(tail)
+  return unitLabels().has(tail)
     ? { lhs, substituted: rest.slice(0, lastSpace).trim(), unit: tail }
     : { lhs, substituted: rest };
 };

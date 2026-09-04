@@ -322,6 +322,29 @@ describe('TopBar information architecture', () => {
     expect(screen.getByRole('combobox', { name: 'Unidades' })).toBeTruthy();
   });
 
+  it('compone un sistema de unidades propio y lo deja activo en el proyecto', async () => {
+    const user = userEvent.setup();
+    render(<TopBarHarness><TopBar /></TopBarHarness>);
+
+    await user.click(screen.getByRole('button', { name: 'Configuración de análisis' }));
+    const units = screen.getByRole('combobox', { name: 'Unidades' }) as HTMLSelectElement;
+    // Los presets de fábrica incluyen el sistema tonelada-metro.
+    expect(within(units).getByRole('option', { name: 'Tn · m' })).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: /crear sistema propio/i }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Fuerza' }), 'kgf');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Longitud' }), 'cm');
+    await user.type(screen.getByRole('textbox', { name: 'Nombre' }), 'Taller');
+    await user.click(screen.getByRole('button', { name: 'Añadir sistema' }));
+
+    // Queda guardado, seleccionado y con sus magnitudes derivadas de la
+    // combinación: kgf·cm para el momento, kgf/cm para la carga distribuida.
+    const updated = screen.getByRole('combobox', { name: 'Unidades' }) as HTMLSelectElement;
+    await waitFor(() => expect(within(updated).getByRole('option', { name: 'Taller' })).toBeTruthy());
+    expect(updated.value.startsWith('custom:')).toBe(true);
+    expect(document.querySelector('.topbar-units-summary')?.textContent).toContain('kgf·cm');
+  });
+
   it('places Model Doctor and Estado in the protected status zone and opens the Doctor directly', async () => {
     const user = userEvent.setup();
     const openDoctor = vi.fn();

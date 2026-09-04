@@ -11,6 +11,7 @@
  * lector exige `typeof value === 'number' && Number.isFinite(value)`.
  */
 import { validateSpace3DProject } from '../model/validation';
+import { isUnitSystemId } from '../../engine/units';
 import {
   SPACE3D_ANALYSIS_SPACE,
   SPACE3D_LIMITS,
@@ -266,7 +267,6 @@ const readCombination = (value: unknown, index: number): Space3DLoadCombination 
   };
 };
 
-const UNIT_SYSTEMS = ['kN-m', 'N-mm', 'kgf-m', 'kip-ft'] as const;
 
 export interface Space3DParseOptions {
   /**
@@ -314,7 +314,7 @@ export const parseSpace3DProject = (json: string, options: Space3DParseOptions =
   );
 
   const units = text(source, 'units', 'project');
-  if (!(UNIT_SYSTEMS as readonly string[]).includes(units)) fail('not-a-string', `project.units «${units}»`);
+  if (!isUnitSystemId(units)) fail('not-a-string', `project.units «${units}»`);
 
   const project: Space3DProject = {
     analysisSpace: SPACE3D_ANALYSIS_SPACE,

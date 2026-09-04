@@ -2,6 +2,7 @@ import type { AnalysisResult, DiagramQuantity, DiagramSegment, LoadCombination, 
 import { evaluatePolynomial, rootsInInterval } from './diagram';
 import { isTrustedForCombination, resolveReliability, worstLevel } from './reliability';
 import { analyzeProject } from './solver';
+import { createFactorizationCache } from './math';
 
 export interface AnalysisScenario {
   id: string;
@@ -139,11 +140,15 @@ export const analyzeProjectScenarios = (project: ProjectModel): AnalysisScenario
       combination,
     })),
   ];
+  // Todos los escenarios comparten proyecto: la rigidez ensamblada es la misma
+  // matriz y sólo cambia el término independiente. Una caché acotada a este
+  // recorrido convierte N factorizaciones en una, y muere con él.
+  const factorizationCache = createFactorizationCache();
   return requested.map(({ combination, ...scenario }) => {
     // No scenario/envelope consumer ever reads `.educationTrace` — only the
     // single "Aprender" tab on the primary analysis does, and it fetches its
     // own trace on demand (see ProjectContext.ensureEducationTrace).
-    const result = analyzeProject(project, combination, { includeEducationTrace: false });
+    const result = analyzeProject(project, combination, { includeEducationTrace: false, factorizationCache });
     const reliability = resolveReliability(result);
     const trusted = reliability.usable && isTrustedForCombination(reliability.level);
     return {

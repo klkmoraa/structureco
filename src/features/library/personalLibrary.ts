@@ -1,6 +1,7 @@
 import { findStandardMaterial } from '../../data/standardMaterials';
 import { findStandardSection } from '../../data/standardSections';
 import type { ThemeMode, UnitSystemId } from '../../types';
+import { isUnitSystemId } from '../../engine/units';
 import type { CanvasViewSettings } from '../view/canvasViewSettings';
 
 export const PERSONAL_LIBRARY_STORAGE_KEY = 'structureCo.personal-library.v1';
@@ -47,9 +48,7 @@ export type PersonalFavoriteDraft =
 
 export type PersonalFavoriteFilter = 'all' | PersonalFavorite['kind'];
 
-const UNIT_SYSTEMS: readonly UnitSystemId[] = ['kN-m', 'N-mm', 'kgf-m', 'kip-ft'];
 const hasOwn = (value: object, key: PropertyKey) => Object.prototype.hasOwnProperty.call(value, key);
-const includes = <T extends string>(items: readonly T[], value: unknown): value is T => typeof value === 'string' && items.includes(value as T);
 const isFiniteNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 const isIsoDate = (value: unknown): value is string => typeof value === 'string' && value.trim() !== '' && !Number.isNaN(Date.parse(value));
 
@@ -119,7 +118,7 @@ export const createFavorite = (
 ): PersonalFavorite[] => {
   const draft = clonePayload(rawDraft);
   const name = normalizeName(draft.name);
-  if (!includes(UNIT_SYSTEMS, draft.unitsAtSave)) throw new Error('Sistema de unidades inválido.');
+  if (!isUnitSystemId(draft.unitsAtSave)) throw new Error('Sistema de unidades inválido.');
   if (!isIsoDate(now)) throw new Error('Fecha del favorito inválida.');
   assertUsableId(library, id);
   assertUniqueActiveName(library, name);
@@ -226,7 +225,7 @@ export const searchFavorites = (
 const decodeBase = (raw: Record<string, unknown>) => {
   if (typeof raw.id !== 'string' || !raw.id.trim() || typeof raw.name !== 'string') throw new Error('Favorito inválido.');
   if (!isIsoDate(raw.createdAt) || !isIsoDate(raw.updatedAt) || (hasOwn(raw, 'deletedAt') && raw.deletedAt !== undefined && !isIsoDate(raw.deletedAt))) throw new Error('Fecha del favorito inválida.');
-  if (!includes(UNIT_SYSTEMS, raw.unitsAtSave)) throw new Error('Sistema de unidades inválido.');
+  if (!isUnitSystemId(raw.unitsAtSave)) throw new Error('Sistema de unidades inválido.');
   return {
     id: raw.id,
     name: normalizeName(raw.name),

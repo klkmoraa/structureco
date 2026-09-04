@@ -1,5 +1,6 @@
 import { CURRENT_SCHEMA_VERSION, createDefaultSettings } from './defaultProject';
 import type {
+  CustomUnitSystem,
   LoadCase,
   LoadCombination,
   EducationalAssertion,
@@ -18,7 +19,10 @@ import type {
   ProjectSettings,
   SpringDefinition,
   SupportDefinition,
+  UnitSystemId,
 } from '../types';
+import { DENSITY_UNITS, FORCE_UNITS, LENGTH_UNITS, STRESS_UNITS } from '../engine/unitSystems';
+import { isCustomUnitSystemId, isPresetUnitSystemId } from '../engine/units';
 import { createId } from '../utils/id';
 
 type JsonObject = Record<string, unknown>;
@@ -142,13 +146,73 @@ const normalizeSupport = (input: unknown, path: string): SupportDefinition => {
   };
 };
 
+const MAX_CUSTOM_UNIT_SYSTEMS = 32;
+
+/**
+ * Sistemas de unidades propios del proyecto.
+ *
+ * Sólo se aceptan combinaciones de unidades elementales del catálogo: un
+ * archivo no puede inyectar un factor de conversión arbitrario, así que un
+ * proyecto importado nunca puede reescribir la equivalencia entre lo que el
+ * motor calcula y lo que la pantalla dice.
+ */
+const normalizeCustomUnitSystems = (input: unknown): CustomUnitSystem[] | undefined => {
+  const raw = arrayAt(input, 'settings.customUnitSystems');
+  if (!raw.length) return undefined;
+  if (raw.length > MAX_CUSTOM_UNIT_SYSTEMS) {
+    fail('settings.customUnitSystems', `excede el límite de ${MAX_CUSTOM_UNIT_SYSTEMS} sistemas.`);
+  }
+  const ids = new Set<string>();
+  return raw.map((entry, index) => {
+    const path = `settings.customUnitSystems[${index}]`;
+    const source = objectAt(entry, path);
+    const id = stringAt(source.id, `${path}.id`);
+    if (!isCustomUnitSystemId(id)) fail(`${path}.id`, 'debe tener la forma «custom:identificador».');
+    uniqueId(id, ids, `${path}.id`);
+    return {
+      id: id as CustomUnitSystem['id'],
+      name: stringAt(source.name, `${path}.name`).slice(0, 60),
+      force: enumAt(source.force, `${path}.force`, FORCE_UNITS.map((unit) => unit.id)),
+      length: enumAt(source.length, `${path}.length`, LENGTH_UNITS.map((unit) => unit.id)),
+      sectionLength: enumAt(source.sectionLength, `${path}.sectionLength`, LENGTH_UNITS.map((unit) => unit.id)),
+      sectionDimension: enumAt(source.sectionDimension, `${path}.sectionDimension`, LENGTH_UNITS.map((unit) => unit.id)),
+      modulus: enumAt(source.modulus, `${path}.modulus`, STRESS_UNITS.map((unit) => unit.id)),
+      density: enumAt(source.density, `${path}.density`, DENSITY_UNITS.map((unit) => unit.id)),
+    };
+  });
+};
+
+/**
+ * El sistema activo puede ser un preset o uno de los personalizados que este
+ * mismo archivo declara.
+ *
+ * Un identificador que no es ninguna de las dos formas es un archivo corrupto y
+ * se rechaza. Uno con la forma «custom:…» pero sin definición sí cae al valor
+ * por defecto: eso ocurre de forma legítima cuando el sistema se borró en otra
+ * pestaña o en una revisión posterior, y no justifica impedir abrir el modelo.
+ */
+const normalizeActiveUnitSystem = (
+  value: unknown,
+  custom: readonly CustomUnitSystem[] | undefined,
+  fallback: UnitSystemId,
+): UnitSystemId => {
+  if (value === undefined) return fallback;
+  if (isPresetUnitSystemId(value)) return value;
+  if (!isCustomUnitSystemId(value)) {
+    return fail('settings.units', 'valor no permitido; use un sistema predefinido o uno declarado en settings.customUnitSystems.');
+  }
+  return custom?.some((system) => system.id === value) ? value : fallback;
+};
+
 const normalizeSettings = (input: unknown): ProjectSettings => {
   const defaults = createDefaultSettings();
   const raw = input === undefined ? {} : objectAt(input, 'settings');
   const snapTargetsRaw = raw.snapTargets === undefined ? {} : objectAt(raw.snapTargets, 'settings.snapTargets');
   const selectionFilterRaw = raw.selectionFilter === undefined ? {} : objectAt(raw.selectionFilter, 'settings.selectionFilter');
+  const customUnitSystems = normalizeCustomUnitSystems(raw.customUnitSystems);
   const settings: ProjectSettings = {
-    units: enumAt(raw.units, 'settings.units', ['kN-m', 'N-mm', 'kgf-m', 'kip-ft'] as const, defaults.units),
+    units: normalizeActiveUnitSystem(raw.units, customUnitSystems, defaults.units),
+    customUnitSystems,
     language: enumAt(raw.language, 'settings.language', ['es', 'en'] as const, defaults.language),
     gridSize: finiteAt(raw.gridSize, 'settings.gridSize', defaults.gridSize),
     snap: booleanAt(raw.snap, 'settings.snap', defaults.snap),

@@ -49,6 +49,7 @@ import { APP_VERSION } from '../../appVersion';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
 import { resolveTopBarCommand, type TopBarCommandContext } from '../workspace/commandRegistry';
 import { PDeltaAdvancedConfig, TopBarHistoryControls } from './TopBarControlGroups';
+import { UnitSystemPicker } from './UnitSystemPicker';
 import type { ToolDockPosition } from '../workspace/useWorkspaceLayoutPreferences';
 import type { PdfPreviewArtifact } from '../pdf-preview/PdfPreviewDialog';
 import {
@@ -634,19 +635,33 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
                   <option value="p-delta">{t('analysis.orderPDelta')}</option>
                 </select>
               </label>
-              <label className="topbar-panel-field">
-                <span>{t('units.label')}</span>
-                <select
-                  aria-label={t('units.label')}
-                  value={project.settings.units}
-                  onChange={(event) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, units: event.target.value as typeof draft.settings.units } }))}
-                >
-                  <option value="kN-m">kN · m</option>
-                  <option value="N-mm">N · mm</option>
-                  <option value="kgf-m">kgf · m</option>
-                  <option value="kip-ft">kip · ft</option>
-                </select>
-              </label>
+              <UnitSystemPicker
+                units={project.settings.units}
+                customSystems={project.settings.customUnitSystems ?? []}
+                onSelect={(unitSystem) => updateProjectView((draft) => ({ ...draft, settings: { ...draft.settings, units: unitSystem } }))}
+                onCreate={(system) => updateProjectView((draft) => ({
+                  ...draft,
+                  settings: {
+                    ...draft.settings,
+                    customUnitSystems: [...(draft.settings.customUnitSystems ?? []), system],
+                    units: system.id,
+                  },
+                }))}
+                onRemove={(id) => updateProjectView((draft) => {
+                  const remaining = (draft.settings.customUnitSystems ?? []).filter((system) => system.id !== id);
+                  return {
+                    ...draft,
+                    settings: {
+                      ...draft.settings,
+                      customUnitSystems: remaining,
+                      // Borrar el sistema activo devuelve la lectura al preset base
+                      // en vez de dejar el proyecto apuntando a una definición que
+                      // ya no existe.
+                      units: draft.settings.units === id ? 'kN-m' : draft.settings.units,
+                    },
+                  };
+                })}
+              />
               {(project.settings.analysisMode ?? 'first-order') === 'p-delta' ? <PDeltaAdvancedConfig /> : null}
             </m.div> : null}
           </AnimatePresence>

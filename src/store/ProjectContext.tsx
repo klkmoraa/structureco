@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { unavailableAnalysis } from '../engine/analysisFailure';
+import { syncCustomUnitSystems } from '../engine/unitSystemRegistry';
 import type { AnalysisWorkerResponse } from '../engine/analysisWorkerProtocol';
 import { analysisBinding, matchesAnalysisBinding, type AnalysisBinding } from '../engine/projectSignature';
 import { normalizeProject } from '../data/migrate';
@@ -48,6 +49,13 @@ const PROJECT_LIBRARY_CHANGE_KEY = 'structureCo.project-library.changed';
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [initial] = useState(() => loadProjectFromStorage(localStorage));
   const [project, setProject] = useState<ProjectModel>(initial.project);
+  // Los sistemas de unidades propios del proyecto son presentación pura, y las
+  // decenas de superficies que los imprimen sólo reciben el identificador. Se
+  // sincronizan durante el render, no en un efecto: un efecto muta el registro
+  // *después* de pintar y sin provocar un nuevo render, así que la primera
+  // pintura tras abrir un proyecto mostraría etiquetas del sistema anterior.
+  // La operación es idempotente y deriva sólo del estado ya publicado.
+  syncCustomUnitSystems(project.settings.customUnitSystems);
   const [past, setPast] = useState<HistoryEntry[]>([]);
   const [future, setFuture] = useState<HistoryEntry[]>([]);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);

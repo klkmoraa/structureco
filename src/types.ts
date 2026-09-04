@@ -17,7 +17,33 @@ export type MemberType = 'frame' | 'truss' | 'rigid';
 export type SupportType = 'none' | 'pin' | 'roller' | 'fixed' | 'custom';
 export type LoadCoordinateSystem = 'global' | 'local';
 export type LoadLengthBasis = 'real' | 'horizontal' | 'vertical';
-export type UnitSystemId = 'kN-m' | 'N-mm' | 'kgf-m' | 'kip-ft';
+/**
+ * Sistema de unidades de presentación: uno de los presets del catálogo
+ * (`engine/unitSystems`) o uno definido por la persona usuaria y declarado en
+ * `settings.customUnitSystems`.
+ */
+export type PresetUnitSystemId = 'kN-m' | 'N-mm' | 'kgf-m' | 'kip-ft' | 'tonf-m' | 'kip-in' | 'MN-m' | 'lbf-in';
+export type CustomUnitSystemId = `custom:${string}`;
+export type UnitSystemId = PresetUnitSystemId | CustomUnitSystemId;
+
+export type ForceUnitId = 'kN' | 'N' | 'MN' | 'kgf' | 'tonf' | 'kip' | 'lbf';
+export type LengthUnitId = 'm' | 'cm' | 'mm' | 'ft' | 'in';
+export type StressUnitId = 'kPa' | 'MPa' | 'GPa' | 'kgf/cm2' | 'tonf/m2' | 'ksi' | 'psi';
+export type DensityUnitId = 'kg/m3' | 't/m3' | 'lb/ft3' | 'lb/in3';
+
+/** Combinación libre de unidades elementales guardada dentro del proyecto. */
+export interface CustomUnitSystem {
+  id: CustomUnitSystemId;
+  name: string;
+  force: ForceUnitId;
+  length: LengthUnitId;
+  /** Longitud con la que se leen A, I y W. */
+  sectionLength: LengthUnitId;
+  /** Longitud con la que se leen cantos, anchos y espesores. */
+  sectionDimension: LengthUnitId;
+  modulus: StressUnitId;
+  density: DensityUnitId;
+}
 
 export interface SpringDefinition {
   kx?: number;
@@ -289,6 +315,8 @@ export interface MovingLoadCase {
 
 export interface ProjectSettings {
   units: UnitSystemId;
+  /** Sistemas de unidades propios del proyecto; viajan con él al exportarlo. */
+  customUnitSystems?: CustomUnitSystem[];
   language: 'es' | 'en';
   gridSize: number;
   snap: boolean;

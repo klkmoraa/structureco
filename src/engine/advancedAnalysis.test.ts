@@ -251,7 +251,11 @@ describe('acciones impuestas, Timoshenko y deformada exacta', () => {
 
     const result = analyzeProject(model);
     expect(result.success).toBe(true);
-    expect(result.linearResidual).toBe(0);
+    // El residuo se mide con productos exactos y suma compensada, así que ya no
+    // se cancela artificialmente a cero: para este sistema devuelve el residuo
+    // real de la solución en doble precisión, del orden de 1e-18. Exigir un cero
+    // exacto medía la aritmética de la propia medición, no la del solver.
+    expect(result.linearResidual).toBeLessThan(Number.EPSILON);
     expect(result.forwardErrorBound).toBeGreaterThanOrEqual(result.conditionEstimate * Number.EPSILON);
     expect(result.reliableDigits).toBeLessThanOrEqual(-Math.log10(Number.EPSILON));
     expect(result.reliableDigits).toBeLessThan(16);

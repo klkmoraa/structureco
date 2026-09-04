@@ -21,6 +21,7 @@ import {
   type Space3DValidationIssue,
   type Space3DVector,
 } from './types';
+import { isUnitSystemId } from '../../engine/units';
 import { buildMemberOrientation, memberLength } from '../engine/orientation';
 
 const PROJECT_FIELDS = ['analysisSpace', 'schemaVersion', 'id', 'name', 'units', 'nodes', 'members', 'nodalLoads', 'memberLoads', 'settlements', 'loadCases', 'loadCombinations'];
@@ -40,7 +41,6 @@ const TERM_FIELDS = ['caseId', 'factor'];
 const MEMBER_PROPERTY_FIELDS = ['A', 'E', 'G', 'Iy', 'Iz', 'J'] as const;
 const MEMBER_NON_NEGATIVE_FIELDS = ['shearAreaY', 'shearAreaZ', 'density'] as const;
 
-const UNIT_SYSTEMS = ['kN-m', 'N-mm', 'kgf-m', 'kip-ft'];
 
 const isPositiveFinite = (value: unknown): boolean => typeof value === 'number' && Number.isFinite(value) && value > 0;
 const isNonNegativeFinite = (value: unknown): boolean => typeof value === 'number' && Number.isFinite(value) && value >= 0;
@@ -105,7 +105,7 @@ export const validateSpace3DProject = (project: Space3DProject): readonly Space3
   unknownFields(collect, project, PROJECT_FIELDS, 'project', '');
   if (project.analysisSpace !== SPACE3D_ANALYSIS_SPACE) collect.push('invalid-property', 'project', '', 'analysisSpace');
   if (project.schemaVersion !== SPACE3D_SCHEMA_VERSION) collect.push('invalid-property', 'project', '', 'schemaVersion');
-  if (!UNIT_SYSTEMS.includes(project.units)) collect.push('invalid-property', 'project', '', 'units');
+  if (!isUnitSystemId(project.units)) collect.push('invalid-property', 'project', '', 'units');
   if (typeof project.id !== 'string' || project.id === '') collect.push('empty-id', 'project', '', 'id');
   if (typeof project.name !== 'string') collect.push('invalid-property', 'project', '', 'name');
 

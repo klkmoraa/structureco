@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildExactDiagrams, evaluateDiagramAt, evaluatePolynomial, rootsInInterval, segmentBezierControls } from './diagram';
+import { buildDeformationCurve, buildExactDiagrams, evaluateDeformationAt, evaluateDiagramAt, evaluatePolynomial, rootsInInterval, segmentBezierControls } from './diagram';
+import type { MemberModel } from '../types';
 
 const close = (actual: number, expected: number, tolerance = 1e-9) => expect(Math.abs(actual - expected)).toBeLessThanOrEqual(tolerance * Math.max(1, Math.abs(expected)));
 
@@ -227,5 +228,33 @@ describe('motor exacto de diagramas', () => {
       close(pc.shear, pa.shear + pb.shear, 2e-8);
       close(pc.moment, pa.moment + pb.moment, 2e-8);
     }
+  });
+
+  it('muestrea la deformada a escala de su propia flexión, no de la unidad de longitud', () => {
+    // Viga empotrada-empotrada de 6 m con carga uniforme: la deformada es un
+    // polinomio de cuarto grado con flecha de milímetros sobre metros, el caso
+    // en el que el criterio absoluto anterior subdividía hasta el tope.
+    const member: MemberModel = { id: 'M', i: 'A', j: 'B', type: 'frame', E: 200e6, A: 0.02, I: 8e-5 };
+    const L = 6;
+    const w = 12;
+    const exact = buildExactDiagrams([0, w * L / 2, -w * L ** 2 / 12, 0, w * L / 2, w * L ** 2 / 12], [{ kind: 'distributed', a: 0, b: L, qxA: 0, qxB: 0, qyA: -w, qyB: -w }], L);
+    const curve = buildDeformationCurve(exact.segments, member, [0, 0, 0, 0, 0, 0]);
+
+    // La poligonal es para dibujar: unas decenas de puntos bastan.
+    expect(curve.points.length).toBeGreaterThan(8);
+    expect(curve.points.length).toBeLessThan(300);
+
+    // Y sigue pegada a la curva exacta, que vive en los polinomios: el error de
+    // la cuerda entre puntos consecutivos se mide contra la flecha real.
+    const deflection = Math.max(...curve.points.map((point) => Math.abs(point.v)));
+    expect(deflection).toBeGreaterThan(0);
+    let worst = 0;
+    for (let index = 1; index < curve.points.length; index += 1) {
+      const left = curve.points[index - 1];
+      const right = curve.points[index];
+      const middle = evaluateDeformationAt(curve.segments, 0.5 * (left.x + right.x))!;
+      worst = Math.max(worst, Math.abs(middle.v - 0.5 * (left.v + right.v)));
+    }
+    expect(worst / deflection).toBeLessThan(1e-3);
   });
 });
