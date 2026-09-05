@@ -89,9 +89,15 @@ export const createInlineSpace3DWorker = (): WorkerLike => {
   };
 };
 
+const isBrowserWorkerSupported = (): boolean => {
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') return false;
+  if (typeof window === 'undefined') return false;
+  return typeof window.Worker === 'function';
+};
+
 /** Elige worker real o degradado según lo que ofrezca el entorno. */
 export const createSpace3DWorkerClient = (): Space3DWorkerClient =>
-  new Space3DWorkerClient(typeof Worker === 'undefined' ? createInlineSpace3DWorker : defaultWorkerFactory);
+  new Space3DWorkerClient(isBrowserWorkerSupported() ? defaultWorkerFactory : createInlineSpace3DWorker);
 
 export class Space3DWorkerClient {
   private readonly createWorker: Space3DWorkerFactory;

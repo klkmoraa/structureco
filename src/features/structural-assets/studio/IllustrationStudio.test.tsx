@@ -85,6 +85,7 @@ describe('Illustration Studio surface', () => {
   it('keeps rename spaces as a draft and shows localized empty and duplicate errors on commit', async () => {
     const user = userEvent.setup();
     render(<IllustrationStudio language="es" onClose={vi.fn()} />);
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Cerrar estudio' })));
     fireEvent.change(screen.getByRole('slider', { name: 'Ancho' }), { target: { value: '1.05' } });
     const input = screen.getByRole('textbox', { name: 'Nombre del diseño' }) as HTMLInputElement;
     await user.clear(input);
@@ -154,7 +155,7 @@ describe('Illustration Studio surface', () => {
     render(<IllustrationStudio language="es" onClose={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: 'Exportar SVG' }));
     expect(createObjectURL).toHaveBeenCalledOnce();
-    expect(revokeObjectURL).toHaveBeenCalledWith('blob:studio-svg');
+    await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith('blob:studio-svg'));
     await user.click(screen.getByRole('button', { name: 'Exportar PNG' }));
     await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/no se pudo exportar/i));
     createObjectURL.mockRestore();

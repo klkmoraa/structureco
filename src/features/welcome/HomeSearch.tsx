@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { ArrowUpRight, Search, X, type LucideIcon } from 'lucide-react';
 import { useModalFocus } from '../../design-system/components/modalFocus';
+import { normalizeSearch } from './homeSearchUtils';
 import './homeSearch.css';
 
 export interface HomeSearchOption {
@@ -10,7 +11,6 @@ export interface HomeSearchOption {
   icon: LucideIcon;
   run: () => void;
 }
-export const normalizeSearch = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().trim();
 
 export function HomeSearch({ language, options, onClose, returnFocusTo }: {
   language: 'es' | 'en'; options: HomeSearchOption[]; onClose: () => void; returnFocusTo?: HTMLElement | null;

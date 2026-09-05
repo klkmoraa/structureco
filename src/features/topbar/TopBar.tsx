@@ -13,6 +13,7 @@ import {
   FilePlus2,
   FolderOpen,
   HardDriveDownload,
+  Keyboard,
   Maximize2,
   Minimize2,
   MoreHorizontal,
@@ -798,6 +799,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
                     <div className="menu-section-title">{t('menu.sectionWorkspace')}</div>
                     <button onClick={() => { layoutActions?.onOpenAnalysisSetup(); setShowMobileMenu(false); }}><SlidersHorizontal size={17} /> {t('inspector.analysisSetupLauncher')}</button>
                     <button onClick={() => { layoutActions?.onOpenViewSettings(); setShowMobileMenu(false); }}><Layers3 size={17} /> {t('inspector.viewTab')}</button>
+                    <button onClick={() => { setShowMobileMenu(false); emitWorkspaceCommand('open-keyboard-shortcuts'); }}><Keyboard size={17} /> {t('shortcuts.title')}</button>
                     {layoutActions ? <div className="topbar-dock-preference" role="group" aria-label={t('toolbar.dockPosition')}>
                       <span>{t('toolbar.dockPosition')}</span>
                       <small>{t('toolbar.dockPositionDescription')}</small>

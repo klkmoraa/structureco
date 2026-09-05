@@ -71,7 +71,8 @@ import {
 } from './CanvasResultLayer';
 import { CanvasInteractionLayer } from './CanvasInteractionLayer';
 import { CanvasMiniMap } from './CanvasMiniMap';
-import { CanvasDiagramStack, externalStackBottomReserve } from './CanvasDiagramStack';
+import { CanvasDiagramStack } from './CanvasDiagramStack';
+import { externalStackBottomReserve } from './diagramStackReserve';
 import { persistStackQuantities, readStoredStackQuantities, toggleStackQuantity, type StackQuantity } from './diagramStack';
 import { CanvasTouchLoupe } from './CanvasTouchLoupe';
 import { CandidatePicker } from './CanvasCandidatePicker';

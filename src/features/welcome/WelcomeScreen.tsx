@@ -23,7 +23,8 @@ import { clearLocalMetrics, exportLocalMetrics, getLocalMetrics, setLocalMetrics
 import { COMPACT_HOME_QUERY, useMediaQuery } from '../../platform/useMediaQuery';
 import { deliverFileSync } from '../../platform/fileDelivery';
 import { haptics } from '../../platform/haptics';
-import { HomeSearch, normalizeSearch, type HomeSearchOption } from './HomeSearch';
+import { HomeSearch, type HomeSearchOption } from './HomeSearch';
+import { normalizeSearch } from './homeSearchUtils';
 import './totalHome.css';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));

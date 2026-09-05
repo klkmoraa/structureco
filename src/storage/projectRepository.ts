@@ -73,6 +73,16 @@ export const projectChecksum = async (project: ProjectModel): Promise<string> =>
   return [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, '0')).join('');
 };
 
+export const MAX_AUTO_RECOVERIES_PER_PROJECT = 20;
+
+let lastTimestampMs = 0;
+export const nextMonotonicIsoDate = (): string => {
+  const now = Date.now();
+  const next = now <= lastTimestampMs ? lastTimestampMs + 1 : now;
+  lastTimestampMs = next;
+  return new Date(next).toISOString();
+};
+
 const projectRecord = async (project: ProjectModel, revision: number): Promise<StoredProjectRecord> => {
   const normalized = normalizeProject(project);
   return {
@@ -80,7 +90,7 @@ const projectRecord = async (project: ProjectModel, revision: number): Promise<S
     name: normalized.name,
     schemaVersion: normalized.schemaVersion,
     revision,
-    updatedAt: new Date().toISOString(),
+    updatedAt: nextMonotonicIsoDate(),
     checksum: await projectChecksum(normalized),
     project: normalized,
   };
@@ -89,7 +99,7 @@ const projectRecord = async (project: ProjectModel, revision: number): Promise<S
 const recoveryRecord = async (project: ProjectModel, reason: RecoveryRecord['reason'], label?: string): Promise<RecoveryRecord> => {
   const normalized = normalizeProject(project);
   return {
-    id: createId(), projectId: normalized.id, reason, createdAt: new Date().toISOString(),
+    id: createId(), projectId: normalized.id, reason, createdAt: nextMonotonicIsoDate(),
     ...(reason === 'version' && label?.trim() ? { label: label.trim() } : {}),
     checksum: await projectChecksum(normalized), project: normalized,
   };
@@ -123,12 +133,24 @@ export class InMemoryProjectRepository implements ProjectRepository {
     };
   }
 
+  private pruneAutoRecoveries(projectId: string) {
+    const auto = [...this.recoveries.values()]
+      .filter((record) => record.projectId === projectId && record.reason !== 'version')
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    if (auto.length > MAX_AUTO_RECOVERIES_PER_PROJECT) {
+      for (const excess of auto.slice(MAX_AUTO_RECOVERIES_PER_PROJECT)) {
+        this.recoveries.delete(excess.id);
+      }
+    }
+  }
+
   async saveProject(project: ProjectModel, expectedRevision?: number) {
     return this.write(async () => {
       const existing = this.projects.get(project.id);
       if (expectedRevision !== undefined && existing?.revision !== expectedRevision) {
         const recovery = await recoveryRecord(project, 'conflict');
         this.recoveries.set(recovery.id, structuredClone(recovery));
+        this.pruneAutoRecoveries(recovery.projectId);
         throw new RepositoryConflictError(project.id);
       }
       const record = await projectRecord(project, (existing?.revision ?? 0) + 1);
@@ -157,6 +179,7 @@ export class InMemoryProjectRepository implements ProjectRepository {
     return this.write(async () => {
       const record = await recoveryRecord(project, reason, label);
       this.recoveries.set(record.id, structuredClone(record));
+      this.pruneAutoRecoveries(record.projectId);
       return structuredClone(record);
     });
   }
@@ -175,7 +198,10 @@ export class InMemoryProjectRepository implements ProjectRepository {
       const current = this.projects.get(recovery.projectId);
       const restored = await projectRecord(recovery.project, (current?.revision ?? 0) + 1);
       const backup = current ? await recoveryRecord(current.project, 'manual') : null;
-      if (backup) this.recoveries.set(backup.id, structuredClone(backup));
+      if (backup) {
+        this.recoveries.set(backup.id, structuredClone(backup));
+        this.pruneAutoRecoveries(backup.projectId);
+      }
       this.projects.set(restored.id, structuredClone(restored));
       // La recuperación ya es la versión guardada; dejarla como conflicto
       // pendiente volvería a presentar dos versiones después de decidir.
@@ -208,6 +234,19 @@ const transactionDone = (transaction: IDBTransaction): Promise<void> => new Prom
   transaction.onabort = () => reject(transaction.error ?? new Error('La transacción IndexedDB fue cancelada.'));
   transaction.onerror = () => reject(transaction.error ?? new Error('Falló la transacción IndexedDB.'));
 });
+
+const pruneIndexedDbAutoRecoveries = async (store: IDBObjectStore, projectId: string): Promise<void> => {
+  const records = await requestResult(store.getAll() as IDBRequest<RecoveryRecord[]>);
+  const autos = records
+    .filter((record) => record.projectId === projectId && record.reason !== 'version')
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  if (autos.length > MAX_AUTO_RECOVERIES_PER_PROJECT) {
+    const toRemove = autos.slice(MAX_AUTO_RECOVERIES_PER_PROJECT);
+    for (const record of toRemove) {
+      store.delete(record.id);
+    }
+  }
+};
 
 export class IndexedDbProjectRepository implements ProjectRepository {
   private databasePromise: Promise<IDBDatabase> | null = null;
@@ -275,10 +314,11 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     let record: StoredProjectRecord;
     if (expectedRevision !== undefined && existing?.revision !== expectedRevision) {
       conflict = true;
-      recoveryStore.put({ id: createId(), projectId: normalized.id, reason: 'conflict', createdAt: new Date().toISOString(), checksum, project: normalized } satisfies RecoveryRecord);
-      record = existing ?? { id: normalized.id, name: normalized.name, schemaVersion: normalized.schemaVersion, revision: 0, updatedAt: new Date().toISOString(), checksum, project: normalized };
+      recoveryStore.put({ id: createId(), projectId: normalized.id, reason: 'conflict', createdAt: nextMonotonicIsoDate(), checksum, project: normalized } satisfies RecoveryRecord);
+      await pruneIndexedDbAutoRecoveries(recoveryStore, normalized.id);
+      record = existing ?? { id: normalized.id, name: normalized.name, schemaVersion: normalized.schemaVersion, revision: 0, updatedAt: nextMonotonicIsoDate(), checksum, project: normalized };
     } else {
-      record = { id: normalized.id, name: normalized.name, schemaVersion: normalized.schemaVersion, revision: (existing?.revision ?? 0) + 1, updatedAt: new Date().toISOString(), checksum, project: normalized };
+      record = { id: normalized.id, name: normalized.name, schemaVersion: normalized.schemaVersion, revision: (existing?.revision ?? 0) + 1, updatedAt: nextMonotonicIsoDate(), checksum, project: normalized };
       projectStore.put(record);
     }
     await done;
@@ -317,7 +357,9 @@ export class IndexedDbProjectRepository implements ProjectRepository {
     const database = await this.database();
     const transaction = database.transaction(RECOVERIES_STORE, 'readwrite');
     const done = transactionDone(transaction);
-    transaction.objectStore(RECOVERIES_STORE).put(record);
+    const store = transaction.objectStore(RECOVERIES_STORE);
+    store.put(record);
+    await pruneIndexedDbAutoRecoveries(store, record.projectId);
     await done;
     return structuredClone(record);
   }

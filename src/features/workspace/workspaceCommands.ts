@@ -76,6 +76,8 @@ export interface WorkspaceCommands {
     tone?: 'success' | 'info' | 'warning' | 'error';
     durationMs?: number;
   };
+  /** Open the keyboard shortcuts cheat sheet modal. */
+  'open-keyboard-shortcuts': void;
 }
 
 export type WorkspaceCommand = keyof WorkspaceCommands;

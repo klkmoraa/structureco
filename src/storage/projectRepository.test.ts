@@ -151,4 +151,32 @@ describe('ProjectRepository', () => {
     duplicate.project.nodes[0].x += 10;
     expect((await repository.openProject(project.id))?.project.nodes[0].x).toBe(project.nodes[0].x);
   });
+
+  it('prunes older automatic recoveries beyond the 20 limit while preserving version checkpoints', async () => {
+    const repository = new InMemoryProjectRepository();
+    const project = createDefaultProject();
+    await repository.saveProject(project);
+
+    // Create 1 named version checkpoint
+    const versionCheckpoint = await repository.createRecovery(project, 'version', 'Hito 1');
+
+    // Create 25 automatic recoveries
+    for (let i = 1; i <= 25; i++) {
+      await repository.createRecovery({ ...project, name: `Auto recovery ${i}` }, 'conflict');
+    }
+
+    const recoveries = await repository.listRecoveries(project.id);
+    const versionRecords = recoveries.filter((r) => r.reason === 'version');
+    const autoRecords = recoveries.filter((r) => r.reason !== 'version');
+
+    // Version checkpoint must never be pruned
+    expect(versionRecords).toHaveLength(1);
+    expect(versionRecords[0].id).toBe(versionCheckpoint.id);
+
+    // Auto recoveries must be capped at 20, keeping the newest ones (25 down to 6)
+    expect(autoRecords).toHaveLength(20);
+    expect(autoRecords[0].project.name).toBe('Auto recovery 25');
+    expect(autoRecords[19].project.name).toBe('Auto recovery 6');
+    expect(autoRecords.some((r) => r.project.name === 'Auto recovery 1')).toBe(false);
+  });
 });

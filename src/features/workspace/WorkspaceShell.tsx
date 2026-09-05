@@ -33,6 +33,7 @@ const LazyDatasheet = lazy(() => import('../datasheet/DatasheetPanel').then((mod
 const LazyStructuralBom = lazy(() => import('../bom/StructuralBomPanel').then((module) => ({ default: module.StructuralBomPanel })));
 const LazyRevisionComparison = lazy(() => import('../revision-comparison/RevisionComparisonPanel').then((module) => ({ default: module.RevisionComparisonPanel })));
 const LazyDenseResults = lazy(() => preloadDenseResultsSurface());
+const LazyKeyboardShortcutsModal = lazy(() => import('./KeyboardShortcutsModal').then((module) => ({ default: module.KeyboardShortcutsModal })));
 
 /**
  * Respaldo de foco para el cierre de una superficie: enfoca el primer lanzador
@@ -77,6 +78,7 @@ const WorkspaceBrokerContent = ({
   layoutController: LayoutController;
 }) => {
   const [modelDoctorAcknowledgedIds, setModelDoctorAcknowledgedIds] = useState<Set<string>>(() => new Set());
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [dataSurfaceStateEpoch, setDataSurfaceStateEpoch] = useState(0);
   const [revisionBaseline, setRevisionBaseline] = useState<RevisionSnapshot | null>(null);
   const [editorLayers, dispatchEditorLayers] = useReducer(editorLayerReducer, undefined, createPersistedEditorLayerState);
@@ -143,6 +145,7 @@ const WorkspaceBrokerContent = ({
         // o Datasheet.
         if (canOpenPalette) openSurface('palette');
       }),
+      onWorkspaceCommand('open-keyboard-shortcuts', () => setShortcutsOpen(true)),
       onWorkspaceCommand('open-model-doctor', () => openSurface('doctor')),
       onWorkspaceCommand('open-datasheet', () => openSurface('datasheet')),
       onWorkspaceCommand('open-structural-bom', () => openSurface('bom')),
@@ -185,6 +188,7 @@ const WorkspaceBrokerContent = ({
     setSelection(null);
     setResultTab('summary');
     setDenseView('reactions');
+    setShortcutsOpen(false);
     setDataSurfaceStateEpoch((epoch) => epoch + 1);
     reportedAnalysisRef.current = null;
     (['results', 'generator', 'dense', 'datasheet', 'bom', 'comparison', 'doctor', 'palette'] as const).forEach((surface) => closeSurface(surface));
@@ -262,6 +266,19 @@ const WorkspaceBrokerContent = ({
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [bom.status, comparison.status, datasheet.status, doctor.status, toggleSurface]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== '?' || event.ctrlKey || event.metaKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target && target.closest('input, textarea, select, [contenteditable="true"], [role="gridcell"]')) return;
+      if (datasheet.status === 'active' || bom.status === 'active' || comparison.status === 'active' || doctor.status === 'active') return;
+      event.preventDefault();
+      setShortcutsOpen((open) => !open);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [bom.status, comparison.status, datasheet.status, doctor.status]);
 
   // Ctrl/Cmd+Z and Ctrl/Cmd+Y drive the same undo/redo the history buttons use
   // (G-01 · CRI-103) — but never with focus in a text field, the Datasheet
@@ -434,6 +451,10 @@ const WorkspaceBrokerContent = ({
         onClose={() => closeSurface('palette')}
         dispatchLayers={dispatchEditorLayers}
         presentation={palette.presentation as 'overlay' | 'sheet'}
+      /></Suspense> : null}
+      {shortcutsOpen ? <Suspense fallback={null}><LazyKeyboardShortcutsModal
+        open={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
       /></Suspense> : null}
       {/* Invocada, nunca residente: sólo existe en el árbol mientras el broker
           la retiene, y desaparece al cerrarse (CRI-101). */}

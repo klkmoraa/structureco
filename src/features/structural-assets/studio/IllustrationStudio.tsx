@@ -144,10 +144,12 @@ export function IllustrationStudio({ language = 'es', initialTheme = 'light', on
     }
     const factory = FACTORY_STUDIO_PRESETS.find((preset) => preset.assetId === parameters.assetId) ?? FACTORY_STUDIO_PRESETS[0];
     const id = `personal:${crypto.randomUUID()}`;
-    const created = createPersonalPreset(library, factory.assetId, uniqueName(library, `${assetLabel(factory.assetId)} — ${t.personal}`), id);
+    const name = uniqueName(library, `${assetLabel(factory.assetId)} — ${t.personal}`);
+    const created = createPersonalPreset(library, factory.assetId, name, id);
     const next = updatePersonalPreset(created, id, { ...patch, previewTheme: patch.previewTheme ?? parameters.previewTheme });
     applyLibrary(next);
     setSelectedPersonalId(id);
+    setRenameDraft(name);
     setParameters({ ...next.find((preset) => preset.id === id)!.parameters });
   };
 

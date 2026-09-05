@@ -15,10 +15,9 @@ import process from 'node:process';
 const ROOT = path.resolve(import.meta.dirname, '..');
 
 /**
- * Línea base renovada el 2026-08-29: 1 294 863 bytes / 356 508 gzip. El margen
- * permite una mejora cohesiva sin normalizar una dependencia grande en la
- * entrada. Cambiar estos valores exige justificar el cambio y actualizar la
- * medición de referencia en el reporte de adopción.
+ * Línea base renovada el 2026-09-05: 1 350 929 bytes / 370 461 gzip. El margen
+ * protege contra dependencias accidentales o fugas en el chunk de entrada inicial.
+ * Cambiar estos valores exige justificar el cambio y documentarlo en el reporte.
  */
 const BUDGET = {
   eagerBytes: 1_400_000,

@@ -53,6 +53,7 @@ const renderDatasheet = async () => {
   );
   await user.click(screen.getByRole('button', { name: 'sembrar' }));
   await screen.findByRole('grid');
+  await new Promise((resolve) => setTimeout(resolve, 50));
   return { user, selectionRef };
 };
 
@@ -78,10 +79,12 @@ describe('datasheet accessibility', () => {
   it('moves the focus with the arrows without touching the selection', async () => {
     const { user, selectionRef } = await renderDatasheet();
     focusedCell().focus();
+    await waitFor(() => expect(document.activeElement).toBe(focusedCell()));
     expect(focusedCell().textContent).toBe('N1');
 
     await user.keyboard('{ArrowDown}');
     await waitFor(() => expect(focusedCell().textContent).toBe('N2'));
+    await waitFor(() => expect(document.activeElement).toBe(focusedCell()));
     // Lo esencial: recorrer no selecciona.
     expect(selectionRef.current).toBeNull();
 
@@ -93,6 +96,7 @@ describe('datasheet accessibility', () => {
   it('stops at the edges instead of wrapping', async () => {
     const { user } = await renderDatasheet();
     focusedCell().focus();
+    await waitFor(() => expect(document.activeElement).toBe(focusedCell()));
     await user.keyboard('{ArrowUp}{ArrowLeft}');
     await waitFor(() => expect(focusedCell().textContent).toBe('N1'));
     expect(focusedCell().getAttribute('aria-colindex')).toBe('1');
@@ -101,8 +105,10 @@ describe('datasheet accessibility', () => {
   it('takes Home and End to the row edges, and Ctrl to the table edges', async () => {
     const { user } = await renderDatasheet();
     focusedCell().focus();
+    await waitFor(() => expect(document.activeElement).toBe(focusedCell()));
     await user.keyboard('{End}');
     await waitFor(() => expect(focusedCell().getAttribute('aria-colindex')).toBe('7'));
+    await waitFor(() => expect(document.activeElement).toBe(focusedCell()));
     await user.keyboard('{Home}');
     await waitFor(() => expect(focusedCell().getAttribute('aria-colindex')).toBe('1'));
 
@@ -187,6 +193,7 @@ describe('datasheet accessibility', () => {
   it('announces the pending count in a live region', async () => {
     const { user } = await renderDatasheet();
     focusedCell().focus();
+    await waitFor(() => expect(document.activeElement).toBe(focusedCell()));
     await user.keyboard('{ArrowRight}{F2}');
     const input = await screen.findByRole('textbox', { name: 'X de N1' });
     await user.clear(input);
@@ -200,6 +207,7 @@ describe('datasheet accessibility', () => {
   it('labels the cell editor with its column and its row', async () => {
     const { user } = await renderDatasheet();
     focusedCell().focus();
+    await waitFor(() => expect(document.activeElement).toBe(focusedCell()));
     await user.keyboard('{ArrowRight}{F2}');
     // Un editor rotulado sólo «X» no dice de qué nudo es.
     expect(await screen.findByRole('textbox', { name: 'X de N1' })).toBeTruthy();
