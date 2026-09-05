@@ -23,3 +23,40 @@ Implementation evidence: browser-rendered StructureCo workspace using the analyz
 - Copy and content: labels are N, V, M plus the existing localized quantity names and solved readings.
 
 final result: passed
+
+## Home / app shell redesign — 2026-09-04
+
+Source visual truth: `docs/product/visual-direction.md` plus the approved
+structural renders already shipped in `public/assets/`.
+
+- Desktop viewport: 1440x900 CSS px. The new shell keeps the sidebar visible,
+  groups navigation by intent, gives the open project one primary action and
+  presents exactly three tool launchers without invented product metrics.
+- Mobile viewport: 390x844 CSS px. The sidebar becomes a two-column drawer,
+  actions remain reachable at touch size, the hero stacks, tool launchers read
+  as a single column and there is no horizontal overflow.
+- Themes and language: Day/Night and ES/EN were toggled through the live UI;
+  hierarchy and focusable controls remain present in both states.
+- Interaction tested: drawer open/Escape/focus return, settings sheet and
+  focus trap, Import Center, Aula dialog, Space 3D experimental orientation,
+  Illustration Studio, navigation to every Home destination, and return to
+  Home. The fixed import modal was checked after removing the shell transform
+  containing block.
+- Console: Browser/IAB route checks had no surfaced console errors. The
+  repository's native-bridge parity gate still reports its existing five
+  web/iOS message mismatches; no bridge code changed here.
+
+**Fidelity ledger**
+
+- [P0] Existing Home had a large unstructured hero and a single flat option
+  list. Fixed with a product shell, grouped navigation, clear CTA hierarchy,
+  structural preview, quick tools and a quiet recent-project list.
+- [P1] Existing shell animation could offset fixed import overlays after
+  settling. Fixed by making the shell entry opacity-only; movement remains on
+  inner surfaces where it cannot change modal coordinates.
+- [P1] Image Gen mock was unavailable because the service returned a temporary
+  429. The final direction therefore follows the canonical visual document and
+  approved renders instead of an unverified generated image.
+
+final result: passed — visual/interaction layer only; solver and data
+contracts unchanged.
