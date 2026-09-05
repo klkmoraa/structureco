@@ -565,7 +565,7 @@ describe('TopBar information architecture', () => {
     expect(onToggleInspector).toHaveBeenCalledOnce();
 
     await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
-    await user.click(screen.getByRole('button', { name: 'Mesa de trabajo completa' }));
+    await user.click(within(screen.getByRole('dialog', { name: 'Herramientas del espacio de trabajo' })).getByRole('button', { name: 'Activar concentración' }));
     expect(onToggleFullCanvas).toHaveBeenCalledOnce();
 
     // La compacidad del riel dejó de ser una intención del usuario (CRI-89): la
@@ -582,5 +582,34 @@ describe('TopBar information architecture', () => {
     await user.click(screen.getByRole('button', { name: 'Herramientas del espacio de trabajo' }));
     await user.click(screen.getByRole('button', { name: 'Izquierda' }));
     expect(onToolDockPositionChange).toHaveBeenCalledWith('left');
+  });
+
+  it('keeps concentration mode visible, reversible, and announced as pressed state', async () => {
+    const user = userEvent.setup();
+    const onToggleFullCanvas = vi.fn();
+    const layoutActions = {
+      inspectorCollapsed: false,
+      fullCanvas: false,
+      toolDockPosition: 'bottom' as const,
+      onToggleInspector: vi.fn(),
+      onToggleFullCanvas,
+      onToolDockPositionChange: vi.fn(),
+      onOpenAnalysisSetup: vi.fn(),
+      onOpenViewSettings: vi.fn(),
+    };
+    const { rerender } = render(<TopBarHarness><TopBar onOpenHome={vi.fn()} layoutActions={layoutActions} /></TopBarHarness>);
+
+    const enter = screen.getByRole('button', { name: 'Activar concentración' });
+    expect(enter.getAttribute('aria-pressed')).toBe('false');
+    expect(screen.getByRole('button', { name: 'Ir al inicio' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Analizar' })).toBeTruthy();
+    await user.click(enter);
+    expect(onToggleFullCanvas).toHaveBeenCalledOnce();
+
+    rerender(<TopBarHarness><TopBar onOpenHome={vi.fn()} layoutActions={{ ...layoutActions, fullCanvas: true }} /></TopBarHarness>);
+    const exit = screen.getByRole('button', { name: 'Salir de concentración' });
+    expect(exit.getAttribute('aria-pressed')).toBe('true');
+    await user.click(exit);
+    expect(onToggleFullCanvas).toHaveBeenCalledTimes(2);
   });
 });

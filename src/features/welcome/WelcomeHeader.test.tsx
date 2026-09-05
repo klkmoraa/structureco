@@ -45,7 +45,7 @@ describe('WelcomeScreen header', () => {
     expect(screen.getByRole('combobox', { name: 'Language' })).toBeTruthy();
   });
 
-  it('keeps responsive branding to the single-line wordmark without an editorial headline', () => {
+  it('keeps the wordmark on one line and gives Studio one clear page heading', () => {
     const { container } = renderWelcome();
 
     const wordmarks = [...container.querySelectorAll('.sc-home-wordmark strong')];
@@ -55,7 +55,7 @@ describe('WelcomeScreen header', () => {
       expect(wordmark.querySelectorAll('span')).toHaveLength(1);
       expect(wordmark.querySelector('br')).toBeNull();
     }
-    expect(container.querySelector('h1')).toBeNull();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Tu próximo modelo empieza aquí.');
     expect(container.querySelector('.welcome-brand-line')).toBeNull();
     expect(container.querySelector('.welcome-title-accent')).toBeNull();
     expect(container.querySelector('.welcome-hero-subtitle')).toBeNull();

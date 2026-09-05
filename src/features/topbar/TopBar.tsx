@@ -721,6 +721,14 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
           <span>{t('results.outputs')}</span>
         </button>
         <div className="topbar-primary-actions" data-topbar-role="primary">
+          {layoutActions ? <IconButton
+            variant="secondary"
+            className="icon-button focus-mode-toggle"
+            label={layoutActions.fullCanvas ? t('shell.exitFocus') : t('shell.enterFocus')}
+            title={layoutActions.fullCanvas ? t('shell.exitFocus') : t('shell.enterFocus')}
+            aria-pressed={layoutActions.fullCanvas}
+            onClick={layoutActions.onToggleFullCanvas}
+          >{layoutActions.fullCanvas ? <Minimize2 size={19} /> : <Maximize2 size={19} />}</IconButton> : null}
           <TopBarHistoryControls label={t('history.label')} undoCommand={undoCommand} redoCommand={redoCommand} />
           <IconButton
             variant="secondary"
@@ -812,7 +820,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
                     </button>
                     <button onClick={() => { layoutActions.onToggleFullCanvas(); setShowMobileMenu(false); }}>
                       {layoutActions.fullCanvas ? <Minimize2 size={17} /> : <Maximize2 size={17} />}
-                      {layoutActions.fullCanvas ? t('shell.exitFullCanvas') : t('shell.fullCanvas')}
+                      {layoutActions.fullCanvas ? t('shell.exitFocus') : t('shell.enterFocus')}
                     </button>
                   </div> : null}
                   <div className="menu-section">

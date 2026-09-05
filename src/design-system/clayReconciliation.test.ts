@@ -10,8 +10,8 @@
  * conserva ninguna capa exterior, que cavidad y pulsado son materias distintas y
  * que ninguna pieza declara su propia fuente de luz.
  *
- * La autoridad de los valores son los tokens vivos del producto: control 10px,
- * card 18px, panel/sheet 24px, modal 28px y pill 999px. Este archivo no elige
+ * La autoridad de los valores son los tokens vivos del producto: control 8px,
+ * card 10px, panel/sheet/modal 12px y pill 999px. Este archivo no elige
  * la escala: comprueba que el producto la implementa de forma consistente.
  */
 
@@ -124,10 +124,10 @@ const outerLayers = (value: string): string[] => shadowLayers(value).filter((lay
 /** La escala vigente del producto. */
 const ROLE_RADIUS = {
   '--sc-radius-data': 0,
-  '--sc-radius-control': 10,
-  '--sc-radius-card': 18,
-  '--sc-radius-panel': 24,
-  '--sc-radius-modal': 28,
+  '--sc-radius-control': 8,
+  '--sc-radius-card': 10,
+  '--sc-radius-panel': 12,
+  '--sc-radius-modal': 12,
 } as const;
 
 describe('radios por rol', () => {
@@ -152,11 +152,11 @@ describe('radios por rol', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('mantiene el radio del sheet en el escalón de panel y el modal por encima', () => {
+  it('mantiene sheet y modal dentro del escalón compacto de panel', () => {
     // Panel y sheet comparten escalón: una hoja es un panel que
     // nace de un borde, no una interrupción.
     expect(resolvePx('--sc-radius-sheet', rootTokens)).toBe(ROLE_RADIUS['--sc-radius-panel']);
-    expect(resolvePx('--sc-radius-modal', rootTokens)).toBeGreaterThan(resolvePx('--sc-radius-panel', rootTokens));
+    expect(resolvePx('--sc-radius-modal', rootTokens)).toBe(resolvePx('--sc-radius-panel', rootTokens));
   });
 
   it('deja las celdas de una rejilla técnica sin redondeo clay', () => {
@@ -252,19 +252,16 @@ describe('CRI-105 · profundidad y desenfoque (V-04)', () => {
     }
   });
 
-  it.each(['light', 'dark'] as const)('ilumina toda la escala clay desde arriba-izquierda en %s', (theme) => {
+  it.each(['light', 'dark'] as const)('usa una sola sombra de contacto vertical en %s', (theme) => {
     const tokens = themed(theme);
-    // La sombra oscura cae abajo-derecha (desplazamientos positivos) y la luz
-    // sube arriba-izquierda (negativos). Un nivel que invirtiera el signo
-    // estaría declarando una segunda fuente de luz.
+    // Studio abandona el contraluz de arcilla: una capa neutra y corta basta
+    // para separar el control del papel sin crear una segunda fuente de luz.
     for (const token of ['--sc-shadow-clay-xs', '--sc-shadow-clay-sm', '--sc-shadow-clay-md', '--sc-shadow-clay-lg', '--sc-shadow-clay-floating']) {
       const layers = outerLayers(tokens.get(token) ?? '');
-      expect(layers.length, `${token} necesita sombra y contraluz exteriores`).toBe(2);
-      const [dark, light] = layers.map((layer) => [...layer.matchAll(/(-?\d+(?:\.\d+)?)px/g)].map((match) => Number.parseFloat(match[1])));
-      expect(dark[0], `${token} · sombra a la derecha`).toBeGreaterThan(0);
-      expect(dark[1], `${token} · sombra hacia abajo`).toBeGreaterThan(0);
-      expect(light[0], `${token} · contraluz a la izquierda`).toBeLessThan(0);
-      expect(light[1], `${token} · contraluz hacia arriba`).toBeLessThan(0);
+      expect(layers.length, `${token} necesita una sola sombra exterior`).toBe(1);
+      const offsets = layers[0].match(/^0\s+(-?\d+(?:\.\d+)?)px\s+(\d+(?:\.\d+)?)px/);
+      expect(offsets, `${token} · sombra centrada`).not.toBeNull();
+      expect(Number.parseFloat(offsets?.[1] ?? '0'), `${token} · sombra hacia abajo`).toBeGreaterThan(0);
     }
   });
 
@@ -324,8 +321,8 @@ describe('CRI-105 · canto de 1px', () => {
       expect(edge).toBeDefined();
       expect(edge, 'el canto se mide en 1px').toMatch(/^1px solid /);
     }
-    // Noche gana contraste cambiando el color del canto, no su grosor.
-    expect(darkTokens.get('--sc-clay-edge')).not.toBe(rootTokens.get('--sc-clay-edge'));
+    // El alias es estable; `--sc-color-border` cambia con el tema.
+    expect(darkTokens.get('--sc-clay-edge')).toBe(rootTokens.get('--sc-clay-edge'));
   });
 
   it('reserva los 2px al énfasis estructural declarado', () => {
@@ -348,8 +345,8 @@ describe('CRI-105 · hundimiento y reduced-motion', () => {
     expect(outerLayers(pressed)).toEqual([]);
   });
 
-  it('declara un hundimiento táctil pronunciado', () => {
-    expect(rootTokens.get('--sc-clay-press-transform')).toBe('translateY(2px) scale(0.98)');
+  it('declara un hundimiento táctil corto', () => {
+    expect(rootTokens.get('--sc-clay-press-transform')).toBe('translateY(1px) scale(0.99)');
   });
 
   it('retira el hundimiento —y sólo el hundimiento— con reduced-motion', () => {

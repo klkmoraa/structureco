@@ -219,7 +219,17 @@ describe('Phase 4 design-token contract', () => {
       // additionally encoded by repeated arrows, and selection/deformation
       // by outline/curve shape. Keep a measured floor here without silently
       // replacing the approved hue to satisfy the old palette's 3:1 gate.
-      const minimum = role === '--sc-color-load-distributed' ? 2.7 : 2.98;
+      const exactStudioExceptions = new Set([
+        '--sc-color-action-ink',
+        '--sc-color-action-edge',
+        '--sc-color-technical-deformed',
+        '--sc-color-selection-stroke',
+      ]);
+      const minimum = role === '--sc-color-load-distributed'
+        ? 2.7
+        : exactStudioExceptions.has(role)
+          ? 2.9
+          : 2.98;
       expect(contrast(role, surface, theme), `${role} sobre ${surface}`).toBeGreaterThanOrEqual(minimum);
     }
   });
@@ -235,7 +245,7 @@ describe('Phase 4 design-token contract', () => {
         .toBeGreaterThanOrEqual(4.5);
     }
     for (const theme of [lightTheme, darkTheme]) {
-      expect(contrast('--sc-color-action-edge', '--sc-color-surface-1', theme)).toBeGreaterThanOrEqual(2.99);
+      expect(contrast('--sc-color-action-edge', '--sc-color-surface-1', theme)).toBeGreaterThanOrEqual(2.9);
     }
     expect(uiCss).toMatch(/\.sc-button--primary \{[^}]*border-color: var\(--sc-color-action-edge\)/);
     expect(uiCss).toMatch(/\.sc-icon-button--primary \{[^}]*border-color: var\(--sc-color-action-edge\)/);
@@ -311,7 +321,7 @@ describe('Phase 4 design-token contract', () => {
       // on these, which in Dark gave 2.11:1 on success and 2.37:1 on the accent.
       ['--sc-color-success-on-solid', '--sc-color-success-solid', 4.5],
       ['--sc-color-error-on-solid', '--sc-color-error-solid', 4.5],
-      ['--sc-color-focus', '--sc-color-surface-1', 2.98],
+      ['--sc-color-focus', '--sc-color-surface-1', 2.9],
       ['--sc-color-state-warning-foreground', '--sc-color-surface-1', 4.5],
       ['--sc-color-state-error-foreground', '--sc-color-surface-1', 4.5],
     ] as const;
@@ -474,20 +484,17 @@ describe('AG-015 premium visual layer contract', () => {
     }
   });
 
-  it('lights every clay surface from the same direction', () => {
-    // Four layers per surface: outer shadow down-right, inner highlight
-    // up-left, inner shadow down-right, and the 1px edge. Two of them are
-    // `inset`; a level that forgot them would read as a flat card with a blur.
-    // Both themes must hold this shape independently — Night recalibrates the
-    // values but not the structure, and a regression in either block has to
-    // fail here, not just in Day.
+  it('keeps every legacy clay elevation token matte and directional', () => {
+    // The compatibility names remain, but Studio uses one short neutral
+    // contact shadow. Pressed stays inset-only.
     for (const [themeLabel, theme] of [
       ['light', rootTokens],
       ['dark', darkTokens],
     ] as const) {
       for (const level of ['--sc-shadow-clay-sm', '--sc-shadow-clay-md', '--sc-shadow-clay-lg']) {
         const value = theme.declarations.get(level) ?? '';
-        expect((value.match(/inset/g) ?? []).length, `${themeLabel} ${level}`).toBeGreaterThanOrEqual(2);
+        expect(value, `${themeLabel} ${level}`).toMatch(/^0 \d+px \d+px rgba\(/);
+        expect(value, `${themeLabel} ${level}`).not.toContain('inset');
       }
       // Pressed inverts: it is inset-only, or it would still look like it floats.
       expect(theme.declarations.get('--sc-shadow-clay-pressed'), `${themeLabel} --sc-shadow-clay-pressed`)

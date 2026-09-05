@@ -1,12 +1,12 @@
-# StructureCo Total Visual Redesign
+# StructureCo Studio — dirección visual
 
 **Clasificación:** `CANONICAL`
 
 ## Product intent
 
-Replace the complete presentation layer with a hard matte structural-instrument identity derived from the user-supplied reference boards. The repository Brandbook and earlier Clay visual plans are historical for visual decisions in this project. They remain useful only for implementation provenance and nonvisual safety contracts.
+La revisión Studio, autorizada el 5 de septiembre de 2026, reorganiza la experiencia como un estudio de ingeniería. La presentación usa papel frío, paneles blancos, navegación azul profunda y controles planos de alta legibilidad. La portada reúne proyecto abierto, proyectos recientes, herramientas y biblioteca. El editor deja más atención al plano y permite concentración reversible.
 
-The product must feel precise, tactile, compact, and structurally grounded. Day uses warm ivory; Night uses deep petroleum. Technical colors do not change between themes. There is no glassmorphism, decorative glow, glossy chrome, or generic SaaS dashboard composition.
+La dirección sustituye la anterior apariencia de marfil y volumen clay. El código y las pruebas vigentes concretan esta dirección; brand/** conserva procedencia.
 
 ## Non-negotiable boundaries
 
@@ -15,36 +15,37 @@ The product must feel precise, tactile, compact, and structurally grounded. Day 
 - Preserve the existing explicit `{ kind, id }` selection authority and responsive composition broker.
 - Preserve foreign work and the untracked mobile-density test log.
 - Do not push or publish the source branch without explicit user approval.
-- Preview publication through Sites is authorized for review checkpoints. Email delivery to `crisdlm302@gmail.com` is authorized for those checkpoint links and image packs.
 
 ## Visual grammar
 
 - Interface/display: Instrument Sans Variable, bundled locally.
 - Technical values: Geist Mono, bundled locally.
-- Day: app `#F3EEE4`, canvas `#FBF8F2`, surface `#F7F1E8`, ink `#102B2D`.
-- Night: app `#07161B`, canvas `#0B1D23`, surface `#112830`, ink `#F3F0E8`.
+- Day: app `#F5F7F8`, canvas `#FFFFFF`, surface `#FFFFFF`, ink `#14232E`.
+- Night: app `#101820`, canvas `#131F29`, surface `#1B2833`, ink `#EDF3F7`.
 - Primary action: `#007D61` with white text.
 - Technical colors in both themes: axial/point `#2F73C8`, shear `#168A6C`, distributed `#65A323`, result moment `#D85C4A`, applied moment `#C65F86`, deformation/selection `#7657D5`, influence `#B26B91`.
-- Four surface depths: base, inset, raised, floating. Use short contact shadows and defined borders.
+- Four surface depths: base, inset, raised, floating. Use thin borders and restrained single contact shadows; remove sculpted clay bevels.
 - Motion uses controlled springs. Structural hero assembly lasts 400-600 ms and then stops. Reduced motion removes translation, morphing, and dock magnification.
 
 ## Structural illustration system
 
 Create ten families with four topology variants each: portals, beams, cantilevers, trusses, slabs, space frames, supports, loads, sections, and connections. Product-facing illustrations are transparent Three.js-rendered PNG assets with deterministic Day/Night counterparts. The parametric vector renderer remains only as an editable studio/export fallback; it is never the primary image on Home, project cards, Generator, or template selection.
 
-Home picks one of all forty illustrations once per session. Project thumbnails use a curated library variant by project type, not a canvas screenshot.
+Home picks one portal illustration once per session. Project thumbnails use a curated library variant by project type, not a canvas screenshot.
 
 ## Home
 
 Home has real views for Inicio, Proyectos, Plantillas, Aula entry, Importar, and Space 3D. Settings is a footer utility. Desktop uses a stable sidebar, tablet a compact rail, and mobile a header menu with no persistent bottom navigation.
 
-Inicio shows compact Continue/New actions, one random structural hero, exactly three recent projects with name and last edit only, and compact Import/Aula/Space 3D access. It must not show invented people, plans, metrics, reliability, or analysis status.
+Inicio muestra un título de tarea, Continuar/Nuevo, una ilustración estructural, hasta tres proyectos recientes reales y accesos Importar/Aula/Space 3D. Un directorio inferior lleva a Plantillas, Biblioteca y Estudio. Buscar herramientas se abre con botón o Cmd/Ctrl+K; Plantillas permite búsqueda sin acentos y filtros de familia. No se inventan personas, planes, métricas ni estado de análisis. Navegación lateral azul profunda, rail en tablet y menú en móvil.
 
 ## Illustration Studio
 
 Settings contains a parameter editor for family, topology, visual proportions, material, camera, detail, and theme preview. Factory presets are immutable. Personal presets are stored separately from ProjectModel and can be renamed, duplicated, deleted, restored, and exported as transparent SVG or PNG at 1x/2x/4x.
 
 ## Workspace
+
+El modo Concentración permite despejar controles secundarios y volver a la composición anterior. Home y Analizar permanecen accesibles.
 
 Top Bar is one clean row: Home/project identity left; undo/redo, export, Analyze, status, and overflow right. Analyze is always visible, green, and white-labeled. Canvas-local controls move out of Top Bar.
 
@@ -56,7 +57,7 @@ Results shares the right slot on desktop, retains a large canvas diagram, uses o
 
 ## Other surfaces and copy
 
-Datasheet, Model Doctor, Import Center, Generator, Project Hub, and Space 3D receive task-appropriate layouts with the same visual system. Aula's internal redesign is deferred; only global compatibility and its current entry are preserved.
+Datasheet, Model Doctor, Import Center, Generator, Project Hub, and Space 3D receive task-appropriate layouts with the same visual system. Aula conserva sus flujos internos y recibe los tokens comunes y la entrada revisada.
 
 Spanish uses direct professional international wording and the term Modelo rather than Mesa. English remains semantically equivalent. UI errors say what happened and what to do without exposing internal codes. Technical logs retain diagnostic details.
 

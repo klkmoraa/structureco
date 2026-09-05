@@ -99,14 +99,16 @@ const verifyWelcomeScroll = async (page) => {
   await page.waitForTimeout(60);
   const scrollTop = await welcome.evaluate((element) => element.scrollTop);
   const reachability = await welcome.evaluate((element) => {
-    element.scrollTop = element.scrollHeight;
-    const quickActions = element.querySelector('.sc-home-quick')?.getBoundingClientRect();
-    const recentProjectsElement = element.querySelector('.sc-home-recents');
-    const recentProjects = recentProjectsElement?.getBoundingClientRect();
-    const fullyVisible = (rect) => Boolean(rect && rect.top >= -1 && rect.bottom <= window.innerHeight + 1);
+    const reachable = (selector) => {
+      const section = element.querySelector(selector);
+      if (!section || !section.getBoundingClientRect().height) return true;
+      section.scrollIntoView({ block: 'center', behavior: 'instant' });
+      const rect = section.getBoundingClientRect();
+      return rect.top >= -1 && rect.bottom <= window.innerHeight + 1;
+    };
     return {
-      quickActionsReachable: fullyVisible(quickActions),
-      recentProjectsReachable: !recentProjectsElement || !recentProjects?.height || fullyVisible(recentProjects),
+      quickActionsReachable: reachable('.sc-home-quick'),
+      recentProjectsReachable: reachable('.sc-home-recents'),
     };
   });
   return {

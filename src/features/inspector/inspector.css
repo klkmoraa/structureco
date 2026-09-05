@@ -855,3 +855,77 @@ dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; 
 .personal-section-selector__manage{width:100%;min-height:32px;margin-top:-4px;border:1px solid var(--border-soft);border-radius:8px;background:var(--surface);color:var(--muted);font-size:12px;font-weight:650}
 .personal-section-selector__manage:hover{color:var(--text);border-color:var(--border)}
 .personal-section-selector__dialog{width:min(980px,calc(100vw - 32px));max-width:980px}
+
+/* Studio inspector: jerarquía editorial compacta y controles planos. */
+.inspector-panel {
+  border-color:var(--sc-color-border);
+  background:var(--sc-color-surface-1);
+  box-shadow:none;
+}
+
+.inspector-tabs {
+  border-bottom:1px solid var(--sc-color-border);
+  background:var(--sc-color-surface-toolbar);
+  box-shadow:none;
+}
+
+.inspector-tabs button {
+  border-radius:var(--sc-radius-control);
+  box-shadow:none;
+}
+
+.inspector-tabs button:hover {
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+}
+
+.inspector-tabs button.active,
+.inspector-tabs button[aria-selected='true'] {
+  background:var(--accent-soft);
+  color:var(--accent-on-soft);
+  box-shadow:none;
+}
+
+.inspector-section,
+.inspector-property-group,
+.inspector-summary,
+.inspector-selection-preview,
+.inspector-narrative,
+.model-overview,
+.selection-card {
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-card);
+  background:var(--sc-color-surface-1);
+  box-shadow:none;
+}
+
+.inspector-property-group__header,
+.inspector-selection-header,
+.section-heading {
+  border-bottom-color:var(--sc-color-border-soft);
+}
+
+.inspector-numeric-field__control,
+.number-control,
+.select-field select,
+.segmented-control,
+.toggle-row,
+.checkbox-grid {
+  border:1px solid var(--sc-color-border);
+  border-radius:var(--sc-radius-control);
+  background:var(--sc-color-surface-input);
+  box-shadow:none;
+}
+
+.inspector-numeric-field__control:focus-within,
+.number-control:focus-within,
+.select-field select:focus-visible {
+  border-color:var(--focus);
+  box-shadow:var(--sc-ring-focus);
+}
+
+.inspector-selection-danger,
+.danger-button,
+.icon-danger-button {
+  box-shadow:none;
+}

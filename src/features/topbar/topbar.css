@@ -1104,3 +1104,209 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .brand-name { color:var(--muted); font-size:var(--sc-font-size-label); font-weight:780; line-height:1; letter-spacing:-.025em; }
 .top-actions { gap: var(--sc-space-2); }
 .combination-select { width:clamp(150px,15vw,230px); max-width:230px; }
+
+/* Studio 2026: una sola barra técnica, plana y legible. Las clases históricas
+   se conservan para no mover comandos; esta sección sólo redefine su materia. */
+.app-shell[data-shell-class] .topbar.topbar--atelier {
+  width:100%;
+  min-height:60px;
+  margin:0;
+  padding:0 14px;
+  grid-template-columns:minmax(210px,.8fr) minmax(480px,1.7fr) max-content;
+  gap:12px;
+  border:0;
+  border-bottom:1px solid var(--sc-color-border);
+  border-radius:0;
+  background:var(--sc-color-surface-toolbar);
+  box-shadow:none;
+}
+
+.app-shell[data-shell-class] .topbar--atelier > .topbar-zone {
+  min-height:59px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+
+.app-shell[data-shell-class] .topbar--atelier .brand-home-button {
+  width:40px;
+  height:40px;
+  flex-basis:40px;
+  border:1px solid transparent;
+  border-radius:var(--sc-radius-control);
+  box-shadow:none;
+}
+
+.app-shell[data-shell-class] .topbar--atelier .brand-home-button:hover,
+.app-shell[data-shell-class] .topbar--atelier .brand-home-button:focus-visible {
+  border-color:var(--sc-color-border);
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+  transform:none;
+}
+
+.app-shell[data-shell-class] .topbar--atelier .topbar-project-trigger {
+  min-height:40px;
+  padding:5px 10px;
+  border:1px solid transparent;
+  border-radius:var(--sc-radius-control);
+  background:transparent;
+  box-shadow:none;
+}
+
+.app-shell[data-shell-class] .topbar--atelier .topbar-project-trigger:hover,
+.app-shell[data-shell-class] .topbar--atelier .topbar-project-trigger:focus-visible {
+  border-color:var(--sc-color-border);
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+  transform:none;
+}
+
+.app-shell[data-shell-class] .topbar--atelier .topbar-analysis-trigger {
+  min-height:40px;
+  border:1px solid var(--sc-color-border);
+  border-radius:var(--sc-radius-control);
+  background:var(--sc-color-surface-input);
+  box-shadow:none;
+}
+
+.app-shell[data-shell-class] .topbar--atelier .topbar-analysis-trigger:hover,
+.app-shell[data-shell-class] .topbar--atelier .topbar-analysis-trigger:focus-visible {
+  border-color:var(--sc-color-border-strong);
+  background:var(--sc-color-surface-elevated);
+  box-shadow:none;
+  transform:none;
+}
+
+.app-shell[data-shell-class] .topbar--atelier .topbar-history-cluster {
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+
+.app-shell[data-shell-class] .topbar--atelier .topbar-primary-actions .sc-icon-button,
+.app-shell[data-shell-class] .topbar--atelier .topbar-command-button,
+.app-shell[data-shell-class] .topbar--atelier .analysis-status,
+.app-shell[data-shell-class] .topbar--atelier .autosave-state {
+  width:38px;
+  min-width:38px;
+  height:38px;
+  min-height:38px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-control);
+  background:var(--sc-color-surface-1);
+  box-shadow:none;
+}
+
+.app-shell[data-shell-class] .topbar--atelier .topbar-primary-actions .sc-icon-button:hover:not(:disabled),
+.app-shell[data-shell-class] .topbar--atelier .topbar-command-button:hover {
+  border-color:var(--sc-color-border);
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+  transform:none;
+}
+
+.app-shell[data-shell-class] .topbar--atelier .focus-mode-toggle[aria-pressed='true'] {
+  border-color:color-mix(in srgb,var(--accent) 48%,var(--sc-color-border));
+  background:var(--accent-soft);
+  color:var(--accent-on-soft);
+}
+
+.app-shell[data-shell-class] .topbar--atelier .analyze-button--clay-primary,
+.app-shell[data-shell-class] .topbar--atelier .analyze-button--clay-primary:hover:not(:disabled),
+.app-shell[data-shell-class] .topbar--atelier .analyze-button--clay-primary:active:not(:disabled) {
+  min-width:108px;
+  height:40px;
+  border:1px solid var(--sc-color-action-edge);
+  border-radius:var(--sc-radius-control);
+  box-shadow:none;
+}
+
+.app-shell[data-shell-class] .topbar--atelier .analyze-button--clay-primary:hover:not(:disabled) {
+  background:var(--accent-hover);
+  transform:none;
+}
+
+.app-shell[data-shell-class] .topbar--atelier .analyze-button--clay-primary:active:not(:disabled) {
+  background:var(--accent-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+/* Concentración conserva el hogar, la identidad del proyecto, Analizar y su
+   propio escape. El resto del chrome sigue montado y vuelve al desactivar. */
+.app-shell[data-full-canvas='true'] .topbar.topbar--atelier {
+  grid-template-columns:minmax(180px,1fr) max-content;
+}
+
+.app-shell[data-full-canvas='true'] .topbar--atelier :is(.topbar-analysis-wrap,.results-launcher,.topbar-health-zone),
+.app-shell[data-full-canvas='true'] .topbar--atelier .topbar-primary-actions > :not(.focus-mode-toggle):not(.analyze-button) {
+  display:none;
+}
+
+.app-shell[data-full-canvas='true'] .topbar--atelier .topbar-actions-zone {
+  justify-content:flex-end;
+}
+
+@media (max-width:1439px) {
+  .app-shell[data-shell-class] .topbar.topbar--atelier {
+    grid-template-columns:minmax(150px,.8fr) minmax(300px,1.2fr) max-content;
+    padding-inline:10px;
+    gap:8px;
+  }
+}
+
+@media (max-width:700px) {
+  .app-shell[data-shell-class='K0'] .topbar.topbar--atelier {
+    min-height:56px;
+    grid-template-columns:minmax(0,1fr) max-content max-content;
+    padding-inline:8px;
+    gap:4px;
+  }
+
+  .app-shell[data-shell-class='K0'][data-full-canvas='true'] .topbar.topbar--atelier {
+    grid-template-columns:minmax(0,1fr) max-content;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier > .topbar-zone { min-height:55px; }
+
+  /* Model Doctor remains available in the project and utilities menus. */
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-health-zone .model-doctor-launcher { display:none; }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions :is(.sc-icon-button,.topbar-command-button),
+  .app-shell[data-shell-class='K0'] .topbar--atelier .brand-home-button,
+  .app-shell[data-shell-class='K0'] .topbar--atelier .results-launcher,
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-health-zone :is(.topbar-command-button,.analysis-status,.autosave-state) {
+    width:44px!important;
+    min-width:44px!important;
+    height:44px;
+    min-height:44px;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .analyze-button {
+    width:44px!important;
+    min-width:44px!important;
+    height:44px;
+    min-height:44px;
+    padding:0;
+  }
+}
+
+@media (pointer:coarse) {
+  .app-shell[data-shell-class] .topbar--atelier :is(.topbar-project-trigger,.topbar-analysis-trigger) {
+    min-width:44px;
+    min-height:44px;
+  }
+  .app-shell[data-shell-class] .topbar--atelier :is(.brand-home-button,.topbar-command-button,.analysis-status),
+  .app-shell[data-shell-class] .topbar--atelier .topbar-primary-actions .sc-icon-button {
+    width:44px;
+    min-width:44px;
+    height:44px;
+    min-height:44px;
+    flex-shrink:0;
+  }
+  .app-shell[data-shell-class] .topbar--atelier .brand-home-button { flex-basis:44px; }
+}

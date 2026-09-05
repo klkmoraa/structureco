@@ -28,17 +28,24 @@ const expectWoff2 = (relativePath: string) => {
   if (existsSync(url)) expect(readFileSync(url).subarray(0, 4).toString('ascii')).toBe('wOF2');
 };
 
-describe('StructureCo total-redesign foundation', () => {
-  it('uses the exact warm Day and deep-petroleum Night neutrals', () => {
-    expect(root.get('--sc-color-bg-app')).toBe('#f3eee4');
-    expect(root.get('--sc-color-bg-canvas')).toBe('#fbf8f2');
-    expect(root.get('--sc-color-surface-1')).toBe('#f7f1e8');
-    expect(root.get('--sc-color-text-primary')).toBe('#102b2d');
+describe('StructureCo Studio foundation', () => {
+  it('uses the exact cool-paper Day and graphite Night neutrals', () => {
+    expect(root.get('--sc-color-bg-app')).toBe('#f5f7f8');
+    expect(root.get('--sc-color-bg-canvas')).toBe('#ffffff');
+    expect(root.get('--sc-color-surface-1')).toBe('#ffffff');
+    expect(root.get('--sc-color-text-primary')).toBe('#14232e');
 
-    expect(dark.get('--sc-color-bg-app')).toBe('#07161b');
-    expect(dark.get('--sc-color-bg-canvas')).toBe('#0b1d23');
-    expect(dark.get('--sc-color-surface-1')).toBe('#112830');
-    expect(dark.get('--sc-color-text-primary')).toBe('#f3f0e8');
+    expect(dark.get('--sc-color-bg-app')).toBe('#101820');
+    expect(dark.get('--sc-color-bg-canvas')).toBe('#131f29');
+    expect(dark.get('--sc-color-surface-1')).toBe('#1b2833');
+    expect(dark.get('--sc-color-text-primary')).toBe('#edf3f7');
+  });
+
+  it('keeps Studio surfaces compact with radii between 8 and 12 pixels', () => {
+    expect(root.get('--sc-radius-control')).toBe('8px');
+    expect(root.get('--sc-radius-card')).toBe('10px');
+    expect(root.get('--sc-radius-panel')).toBe('12px');
+    expect(root.get('--sc-radius-modal')).toBe('12px');
   });
 
   it('keeps the exact technical palette in one theme-independent declaration', () => {
@@ -65,6 +72,7 @@ describe('StructureCo total-redesign foundation', () => {
     expect(root.get('--sc-color-action-foreground')).toBe('var(--sc-white)');
     expect(dark.has('--sc-color-action-primary')).toBe(false);
     expect(dark.has('--sc-color-action-foreground')).toBe(false);
+    expect(dark.get('--sc-color-action-ink-on-soft')).toBe('#76cbb5');
   });
 
   it('defines base, inset, raised and floating as bordered matte contact depths', () => {

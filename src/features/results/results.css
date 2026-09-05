@@ -1063,3 +1063,91 @@
 .stability-study-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:7px; }.stability-study-grid article { display:grid; gap:4px; padding:9px; border-radius:var(--sc-radius-xs); background:var(--sc-color-surface-2); }.stability-study-grid b { font-family:var(--sc-font-mono); font-size:16px; }.stability-study-grid p,.stability-study-limit { margin:0; color:var(--muted); font-size:var(--sc-font-size-caption); }
 .stability-study-mode { display:grid; gap:2px; color:var(--muted); font-size:var(--sc-font-size-caption); }.stability-study-mode select { max-width:11rem; }
 .stability-study-details { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px 8px; margin:0; }.stability-study-details div { min-width:0; }.stability-study-details dt { color:var(--muted); font-size:var(--sc-font-size-caption); }.stability-study-details dd { margin:1px 0 0; font-family:var(--sc-font-mono); font-size:12px; overflow-wrap:anywhere; }.stability-study-issues { display:grid; gap:3px; margin:0; padding-left:16px; color:var(--muted); font-size:var(--sc-font-size-caption); }
+
+/* Studio results: una superficie analítica continua, con tablas y tarjetas
+   separadas por líneas finas en vez de relieve. */
+.results-panel,
+.dense-results-surface {
+  border-color:var(--sc-color-border);
+  background:var(--sc-color-surface-1);
+  box-shadow:none;
+}
+
+.result-tabs,
+.dense-results-tabs,
+.results-mode-control {
+  border-bottom-color:var(--sc-color-border);
+  background:var(--sc-color-surface-toolbar);
+  box-shadow:none;
+}
+
+.result-tabs button,
+.dense-results-tabs button,
+.results-mode-control button {
+  border-radius:var(--sc-radius-control);
+  box-shadow:none;
+}
+
+.result-tabs button:hover,
+.dense-results-tabs button:hover,
+.results-mode-control button:hover {
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+  transform:none;
+}
+
+.result-tabs button.active,
+.result-tabs button[aria-selected='true'],
+.dense-results-tabs button[aria-selected='true'],
+.results-mode-control button[aria-pressed='true'] {
+  border-color:color-mix(in srgb,var(--accent) 42%,var(--sc-color-border));
+  background:var(--accent-soft);
+  color:var(--accent-on-soft);
+  box-shadow:none;
+  transform:none;
+}
+
+.results-metric-cards > div,
+.results-metric-cards > button,
+.result-extreme-card,
+.diagram-chart,
+.diagram-cursor-readout,
+.education-explorer,
+.stability-studies-card,
+.elastic-demand-grid,
+.computed-list,
+.issue-card {
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-card);
+  background:var(--sc-color-surface-1);
+  box-shadow:none;
+}
+
+.results-table,
+.dof-table,
+.education-substitution-table {
+  border-color:var(--sc-color-border);
+  background:var(--sc-color-surface-1);
+}
+
+.results-table :is(th,td),
+.dof-table :is(th,td),
+.education-substitution-table :is(th,td) {
+  border-color:var(--sc-color-border-soft);
+}
+
+.results-mode-control button,
+.results-mobile-commandbar button,
+.results-desktop-toggle__action,
+.result-summary-actions button {
+  color:var(--accent-on-soft);
+}
+
+@media (max-width:700px) {
+  /* Deja al menos la mitad superior del modelo disponible mientras se consulta
+     Resultados. El contenido sigue desplazándose dentro de la hoja. */
+  .results-panel:not(.mobile-collapsed):not(.results-mode-focused) {
+    height:min(42dvh,360px)!important;
+    max-height:42dvh;
+  }
+}

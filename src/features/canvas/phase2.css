@@ -2123,7 +2123,84 @@ body:has(.structural-edit-surface) .app-shell .tool-rail.is-floating-dock {
 
 .tool-group + .tool-group { border-top-color:var(--border-soft); }
 
+/* Studio canvas chrome. Geometry, hit targets and SVG coordinates remain
+   untouched; only the containers become flatter and easier to scan. */
+.canvas-host {
+  background:var(--sc-color-bg-canvas);
+}
+
+.canvas-controls,
+.canvas-mode-badge,
+.canvas-status,
+.canvas-view-chips,
+.canvas-evidence-rail,
+.canvas-layer-panel,
+.candidate-picker,
+.quick-entry-bar,
+.duplicate-preview-panel {
+  border:1px solid var(--sc-color-border-canvas-chrome);
+  border-radius:var(--sc-radius-control);
+  background:var(--sc-color-surface-elevated);
+  box-shadow:var(--sc-shadow-raised);
+}
+
+.canvas-controls {
+  gap:2px;
+  padding:3px;
+}
+
+.canvas-controls .sc-icon-button,
+.canvas-layer-trigger {
+  border-radius:calc(var(--sc-radius-control) - 2px);
+  box-shadow:none;
+}
+
+.canvas-controls .sc-icon-button:hover,
+.canvas-layer-trigger:hover {
+  background:var(--sc-color-surface-2);
+  box-shadow:none;
+  transform:none;
+}
+
+.canvas-hint {
+  border:1px solid var(--sc-color-border);
+  border-radius:var(--sc-radius-control);
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-raised);
+}
+
+.canvas-layer-row,
+.canvas-layer-preset,
+.canvas-layer-reset,
+.candidate-picker [role='option'] {
+  border-radius:calc(var(--sc-radius-control) - 1px);
+  box-shadow:none;
+}
+
+.canvas-evidence-stack-choice[aria-pressed='true'],
+.canvas-layer-preset[aria-pressed='true'] {
+  box-shadow:none;
+}
+
+@media (max-width:700px) {
+  .canvas-controls,
+  .canvas-mode-badge,
+  .canvas-status,
+  .canvas-view-chips {
+    border-color:var(--sc-color-border);
+  }
+}
+
 /* --- Sellos de extremos M/V sobre el diagrama -------------------------- */
 /* El color es el de la magnitud que se está mirando, el mismo del diagrama:
    la capa declara cuál y el sello lo hereda. */
 .critical-point-layer { --critical-color:var(--moment); }
+
+@media (pointer:coarse) {
+  .app-shell[data-shell-class] .canvas-controls .sc-icon-button {
+    width:44px;
+    min-width:44px;
+    height:44px;
+    min-height:44px;
+  }
+}

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Box, Folder, GraduationCap, Home, Image as ImageIcon, LayoutTemplate, LibraryBig, Menu, Moon, Play, Plus, Settings, Sun, Upload, X } from 'lucide-react';
+import { ArrowRight, Box, Folder, GraduationCap, Home, Image as ImageIcon, LayoutTemplate, LibraryBig, Menu, Moon, Play, Plus, Search, Settings, Sun, Upload, X } from 'lucide-react';
 import { m, useReducedMotion } from 'motion/react';
 import { createBlankProject, exampleProjects } from '../../data/defaultProject';
 import { useProject, useWorkspaceUI } from '../../store/ProjectContext';
@@ -23,6 +23,7 @@ import { clearLocalMetrics, exportLocalMetrics, getLocalMetrics, setLocalMetrics
 import { COMPACT_HOME_QUERY, useMediaQuery } from '../../platform/useMediaQuery';
 import { deliverFileSync } from '../../platform/fileDelivery';
 import { haptics } from '../../platform/haptics';
+import { HomeSearch, normalizeSearch, type HomeSearchOption } from './HomeSearch';
 import './totalHome.css';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
@@ -43,6 +44,7 @@ type NavigationDestination = HomeView | 'studio';
 
 const copy = {
   es: {
+    headline: 'Tu próximo modelo empieza aquí.', intro: 'Modela, analiza y entiende cada estructura.', search: 'Buscar herramientas', templateSearch: 'Buscar plantillas', all: 'Todas', beams: 'Vigas', frames: 'Pórticos', trusses: 'Armaduras', noTemplates: 'No hay plantillas con estos filtros.', clearFilters: 'Restablecer filtros',
     navigation: 'Navegación principal', workspace: 'Espacio de trabajo', home: 'Inicio', projects: 'Proyectos', templates: 'Plantillas', library: 'Biblioteca', classroom: 'Aula', import: 'Importar', space3d: 'Space 3D',
     settings: 'Ajustes', settingsTitle: 'Ajustes', settingsBody: 'Personaliza cómo se presenta StructureCo en este dispositivo.', language: 'Idioma', theme: 'Tema', light: 'Claro', dark: 'Oscuro', closeSettings: 'Cerrar ajustes', studio: 'Estudio de ilustraciones', menu: 'Abrir navegación', closeMenu: 'Cerrar navegación', work: 'Trabajo', explore: 'Explorar', tools: 'Herramientas', current: 'Proyecto abierto', continue: 'Continuar proyecto', continueHint: 'Retoma donde lo dejaste', create: 'Nuevo proyecto', createHint: 'Lienzo vacío', modelPreview: 'Modelo estructural', quickTitle: 'Abrir una herramienta', importHint: 'JSON, StructureCo o DXF', classroomHint: 'Casos guiados paso a paso', spaceHint: 'Pórticos y cargas 3D', localMetrics: 'Diagnóstico local', localMetricsBody: 'Opcional. Guarda sólo eventos agregados en este dispositivo; nunca envía geometría, cargas, resultados ni datos personales.', localMetricsOptIn: 'Guardar mediciones locales para mejorar el flujo', localMetricsCount: '{count} observaciones locales', exportDiagnostics: 'Exportar diagnóstico', clearDiagnostics: 'Borrar observaciones',
     workspaceBody: 'Un espacio directo para modelar, revisar y volver al punto exacto de tu trabajo.', systemTitle: 'Todo el sistema, a la vista', systemBody: 'Elige una ruta y sigue trabajando sin perder contexto.', libraryHint: 'Modelos guardados en este dispositivo', studioHint: 'Crea y exporta ilustraciones',
@@ -55,6 +57,7 @@ const copy = {
     secondary: 'Accesos rápidos', local: 'Guardado local en este dispositivo',
   },
   en: {
+    headline: 'Your next model starts here.', intro: 'Model, analyze and understand every structure.', search: 'Find tools', templateSearch: 'Search templates', all: 'All', beams: 'Beams', frames: 'Frames', trusses: 'Trusses', noTemplates: 'No templates match these filters.', clearFilters: 'Reset filters',
     navigation: 'Primary navigation', workspace: 'Workspace', home: 'Home', projects: 'Projects', templates: 'Templates', library: 'Library', classroom: 'Classroom', import: 'Import', space3d: 'Space 3D',
     settings: 'Settings', settingsTitle: 'Settings', settingsBody: 'Personalize how StructureCo is presented on this device.', language: 'Language', theme: 'Theme', light: 'Light', dark: 'Dark', closeSettings: 'Close settings', studio: 'Illustration Studio', menu: 'Open navigation', closeMenu: 'Close navigation', work: 'Work', explore: 'Explore', tools: 'Tools', current: 'Open project', continue: 'Continue project', continueHint: 'Pick up where you left off', create: 'New project', createHint: 'Blank canvas', modelPreview: 'Structural model', quickTitle: 'Open a tool', importHint: 'JSON, StructureCo or DXF', classroomHint: 'Guided cases, step by step', spaceHint: '3D frames and loads', localMetrics: 'Local diagnostics', localMetricsBody: 'Optional. Stores aggregate events on this device only; it never sends geometry, loads, results, or personal data.', localMetricsOptIn: 'Store local measurements to improve the flow', localMetricsCount: '{count} local observations', exportDiagnostics: 'Export diagnostics', clearDiagnostics: 'Erase observations',
     workspaceBody: 'A direct place to model, review, and return to the exact point in your work.', systemTitle: 'The whole system, in view', systemBody: 'Choose a route and keep working without losing context.', libraryHint: 'Models saved on this device', studioHint: 'Create and export illustrations',
@@ -87,10 +90,17 @@ const CLASSROOM_FEATURES: ReadonlyArray<{ id: ClassroomExerciseTemplateId; asset
   { id: 'portal-frame', assetId: 'portal:two-bay', name: 'newExercise.template.portalFrameName', description: 'newExercise.template.portalFrameDescription' },
 ];
 
-const templateAssetId = (name: string): ThreeStructuralAssetId => {
-  if (/armadura|truss/i.test(name)) return 'truss:warren';
-  if (/viga|beam/i.test(name)) return 'beam:simply-supported';
-  return 'portal:single-bay';
+type TemplateFamily = 'beams' | 'frames' | 'trusses';
+const templateFamilyByName: Record<string, TemplateFamily> = {
+  'Hibbeler · carga tributaria Fig. 2–11': 'beams',
+  'Práctica tipo Hibbeler · diagramas': 'beams',
+  'Práctica tipo Hibbeler · armadura': 'trusses',
+  'Pórtico de ejemplo': 'frames',
+  'Viga simplemente apoyada': 'beams',
+  'Armadura triangular': 'trusses',
+};
+const templateAssets: Record<TemplateFamily, ThreeStructuralAssetId> = {
+  beams: 'beam:simply-supported', frames: 'portal:single-bay', trusses: 'truss:warren',
 };
 
 interface WelcomePreferencesProps {
@@ -140,6 +150,9 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
   const { theme, setTheme } = useWorkspaceUI();
   const reducedMotion = useReducedMotion();
   const text = copy[language];
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [templateQuery, setTemplateQuery] = useState('');
+  const [templateFamily, setTemplateFamily] = useState<'all' | 'beams' | 'frames' | 'trusses'>('all');
   const [view, setView] = useState<HomeView>(initialView);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const compactHome = useMediaQuery(COMPACT_HOME_QUERY);
@@ -150,6 +163,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
   const [importCenterOpen, setImportCenterOpen] = useState(false);
   const [dxfImportOpen, setDxfImportOpen] = useState(false);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const searchTriggerRef = useRef<HTMLButtonElement>(null);
   const homeRef = useRef<HTMLElement>(null);
   const preferencesLauncherRef = useRef<HTMLButtonElement | null>(null);
   const studioLauncherRef = useRef<HTMLButtonElement | null>(null);
@@ -175,7 +189,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
   }, [mobileNavOpen]);
 
   useEffect(() => {
-    if ((!preferencesOpen && !studioOpen) || !homeRef.current) return undefined;
+    if ((!preferencesOpen && !studioOpen && !searchOpen) || !homeRef.current) return undefined;
     const home = homeRef.current;
     const previousInert = home.inert;
     const previousAriaHidden = home.getAttribute('aria-hidden');
@@ -186,7 +200,19 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
       if (previousAriaHidden === null) home.removeAttribute('aria-hidden');
       else home.setAttribute('aria-hidden', previousAriaHidden);
     };
-  }, [preferencesOpen, studioOpen]);
+  }, [preferencesOpen, studioOpen, searchOpen]);
+
+  useEffect(() => {
+    const onSearchKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return;
+      if (preferencesOpen || studioOpen || exerciseDialogOpen || importCenterOpen || dxfImportOpen || document.querySelector('[role="dialog"], dialog[open]')) return;
+      event.preventDefault();
+      setMobileNavOpen(false);
+      setSearchOpen(true);
+    };
+    window.addEventListener('keydown', onSearchKey);
+    return () => window.removeEventListener('keydown', onSearchKey);
+  }, [preferencesOpen, studioOpen, exerciseDialogOpen, importCenterOpen, dxfImportOpen]);
 
   const openBlankProject = () => {
     const next = createBlankProject();
@@ -234,17 +260,23 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
           if (!navItem) return null;
           const Icon = navItem.icon;
           const active = id !== 'studio' && view === id;
-          return <button key={id} type="button" className={active ? 'is-active' : undefined} aria-current={active ? 'page' : undefined} onClick={(event) => id === 'studio' ? openStudio(event.currentTarget) : navigate(id)}><Icon size={18} /><span>{text[id]}</span></button>;
+          return <button key={id} type="button" aria-label={text[id]} title={text[id]} className={active ? 'is-active' : undefined} aria-current={active ? 'page' : undefined} onClick={(event) => id === 'studio' ? openStudio(event.currentTarget) : navigate(id)}><Icon size={18} /><span>{text[id]}</span></button>;
         })}
       </div>
     </section>)}
     {mobile ? <div className="sc-home-nav-group sc-home-nav-group--settings"><button type="button" onClick={(event) => openPreferences(event.currentTarget)}><Settings size={18} /><span>{text.settings}</span></button></div> : null}
   </nav>;
 
-  const dashboard = <>
+  const searchOptions: HomeSearchOption[] = NAV_ITEMS.filter((item) => item.id !== 'studio').map(({ id, icon }) => ({
+    id, icon, label: text[id], description: id === 'templates' ? text.templatesBody : id === 'projects' ? text.projectsBody : id === 'classroom' ? text.classroomHint : id === 'space3d' ? text.spaceHint : id === 'import' ? text.importHint : id === 'library' ? text.libraryHint : text.workspaceBody,
+    run: () => navigate(id as HomeView),
+  }));
+
+  const dashboard = <div className="sc-home-dashboard">
+    <header className="sc-home-intro"><h1>{text.headline}</h1><p>{text.intro}</p></header>
     <section className="sc-home-hero sc-home-workbench" aria-labelledby="home-current-project">
       <div className="sc-home-primary-actions" onPointerEnter={onPreloadWorkspace} onFocusCapture={onPreloadWorkspace}>
-        <div className="sc-home-workbench__meta"><span>01</span><p>{text.current}</p><span>LOCAL</span></div>
+        <div className="sc-home-workbench__meta"><p>{text.current}</p></div>
         <h2 id="home-current-project">{project.name}</h2>
         <p className="sc-home-workbench__body">{text.workspaceBody}</p>
         <div className="sc-home-primary-buttons">
@@ -254,37 +286,46 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
         <div className="sc-home-workbench__footer"><span>{text.local}</span><span>{text.modelPreview} <b>· 2D</b></span></div>
       </div>
       <m.div className="sc-home-hero-asset" initial={reducedMotion ? false : { opacity: 0, y: -14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 220, damping: 24, mass: 0.8 }}>
-        <div className="sc-home-hero-asset__frame"><span className="sc-home-hero-asset__axis sc-home-hero-asset__axis--x" aria-hidden="true" /><span className="sc-home-hero-asset__axis sc-home-hero-asset__axis--y" aria-hidden="true" /><ThreeStructuralImage assetId={heroId as PortalAssetId} theme={theme} eager /></div>
-        <div className="sc-home-hero-asset__caption"><span>MODEL / 2D</span><span>{text.modelPreview}</span><span aria-hidden="true">↗</span></div>
+        <div className="sc-home-hero-asset__frame"><ThreeStructuralImage assetId={heroId as PortalAssetId} theme={theme} eager /></div>
+        <div className="sc-home-hero-asset__caption"><span>MODEL / 2D</span><span>{text.modelPreview}</span><ArrowRight size={15} aria-hidden="true" /></div>
       </m.div>
     </section>
+    <section className="sc-home-recents" aria-labelledby="home-recents-title">
+      <div className="sc-home-section-heading"><div><h2 id="home-recents-title">{text.recent}</h2></div><button type="button" onClick={() => setView('projects')}>{text.viewAll}<ArrowRight size={15} /></button></div>
+      <Suspense fallback={<p role="status">{t('hub.loading')}</p>}><Phase2ProjectHub onOpenWorkspace={onOpenWorkspace} variant="recent" limit={3} /></Suspense>
+    </section>
     <section className="sc-home-quick sc-home-tool-dock" aria-labelledby="home-quick-title" data-testid="home-secondary-actions">
-      <div className="sc-home-section-heading"><div><span className="sc-home-section-index">02 / {text.tools}</span><h2 id="home-quick-title">{text.quickTitle}</h2></div><span className="sc-home-section-count" aria-hidden="true">03</span></div>
+      <div className="sc-home-section-heading"><div><h2 id="home-quick-title">{text.quickTitle}</h2></div></div>
       <div className="sc-home-quick-row">
-        <button type="button" onClick={() => setImportCenterOpen(true)}><span className="sc-home-launcher__index">01</span><span className="sc-home-launcher__icon"><Upload size={18} /></span><span className="sc-home-launcher__copy"><strong>{text.import}</strong><small>{text.importHint}</small></span><ArrowRight size={16} /></button>
-        <button type="button" onClick={() => openExercise()}><span className="sc-home-launcher__index">02</span><span className="sc-home-launcher__icon"><GraduationCap size={18} /></span><span className="sc-home-launcher__copy"><strong>{text.classroom}</strong><small>{text.classroomHint}</small></span><ArrowRight size={16} /></button>
-        <button type="button" onClick={onOpenSpace3D}><span className="sc-home-launcher__index">03</span><span className="sc-home-launcher__icon"><Box size={18} /></span><span className="sc-home-launcher__copy"><strong>{text.space3d}</strong><small>{text.spaceHint}</small></span><ArrowRight size={16} /></button>
+        <button type="button" aria-label={text.import} onClick={() => setImportCenterOpen(true)}><span className="sc-home-launcher__icon"><Upload size={18} /></span><span className="sc-home-launcher__copy"><strong>{text.import}</strong><small>{text.importHint}</small></span><ArrowRight size={16} /></button>
+        <button type="button" onClick={() => openExercise()}><span className="sc-home-launcher__icon"><GraduationCap size={18} /></span><span className="sc-home-launcher__copy"><strong>{text.classroom}</strong><small>{text.classroomHint}</small></span><ArrowRight size={16} /></button>
+        <button type="button" onClick={onOpenSpace3D}><span className="sc-home-launcher__icon"><Box size={18} /></span><span className="sc-home-launcher__copy"><strong>{text.space3d}</strong><small>{text.spaceHint}</small></span><ArrowRight size={16} /></button>
       </div>
     </section>
     <section className="sc-home-directory" aria-labelledby="home-directory-title">
-      <div className="sc-home-section-heading"><div><span className="sc-home-section-index">03 / {text.workspace}</span><h2 id="home-directory-title">{text.systemTitle}</h2><p>{text.systemBody}</p></div><span className="sc-home-section-count" aria-hidden="true">03</span></div>
+      <div className="sc-home-section-heading"><div><h2 id="home-directory-title">{text.systemTitle}</h2><p>{text.systemBody}</p></div></div>
       <div className="sc-home-directory__list">
         <button type="button" onClick={() => navigate('templates')}><span className="sc-home-directory__icon"><LayoutTemplate size={19} /></span><span><strong>{text.templates}</strong><small>{text.templatesBody}</small></span><ArrowRight size={16} /></button>
         <button type="button" onClick={() => navigate('library')}><span className="sc-home-directory__icon"><LibraryBig size={19} /></span><span><strong>{text.library}</strong><small>{text.libraryHint}</small></span><ArrowRight size={16} /></button>
         <button type="button" onClick={(event) => openStudio(event.currentTarget)}><span className="sc-home-directory__icon"><ImageIcon size={19} /></span><span><strong>{text.studio}</strong><small>{text.studioHint}</small></span><ArrowRight size={16} /></button>
       </div>
     </section>
-    <section className="sc-home-recents" aria-labelledby="home-recents-title">
-      <div className="sc-home-section-heading"><div><span className="sc-home-section-index">04 / {text.work}</span><h2 id="home-recents-title">{text.recent}</h2></div><button type="button" onClick={() => setView('projects')}>{text.viewAll}<ArrowRight size={15} /></button></div>
-      <Suspense fallback={<p role="status">{t('hub.loading')}</p>}><Phase2ProjectHub onOpenWorkspace={onOpenWorkspace} variant="recent" limit={3} /></Suspense>
-    </section>
-  </>;
+  </div>;
 
+  const preparedTemplates = exampleProjects.map((example) => ({
+    example, presented: presentExample(example.name, example.description, t),
+    family: templateFamilyByName[example.name] ?? 'frames',
+  }));
+  const visibleTemplates = preparedTemplates.filter(({ presented, family }) => (templateFamily === 'all' || family === templateFamily) && normalizeSearch(`${presented.name} ${presented.description}`).includes(normalizeSearch(templateQuery)));
   const templates = <section className="sc-home-view" aria-labelledby="home-templates-title">
     <header><p>{text.templates}</p><h2 id="home-templates-title">{text.templatesTitle}</h2><span>{text.templatesBody}</span></header>
-    <div className="sc-home-template-grid">{exampleProjects.map((example) => {
-      const presented = presentExample(example.name, example.description, t);
-      return <button key={example.name} className="welcome-template-card" type="button" onClick={() => openExample(example.build)}><span className="sc-home-template-media"><ThreeStructuralImage assetId={templateAssetId(example.name)} theme={theme} /></span><strong>{presented.name}</strong><span>{presented.description}</span><ArrowRight size={16} aria-hidden="true" /></button>;
+    <div className="sc-home-template-toolbar">
+      <label className="sc-home-template-search"><Search size={18} aria-hidden="true" /><input aria-label={text.templateSearch} placeholder={text.templateSearch} value={templateQuery} onChange={(event) => setTemplateQuery(event.target.value)} /></label>
+      <div className="sc-home-template-filters" role="group" aria-label={text.templates}>{(['all', 'beams', 'frames', 'trusses'] as const).map((family) => <button type="button" key={family} aria-pressed={templateFamily === family} onClick={() => setTemplateFamily(family)}>{text[family]}</button>)}</div>
+    </div>
+    {!visibleTemplates.length && <div className="sc-home-template-empty" role="status"><p>{text.noTemplates}</p><button type="button" onClick={() => { setTemplateQuery(''); setTemplateFamily('all'); }}>{text.clearFilters}</button></div>}
+    <div className="sc-home-template-grid">{visibleTemplates.map(({ example, presented, family }) => {
+      return <button key={example.name} className="welcome-template-card" type="button" onClick={() => openExample(example.build)}><span className="sc-home-template-media"><ThreeStructuralImage assetId={templateAssets[family]} theme={theme} /></span><strong>{presented.name}</strong><span>{presented.description}</span><ArrowRight size={16} aria-hidden="true" /></button>;
     })}</div>
   </section>;
 
@@ -355,15 +396,15 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
     >{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</button>
   </div>;
 
-  return <><main ref={homeRef} className="sc-home sc-home--radical" data-testid="welcome-screen">
-    <aside className="sc-home-sidebar"><div className="sc-home-sidebar__brand"><div className="sc-home-wordmark"><BrandMark size={30} /><strong><span>structure</span>Co</strong></div><span>{text.workspace}</span></div>{renderNavigation()}<div className="sc-home-sidebar__footer"><span>LOCAL</span><small>{text.local}</small></div><button type="button" className="sc-home-settings" onClick={(event) => openPreferences(event.currentTarget)}><Settings size={19} /><span>{text.settings}</span></button></aside>
+  return <><main ref={homeRef} className="sc-home sc-home--studio" data-testid="welcome-screen">
+    <aside className="sc-home-sidebar"><div className="sc-home-sidebar__brand"><div className="sc-home-wordmark"><BrandMark size={30} /><strong><span>structure</span>Co</strong></div><span>{text.workspace}</span></div>{renderNavigation()}<div className="sc-home-sidebar__footer"><span>LOCAL</span><small>{text.local}</small></div><button type="button" className="sc-home-settings" aria-label={text.settings} title={text.settings} onClick={(event) => openPreferences(event.currentTarget)}><Settings size={19} /><span>{text.settings}</span></button></aside>
     <header className="sc-home-mobile-header">
       <button ref={mobileMenuButtonRef} type="button" className="sc-home-menu-toggle" aria-label={mobileNavOpen ? text.closeMenu : text.menu} aria-expanded={mobileNavOpen} onClick={() => { haptics.selection(); setMobileNavOpen((open) => !open); }}>{mobileNavOpen ? <X size={20} /> : <Menu size={20} />}</button>
       <div className="sc-home-wordmark"><BrandMark size={25} /><strong><span>structure</span>Co</strong></div>
       {compactHome ? appearanceControls : <span aria-hidden="true" className="sc-home-mobile-header__spacer" />}
     </header>
     {mobileNavOpen ? renderNavigation(true) : null}
-    <div className="sc-home-main"><header className="sc-home-topline"><div className="sc-home-topline__context"><span>{text.workspace}</span><b aria-hidden="true">/</b><strong>{text[view]}</strong></div><div className="sc-home-topline__right"><span className="sc-home-topline__project">{project.name}</span>{compactHome ? null : appearanceControls}</div></header>{/*
+    <div className="sc-home-main"><header className="sc-home-topline"><div className="sc-home-topline__context"><span>{text.workspace}</span><b aria-hidden="true">/</b><strong>{text[view]}</strong></div><div className="sc-home-topline__right"><button ref={searchTriggerRef} type="button" className="sc-home-search-trigger" onClick={() => setSearchOpen(true)}><Search size={17} /><span>{text.search}</span><kbd>⌘ K</kbd></button>{compactHome ? null : appearanceControls}</div></header>{/*
       * `data-stagger` es la entrada escalonada declarativa de `platform/native.css`:
       * cada sección de la vista llega 40 ms después de la anterior, en pasos que
       * se congelan a partir de la sexta. La clave por vista es lo que hace que
@@ -372,5 +413,5 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
       <div className="sc-home-content" data-stagger key={view}>{content}</div></div>
     {importCenterOpen ? <Suspense fallback={null}><PortableImportCenter open currentProjectName={project.name} onClose={() => setImportCenterOpen(false)} onSaveCurrent={() => exportProjectJson(project)} onImported={(outcome) => { replaceProject({ ...outcome.project, settings: { ...outcome.project.settings, language } }, outcome.restoredAnalysis); setImportCenterOpen(false); onOpenWorkspace(); }} /></Suspense> : null}
     <NewExerciseDialog open={exerciseDialogOpen} initialTemplateId={exerciseTemplateId} onClose={() => setExerciseDialogOpen(false)} onCreate={(next) => { replaceProject({ ...next, settings: { ...next.settings, language } }); setExerciseDialogOpen(false); onOpenWorkspace(); }} />
-  </main>{preferencesOpen ? <><div className="sc-home-settings-scrim" aria-hidden="true" onClick={closePreferences} /><WelcomePreferences language={language} theme={theme} onLanguageChange={updateLanguage} onThemeChange={setTheme} onClose={closePreferences} /></> : null}{studioOpen ? <IllustrationStudio language={language} initialTheme={theme} onClose={closeStudio} /> : null}</>;
+  </main>{searchOpen ? <HomeSearch language={language} options={searchOptions} onClose={() => setSearchOpen(false)} returnFocusTo={searchTriggerRef.current} /> : null}{preferencesOpen ? <><div className="sc-home-settings-scrim" aria-hidden="true" onClick={closePreferences} /><WelcomePreferences language={language} theme={theme} onLanguageChange={updateLanguage} onThemeChange={setTheme} onClose={closePreferences} /></> : null}{studioOpen ? <IllustrationStudio language={language} initialTheme={theme} onClose={closeStudio} /> : null}</>;
 };

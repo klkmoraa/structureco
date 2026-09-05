@@ -1,10 +1,10 @@
 /*
  * structureCo · Design tokens
  * ---------------------------------------------------------------------------
- * Dirección visual: instrumento estructural mate, duro y táctil.
+ * Dirección visual: Studio estructural mate, preciso y compacto.
  *
- * Día usa marfil cálido y Noche petróleo profundo. La interfaz se construye
- * con bordes definidos, cuatro profundidades y sombras cortas de contacto.
+ * Día usa papel frío y Noche grafito azulado. La interfaz se construye con
+ * bordes definidos, cuatro profundidades y sombras discretas de contacto.
  * Los colores técnicos se declaran una sola vez y no cambian con el tema.
  *
  * Capas:
@@ -107,32 +107,32 @@
   --sc-lilac-100: #eee8fc;
 
   /* ------------------------------------------------------------------ */
-  /* 2 · ROLES SEMÁNTICOS — TEMA DÍA (papel de grafito)                  */
+  /* 2 · ROLES SEMÁNTICOS — TEMA DÍA (papel frío)                        */
   /* ------------------------------------------------------------------ */
-  --sc-color-bg-app: #f3eee4;
-  --sc-color-bg-canvas: #fbf8f2;
-  --sc-color-surface-1: #f7f1e8;
-  --sc-color-surface-2: #efe7dc;
-  --sc-color-surface-elevated: #fffdf8;
-  --sc-color-surface-pressed: #e8ded0;
-  --sc-color-surface-inset: #ece3d6;
-  --sc-color-surface-toolbar: #f7f1e8;
-  --sc-color-surface-input: #f3eee4;
+  --sc-color-bg-app: #f5f7f8;
+  --sc-color-bg-canvas: #ffffff;
+  --sc-color-surface-1: #ffffff;
+  --sc-color-surface-2: #eef2f4;
+  --sc-color-surface-elevated: #ffffff;
+  --sc-color-surface-pressed: #e8edef;
+  --sc-color-surface-inset: #f0f3f5;
+  --sc-color-surface-toolbar: #ffffff;
+  --sc-color-surface-input: #f8fafb;
 
-  --sc-color-text-primary: #102b2d;
-  --sc-color-text-secondary: #536466;
-  --sc-color-text-muted: #667577;
-  --sc-color-text-disabled: #9aa0a1;
+  --sc-color-text-primary: #14232e;
+  --sc-color-text-secondary: #52616c;
+  --sc-color-text-muted: #66747f;
+  --sc-color-text-disabled: #98a3ab;
   /* CRI-117 · `--sc-color-text-disabled` (2,59:1 en Día) es legítimo para un
      control inactivo: WCAG 1.4.3 exime a los «inactive user interface
      components». Pero la auditoría por componente encontró superficies
      deshabilitadas que SIGUEN llevando contenido obligatorio —el valor y su
      unidad dentro de un campo apagado— y ahí no hay exención que valga. Este
      rol es para ésas: 4,79:1 en el peor de los cuatro fondos. */
-  --sc-color-text-disabled-content: #6b7274;
+  --sc-color-text-disabled-content: #66737d;
   --sc-color-text-inverse: var(--sc-white);
   --sc-color-text-link: var(--sc-blue-600);
-  --sc-color-text-technical: #4a5153;
+  --sc-color-text-technical: #3f4f5a;
   /* CRI-114 · #7b8284 medía 3,82:1 sobre la superficie de Día — por debajo del
      piso de texto (4,5:1). El rol escribe unidades y magnitudes del solver
      («kN», «m»), que son contenido numérico que hay que leer, no adorno, así
@@ -140,18 +140,18 @@
      de los cuatro fondos, todavía por encima de `--sc-color-text-secondary`
      (5,11:1) para no aplanar la jerarquía. El tamaño (LEDGER-03, 10px) no se
      toca: el hallazgo era de color. La variante de Noche ya medía 7,60:1. */
-  --sc-color-text-unit: #6c7375;
+  --sc-color-text-unit: #66737d;
 
-  --sc-color-border: #ded8ce;
-  --sc-color-border-soft: #ebe5dc;
-  --sc-color-border-strong: #b9afa1;
+  --sc-color-border: #d6dde2;
+  --sc-color-border-soft: #e4e9ed;
+  --sc-color-border-strong: #aab5bd;
   /* El chrome que flota sobre el lienzo (badge de modo, chips, zoom, quick-entry,
      tooltip de corte) no puede apoyarse en ningún rol de superficie o borde
      existente: --sc-color-border-strong mide 1,96:1 contra #fafcfb, y ningún otro
      rol llega a 1,3:1. Medido aparte, sin depender del desenfoque que antes lo
      separaba del dibujo. */
-  --sc-color-border-canvas-chrome: #82786d;
-  --sc-color-divider: #e7e0d6;
+  --sc-color-border-canvas-chrome: #6a7680;
+  --sc-color-divider: #e2e7eb;
 
   /* Acción primaria — invariante por tema, con etiqueta blanca. */
   --sc-color-action-primary: #007d61;
@@ -232,13 +232,13 @@
   --sc-color-on-signal: var(--sc-white);
 
   /* Lienzo y documento: explícitos, nunca producidos por inversión. */
-  --sc-color-canvas-grid: #e8e1d7;
-  --sc-color-canvas-grid-strong: #d9d0c4;
-  --sc-color-canvas-member: #102b2d;
-  --sc-color-canvas-node-fill: #fbf8f2;
-  --sc-color-overlay-soft: rgba(4, 11, 7, 0.28);
-  --sc-color-overlay-sheet: rgba(2, 10, 6, 0.34);
-  --sc-color-overlay-strong: rgba(5, 18, 11, 0.58);
+  --sc-color-canvas-grid: #e7ecef;
+  --sc-color-canvas-grid-strong: #cfd7dd;
+  --sc-color-canvas-member: #14232e;
+  --sc-color-canvas-node-fill: #ffffff;
+  --sc-color-overlay-soft: rgba(20, 35, 46, 0.24);
+  --sc-color-overlay-sheet: rgba(20, 35, 46, 0.32);
+  --sc-color-overlay-strong: rgba(16, 24, 32, 0.58);
 
   /* Materiales del pórtico del hero. Son roles de ilustración, no de interfaz:
      nada de texto se apoya en ellos, así que se eligen por lectura de volumen
@@ -387,10 +387,10 @@
      cinco del Brandbook — la desviación que LEDGER-01 gobierna y que este
      slice cierra. */
   --sc-radius-data: 0;
-  --sc-radius-control: 10px;
-  --sc-radius-card: 18px;
-  --sc-radius-panel: 24px;
-  --sc-radius-modal: 28px;
+  --sc-radius-control: 8px;
+  --sc-radius-card: 10px;
+  --sc-radius-panel: 12px;
+  --sc-radius-modal: 12px;
   --sc-radius-pill: 999px;
 
   /* Alias de migración. El rol al que apunta cada uno se eligió por lo que sus
@@ -413,123 +413,75 @@
   /* ------------------------------------------------------------------ */
   /* 5 · MATERIA: cuatro profundidades mate y una sola fuente de luz     */
   /* ------------------------------------------------------------------ */
-  /* La sombra es tinta de marca diluida, no negro. Sobre porcelana el negro
-     puro ensucia; un grafito verdoso mantiene el aire del papel. */
-  --sc-shadow-raised: 2px 3px 6px rgba(52, 42, 30, 0.14), -2px -2px 4px rgba(255, 255, 255, 0.72);
-  --sc-shadow-lifted: 4px 5px 10px rgba(52, 42, 30, 0.16), -3px -3px 8px rgba(255, 255, 255, 0.76), inset 0 1px 0 rgba(255, 255, 255, 0.68);
-  --sc-shadow-floating: 4px 5px 10px rgba(52, 42, 30, 0.16), -3px -3px 8px rgba(255, 255, 255, 0.76), inset 0 1px 0 rgba(255, 255, 255, 0.68);
-  --sc-shadow-modal: 5px 6px 10px rgba(52, 42, 30, 0.2), -3px -3px 8px rgba(255, 255, 255, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.68);
-  --sc-shadow-popover: 3px 4px 8px rgba(52, 42, 30, 0.16), -2px -2px 6px rgba(255, 255, 255, 0.72);
+  /* Sombras centradas, cortas y neutras: separan papel de papel sin modelar
+     volumen. Los nombres históricos sobreviven para sus consumidores. */
+  --sc-shadow-raised: 0 1px 2px rgba(20, 35, 46, 0.08);
+  --sc-shadow-lifted: 0 4px 10px rgba(20, 35, 46, 0.11);
+  --sc-shadow-floating: 0 5px 10px rgba(20, 35, 46, 0.13);
+  --sc-shadow-modal: 0 8px 12px rgba(20, 35, 46, 0.16);
+  --sc-shadow-popover: 0 4px 8px rgba(20, 35, 46, 0.12);
   /* drop-shadow() sólo admite una capa, así que la elevación flotante tiene una
      variante propia para elementos con forma recortada. */
-  --sc-shadow-drop: 4px 5px 10px rgba(52, 42, 30, 0.16);
+  --sc-shadow-drop: 0 5px 10px rgba(20, 35, 46, 0.13);
   /* Hoja: la única sombra del sistema que sube, y no porque tenga otra fuente
      de luz. Una hoja nace pegada al borde del viewport; el canto que se ve es
      el de entrada, y lo que lo separa del plano de trabajo es oclusión de
      contacto, no la sombra proyectada por la luz clave. Por eso no lleva
      componente horizontal: no hay silueta que proyectar contra ese borde. */
-  --sc-shadow-sheet: 0 -4px 10px rgba(52, 42, 30, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.68);
+  --sc-shadow-sheet: 0 -4px 10px rgba(20, 35, 46, 0.13);
 
-  /* ---- Materia clay -------------------------------------------------
-     Una superficie clay son cuatro capas y una sola fuente de luz, a 145°
-     (arriba-izquierda, ver --sc-gradient-clay). En orden: sombra exterior
-     difusa abajo-derecha, luz interior arriba-izquierda, sombra interior
-     abajo-derecha, y el canto de 1px que separa la superficie del fondo.
-
-     El pórtico del hero proyecta esta misma fuente de luz en isométrico
-     (src/graphics/isometricPortal.ts), pero la proyección no conserva el
-     ángulo: en pantalla cae a ~151,7° en convención `linear-gradient` —
-     mismo cuadrante, ~6,7° de diferencia. No son intercambiables.
-
-     La tinta es grafito verdoso diluido, nunca negro: sobre un fondo cálido el
-     negro puro ensucia y delata el degradado.
-
-     ESCALA POR TAMAÑO, NUNCA POR IMPORTANCIA (V-04). Cada escalón está
-     emparejado con un radio de la escala de arriba, y su desenfoque NO puede
-     superarlo: una sombra más difusa que la esquina deja de leerse como
-     contacto y empieza a leerse como halo.
-
-       xs · control en reposo      → radio control 10px · blur  8px
-       sm · control elevado/hover  → radio control 10px · blur 10px
-       md · tarjeta y panel RAISED → radio card    18px · blur 16px
-       lg · FLOATING               → radio panel   24px · blur 10px
-       sheet                       → radio panel   24px · blur 10px
-       modal                       → radio modal   28px · blur 10px
-
-     De xs a sm la pieza no cambia de radio, así que la diferencia de altura la
-     lleva el DESPLAZAMIENTO y la opacidad, no el desenfoque: es lo correcto
-     físicamente dentro del tope, y lo que hace que un control en hover se
-     separe sin convertirse en una nube.
-
-     Los paneles a sangre completa (topbar, inspector acoplado) llevan radio 0
-     porque CRI-90 lo quita contra el viewport: ahí la desigualdad no tiene
-     nada que acotar y quien los separa del lienzo es el canto de 1px, no la
-     sombra. Es el único caso en el que el tope no muerde, y por eso el canto
-     es obligatorio precisamente ahí. */
-  --sc-shadow-clay-xs: 1px 2px 4px rgba(52, 42, 30, 0.11), -1px -1px 2px rgba(255, 255, 255, 0.68), inset 0 1px 0 rgba(255, 255, 255, 0.7), inset -1px -1px 2px rgba(52, 42, 30, 0.07);
-  --sc-shadow-clay-sm: 2px 3px 6px rgba(52, 42, 30, 0.14), -2px -2px 4px rgba(255, 255, 255, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.72), inset -1px -1px 3px rgba(52, 42, 30, 0.08);
-  --sc-shadow-clay-md: 3px 4px 8px rgba(52, 42, 30, 0.16), -2px -2px 6px rgba(255, 255, 255, 0.74), inset 0 1px 0 rgba(255, 255, 255, 0.72), inset -2px -2px 4px rgba(52, 42, 30, 0.09);
-  --sc-shadow-clay-lg: 4px 5px 10px rgba(52, 42, 30, 0.18), -3px -3px 8px rgba(255, 255, 255, 0.76), inset 0 1px 0 rgba(255, 255, 255, 0.72), inset -2px -2px 5px rgba(52, 42, 30, 0.1);
-  --sc-shadow-clay-floating: 4px 5px 10px rgba(52, 42, 30, 0.18), -3px -3px 8px rgba(255, 255, 255, 0.76), inset 0 1px 0 rgba(255, 255, 255, 0.72), inset -2px -2px 5px rgba(52, 42, 30, 0.1);
+  /* ---- Materia Studio ------------------------------------------------
+     La escala mantiene la relación tamaño/profundidad, pero usa una sola
+     oclusión vertical. El borde de 1px aporta la definición principal. */
+  --sc-shadow-clay-xs: 0 1px 2px rgba(20, 35, 46, 0.08);
+  --sc-shadow-clay-sm: 0 2px 4px rgba(20, 35, 46, 0.1);
+  --sc-shadow-clay-md: 0 3px 6px rgba(20, 35, 46, 0.11);
+  --sc-shadow-clay-lg: 0 5px 10px rgba(20, 35, 46, 0.13);
+  --sc-shadow-clay-floating: 0 5px 10px rgba(20, 35, 46, 0.13);
   /* A resting well is shallower than a pressed piece: both are cavities, but
      only the second communicates an active touch. */
-  --sc-shadow-clay-inset: inset 2px 2px 4px rgba(52, 42, 30, 0.14), inset -1px -1px 3px rgba(255, 255, 255, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  --sc-shadow-clay-inset: inset 0 1px 2px rgba(20, 35, 46, 0.08);
   /* Pulsado: la luz se invierte. Sólo capas interiores — cualquier sombra
      exterior lo devolvería a parecer que flota. */
   /* Una cavidad estándar es arcilla neutra: el color de marca queda para el
      relleno de acciones/selecciones y no contamina campos, cards o capas. */
-  --sc-shadow-clay-pressed: inset 2px 3px 5px rgba(52, 42, 30, 0.18), inset -1px -1px 3px rgba(255, 255, 255, 0.66), inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  --sc-shadow-clay-pressed: inset 0 1px 3px rgba(20, 35, 46, 0.14);
 
   /* Public material contract: four named depths with a defined 1px edge. */
   --sc-depth-base-border: 1px solid var(--sc-color-border-soft);
   --sc-depth-base-shadow: none;
   --sc-depth-inset-border: 1px solid var(--sc-color-border);
-  --sc-depth-inset-shadow: inset 2px 2px 4px rgba(52, 42, 30, 0.14), inset -1px -1px 3px rgba(255, 255, 255, 0.62);
+  --sc-depth-inset-shadow: inset 0 1px 2px rgba(20, 35, 46, 0.08);
   --sc-depth-raised-border: 1px solid var(--sc-color-border);
-  --sc-depth-raised-shadow: 2px 3px 6px rgba(52, 42, 30, 0.14), -2px -2px 4px rgba(255, 255, 255, 0.72);
+  --sc-depth-raised-shadow: 0 2px 4px rgba(20, 35, 46, 0.1);
   --sc-depth-floating-border: 1px solid var(--sc-color-border-strong);
-  --sc-depth-floating-shadow: 4px 5px 10px rgba(52, 42, 30, 0.18), -3px -3px 8px rgba(255, 255, 255, 0.76);
+  --sc-depth-floating-shadow: 0 5px 10px rgba(20, 35, 46, 0.13);
 
-  --sc-clay-edge: 1px solid color-mix(in srgb, var(--sc-color-border) 58%, white);
+  --sc-clay-edge: 1px solid var(--sc-color-border);
   --sc-gradient-clay: var(--sc-color-surface-1);
 
-  /* El hundimiento de una tecla clay: baja 2px y encoge de forma visible. Es un token
+  /* El hundimiento de una tecla Studio: baja 1px y encoge apenas. Es un token
      y no un literal porque `prefers-reduced-motion` lo anula de una sola vez
      para todos los controles, en lugar de repetir un `transform:none` por
      selector al final de la hoja. */
-  --sc-clay-press-transform: translateY(2px) scale(0.98);
+  --sc-clay-press-transform: translateY(1px) scale(0.99);
 
   /* CRI-120 · el mismo hundimiento sin el `scale(.98)`, para los controles cuyo
      objetivo táctil ya está en el mínimo de 44px: encoger un 2 % los deja en
      43px medidos en WebKit. Es un token y no un literal por la misma razón que
      el anterior — `prefers-reduced-motion` tiene que poder anularlo — y sólo
      debe usarse donde la reducción del área tocable esté demostrada. */
-  --sc-clay-press-transform-flat: translateY(2px);
+  --sc-clay-press-transform-flat: translateY(1px);
 
-  /* Arcilla teñida de marca: la única pieza que se rellena con el acento en
-     lugar de con la superficie. Misma anatomía que el resto de la escala
-     (sombra exterior abajo, luz interior arriba, sombra interior abajo), pero
-     medida sobre el color de acción para que el volumen siga leyéndose cuando
-     el relleno ya no es marfil. La consume el Design System (`ui.css`) en
-     `.sc-button--primary` / `.sc-icon-button--primary`; antes vivía repetida
-     tres veces al final de `styles.css`.
-
-     CRI-105: el relleno, el canto y la tinta son los que fijó CRI-91 y no se
-     tocan. Lo que cambia es de dónde viene la luz. La elevación EXTERIOR pasa
-     a ser la misma física neutra que el resto del sistema (misma geometría que
-     `--sc-shadow-clay-xs`/`-sm`, misma tinta de grafito): antes proyectaba
-     `0 5px 11px` de menta al 28%, una sombra de color que hacía de halo y
-     encendía el botón primario desde una fuente verde propia, en vertical, sin
-     el contraluz de arriba-izquierda que tiene todo lo demás. El acento sigue
-     modelando el volumen DENTRO de la pieza —ahí es relleno, no luz—, y esa
-     sombra interior se muda a abajo-derecha como el resto de la escala. */
+  /* La acción conserva el relleno de marca exacto y recibe la misma sombra
+     neutra que cualquier control. */
   --sc-gradient-clay-action: var(--sc-color-action-primary);
-  --sc-shadow-clay-action: 1px 2px 4px rgba(52, 42, 30, 0.14), -1px -1px 2px rgba(255, 255, 255, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset -1px -1px 3px color-mix(in srgb, var(--sc-color-action-primary) 45%, black);
-  --sc-shadow-clay-action-hover: 2px 3px 6px rgba(52, 42, 30, 0.16), -2px -2px 4px rgba(255, 255, 255, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.24), inset -1px -1px 4px color-mix(in srgb, var(--sc-color-action-primary) 48%, black);
+  --sc-shadow-clay-action: 0 1px 2px rgba(20, 35, 46, 0.14);
+  --sc-shadow-clay-action-hover: 0 2px 4px rgba(20, 35, 46, 0.17);
   /* Rehundido con color: la cavidad neutra desaparecería sobre el relleno de
      marca, así que la tinta de la cavidad también se mide sobre el acento. La
      cavidad se ilumina desde arriba-izquierda igual que la neutra. */
-  --sc-shadow-clay-action-pressed: inset 2px 3px 5px color-mix(in srgb, var(--sc-color-action-primary) 48%, black), inset -1px -1px 3px rgba(255, 255, 255, 0.18);
+  --sc-shadow-clay-action-pressed: inset 0 1px 3px rgba(0, 0, 0, 0.22);
 
 
   /* Anillos: 1px de luz interior en el borde superior. Es lo que separa una
@@ -770,43 +722,41 @@
 }
 
 /*
- * TEMA NOCHE · petróleo profundo
+ * TEMA NOCHE · grafito azulado
  * No es una inversión del Día: los neutros y la materia se calibran para el
  * fondo oscuro; la paleta técnica permanece idéntica.
  */
 :root[data-theme='dark'] {
-  --sc-color-bg-app: #07161b;
-  --sc-color-bg-canvas: #0b1d23;
-  --sc-color-surface-1: #112830;
+  --sc-color-bg-app: #101820;
+  --sc-color-bg-canvas: #131f29;
+  --sc-color-surface-1: #1b2833;
   /* `surface-2` separa campos, trays y botones secundarios del fondo base. */
-  --sc-color-surface-2: #163039;
-  --sc-color-surface-elevated: #1a3540;
-  --sc-color-surface-pressed: #0b1d23;
-  --sc-color-surface-inset: #0b1d23;
-  --sc-color-surface-toolbar: #112830;
-  --sc-color-surface-input: #0b1d23;
+  --sc-color-surface-2: #22313d;
+  --sc-color-surface-elevated: #273846;
+  --sc-color-surface-pressed: #111b24;
+  --sc-color-surface-inset: #131f29;
+  --sc-color-surface-toolbar: #1b2833;
+  --sc-color-surface-input: #15232d;
 
-  --sc-color-text-primary: #f3f0e8;
-  --sc-color-text-secondary: #b5c2bf;
-  --sc-color-text-muted: #93a4a1;
-  --sc-color-text-disabled: #64746f;
-  --sc-color-text-disabled-content: #849590;
-  --sc-color-text-inverse: #07161b;
+  --sc-color-text-primary: #edf3f7;
+  --sc-color-text-secondary: #b7c2ca;
+  --sc-color-text-muted: #93a1ab;
+  --sc-color-text-disabled: #667682;
+  --sc-color-text-disabled-content: #91a0aa;
+  --sc-color-text-inverse: #101820;
   --sc-color-text-link: #95d0e5;
-  --sc-color-text-technical: #d1ddd8;
-  --sc-color-text-unit: #a6b6b0;
+  --sc-color-text-technical: #d0d8de;
+  --sc-color-text-unit: #a8b4bc;
 
-  --sc-color-border: #33474f;
-  --sc-color-border-soft: #263941;
-  --sc-color-border-strong: #58717a;
-  --sc-color-border-canvas-chrome: #58717a;
-  --sc-color-divider: #20313a;
+  --sc-color-border: #344550;
+  --sc-color-border-soft: #293944;
+  --sc-color-border-strong: #526673;
+  --sc-color-border-canvas-chrome: #71838f;
+  --sc-color-divider: #263641;
 
-  /* CRI-113 · Única excepción del bloque de marca, y por la misma razón que las
-     tintas de estado de más abajo: sobre el tinte suave nocturno el canto menta
-     (mint-700) mide 2,76:1. El relleno de marca —mint-500, que ya vive en el
-     sistema— mide 4,46:1 sobre ese mismo fondo. No se inventa ningún HEX. */
-  --sc-color-action-ink-on-soft: var(--sc-color-action-primary);
+  /* Tinta clara para acento sobre superficie nocturna. El primario relleno
+     conserva #007d61 y blanco; este rol sólo escribe iconos y enlaces. */
+  --sc-color-action-ink-on-soft: #76cbb5;
 
   /* Marca, estados, trazo de selección, foco y Aula NO se redeclaran aquí:
      son invariantes y viven una sola vez en :root. Los rellenos suaves de
@@ -828,18 +778,18 @@
   --sc-color-state-warning-foreground: var(--sc-color-canario);
   --sc-color-state-error-foreground: #f79b93;
 
-  --sc-color-canvas-grid: #20363d;
-  --sc-color-canvas-grid-strong: #314950;
-  --sc-color-canvas-member: #f3f0e8;
-  --sc-color-canvas-node-fill: #0b1d23;
+  --sc-color-canvas-grid: #263743;
+  --sc-color-canvas-grid-strong: #3c4d59;
+  --sc-color-canvas-member: #edf3f7;
+  --sc-color-canvas-node-fill: #131f29;
   --sc-color-overlay-soft: rgba(0, 0, 0, 0.34);
   --sc-color-overlay-sheet: rgba(0, 0, 0, 0.46);
   --sc-color-overlay-strong: rgba(0, 0, 0, 0.68);
 
   /* Sólo el marfil cambia de fase. La menta del pórtico es la misma en ambos
      temas: la marca no tiene dos versiones. */
-  --sc-color-clay-ivory: #1a3540;
-  --sc-color-clay-ivory-deep: #112830;
+  --sc-color-clay-ivory: #273846;
+  --sc-color-clay-ivory-deep: #1b2833;
 
   /* Los roles técnicos NO se redeclaran: ésa es exactamente la regla que este
      cierre cromático establece. Antes había un segundo juego aquí, y sobre la
@@ -857,36 +807,36 @@
   --sc-color-demand-reference-peak: #ede2ff;
   --sc-color-demand-unevaluated: #7f8b8f;
 
-  --sc-shadow-raised: 2px 3px 6px rgba(0, 0, 0, 0.42), -2px -2px 4px rgba(67, 98, 108, 0.14);
-  --sc-shadow-lifted: 4px 5px 10px rgba(0, 0, 0, 0.48), -3px -3px 8px rgba(67, 98, 108, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  --sc-shadow-floating: 4px 5px 10px rgba(0, 0, 0, 0.48), -3px -3px 8px rgba(67, 98, 108, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  --sc-shadow-modal: 5px 6px 10px rgba(0, 0, 0, 0.56), -3px -3px 8px rgba(67, 98, 108, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  --sc-shadow-popover: 3px 4px 8px rgba(0, 0, 0, 0.46), -2px -2px 6px rgba(67, 98, 108, 0.16);
-  --sc-shadow-drop: 4px 5px 10px rgba(0, 0, 0, 0.48);
-  --sc-shadow-sheet: 0 -4px 10px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --sc-shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --sc-shadow-lifted: 0 4px 10px rgba(0, 0, 0, 0.28);
+  --sc-shadow-floating: 0 5px 10px rgba(0, 0, 0, 0.32);
+  --sc-shadow-modal: 0 8px 12px rgba(0, 0, 0, 0.38);
+  --sc-shadow-popover: 0 4px 8px rgba(0, 0, 0, 0.3);
+  --sc-shadow-drop: 0 5px 10px rgba(0, 0, 0, 0.32);
+  --sc-shadow-sheet: 0 -4px 10px rgba(0, 0, 0, 0.32);
 
   /* En Noche la sombra pierde trabajo —no queda luz que quitar— y el borde lo
      gana: sin un canto visible los paneles se funden con el fondo. La luz
      interior pasa de blanca a un velo de marca muy tenue; el blanco puro sobre
      grafito se lee como un arañazo. */
-  --sc-shadow-clay-xs: 1px 2px 4px rgba(0, 0, 0, 0.36), -1px -1px 2px rgba(67, 98, 108, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.04), inset -1px -1px 2px rgba(0, 0, 0, 0.22);
-  --sc-shadow-clay-sm: 2px 3px 6px rgba(0, 0, 0, 0.42), -2px -2px 4px rgba(67, 98, 108, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.05), inset -1px -1px 3px rgba(0, 0, 0, 0.25);
-  --sc-shadow-clay-md: 3px 4px 8px rgba(0, 0, 0, 0.46), -2px -2px 6px rgba(67, 98, 108, 0.17), inset 0 1px 0 rgba(255, 255, 255, 0.05), inset -2px -2px 4px rgba(0, 0, 0, 0.28);
-  --sc-shadow-clay-lg: 4px 5px 10px rgba(0, 0, 0, 0.5), -3px -3px 8px rgba(67, 98, 108, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05), inset -2px -2px 5px rgba(0, 0, 0, 0.3);
-  --sc-shadow-clay-floating: 4px 5px 10px rgba(0, 0, 0, 0.5), -3px -3px 8px rgba(67, 98, 108, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05), inset -2px -2px 5px rgba(0, 0, 0, 0.3);
-  --sc-shadow-clay-inset: inset 2px 2px 4px rgba(0, 0, 0, 0.36), inset -1px -1px 3px rgba(67, 98, 108, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --sc-shadow-clay-xs: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --sc-shadow-clay-sm: 0 2px 4px rgba(0, 0, 0, 0.26);
+  --sc-shadow-clay-md: 0 3px 6px rgba(0, 0, 0, 0.28);
+  --sc-shadow-clay-lg: 0 5px 10px rgba(0, 0, 0, 0.32);
+  --sc-shadow-clay-floating: 0 5px 10px rgba(0, 0, 0, 0.32);
+  --sc-shadow-clay-inset: inset 0 1px 2px rgba(0, 0, 0, 0.28);
   /* Las cavidades neutras conservan volumen con carbón y luz azul grisácea;
      el verde se reserva al control primario o a una selección real. */
-  --sc-shadow-clay-pressed: inset 2px 3px 5px rgba(0, 0, 0, 0.44), inset -1px -1px 3px rgba(67, 98, 108, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --sc-shadow-clay-pressed: inset 0 1px 3px rgba(0, 0, 0, 0.38);
 
   --sc-depth-base-border: 1px solid var(--sc-color-border-soft);
   --sc-depth-base-shadow: none;
   --sc-depth-inset-border: 1px solid var(--sc-color-border);
-  --sc-depth-inset-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.36), inset -1px -1px 3px rgba(67, 98, 108, 0.14);
+  --sc-depth-inset-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28);
   --sc-depth-raised-border: 1px solid var(--sc-color-border);
-  --sc-depth-raised-shadow: 2px 3px 6px rgba(0, 0, 0, 0.42), -2px -2px 4px rgba(67, 98, 108, 0.14);
+  --sc-depth-raised-shadow: 0 2px 4px rgba(0, 0, 0, 0.26);
   --sc-depth-floating-border: 1px solid var(--sc-color-border-strong);
-  --sc-depth-floating-shadow: 4px 5px 10px rgba(0, 0, 0, 0.5), -3px -3px 8px rgba(67, 98, 108, 0.18);
+  --sc-depth-floating-shadow: 0 5px 10px rgba(0, 0, 0, 0.32);
 
   --sc-clay-edge: 1px solid var(--sc-color-border);
   --sc-gradient-clay: var(--sc-color-surface-1);
@@ -896,9 +846,9 @@
      la escala clay. El gradiente no cambia: se mide sobre el mismo acento. La
      elevación exterior es la neutra nocturna, igual que cualquier otro
      control: la acción no tiene una fuente de luz verde propia. */
-  --sc-shadow-clay-action: 1px 2px 4px rgba(0, 0, 0, 0.38), -1px -1px 2px rgba(67, 98, 108, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.12), inset -1px -1px 3px color-mix(in srgb, var(--sc-color-action-primary) 44%, black);
-  --sc-shadow-clay-action-hover: 2px 3px 6px rgba(0, 0, 0, 0.44), -2px -2px 4px rgba(67, 98, 108, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.14), inset -1px -1px 4px color-mix(in srgb, var(--sc-color-action-primary) 48%, black);
-  --sc-shadow-clay-action-pressed: inset 2px 3px 5px color-mix(in srgb, var(--sc-color-action-primary) 46%, black), inset -1px -1px 3px rgba(255, 255, 255, 0.1);
+  --sc-shadow-clay-action: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --sc-shadow-clay-action-hover: 0 2px 4px rgba(0, 0, 0, 0.34);
+  --sc-shadow-clay-action-pressed: inset 0 1px 3px rgba(0, 0, 0, 0.4);
 
 
   --sc-ring-inset: inset 0 1px 0 color-mix(in srgb, var(--sc-color-action-primary) 14%, transparent);
