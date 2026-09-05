@@ -954,3 +954,589 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Radical workspace revision ---------------------------------------------
+ * Home now reads as an engineering workbench instead of a collection of
+ * dashboard cards. The existing classes remain the compatibility layer for
+ * the current feature routes; this block owns the new composition only.
+ */
+
+.sc-home--radical {
+  --home-rail: #102b2d;
+  --home-rail-soft: #173c3d;
+  --home-rail-ink: #f3f0e8;
+  --home-rail-muted: #a6bbb3;
+  --home-mint: #b8f1d3;
+  --home-line: color-mix(in srgb, var(--sc-color-text-primary, #102b2d) 16%, transparent);
+  grid-template-columns: 252px minmax(0, 1fr);
+  background: var(--sc-color-bg-app, #f3eee4);
+}
+
+.sc-home--radical .sc-home-sidebar {
+  padding: 24px 15px 16px;
+  gap: 30px;
+  border-inline-end: 1px solid rgb(255 255 255 / .1);
+  background: var(--home-rail);
+  color: var(--home-rail-ink);
+}
+
+.sc-home--radical .sc-home-sidebar__brand {
+  display: grid;
+  gap: 13px;
+  padding: 0 7px 25px;
+  border-block-end: 1px solid rgb(255 255 255 / .12);
+}
+
+.sc-home--radical .sc-home-sidebar__brand > span {
+  padding-inline-start: 40px;
+  color: var(--home-rail-muted);
+  font-family: var(--sc-font-mono, "Geist Mono", monospace);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.sc-home--radical .sc-home-wordmark {
+  padding-inline: 0;
+  color: var(--home-rail-ink);
+}
+
+.sc-home--radical .sc-home-wordmark strong { color: currentColor; }
+
+.sc-home--radical .sc-home-nav { gap: 25px; }
+.sc-home--radical .sc-home-nav-group { gap: 9px; }
+
+.sc-home--radical .sc-home-nav-group h2 {
+  margin-inline: 11px;
+  color: var(--home-rail-muted);
+  font-size: 9px;
+  letter-spacing: .16em;
+}
+
+.sc-home--radical .sc-home-nav-group__items { gap: 2px; }
+
+.sc-home--radical .sc-home-nav button,
+.sc-home--radical .sc-home-settings {
+  min-height: 43px;
+  padding-inline: 11px;
+  border-color: transparent;
+  border-radius: 7px;
+  color: #c3d2cc;
+  font-size: 12px;
+  font-weight: 650;
+  transition: background var(--sc-motion-control) var(--sc-ease-standard), color var(--sc-motion-control) var(--sc-ease-standard), transform var(--sc-motion-control) var(--sc-ease-standard);
+}
+
+.sc-home--radical .sc-home-nav button svg,
+.sc-home--radical .sc-home-settings svg { color: #8eaca2; }
+
+.sc-home--radical .sc-home-nav button:hover,
+.sc-home--radical .sc-home-settings:hover {
+  border-color: transparent;
+  background: var(--home-rail-soft);
+  color: var(--home-rail-ink);
+  transform: translateX(3px);
+}
+
+.sc-home--radical .sc-home-nav button:hover svg,
+.sc-home--radical .sc-home-settings:hover svg { color: var(--home-mint); }
+
+.sc-home--radical .sc-home-nav button.is-active {
+  border-color: transparent;
+  background: rgb(184 241 211 / .13);
+  color: var(--home-mint);
+}
+
+.sc-home--radical .sc-home-nav button.is-active::before {
+  inset-block: 8px;
+  inset-inline-start: -15px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--home-mint);
+}
+
+.sc-home--radical .sc-home-nav button.is-active svg { color: currentColor; }
+
+.sc-home--radical .sc-home-sidebar__footer {
+  display: grid;
+  gap: 5px;
+  margin-top: auto;
+  padding: 14px 11px 2px;
+  border-block-start: 1px solid rgb(255 255 255 / .12);
+}
+
+.sc-home--radical .sc-home-sidebar__footer span {
+  color: var(--home-mint);
+  font-family: var(--sc-font-mono, "Geist Mono", monospace);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .11em;
+}
+
+.sc-home--radical .sc-home-sidebar__footer small {
+  color: var(--home-rail-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.sc-home--radical .sc-home-settings {
+  margin-top: 0;
+  border-block-start: 0;
+}
+
+.sc-home--radical .sc-home-main { overflow: auto; }
+
+.sc-home--radical .sc-home-topline {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 30;
+  min-height: 76px;
+  padding-inline: clamp(28px, 5vw, 70px);
+  border-block-end: 1px solid var(--sc-color-border-soft, #ebe5dc);
+  background: var(--sc-color-bg-app, #f3eee4);
+}
+
+.sc-home--radical .sc-home-topline__context,
+.sc-home--radical .sc-home-topline__right {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sc-home--radical .sc-home-topline__context > span,
+.sc-home--radical .sc-home-topline__context > b {
+  color: var(--sc-color-text-muted, #667577);
+  font-family: var(--sc-font-mono, "Geist Mono", monospace);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.sc-home--radical .sc-home-topline__context > b { color: var(--sc-color-border-strong, #b9afa1); font-weight: 500; }
+
+.sc-home--radical .sc-home-topline__context > strong {
+  color: var(--sc-color-text-primary, #102b2d);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.sc-home--radical .sc-home-topline__right { gap: 16px; }
+
+.sc-home--radical .sc-home-topline__project {
+  max-width: 220px;
+  overflow: hidden;
+  color: var(--sc-color-text-muted, #667577);
+  font-family: var(--sc-font-mono, "Geist Mono", monospace);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sc-home--radical .sc-home-content {
+  width: min(100%, 1440px);
+  padding: clamp(34px, 5vw, 68px) clamp(28px, 5vw, 70px) 84px;
+  gap: clamp(42px, 5vw, 64px);
+}
+
+/* Workbench --------------------------------------------------------------- */
+
+.sc-home--radical .sc-home-hero {
+  min-height: 392px;
+  grid-template-columns: minmax(310px, .86fr) minmax(400px, 1.14fr);
+  border: 0;
+  border-block: 1px solid rgb(16 43 45 / .22);
+  border-radius: 0;
+  background: var(--home-rail);
+  box-shadow: none;
+}
+
+.sc-home--radical .sc-home-primary-actions {
+  padding: clamp(34px, 5vw, 68px);
+  color: var(--home-rail-ink);
+  background: var(--home-rail);
+}
+
+.sc-home--radical .sc-home-workbench__meta {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 20px;
+  color: var(--home-rail-muted);
+  font-family: var(--sc-font-mono, "Geist Mono", monospace);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: .1em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.sc-home--radical .sc-home-workbench__meta span:first-child {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid rgb(184 241 211 / .45);
+  border-radius: 50%;
+  color: var(--home-mint);
+  font-size: 8px;
+}
+
+.sc-home--radical .sc-home-workbench__meta span:last-child { margin-inline-start: auto; color: var(--home-mint); }
+.sc-home--radical .sc-home-workbench__meta p { margin: 0; color: var(--home-rail-muted); font: inherit; }
+
+.sc-home--radical .sc-home-primary-actions h2 {
+  max-width: 620px;
+  color: var(--home-rail-ink);
+  font-size: clamp(43px, 5vw, 75px);
+  font-weight: 620;
+  letter-spacing: -.07em;
+  line-height: .91;
+}
+
+.sc-home--radical .sc-home-workbench__body {
+  max-width: 420px;
+  margin: 19px 0 0;
+  color: #c1d2cb;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.sc-home--radical .sc-home-primary-buttons {
+  width: 100%;
+  max-width: 480px;
+  margin-top: 29px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sc-home--radical .sc-home-continue,
+.sc-home--radical .sc-home-new {
+  min-height: 58px;
+  border-radius: 7px;
+  font-size: 11px;
+}
+
+.sc-home--radical .sc-home-continue {
+  border-color: var(--sc-color-action-primary, #007d61);
+  background: var(--sc-color-action-primary, #007d61);
+  box-shadow: 0 4px 0 var(--sc-color-action-pressed, #005e49);
+}
+
+.sc-home--radical .sc-home-continue:hover { background: var(--sc-color-action-hover, #006d55); }
+
+.sc-home--radical .sc-home-new {
+  border-color: rgb(243 240 232 / .3);
+  background: transparent;
+  color: var(--home-rail-ink);
+  box-shadow: none;
+}
+
+.sc-home--radical .sc-home-new:hover { border-color: var(--home-mint); background: rgb(184 241 211 / .1); }
+.sc-home--radical .sc-home-continue small,
+.sc-home--radical .sc-home-new small { font-size: 9px; }
+
+.sc-home--radical .sc-home-workbench__footer {
+  width: 100%;
+  max-width: 480px;
+  margin-top: 22px;
+  padding-top: 13px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-block-start: 1px solid rgb(255 255 255 / .15);
+  color: var(--home-rail-muted);
+  font-family: var(--sc-font-mono, "Geist Mono", monospace);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.sc-home--radical .sc-home-workbench__footer b { color: var(--home-mint); font-weight: 650; }
+
+.sc-home--radical .sc-home-hero-asset {
+  position: relative;
+  padding: 25px 30px 20px;
+  border-inline-start: 1px solid rgb(16 43 45 / .18);
+  background: var(--sc-color-surface-2, #efe7dc);
+}
+
+.sc-home--radical .sc-home-hero-asset__frame {
+  position: relative;
+  isolation: isolate;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgb(16 43 45 / .16);
+  background: var(--sc-color-bg-canvas, #fbf8f2);
+}
+
+.sc-home--radical .sc-home-hero-asset__axis {
+  position: absolute;
+  z-index: 0;
+  display: block;
+  pointer-events: none;
+  opacity: .55;
+}
+
+.sc-home--radical .sc-home-hero-asset__axis--x { inset-inline: 0; inset-block-start: 50%; border-block-start: 1px solid rgb(0 125 97 / .2); }
+.sc-home--radical .sc-home-hero-asset__axis--y { inset-block: 0; inset-inline-start: 50%; border-inline-start: 1px solid rgb(0 125 97 / .2); }
+
+.sc-home--radical .sc-home-hero-asset__frame img,
+.sc-home--radical .sc-home-hero-asset__frame svg,
+.sc-home--radical .sc-home-hero-asset .three-structural-image {
+  position: relative;
+  z-index: 1;
+  max-height: 300px;
+}
+
+.sc-home--radical .sc-home-hero-asset__caption {
+  padding-top: 12px;
+  border-block-start: 1px solid rgb(16 43 45 / .2);
+  color: var(--sc-color-text-muted, #667577);
+  font-family: var(--sc-font-mono, "Geist Mono", monospace);
+  font-size: 9px;
+  letter-spacing: .04em;
+}
+
+.sc-home--radical .sc-home-hero-asset__caption span:first-child {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: var(--sc-color-action-ink, #007d61);
+  font: inherit;
+  font-weight: 750;
+}
+
+.sc-home--radical .sc-home-hero-asset__caption span:last-child { margin-inline-start: auto; color: var(--sc-color-action-ink, #007d61); font-size: 13px; }
+
+/* Rails and directory ----------------------------------------------------- */
+
+.sc-home--radical .sc-home-section-heading { align-items: flex-end; }
+.sc-home--radical .sc-home-section-heading > div { min-width: 0; }
+
+.sc-home--radical .sc-home-section-index {
+  display: block;
+  color: var(--sc-color-action-ink, #007d61);
+  font-family: var(--sc-font-mono, "Geist Mono", monospace);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .12em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.sc-home--radical .sc-home-section-heading h2 {
+  margin-top: 7px;
+  font-size: 21px;
+  font-weight: 720;
+  letter-spacing: -.04em;
+}
+
+.sc-home--radical .sc-home-section-heading p {
+  max-width: 480px;
+  margin: 8px 0 0;
+  color: var(--sc-color-text-muted, #667577);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.sc-home--radical .sc-home-section-count {
+  padding-bottom: 4px;
+  color: var(--sc-color-text-muted, #667577);
+  font-family: var(--sc-font-mono, "Geist Mono", monospace);
+  font-size: 10px;
+  letter-spacing: .1em;
+}
+
+.sc-home--radical .sc-home-quick,
+.sc-home--radical .sc-home-directory,
+.sc-home--radical .sc-home-recents { gap: 18px; }
+
+.sc-home--radical .sc-home-quick-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  border-block: 1px solid var(--home-line);
+}
+
+.sc-home--radical .sc-home-quick-row > button {
+  min-height: 106px;
+  padding: 16px 17px;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  gap: 11px;
+  border: 0;
+  border-inline-end: 1px solid var(--home-line);
+  border-radius: 0;
+  background: transparent;
+  transition: background var(--sc-motion-control) var(--sc-ease-standard), padding-inline var(--sc-motion-control) var(--sc-ease-standard);
+}
+
+.sc-home--radical .sc-home-quick-row > button:last-child { border-inline-end: 0; }
+.sc-home--radical .sc-home-quick-row > button:hover { border-color: var(--home-line); background: var(--sc-color-surface-1, #f7f1e8); transform: none; }
+.sc-home--radical .sc-home-quick-row > button:active { background: var(--sc-color-surface-pressed, #e8ded0); }
+
+.sc-home--radical .sc-home-launcher__index {
+  align-self: start;
+  padding-top: 5px;
+  color: var(--sc-color-text-muted, #667577);
+  font-family: var(--sc-font-mono, "Geist Mono", monospace);
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.sc-home--radical .sc-home-launcher__icon {
+  width: 41px;
+  height: 41px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--home-rail);
+  color: var(--home-mint);
+}
+
+.sc-home--radical .sc-home-launcher__copy { gap: 5px; }
+.sc-home--radical .sc-home-launcher__copy strong { font-size: 12px; }
+.sc-home--radical .sc-home-launcher__copy small { font-size: 9.5px; line-height: 1.3; }
+.sc-home--radical .sc-home-quick-row > button > svg { color: var(--sc-color-action-ink, #007d61); }
+
+.sc-home--radical .sc-home-directory__list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-block: 1px solid var(--home-line);
+}
+
+.sc-home--radical .sc-home-directory__list > button {
+  min-width: 0;
+  min-height: 96px;
+  padding: 15px 17px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-inline-end: 1px solid var(--home-line);
+  background: transparent;
+  color: var(--sc-color-text-primary, #102b2d);
+  cursor: pointer;
+  text-align: start;
+  transition: background var(--sc-motion-control) var(--sc-ease-standard), padding-inline var(--sc-motion-control) var(--sc-ease-standard);
+}
+
+.sc-home--radical .sc-home-directory__list > button:last-child { border-inline-end: 0; }
+.sc-home--radical .sc-home-directory__list > button:hover { background: var(--sc-color-surface-1, #f7f1e8); }
+.sc-home--radical .sc-home-directory__icon { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--home-line); border-radius: 50%; color: var(--sc-color-action-ink, #007d61); }
+.sc-home--radical .sc-home-directory__list > button > span:nth-child(2) { min-width: 0; display: grid; gap: 5px; }
+.sc-home--radical .sc-home-directory__list strong { overflow: hidden; font-size: 12px; font-weight: 740; text-overflow: ellipsis; white-space: nowrap; }
+.sc-home--radical .sc-home-directory__list small { overflow: hidden; color: var(--sc-color-text-muted, #667577); font-size: 9.5px; line-height: 1.3; text-overflow: ellipsis; }
+.sc-home--radical .sc-home-directory__list > button > svg { color: var(--sc-color-action-ink, #007d61); }
+
+/* Recent work stays a list; only its context and rhythm change. */
+
+.sc-home--radical .sc-home-recents .project-hub--recent .project-hub__row { min-height: 86px; padding-block: 9px; border-bottom-color: var(--home-line); }
+.sc-home--radical .sc-home-recents .project-hub--recent .project-hub__preview { border-radius: 0; background: var(--sc-color-surface-2, #efe7dc); }
+.sc-home--radical .sc-home-recents .project-hub--recent .project-hub__open { border-radius: 50%; }
+
+/* All destination surfaces inherit the workbench's flatter geometry. */
+
+.sc-home--radical .sc-home-view > header > p,
+.sc-home--radical .sc-home-space__copy > p,
+.sc-home--radical .sc-home-classroom-hero p { margin-bottom: 12px; }
+.sc-home--radical .sc-home-view > header h2,
+.sc-home--radical .sc-home-focused > header h2 { font-weight: 620; }
+.sc-home--radical .sc-home-template-grid > button,
+.sc-home--radical .sc-home-classroom-cases button,
+.sc-home--radical .welcome-import-card,
+.sc-home--radical .sc-home-focused,
+.sc-home--radical .sc-home-space,
+.sc-home--radical .sc-home-classroom-hero { border-radius: 0; box-shadow: none; }
+.sc-home--radical .sc-home-template-grid > button:hover,
+.sc-home--radical .sc-home-classroom-cases button:hover,
+.sc-home--radical .welcome-import-card:hover { transform: none; }
+.sc-home--radical .sc-home-template-media { border-radius: 0; }
+
+.sc-home--radical .sc-home-space__asset,
+.sc-home--radical .sc-home-classroom-hero > img,
+.sc-home--radical .sc-home-classroom-hero > svg { background: var(--sc-color-surface-2, #efe7dc); }
+
+/* Settings keeps its modal contract but uses the same editorial rail. */
+
+.sc-home--radical ~ .sc-home-settings-panel { width: min(460px, 100vw); border-radius: 0; }
+
+/* Compact rail ------------------------------------------------------------ */
+
+@media (max-width: 1100px) and (min-width: 761px) {
+  .sc-home--radical { grid-template-columns: 80px minmax(0, 1fr); }
+  .sc-home--radical .sc-home-sidebar { padding-inline: 10px; gap: 26px; }
+  .sc-home--radical .sc-home-sidebar__brand { padding-inline: 0; }
+  .sc-home--radical .sc-home-sidebar__brand > span,
+  .sc-home--radical .sc-home-sidebar__footer,
+  .sc-home--radical .sc-home-sidebar .sc-home-wordmark strong,
+  .sc-home--radical .sc-home-sidebar .sc-home-nav-group h2,
+  .sc-home--radical .sc-home-sidebar .sc-home-nav span,
+  .sc-home--radical .sc-home-sidebar .sc-home-settings span { display: none; }
+  .sc-home--radical .sc-home-sidebar .sc-home-wordmark,
+  .sc-home--radical .sc-home-sidebar .sc-home-nav button,
+  .sc-home--radical .sc-home-sidebar .sc-home-settings { justify-content: center; padding-inline: 0; }
+  .sc-home--radical .sc-home-nav { gap: 17px; }
+  .sc-home--radical .sc-home-nav button.is-active::before { inset-inline-start: -10px; }
+  .sc-home--radical .sc-home-topline { padding-inline: 28px; }
+  .sc-home--radical .sc-home-content { padding-inline: 28px; }
+  .sc-home--radical .sc-home-hero { grid-template-columns: minmax(270px, .9fr) minmax(320px, 1.1fr); }
+  .sc-home--radical .sc-home-primary-actions { padding-inline: 34px; }
+  .sc-home--radical .sc-home-primary-buttons { grid-template-columns: 1fr; }
+  .sc-home--radical .sc-home-directory__list { grid-template-columns: 1fr; }
+  .sc-home--radical .sc-home-directory__list > button { border-inline-end: 0; border-block-end: 1px solid var(--home-line); }
+  .sc-home--radical .sc-home-directory__list > button:last-child { border-block-end: 0; }
+}
+
+/* Phone / touch: the workbench stacks, all destinations remain in the
+ * reading flow, and the dark rail becomes the app bar. */
+
+@media (max-width: 760px), (hover: none) and (pointer: coarse) and (max-width: 1023px) {
+  .sc-home--radical { display: block; overflow-y: auto; overflow-x: hidden; }
+  .sc-home--radical .sc-home-sidebar { display: none; }
+  .sc-home--radical .sc-home-main { min-height: 100dvh; overflow: visible; }
+  .sc-home--radical .sc-home-mobile-header { background: var(--home-rail); color: var(--home-rail-ink); border-block-end-color: rgb(255 255 255 / .12); }
+  .sc-home--radical .sc-home-mobile-header .sc-home-wordmark { color: var(--home-rail-ink); }
+  .sc-home--radical .sc-home-mobile-header .sc-home-wordmark strong { color: currentColor; }
+  .sc-home--radical .sc-home-menu-toggle { border-color: rgb(255 255 255 / .24); background: transparent; color: var(--home-rail-ink); }
+  .sc-home--radical .sc-home-menu-toggle[aria-expanded='true'] { background: var(--home-rail-soft); }
+  .sc-home--radical .sc-home-mobile-header .sc-home-appearance select,
+  .sc-home--radical .sc-home-mobile-header .sc-home-appearance button { border-color: rgb(255 255 255 / .24); background: transparent; color: var(--home-rail-ink); }
+  .sc-home--radical .sc-home-nav--mobile { border-color: var(--home-rail-soft); background: var(--home-rail); color: var(--home-rail-ink); }
+  .sc-home--radical .sc-home-nav--mobile .sc-home-nav-group h2 { color: var(--home-rail-muted); }
+  .sc-home--radical .sc-home-nav--mobile .sc-home-nav button { color: #c3d2cc; }
+  .sc-home--radical .sc-home-nav--mobile .sc-home-nav button.is-active { background: rgb(184 241 211 / .13); color: var(--home-mint); }
+  .sc-home--radical .sc-home-nav--mobile .sc-home-nav-group--settings { border-block-start-color: rgb(255 255 255 / .12); }
+  .sc-home--radical .sc-home-topline { position: static; min-height: 0; padding: 25px 16px 4px; border-block-end: 0; background: transparent; }
+  .sc-home--radical .sc-home-topline__context > span,
+  .sc-home--radical .sc-home-topline__context > b { font-size: 9px; }
+  .sc-home--radical .sc-home-topline__context > strong { font-size: 27px; letter-spacing: -.05em; }
+  .sc-home--radical .sc-home-topline__right { display: none; }
+  .sc-home--radical .sc-home-content { padding: 9px 14px calc(40px + var(--sc-safe-bottom, 0px)); gap: 38px; }
+  .sc-home--radical .sc-home-hero { min-height: 0; grid-template-columns: 1fr; border-block-color: rgb(16 43 45 / .22); }
+  .sc-home--radical .sc-home-hero-asset { grid-row: 1; min-height: 242px; padding: 12px 13px 14px; border-inline-start: 0; border-block-end: 1px solid rgb(16 43 45 / .18); }
+  .sc-home--radical .sc-home-hero-asset__frame { min-height: 196px; }
+  .sc-home--radical .sc-home-hero-asset__frame img,
+  .sc-home--radical .sc-home-hero-asset__frame svg,
+  .sc-home--radical .sc-home-hero-asset .three-structural-image { height: 194px; max-height: 194px; }
+  .sc-home--radical .sc-home-primary-actions { grid-row: 2; padding: 25px 19px 27px; }
+  .sc-home--radical .sc-home-workbench__meta { margin-bottom: 18px; }
+  .sc-home--radical .sc-home-primary-actions h2 { font-size: clamp(39px, 12vw, 54px); }
+  .sc-home--radical .sc-home-workbench__body { margin-top: 16px; font-size: 12px; }
+  .sc-home--radical .sc-home-primary-buttons { max-width: none; margin-top: 23px; grid-template-columns: 1fr; }
+  .sc-home--radical .sc-home-workbench__footer { max-width: none; margin-top: 19px; }
+  .sc-home--radical .sc-home-section-heading h2 { font-size: 19px; }
+  .sc-home--radical .sc-home-section-heading p { font-size: 11px; }
+  .sc-home--radical .sc-home-quick-row { grid-template-columns: 1fr; }
+  .sc-home--radical .sc-home-quick-row > button { min-height: 76px; border-inline-end: 0; border-block-end: 1px solid var(--home-line); padding: 12px 7px; }
+  .sc-home--radical .sc-home-quick-row > button:last-child { border-block-end: 0; }
+  .sc-home--radical .sc-home-launcher__icon { width: 38px; height: 38px; }
+  .sc-home--radical .sc-home-directory__list { grid-template-columns: 1fr; }
+  .sc-home--radical .sc-home-directory__list > button { min-height: 82px; border-inline-end: 0; border-block-end: 1px solid var(--home-line); padding-inline: 7px; }
+  .sc-home--radical .sc-home-directory__list > button:last-child { border-block-end: 0; }
+  .sc-home--radical .sc-home-recents .project-hub--recent .project-hub__row { grid-template-columns: 70px minmax(0, 1fr) auto; }
+  .sc-home--radical .sc-home-view > header h2,
+  .sc-home--radical .sc-home-focused > header h2 { font-size: 35px; }
+  .sc-home--radical .sc-home-settings-panel { border-radius: 0; }
+}

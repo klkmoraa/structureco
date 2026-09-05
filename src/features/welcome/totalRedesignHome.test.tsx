@@ -94,6 +94,21 @@ describe('Home total redesign contract', () => {
     expect(screen.queryByText(/Mesa/i)).toBeNull();
   });
 
+  it('makes the remaining product routes discoverable from the workbench', async () => {
+    const user = userEvent.setup();
+    renderHome();
+    const directory = screen.getByRole('heading', { name: 'Todo el sistema, a la vista' }).closest('section');
+
+    expect(directory).not.toBeNull();
+    expect(within(directory as HTMLElement).getAllByRole('button')).toHaveLength(3);
+    expect(within(directory as HTMLElement).getByRole('button', { name: /Plantillas/ })).toBeTruthy();
+    expect(within(directory as HTMLElement).getByRole('button', { name: /Biblioteca/ })).toBeTruthy();
+    expect(within(directory as HTMLElement).getByRole('button', { name: /Estudio de ilustraciones/ })).toBeTruthy();
+
+    await user.click(within(directory as HTMLElement).getByRole('button', { name: /Plantillas/ }));
+    expect(screen.getByRole('heading', { name: 'Elige una estructura de partida' })).toBeTruthy();
+  });
+
   it('opens the personal library as its own Home destination', async () => {
     const user = userEvent.setup();
     renderHome();
