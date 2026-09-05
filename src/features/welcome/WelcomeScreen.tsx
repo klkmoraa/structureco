@@ -43,8 +43,9 @@ type NavigationDestination = HomeView | 'studio';
 
 const copy = {
   es: {
-    navigation: 'Navegación principal', home: 'Inicio', projects: 'Proyectos', templates: 'Plantillas', library: 'Biblioteca', classroom: 'Aula', import: 'Importar', space3d: 'Space 3D',
+    navigation: 'Navegación principal', workspace: 'Espacio de trabajo', home: 'Inicio', projects: 'Proyectos', templates: 'Plantillas', library: 'Biblioteca', classroom: 'Aula', import: 'Importar', space3d: 'Space 3D',
     settings: 'Ajustes', settingsTitle: 'Ajustes', settingsBody: 'Personaliza cómo se presenta StructureCo en este dispositivo.', language: 'Idioma', theme: 'Tema', light: 'Claro', dark: 'Oscuro', closeSettings: 'Cerrar ajustes', studio: 'Estudio de ilustraciones', menu: 'Abrir navegación', closeMenu: 'Cerrar navegación', work: 'Trabajo', explore: 'Explorar', tools: 'Herramientas', current: 'Proyecto abierto', continue: 'Continuar proyecto', continueHint: 'Retoma donde lo dejaste', create: 'Nuevo proyecto', createHint: 'Lienzo vacío', modelPreview: 'Modelo estructural', quickTitle: 'Abrir una herramienta', importHint: 'JSON, StructureCo o DXF', classroomHint: 'Casos guiados paso a paso', spaceHint: 'Pórticos y cargas 3D', localMetrics: 'Diagnóstico local', localMetricsBody: 'Opcional. Guarda sólo eventos agregados en este dispositivo; nunca envía geometría, cargas, resultados ni datos personales.', localMetricsOptIn: 'Guardar mediciones locales para mejorar el flujo', localMetricsCount: '{count} observaciones locales', exportDiagnostics: 'Exportar diagnóstico', clearDiagnostics: 'Borrar observaciones',
+    workspaceBody: 'Un espacio directo para modelar, revisar y volver al punto exacto de tu trabajo.', systemTitle: 'Todo el sistema, a la vista', systemBody: 'Elige una ruta y sigue trabajando sin perder contexto.', libraryHint: 'Modelos guardados en este dispositivo', studioHint: 'Crea y exporta ilustraciones',
     recent: 'Proyectos recientes', viewAll: 'Ver todos', templatesTitle: 'Elige una estructura de partida', templatesBody: 'Abre un modelo preparado y adáptalo a tu caso.',
     projectsTitle: 'Tus proyectos', projectsBody: 'Abre, renombra o duplica el trabajo guardado en este dispositivo.',
     classroomTitle: 'Aprende resolviendo una estructura', classroomBody: 'Elige un caso, ajusta sus datos y avanza con una guía que no te quita el control del modelo.', classroomAction: 'Crear desde cero', classroomCases: 'O empieza con un caso preparado',
@@ -54,8 +55,9 @@ const copy = {
     secondary: 'Accesos rápidos', local: 'Guardado local en este dispositivo',
   },
   en: {
-    navigation: 'Primary navigation', home: 'Home', projects: 'Projects', templates: 'Templates', library: 'Library', classroom: 'Classroom', import: 'Import', space3d: 'Space 3D',
+    navigation: 'Primary navigation', workspace: 'Workspace', home: 'Home', projects: 'Projects', templates: 'Templates', library: 'Library', classroom: 'Classroom', import: 'Import', space3d: 'Space 3D',
     settings: 'Settings', settingsTitle: 'Settings', settingsBody: 'Personalize how StructureCo is presented on this device.', language: 'Language', theme: 'Theme', light: 'Light', dark: 'Dark', closeSettings: 'Close settings', studio: 'Illustration Studio', menu: 'Open navigation', closeMenu: 'Close navigation', work: 'Work', explore: 'Explore', tools: 'Tools', current: 'Open project', continue: 'Continue project', continueHint: 'Pick up where you left off', create: 'New project', createHint: 'Blank canvas', modelPreview: 'Structural model', quickTitle: 'Open a tool', importHint: 'JSON, StructureCo or DXF', classroomHint: 'Guided cases, step by step', spaceHint: '3D frames and loads', localMetrics: 'Local diagnostics', localMetricsBody: 'Optional. Stores aggregate events on this device only; it never sends geometry, loads, results, or personal data.', localMetricsOptIn: 'Store local measurements to improve the flow', localMetricsCount: '{count} local observations', exportDiagnostics: 'Export diagnostics', clearDiagnostics: 'Erase observations',
+    workspaceBody: 'A direct place to model, review, and return to the exact point in your work.', systemTitle: 'The whole system, in view', systemBody: 'Choose a route and keep working without losing context.', libraryHint: 'Models saved on this device', studioHint: 'Create and export illustrations',
     recent: 'Recent projects', viewAll: 'View all', templatesTitle: 'Choose a starting structure', templatesBody: 'Open a prepared model and adapt it to your case.',
     projectsTitle: 'Your projects', projectsBody: 'Open, rename, or duplicate work saved on this device.',
     classroomTitle: 'Learn by solving a structure', classroomBody: 'Choose a case, adjust its data, and move forward with guidance that keeps you in control of the model.', classroomAction: 'Start from scratch', classroomCases: 'Or begin with a prepared case',
@@ -240,30 +242,40 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
   </nav>;
 
   const dashboard = <>
-    <section className="sc-home-hero" aria-labelledby="home-current-project">
+    <section className="sc-home-hero sc-home-workbench" aria-labelledby="home-current-project">
       <div className="sc-home-primary-actions" onPointerEnter={onPreloadWorkspace} onFocusCapture={onPreloadWorkspace}>
-        <p>{text.current}</p><h2 id="home-current-project">{project.name}</h2>
+        <div className="sc-home-workbench__meta"><span>01</span><p>{text.current}</p><span>LOCAL</span></div>
+        <h2 id="home-current-project">{project.name}</h2>
+        <p className="sc-home-workbench__body">{text.workspaceBody}</p>
         <div className="sc-home-primary-buttons">
           <button type="button" className="sc-home-continue" onClick={onOpenWorkspace} aria-label={text.continue}><Play size={17} fill="currentColor" /><span><strong>{text.continue}</strong><small aria-hidden="true">{text.continueHint}</small></span></button>
           <button type="button" className="sc-home-new" onClick={openBlankProject} aria-label={text.create}><Plus size={17} strokeWidth={2.6} aria-hidden="true" /><span><strong>{text.create}</strong><small aria-hidden="true">{text.createHint}</small></span></button>
         </div>
-        <small>{text.local}</small>
+        <div className="sc-home-workbench__footer"><span>{text.local}</span><span>{text.modelPreview} <b>· 2D</b></span></div>
       </div>
       <m.div className="sc-home-hero-asset" initial={reducedMotion ? false : { opacity: 0, y: -14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 220, damping: 24, mass: 0.8 }}>
-        <div className="sc-home-hero-asset__frame"><ThreeStructuralImage assetId={heroId as PortalAssetId} theme={theme} eager /></div>
-        <div className="sc-home-hero-asset__caption"><span>2D</span><span>{text.modelPreview}</span></div>
+        <div className="sc-home-hero-asset__frame"><span className="sc-home-hero-asset__axis sc-home-hero-asset__axis--x" aria-hidden="true" /><span className="sc-home-hero-asset__axis sc-home-hero-asset__axis--y" aria-hidden="true" /><ThreeStructuralImage assetId={heroId as PortalAssetId} theme={theme} eager /></div>
+        <div className="sc-home-hero-asset__caption"><span>MODEL / 2D</span><span>{text.modelPreview}</span><span aria-hidden="true">↗</span></div>
       </m.div>
     </section>
-    <section className="sc-home-quick" aria-labelledby="home-quick-title" data-testid="home-secondary-actions">
-      <div className="sc-home-section-heading"><h2 id="home-quick-title">{text.quickTitle}</h2></div>
+    <section className="sc-home-quick sc-home-tool-dock" aria-labelledby="home-quick-title" data-testid="home-secondary-actions">
+      <div className="sc-home-section-heading"><div><span className="sc-home-section-index">02 / {text.tools}</span><h2 id="home-quick-title">{text.quickTitle}</h2></div><span className="sc-home-section-count" aria-hidden="true">03</span></div>
       <div className="sc-home-quick-row">
-        <button type="button" onClick={() => setImportCenterOpen(true)}><span className="sc-home-launcher__icon"><Upload size={18} /></span><span className="sc-home-launcher__copy"><strong>{text.import}</strong><small>{text.importHint}</small></span><ArrowRight size={16} /></button>
-        <button type="button" onClick={() => openExercise()}><span className="sc-home-launcher__icon"><GraduationCap size={18} /></span><span className="sc-home-launcher__copy"><strong>{text.classroom}</strong><small>{text.classroomHint}</small></span><ArrowRight size={16} /></button>
-        <button type="button" onClick={onOpenSpace3D}><span className="sc-home-launcher__icon"><Box size={18} /></span><span className="sc-home-launcher__copy"><strong>{text.space3d}</strong><small>{text.spaceHint}</small></span><ArrowRight size={16} /></button>
+        <button type="button" onClick={() => setImportCenterOpen(true)}><span className="sc-home-launcher__index">01</span><span className="sc-home-launcher__icon"><Upload size={18} /></span><span className="sc-home-launcher__copy"><strong>{text.import}</strong><small>{text.importHint}</small></span><ArrowRight size={16} /></button>
+        <button type="button" onClick={() => openExercise()}><span className="sc-home-launcher__index">02</span><span className="sc-home-launcher__icon"><GraduationCap size={18} /></span><span className="sc-home-launcher__copy"><strong>{text.classroom}</strong><small>{text.classroomHint}</small></span><ArrowRight size={16} /></button>
+        <button type="button" onClick={onOpenSpace3D}><span className="sc-home-launcher__index">03</span><span className="sc-home-launcher__icon"><Box size={18} /></span><span className="sc-home-launcher__copy"><strong>{text.space3d}</strong><small>{text.spaceHint}</small></span><ArrowRight size={16} /></button>
+      </div>
+    </section>
+    <section className="sc-home-directory" aria-labelledby="home-directory-title">
+      <div className="sc-home-section-heading"><div><span className="sc-home-section-index">03 / {text.workspace}</span><h2 id="home-directory-title">{text.systemTitle}</h2><p>{text.systemBody}</p></div><span className="sc-home-section-count" aria-hidden="true">03</span></div>
+      <div className="sc-home-directory__list">
+        <button type="button" onClick={() => navigate('templates')}><span className="sc-home-directory__icon"><LayoutTemplate size={19} /></span><span><strong>{text.templates}</strong><small>{text.templatesBody}</small></span><ArrowRight size={16} /></button>
+        <button type="button" onClick={() => navigate('library')}><span className="sc-home-directory__icon"><LibraryBig size={19} /></span><span><strong>{text.library}</strong><small>{text.libraryHint}</small></span><ArrowRight size={16} /></button>
+        <button type="button" onClick={(event) => openStudio(event.currentTarget)}><span className="sc-home-directory__icon"><ImageIcon size={19} /></span><span><strong>{text.studio}</strong><small>{text.studioHint}</small></span><ArrowRight size={16} /></button>
       </div>
     </section>
     <section className="sc-home-recents" aria-labelledby="home-recents-title">
-      <div className="sc-home-section-heading"><h2 id="home-recents-title">{text.recent}</h2><button type="button" onClick={() => setView('projects')}>{text.viewAll}<ArrowRight size={15} /></button></div>
+      <div className="sc-home-section-heading"><div><span className="sc-home-section-index">04 / {text.work}</span><h2 id="home-recents-title">{text.recent}</h2></div><button type="button" onClick={() => setView('projects')}>{text.viewAll}<ArrowRight size={15} /></button></div>
       <Suspense fallback={<p role="status">{t('hub.loading')}</p>}><Phase2ProjectHub onOpenWorkspace={onOpenWorkspace} variant="recent" limit={3} /></Suspense>
     </section>
   </>;
@@ -343,15 +355,15 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
     >{theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}</button>
   </div>;
 
-  return <><main ref={homeRef} className="sc-home" data-testid="welcome-screen">
-    <aside className="sc-home-sidebar"><div className="sc-home-wordmark"><BrandMark size={30} /><strong><span>structure</span>Co</strong></div>{renderNavigation()}<button type="button" className="sc-home-settings" onClick={(event) => openPreferences(event.currentTarget)}><Settings size={19} /><span>{text.settings}</span></button></aside>
+  return <><main ref={homeRef} className="sc-home sc-home--radical" data-testid="welcome-screen">
+    <aside className="sc-home-sidebar"><div className="sc-home-sidebar__brand"><div className="sc-home-wordmark"><BrandMark size={30} /><strong><span>structure</span>Co</strong></div><span>{text.workspace}</span></div>{renderNavigation()}<div className="sc-home-sidebar__footer"><span>LOCAL</span><small>{text.local}</small></div><button type="button" className="sc-home-settings" onClick={(event) => openPreferences(event.currentTarget)}><Settings size={19} /><span>{text.settings}</span></button></aside>
     <header className="sc-home-mobile-header">
       <button ref={mobileMenuButtonRef} type="button" className="sc-home-menu-toggle" aria-label={mobileNavOpen ? text.closeMenu : text.menu} aria-expanded={mobileNavOpen} onClick={() => { haptics.selection(); setMobileNavOpen((open) => !open); }}>{mobileNavOpen ? <X size={20} /> : <Menu size={20} />}</button>
       <div className="sc-home-wordmark"><BrandMark size={25} /><strong><span>structure</span>Co</strong></div>
       {compactHome ? appearanceControls : <span aria-hidden="true" className="sc-home-mobile-header__spacer" />}
     </header>
     {mobileNavOpen ? renderNavigation(true) : null}
-    <div className="sc-home-main"><header className="sc-home-topline"><span>{text[view]}</span>{compactHome ? null : appearanceControls}</header>{/*
+    <div className="sc-home-main"><header className="sc-home-topline"><div className="sc-home-topline__context"><span>{text.workspace}</span><b aria-hidden="true">/</b><strong>{text[view]}</strong></div><div className="sc-home-topline__right"><span className="sc-home-topline__project">{project.name}</span>{compactHome ? null : appearanceControls}</div></header>{/*
       * `data-stagger` es la entrada escalonada declarativa de `platform/native.css`:
       * cada sección de la vista llega 40 ms después de la anterior, en pasos que
       * se congelan a partir de la sexta. La clave por vista es lo que hace que

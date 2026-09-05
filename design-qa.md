@@ -60,3 +60,41 @@ structural renders already shipped in `public/assets/`.
 
 final result: passed — visual/interaction layer only; solver and data
 contracts unchanged.
+
+## Home / workbench radical revision — 2026-09-04
+
+Source visual truth: written workbench direction derived from the canonical
+visual system and the existing structural asset library. Image Gen was
+attempted for a complete concept board but returned `429 usage_limit_reached`,
+so no unverified generated asset was introduced.
+
+- Desktop viewport: 1440x900 CSS px. Sidebar is a dark petroleum rail; the
+  first viewport is a two-plane project workbench with real project name,
+  primary actions and a real structural render. Tool entry points are an
+  indexed open rail, not a repeated card grid.
+- Mobile viewport: 390x844 CSS px. The rail becomes a dark app bar and drawer;
+  the model, project actions, tools, system directory and recent list remain
+  in a vertical reading flow. `scrollWidth === clientWidth === 390`.
+- Themes and language: Day/Night and ES/EN remain wired to the existing
+  preferences and workspace UI state.
+- Interaction tested: directory navigation to Plantillas and Biblioteca,
+  Illustration Studio launch, tool rail Importar/Aula/Space 3D, settings
+  focus return, mobile drawer Escape, and the full import modal geometry.
+- Render evidence: `output/playwright/home-radical-desktop.png` and
+  `output/playwright/home-radical-mobile.png` were inspected with
+  `view_image`; captures stay ignored and are not versioned.
+
+**Fidelity ledger**
+
+- [P0] The previous home read as a dashboard. Fixed by making the active
+  project and structural preview the dominant work surface.
+- [P0] Tool discovery was split between navigation and three cards. Fixed with
+  grouped sidebar intent plus a numbered rail and a complete system directory.
+- [P1] Mobile needed a composition that survived the larger directory. Fixed
+  with stack-first responsive rules, full touch targets and no horizontal
+  overflow.
+- [P1] The modal/focus contracts remain intact; all changes are in the visual
+  shell and its Home navigation composition.
+
+final result: passed — radical visual revision verified in Browser/IAB and
+Playwright capture at native desktop/mobile sizes.
