@@ -1,0 +1,528 @@
+.aisc-design-card {
+  display: grid;
+  gap: var(--sc-space-3);
+  padding: var(--sc-space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--sc-radius-lg);
+  background: var(--surface);
+  box-shadow: var(--sc-shadow-raised);
+}
+
+.aisc-design-card[data-status='pass'] {
+  border-color: color-mix(in oklab, var(--sc-color-state-success, #168a6c) 30%, var(--border));
+}
+
+.aisc-design-card[data-status='warning'] {
+  border-color: color-mix(in oklab, var(--sc-color-state-warning, #d97706) 38%, var(--border));
+  background: color-mix(in oklab, var(--surface) 97%, var(--sc-color-state-warning, #d97706));
+}
+
+.aisc-design-card[data-status='fail'] {
+  border-color: color-mix(in oklab, var(--danger, #dc2626) 38%, var(--border));
+  background: color-mix(in oklab, var(--surface) 97%, var(--danger, #dc2626));
+}
+
+/* Header */
+.aisc-design-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sc-space-3);
+  flex-wrap: wrap;
+}
+
+.aisc-design-card__header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-2);
+}
+
+.aisc-design-card__header-left > span {
+  display: grid;
+  gap: 2px;
+}
+
+.aisc-design-card__header small {
+  color: var(--muted);
+  font-family: var(--sc-font-mono);
+  font-size: 0.75rem;
+}
+
+.aisc-design-card__badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: var(--sc-font-size-caption, 0.75rem);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.aisc-design-card__badge[data-status='pass'] {
+  background: color-mix(in oklab, var(--sc-color-state-success, #168a6c) 15%, var(--surface));
+  color: var(--sc-color-state-success, #168a6c);
+}
+
+.aisc-design-card__badge[data-status='warning'] {
+  background: color-mix(in oklab, var(--sc-color-state-warning, #d97706) 18%, var(--surface));
+  color: var(--sc-color-state-warning, #d97706);
+}
+
+.aisc-design-card__badge[data-status='fail'] {
+  background: color-mix(in oklab, var(--danger, #dc2626) 18%, var(--surface));
+  color: var(--danger, #dc2626);
+}
+
+.aisc-design-card__badge[data-status='unavailable'] {
+  background: color-mix(in oklab, var(--muted) 18%, var(--surface));
+  color: var(--muted);
+}
+
+/* Tab Bar */
+.aisc-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+  overflow-x: auto;
+}
+
+.aisc-tab-btn {
+  padding: 6px 12px;
+  border-radius: var(--sc-radius-md);
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.aisc-tab-btn:hover {
+  color: var(--text);
+  background: color-mix(in oklab, var(--surface) 92%, var(--border));
+}
+
+.aisc-tab-btn.active {
+  color: var(--text);
+  background: color-mix(in oklab, var(--surface) 86%, var(--border));
+}
+
+/* Filter & Member Navigation */
+.aisc-design-card__toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sc-space-2);
+  flex-wrap: wrap;
+}
+
+.aisc-design-card__member-selector {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-2);
+  flex: 1;
+  min-width: 200px;
+}
+
+.aisc-design-card__member-selector select {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: var(--sc-radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--sc-font-mono);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.aisc-canvas-focus-btn {
+  padding: 5px 10px;
+  border-radius: var(--sc-radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.aisc-canvas-focus-btn:hover {
+  background: color-mix(in oklab, var(--surface) 90%, var(--border));
+}
+
+/* Utilization Dial / Segmented Gauge */
+.aisc-gauge-container {
+  display: grid;
+  gap: var(--sc-space-2);
+  padding: var(--sc-space-3);
+  border-radius: var(--sc-radius-md);
+  background: color-mix(in oklab, var(--surface) 95%, var(--border));
+  border: 1px solid var(--border);
+}
+
+.aisc-gauge-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.aisc-gauge-ratio-huge {
+  font-family: var(--sc-font-mono);
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.aisc-gauge-track {
+  position: relative;
+  width: 100%;
+  height: 14px;
+  background: var(--border);
+  border-radius: 999px;
+  display: flex;
+  overflow: hidden;
+}
+
+.aisc-gauge-seg-safe {
+  width: 72%; /* corresponds to ratio 0.90 / 1.25 scale */
+  background: color-mix(in oklab, var(--sc-color-state-success, #168a6c) 75%, transparent);
+}
+
+.aisc-gauge-seg-warning {
+  width: 8%; /* corresponds to ratio 0.90 to 1.00 */
+  background: color-mix(in oklab, var(--sc-color-state-warning, #d97706) 80%, transparent);
+}
+
+.aisc-gauge-seg-fail {
+  width: 20%; /* corresponds to ratio > 1.00 */
+  background: color-mix(in oklab, var(--danger, #dc2626) 80%, transparent);
+}
+
+.aisc-gauge-pointer-rail {
+  position: relative;
+  width: 100%;
+  height: 10px;
+}
+
+.aisc-gauge-pointer {
+  position: absolute;
+  transform: translateX(-50%);
+  top: 0;
+  font-family: var(--sc-font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: left 0.3s ease;
+}
+
+.aisc-gauge-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-family: var(--sc-font-mono);
+}
+
+/* Overview layout with Cross Section */
+.aisc-overview-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: var(--sc-space-3);
+  align-items: center;
+}
+
+.aisc-section-diagram {
+  width: 100%;
+  max-width: 240px;
+  margin: 0 auto;
+}
+
+.aisc-section-diagram__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.aisc-props-table {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  font-size: 0.75rem;
+}
+
+.aisc-props-item {
+  padding: 6px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--sc-radius-sm);
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--sc-font-mono);
+}
+
+.aisc-props-item dt {
+  color: var(--muted);
+}
+
+.aisc-props-item dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+/* Limit States Tab */
+.aisc-limit-states-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--sc-space-2);
+}
+
+.aisc-limit-card {
+  padding: var(--sc-space-3);
+  border-radius: var(--sc-radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  display: grid;
+  gap: 6px;
+}
+
+.aisc-limit-card.is-governing {
+  border-color: color-mix(in oklab, var(--text) 40%, var(--border));
+  background: color-mix(in oklab, var(--surface) 93%, var(--border));
+}
+
+.aisc-limit-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.aisc-limit-card-header strong {
+  font-size: 0.8rem;
+}
+
+.aisc-limit-card-header small {
+  font-family: var(--sc-font-mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.aisc-limit-card-ratio {
+  font-family: var(--sc-font-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.aisc-limit-card-inequality {
+  font-family: var(--sc-font-mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  background: color-mix(in oklab, var(--surface) 90%, var(--border));
+  padding: 3px 6px;
+  border-radius: var(--sc-radius-sm);
+}
+
+.aisc-limit-card-meter {
+  height: 5px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.aisc-limit-card-bar {
+  height: 100%;
+  border-radius: 999px;
+}
+
+/* Calculation Sheet Tab */
+.aisc-calc-sheet {
+  display: grid;
+  gap: var(--sc-space-3);
+}
+
+.aisc-calc-block {
+  padding: var(--sc-space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--sc-radius-md);
+  background: var(--surface);
+  display: grid;
+  gap: 6px;
+}
+
+.aisc-calc-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.aisc-calc-clause {
+  font-family: var(--sc-font-mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.aisc-calc-eq {
+  padding: 8px 12px;
+  background: color-mix(in oklab, var(--surface) 93%, var(--border));
+  border-radius: var(--sc-radius-sm);
+  font-family: var(--sc-font-mono);
+  font-size: 0.82rem;
+  border-left: 3px solid var(--muted);
+}
+
+.aisc-calc-vars {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aisc-calc-var-item {
+  font-family: var(--sc-font-mono);
+  font-size: 0.72rem;
+  padding: 4px 8px;
+  background: color-mix(in oklab, var(--surface) 96%, var(--border));
+  border: 1px solid var(--border);
+  border-radius: var(--sc-radius-sm);
+}
+
+/* Smart Section Sizer Tab */
+.aisc-sizer-panel {
+  display: grid;
+  gap: var(--sc-space-3);
+}
+
+.aisc-sizer-summary-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--sc-space-3);
+  border-radius: var(--sc-radius-md);
+  background: color-mix(in oklab, var(--sc-color-state-success, #168a6c) 10%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--sc-color-state-success, #168a6c) 25%, var(--border));
+  flex-wrap: wrap;
+  gap: var(--sc-space-2);
+}
+
+.aisc-sizer-highlight-badge {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--sc-color-state-success, #168a6c);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.aisc-sizer-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--sc-radius-md);
+}
+
+.aisc-sizer-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  font-family: var(--sc-font-mono);
+}
+
+.aisc-sizer-table th,
+.aisc-sizer-table td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.aisc-sizer-table th {
+  background: color-mix(in oklab, var(--surface) 92%, var(--border));
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.aisc-sizer-row.is-current {
+  background: color-mix(in oklab, var(--surface) 88%, var(--border));
+  font-weight: 700;
+}
+
+.aisc-sizer-row.is-recommended {
+  background: color-mix(in oklab, var(--sc-color-state-success, #168a6c) 12%, var(--surface));
+}
+
+.aisc-weight-delta {
+  font-weight: 600;
+}
+
+.aisc-weight-delta.lighter {
+  color: var(--sc-color-state-success, #168a6c);
+}
+
+.aisc-weight-delta.heavier {
+  color: var(--muted);
+}
+
+.aisc-adopt-btn {
+  padding: 3px 8px;
+  border-radius: var(--sc-radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.72rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.aisc-adopt-btn:hover {
+  background: color-mix(in oklab, var(--surface) 85%, var(--border));
+}
+
+/* Footer & Unavailable */
+.aisc-design-card__footer {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.4;
+  border-top: 1px solid var(--border);
+  padding-top: var(--sc-space-2);
+}
+
+.aisc-design-card__unavailable {
+  display: grid;
+  gap: 4px;
+}
+
+.aisc-design-card__unavailable p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+  .aisc-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .aisc-design-card {
+    padding: var(--sc-space-3);
+  }
+  .aisc-limit-states-grid {
+    grid-template-columns: 1fr;
+  }
+}

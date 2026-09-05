@@ -245,6 +245,7 @@ describe('ModelDoctor surface', () => {
   it('keeps keyboard focus inside the dialog when preview is opened and returns it to its finding when cancelled', async () => {
     const user = userEvent.setup();
     renderDoctor(withRepairableTopology());
+    await settledFocus();
     const finding = (await screen.findAllByRole('article')).find((article) => article.textContent?.includes('N-SPLIT'))!;
     const previewAction = within(finding).getByRole('button', { name: /previsualizar reparaci/i });
     await user.click(previewAction);

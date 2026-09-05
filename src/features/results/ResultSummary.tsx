@@ -16,6 +16,7 @@ import { NumericQualityCard } from './NumericQualityCard';
 import { ElasticDemandCard } from './ElasticDemandCard';
 import { ResultExtremeCard } from './ResultExtremeCard';
 import { NtcSteelDesignCard } from '../design/NtcSteelDesignCard';
+import { AiscSteelDesignCard } from '../design/AiscSteelDesignCard';
 import { useNumericCertificate } from '../../engine/useNumericCertificate';
 import { NumericCertificateCard } from './NumericCertificateCard';
 import type { ResultRef } from './provenance';
@@ -122,6 +123,7 @@ export const ResultSummary = () => {
     <NumericQualityCard analysis={analysis} />
     <NumericCertificateCard {...certificate} />
     <StabilityStudiesCard studies={studies} />
+    <AiscSteelDesignCard />
     <NtcSteelDesignCard />
     {analysis.pDelta ? <section className="p-delta-summary" aria-label={t('pdelta.summaryTitle')}>
       <strong>{t('pdelta.summaryTitle')} <span className="experimental-badge">{t('pdelta.experimental')}</span></strong>

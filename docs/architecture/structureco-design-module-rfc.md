@@ -183,3 +183,44 @@ casos independientes y estados globales propios.
 4. Prueba de que el solver, workers, `ProjectModel`, persistencia y formatos no
    cambiaron.
 5. `verify:protected`, typecheck, lint, build y QA focal de resultados.
+
+---
+
+## Módulo ANSI/AISC 360-16 / 360-22 (LRFD) — Extensión Multiestado
+
+**Fecha de integración:** 2026-09-05  
+**Norma:** Specification for Structural Steel Buildings (ANSI/AISC 360-16 / 360-22 LRFD)  
+**Alcance:** Miembros tipo `truss` y `frame` con perfiles I laminados en caliente AISC y aceros estructurales (A992, A36).
+
+### Capítulos Cubiertos
+
+1. **Capítulo D — Tensión (§D2):**
+   - Fluencia en sección bruta: $P_n = F_y \cdot A_g$, $\phi_t = 0.90$, $P_d = \phi_t P_n$.
+   - Límite de esbeltez recomendado (§D1): $L/r \le 300$.
+
+2. **Capítulo E — Compresión (§E3):**
+   - Esbeltez elástica $KL/r \le 200$.
+   - Pandeo elástico de Euler: $F_e = \frac{\pi^2 E}{(KL/r)^2}$.
+   - Umbral $4.71\sqrt{E/F_y}$:
+     - Inelástico ($KL/r \le 4.71\sqrt{E/F_y}$): $F_{cr} = [0.658^{F_y/F_e}] F_y$.
+     - Elástico ($KL/r > 4.71\sqrt{E/F_y}$): $F_{cr} = 0.877 F_e$.
+   - Resistencia de diseño: $P_c = \phi_c F_{cr} A_g$ con $\phi_c = 0.90$.
+
+3. **Capítulo F — Flexión (§F2):**
+   - Momento plástico nominal: $M_p = F_y \cdot Z_x$.
+   - Longitudes límites para pandeo lateral-torsional (LTB):
+     - $L_p = 1.76 r_y \sqrt{E/F_y}$.
+     - $L_r$ per Eq. F2-6 con $r_{ts}$ y constante torsional $J$.
+   - Ecuaciones de resistencia nominal $M_n$ (fluencia, LTB inelástico y LTB elástico), con $\phi_b = 0.90$.
+
+4. **Capítulo G — Cortante (§G2):**
+   - Cortante en el alma de perfiles I: $V_n = 0.6 F_y A_w C_{v1}$, $\phi_v = 0.90$ o $1.00$ según $h/t_w \le 2.24\sqrt{E/F_y}$.
+
+5. **Capítulo H — Fuerzas Combinadas (§H1.1):**
+   - Para $P_u / P_c \ge 0.2$: $\frac{P_u}{P_c} + \frac{8}{9}\left(\frac{M_{ux}}{M_{cx}}\right) \le 1.0$ (Eq. H1-1a).
+   - Para $P_u / P_c < 0.2$: $\frac{P_u}{2 P_c} + \left(\frac{M_{ux}}{M_{cx}}\right) \le 1.0$ (Eq. H1-1b).
+   - Aplica tanto a miembros en flexo-compresión como en flexo-tensión.
+
+### Principio de Aislamiento y Fail-Closed
+El módulo `evaluateAiscSteel360Project` es una proyección funcional pura `(project, analysis, combinationId) => AiscProjectDesignSummary`. No altera el modelo ni el solver, exige que el análisis sea `reliable` o `limited` (usable), verifica que no haya divergencia entre el modelo y los catálogos y no extrapola perfiles desconocidos.
+

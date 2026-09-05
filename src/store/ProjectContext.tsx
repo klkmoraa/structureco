@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { unavailableAnalysis } from '../engine/analysisFailure';
 import { syncCustomUnitSystems } from '../engine/unitSystemRegistry';
-import type { AnalysisWorkerResponse } from '../engine/analysisWorkerProtocol';
+import {
+  createAnalysisWorkerClient,
+  WorkerJobCancelledError,
+  type CoalescingWorkerClient,
+} from '../runtime/coalescingWorkerClient';
 import { analysisBinding, matchesAnalysisBinding, type AnalysisBinding } from '../engine/projectSignature';
 import { normalizeProject } from '../data/migrate';
 import { loadProjectFromStorage, saveProjectToStorage } from '../data/projectStorage';
@@ -12,7 +16,7 @@ import { ProjectAnalysisContext, useProjectAnalysis, type ProjectAnalysisContext
 import { WorkspaceUIContext, useWorkspaceUI, type WorkspaceUIContextValue, type ModeShapeCanvasState, type ResultCursor, type ResultTab } from './WorkspaceUIContext';
 import type { PreparedTopologyRepair, ProjectCommand, ProjectCommandResult } from '../commands/projectCommand';
 import type { PreparedStructureGeneration } from '../commands/structureGeneration';
-import { WORKER_PROTOCOL_VERSION, type AnalysisWorkerPayload, type WorkerRequestEnvelope, type WorkerResponseEnvelope } from '../runtime/workerProtocol';
+import type { AnalysisWorkerPayload } from '../runtime/workerProtocol';
 import type { ProjectRepository } from '../storage/projectRepository';
 import { recordLocalMetric } from '../analytics/localMetrics';
 import type { PreparedStructuralEdit } from '../data/structuralEditing';
@@ -90,7 +94,14 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const transactionDescriptionRef = useRef('Editar proyecto');
   const analysisTimerRef = useRef<number | null>(null);
   const analysisRevisionRef = useRef(0);
-  const analysisWorkerRef = useRef<Worker | null>(null);
+  const analysisClientRef = useRef<CoalescingWorkerClient<AnalysisWorkerPayload, AnalysisResult> | null>(null);
+
+  const getAnalysisClient = useCallback(() => {
+    if (!analysisClientRef.current) {
+      analysisClientRef.current = createAnalysisWorkerClient();
+    }
+    return analysisClientRef.current;
+  }, []);
   const repositoryRef = useRef<ProjectRepository | null>(null);
   const repositoryRevisionRef = useRef<{ projectId: string; revision: number } | null>(null);
   const repositoryBlockedProjectIdRef = useRef<string | null>(null);
@@ -186,8 +197,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       window.clearTimeout(analysisTimerRef.current);
       analysisTimerRef.current = null;
     }
-    analysisWorkerRef.current?.terminate();
-    analysisWorkerRef.current = null;
+    analysisClientRef.current?.invalidate();
     setIsAnalyzing(false);
     analysisRef.current = null;
     setAnalysis(null);
@@ -247,7 +257,8 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => () => {
     if (analysisTimerRef.current !== null) window.clearTimeout(analysisTimerRef.current);
-    analysisWorkerRef.current?.terminate();
+    analysisClientRef.current?.dispose();
+    analysisClientRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -315,9 +326,10 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   }, [project, persistenceRevision, transactionActive]);
 
   const analyze = useCallback(() => {
-    if (analysisTimerRef.current !== null) window.clearTimeout(analysisTimerRef.current);
-    analysisWorkerRef.current?.terminate();
-    analysisWorkerRef.current = null;
+    if (analysisTimerRef.current !== null) {
+      window.clearTimeout(analysisTimerRef.current);
+      analysisTimerRef.current = null;
+    }
     const currentProject = projectRef.current;
     const source = structuredClone(currentProject);
     const topologyRepair = repairProjectTopology(source);
@@ -364,93 +376,34 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     // A run that never produced numbers still has to reach the user: leaving
     // `isAnalyzing` set would freeze the UI on "analysing" with no explanation.
     const fail = (message: string) => complete(unavailableAnalysis(message));
-    const runFallback = () => {
-      analysisTimerRef.current = window.setTimeout(() => {
-        analysisTimerRef.current = null;
-        // Interactive edits never need the education trace up front — the
-        // "Aprender" tab and PDF export fetch it on demand (AG-013).
-        void runFallbackAnalysis(source, selectedCombinationId, false)
-          .then(complete)
-          .catch((error: unknown) => fail(error instanceof Error ? error.message : 'No se pudo completar el análisis estructural.'));
-      }, 0);
-    };
-    if (typeof Worker === 'undefined') {
-      runFallback();
-      return;
-    }
-    try {
-      const worker = new Worker(new URL('../workers/analysis.worker.ts', import.meta.url), { type: 'module' });
-      analysisWorkerRef.current = worker;
-      let settled = false;
-      const fallbackOnce = () => {
-        if (settled || analysisRevisionRef.current !== requestRevision) return;
-        settled = true;
-        worker.terminate();
-        if (analysisWorkerRef.current === worker) analysisWorkerRef.current = null;
-        runFallback();
-      };
-      worker.onmessage = (event: MessageEvent<WorkerResponseEnvelope<'analysis', AnalysisResult> | AnalysisWorkerResponse>) => {
-        if (settled || event.data.requestId !== requestRevision) return;
-        settled = true;
-        worker.terminate();
-        if (analysisWorkerRef.current === worker) analysisWorkerRef.current = null;
-        // `analysis-error` is a decision taken by the same pure function the
-        // fallback would call, so recomputing it on the main thread would only
-        // block the UI to reach the identical failure and hide its message.
-        if (event.data.type === 'success' || event.data.type === 'analysis-result') complete(event.data.result);
-        else fail(event.data.type === 'error' ? event.data.error.message : event.data.message);
-      };
-      worker.onerror = fallbackOnce;
-      const request: WorkerRequestEnvelope<'analysis', AnalysisWorkerPayload> = {
-        protocolVersion: WORKER_PROTOCOL_VERSION, type: 'run', domain: 'analysis', requestId: requestRevision,
-        payload: { project: source, combinationId: selectedCombinationId || null, includeEducationTrace: false },
-      };
-      worker.postMessage(request);
-    } catch {
-      runFallback();
-    }
-  }, [publishAnalysisResult, selectedCombinationId, setSelection]);
+
+    const client = getAnalysisClient();
+    client.submit({
+      project: source,
+      combinationId: selectedCombinationId || null,
+      includeEducationTrace: false,
+    })
+      .then((result) => {
+        complete(result);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof WorkerJobCancelledError) return;
+        fail(error instanceof Error ? error.message : 'No se pudo completar el análisis estructural.');
+      });
+  }, [getAnalysisClient, publishAnalysisResult, selectedCombinationId, setSelection]);
 
   // Standalone worker-or-fallback runner for `ensureEducationTrace`: unlike
   // `analyze()` above, this never touches history, selection or the revision
   // counter that governs the main interactive analysis — it only computes one
   // extra result, on demand, to read its `educationTrace` off of.
   const runAnalysisWithTrace = useCallback((source: ProjectModel, combinationId: string): Promise<AnalysisResult> => {
-    return new Promise((resolve, reject) => {
-      const runFallback = () => {
-        void runFallbackAnalysis(source, combinationId, true).then(resolve).catch(reject);
-      };
-      if (typeof Worker === 'undefined') {
-        runFallback();
-        return;
-      }
-      try {
-        const worker = new Worker(new URL('../workers/analysis.worker.ts', import.meta.url), { type: 'module' });
-        let settled = false;
-        const fallbackOnce = () => {
-          if (settled) return;
-          settled = true;
-          worker.terminate();
-          runFallback();
-        };
-        worker.onmessage = (event: MessageEvent<WorkerResponseEnvelope<'analysis', AnalysisResult> | AnalysisWorkerResponse>) => {
-          if (settled) return;
-          settled = true;
-          worker.terminate();
-          if (event.data.type === 'success' || event.data.type === 'analysis-result') resolve(event.data.result);
-          else reject(new Error(event.data.type === 'error' ? event.data.error.message : event.data.message));
-        };
-        worker.onerror = fallbackOnce;
-        const request: WorkerRequestEnvelope<'analysis', AnalysisWorkerPayload> = {
-          protocolVersion: WORKER_PROTOCOL_VERSION, type: 'run', domain: 'analysis', requestId: 0,
-          payload: { project: source, combinationId: combinationId || null, includeEducationTrace: true },
-        };
-        worker.postMessage(request);
-      } catch {
-        runFallback();
-      }
+    const client = getAnalysisClient();
+    return client.submit({
+      project: source,
+      combinationId: combinationId || null,
+      includeEducationTrace: true,
     });
-  }, []);
+  }, [getAnalysisClient]);
 
   const ensureEducationTrace = useCallback(async (): Promise<AnalysisResult | null> => {
     const target = analysisRef.current;

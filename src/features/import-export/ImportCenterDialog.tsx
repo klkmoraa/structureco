@@ -279,7 +279,7 @@ export const ImportCenterDialog = ({
     containerRef: dialogRef,
     onEscape: onClose,
     initialFocus: (dialog) => (
-      dialog.querySelector<HTMLElement>('[data-import-stage-focus="select"]')
+      dialog.querySelector<HTMLElement>(`[data-import-stage-focus="${stage}"]`)
       ?? dialog.querySelector<HTMLElement>('.import-center-close')
     ),
   });
