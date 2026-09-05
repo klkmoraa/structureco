@@ -484,21 +484,24 @@ describe('AG-015 premium visual layer contract', () => {
     }
   });
 
-  it('keeps every legacy clay elevation token matte and directional', () => {
-    // The compatibility names remain, but Studio uses one short neutral
-    // contact shadow. Pressed stays inset-only.
+  it('lights every clay surface from the same direction', () => {
+    // Four layers per surface: outer shadow down-right, inner highlight
+    // up-left, inner shadow down-right, and the 1px edge. Two of them are
+    // `inset`; a level that forgot them would read as a flat card with a blur.
+    // Both themes must hold this shape independently — Night recalibrates the
+    // values but not the structure, and a regression in either block has to
+    // fail here, not just in Day.
     for (const [themeLabel, theme] of [
       ['light', rootTokens],
       ['dark', darkTokens],
     ] as const) {
       for (const level of ['--sc-shadow-clay-sm', '--sc-shadow-clay-md', '--sc-shadow-clay-lg']) {
         const value = theme.declarations.get(level) ?? '';
-        expect(value, `${themeLabel} ${level}`).toMatch(/^0 \d+px \d+px rgba\(/);
-        expect(value, `${themeLabel} ${level}`).not.toContain('inset');
+        expect((value.match(/inset/g) ?? []).length, `${themeLabel} ${level}`).toBeGreaterThanOrEqual(2);
       }
       // Pressed inverts: it is inset-only, or it would still look like it floats.
       expect(theme.declarations.get('--sc-shadow-clay-pressed'), `${themeLabel} --sc-shadow-clay-pressed`)
-        .not.toMatch(/(^|,)\s*0\s+\d+px/);
+        .toMatch(/^inset 2px 3px 5px/);
     }
   });
 

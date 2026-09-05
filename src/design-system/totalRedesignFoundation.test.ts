@@ -41,11 +41,11 @@ describe('StructureCo Studio foundation', () => {
     expect(dark.get('--sc-color-text-primary')).toBe('#edf3f7');
   });
 
-  it('keeps Studio surfaces compact with radii between 8 and 12 pixels', () => {
-    expect(root.get('--sc-radius-control')).toBe('8px');
-    expect(root.get('--sc-radius-card')).toBe('10px');
-    expect(root.get('--sc-radius-panel')).toBe('12px');
-    expect(root.get('--sc-radius-modal')).toBe('12px');
+  it('keeps clay surfaces tactile with radii between 10 and 28 pixels', () => {
+    expect(root.get('--sc-radius-control')).toBe('10px');
+    expect(root.get('--sc-radius-card')).toBe('18px');
+    expect(root.get('--sc-radius-panel')).toBe('24px');
+    expect(root.get('--sc-radius-modal')).toBe('28px');
   });
 
   it('keeps the exact technical palette in one theme-independent declaration', () => {

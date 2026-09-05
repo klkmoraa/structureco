@@ -2140,7 +2140,9 @@ body:has(.structural-edit-surface) .app-shell .tool-rail.is-floating-dock {
 .duplicate-preview-panel {
   border:1px solid var(--sc-color-border-canvas-chrome);
   border-radius:var(--sc-radius-control);
-  background:var(--sc-color-surface-elevated);
+  background:color-mix(in srgb, var(--sc-color-surface-elevated) 90%, transparent);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
   box-shadow:var(--sc-shadow-raised);
 }
 
@@ -2153,19 +2155,28 @@ body:has(.structural-edit-surface) .app-shell .tool-rail.is-floating-dock {
 .canvas-layer-trigger {
   border-radius:calc(var(--sc-radius-control) - 2px);
   box-shadow:none;
+  transition:transform 180ms var(--sc-ease-standard), box-shadow 180ms var(--sc-ease-standard);
 }
 
 .canvas-controls .sc-icon-button:hover,
 .canvas-layer-trigger:hover {
   background:var(--sc-color-surface-2);
-  box-shadow:none;
-  transform:none;
+  box-shadow:var(--sc-shadow-clay-xs);
+  transform:translateY(-1px);
+}
+
+.canvas-controls .sc-icon-button:active,
+.canvas-layer-trigger:active {
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
 }
 
 .canvas-hint {
   border:1px solid var(--sc-color-border);
   border-radius:var(--sc-radius-control);
-  background:var(--sc-color-surface-1);
+  background:color-mix(in srgb, var(--sc-color-surface-1) 90%, transparent);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
   box-shadow:var(--sc-shadow-raised);
 }
 
@@ -2179,7 +2190,7 @@ body:has(.structural-edit-surface) .app-shell .tool-rail.is-floating-dock {
 
 .canvas-evidence-stack-choice[aria-pressed='true'],
 .canvas-layer-preset[aria-pressed='true'] {
-  box-shadow:none;
+  box-shadow:var(--sc-shadow-clay-pressed);
 }
 
 @media (max-width:700px) {

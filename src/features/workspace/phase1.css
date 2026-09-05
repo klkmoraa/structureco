@@ -2118,26 +2118,46 @@
 .app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-button,
 .app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .sc-popover__trigger,
 .app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock :is(.dock-collapse-toggle,.dock-position-toggle) {
-  border-color:transparent;
+  position:relative;
+  border:1px solid var(--sc-color-border-soft);
   border-radius:var(--sc-radius-control);
-  background:transparent;
-  box-shadow:none;
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transition:transform 220ms cubic-bezier(.2,.85,.25,1.1), box-shadow 200ms var(--sc-ease-standard), background-color 180ms var(--sc-ease-standard);
 }
 
 .app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-button:hover,
 .app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .sc-popover__trigger:hover,
 .app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock :is(.dock-collapse-toggle,.dock-position-toggle):hover {
-  border-color:var(--sc-color-border-soft);
+  border-color:var(--sc-color-border);
   background:var(--sc-color-surface-2);
-  box-shadow:none;
-  transform:none;
+  box-shadow:var(--sc-shadow-clay-sm);
+  transform:translateY(-2px);
 }
 
 .app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-button.active,
-.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .sc-popover__trigger[aria-expanded='true'] {
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .sc-popover__trigger[aria-expanded='true'],
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-button:active,
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .sc-popover__trigger:active {
   border-color:color-mix(in srgb,var(--tool-color,var(--accent)) 42%,var(--sc-color-border));
-  background:color-mix(in srgb,var(--tool-color,var(--accent)) 9%,var(--sc-color-surface-1));
-  box-shadow:none;
+  background:color-mix(in srgb,var(--tool-color,var(--accent)) 12%,var(--sc-color-surface-1));
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .tool-button.active::after,
+.app-shell[data-shell-class='X2'] .tool-rail.is-floating-dock .sc-popover__trigger[aria-expanded='true']::after {
+  content:'';
+  position:absolute;
+  bottom:3px;
+  left:50%;
+  transform:translateX(-50%);
+  width:4px;
+  height:4px;
+  border-radius:50%;
+  background:var(--tool-color,var(--accent));
+  box-shadow:0 0 4px var(--tool-color,var(--accent));
+  pointer-events:none;
 }
 
 .app-shell .professional-note {

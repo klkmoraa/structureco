@@ -1134,34 +1134,47 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
   width:40px;
   height:40px;
   flex-basis:40px;
-  border:1px solid transparent;
+  border:1px solid var(--sc-color-border-soft);
   border-radius:var(--sc-radius-control);
-  box-shadow:none;
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transition:transform 180ms var(--sc-ease-standard), box-shadow 180ms var(--sc-ease-standard);
 }
 
 .app-shell[data-shell-class] .topbar--atelier .brand-home-button:hover,
 .app-shell[data-shell-class] .topbar--atelier .brand-home-button:focus-visible {
   border-color:var(--sc-color-border);
   background:var(--sc-color-surface-2);
-  box-shadow:none;
-  transform:none;
+  box-shadow:var(--sc-shadow-clay-sm);
+  transform:translateY(-1px);
+}
+
+.app-shell[data-shell-class] .topbar--atelier .brand-home-button:active {
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
 }
 
 .app-shell[data-shell-class] .topbar--atelier .topbar-project-trigger {
   min-height:40px;
-  padding:5px 10px;
-  border:1px solid transparent;
+  padding:5px 12px;
+  border:1px solid var(--sc-color-border-soft);
   border-radius:var(--sc-radius-control);
-  background:transparent;
-  box-shadow:none;
+  background:var(--sc-color-surface-1);
+  box-shadow:var(--sc-shadow-clay-xs);
+  transition:transform 180ms var(--sc-ease-standard), box-shadow 180ms var(--sc-ease-standard);
 }
 
 .app-shell[data-shell-class] .topbar--atelier .topbar-project-trigger:hover,
 .app-shell[data-shell-class] .topbar--atelier .topbar-project-trigger:focus-visible {
   border-color:var(--sc-color-border);
   background:var(--sc-color-surface-2);
-  box-shadow:none;
-  transform:none;
+  box-shadow:var(--sc-shadow-clay-sm);
+  transform:translateY(-1px);
+}
+
+.app-shell[data-shell-class] .topbar--atelier .topbar-project-trigger:active {
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
 }
 
 .app-shell[data-shell-class] .topbar--atelier .topbar-analysis-trigger {
@@ -1169,15 +1182,15 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
   border:1px solid var(--sc-color-border);
   border-radius:var(--sc-radius-control);
   background:var(--sc-color-surface-input);
-  box-shadow:none;
+  box-shadow:var(--sc-shadow-clay-inset);
+  transition:border-color 180ms var(--sc-ease-standard), box-shadow 180ms var(--sc-ease-standard);
 }
 
 .app-shell[data-shell-class] .topbar--atelier .topbar-analysis-trigger:hover,
 .app-shell[data-shell-class] .topbar--atelier .topbar-analysis-trigger:focus-visible {
   border-color:var(--sc-color-border-strong);
   background:var(--sc-color-surface-elevated);
-  box-shadow:none;
-  transform:none;
+  box-shadow:var(--sc-shadow-clay-sm);
 }
 
 .app-shell[data-shell-class] .topbar--atelier .topbar-history-cluster {
@@ -1199,40 +1212,50 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
   border:1px solid var(--sc-color-border-soft);
   border-radius:var(--sc-radius-control);
   background:var(--sc-color-surface-1);
-  box-shadow:none;
+  box-shadow:var(--sc-shadow-clay-xs);
+  transition:transform 180ms var(--sc-ease-standard), box-shadow 180ms var(--sc-ease-standard);
 }
 
 .app-shell[data-shell-class] .topbar--atelier .topbar-primary-actions .sc-icon-button:hover:not(:disabled),
 .app-shell[data-shell-class] .topbar--atelier .topbar-command-button:hover {
   border-color:var(--sc-color-border);
   background:var(--sc-color-surface-2);
-  box-shadow:none;
-  transform:none;
+  box-shadow:var(--sc-shadow-clay-sm);
+  transform:translateY(-1px);
+}
+
+.app-shell[data-shell-class] .topbar--atelier .topbar-primary-actions .sc-icon-button:active:not(:disabled),
+.app-shell[data-shell-class] .topbar--atelier .topbar-command-button:active {
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
 }
 
 .app-shell[data-shell-class] .topbar--atelier .focus-mode-toggle[aria-pressed='true'] {
   border-color:color-mix(in srgb,var(--accent) 48%,var(--sc-color-border));
   background:var(--accent-soft);
   color:var(--accent-on-soft);
+  box-shadow:var(--sc-shadow-clay-pressed);
 }
 
-.app-shell[data-shell-class] .topbar--atelier .analyze-button--clay-primary,
-.app-shell[data-shell-class] .topbar--atelier .analyze-button--clay-primary:hover:not(:disabled),
-.app-shell[data-shell-class] .topbar--atelier .analyze-button--clay-primary:active:not(:disabled) {
+.app-shell[data-shell-class] .topbar--atelier .analyze-button--clay-primary {
   min-width:108px;
   height:40px;
   border:1px solid var(--sc-color-action-edge);
   border-radius:var(--sc-radius-control);
-  box-shadow:none;
+  background:var(--sc-gradient-clay-action);
+  box-shadow:var(--sc-shadow-clay-action);
+  transition:transform 180ms var(--sc-ease-standard), box-shadow 180ms var(--sc-ease-standard), background-color 180ms var(--sc-ease-standard);
 }
 
 .app-shell[data-shell-class] .topbar--atelier .analyze-button--clay-primary:hover:not(:disabled) {
   background:var(--accent-hover);
-  transform:none;
+  box-shadow:var(--sc-shadow-clay-action-hover);
+  transform:translateY(-1px);
 }
 
 .app-shell[data-shell-class] .topbar--atelier .analyze-button--clay-primary:active:not(:disabled) {
   background:var(--accent-pressed);
+  box-shadow:var(--sc-shadow-clay-action-pressed);
   transform:var(--sc-clay-press-transform);
 }
 

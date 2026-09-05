@@ -387,10 +387,10 @@
      cinco del Brandbook — la desviación que LEDGER-01 gobierna y que este
      slice cierra. */
   --sc-radius-data: 0;
-  --sc-radius-control: 8px;
-  --sc-radius-card: 10px;
-  --sc-radius-panel: 12px;
-  --sc-radius-modal: 12px;
+  --sc-radius-control: 10px;
+  --sc-radius-card: 18px;
+  --sc-radius-panel: 24px;
+  --sc-radius-modal: 28px;
   --sc-radius-pill: 999px;
 
   /* Alias de migración. El rol al que apunta cada uno se eligió por lo que sus
@@ -413,75 +413,57 @@
   /* ------------------------------------------------------------------ */
   /* 5 · MATERIA: cuatro profundidades mate y una sola fuente de luz     */
   /* ------------------------------------------------------------------ */
-  /* Sombras centradas, cortas y neutras: separan papel de papel sin modelar
-     volumen. Los nombres históricos sobreviven para sus consumidores. */
-  --sc-shadow-raised: 0 1px 2px rgba(20, 35, 46, 0.08);
-  --sc-shadow-lifted: 0 4px 10px rgba(20, 35, 46, 0.11);
-  --sc-shadow-floating: 0 5px 10px rgba(20, 35, 46, 0.13);
-  --sc-shadow-modal: 0 8px 12px rgba(20, 35, 46, 0.16);
-  --sc-shadow-popover: 0 4px 8px rgba(20, 35, 46, 0.12);
+  --sc-shadow-raised: 2px 3px 6px rgba(52, 42, 30, 0.14), -2px -2px 4px rgba(255, 255, 255, 0.72);
+  --sc-shadow-lifted: 4px 5px 10px rgba(52, 42, 30, 0.16), -3px -3px 8px rgba(255, 255, 255, 0.76), inset 0 1px 0 rgba(255, 255, 255, 0.68);
+  --sc-shadow-floating: 4px 5px 10px rgba(52, 42, 30, 0.16), -3px -3px 8px rgba(255, 255, 255, 0.76), inset 0 1px 0 rgba(255, 255, 255, 0.68);
+  --sc-shadow-modal: 5px 6px 10px rgba(52, 42, 30, 0.2), -3px -3px 8px rgba(255, 255, 255, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.68);
+  --sc-shadow-popover: 3px 4px 8px rgba(52, 42, 30, 0.16), -2px -2px 6px rgba(255, 255, 255, 0.72);
   /* drop-shadow() sólo admite una capa, así que la elevación flotante tiene una
      variante propia para elementos con forma recortada. */
-  --sc-shadow-drop: 0 5px 10px rgba(20, 35, 46, 0.13);
+  --sc-shadow-drop: 4px 5px 10px rgba(52, 42, 30, 0.16);
   /* Hoja: la única sombra del sistema que sube, y no porque tenga otra fuente
      de luz. Una hoja nace pegada al borde del viewport; el canto que se ve es
      el de entrada, y lo que lo separa del plano de trabajo es oclusión de
-     contacto, no la sombra proyectada por la luz clave. Por eso no lleva
-     componente horizontal: no hay silueta que proyectar contra ese borde. */
-  --sc-shadow-sheet: 0 -4px 10px rgba(20, 35, 46, 0.13);
+     contacto, no la sombra proyectada por la luz clave. */
+  --sc-shadow-sheet: 0 -4px 10px rgba(52, 42, 30, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.68);
 
-  /* ---- Materia Studio ------------------------------------------------
-     La escala mantiene la relación tamaño/profundidad, pero usa una sola
-     oclusión vertical. El borde de 1px aporta la definición principal. */
-  --sc-shadow-clay-xs: 0 1px 2px rgba(20, 35, 46, 0.08);
-  --sc-shadow-clay-sm: 0 2px 4px rgba(20, 35, 46, 0.1);
-  --sc-shadow-clay-md: 0 3px 6px rgba(20, 35, 46, 0.11);
-  --sc-shadow-clay-lg: 0 5px 10px rgba(20, 35, 46, 0.13);
-  --sc-shadow-clay-floating: 0 5px 10px rgba(20, 35, 46, 0.13);
-  /* A resting well is shallower than a pressed piece: both are cavities, but
-     only the second communicates an active touch. */
-  --sc-shadow-clay-inset: inset 0 1px 2px rgba(20, 35, 46, 0.08);
-  /* Pulsado: la luz se invierte. Sólo capas interiores — cualquier sombra
-     exterior lo devolvería a parecer que flota. */
-  /* Una cavidad estándar es arcilla neutra: el color de marca queda para el
-     relleno de acciones/selecciones y no contamina campos, cards o capas. */
-  --sc-shadow-clay-pressed: inset 0 1px 3px rgba(20, 35, 46, 0.14);
+  /* ---- Materia Claymorphism -----------------------------------------
+     Una superficie clay son cuatro capas y una sola fuente de luz, a 145°
+     (arriba-izquierda). En orden: sombra exterior abajo-derecha, contraluz
+     arriba-izquierda, bisel superior de luz y bisel inferior de sombra. */
+  --sc-shadow-clay-xs: 1px 2px 4px rgba(52, 42, 30, 0.11), -1px -1px 2px rgba(255, 255, 255, 0.68), inset 0 1px 0 rgba(255, 255, 255, 0.7), inset -1px -1px 2px rgba(52, 42, 30, 0.07);
+  --sc-shadow-clay-sm: 2px 3px 6px rgba(52, 42, 30, 0.14), -2px -2px 4px rgba(255, 255, 255, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.72), inset -1px -1px 3px rgba(52, 42, 30, 0.08);
+  --sc-shadow-clay-md: 3px 4px 8px rgba(52, 42, 30, 0.16), -2px -2px 6px rgba(255, 255, 255, 0.74), inset 0 1px 0 rgba(255, 255, 255, 0.72), inset -2px -2px 4px rgba(52, 42, 30, 0.09);
+  --sc-shadow-clay-lg: 4px 5px 10px rgba(52, 42, 30, 0.18), -3px -3px 8px rgba(255, 255, 255, 0.76), inset 0 1px 0 rgba(255, 255, 255, 0.72), inset -2px -2px 5px rgba(52, 42, 30, 0.1);
+  --sc-shadow-clay-floating: 4px 5px 10px rgba(52, 42, 30, 0.18), -3px -3px 8px rgba(255, 255, 255, 0.76), inset 0 1px 0 rgba(255, 255, 255, 0.72), inset -2px -2px 5px rgba(52, 42, 30, 0.1);
+  /* Cavidad en reposo: más suave que la cavidad pulsada. */
+  --sc-shadow-clay-inset: inset 2px 2px 4px rgba(52, 42, 30, 0.14), inset -1px -1px 3px rgba(255, 255, 255, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  /* Pulsado: la luz se invierte en una cavidad táctil rehundida. */
+  --sc-shadow-clay-pressed: inset 2px 3px 5px rgba(52, 42, 30, 0.18), inset -1px -1px 3px rgba(255, 255, 255, 0.66), inset 0 1px 0 rgba(255, 255, 255, 0.32);
 
   /* Public material contract: four named depths with a defined 1px edge. */
   --sc-depth-base-border: 1px solid var(--sc-color-border-soft);
   --sc-depth-base-shadow: none;
   --sc-depth-inset-border: 1px solid var(--sc-color-border);
-  --sc-depth-inset-shadow: inset 0 1px 2px rgba(20, 35, 46, 0.08);
+  --sc-depth-inset-shadow: inset 2px 2px 4px rgba(52, 42, 30, 0.14), inset -1px -1px 3px rgba(255, 255, 255, 0.62);
   --sc-depth-raised-border: 1px solid var(--sc-color-border);
-  --sc-depth-raised-shadow: 0 2px 4px rgba(20, 35, 46, 0.1);
+  --sc-depth-raised-shadow: 2px 3px 6px rgba(52, 42, 30, 0.14), -2px -2px 4px rgba(255, 255, 255, 0.72);
   --sc-depth-floating-border: 1px solid var(--sc-color-border-strong);
-  --sc-depth-floating-shadow: 0 5px 10px rgba(20, 35, 46, 0.13);
+  --sc-depth-floating-shadow: 4px 5px 10px rgba(52, 42, 30, 0.18), -3px -3px 8px rgba(255, 255, 255, 0.76);
 
-  --sc-clay-edge: 1px solid var(--sc-color-border);
+  --sc-clay-edge: 1px solid color-mix(in srgb, var(--sc-color-border) 58%, white);
   --sc-gradient-clay: var(--sc-color-surface-1);
 
-  /* El hundimiento de una tecla Studio: baja 1px y encoge apenas. Es un token
-     y no un literal porque `prefers-reduced-motion` lo anula de una sola vez
-     para todos los controles, en lugar de repetir un `transform:none` por
-     selector al final de la hoja. */
-  --sc-clay-press-transform: translateY(1px) scale(0.99);
+  /* El hundimiento táctil pronunciado de una tecla clay. */
+  --sc-clay-press-transform: translateY(2px) scale(0.98);
+  --sc-clay-press-transform-flat: translateY(2px);
 
-  /* CRI-120 · el mismo hundimiento sin el `scale(.98)`, para los controles cuyo
-     objetivo táctil ya está en el mínimo de 44px: encoger un 2 % los deja en
-     43px medidos en WebKit. Es un token y no un literal por la misma razón que
-     el anterior — `prefers-reduced-motion` tiene que poder anularlo — y sólo
-     debe usarse donde la reducción del área tocable esté demostrada. */
-  --sc-clay-press-transform-flat: translateY(1px);
-
-  /* La acción conserva el relleno de marca exacto y recibe la misma sombra
-     neutra que cualquier control. */
+  /* Arcilla teñida de marca para acción primaria. */
   --sc-gradient-clay-action: var(--sc-color-action-primary);
-  --sc-shadow-clay-action: 0 1px 2px rgba(20, 35, 46, 0.14);
-  --sc-shadow-clay-action-hover: 0 2px 4px rgba(20, 35, 46, 0.17);
-  /* Rehundido con color: la cavidad neutra desaparecería sobre el relleno de
-     marca, así que la tinta de la cavidad también se mide sobre el acento. La
-     cavidad se ilumina desde arriba-izquierda igual que la neutra. */
-  --sc-shadow-clay-action-pressed: inset 0 1px 3px rgba(0, 0, 0, 0.22);
+  --sc-shadow-clay-action: 1px 2px 4px rgba(52, 42, 30, 0.14), -1px -1px 2px rgba(255, 255, 255, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset -1px -1px 3px color-mix(in srgb, var(--sc-color-action-primary) 45%, black);
+  --sc-shadow-clay-action-hover: 2px 3px 6px rgba(52, 42, 30, 0.16), -2px -2px 4px rgba(255, 255, 255, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.24), inset -1px -1px 4px color-mix(in srgb, var(--sc-color-action-primary) 48%, black);
+  --sc-shadow-clay-action-pressed: inset 2px 3px 5px color-mix(in srgb, var(--sc-color-action-primary) 48%, black), inset -1px -1px 3px rgba(255, 255, 255, 0.18);
+
 
 
   /* Anillos: 1px de luz interior en el borde superior. Es lo que separa una
@@ -807,36 +789,36 @@
   --sc-color-demand-reference-peak: #ede2ff;
   --sc-color-demand-unevaluated: #7f8b8f;
 
-  --sc-shadow-raised: 0 1px 2px rgba(0, 0, 0, 0.24);
-  --sc-shadow-lifted: 0 4px 10px rgba(0, 0, 0, 0.28);
-  --sc-shadow-floating: 0 5px 10px rgba(0, 0, 0, 0.32);
-  --sc-shadow-modal: 0 8px 12px rgba(0, 0, 0, 0.38);
-  --sc-shadow-popover: 0 4px 8px rgba(0, 0, 0, 0.3);
-  --sc-shadow-drop: 0 5px 10px rgba(0, 0, 0, 0.32);
-  --sc-shadow-sheet: 0 -4px 10px rgba(0, 0, 0, 0.32);
+  --sc-shadow-raised: 2px 3px 6px rgba(0, 0, 0, 0.42), -2px -2px 4px rgba(67, 98, 108, 0.14);
+  --sc-shadow-lifted: 4px 5px 10px rgba(0, 0, 0, 0.48), -3px -3px 8px rgba(67, 98, 108, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --sc-shadow-floating: 4px 5px 10px rgba(0, 0, 0, 0.48), -3px -3px 8px rgba(67, 98, 108, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --sc-shadow-modal: 5px 6px 10px rgba(0, 0, 0, 0.56), -3px -3px 8px rgba(67, 98, 108, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --sc-shadow-popover: 3px 4px 8px rgba(0, 0, 0, 0.46), -2px -2px 6px rgba(67, 98, 108, 0.16);
+  --sc-shadow-drop: 4px 5px 10px rgba(0, 0, 0, 0.48);
+  --sc-shadow-sheet: 0 -4px 10px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
   /* En Noche la sombra pierde trabajo —no queda luz que quitar— y el borde lo
      gana: sin un canto visible los paneles se funden con el fondo. La luz
      interior pasa de blanca a un velo de marca muy tenue; el blanco puro sobre
      grafito se lee como un arañazo. */
-  --sc-shadow-clay-xs: 0 1px 2px rgba(0, 0, 0, 0.24);
-  --sc-shadow-clay-sm: 0 2px 4px rgba(0, 0, 0, 0.26);
-  --sc-shadow-clay-md: 0 3px 6px rgba(0, 0, 0, 0.28);
-  --sc-shadow-clay-lg: 0 5px 10px rgba(0, 0, 0, 0.32);
-  --sc-shadow-clay-floating: 0 5px 10px rgba(0, 0, 0, 0.32);
-  --sc-shadow-clay-inset: inset 0 1px 2px rgba(0, 0, 0, 0.28);
+  --sc-shadow-clay-xs: 1px 2px 4px rgba(0, 0, 0, 0.36), -1px -1px 2px rgba(67, 98, 108, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.04), inset -1px -1px 2px rgba(0, 0, 0, 0.22);
+  --sc-shadow-clay-sm: 2px 3px 6px rgba(0, 0, 0, 0.42), -2px -2px 4px rgba(67, 98, 108, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.05), inset -1px -1px 3px rgba(0, 0, 0, 0.25);
+  --sc-shadow-clay-md: 3px 4px 8px rgba(0, 0, 0, 0.46), -2px -2px 6px rgba(67, 98, 108, 0.17), inset 0 1px 0 rgba(255, 255, 255, 0.05), inset -2px -2px 4px rgba(0, 0, 0, 0.28);
+  --sc-shadow-clay-lg: 4px 5px 10px rgba(0, 0, 0, 0.5), -3px -3px 8px rgba(67, 98, 108, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05), inset -2px -2px 5px rgba(0, 0, 0, 0.3);
+  --sc-shadow-clay-floating: 4px 5px 10px rgba(0, 0, 0, 0.5), -3px -3px 8px rgba(67, 98, 108, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.05), inset -2px -2px 5px rgba(0, 0, 0, 0.3);
+  --sc-shadow-clay-inset: inset 2px 2px 4px rgba(0, 0, 0, 0.36), inset -1px -1px 3px rgba(67, 98, 108, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.03);
   /* Las cavidades neutras conservan volumen con carbón y luz azul grisácea;
      el verde se reserva al control primario o a una selección real. */
-  --sc-shadow-clay-pressed: inset 0 1px 3px rgba(0, 0, 0, 0.38);
+  --sc-shadow-clay-pressed: inset 2px 3px 5px rgba(0, 0, 0, 0.44), inset -1px -1px 3px rgba(67, 98, 108, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 
   --sc-depth-base-border: 1px solid var(--sc-color-border-soft);
   --sc-depth-base-shadow: none;
   --sc-depth-inset-border: 1px solid var(--sc-color-border);
-  --sc-depth-inset-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28);
+  --sc-depth-inset-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.36), inset -1px -1px 3px rgba(67, 98, 108, 0.14);
   --sc-depth-raised-border: 1px solid var(--sc-color-border);
-  --sc-depth-raised-shadow: 0 2px 4px rgba(0, 0, 0, 0.26);
+  --sc-depth-raised-shadow: 2px 3px 6px rgba(0, 0, 0, 0.42), -2px -2px 4px rgba(67, 98, 108, 0.14);
   --sc-depth-floating-border: 1px solid var(--sc-color-border-strong);
-  --sc-depth-floating-shadow: 0 5px 10px rgba(0, 0, 0, 0.32);
+  --sc-depth-floating-shadow: 4px 5px 10px rgba(0, 0, 0, 0.5), -3px -3px 8px rgba(67, 98, 108, 0.18);
 
   --sc-clay-edge: 1px solid var(--sc-color-border);
   --sc-gradient-clay: var(--sc-color-surface-1);
@@ -846,9 +828,9 @@
      la escala clay. El gradiente no cambia: se mide sobre el mismo acento. La
      elevación exterior es la neutra nocturna, igual que cualquier otro
      control: la acción no tiene una fuente de luz verde propia. */
-  --sc-shadow-clay-action: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --sc-shadow-clay-action-hover: 0 2px 4px rgba(0, 0, 0, 0.34);
-  --sc-shadow-clay-action-pressed: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+  --sc-shadow-clay-action: 1px 2px 4px rgba(0, 0, 0, 0.38), -1px -1px 2px rgba(67, 98, 108, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.12), inset -1px -1px 3px color-mix(in srgb, var(--sc-color-action-primary) 44%, black);
+  --sc-shadow-clay-action-hover: 2px 3px 6px rgba(0, 0, 0, 0.44), -2px -2px 4px rgba(67, 98, 108, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.14), inset -1px -1px 4px color-mix(in srgb, var(--sc-color-action-primary) 48%, black);
+  --sc-shadow-clay-action-pressed: inset 2px 3px 5px color-mix(in srgb, var(--sc-color-action-primary) 46%, black), inset -1px -1px 3px rgba(255, 255, 255, 0.1);
 
 
   --sc-ring-inset: inset 0 1px 0 color-mix(in srgb, var(--sc-color-action-primary) 14%, transparent);

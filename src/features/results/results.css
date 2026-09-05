@@ -254,7 +254,7 @@
    desfavorable no puedan divergir. Tampoco hay ninguna regla que dependa del
    signo o de un umbral: el color técnico sólo llega a la etiqueta. */
 .result-extreme-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:8px; }
-.result-extreme-card { --extreme-color:var(--muted); min-width:0; padding:10px 11px; border-radius:10px; display:grid; align-content:start; gap:5px; }
+.result-extreme-card { --extreme-color:var(--muted); min-width:0; padding:10px 11px; border-radius:var(--sc-radius-card); display:grid; align-content:start; gap:5px; border-top:2px solid var(--extreme-color); }
 .result-extreme-card[data-accent='axial'] { --extreme-color:var(--axial); }
 .result-extreme-card[data-accent='shear'] { --extreme-color:var(--shear); }
 .result-extreme-card[data-accent='moment'] { --extreme-color:var(--moment); }
@@ -273,9 +273,35 @@
    lo que cambia es la palabra y su peso, nunca un color sobre el valor. */
 .result-extreme-card__reliability dd[data-reliability='unreliable'],
 .result-extreme-card__reliability dd[data-reliability='failed'] { font-weight:750; text-decoration:underline; text-underline-offset:2px; }
-.result-extreme-card__locate { min-height:30px; margin-top:1px; padding:0 8px; border:0; border-radius:8px; background:var(--surface-2); color:var(--text); display:inline-flex; align-items:center; justify-self:start; gap:5px; font:inherit; font-size:9px; font-weight:650; cursor:pointer; }
-.result-extreme-card__locate:hover { color:var(--accent); }
-.result-extreme-card__locate:focus-visible { outline:3px solid var(--focus); outline-offset:3px; }
+.result-extreme-card__locate {
+  min-height:30px;
+  margin-top:2px;
+  padding:0 10px;
+  border:1px solid var(--sc-color-border-soft);
+  border-radius:var(--sc-radius-control);
+  background:var(--surface-2);
+  color:var(--text);
+  box-shadow:var(--sc-shadow-clay-xs);
+  display:inline-flex;
+  align-items:center;
+  justify-self:start;
+  gap:5px;
+  font:inherit;
+  font-size:9px;
+  font-weight:650;
+  cursor:pointer;
+  transition:transform 180ms var(--sc-ease-standard), box-shadow 180ms var(--sc-ease-standard), color 180ms var(--sc-ease-standard);
+}
+.result-extreme-card__locate:hover {
+  color:var(--accent);
+  box-shadow:var(--sc-shadow-clay-sm);
+  transform:translateY(-1px);
+}
+.result-extreme-card__locate:active {
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
+}
+.result-extreme-card__locate:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
 .diagram-cursor-metric { display:grid; align-content:start; gap:2px; padding:10px 11px; }
 .diagram-cursor-metric span { color:var(--muted); font-size:8px; }
 .diagram-cursor-metric strong { font-family:var(--sc-font-mono); font-size:12px; }
@@ -1086,14 +1112,15 @@
 .results-mode-control button {
   border-radius:var(--sc-radius-control);
   box-shadow:none;
+  transition:transform 180ms var(--sc-ease-standard), box-shadow 180ms var(--sc-ease-standard);
 }
 
 .result-tabs button:hover,
 .dense-results-tabs button:hover,
 .results-mode-control button:hover {
   background:var(--sc-color-surface-2);
-  box-shadow:none;
-  transform:none;
+  box-shadow:var(--sc-shadow-clay-xs);
+  transform:translateY(-1px);
 }
 
 .result-tabs button.active,
@@ -1103,7 +1130,7 @@
   border-color:color-mix(in srgb,var(--accent) 42%,var(--sc-color-border));
   background:var(--accent-soft);
   color:var(--accent-on-soft);
-  box-shadow:none;
+  box-shadow:var(--sc-shadow-clay-pressed);
   transform:none;
 }
 
@@ -1120,7 +1147,20 @@
   border:1px solid var(--sc-color-border-soft);
   border-radius:var(--sc-radius-card);
   background:var(--sc-color-surface-1);
-  box-shadow:none;
+  box-shadow:var(--sc-shadow-clay-xs);
+  transition:transform 180ms var(--sc-ease-standard), box-shadow 180ms var(--sc-ease-standard);
+}
+
+.results-metric-cards > button:hover,
+.result-extreme-card:hover {
+  box-shadow:var(--sc-shadow-clay-sm);
+  transform:translateY(-1px);
+}
+
+.results-metric-cards > button:active,
+.result-extreme-card:active {
+  box-shadow:var(--sc-shadow-clay-pressed);
+  transform:var(--sc-clay-press-transform);
 }
 
 .results-table,
