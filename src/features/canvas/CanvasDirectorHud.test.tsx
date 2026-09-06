@@ -150,5 +150,32 @@ describe('CanvasDirectorHud', () => {
     expect(activeBtn.textContent).toContain('Sólido 2.5D');
     expect(activeBtn.className).toContain('is-active');
   });
+
+  it('renders compact mode with data-compact attribute and is-compact-hud class', () => {
+    const { getByTestId } = render(
+      <CanvasDirectorHud
+        visible={true}
+        compact={true}
+        vibrationActive={false}
+        onToggleVibration={vi.fn()}
+        vibrationSpeed={1.0}
+        onChangeSpeed={vi.fn()}
+        vibrationAmplitude={1.0}
+        onChangeAmplitude={vi.fn()}
+        forceFlowActive={false}
+        onToggleForceFlow={vi.fn()}
+        solidModeActive={false}
+        onToggleSolidMode={vi.fn()}
+        stackActive={false}
+        stackLayout="rows"
+        onToggleStackLayout={vi.fn()}
+        onFitCamera={vi.fn()}
+      />,
+    );
+
+    const hud = getByTestId('canvas-director-hud');
+    expect(hud.getAttribute('data-compact')).toBe('true');
+    expect(hud.className).toContain('is-compact-hud');
+  });
 });
 

@@ -2927,7 +2927,8 @@ export const StructuralCanvas = ({
         onStackQuantityToggle={toggleStackQuantityChoice}
       />
       <CanvasDirectorHud
-        visible={Boolean((analysis?.success || project.members.length > 0) && !compactCanvasChrome)}
+        visible={Boolean(analysis?.success || project.members.length > 0)}
+        compact={compactCanvasChrome}
         vibrationActive={vibrationActive}
         onToggleVibration={() => setVibrationActive((curr) => !curr)}
         vibrationSpeed={vibrationSpeed}

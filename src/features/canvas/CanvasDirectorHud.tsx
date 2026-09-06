@@ -5,6 +5,7 @@ import type { ReactionDisplayMode } from './supportCompass';
 
 export interface CanvasDirectorHudProps {
   visible: boolean;
+  compact?: boolean;
   vibrationActive: boolean;
   onToggleVibration: () => void;
   vibrationSpeed: number;
@@ -28,6 +29,7 @@ const AMPLITUDE_OPTIONS = [1.0, 2.5, 5.0];
 
 const CanvasDirectorHudImpl = ({
   visible,
+  compact = false,
   vibrationActive,
   onToggleVibration,
   vibrationSpeed,
@@ -59,11 +61,34 @@ const CanvasDirectorHudImpl = ({
 
   return (
     <aside
-      className="canvas-director-hud"
+      className={`canvas-director-hud${compact ? ' is-compact-hud' : ''}`}
       aria-label="Controles cinemáticos del lienzo"
       data-canvas-chrome="director-hud"
+      data-compact={compact ? 'true' : undefined}
       data-testid="canvas-director-hud"
     >
+      {onToggleSolidMode ? (
+        <div className="director-hud-group">
+          <button
+            type="button"
+            className={`director-hud-btn${solidModeActive ? ' is-active' : ''}`}
+            onClick={onToggleSolidMode}
+            aria-pressed={solidModeActive}
+            title={
+              solidModeActive
+                ? 'Volver a vista analítica unifilar (alambre 1D)'
+                : 'Extrusión 2.5D: visualizar volumetría física de perfiles I/tubulares y orientación'
+            }
+            data-testid="director-solid-mode-toggle"
+          >
+            <Box size={14} />
+            <span>{solidModeActive ? 'Sólido 2.5D' : 'Wireframe'}</span>
+          </button>
+        </div>
+      ) : null}
+
+      <div className="director-hud-divider" aria-hidden="true" />
+
       <div className="director-hud-group">
         <button
           type="button"
@@ -137,29 +162,6 @@ const CanvasDirectorHudImpl = ({
             >
               <Compass size={14} />
               <span>{reactionMode === 'polar' ? 'Brújula' : reactionMode === 'both' ? 'Polar + XY' : 'Cartesiano'}</span>
-            </button>
-          </div>
-        </>
-      ) : null}
-
-      {onToggleSolidMode ? (
-        <>
-          <div className="director-hud-divider" aria-hidden="true" />
-          <div className="director-hud-group">
-            <button
-              type="button"
-              className={`director-hud-btn${solidModeActive ? ' is-active' : ''}`}
-              onClick={onToggleSolidMode}
-              aria-pressed={solidModeActive}
-              title={
-                solidModeActive
-                  ? 'Volver a vista analítica unifilar (alambre 1D)'
-                  : 'Extrusión 2.5D: visualizar volumetría física de perfiles I/tubulares y orientación'
-              }
-              data-testid="director-solid-mode-toggle"
-            >
-              <Box size={14} />
-              <span>{solidModeActive ? 'Sólido 2.5D' : 'Wireframe'}</span>
             </button>
           </div>
         </>
