@@ -94,12 +94,12 @@ describe('ToolRail mobile action sheets', () => {
     expect(screen.queryByRole('button', { name: /poner herramientas/i })).toBeNull();
   });
 
-  it('keeps the phone dock to six direct destinations and routes the rest through sheets', () => {
+  it('renders the Glassmorphic Dock 2.0 with switchable tabs and routes secondary tools through sheets', () => {
     const { container } = renderToolRail('K0');
     const dock = container.querySelector<HTMLElement>('.mobile-tool-dock');
 
     expect(dock).toBeTruthy();
-    expect(within(dock as HTMLElement).getAllByRole('button')).toHaveLength(6);
+    expect(within(dock as HTMLElement).getAllByRole('button')).toHaveLength(5);
     expect(within(dock as HTMLElement).getByRole('button', { name: /herramientas de carga/i })).toBeTruthy();
     expect(within(dock as HTMLElement).getByRole('button', { name: /más herramientas/i })).toBeTruthy();
   });
@@ -149,7 +149,7 @@ describe('ToolRail mobile action sheets', () => {
     expect(within(screen.getByRole('group', { name: /^crear$/i })).getAllByRole('button')).toHaveLength(4);
     expect(within(screen.getByRole('group', { name: /^cargas$/i })).getAllByRole('button')).toHaveLength(3);
     expect(within(screen.getByRole('group', { name: /anotar e inspeccionar.*editar/i })).getAllByRole('button')).toHaveLength(4);
-    expect(document.querySelectorAll('[data-tool-id]')).toHaveLength(16);
+    expect(document.querySelectorAll('[data-tool-id]')).toHaveLength(12);
   });
 
   it('opens Buscar comandos from the Navegar group in the ToolRail', async () => {

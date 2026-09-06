@@ -181,9 +181,9 @@
      and compact copies use smaller annotation text and no member IDs. */
   .diagram-stack-layer--canvas .diagram-stack-panel-title { font-size:10px!important; }
   .diagram-stack-layer--canvas .diagram-stack-reading text { font-size:8px!important; }
-  .diagram-stack-layer--canvas .diagram-stack-member-line { stroke-width:1.7; }
-  .diagram-stack-layer--canvas .diagram-stack-replica-member { stroke-width:1.4; opacity:.75; }
-  .diagram-stack-layer--canvas .diagram-stack-member-fill { opacity:.12; }
+  .diagram-stack-layer--canvas .diagram-stack-member-line { stroke-width:2.2; }
+  .diagram-stack-layer--canvas .diagram-stack-replica-member { stroke-width:1.6; opacity:.85; }
+  .diagram-stack-layer--canvas .diagram-stack-member-fill { opacity:.48; }
   .diagram-stack-layer--canvas .diagram-stack-member-hit { stroke-width:24; }
   .diagram-stack-probe-summary { font-size:8.5px; }
 

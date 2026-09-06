@@ -1,4 +1,5 @@
 import {
+  BarChart2,
   BoxSelect,
   ChevronRight,
   CircleDot,
@@ -8,6 +9,7 @@ import {
   GitCommitHorizontal,
   Grid3x3,
   Hand,
+  Layers,
   Move,
   MousePointer2,
   MoreHorizontal,
@@ -18,12 +20,13 @@ import {
   Search,
   Scissors,
   Sigma,
+  Zap,
   type LucideIcon,
 } from 'lucide-react';
 import { useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '../../i18n/useI18n';
-import { useProject } from '../../store/ProjectContext';
+import { useProject, type ResultTab } from '../../store/ProjectContext';
 import type { Tool } from '../../types';
 import { ToolButton as EditorToolButton, type ToolTone } from '../../design-system/components/editor';
 import { STRUCTURAL_TOOL_IDS, StructuralToolIcon } from './StructuralToolIcon';
@@ -241,10 +244,16 @@ const setAppShellMobileInert = (inert: boolean) => {
  * por su cuenta.
  */
 export const ToolRail = () => {
-  const { activeTool, setActiveTool, project, selection } = useProject();
+  const { activeTool, setActiveTool, project, selection, resultTab, setResultTab } = useProject();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [mobileMenu, setMobileMenu] = useState<'loads' | 'more' | null>(null);
   const [desktopDockCollapsed, setDesktopDockCollapsed] = useState(false);
+  type MobileDockTab = 'navigate' | 'geometry' | 'loads' | 'results';
+  const [activeMobileTab, setActiveMobileTab] = useState<MobileDockTab>(() => {
+    if (activeTool === 'node' || activeTool === 'member' || activeTool === 'support') return 'geometry';
+    if (activeTool === 'pointLoad' || activeTool === 'distributedLoad' || activeTool === 'moment') return 'loads';
+    return 'navigate';
+  });
   const loadMenuButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuButtonRef = useRef<HTMLButtonElement>(null);
   const paletteRef = useRef<HTMLElement>(null);
@@ -262,13 +271,10 @@ export const ToolRail = () => {
   const visibleTools = classroom && !revealAdvanced
     ? TOOL_REGISTRY.filter((tool) => !tool.classroomAdvanced)
     : TOOL_REGISTRY;
-  const mobilePrimaryTools = TOOL_REGISTRY.filter((tool) => tool.mobile === 'primary');
   const mobilePaletteTools = mobileMenu === 'loads' || mobileMenu === 'more'
     ? TOOL_REGISTRY.filter((tool) => tool.mobile === mobileMenu)
     : [];
-  const loadToolActive = TOOL_REGISTRY.some((tool) => tool.mobile === 'loads' && tool.id === activeTool);
   const moreToolActive = TOOL_REGISTRY.some((tool) => tool.mobile === 'more' && tool.id === activeTool);
-  const loadGroupHighlighted = mobileMenu ? mobileMenu === 'loads' : loadToolActive;
   const moreGroupHighlighted = mobileMenu ? mobileMenu !== 'loads' : moreToolActive;
   const canEditSelection = selection?.kind === 'node'
     || selection?.kind === 'member'
@@ -287,6 +293,38 @@ export const ToolRail = () => {
     generatorWasOpenRef.current = false;
     setActiveTool('select');
   }, [generatorOpen, setActiveTool]);
+
+  useEffect(() => {
+    if (activeTool === 'node' || activeTool === 'member' || activeTool === 'support') {
+      setActiveMobileTab('geometry');
+    } else if (activeTool === 'pointLoad' || activeTool === 'distributedLoad' || activeTool === 'moment') {
+      setActiveMobileTab('loads');
+    } else if (activeTool === 'select' || activeTool === 'pan') {
+      setActiveMobileTab('navigate');
+    }
+  }, [activeTool]);
+
+  const handleMobileTabClick = (tab: MobileDockTab) => {
+    haptics.selection();
+    setActiveMobileTab(tab);
+    if (tab === 'navigate' && activeTool !== 'select' && activeTool !== 'pan') {
+      selectTool('select');
+    } else if (tab === 'geometry' && activeTool !== 'node' && activeTool !== 'member' && activeTool !== 'support') {
+      selectTool('member');
+    } else if (tab === 'loads' && activeTool !== 'pointLoad' && activeTool !== 'distributedLoad' && activeTool !== 'moment') {
+      selectTool('pointLoad');
+    }
+  };
+
+  const handleSegmentClick = (tab: ResultTab) => {
+    haptics.selection();
+    setResultTab(tab);
+  };
+
+  const handleSolidToggle = () => {
+    haptics.impact('medium');
+    emitWorkspaceCommand('toggle-canvas-solid-mode');
+  };
 
   const selectTool = (tool: Tool) => {
     // Cambiar de herramienta es el gesto más repetido de la mesa y el que peor
@@ -588,38 +626,202 @@ export const ToolRail = () => {
         <div className="toolbar-spacer" />
         <div className="selection-tip"><BoxSelect size={18} /><span>{t('toolbar.tip')}</span></div>
 
-        <nav className="mobile-tool-dock" aria-label={t('toolbar.primary')}>
-          {mobilePrimaryTools.map((definition) => <RegisteredToolButton
-            key={definition.id}
-            definition={definition}
-            label={t(definition.labelKey)}
-            active={activeTool === definition.id}
-            className="mobile-dock-tool"
-            onSelect={selectTool}
-          />)}
-          <button
-            ref={loadMenuButtonRef}
-            className={`sc-tool-button sc-tool-button--load mobile-tool-group tool-button tool-pointLoad mobile-dock-tool${loadGroupHighlighted ? ' is-active' : ''}`}
-            aria-label={t('toolbar.loads')}
-            aria-expanded={mobileMenu === 'loads'}
-            aria-haspopup="dialog"
-            onClick={() => setMobileMenu((current) => current === 'loads' ? null : 'loads')}
-          >
-            <span className="sc-tool-button__icon" aria-hidden="true"><StructuralToolIcon tool="pointLoad" /></span>
-            <span className="sc-tool-button__copy"><strong>{t('toolbar.loadsShort')}</strong></span>
-          </button>
-          <button
-            ref={moreMenuButtonRef}
-            className={`sc-tool-button sc-tool-button--navigation mobile-tool-group tool-button mobile-dock-tool${moreGroupHighlighted ? ' is-active' : ''}`}
-            aria-label={t('toolbar.more')}
-            aria-expanded={mobileMenu === 'more'}
-            aria-haspopup="dialog"
-            onClick={() => setMobileMenu((current) => current === 'more' ? null : 'more')}
-          >
-            <span className="sc-tool-button__icon" aria-hidden="true"><MoreHorizontal size={22} strokeWidth={1.8} /></span>
-            <span className="sc-tool-button__copy"><strong>{t('toolbar.moreShort')}</strong></span>
-          </button>
-        </nav>
+        {shellClass === 'K0' ? (
+          <div className="mobile-dock-wrapper">
+            <div className={`mobile-dock-subshelf mobile-dock-subshelf--${activeMobileTab}`} role="toolbar" aria-label={`Herramientas de ${activeMobileTab}`}>
+              {activeMobileTab === 'navigate' && (
+                <div className="dock-subshelf-inner">
+                  {toolsInGroup('navigate', visibleTools).map((definition) => (
+                    <RegisteredToolButton
+                      key={definition.id}
+                      definition={definition}
+                      label={t(definition.labelKey)}
+                      active={activeTool === definition.id}
+                      compact
+                      className="mobile-subshelf-tool"
+                      onSelect={selectTool}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    className="sc-tool-button sc-tool-button--navigation is-compact tool-button tool-command-palette mobile-subshelf-tool"
+                    onClick={openCommandPaletteFromMobile}
+                    aria-label={t('palette.open')}
+                  >
+                    <span className="sc-tool-button__icon" aria-hidden="true"><Search size={20} strokeWidth={1.8} /></span>
+                    <span className="sc-tool-button__copy"><strong>{t('palette.openShort')}</strong></span>
+                  </button>
+                </div>
+              )}
+              {activeMobileTab === 'geometry' && (
+                <div className="dock-subshelf-inner">
+                  {toolsInGroup('create', visibleTools).map((definition) => (
+                    <RegisteredToolButton
+                      key={definition.id}
+                      definition={definition}
+                      label={t(definition.labelKey)}
+                      active={activeTool === definition.id}
+                      compact
+                      className="mobile-subshelf-tool"
+                      onSelect={selectTool}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    className="sc-tool-button sc-tool-button--structure is-compact tool-button tool-structure-generator mobile-subshelf-tool"
+                    onClick={openStructureGeneratorFromMobile}
+                    aria-label={t('generator.launcher')}
+                    data-structure-generator-command
+                  >
+                    <span className="sc-tool-button__icon" aria-hidden="true"><Grid3x3 size={20} strokeWidth={1.8} /></span>
+                    <span className="sc-tool-button__copy"><strong>Marco</strong></span>
+                  </button>
+                </div>
+              )}
+              {activeMobileTab === 'loads' && (
+                <div className="dock-subshelf-inner">
+                  {toolsInGroup('loads', visibleTools).map((definition) => (
+                    <RegisteredToolButton
+                      key={definition.id}
+                      definition={definition}
+                      label={t(definition.labelKey)}
+                      active={activeTool === definition.id}
+                      compact
+                      className="mobile-subshelf-tool"
+                      onSelect={selectTool}
+                    />
+                  ))}
+                </div>
+              )}
+              {activeMobileTab === 'results' && (
+                <div className="dock-segmented-slider" role="radiogroup" aria-label="Solicitaciones y diagramas">
+                  <div
+                    className="dock-segmented-slider__thumb"
+                    data-active-index={
+                      resultTab === 'axial' ? 0
+                      : resultTab === 'shear' ? 1
+                      : resultTab === 'moment' ? 2
+                      : resultTab === 'deformed' ? 3
+                      : -1
+                    }
+                    aria-hidden="true"
+                  />
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={resultTab === 'axial'}
+                    className={`dock-segment-btn${resultTab === 'axial' ? ' is-active' : ''}`}
+                    onClick={() => handleSegmentClick('axial')}
+                  >
+                    <span className="dock-segment-symbol">N</span>
+                    <span className="dock-segment-name">Axial</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={resultTab === 'shear'}
+                    className={`dock-segment-btn${resultTab === 'shear' ? ' is-active' : ''}`}
+                    onClick={() => handleSegmentClick('shear')}
+                  >
+                    <span className="dock-segment-symbol">V</span>
+                    <span className="dock-segment-name">Cortante</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={resultTab === 'moment'}
+                    className={`dock-segment-btn${resultTab === 'moment' ? ' is-active' : ''}`}
+                    onClick={() => handleSegmentClick('moment')}
+                  >
+                    <span className="dock-segment-symbol">M</span>
+                    <span className="dock-segment-name">Flector</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={resultTab === 'deformed'}
+                    className={`dock-segment-btn${resultTab === 'deformed' ? ' is-active' : ''}`}
+                    onClick={() => handleSegmentClick('deformed')}
+                  >
+                    <span className="dock-segment-symbol">δ</span>
+                    <span className="dock-segment-name">Flecha</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="button"
+                    className="dock-segment-btn dock-segment-btn--solid"
+                    onClick={handleSolidToggle}
+                    aria-label="Alternar renderizado sólido 2.5D"
+                  >
+                    <span className="dock-segment-symbol">🧊</span>
+                    <span className="dock-segment-name">2.5D</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <nav className="mobile-tool-dock is-glass-dock-2" aria-label={t('toolbar.primary')}>
+              <button
+                type="button"
+                className={`mobile-dock-tab mobile-dock-tab--navigate${activeMobileTab === 'navigate' ? ' is-active' : ''}`}
+                onClick={() => handleMobileTabClick('navigate')}
+                aria-label={t('toolbar.groupNavigate') || 'Navegar'}
+                aria-pressed={activeMobileTab === 'navigate'}
+              >
+                <span className="mobile-dock-tab__icon" aria-hidden="true"><MousePointer2 size={19} strokeWidth={2} /></span>
+                <span className="mobile-dock-tab__label">{t('toolbar.groupNavigate') || 'Navegar'}</span>
+              </button>
+              <button
+                type="button"
+                className={`mobile-dock-tab mobile-dock-tab--geometry${activeMobileTab === 'geometry' ? ' is-active' : ''}`}
+                onClick={() => handleMobileTabClick('geometry')}
+                aria-label={t('toolbar.groupCreate') || 'Geometría'}
+                aria-pressed={activeMobileTab === 'geometry'}
+              >
+                <span className="mobile-dock-tab__icon" aria-hidden="true"><Layers size={19} strokeWidth={2} /></span>
+                <span className="mobile-dock-tab__label">{t('toolbar.groupCreate') || 'Geometría'}</span>
+              </button>
+              <button
+                ref={loadMenuButtonRef}
+                type="button"
+                className={`mobile-dock-tab mobile-dock-tab--loads${activeMobileTab === 'loads' ? ' is-active' : ''}`}
+                onClick={() => {
+                  haptics.selection();
+                  setActiveMobileTab('loads');
+                  setMobileMenu((current) => current === 'loads' ? null : 'loads');
+                }}
+                aria-label={t('toolbar.loads')}
+                aria-expanded={mobileMenu === 'loads'}
+                aria-haspopup="dialog"
+              >
+                <span className="mobile-dock-tab__icon" aria-hidden="true"><Zap size={19} strokeWidth={2} /></span>
+                <span className="mobile-dock-tab__label">{t('toolbar.loadsShort') || 'Cargas'}</span>
+              </button>
+              <button
+                type="button"
+                className={`mobile-dock-tab mobile-dock-tab--results${activeMobileTab === 'results' ? ' is-active' : ''}`}
+                onClick={() => handleMobileTabClick('results')}
+                aria-label="Resultados y diagramas"
+                aria-pressed={activeMobileTab === 'results'}
+              >
+                <span className="mobile-dock-tab__icon" aria-hidden="true"><BarChart2 size={19} strokeWidth={2} /></span>
+                <span className="mobile-dock-tab__label">{t('canvas.evidenceResults') || 'Resultados'}</span>
+              </button>
+              <button
+                ref={moreMenuButtonRef}
+                type="button"
+                className={`mobile-dock-tab mobile-dock-tab--more mobile-tool-group tool-button mobile-dock-tool${moreGroupHighlighted ? ' is-active' : ''}`}
+                onClick={() => setMobileMenu((current) => current === 'more' ? null : 'more')}
+                aria-label={t('toolbar.more')}
+                aria-expanded={mobileMenu === 'more'}
+                aria-haspopup="dialog"
+              >
+                <span className="mobile-dock-tab__icon" aria-hidden="true"><MoreHorizontal size={19} strokeWidth={2} /></span>
+                <span className="mobile-dock-tab__label">{t('toolbar.moreShort') || 'Más'}</span>
+              </button>
+            </nav>
+          </div>
+        ) : null}
       </aside>
       {mobilePalette}
     </>

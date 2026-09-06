@@ -79,6 +79,7 @@ import { CanvasSolidExtrusionLayer } from './CanvasSolidExtrusionLayer';
 import { computeForceFlows, harmonicFactor } from './canvasDynamics';
 import type { ReactionDisplayMode } from './supportCompass';
 import { CanvasTouchLoupe } from './CanvasTouchLoupe';
+import { CanvasTouchRadialRing } from './CanvasTouchRadialRing';
 import { CandidatePicker } from './CanvasCandidatePicker';
 import {
   activeCandidate,
@@ -291,7 +292,7 @@ export const StructuralCanvas = ({
   const [vibrationAmplitude, setVibrationAmplitude] = useState(1.0);
   const [forceFlowActive, setForceFlowActive] = useState(false);
   const [dynamicHarmonicFactor, setDynamicHarmonicFactor] = useState(1.0);
-  const [reactionMode, setReactionMode] = useState<ReactionDisplayMode>('both');
+  const [reactionMode, setReactionMode] = useState<ReactionDisplayMode>('cartesian');
   const [solidModeActive, setSolidModeActive] = useState(false);
   const [cut, setCut] = useState<CutInfo | null>(null);
   const [interaction, setInteractionState] = useState<CanvasInteraction>(IDLE_INTERACTION);
@@ -774,6 +775,9 @@ export const StructuralCanvas = ({
     view.showResultValues,
   ]);
 
+  const fitModelRef = useRef(fitModel);
+  useEffect(() => { fitModelRef.current = fitModel; }, [fitModel]);
+
   const navigateMinimapTo = useCallback((point: ModelPoint) => {
     updateCamera((current) => ({
       scale: current.scale,
@@ -953,6 +957,26 @@ export const StructuralCanvas = ({
     else updateProject((draft) => ({ ...draft, memberLoads: draft.memberLoads.filter((load) => load.id !== target.id) }));
     setSelection(null);
   }, [executeProjectCommand, selection, setSelection, updateProject]);
+
+  const cycleNodeSupport = useCallback((nodeId: string) => {
+    const targetNode = nodeMap.get(nodeId);
+    if (!targetNode) return;
+    const order: Array<'none' | 'pin' | 'roller' | 'fixed'> = ['none', 'pin', 'roller', 'fixed'];
+    const currentIdx = order.indexOf(targetNode.support.type as 'none' | 'pin' | 'roller' | 'fixed');
+    const nextType = order[(currentIdx + 1) % order.length];
+    updateProject((draft) => {
+      const target = draft.nodes.find((item) => item.id === nodeId);
+      if (target) {
+        target.support = {
+          ...target.support,
+          type: nextType,
+          angleDeg: target.support.angleDeg ?? 90,
+        };
+      }
+      return draft;
+    });
+    showCanvasFeedback(`Apoyo ${nodeId}: ${nextType === 'none' ? 'Libre' : nextType}`);
+  }, [nodeMap, showCanvasFeedback, updateProject]);
 
   const addNode = (point: { x: number; y: number }) => {
     let id = '';
@@ -2163,8 +2187,8 @@ export const StructuralCanvas = ({
     setStackLayout((current) => (current === 'rows' ? 'columns' : 'rows'));
   }, []);
   useEffect(() => {
-    if (stackActive) fitModel(0, true);
-  }, [fitModel, stackActive, stackQuantities.length, stackLayout]);
+    if (stackActive) fitModelRef.current(0, true);
+  }, [stackActive, stackQuantities.length, stackLayout]);
   useEffect(() => onWorkspaceCommand('toggle-diagram-stack', toggleStack), [toggleStack]);
   useEffect(() => onWorkspaceCommand('toggle-diagram-stack-layout', toggleStackLayout), [toggleStackLayout]);
 
@@ -2582,16 +2606,16 @@ export const StructuralCanvas = ({
           <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--axial)" /></marker>
           <marker id="arrow-mechanism" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--warning)" /></marker>
           <linearGradient id="sc-diagram-axial-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--axial)" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="var(--axial)" stopOpacity="0.08" />
+            <stop offset="0%" stopColor="var(--axial)" stopOpacity="0.68" />
+            <stop offset="100%" stopColor="var(--axial)" stopOpacity="0.25" />
           </linearGradient>
           <linearGradient id="sc-diagram-shear-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--shear)" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="var(--shear)" stopOpacity="0.08" />
+            <stop offset="0%" stopColor="var(--shear)" stopOpacity="0.68" />
+            <stop offset="100%" stopColor="var(--shear)" stopOpacity="0.25" />
           </linearGradient>
           <linearGradient id="sc-diagram-moment-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--moment)" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="var(--moment)" stopOpacity="0.08" />
+            <stop offset="0%" stopColor="var(--moment)" stopOpacity="0.68" />
+            <stop offset="100%" stopColor="var(--moment)" stopOpacity="0.25" />
           </linearGradient>
           <filter id="sc-canvas-glow" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="2" result="glow" />
@@ -2960,6 +2984,38 @@ export const StructuralCanvas = ({
         sceneId={CANVAS_SCENE_ID}
         canvasHeight={size.height}
       /> : null}
+      {selection && (selection.kind === 'node' || selection.kind === 'member') && !structuralEditDraft ? (
+        <CanvasTouchRadialRing
+          selection={selection}
+          toScreen={toScreen}
+          nodeMap={nodeMap}
+          memberMap={memberMap}
+          onCycleSupport={cycleNodeSupport}
+          onStartMember={(nodeId) => {
+            setMemberStart(nodeId);
+            setActiveTool('member');
+            showCanvasFeedback(`Barra iniciada en ${nodeId}`);
+          }}
+          onAddLoad={(kind, id) => {
+            if (kind === 'node') {
+              setActiveTool('pointLoad');
+              showCanvasFeedback(`Carga sobre nudo ${id}`);
+            } else {
+              setActiveTool('distributedLoad');
+              showCanvasFeedback(`Carga sobre barra ${id}`);
+            }
+          }}
+          onCutMember={() => {
+            setActiveTool('split');
+            showCanvasFeedback('Herramienta cortar activa');
+          }}
+          onOpenSection={() => {
+            onRequestInspector?.();
+          }}
+          onDelete={() => deleteSelection()}
+          onDismiss={() => setSelection(null)}
+        />
+      ) : null}
       {canvasFeedback ? <div className="canvas-feedback" role="alert">{canvasFeedback}</div> : null}
       <RepeatActionOverlay
         available={!compactCanvasChrome && Boolean(repeatCandidate) && !structuralEditDraft}

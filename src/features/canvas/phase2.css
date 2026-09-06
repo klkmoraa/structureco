@@ -223,6 +223,137 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
     overflow:visible;
   }
   .desktop-tool-list,.toolbar-spacer,.selection-tip { display:none; }
+
+  /* Glassmorphic Dock 2.0 Mobile */
+  .app-shell[data-shell-class='K0'] .toolbar {
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    z-index:calc(var(--sc-z-sticky, 20) + 5);
+    pointer-events:none;
+    background:transparent !important;
+    border:0 !important;
+    box-shadow:none !important;
+    padding:0 12px calc(12px + var(--sc-safe-bottom, 0px)) 12px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-end;
+    height:auto;
+    min-height:0;
+  }
+  .app-shell[data-shell-class='K0'] .canvas-evidence-rail {
+    display:none !important;
+  }
+
+  .mobile-dock-wrapper {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    width:100%;
+    max-width:480px;
+    margin:0 auto;
+    pointer-events:auto;
+  }
+
+  .mobile-dock-subshelf {
+    width:100%;
+    display:flex;
+    justify-content:center;
+    pointer-events:auto;
+    animation:dockSubshelfBloom 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes dockSubshelfBloom {
+    from { opacity:0; transform:translateY(8px) scale(0.96); }
+    to { opacity:1; transform:translateY(0) scale(1); }
+  }
+
+  .dock-subshelf-inner {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    padding:5px 10px;
+    border-radius:20px;
+    background:color-mix(in srgb, var(--sc-color-surface-1) 85%, transparent);
+    backdrop-filter:blur(20px) saturate(180%);
+    -webkit-backdrop-filter:blur(20px) saturate(180%);
+    border:1px solid color-mix(in srgb, var(--sc-color-border-soft) 80%, rgba(255,255,255,0.4));
+    box-shadow:0 8px 24px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.4);
+    max-width:100%;
+    overflow-x:auto;
+  }
+  .dock-subshelf-inner::-webkit-scrollbar { display:none; }
+
+  .mobile-subshelf-tool {
+    height:42px !important;
+    min-height:42px !important;
+    min-width:44px !important;
+    border-radius:12px !important;
+    padding:4px 8px !important;
+  }
+
+  /* Fluid Segmented Slider for Solicitaciones (N, V, M, δ, 2.5D) */
+  .dock-segmented-slider {
+    position:relative;
+    display:flex;
+    align-items:center;
+    gap:2px;
+    width:100%;
+    max-width:380px;
+    background:color-mix(in srgb, var(--sc-color-surface-inset) 90%, transparent);
+    backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+    border-radius:16px;
+    padding:4px;
+    box-shadow:var(--sc-shadow-clay-inset), 0 8px 24px rgba(0,0,0,0.12);
+    border:1px solid color-mix(in srgb, var(--sc-color-border-soft) 70%, rgba(255,255,255,0.25));
+  }
+  .dock-segmented-slider__thumb {
+    position:absolute;
+    top:4px;
+    bottom:4px;
+    left:4px;
+    width:calc((100% - 8px) / 5);
+    border-radius:12px;
+    background:var(--sc-color-surface-1);
+    box-shadow:0 3px 10px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.7);
+    transition:transform 0.25s cubic-bezier(0.2, 0, 0, 1);
+    pointer-events:none;
+  }
+  .dock-segmented-slider__thumb[data-active-index='0'] { transform:translateX(0%); }
+  .dock-segmented-slider__thumb[data-active-index='1'] { transform:translateX(100%); }
+  .dock-segmented-slider__thumb[data-active-index='2'] { transform:translateX(200%); }
+  .dock-segmented-slider__thumb[data-active-index='3'] { transform:translateX(300%); }
+  .dock-segmented-slider__thumb[data-active-index='4'] { transform:translateX(400%); }
+  .dock-segmented-slider__thumb[data-active-index='-1'] { opacity:0; }
+
+  .dock-segment-btn {
+    flex:1;
+    height:40px;
+    border:0;
+    border-radius:12px;
+    background:transparent;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:1px;
+    color:var(--sc-color-text-subtle);
+    cursor:pointer;
+    position:relative;
+    z-index:1;
+    transition:color 0.15s ease, transform 0.15s ease;
+  }
+  .dock-segment-btn:hover:not(:disabled) { color:var(--sc-color-text); }
+  .dock-segment-btn.is-active { color:var(--accent); font-weight:800; }
+  .dock-segment-symbol { font-size:13px; font-weight:800; line-height:1; }
+  .dock-segment-name { font-size:9px; font-weight:650; line-height:1; }
+  .dock-segment-btn--solid { color:var(--sc-color-text); }
+  .dock-segment-btn--solid:active { transform:scale(0.95); }
+
   .mobile-tool-dock {
     display:grid;
     grid-template-columns:repeat(6,minmax(0,1fr));
@@ -230,6 +361,64 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
     gap:2px;
     width:100%;
   }
+  .mobile-tool-dock.is-glass-dock-2 {
+    display:flex !important;
+    align-items:center;
+    justify-content:space-around;
+    gap:4px;
+    padding:6px 8px;
+    border-radius:24px;
+    backdrop-filter:blur(24px) saturate(190%);
+    -webkit-backdrop-filter:blur(24px) saturate(190%);
+    background:color-mix(in srgb, var(--sc-color-surface-1) 88%, transparent);
+    border:1px solid color-mix(in srgb, var(--sc-color-border-soft) 80%, rgba(255,255,255,0.5));
+    box-shadow:0 12px 36px rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.5);
+  }
+
+  .mobile-dock-tab {
+    flex:1;
+    min-width:0;
+    height:50px;
+    border-radius:16px;
+    border:0;
+    background:transparent;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
+    color:var(--sc-color-text-subtle);
+    transition:all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor:pointer;
+    padding:2px;
+  }
+  .mobile-dock-tab:hover:not(:disabled) {
+    color:var(--sc-color-text);
+    background:color-mix(in srgb, var(--sc-color-surface-hover) 60%, transparent);
+  }
+  .mobile-dock-tab.is-active {
+    color:var(--accent);
+    background:color-mix(in srgb, var(--accent) 14%, transparent);
+    font-weight:700;
+    box-shadow:inset 0 1px 0 color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .mobile-dock-tab__icon {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:22px;
+    height:22px;
+  }
+  .mobile-dock-tab__label {
+    font-size:10px;
+    line-height:1.1;
+    font-weight:650;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:100%;
+  }
+
   .mobile-tool-dock .tool-button {
     min-width:0;
     width:100%;
@@ -2511,6 +2700,120 @@ body:has(.structural-edit-surface) .app-shell .tool-rail.is-floating-dock {
 .solid-face--joint-top,
 .solid-face--joint-side {
   cursor: pointer;
+}
+
+/* --- Menú radial táctil contextual (Touch Quick Ring) ---------------- */
+@keyframes ringBloom {
+  0% {
+    opacity: 0;
+    transform: scale(0.65);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.canvas-touch-radial-ring {
+  position: absolute;
+  z-index: 32;
+  width: 0;
+  height: 0;
+  pointer-events: auto;
+  user-select: none;
+  animation: ringBloom 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.radial-ring-center-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--sc-color-border, #475569) 80%, transparent);
+  background: color-mix(in srgb, var(--sc-color-surface-1, #1e293b) 90%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--sc-color-text-secondary, #94a3b8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  transition: all 0.15s ease;
+  z-index: 2;
+}
+
+.radial-ring-center-btn:hover {
+  color: #fff;
+  background: var(--sc-color-surface-2, #334155);
+}
+
+.radial-ring-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--sc-color-border, #475569) 70%, transparent);
+  background: color-mix(in srgb, var(--sc-color-surface-1, #1e293b) 92%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: var(--sc-color-text-primary, #f8fafc);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.2),
+    0 6px 16px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  padding: 0;
+  z-index: 3;
+}
+
+.radial-ring-btn:active {
+  transform: scale(0.92) !important;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.radial-ring-btn-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  line-height: 1;
+  margin-top: 2px;
+  color: var(--sc-color-text-secondary, #94a3b8);
+  pointer-events: none;
+}
+
+.radial-ring-btn:hover {
+  background: color-mix(in srgb, var(--sc-color-primary, #3b82f6) 25%, var(--sc-color-surface-1, #1e293b));
+  border-color: var(--sc-color-primary, #3b82f6);
+  color: #fff;
+}
+
+.radial-ring-btn:hover .radial-ring-btn-label {
+  color: #fff;
+}
+
+.radial-ring-btn--danger:hover {
+  background: color-mix(in srgb, var(--sc-color-state-error, #ef4444) 30%, var(--sc-color-surface-1, #1e293b));
+  border-color: var(--sc-color-state-error, #ef4444);
+  color: #fff;
+}
+
+.radial-ring-btn--danger:hover .radial-ring-btn-label {
+  color: #fca5a5;
 }
 
 
