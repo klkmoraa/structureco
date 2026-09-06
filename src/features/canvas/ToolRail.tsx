@@ -326,6 +326,11 @@ export const ToolRail = () => {
     emitWorkspaceCommand('toggle-canvas-solid-mode');
   };
 
+  const handleCompassToggle = () => {
+    haptics.impact('medium');
+    emitWorkspaceCommand('toggle-canvas-reaction-mode');
+  };
+
   const selectTool = (tool: Tool) => {
     // Cambiar de herramienta es el gesto más repetido de la mesa y el que peor
     // se confirma en un teléfono: la tecla queda debajo del pulgar, tapada.
@@ -755,6 +760,17 @@ export const ToolRail = () => {
                   >
                     <span className="dock-segment-symbol">🧊</span>
                     <span className="dock-segment-name">2.5D</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="button"
+                    className="dock-segment-btn dock-segment-btn--compass"
+                    onClick={handleCompassToggle}
+                    aria-label="Alternar brújula polar de reacciones"
+                    title="Alternar brújula polar de reacciones"
+                  >
+                    <span className="dock-segment-symbol">🧭</span>
+                    <span className="dock-segment-name">Brújula</span>
                   </button>
                 </div>
               )}

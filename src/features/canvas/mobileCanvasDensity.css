@@ -231,4 +231,16 @@
 @media (max-width:420px) {
   .canvas-evidence-layer { padding-inline:8px; font-size:10px; }
   .canvas-result-legend { width:min(188px,calc(100% - 66px)); }
+  .canvas-orientation-compass { top: 8px; right: 8px; }
 }
+
+@media (max-width:768px) {
+  .canvas-orientation-compass {
+    top: 10px;
+    right: 10px;
+  }
+  .canvas-orientation-compass .orientation-compass-mode-pill {
+    display: none;
+  }
+}
+

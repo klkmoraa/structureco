@@ -74,6 +74,7 @@ import { CanvasMiniMap } from './CanvasMiniMap';
 import { CanvasDiagramStack } from './CanvasDiagramStack';
 import { persistStackQuantities, readStoredStackQuantities, stackModelBounds, toggleStackQuantity, type StackLayout, type StackQuantity } from './diagramStack';
 import { CanvasDirectorHud } from './CanvasDirectorHud';
+import { CanvasOrientationCompass } from './CanvasOrientationCompass';
 import { CanvasForceFlowLayer } from './CanvasForceFlowLayer';
 import { CanvasSolidExtrusionLayer } from './CanvasSolidExtrusionLayer';
 import { computeForceFlows, harmonicFactor } from './canvasDynamics';
@@ -292,7 +293,7 @@ export const StructuralCanvas = ({
   const [vibrationAmplitude, setVibrationAmplitude] = useState(1.0);
   const [forceFlowActive, setForceFlowActive] = useState(false);
   const [dynamicHarmonicFactor, setDynamicHarmonicFactor] = useState(1.0);
-  const [reactionMode, setReactionMode] = useState<ReactionDisplayMode>('cartesian');
+  const [reactionMode, setReactionMode] = useState<ReactionDisplayMode>('both');
   const [solidModeActive, setSolidModeActive] = useState(false);
   const [cut, setCut] = useState<CutInfo | null>(null);
   const [interaction, setInteractionState] = useState<CanvasInteraction>(IDLE_INTERACTION);
@@ -2621,6 +2622,14 @@ export const StructuralCanvas = ({
             <feGaussianBlur stdDeviation="2" result="glow" />
             <feComposite in="SourceGraphic" in2="glow" operator="over" />
           </filter>
+          <linearGradient id="sc-compass-dial" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="color-mix(in srgb, var(--sc-color-surface-2, #334155) 80%, white 20%)" />
+            <stop offset="100%" stopColor="var(--sc-color-surface-1, #0f172a)" />
+          </linearGradient>
+          <linearGradient id="sc-compass-needle-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#f97316" />
+            <stop offset="100%" stopColor="#38bdf8" />
+          </linearGradient>
         </defs>
         {/* Todo lo dibujable va dentro de un grupo con `id`: la lupa táctil lo
             clona con `<use>` para ampliarlo, en vez de mantener un segundo
@@ -2969,6 +2978,12 @@ export const StructuralCanvas = ({
         stackLayout={stackLayout}
         onToggleStackLayout={toggleStackLayout}
         onFitCamera={() => fitModel(0, true)}
+      />
+      <CanvasOrientationCompass
+        onFit={() => fitModel(0, true)}
+        reactionMode={reactionMode}
+        onCycleReactionMode={cycleReactionMode}
+        compact={compactCanvasChrome}
       />
       {project.members.length >= 12 || project.nodes.length >= 16 ? <CanvasMiniMap
         nodes={project.nodes}

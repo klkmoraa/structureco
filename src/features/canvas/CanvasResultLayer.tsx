@@ -118,7 +118,7 @@ export const criticalStationLabel = (station: string, lengthUnit: string): strin
 const CanvasResultLayerImpl = ({
   slot, project, analysis, resultTab, resultsAllowed, resultCursor, influenceCanvasState, modeShapeState, camera, toScreen,
   nodeMap, memberMap, resultMap, nodeResultMap, mechanismMap, mechanismPixelScale, globalDiagramMax,
-  units, lengthLabel, forceLabel, momentLabel, showResults, showDiagnostics, harmonicFactor = 1, reactionMode = 'cartesian', size, t,
+  units, lengthLabel, forceLabel, momentLabel, showResults, showDiagnostics, harmonicFactor = 1, reactionMode = 'both', size, t,
 }: CanvasResultLayerProps) => {
   const view = readCanvasViewSettings(project);
   const scaleFor = (result: MemberResult) => diagramPixelScaleFor(project, resultTab, globalDiagramMax, result);
@@ -454,11 +454,11 @@ const CanvasResultLayerImpl = ({
     if (showPolar) {
       const polar = computePolarReaction(result.rx, result.ry, result.rm);
       if (polar.hasForce || polar.hasMoment) {
-        const dialR = 30;
-        const needleLen = 52;
+        const dialR = 34;
+        const needleLen = 56;
         const tipX = p.x + polar.screenVector.ux * needleLen;
         const tipY = p.y + polar.screenVector.uy * needleLen;
-        const badgeOffset = needleLen + 16;
+        const badgeOffset = needleLen + 18;
         const badgeX = p.x + polar.screenVector.ux * badgeOffset;
         const badgeY = p.y + polar.screenVector.uy * badgeOffset;
 
@@ -469,14 +469,15 @@ const CanvasResultLayerImpl = ({
           descriptions.push(`Mᵣ = ${formatFixed(toDisplay(polar.rm, units, 'moment'), 3)} ${momentLabel}`);
         }
 
-        const dialTicks = [0, 90, 180, 270].map((deg) => {
+        const dialTicks = [0, 45, 90, 135, 180, 225, 270, 315].map((deg) => {
+          const isMajor = deg % 90 === 0;
           const rad = (deg * Math.PI) / 180;
-          const r1 = dialR - 4;
-          const r2 = dialR;
+          const r1 = isMajor ? dialR - 6 : dialR - 3.5;
+          const r2 = dialR - 1.5;
           return (
             <line
               key={`tick-${deg}`}
-              className="reaction-compass-tick"
+              className={`reaction-compass-tick${isMajor ? ' is-major' : ''}`}
               x1={p.x + r1 * Math.cos(rad)}
               y1={p.y - r1 * Math.sin(rad)}
               x2={p.x + r2 * Math.cos(rad)}
@@ -490,7 +491,7 @@ const CanvasResultLayerImpl = ({
           : '';
 
         const torque = polar.hasMoment
-          ? reactiveTorquePath(p.x, p.y, dialR + 6, polar.rm)
+          ? reactiveTorquePath(p.x, p.y, dialR + 7, polar.rm)
           : null;
 
         const badgeLabel = polar.hasForce
@@ -500,8 +501,13 @@ const CanvasResultLayerImpl = ({
         elements.push(
           <g key="polar-compass" className="reaction-polar-compass" data-reaction-compass={node.id}>
             <circle className="reaction-compass-base" cx={p.x} cy={p.y} r={dialR} />
-            <circle className="reaction-compass-ring" cx={p.x} cy={p.y} r={dialR - 2} />
+            <circle className="reaction-compass-groove" cx={p.x} cy={p.y} r={dialR - 3} />
+            <circle className="reaction-compass-ring" cx={p.x} cy={p.y} r={dialR - 7} />
             {dialTicks}
+            <text className="reaction-compass-cardinal is-north" x={p.x} y={p.y - dialR + 13} textAnchor="middle">N</text>
+            <text className="reaction-compass-cardinal" x={p.x + dialR - 11} y={p.y + 3.5} textAnchor="middle">E</text>
+            <text className="reaction-compass-cardinal" x={p.x} y={p.y + dialR - 6} textAnchor="middle">S</text>
+            <text className="reaction-compass-cardinal" x={p.x - dialR + 11} y={p.y + 3.5} textAnchor="middle">W</text>
             {arcPath ? <path className="reaction-compass-arc" d={arcPath} /> : null}
             {polar.hasForce ? (
               <>
@@ -523,6 +529,9 @@ const CanvasResultLayerImpl = ({
                 />
               </>
             ) : null}
+            {/* Tactile center pivot pin */}
+            <circle className="reaction-compass-pin" cx={p.x} cy={p.y} r="4.2" />
+            <circle className="reaction-compass-pin-dot" cx={p.x - 1} cy={p.y - 1} r="1.3" />
             {torque ? (
               <path
                 className="reaction-compass-torque"
@@ -534,11 +543,11 @@ const CanvasResultLayerImpl = ({
             <g className="reaction-compass-badge" transform={`translate(${badgeX} ${badgeY})`}>
               <rect
                 className="reaction-compass-badge-bg"
-                x={-Math.max(46, badgeLabel.length * 3.7)}
-                y="-10"
-                width={Math.max(92, badgeLabel.length * 7.4)}
-                height="20"
-                rx="6"
+                x={-Math.max(48, badgeLabel.length * 3.8)}
+                y="-11"
+                width={Math.max(96, badgeLabel.length * 7.6)}
+                height="22"
+                rx="8"
               />
               <text className="reaction-compass-badge-text" x="0" y="4" textAnchor="middle">
                 {badgeLabel}
