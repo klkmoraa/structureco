@@ -122,4 +122,52 @@ describe('CanvasDiagramStack', () => {
     expect(container.querySelector('.diagram-stack-probe-summary')?.textContent).toContain('BC · x 2500.00 mm');
     expect(container.querySelector('[data-stack-probe="BC:moment"] .diagram-stack-probe-value')?.textContent).toBe('7.5e+6 N·mm');
   });
+
+  it('renders directly into the canvas world coordinates with floating badges when toScreen is provided', () => {
+    const toScreen = (x: number, y: number) => ({ x: 100 + x * 20, y: 500 - y * 20 });
+    const camera = { x: 100, y: 500, scale: 20 };
+    const { container } = render(<svg viewBox="0 0 1000 800"><CanvasDiagramStack
+      project={project}
+      results={members.map((member) => result(member.id))}
+      quantities={['axial', 'shear', 'moment']}
+      nodeMap={new Map(nodes.map((node) => [node.id, node]))}
+      size={{ width: 1000, height: 800 }}
+      t={((key: string) => key) as never}
+      camera={camera}
+      toScreen={toScreen}
+      layoutMode="rows"
+    /></svg>);
+
+    // Mask is transparent in world mode so the real canvas grid is visible
+    expect(container.querySelector('.diagram-stack-canvas-mask')?.getAttribute('fill')).toBe('none');
+    // Badges are rendered with replica badge classes
+    expect(container.querySelectorAll('.diagram-stack-replica-badge')).toHaveLength(3);
+    expect(container.querySelector('.diagram-stack-replica-badge.axial')).toBeTruthy();
+    expect(container.querySelector('.diagram-stack-replica-badge.shear')).toBeTruthy();
+    expect(container.querySelector('.diagram-stack-replica-badge.moment')).toBeTruthy();
+    // Replicas still have replica members
+    expect(container.querySelectorAll('.diagram-stack-replica-member')).toHaveLength(9);
+  });
+
+  it('offsets replicas horizontally when layoutMode is columns', () => {
+    const toScreen = (x: number, y: number) => ({ x: 100 + x * 20, y: 500 - y * 20 });
+    const camera = { x: 100, y: 500, scale: 20 };
+    const { container } = render(<svg viewBox="0 0 1000 800"><CanvasDiagramStack
+      project={project}
+      results={members.map((member) => result(member.id))}
+      quantities={['axial', 'shear', 'moment']}
+      nodeMap={new Map(nodes.map((node) => [node.id, node]))}
+      size={{ width: 1000, height: 800 }}
+      t={((key: string) => key) as never}
+      camera={camera}
+      toScreen={toScreen}
+      layoutMode="columns"
+    /></svg>);
+
+    expect(container.querySelector('[data-canvas-layer="diagram-stack"]')?.getAttribute('data-stack-layout')).toBe('columns');
+    const memberABs = Array.from(container.querySelectorAll('[data-stack-member="AB"] .diagram-stack-replica-member'));
+    const xCoords = memberABs.map((el) => Number(el.getAttribute('x1')));
+    expect(xCoords[1]).toBeGreaterThan(xCoords[0]);
+    expect(xCoords[2]).toBeGreaterThan(xCoords[1]);
+  });
 });

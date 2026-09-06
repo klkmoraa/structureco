@@ -153,3 +153,69 @@ export const stationReadings = (result: MemberResult, x: number): ReadonlyArray<
     return { quantity, value: rightValue, jump: Math.abs(rightValue - leftValue) > scale * 1e-9 ? { left: leftValue, right: rightValue } : null };
   });
 };
+
+export type StackLayout = 'rows' | 'columns';
+
+export interface StackReplicaOffset {
+  quantity: StackQuantity;
+  index: number;
+  dx: number;
+  dy: number;
+}
+
+export const computeStackOffsets = (
+  bounds: { minX: number; maxX: number; minY: number; maxY: number },
+  quantities: readonly StackQuantity[],
+  layout: StackLayout = 'rows',
+): StackReplicaOffset[] => {
+  const spanX = Math.max(1e-4, bounds.maxX - bounds.minX);
+  const spanY = Math.max(1e-4, bounds.maxY - bounds.minY);
+  const gapX = Math.max(spanX * 0.35, 2.2);
+  const gapY = Math.max(spanY * 0.45, 1.8);
+
+  return quantities.map((quantity, index) => {
+    if (layout === 'columns') {
+      return { quantity, index, dx: index * (spanX + gapX), dy: 0 };
+    }
+    return { quantity, index, dx: 0, dy: index === 0 ? 0 : -index * (spanY + gapY) };
+  });
+};
+
+export const stackModelBounds = (
+  nodes: readonly { x: number; y: number }[],
+  quantities: readonly StackQuantity[],
+  layout: StackLayout = 'rows',
+): { minX: number; maxX: number; minY: number; maxY: number } => {
+  const [first, ...rest] = nodes;
+  if (!first) return { minX: 0, maxX: 1, minY: 0, maxY: 1 };
+  const base = rest.reduce((acc, node) => ({
+    minX: Math.min(acc.minX, node.x), maxX: Math.max(acc.maxX, node.x),
+    minY: Math.min(acc.minY, node.y), maxY: Math.max(acc.maxY, node.y),
+  }), { minX: first.x, maxX: first.x, minY: first.y, maxY: first.y });
+
+  const count = Math.max(1, quantities.length);
+  if (count <= 1) return base;
+
+  const spanX = Math.max(1e-4, base.maxX - base.minX);
+  const spanY = Math.max(1e-4, base.maxY - base.minY);
+
+  if (layout === 'columns') {
+    const gapX = Math.max(spanX * 0.35, 2.2);
+    const totalSpanX = spanX * count + gapX * (count - 1);
+    return {
+      minX: base.minX,
+      maxX: base.minX + totalSpanX,
+      minY: base.minY,
+      maxY: base.maxY,
+    };
+  }
+  const gapY = Math.max(spanY * 0.45, 1.8);
+  const totalSpanY = spanY * count + gapY * (count - 1);
+  return {
+    minX: base.minX,
+    maxX: base.maxX,
+    minY: base.maxY - totalSpanY,
+    maxY: base.maxY,
+  };
+};
+

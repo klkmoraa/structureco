@@ -1406,6 +1406,20 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 .diagram-stack-panel.shear .diagram-stack-panel-title { fill:var(--shear); }
 .diagram-stack-panel.moment .diagram-stack-panel-title { fill:var(--moment); }
 
+.diagram-stack-replica-badge { pointer-events: none; filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.14)); }
+.diagram-stack-replica-badge-bg { fill: var(--surface-1); stroke: var(--border-soft); stroke-width: 1px; }
+.diagram-stack-replica-badge.axial .diagram-stack-replica-badge-bg { stroke: color-mix(in srgb, var(--axial) 45%, var(--border)); }
+.diagram-stack-replica-badge.shear .diagram-stack-replica-badge-bg { stroke: color-mix(in srgb, var(--shear) 45%, var(--border)); }
+.diagram-stack-replica-badge.moment .diagram-stack-replica-badge-bg { stroke: color-mix(in srgb, var(--moment) 45%, var(--border)); }
+.diagram-stack-panel-symbol { font-weight: 850; font-family: var(--sc-font-mono); }
+
+.diagram-stack-member-lane.axial .diagram-stack-member-fill { fill: url(#sc-diagram-axial-grad); }
+.diagram-stack-member-lane.shear .diagram-stack-member-fill { fill: url(#sc-diagram-shear-grad); }
+.diagram-stack-member-lane.moment .diagram-stack-member-fill { fill: url(#sc-diagram-moment-grad); }
+.diagram-shape.axial .diagram-fill { fill: url(#sc-diagram-axial-grad); }
+.diagram-shape.shear .diagram-fill { fill: url(#sc-diagram-shear-grad); }
+.diagram-shape.moment .diagram-fill { fill: url(#sc-diagram-moment-grad); }
+
 @media (max-width:1023px) {
   .canvas-evidence-rail { left:max(8px,var(--sc-safe-left)); right:max(84px,var(--sc-safe-right)); bottom:8px; max-width:none; transform:none; }
   .canvas-evidence-layer { min-height:30px; padding-inline:8px; }
@@ -2215,3 +2229,289 @@ body:has(.structural-edit-surface) .app-shell .tool-rail.is-floating-dock {
     min-height:44px;
   }
 }
+
+/* --- Director HUD flotante cinemático --------------------------------- */
+.canvas-director-hud {
+  position:absolute;
+  top:12px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 8px;
+  border:1px solid var(--sc-color-border);
+  border-radius:9999px;
+  background:color-mix(in srgb, var(--sc-color-surface-1, #1e293b) 88%, transparent);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  box-shadow:var(--sc-shadow-raised, 0 6px 20px rgba(0, 0, 0, 0.12));
+  z-index:15;
+  pointer-events:auto;
+  user-select:none;
+}
+
+.director-hud-group {
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+
+.director-hud-divider {
+  width:1px;
+  height:18px;
+  background:var(--sc-color-border);
+  margin-inline:2px;
+}
+
+.director-hud-btn {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  height:30px;
+  padding:0 10px;
+  border:1px solid transparent;
+  border-radius:9999px;
+  background:transparent;
+  color:var(--sc-color-text-secondary, #94a3b8);
+  font-size:12px;
+  font-weight:600;
+  cursor:pointer;
+  transition:all 0.16s ease;
+}
+
+.director-hud-btn:hover {
+  background:color-mix(in srgb, var(--sc-color-surface-2, #334155) 60%, transparent);
+  color:var(--sc-color-text-primary, #f8fafc);
+}
+
+.director-hud-btn.is-active {
+  background:var(--sc-color-primary, #3b82f6);
+  color:#fff;
+  border-color:color-mix(in srgb, #fff 20%, transparent);
+  box-shadow:0 0 12px color-mix(in srgb, var(--sc-color-primary, #3b82f6) 40%, transparent);
+}
+
+.director-hud-pill-btn {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  height:24px;
+  padding:0 7px;
+  border:1px solid var(--sc-color-border);
+  border-radius:9999px;
+  background:color-mix(in srgb, var(--sc-color-surface-2, #334155) 40%, transparent);
+  color:var(--sc-color-text-secondary, #94a3b8);
+  font-size:11px;
+  font-weight:600;
+  cursor:pointer;
+  transition:background 0.14s ease;
+}
+
+.director-hud-pill-btn:hover {
+  background:color-mix(in srgb, var(--sc-color-surface-2, #334155) 80%, transparent);
+  color:var(--sc-color-text-primary, #f8fafc);
+}
+
+.director-hud-icon-btn {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:30px;
+  height:30px;
+  border:1px solid transparent;
+  border-radius:9999px;
+  background:transparent;
+  color:var(--sc-color-text-secondary, #94a3b8);
+  cursor:pointer;
+  transition:all 0.16s ease;
+}
+
+.director-hud-icon-btn:hover {
+  background:color-mix(in srgb, var(--sc-color-surface-2, #334155) 60%, transparent);
+  color:var(--sc-color-text-primary, #f8fafc);
+}
+
+.director-hud-pulse {
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:#22c55e;
+  animation:sc-director-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes sc-director-pulse {
+  0%, 100% { opacity:1; transform:scale(1); }
+  50% { opacity:0.3; transform:scale(1.4); }
+}
+
+/* --- Flujo dinámico de esfuerzos (Force Flow Streams) ----------------- */
+.canvas-force-flow-layer {
+  pointer-events:none;
+}
+
+.force-flow-group.is-tension .force-flow-glow {
+  stroke:#f43f5e;
+  opacity:0.25;
+}
+
+.force-flow-group.is-tension .force-flow-stream {
+  stroke:#f43f5e;
+  stroke-linecap:round;
+  stroke-dasharray:8 12;
+  animation:sc-force-stream-anim linear infinite;
+}
+
+.force-flow-group.is-compression .force-flow-glow {
+  stroke:#0284c7;
+  opacity:0.25;
+}
+
+.force-flow-group.is-compression .force-flow-stream {
+  stroke:#0284c7;
+  stroke-linecap:round;
+  stroke-dasharray:8 12;
+  animation:sc-force-stream-anim linear infinite;
+}
+
+@keyframes sc-force-stream-anim {
+  from { stroke-dashoffset:40; }
+  to { stroke-dashoffset:0; }
+}
+
+/* --- Fantasma de referencia indeformada en oscilación dinámica ------- */
+.deformed-rest-ghost {
+  stroke:color-mix(in srgb, var(--sc-color-text-muted, #94a3b8) 40%, transparent);
+  stroke-width:1.5px;
+  stroke-dasharray:4 4;
+  pointer-events:none;
+}
+
+/* --- Brújula polar de reacciones en apoyos (Claymorphic) -------------- */
+.reaction-polar-compass {
+  pointer-events:none;
+}
+
+.reaction-compass-base {
+  fill:color-mix(in srgb, var(--sc-color-surface-1, #1e293b) 84%, transparent);
+  stroke:color-mix(in srgb, var(--sc-color-border, #475569) 70%, transparent);
+  stroke-width:1.2px;
+  filter:drop-shadow(0 3px 10px rgba(0, 0, 0, 0.22));
+}
+
+.reaction-compass-ring {
+  fill:none;
+  stroke:color-mix(in srgb, var(--sc-color-border, #475569) 45%, transparent);
+  stroke-width:1px;
+  stroke-dasharray:2 4;
+}
+
+.reaction-compass-tick {
+  stroke:color-mix(in srgb, var(--sc-color-border, #94a3b8) 75%, transparent);
+  stroke-width:1.4px;
+  stroke-linecap:round;
+}
+
+.reaction-compass-arc {
+  fill:none;
+  stroke:var(--sc-color-primary, #38bdf8);
+  stroke-width:2px;
+  stroke-linecap:round;
+  opacity:0.85;
+}
+
+.reaction-compass-needle-glow {
+  stroke:var(--sc-color-primary, #38bdf8);
+  stroke-width:6px;
+  stroke-linecap:round;
+  opacity:0.25;
+}
+
+.reaction-compass-needle {
+  stroke:var(--sc-color-primary, #0284c7);
+  stroke-width:2.6px;
+  stroke-linecap:round;
+}
+
+.reaction-compass-torque {
+  fill:none;
+  stroke:#f59e0b;
+  stroke-width:2.2px;
+  stroke-linecap:round;
+  stroke-dasharray:4 2;
+}
+
+.reaction-compass-badge {
+  pointer-events:none;
+}
+
+.reaction-compass-badge-bg {
+  fill:color-mix(in srgb, var(--sc-color-surface-1, #0f172a) 92%, transparent);
+  stroke:color-mix(in srgb, var(--sc-color-border, #334155) 80%, transparent);
+  stroke-width:1px;
+  filter:drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+}
+
+.reaction-compass-badge-text {
+  fill:var(--sc-color-text-primary, #f8fafc);
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:0.02em;
+  paint-order:stroke;
+  stroke:var(--sc-color-surface-1, #0f172a);
+  stroke-width:2px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* 2.5D Isometric Solid Extrusion Layer (Wire-to-Solid Mode)                 */
+/* -------------------------------------------------------------------------- */
+
+.solid-extrusion-layer {
+  cursor: pointer;
+}
+
+.solid-ghost-axis {
+  stroke: rgba(148, 163, 184, 0.35);
+  stroke-width: 1px;
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+  transition: stroke 0.2s ease, opacity 0.2s ease;
+}
+
+.solid-ghost-axis.is-selected {
+  stroke: var(--sc-accent, #f59e0b);
+  stroke-width: 1.5px;
+  stroke-dasharray: none;
+  opacity: 0.9;
+}
+
+.solid-face {
+  transition: filter 0.15s ease, opacity 0.15s ease;
+  outline: none;
+}
+
+.solid-face:hover {
+  filter: brightness(1.12);
+  cursor: pointer;
+}
+
+.solid-face.candidate-preview {
+  filter: brightness(1.22) drop-shadow(0 0 4px rgba(245, 158, 11, 0.4));
+}
+
+.solid-face.is-selected {
+  filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.65));
+}
+
+.solid-face--cap {
+  stroke-width: 1px;
+}
+
+.solid-face--joint-front,
+.solid-face--joint-top,
+.solid-face--joint-side {
+  cursor: pointer;
+}
+
+
+

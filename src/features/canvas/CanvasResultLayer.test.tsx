@@ -136,3 +136,24 @@ describe('CanvasResultLayer modal and buckling modes', () => {
     expect(layer?.querySelectorAll('path')).toHaveLength(1);
   });
 });
+
+describe('CanvasResultLayer polar reaction compass', () => {
+  it('renders polar compass and resultant needle when reactionMode is polar', () => {
+    const nodeResults = [
+      { nodeId: 'N1', rx: 30, ry: 40, rm: 12 },
+    ];
+    renderLayer('moment', {
+      slot: 'annotations',
+      reactionMode: 'polar',
+      analysis: { ...analysis, nodeResults },
+      nodeResultMap: new Map(nodeResults.map((r) => [r.nodeId, r])),
+    });
+
+    const compass = document.querySelector('[data-reaction-compass="N1"]');
+    expect(compass).not.toBeNull();
+    expect(compass?.querySelector('.reaction-compass-base')).not.toBeNull();
+    expect(compass?.querySelector('[data-reaction-component="r-net"]')).not.toBeNull();
+    expect(compass?.querySelector('.reaction-compass-badge-text')?.textContent).toContain('R 50.00 kN · 53°');
+  });
+});
+

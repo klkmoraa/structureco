@@ -72,8 +72,12 @@ import {
 import { CanvasInteractionLayer } from './CanvasInteractionLayer';
 import { CanvasMiniMap } from './CanvasMiniMap';
 import { CanvasDiagramStack } from './CanvasDiagramStack';
-import { externalStackBottomReserve } from './diagramStackReserve';
-import { persistStackQuantities, readStoredStackQuantities, toggleStackQuantity, type StackQuantity } from './diagramStack';
+import { persistStackQuantities, readStoredStackQuantities, stackModelBounds, toggleStackQuantity, type StackLayout, type StackQuantity } from './diagramStack';
+import { CanvasDirectorHud } from './CanvasDirectorHud';
+import { CanvasForceFlowLayer } from './CanvasForceFlowLayer';
+import { CanvasSolidExtrusionLayer } from './CanvasSolidExtrusionLayer';
+import { computeForceFlows, harmonicFactor } from './canvasDynamics';
+import type { ReactionDisplayMode } from './supportCompass';
 import { CanvasTouchLoupe } from './CanvasTouchLoupe';
 import { CandidatePicker } from './CanvasCandidatePicker';
 import {
@@ -280,7 +284,15 @@ export const StructuralCanvas = ({
   const [camera, setCamera] = useState<Camera>({ scale: 85, x: 260, y: 500 });
   const [memberStart, setMemberStart] = useState<string | null>(null);
   const [stackActive, setStackActive] = useState(false);
+  const [stackLayout, setStackLayout] = useState<StackLayout>('rows');
   const [stackQuantities, setStackQuantities] = useState<StackQuantity[]>(readStoredStackQuantities);
+  const [vibrationActive, setVibrationActive] = useState(false);
+  const [vibrationSpeed, setVibrationSpeed] = useState(1.0);
+  const [vibrationAmplitude, setVibrationAmplitude] = useState(1.0);
+  const [forceFlowActive, setForceFlowActive] = useState(false);
+  const [dynamicHarmonicFactor, setDynamicHarmonicFactor] = useState(1.0);
+  const [reactionMode, setReactionMode] = useState<ReactionDisplayMode>('both');
+  const [solidModeActive, setSolidModeActive] = useState(false);
   const [cut, setCut] = useState<CutInfo | null>(null);
   const [interaction, setInteractionState] = useState<CanvasInteraction>(IDLE_INTERACTION);
   const [spacePressed, setSpacePressed] = useState(false);
@@ -323,6 +335,7 @@ export const StructuralCanvas = ({
   const clipboardRef = useRef<ModelClipboard | null>(null);
   const pasteCountRef = useRef(1);
   const cameraFrameRef = useRef<number | null>(null);
+  const cameraAnimationRef = useRef<number | null>(null);
   const interactionFrameRef = useRef<number | null>(null);
   const nodeMoveFrameRef = useRef<number | null>(null);
   const pendingNodeMoveRef = useRef<{ nodeId: string; point: { x: number; y: number } } | null>(null);
@@ -554,6 +567,47 @@ export const StructuralCanvas = ({
     });
   }, []);
 
+  const stopCameraAnimation = useCallback(() => {
+    if (cameraAnimationRef.current !== null) {
+      window.cancelAnimationFrame(cameraAnimationRef.current);
+      cameraAnimationRef.current = null;
+    }
+  }, []);
+
+  const animateCameraTo = useCallback((target: Camera, durationMs = 280) => {
+    stopCameraAnimation();
+    const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
+    const prefersReduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    if (isTest || prefersReduced || durationMs <= 0) {
+      updateCamera(target);
+      return;
+    }
+    const start = { ...cameraRef.current };
+    const startTime = performance.now();
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+    const step = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / durationMs);
+      const eased = easeOutCubic(progress);
+
+      const next: Camera = {
+        x: start.x + (target.x - start.x) * eased,
+        y: start.y + (target.y - start.y) * eased,
+        scale: start.scale + (target.scale - start.scale) * eased,
+      };
+      updateCamera(next);
+
+      if (progress < 1) {
+        cameraAnimationRef.current = window.requestAnimationFrame(step);
+      } else {
+        cameraAnimationRef.current = null;
+      }
+    };
+
+    cameraAnimationRef.current = window.requestAnimationFrame(step);
+  }, [stopCameraAnimation, updateCamera]);
+
   const scheduleInteractionFrame = useCallback((next: CanvasInteraction) => {
     interactionRef.current = next;
     if (interactionFrameRef.current !== null) return;
@@ -633,11 +687,13 @@ export const StructuralCanvas = ({
 
   useEffect(() => () => {
     if (cameraFrameRef.current !== null) window.cancelAnimationFrame(cameraFrameRef.current);
+    if (cameraAnimationRef.current !== null) window.cancelAnimationFrame(cameraAnimationRef.current);
     if (interactionFrameRef.current !== null) window.cancelAnimationFrame(interactionFrameRef.current);
     if (nodeMoveFrameRef.current !== null) window.cancelAnimationFrame(nodeMoveFrameRef.current);
     if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
     if (feedbackTimerRef.current !== null) window.clearTimeout(feedbackTimerRef.current);
     cameraFrameRef.current = null;
+    cameraAnimationRef.current = null;
     interactionFrameRef.current = null;
     nodeMoveFrameRef.current = null;
     structuralEditFrameRef.current = null;
@@ -667,7 +723,7 @@ export const StructuralCanvas = ({
     coordinateReadoutRef.current.textContent = `X ${formatFixed(toDisplay(point.x, units, 'length'), 3)} · Y ${formatFixed(toDisplay(point.y, units, 'length'), 3)} ${lengthLabel}`;
   }, [lengthLabel, localScreenPoint, units]);
 
-  const fitModel = useCallback((bottomReserve = 0) => {
+  const fitModel = useCallback((bottomReserve = 0, animated = false) => {
     if (!project.nodes.length || !Number.isFinite(size.width) || !Number.isFinite(size.height) || size.width <= 0 || size.height <= 0) return;
     // React supplies a MouseEvent when this callback is handed directly to a
     // button. Only the ACM effect is allowed to provide a numeric reserve.
@@ -686,19 +742,31 @@ export const StructuralCanvas = ({
       reactionsVisible: layers.results && resultsAllowed && view.showResultValues && analysis?.success === true,
       diagramScale: view.diagramScale,
     }), viewport);
-    updateCamera(cameraToFitBounds(
-      modelBounds(project.nodes),
+    const targetBounds = stackActive && stackQuantities.length > 1
+      ? stackModelBounds(project.nodes, stackQuantities, stackLayout)
+      : modelBounds(project.nodes);
+    const targetCamera = cameraToFitBounds(
+      targetBounds,
       viewport,
       { ...reserved, bottom: reserved.bottom + safeBottomReserve },
-    ));
+    );
+    if (animated) {
+      animateCameraTo(targetCamera);
+    } else {
+      updateCamera(targetCamera);
+    }
   }, [
     analysis?.success,
+    animateCameraTo,
     layers.results,
     loadsLayerVisible,
     project,
     resultTab,
     resultsAllowed,
     size,
+    stackActive,
+    stackLayout,
+    stackQuantities,
     updateCamera,
     view.diagramScale,
     view.showLoads,
@@ -2091,10 +2159,47 @@ export const StructuralCanvas = ({
       return next;
     });
   }, []);
+  const toggleStackLayout = useCallback(() => {
+    setStackLayout((current) => (current === 'rows' ? 'columns' : 'rows'));
+  }, []);
   useEffect(() => {
-    if (stackActive) fitModel(externalStackBottomReserve(project, size, stackQuantities.length));
-  }, [fitModel, project, size, stackActive, stackQuantities.length]);
+    if (stackActive) fitModel(0, true);
+  }, [fitModel, stackActive, stackQuantities.length, stackLayout]);
   useEffect(() => onWorkspaceCommand('toggle-diagram-stack', toggleStack), [toggleStack]);
+  useEffect(() => onWorkspaceCommand('toggle-diagram-stack-layout', toggleStackLayout), [toggleStackLayout]);
+
+  const toggleVibration = useCallback(() => setVibrationActive((curr) => !curr), []);
+  const toggleForceFlow = useCallback(() => setForceFlowActive((curr) => !curr), []);
+  const toggleSolidMode = useCallback(() => setSolidModeActive((curr) => !curr), []);
+  const cycleReactionMode = useCallback(() => {
+    setReactionMode((curr) => (curr === 'both' ? 'polar' : curr === 'polar' ? 'cartesian' : 'both'));
+  }, []);
+  useEffect(() => onWorkspaceCommand('toggle-canvas-vibration', toggleVibration), [toggleVibration]);
+  useEffect(() => onWorkspaceCommand('toggle-canvas-force-flow', toggleForceFlow), [toggleForceFlow]);
+  useEffect(() => onWorkspaceCommand('toggle-canvas-solid-mode', toggleSolidMode), [toggleSolidMode]);
+  useEffect(() => onWorkspaceCommand('toggle-canvas-reaction-mode', cycleReactionMode), [cycleReactionMode]);
+
+  useEffect(() => {
+    if (!vibrationActive) {
+      setDynamicHarmonicFactor(1.0);
+      return;
+    }
+    let animId: number;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const elapsed = now - start;
+      const factor = harmonicFactor(elapsed, vibrationSpeed, vibrationAmplitude);
+      setDynamicHarmonicFactor(factor);
+      animId = window.requestAnimationFrame(tick);
+    };
+    animId = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(animId);
+  }, [vibrationActive, vibrationSpeed, vibrationAmplitude]);
+
+  const forceFlows = useMemo(() => {
+    if (!forceFlowActive || !analysis?.success) return new Map();
+    return computeForceFlows(project, analysis.memberResults);
+  }, [forceFlowActive, analysis, project]);
 
   const mechanismPixelScale = useMemo(() => {
     let maximum = 0;
@@ -2476,6 +2581,22 @@ export const StructuralCanvas = ({
           <marker id="arrow-load-moment" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--sc-color-load-moment-applied)" /></marker>
           <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--axial)" /></marker>
           <marker id="arrow-mechanism" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--warning)" /></marker>
+          <linearGradient id="sc-diagram-axial-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--axial)" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="var(--axial)" stopOpacity="0.08" />
+          </linearGradient>
+          <linearGradient id="sc-diagram-shear-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--shear)" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="var(--shear)" stopOpacity="0.08" />
+          </linearGradient>
+          <linearGradient id="sc-diagram-moment-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--moment)" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="var(--moment)" stopOpacity="0.08" />
+          </linearGradient>
+          <filter id="sc-canvas-glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2" result="glow" />
+            <feComposite in="SourceGraphic" in2="glow" operator="over" />
+          </filter>
         </defs>
         {/* Todo lo dibujable va dentro de un grupo con `id`: la lupa táctil lo
             clona con `<use>` para ampliarlo, en vez de mantener un segundo
@@ -2551,37 +2672,63 @@ export const StructuralCanvas = ({
           lengthLabel={lengthLabel}
           forceLabel={forceLabel}
           momentLabel={momentLabel}
+          harmonicFactor={dynamicHarmonicFactor}
           showResults={layers.results && !stackActive && !structuralEditDraft}
           showDiagnostics={layers.diagnostics && !structuralEditDraft}
           size={size}
           t={t}
         />
 
-        <CanvasGeometryLayer
-          slot="members"
+        {solidModeActive ? (
+          <CanvasSolidExtrusionLayer
+            project={project}
+            toScreen={toScreen}
+            camera={camera}
+            selectedMemberIds={selectionVisualState.memberIds}
+            selectedNodeIds={selectionVisualState.nodeIds}
+            candidatePreview={candidatePreview}
+            heatmapRatios={heatmapRatios}
+            onObjectPointerDown={handleObjectPointerDown}
+            onObjectKeyDown={handleObjectKeyDown}
+            onShowCut={showCut}
+            onCutLeave={onCutLeave}
+          />
+        ) : (
+          <CanvasGeometryLayer
+            slot="members"
+            project={project}
+            nodeMap={nodeMap}
+            memberMap={memberMap}
+            toScreen={toScreen}
+            camera={camera}
+            selectionVisualState={selectionVisualState}
+            candidatePreview={candidatePreview}
+            learningFocus={learningFocus}
+            memberStartId={memberStart}
+            layers={acmLayers}
+            loadsLayerVisible={loadsLayerVisible && !stackActive}
+            heatmapRatios={heatmapRatios}
+            demandMapActive={demandMapActive}
+            resultTab={resultTab}
+            units={units}
+            forceLabel={forceLabel}
+            momentLabel={momentLabel}
+            distributedLabel={distributedLabel}
+            t={t}
+            onObjectPointerDown={handleObjectPointerDown}
+            onObjectKeyDown={handleObjectKeyDown}
+            onShowCut={showCut}
+            onCutLeave={onCutLeave}
+          />
+        )}
+
+        <CanvasForceFlowLayer
           project={project}
           nodeMap={nodeMap}
           memberMap={memberMap}
+          flows={forceFlows}
           toScreen={toScreen}
-          camera={camera}
-          selectionVisualState={selectionVisualState}
-          candidatePreview={candidatePreview}
-          learningFocus={learningFocus}
-          memberStartId={memberStart}
-          layers={acmLayers}
-          loadsLayerVisible={loadsLayerVisible && !stackActive}
-          heatmapRatios={heatmapRatios}
-          demandMapActive={demandMapActive}
-          resultTab={resultTab}
-          units={units}
-          forceLabel={forceLabel}
-          momentLabel={momentLabel}
-          distributedLabel={distributedLabel}
-          t={t}
-          onObjectPointerDown={handleObjectPointerDown}
-          onObjectKeyDown={handleObjectKeyDown}
-          onShowCut={showCut}
-          onCutLeave={onCutLeave}
+          visible={forceFlowActive && analysis?.success === true && !stackActive}
         />
 
         {stackActive && layers.results && analysis?.success && !structuralEditDraft ? <CanvasDiagramStack
@@ -2591,6 +2738,9 @@ export const StructuralCanvas = ({
           nodeMap={nodeMap}
           size={size}
           t={t}
+          camera={camera}
+          toScreen={toScreen}
+          layoutMode={stackLayout}
         /> : null}
 
         <CanvasResultLayer
@@ -2615,6 +2765,7 @@ export const StructuralCanvas = ({
           lengthLabel={lengthLabel}
           forceLabel={forceLabel}
           momentLabel={momentLabel}
+          reactionMode={reactionMode}
           showResults={layers.results && !stackActive && !structuralEditDraft}
           showDiagnostics={layers.diagnostics && !structuralEditDraft}
           size={size}
@@ -2768,19 +2919,38 @@ export const StructuralCanvas = ({
         onCancelPlacement={() => setActiveTool('select')}
         onZoomIn={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1.15))}
         onZoomOut={() => updateCamera(zoomCameraAt(cameraRef.current, { x: size.width / 2, y: size.height / 2 }, 1 / 1.15))}
-        onFit={fitModel}
+        onFit={() => fitModel(0, true)}
         stackActive={stackActive}
         stackAvailable={stackAvailable}
         stackQuantities={stackQuantities}
         onStackToggle={toggleStack}
         onStackQuantityToggle={toggleStackQuantityChoice}
       />
+      <CanvasDirectorHud
+        visible={Boolean((analysis?.success || project.members.length > 0) && !compactCanvasChrome)}
+        vibrationActive={vibrationActive}
+        onToggleVibration={() => setVibrationActive((curr) => !curr)}
+        vibrationSpeed={vibrationSpeed}
+        onChangeSpeed={setVibrationSpeed}
+        vibrationAmplitude={vibrationAmplitude}
+        onChangeAmplitude={setVibrationAmplitude}
+        forceFlowActive={forceFlowActive}
+        onToggleForceFlow={() => setForceFlowActive((curr) => !curr)}
+        reactionMode={reactionMode}
+        onCycleReactionMode={cycleReactionMode}
+        solidModeActive={solidModeActive}
+        onToggleSolidMode={toggleSolidMode}
+        stackActive={stackActive}
+        stackLayout={stackLayout}
+        onToggleStackLayout={toggleStackLayout}
+        onFitCamera={() => fitModel(0, true)}
+      />
       {project.members.length >= 12 || project.nodes.length >= 16 ? <CanvasMiniMap
         nodes={project.nodes}
         members={project.members}
         viewport={minimapViewport}
         label={t('canvas.minimap')}
-        onFit={fitModel}
+        onFit={() => fitModel(0, true)}
         onNavigate={navigateMinimapTo}
       /> : null}
       {touchLoupe ? <CanvasTouchLoupe

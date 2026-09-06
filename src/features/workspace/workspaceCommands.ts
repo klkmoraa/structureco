@@ -60,6 +60,16 @@ export interface WorkspaceCommands {
   'open-structural-bom': void;
   /** Toggle the simultaneous N/V/M canvas reading for the current solved model. */
   'toggle-diagram-stack': void;
+  /** Toggle the layout mode (rows / columns) of the simultaneous N/V/M canvas diagrams. */
+  'toggle-diagram-stack-layout': void;
+  /** Toggle harmonic dynamic vibration of the deformed structure. */
+  'toggle-canvas-vibration': void;
+  /** Toggle real-time directional force flow lines on structural members. */
+  'toggle-canvas-force-flow': void;
+  /** Toggle reaction display mode (cartesian, polar compass, or both). */
+  'toggle-canvas-reaction-mode': void;
+  /** Toggle 2.5D isometric solid extrusion mode on structural members. */
+  'toggle-canvas-solid-mode': void;
   /** Open the explicit baseline-to-current revision comparison. */
   'open-revision-comparison': void;
   /** Open the contextual structural-editing surface for the current selection. */

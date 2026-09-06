@@ -9,6 +9,7 @@ import { formatFixed, formatScientific } from '../../utils/numberFormat';
 import type { TranslationKey } from '../../i18n/catalogs';
 import { readCanvasViewSettings } from '../view/canvasViewSettings';
 import { modeShapePoints, modeShapeScaleFor } from './modeShapePath';
+import { computePolarReaction, polarAngleArcPath, reactiveTorquePath, type ReactionDisplayMode } from './supportCompass';
 
 type MemberResult = AnalysisResult['memberResults'][number];
 type NodeResult = AnalysisResult['nodeResults'][number];
@@ -42,6 +43,8 @@ export interface CanvasResultLayerProps {
   momentLabel: string;
   showResults: boolean;
   showDiagnostics: boolean;
+  harmonicFactor?: number;
+  reactionMode?: ReactionDisplayMode;
   size: { width: number; height: number };
   t: Translate;
 }
@@ -115,7 +118,7 @@ export const criticalStationLabel = (station: string, lengthUnit: string): strin
 const CanvasResultLayerImpl = ({
   slot, project, analysis, resultTab, resultsAllowed, resultCursor, influenceCanvasState, modeShapeState, camera, toScreen,
   nodeMap, memberMap, resultMap, nodeResultMap, mechanismMap, mechanismPixelScale, globalDiagramMax,
-  units, lengthLabel, forceLabel, momentLabel, showResults, showDiagnostics, size, t,
+  units, lengthLabel, forceLabel, momentLabel, showResults, showDiagnostics, harmonicFactor = 1, reactionMode = 'cartesian', size, t,
 }: CanvasResultLayerProps) => {
   const view = readCanvasViewSettings(project);
   const scaleFor = (result: MemberResult) => diagramPixelScaleFor(project, resultTab, globalDiagramMax, result);
@@ -181,7 +184,7 @@ const CanvasResultLayerImpl = ({
     const ni = nodeMap.get(member.i); const nj = nodeMap.get(member.j);
     if (!result || !ni || !nj || member.type === 'rigid' || !result.deformation.length) return '';
     const { c, s } = memberAxis(member, ni, nj);
-    const scale = view.deformedScale;
+    const scale = view.deformedScale * harmonicFactor;
     const curved = result.deformation.map((point) => {
       const grossX = (result.startOffset ?? 0) + point.x;
       const gx = ni.x + c * grossX + scale * (c * point.u - s * point.v);
@@ -199,7 +202,7 @@ const CanvasResultLayerImpl = ({
   const renderModeShape = () => {
     if (!showResults || !modeShapeState) return null;
     const dofs = new Map(modeShapeState.shape.map((node) => [node.nodeId, node]));
-    const scale = modeShapeScaleFor(project.nodes);
+    const scale = modeShapeScaleFor(project.nodes) * harmonicFactor;
     const paths = project.members.flatMap((member) => {
       const start = nodeMap.get(member.i); const end = nodeMap.get(member.j);
       const startDof = dofs.get(member.i); const endDof = dofs.get(member.j);
@@ -414,40 +417,153 @@ const CanvasResultLayerImpl = ({
     const { bottom: bottomClearance, side: sideClearance } = reactionClearanceFor(node.support.type);
     const elements = [];
     const descriptions: string[] = [];
-    if (Math.abs(result.rx) > 1e-8) {
-      const direction = Math.sign(result.rx);
-      const length = 48;
-      descriptions.push(`Rx = ${formatFixed(toDisplay(result.rx, units, 'force'), 3)} ${forceLabel}`);
-      elements.push(
-        <line key="rx" data-reaction-component="rx" x1={p.x - direction * (sideClearance + length)} y1={p.y} x2={p.x - direction * sideClearance} y2={p.y} markerEnd="url(#arrow-blue)" />,
-      );
+
+    const showCartesian = reactionMode === 'cartesian' || reactionMode === 'both';
+    const showPolar = reactionMode === 'polar' || reactionMode === 'both';
+
+    if (showCartesian) {
+      if (Math.abs(result.rx) > 1e-8) {
+        const direction = Math.sign(result.rx);
+        const length = 48;
+        descriptions.push(`Rx = ${formatFixed(toDisplay(result.rx, units, 'force'), 3)} ${forceLabel}`);
+        elements.push(
+          <line key="rx" data-reaction-component="rx" x1={p.x - direction * (sideClearance + length)} y1={p.y} x2={p.x - direction * sideClearance} y2={p.y} markerEnd="url(#arrow-blue)" />,
+        );
+      }
+      if (Math.abs(result.ry) > 1e-8) {
+        const screenDirection = -Math.sign(result.ry);
+        const length = 48;
+        descriptions.push(`Ry = ${formatFixed(toDisplay(result.ry, units, 'force'), 3)} ${forceLabel}`);
+        elements.push(
+          screenDirection < 0
+            ? <line key="ry" data-reaction-component="ry" x1={p.x} y1={p.y + bottomClearance + length} x2={p.x} y2={p.y + bottomClearance} markerEnd="url(#arrow-blue)" />
+            : <line key="ry" data-reaction-component="ry" x1={p.x} y1={p.y + bottomClearance} x2={p.x} y2={p.y + bottomClearance + length} markerEnd="url(#arrow-blue)" />,
+        );
+      }
+      if (Math.abs(result.rm) > 1e-8 && !showPolar) {
+        const clockwise = result.rm < 0;
+        const r = Math.max(28, bottomClearance + 6);
+        const path = clockwise
+          ? `M ${p.x - 22} ${p.y - 10} A ${r} ${r} 0 1 0 ${p.x + 20} ${p.y - 14}`
+          : `M ${p.x + 22} ${p.y - 10} A ${r} ${r} 0 1 1 ${p.x - 20} ${p.y - 14}`;
+        descriptions.push(`Mᵣ = ${formatFixed(toDisplay(result.rm, units, 'moment'), 3)} ${momentLabel}`);
+        elements.push(<path key="moment" d={path} markerEnd="url(#arrow-blue)" />);
+      }
     }
-    if (Math.abs(result.ry) > 1e-8) {
-      const screenDirection = -Math.sign(result.ry);
-      const length = 48;
-      descriptions.push(`Ry = ${formatFixed(toDisplay(result.ry, units, 'force'), 3)} ${forceLabel}`);
-      elements.push(
-        screenDirection < 0
-          ? <line key="ry" data-reaction-component="ry" x1={p.x} y1={p.y + bottomClearance + length} x2={p.x} y2={p.y + bottomClearance} markerEnd="url(#arrow-blue)" />
-          : <line key="ry" data-reaction-component="ry" x1={p.x} y1={p.y + bottomClearance} x2={p.x} y2={p.y + bottomClearance + length} markerEnd="url(#arrow-blue)" />,
-      );
+
+    if (showPolar) {
+      const polar = computePolarReaction(result.rx, result.ry, result.rm);
+      if (polar.hasForce || polar.hasMoment) {
+        const dialR = 30;
+        const needleLen = 52;
+        const tipX = p.x + polar.screenVector.ux * needleLen;
+        const tipY = p.y + polar.screenVector.uy * needleLen;
+        const badgeOffset = needleLen + 16;
+        const badgeX = p.x + polar.screenVector.ux * badgeOffset;
+        const badgeY = p.y + polar.screenVector.uy * badgeOffset;
+
+        if (polar.hasForce) {
+          descriptions.push(`R = ${formatFixed(toDisplay(polar.rNet, units, 'force'), 3)} ${forceLabel} · ${formatFixed(polar.thetaDeg, 1)}°`);
+        }
+        if (polar.hasMoment) {
+          descriptions.push(`Mᵣ = ${formatFixed(toDisplay(polar.rm, units, 'moment'), 3)} ${momentLabel}`);
+        }
+
+        const dialTicks = [0, 90, 180, 270].map((deg) => {
+          const rad = (deg * Math.PI) / 180;
+          const r1 = dialR - 4;
+          const r2 = dialR;
+          return (
+            <line
+              key={`tick-${deg}`}
+              className="reaction-compass-tick"
+              x1={p.x + r1 * Math.cos(rad)}
+              y1={p.y - r1 * Math.sin(rad)}
+              x2={p.x + r2 * Math.cos(rad)}
+              y2={p.y - r2 * Math.sin(rad)}
+            />
+          );
+        });
+
+        const arcPath = polar.hasForce && polar.thetaDeg > 2 && polar.thetaDeg < 358
+          ? polarAngleArcPath(p.x, p.y, dialR - 6, polar.thetaRad)
+          : '';
+
+        const torque = polar.hasMoment
+          ? reactiveTorquePath(p.x, p.y, dialR + 6, polar.rm)
+          : null;
+
+        const badgeLabel = polar.hasForce
+          ? `R ${formatFixed(toDisplay(polar.rNet, units, 'force'), 2)} ${forceLabel} · ${formatFixed(polar.thetaDeg, 0)}°`
+          : `Mᵣ ${formatFixed(toDisplay(polar.rm, units, 'moment'), 2)} ${momentLabel}`;
+
+        elements.push(
+          <g key="polar-compass" className="reaction-polar-compass" data-reaction-compass={node.id}>
+            <circle className="reaction-compass-base" cx={p.x} cy={p.y} r={dialR} />
+            <circle className="reaction-compass-ring" cx={p.x} cy={p.y} r={dialR - 2} />
+            {dialTicks}
+            {arcPath ? <path className="reaction-compass-arc" d={arcPath} /> : null}
+            {polar.hasForce ? (
+              <>
+                <line
+                  className="reaction-compass-needle-glow"
+                  x1={p.x}
+                  y1={p.y}
+                  x2={tipX}
+                  y2={tipY}
+                />
+                <line
+                  className="reaction-compass-needle"
+                  data-reaction-component="r-net"
+                  x1={p.x}
+                  y1={p.y}
+                  x2={tipX}
+                  y2={tipY}
+                  markerEnd="url(#arrow-blue)"
+                />
+              </>
+            ) : null}
+            {torque ? (
+              <path
+                className="reaction-compass-torque"
+                data-reaction-component="rm"
+                d={torque.path}
+                markerEnd="url(#arrow-blue)"
+              />
+            ) : null}
+            <g className="reaction-compass-badge" transform={`translate(${badgeX} ${badgeY})`}>
+              <rect
+                className="reaction-compass-badge-bg"
+                x={-Math.max(46, badgeLabel.length * 3.7)}
+                y="-10"
+                width={Math.max(92, badgeLabel.length * 7.4)}
+                height="20"
+                rx="6"
+              />
+              <text className="reaction-compass-badge-text" x="0" y="4" textAnchor="middle">
+                {badgeLabel}
+              </text>
+            </g>
+          </g>,
+        );
+      }
     }
-    if (Math.abs(result.rm) > 1e-8) {
-      const clockwise = result.rm < 0;
-      const r = Math.max(28, bottomClearance + 6);
-      const path = clockwise
-        ? `M ${p.x - 22} ${p.y - 10} A ${r} ${r} 0 1 0 ${p.x + 20} ${p.y - 14}`
-        : `M ${p.x + 22} ${p.y - 10} A ${r} ${r} 0 1 1 ${p.x - 20} ${p.y - 14}`;
-      descriptions.push(`Mᵣ = ${formatFixed(toDisplay(result.rm, units, 'moment'), 3)} ${momentLabel}`);
-      elements.push(<path key="moment" d={path} markerEnd="url(#arrow-blue)" />);
-    }
+
     return elements.length ? <g key={node.id} className="reaction-symbol" data-node-id={node.id}><title>{descriptions.join(' · ')}</title>{elements}</g> : null;
   };
 
   if (slot === 'diagrams') {
     return <>
       {showResults ? <g className="diagram-layer">{project.members.map(diagramPath)}</g> : null}
-      {showResults && resultsAllowed && resultTab === 'deformed' && analysis?.success ? <g className="deformed-layer">{project.members.map((member) => <path key={member.id} d={deformedPath(member)} />)}</g> : null}
+      {showResults && resultsAllowed && resultTab === 'deformed' && analysis?.success ? <g className="deformed-layer">
+        {Math.abs(harmonicFactor - 1) > 0.05 ? project.members.map((member) => {
+          const ni = nodeMap.get(member.i); const nj = nodeMap.get(member.j);
+          if (!ni || !nj) return null;
+          const a = toScreen(ni.x, ni.y); const b = toScreen(nj.x, nj.y);
+          return <line key={`rest-${member.id}`} className="deformed-rest-ghost" x1={a.x} y1={a.y} x2={b.x} y2={b.y} />;
+        }) : null}
+        {project.members.map((member) => <path key={member.id} d={deformedPath(member)} />)}
+      </g> : null}
       {renderModeShape()}
       {showResults ? renderResultCursor() : null}
       {showDiagnostics ? renderMechanism() : null}

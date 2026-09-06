@@ -5,7 +5,8 @@ import { segmentBezierControls } from '../../engine/diagram';
 import { toDisplay, unitLabel } from '../../engine/units';
 import { memberAxis } from '../../graphics/structureGeometry';
 import { formatFixed, formatNumber } from '../../utils/numberFormat';
-import { STACK_QUANTITIES, STACK_SYMBOLS, stationReadings, type StackQuantity } from './diagramStack';
+import { STACK_QUANTITIES, STACK_SYMBOLS, computeStackOffsets, stationReadings, type StackLayout, type StackQuantity } from './diagramStack';
+import type { CanvasCamera } from './canvasInteraction';
 
 type MemberResult = AnalysisResult['memberResults'][number];
 type Translate = (key: TranslationKey, variables?: Record<string, string | number>) => string;
@@ -60,27 +61,34 @@ const canvasCells = (size: DiagramSize, quantities: readonly StackQuantity[]): C
   }));
 };
 
-/**
- * Combined Axial/Cortante/Momento view rendered as a dedicated canvas scene.
- * A solid canvas background masks the normal editor scene while ACM is active,
- * so the analytical copies are not visually superimposed on the live model.
- */
-export const CanvasDiagramStack = memo(({
-  project, results, quantities, nodeMap, size, t,
-}: {
+export interface CanvasDiagramStackProps {
   project: ProjectModel;
   results: readonly MemberResult[];
   quantities: readonly StackQuantity[];
   nodeMap: ReadonlyMap<string, NodeModel>;
   size: DiagramSize;
   t: Translate;
-}) => {
+  camera?: CanvasCamera;
+  toScreen?: (x: number, y: number) => { x: number; y: number };
+  layoutMode?: StackLayout;
+}
+
+/**
+ * Combined Axial/Cortante/Momento view rendered as a dedicated canvas scene.
+ * Replicates the structure directly into the canvas world coordinate space
+ * so all diagrams participate naturally in camera zoom, pan and interaction.
+ */
+export const CanvasDiagramStack = memo(({
+  project, results, quantities, nodeMap, size, t, camera, toScreen, layoutMode = 'rows',
+}: CanvasDiagramStackProps) => {
   const compact = size.width < 700 || size.height < 600;
+  const isWorldMode = Boolean(toScreen && camera);
   const [probe, setProbe] = useState<StackProbe | null>(null);
   const resultMap = useMemo(() => new Map(results.map((result) => [result.memberId, result])), [results]);
   const visibleQuantities = useMemo(() => STACK_QUANTITIES.filter((quantity) => quantities.includes(quantity)), [quantities]);
   const bounds = useMemo(() => boundsOf(project), [project]);
   const cells = useMemo(() => canvasCells(size, visibleQuantities), [size, visibleQuantities]);
+  const offsets = useMemo(() => computeStackOffsets(bounds, visibleQuantities, layoutMode), [bounds, layoutMode, visibleQuantities]);
   const maxima = useMemo(() => Object.fromEntries(STACK_QUANTITIES.map((quantity) => [quantity, maximumFor(results, quantity)])) as Record<StackQuantity, number>, [results]);
   const solvedMembers = useMemo(() => project.members.flatMap((member) => {
     const result = resultMap.get(member.id);
@@ -135,23 +143,26 @@ export const CanvasDiagramStack = memo(({
   return <g
     className="diagram-stack-layer diagram-stack-layer--canvas"
     data-canvas-layer="diagram-stack"
-    data-stack-layout="rows"
+    data-stack-layout={layoutMode}
     aria-label={t('canvas.evidenceStackStructure')}
     onPointerLeave={(event) => { if (event.pointerType !== 'touch') setProbe(null); }}
   >
     <title>{t('canvas.evidenceStackStructureDetail')}</title>
-    <rect className="diagram-stack-canvas-mask" x="0" y="0" width={size.width} height={size.height} fill="var(--canvas-bg)" />
+    <rect className="diagram-stack-canvas-mask" x="0" y="0" width={size.width} height={size.height} fill={isWorldMode ? 'none' : 'var(--canvas-bg)'} pointerEvents="none" />
     <g className="diagram-stack-header" aria-hidden="true">
       <text className="diagram-stack-kicker" x={compact ? 10 : 18} y={compact ? 57 : 51}>ACM</text>
       <text className="diagram-stack-probe-summary" x={compact ? 47 : 57} y={compact ? 57 : 51}>{probeSummary}</text>
     </g>
     {cells.map((cell, cellIndex) => {
+      const offset = offsets[cellIndex] ?? { dx: 0, dy: 0 };
       const spanX = Math.max(1e-9, bounds.maxX - bounds.minX);
       const spanY = Math.max(1e-9, bounds.maxY - bounds.minY);
       const titleHeight = compact ? 18 : 24;
       const paddingX = compact ? 12 : 18;
       const paddingY = compact ? 8 : 14;
-      const amplitude = Math.max(compact ? 10 : 15, Math.min(compact ? 19 : 30, cell.height * .17));
+      const amplitude = isWorldMode
+        ? Math.max(16, Math.min(54, 38 * ((camera?.scale ?? 40) / 45)))
+        : Math.max(compact ? 10 : 15, Math.min(compact ? 19 : 30, cell.height * .17));
       const usableHeight = Math.max(1, cell.height - titleHeight - paddingY * 2 - amplitude * 2);
       const usableWidth = Math.max(1, cell.width - paddingX * 2);
       const scale = Math.min(usableWidth / spanX, usableHeight / spanY);
@@ -159,14 +170,31 @@ export const CanvasDiagramStack = memo(({
       const contentHeight = spanY * scale;
       const originX = cell.x + (cell.width - contentWidth) / 2 - bounds.minX * scale;
       const originY = cell.y + titleHeight + paddingY + amplitude + (usableHeight - contentHeight) / 2 + bounds.maxY * scale;
-      const screenPoint = (node: NodeModel) => ({ x: originX + node.x * scale, y: originY - node.y * scale });
+      const screenPoint = (node: NodeModel) => isWorldMode
+        ? toScreen!(node.x + offset.dx, node.y + offset.dy)
+        : ({ x: originX + node.x * scale, y: originY - node.y * scale });
+
+      const topY = bounds.maxY + offset.dy;
+      const centerX = (bounds.minX + bounds.maxX) / 2 + offset.dx;
+      const badgePos = isWorldMode ? toScreen!(centerX, topY) : null;
 
       return <g key={cell.quantity} className={`diagram-stack-panel ${cell.quantity}`} data-stack-panel={cell.quantity}>
         {cellIndex > 0 ? <line className="diagram-stack-panel-rule" x1={cell.x} y1={cell.y - (compact ? 3 : 5)} x2={cell.x + cell.width} y2={cell.y - (compact ? 3 : 5)} aria-hidden="true" /> : null}
-        <text className="diagram-stack-panel-title" x={cell.x + 2} y={cell.y + (compact ? 14 : 18)}>
-          <tspan>{compact ? STACK_SYMBOLS[cell.quantity] : `${STACK_SYMBOLS[cell.quantity]} · ${labelFor(cell.quantity)}`}</tspan>
-          <tspan className="diagram-stack-panel-unit" dx={compact ? 6 : 9}>{unitFor(cell.quantity)}</tspan>
-        </text>
+        {isWorldMode && badgePos ? (
+          <g className={`diagram-stack-replica-badge ${cell.quantity}`} transform={`translate(${badgePos.x} ${badgePos.y - 18})`} pointerEvents="none">
+            <rect className="diagram-stack-replica-badge-bg" x="-90" y="-18" width="180" height="26" rx="13" />
+            <text className="diagram-stack-panel-title" x="0" y="-1" textAnchor="middle">
+              <tspan className="diagram-stack-panel-symbol">{STACK_SYMBOLS[cell.quantity]}</tspan>
+              <tspan> · {labelFor(cell.quantity)}</tspan>
+              <tspan className="diagram-stack-panel-unit" dx="8">{unitFor(cell.quantity)}</tspan>
+            </text>
+          </g>
+        ) : (
+          <text className="diagram-stack-panel-title" x={cell.x + 2} y={cell.y + (compact ? 14 : 18)}>
+            <tspan>{compact ? STACK_SYMBOLS[cell.quantity] : `${STACK_SYMBOLS[cell.quantity]} · ${labelFor(cell.quantity)}`}</tspan>
+            <tspan className="diagram-stack-panel-unit" dx={compact ? 6 : 9}>{unitFor(cell.quantity)}</tspan>
+          </text>
+        )}
         {solvedMembers.map(({ member, result, start, end, axis }) => {
           const memberStart = screenPoint(start);
           const memberEnd = screenPoint(end);

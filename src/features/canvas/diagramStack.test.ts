@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import type { MemberResult, ProjectModel } from '../../types';
-import { buildDiagramStack, DIAGRAM_STACK_STORAGE_KEY, parseStackQuantities, persistStackQuantities, readStoredStackQuantities, resolveStackMemberId, snapStation, stackMetricsFor, stationFromScreenX, stationReadings, toggleStackQuantity } from './diagramStack';
+import { buildDiagramStack, computeStackOffsets, DIAGRAM_STACK_STORAGE_KEY, parseStackQuantities, persistStackQuantities, readStoredStackQuantities, resolveStackMemberId, snapStation, stackMetricsFor, stackModelBounds, stationFromScreenX, stationReadings, toggleStackQuantity } from './diagramStack';
 
 const beam = (memberId: string, length = 8): MemberResult => ({
   memberId, length, localDisplacements: [], localEndForces: [],
@@ -60,5 +60,33 @@ describe('canvas diagram stack', () => {
 
   it('reserves only the height of the lanes that are actually visible', () => {
     expect(stackMetricsFor(558, 1).total).toBeLessThan(stackMetricsFor(558, 3).total);
+  });
+
+  it('computes stack offsets and expanded model bounds for rows and columns', () => {
+    const bounds = { minX: 0, maxX: 10, minY: 0, maxY: 6 };
+    const rowOffsets = computeStackOffsets(bounds, ['axial', 'shear', 'moment'], 'rows');
+    expect(rowOffsets).toHaveLength(3);
+    expect(rowOffsets[0].dy).toBe(0);
+    expect(rowOffsets[1].dy).toBeLessThan(0);
+    expect(rowOffsets[2].dy).toBeLessThan(rowOffsets[1].dy);
+
+    const colOffsets = computeStackOffsets(bounds, ['axial', 'shear', 'moment'], 'columns');
+    expect(colOffsets).toHaveLength(3);
+    expect(colOffsets[0].dx).toBe(0);
+    expect(colOffsets[1].dx).toBeGreaterThan(0);
+    expect(colOffsets[2].dx).toBeGreaterThan(colOffsets[1].dx);
+
+    const nodes = [{ x: 0, y: 0 }, { x: 10, y: 6 }];
+    const rowBounds = stackModelBounds(nodes, ['axial', 'shear', 'moment'], 'rows');
+    expect(rowBounds.minX).toBe(0);
+    expect(rowBounds.maxX).toBe(10);
+    expect(rowBounds.minY).toBeLessThan(0);
+    expect(rowBounds.maxY).toBe(6);
+
+    const colBounds = stackModelBounds(nodes, ['axial', 'shear', 'moment'], 'columns');
+    expect(colBounds.minX).toBe(0);
+    expect(colBounds.maxX).toBeGreaterThan(10);
+    expect(colBounds.minY).toBe(0);
+    expect(colBounds.maxY).toBe(6);
   });
 });
