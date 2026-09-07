@@ -80,7 +80,6 @@ import { CanvasSolidExtrusionLayer } from './CanvasSolidExtrusionLayer';
 import { computeForceFlows, harmonicFactor } from './canvasDynamics';
 import type { ReactionDisplayMode } from './supportCompass';
 import { CanvasTouchLoupe } from './CanvasTouchLoupe';
-import { CanvasTouchRadialRing } from './CanvasTouchRadialRing';
 import { CandidatePicker } from './CanvasCandidatePicker';
 import {
   activeCandidate,
@@ -959,25 +958,6 @@ export const StructuralCanvas = ({
     setSelection(null);
   }, [executeProjectCommand, selection, setSelection, updateProject]);
 
-  const cycleNodeSupport = useCallback((nodeId: string) => {
-    const targetNode = nodeMap.get(nodeId);
-    if (!targetNode) return;
-    const order: Array<'none' | 'pin' | 'roller' | 'fixed'> = ['none', 'pin', 'roller', 'fixed'];
-    const currentIdx = order.indexOf(targetNode.support.type as 'none' | 'pin' | 'roller' | 'fixed');
-    const nextType = order[(currentIdx + 1) % order.length];
-    updateProject((draft) => {
-      const target = draft.nodes.find((item) => item.id === nodeId);
-      if (target) {
-        target.support = {
-          ...target.support,
-          type: nextType,
-          angleDeg: target.support.angleDeg ?? 90,
-        };
-      }
-      return draft;
-    });
-    showCanvasFeedback(`Apoyo ${nodeId}: ${nextType === 'none' ? 'Libre' : nextType}`);
-  }, [nodeMap, showCanvasFeedback, updateProject]);
 
   const addNode = (point: { x: number; y: number }) => {
     let id = '';
@@ -2999,38 +2979,7 @@ export const StructuralCanvas = ({
         sceneId={CANVAS_SCENE_ID}
         canvasHeight={size.height}
       /> : null}
-      {selection && (selection.kind === 'node' || selection.kind === 'member') && !structuralEditDraft ? (
-        <CanvasTouchRadialRing
-          selection={selection}
-          toScreen={toScreen}
-          nodeMap={nodeMap}
-          memberMap={memberMap}
-          onCycleSupport={cycleNodeSupport}
-          onStartMember={(nodeId) => {
-            setMemberStart(nodeId);
-            setActiveTool('member');
-            showCanvasFeedback(`Barra iniciada en ${nodeId}`);
-          }}
-          onAddLoad={(kind, id) => {
-            if (kind === 'node') {
-              setActiveTool('pointLoad');
-              showCanvasFeedback(`Carga sobre nudo ${id}`);
-            } else {
-              setActiveTool('distributedLoad');
-              showCanvasFeedback(`Carga sobre barra ${id}`);
-            }
-          }}
-          onCutMember={() => {
-            setActiveTool('split');
-            showCanvasFeedback('Herramienta cortar activa');
-          }}
-          onOpenSection={() => {
-            onRequestInspector?.();
-          }}
-          onDelete={() => deleteSelection()}
-          onDismiss={() => setSelection(null)}
-        />
-      ) : null}
+
       {canvasFeedback ? <div className="canvas-feedback" role="alert">{canvasFeedback}</div> : null}
       <RepeatActionOverlay
         available={!compactCanvasChrome && Boolean(repeatCandidate) && !structuralEditDraft}
