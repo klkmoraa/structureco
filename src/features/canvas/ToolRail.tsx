@@ -699,79 +699,82 @@ export const ToolRail = () => {
                 </div>
               )}
               {activeMobileTab === 'results' && (
-                <div className="dock-segmented-slider" role="radiogroup" aria-label="Solicitaciones y diagramas">
-                  <div
-                    className="dock-segmented-slider__thumb"
-                    data-active-index={
-                      resultTab === 'axial' ? 0
-                      : resultTab === 'shear' ? 1
-                      : resultTab === 'moment' ? 2
-                      : resultTab === 'deformed' ? 3
-                      : -1
-                    }
-                    aria-hidden="true"
-                  />
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={resultTab === 'axial'}
-                    className={`dock-segment-btn${resultTab === 'axial' ? ' is-active' : ''}`}
-                    onClick={() => handleSegmentClick('axial')}
-                  >
-                    <span className="dock-segment-symbol">N</span>
-                    <span className="dock-segment-name">Axial</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={resultTab === 'shear'}
-                    className={`dock-segment-btn${resultTab === 'shear' ? ' is-active' : ''}`}
-                    onClick={() => handleSegmentClick('shear')}
-                  >
-                    <span className="dock-segment-symbol">V</span>
-                    <span className="dock-segment-name">Cortante</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={resultTab === 'moment'}
-                    className={`dock-segment-btn${resultTab === 'moment' ? ' is-active' : ''}`}
-                    onClick={() => handleSegmentClick('moment')}
-                  >
-                    <span className="dock-segment-symbol">M</span>
-                    <span className="dock-segment-name">Flector</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="radio"
-                    aria-checked={resultTab === 'deformed'}
-                    className={`dock-segment-btn${resultTab === 'deformed' ? ' is-active' : ''}`}
-                    onClick={() => handleSegmentClick('deformed')}
-                  >
-                    <span className="dock-segment-symbol">δ</span>
-                    <span className="dock-segment-name">Flecha</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="button"
-                    className="dock-segment-btn dock-segment-btn--solid"
-                    onClick={handleSolidToggle}
-                    aria-label="Alternar renderizado sólido 2.5D"
-                  >
-                    <span className="dock-segment-symbol">🧊</span>
-                    <span className="dock-segment-name">2.5D</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="button"
-                    className="dock-segment-btn dock-segment-btn--compass"
-                    onClick={handleCompassToggle}
-                    aria-label="Alternar brújula polar de reacciones"
-                    title="Alternar brújula polar de reacciones"
-                  >
-                    <span className="dock-segment-symbol">🧭</span>
-                    <span className="dock-segment-name">Brújula</span>
-                  </button>
+                <div className="dock-subshelf-inner dock-subshelf-inner--results">
+                  <div className="dock-segmented-slider" role="radiogroup" aria-label="Solicitaciones y diagramas">
+                    <div
+                      className="dock-segmented-slider__thumb"
+                      data-active-index={
+                        resultTab === 'axial' ? 0
+                        : resultTab === 'shear' ? 1
+                        : resultTab === 'moment' ? 2
+                        : resultTab === 'deformed' ? 3
+                        : -1
+                      }
+                      aria-hidden="true"
+                    />
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={resultTab === 'axial'}
+                      className={`dock-segment-btn${resultTab === 'axial' ? ' is-active' : ''}`}
+                      onClick={() => handleSegmentClick('axial')}
+                    >
+                      <span className="dock-segment-symbol">N</span>
+                      <span className="dock-segment-name">Axial</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={resultTab === 'shear'}
+                      className={`dock-segment-btn${resultTab === 'shear' ? ' is-active' : ''}`}
+                      onClick={() => handleSegmentClick('shear')}
+                    >
+                      <span className="dock-segment-symbol">V</span>
+                      <span className="dock-segment-name">Cortante</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={resultTab === 'moment'}
+                      className={`dock-segment-btn${resultTab === 'moment' ? ' is-active' : ''}`}
+                      onClick={() => handleSegmentClick('moment')}
+                    >
+                      <span className="dock-segment-symbol">M</span>
+                      <span className="dock-segment-name">Flector</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={resultTab === 'deformed'}
+                      className={`dock-segment-btn${resultTab === 'deformed' ? ' is-active' : ''}`}
+                      onClick={() => handleSegmentClick('deformed')}
+                    >
+                      <span className="dock-segment-symbol">δ</span>
+                      <span className="dock-segment-name">Flecha</span>
+                    </button>
+                  </div>
+                  <div className="dock-subshelf-actions" role="toolbar" aria-label="Visualización avanzada">
+                    <button
+                      type="button"
+                      className="dock-action-pill dock-action-pill--solid"
+                      onClick={handleSolidToggle}
+                      aria-label="Alternar renderizado sólido 2.5D"
+                      title="Alternar renderizado sólido 2.5D"
+                    >
+                      <span className="dock-action-symbol">🧊</span>
+                      <span className="dock-action-name">2.5D</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="dock-action-pill dock-action-pill--compass"
+                      onClick={handleCompassToggle}
+                      aria-label="Alternar brújula polar de reacciones"
+                      title="Alternar brújula polar de reacciones"
+                    >
+                      <span className="dock-action-symbol">🧭</span>
+                      <span className="dock-action-name">Brújula</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

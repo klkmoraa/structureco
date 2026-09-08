@@ -31,9 +31,9 @@
 .pdf-preview-dialog__unavailable { display: grid; place-items: center; min-height: 220px; border: 1px dashed var(--border); border-radius: 12px; color: var(--text-muted); text-align: center; padding: 24px; }
 
 @media (max-width: 680px) {
-  .pdf-preview-dialog.sc-modal-surface--dialog { width: 100%; height: min(100dvh, 860px); border-radius: 18px 18px 0 0; align-self: end; }
+  .pdf-preview-dialog.sc-modal-surface--dialog { width: 100%; height: min(calc(100dvh - var(--sc-safe-top) - 12px), 860px); max-height: calc(100dvh - var(--sc-safe-top) - 12px); border-radius: 18px 18px 0 0; align-self: end; }
   .pdf-preview-dialog .sc-modal-surface__body { padding: 12px; }
-  .pdf-preview-dialog__page { min-height: 360px; padding: 8px; border-radius: 10px; }
+  .pdf-preview-dialog__page { min-height: 280px; padding: 8px; border-radius: 10px; }
   .pdf-preview-dialog__workspace { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
-  .pdf-preview-dialog__options { max-height: 260px; border-right: 0; border-bottom: 1px solid var(--border); }
+  .pdf-preview-dialog__options { max-height: 220px; border-right: 0; border-bottom: 1px solid var(--border); }
 }

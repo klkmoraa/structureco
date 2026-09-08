@@ -404,7 +404,19 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
       <div className="sc-home-wordmark"><BrandMark size={25} /><strong><span>structure</span>Co</strong></div>
       {compactHome ? appearanceControls : <span aria-hidden="true" className="sc-home-mobile-header__spacer" />}
     </header>
-    {mobileNavOpen ? renderNavigation(true) : null}
+    {mobileNavOpen ? (
+      <>
+        <div
+          className="sc-home-nav-backdrop"
+          aria-hidden="true"
+          onClick={() => {
+            haptics.selection();
+            setMobileNavOpen(false);
+          }}
+        />
+        {renderNavigation(true)}
+      </>
+    ) : null}
     <div className="sc-home-main"><header className="sc-home-topline"><div className="sc-home-topline__context"><span>{text.workspace}</span><b aria-hidden="true">/</b><strong>{text[view]}</strong></div><div className="sc-home-topline__right"><button ref={searchTriggerRef} type="button" className="sc-home-search-trigger" onClick={() => setSearchOpen(true)}><Search size={17} /><span>{text.search}</span><kbd>⌘ K</kbd></button>{compactHome ? null : appearanceControls}</div></header>{/*
       * `data-stagger` es la entrada escalonada declarativa de `platform/native.css`:
       * cada sección de la vista llega 40 ms después de la anterior, en pasos que

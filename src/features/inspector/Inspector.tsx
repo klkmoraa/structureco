@@ -14,6 +14,7 @@ import { readCanvasViewSettings, withCanvasViewSettings } from '../view/canvasVi
 import { MAX_INSPECTOR_WIDTH, MIN_INSPECTOR_WIDTH, clampInspectorWidth, type InspectorDetent } from '../workspace/useWorkspaceLayoutPreferences';
 import type { SurfacePresentation, SurfaceStatus } from '../workspace/surfacePresentation';
 import { ViewFavoritesPanel } from '../library/ViewFavoritesPanel';
+import { haptics } from '../../platform/haptics';
 import './inspector.css';
 
 const NumberField = ({
@@ -188,6 +189,76 @@ const InspectorContent = ({
       onMobileDetentChange?.('large');
     }
   };
+
+  const sheetDragOriginRef = useRef<{ clientY: number; startTime: number; pointerId: number } | null>(null);
+
+  const handleSheetPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    sheetDragOriginRef.current = {
+      clientY: event.clientY,
+      startTime: performance.now(),
+      pointerId: event.pointerId,
+    };
+  };
+
+  const handleSheetPointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const origin = sheetDragOriginRef.current;
+    if (!origin || origin.pointerId !== event.pointerId) return;
+    sheetDragOriginRef.current = null;
+    try {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    } catch {
+      // Ignored
+    }
+
+    const deltaY = event.clientY - origin.clientY;
+    const duration = Math.max(1, performance.now() - origin.startTime);
+    const velocityY = deltaY / duration;
+
+    // Small movement is treated as tap/click, handled by onClick
+    if (Math.abs(deltaY) < 14) return;
+
+    // Swiping or dragging down
+    if (deltaY > 36 || velocityY > 0.35) {
+      if (mobileDetent === 'large') {
+        haptics.selection();
+        onMobileDetentChange?.('medium');
+      } else if (mobileDetent === 'medium') {
+        haptics.selection();
+        onMobileDetentChange?.('compact');
+      } else if (mobileDetent === 'compact' && (deltaY > 55 || velocityY > 0.45) && onClose) {
+        haptics.impact('light');
+        onClose();
+      }
+      return;
+    }
+
+    // Swiping or dragging up
+    if (deltaY < -36 || velocityY < -0.35) {
+      if (mobileDetent === 'compact') {
+        haptics.selection();
+        onMobileDetentChange?.('medium');
+      } else if (mobileDetent === 'medium') {
+        haptics.selection();
+        onMobileDetentChange?.('large');
+      }
+    }
+  };
+
+  const handleSheetPointerCancel = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    sheetDragOriginRef.current = null;
+    try {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    } catch {
+      // Ignored
+    }
+  };
+
   const onTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, index: number) => {
     let nextIndex = index;
     if (event.key === 'ArrowLeft') nextIndex = (index - 1 + inspectorTabs.length) % inspectorTabs.length;
@@ -241,6 +312,9 @@ const InspectorContent = ({
             aria-label={`${t('inspector.detentGroup')}: ${detentLabel(mobileDetent)}`}
             onClick={() => moveDetent(1)}
             onKeyDown={onDetentHandleKeyDown}
+            onPointerDown={handleSheetPointerDown}
+            onPointerUp={handleSheetPointerUp}
+            onPointerCancel={handleSheetPointerCancel}
           >
             <GripHorizontal size={22} aria-hidden="true" />
             <span className="sr-only">{detentLabel(mobileDetent)}</span>

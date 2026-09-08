@@ -16,4 +16,8 @@
 .sc-home-search footer { padding: 12px 20px; border-top: 1px solid var(--sc-color-border); color: var(--sc-color-text-muted); font: 11px/1.5 var(--sc-font-mono); }
 .sc-home-search__empty { padding: 28px; text-align: center; }
 .sc-home-search__empty p { color: var(--sc-color-text-secondary); }
-@media (max-width: 760px) { .sc-home-search-scrim { padding-top: 24px; } .sc-home-search header { padding: 12px; } }
+@media (max-width: 760px) {
+  .sc-home-search-scrim { padding-top: max(24px, calc(var(--sc-safe-top) + 14px)); }
+  .sc-home-search header { padding: 12px; }
+  .sc-home-search header button { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
+}

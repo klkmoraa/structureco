@@ -512,9 +512,25 @@
   font-size: 0.85rem;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 768px), (pointer: coarse) {
   .aisc-overview-grid {
     grid-template-columns: 1fr;
+  }
+  .aisc-adopt-btn {
+    min-height: 44px;
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .aisc-canvas-focus-btn {
+    min-height: 44px;
+    padding: 8px 12px;
+  }
+  .aisc-tab-btn {
+    min-height: 44px;
+    padding: 8px 14px;
   }
 }
 

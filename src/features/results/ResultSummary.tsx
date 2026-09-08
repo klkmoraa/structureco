@@ -119,12 +119,14 @@ export const ResultSummary = () => {
         <button disabled={comparisonBusy} onClick={compare}>{comparisonBusy ? <RefreshCw className="spin" size={15} /> : <GitCompareArrows size={15} />} {scenarios ? t('results.updateComparison') : t('results.compareCases')}</button>
       </div>
     </header>
-    <ElasticDemandCard />
-    <NumericQualityCard analysis={analysis} />
-    <NumericCertificateCard {...certificate} />
-    <StabilityStudiesCard studies={studies} />
-    <AiscSteelDesignCard />
-    <NtcSteelDesignCard />
+    <div className="result-summary-cards-carousel">
+      <ElasticDemandCard />
+      <NumericQualityCard analysis={analysis} />
+      <NumericCertificateCard {...certificate} />
+      <StabilityStudiesCard studies={studies} />
+      <AiscSteelDesignCard />
+      <NtcSteelDesignCard />
+    </div>
     {analysis.pDelta ? <section className="p-delta-summary" aria-label={t('pdelta.summaryTitle')}>
       <strong>{t('pdelta.summaryTitle')} <span className="experimental-badge">{t('pdelta.experimental')}</span></strong>
       <span className={analysis.pDelta.converged ? 'is-resolved' : 'is-warning'}>{analysis.pDelta.converged ? t('pdelta.converged') : t('pdelta.notConverged')}</span>
