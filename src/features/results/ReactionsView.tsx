@@ -3,7 +3,7 @@ import { Surface } from '../../design-system/components/surface';
 import { resolveReliability } from '../../engine/reliability';
 import { toDisplay, unitLabel } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
-import { useProject } from '../../store/ProjectContext';
+import { useProjectModel, useProjectAnalysis, useWorkspaceUI } from '../../store/ProjectContext';
 import { ResultExtremeCard } from './ResultExtremeCard';
 import { formatResultNearZero, formatResultNumber } from './resultFormatting';
 import { isReactionDofConstrained, type ReactionDof } from './reactionPresentation';
@@ -18,7 +18,9 @@ import { isReactionDofConstrained, type ReactionDof } from './reactionPresentati
  * dictamina: no hay check por fila, porque una fila no es un veredicto.
  */
 export const ReactionsView = () => {
-  const { analysis, project, selection, setSelection } = useProject();
+  const { project } = useProjectModel();
+  const { analysis } = useProjectAnalysis();
+  const { selection, setSelection } = useWorkspaceUI();
   const { t } = useI18n();
   const units = project.settings.units;
   const lengthUnit = unitLabel(units, 'length');

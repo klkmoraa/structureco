@@ -66,7 +66,7 @@ const SELF = path.join('scripts', 'check-i18n-usage.mjs');
  * nombrarlo.
  */
 export const IS_TEST = /\.(test|spec)\.[cm]?[jt]sx?$/;
-const SCANNED_ROOTS = ['src', 'scripts', 'qa.mjs', 'qa-webkit.mjs'];
+const SCANNED_ROOTS = ['src', 'scripts'];
 const SCANNED_EXTENSIONS = /\.(ts|tsx|mjs|js)$/;
 
 const collect = async (relative) => {

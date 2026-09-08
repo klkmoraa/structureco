@@ -12,10 +12,10 @@ import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { openExamplePortal } from './scripts/qa-welcome.mjs';
+import { openExamplePortal } from './qa-welcome.mjs';
 import { execFileSync } from 'node:child_process';
 
-const root = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const baseURL = process.env.BASE_URL ?? 'http://localhost:5173';
 const artifactsDir = path.join(root, 'qa-artifacts', 'capturas');
 const outDir = path.join(artifactsDir, 'png');

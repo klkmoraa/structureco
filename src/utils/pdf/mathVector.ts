@@ -6,9 +6,8 @@
  * the formula's own composed matrix as an *outer* transform (via `pushOperators` +
  * `concatTransformationMatrix`) and then calling `drawSvgPath` with the identity — the outer
  * concat supplies the real placement, and `drawSvgPath`'s own flip is folded into that
- * derivation rather than fought after the fact. See the plan this module was built from
- * (`docs/superpowers/plans/2026-08-28-pdf-formulas-mathjax-vector.md`) for the worked-through
- * derivation and the rendered proof it was checked against.
+ * derivation rather than fought after the fact. See docs/architecture/README.md
+ * for the architectural and numerical contracts governing this derivation.
  */
 import type { PDFPage } from 'pdf-lib';
 import type { AffineMatrix, FormulaOp, ParsedFormula } from './mathTypeset';

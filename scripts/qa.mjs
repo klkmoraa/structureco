@@ -4,9 +4,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 // CRI-116 · la navegación por los pasos de la bienvenida vive una sola vez.
-import { openResultsSurface, openWelcomeStep } from './scripts/qa-welcome.mjs';
+import { openResultsSurface, openWelcomeStep } from './qa-welcome.mjs';
 
-const root = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const assetsDir = path.join(root, 'dist', 'assets');
 const artifactsDir = path.join(root, 'qa-artifacts');
 fs.mkdirSync(artifactsDir, { recursive: true });

@@ -8,6 +8,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
+import { clamp } from '../../utils/math';
 import {
   evaluateAxleTrain,
   evaluateInfluenceLine,
@@ -77,8 +78,6 @@ const fieldStyle: CSSProperties = {
   color: 'var(--muted)',
 };
 
-const clamp = (value: number, minimum: number, maximum: number): number =>
-  Math.max(minimum, Math.min(maximum, value));
 
 const finiteExponential = (value: number, digits = 2): string => formatScientific(value, digits);
 

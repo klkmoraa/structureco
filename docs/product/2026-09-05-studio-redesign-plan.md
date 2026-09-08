@@ -10,7 +10,7 @@
 
 **Tech Stack:** React 19, TypeScript, Vite, CSS, lucide-react, Vitest y navegador integrado; dependencias existentes.
 
-**Spec:** docs/superpowers/specs/2026-09-05-studio-design.md
+**Spec:** [docs/product/2026-09-05-studio-design-spec.md](2026-09-05-studio-design-spec.md)
 
 ## Global Constraints
 

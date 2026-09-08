@@ -39,6 +39,9 @@ export default defineConfig({
   plugins: [react(), pwaShellPlugin()],
   base: './',
   define: { __APP_VERSION__: JSON.stringify(version) },
+  build: {
+    chunkSizeWarningLimit: 800,
+  },
   test: {
     setupFiles: ['src/i18n/testCatalogSetup.ts'],
     // The quality gate must only observe the real product. Backups, worktrees and

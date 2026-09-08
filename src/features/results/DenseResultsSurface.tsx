@@ -2,7 +2,7 @@ import { lazy, Suspense, useRef, type KeyboardEvent as ReactKeyboardEvent } from
 import { LoaderCircle } from 'lucide-react';
 import { Drawer } from '../../design-system/components/overlays';
 import { useI18n } from '../../i18n/useI18n';
-import { useProject } from '../../store/ProjectContext';
+import { useProjectModel, useProjectAnalysis, useWorkspaceUI } from '../../store/ProjectContext';
 import type { SurfacePresentation } from '../workspace/surfacePresentation';
 import { DENSE_RESULT_VIEWS, preloadInfluenceLineView, type DenseResultView } from './denseResults';
 import { LearnView } from './LearnView';
@@ -41,7 +41,9 @@ export const DenseResultsSurface = ({
   onSurfaceReady,
 }: DenseResultsSurfaceProps) => {
   const { t } = useI18n();
-  const { project, selection, setInfluenceCanvasState } = useProject();
+  const { project } = useProjectModel();
+  const { setInfluenceCanvasState } = useProjectAnalysis();
+  const { selection } = useWorkspaceUI();
   const tabsRef = useRef<HTMLDivElement>(null);
 
   const viewLabel: Record<DenseResultView, string> = {

@@ -5,7 +5,7 @@ import { buildDeformationEnvelope, buildReactionEnvelope, summarizeAnalysisResul
 import { toDisplay, unitLabel } from '../../engine/units';
 import { Surface } from '../../design-system/components/surface';
 import { resolveReliability } from '../../engine/reliability';
-import { useProject, type ResultTab } from '../../store/ProjectContext';
+import { useProjectModel, useProjectAnalysis, useWorkspaceUI, type ResultTab } from '../../store/ProjectContext';
 import type { DiagramQuantity, ResponseQuantity } from '../../types';
 import { downloadResultsCsv } from '../../utils/resultsExport';
 import { formatResultNearZero, formatResultNumber, formatResultValue } from './resultFormatting';
@@ -27,7 +27,9 @@ const diagramTab: Record<DiagramQuantity, ResultTab> = { axial: 'axial', shear: 
 const diagramSymbol: Record<DiagramQuantity, string> = { axial: 'N', shear: 'V', moment: 'M' };
 
 export const ResultSummary = () => {
-  const { project, analysis, selectedCombinationId, setSelection, setResultCursor, setResultTab } = useProject();
+  const { project } = useProjectModel();
+  const { analysis, selectedCombinationId } = useProjectAnalysis();
+  const { setSelection, setResultCursor, setResultTab } = useWorkspaceUI();
   const { language, t } = useI18n();
   const { scenarios, busy: comparisonBusy, error: comparisonError, run: compare } = useScenarioAnalysis(project);
   const certificate = useNumericCertificate(project, selectedCombinationId);

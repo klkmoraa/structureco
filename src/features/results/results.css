@@ -177,21 +177,6 @@
   .result-tabs button { min-width:76px;padding:0 12px;scroll-snap-align:start; }
   .diagram-chart-heading small{display:none}.diagram-chart svg{height:188px}.diagram-cursor-readout{grid-template-columns:repeat(2,minmax(0,1fr))}.diagram-cursor-readout small{grid-column:1/-1}
   .learning-toolbar{align-items:stretch;flex-direction:column;gap:8px}.learning-level{display:grid;grid-template-columns:repeat(3,1fr)}.learning-level button{min-height:34px}.learning-content{padding:0 16px 13px 45px}
-  .canvas-controls { bottom:calc(82px + var(--sc-safe-bottom)); }
-  .canvas-controls button { width:var(--sc-control-height-touch); height:var(--sc-control-height-touch); }
-  .canvas-status { bottom:calc(80px + var(--sc-safe-bottom)); }
-  .welcome-header { min-height:64px; padding-inline:max(20px,var(--sc-safe-left)) max(20px,var(--sc-safe-right)); }
-  .welcome-brand { font-size:18px; }
-  .welcome-content { width:min(100% - 36px,760px); padding:44px 0 36px; gap:36px; }
-  /* Con una sola columna la figura pasa de compañera del titular a remate de
-     la sección: se centra, se acota y cede el ancho al texto. */
-  .portal-hero { max-width:400px; }
-  .welcome-hero-launcher { grid-template-columns:1fr; }
-  .welcome-launcher-card { grid-template-columns:auto minmax(0,1fr) auto; grid-template-areas:"icon info arrow"; align-items:center; gap:14px; padding:16px 18px; }
-  .welcome-workflow { padding:24px 20px; }
-  .welcome-workflow-steps { gap:22px; }
-  .welcome-workflow-step:not(:last-child)::after { right:-22px; }
-  .welcome-footer { padding-bottom:calc(9px + var(--sc-safe-bottom)); }
 }
 .diagram-value-layer { pointer-events: none; font-size: 10px; font-weight: 700; }
 .diagram-value-layer circle { fill: currentColor; stroke: var(--canvas-bg); stroke-width: 1.5; }

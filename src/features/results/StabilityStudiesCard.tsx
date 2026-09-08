@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import type { ModelStudiesState } from '../../engine/useModelStudies';
 import { useI18n } from '../../i18n/useI18n';
-import { useProject } from '../../store/ProjectContext';
+import { useWorkspaceUI } from '../../store/ProjectContext';
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
 
 export const StabilityStudiesCard = ({ studies }: { studies: ModelStudiesState }) => {
   const { t } = useI18n();
-  const { modeShapeState, setModeShapeState } = useProject();
+  const { modeShapeState, setModeShapeState } = useWorkspaceUI();
   const buckling = studies.buckling;
   const modal = studies.modal;
   const [bucklingMode, setBucklingMode] = useState(0);

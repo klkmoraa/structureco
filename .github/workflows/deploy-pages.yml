@@ -32,8 +32,8 @@ jobs:
       - name: Instalar dependencias exactas
         run: npm ci
 
-      - name: Construir producción
-        run: npm run build
+      - name: Verificar calidad antes de publicar
+        run: npm run verify
 
       - name: Preparar artefacto de Pages
         uses: actions/upload-pages-artifact@v3

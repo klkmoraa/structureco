@@ -1,20 +1,10 @@
-import { findStandardSection, standardSections, type SectionShapeType, type StandardSection } from '../../data/standardSections';
+import { findStandardSection, standardSections, type StandardSection } from '../../data/standardSections';
 import { toDisplay, unitLabel } from '../../engine/units';
 import type { TranslationKey } from '../../i18n/catalogs';
 import { useI18n } from '../../i18n/useI18n';
 import type { MemberPropertyOrigin, UnitSystemId } from '../../types';
 import { formatInspectorValue } from './numericFormatting';
-
-const SHAPE_ORDER: readonly SectionShapeType[] = ['I', 'HSS_RECT', 'HSS_ROUND', 'C', 'L', 'RECT'];
-
-const SHAPE_LABEL_KEYS: Record<SectionShapeType, TranslationKey> = {
-  I: 'inspector.sectionShapeI',
-  HSS_RECT: 'inspector.sectionShapeHssRect',
-  HSS_ROUND: 'inspector.sectionShapeHssRound',
-  C: 'inspector.sectionShapeC',
-  L: 'inspector.sectionShapeL',
-  RECT: 'inspector.sectionShapeRect',
-};
+import { SHAPE_LABEL_KEYS, SHAPE_ORDER } from './sectionPresentation';
 
 /**
  * Nombre traducible para las secciones genéricas, cuyo nombre en `src/data` está

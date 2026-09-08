@@ -3,6 +3,7 @@ import { findStandardMaterial } from '../../data/standardMaterials';
 import { findStandardSection } from '../../data/standardSections';
 import type { TranslationKey } from '../../i18n/catalogs';
 import type { MemberLoad, MemberModel, NodalLoad, NodeModel, ProjectModel } from '../../types';
+import { normalizeSearch } from '../../utils/search';
 
 /**
  * Proyección tabular del modelo estructural.
@@ -455,16 +456,9 @@ export const datasheetRowSearchText = (
   }
   return parts.join(' ').toLowerCase();
 };
-
 /**
- * Búsqueda por subcadena sobre el texto ya presentado.
- *
- * Se normalizan los acentos para que «seccion» encuentre «sección»: en un
- * datasheet técnico, obligar a acentuar es una barrera sin contrapartida.
+ * Búsqueda por subcadena sobre el texto ya presentado normalizando acentos.
  */
-const normalizeSearch = (value: string): string =>
-  value.trim().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
-
 export const searchDatasheetRows = (
   rows: readonly DatasheetRow[],
   query: string,

@@ -3,7 +3,7 @@ import { CircleSlash, Gauge, Info, LocateFixed } from 'lucide-react';
 import { toDisplay, unitLabel } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import type { TranslationKey } from '../../i18n/catalogs';
-import { useProject } from '../../store/ProjectContext';
+import { useProjectModel, useProjectAnalysis, useWorkspaceUI } from '../../store/ProjectContext';
 import { formatFixed } from '../../utils/numberFormat';
 import { formatInspectorNumber, formatInspectorValue } from '../inspector/numericFormatting';
 import { emitWorkspaceCommand } from '../workspace/workspaceCommands';
@@ -36,7 +36,9 @@ const gapLabel: Record<ElasticIndexGap, TranslationKey> = {
 };
 
 export const ElasticDemandCard = () => {
-  const { project, analysis, setSelection } = useProject();
+  const { project } = useProjectModel();
+  const { analysis } = useProjectAnalysis();
+  const { setSelection } = useWorkspaceUI();
   const { t } = useI18n();
   const view = useMemo(() => elasticDemandView(project, analysis), [analysis, project]);
   const units = project.settings.units;

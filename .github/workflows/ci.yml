@@ -53,11 +53,20 @@ jobs:
       - name: Contrato del service worker
         run: npm run verify:pwa
 
+      - name: Paridad del puente nativo
+        run: npm run verify:native-bridge
+
+      - name: Presupuesto y contratos de estilos
+        run: npm run verify:styles
+
       - name: Catálogo de traducción sin claves muertas
         run: npm run verify:i18n
 
+      - name: Verificador del ejecutor de pruebas mínimas
+        run: npm run verify:test-runner
+
       - name: Pruebas deterministas
-        run: npm test
+        run: npm run test:all
 
       # `npm test` ya cubre las pruebas unitarias de Space 3D; lo que faltaba en
       # el gate era la política de capacidad y el contrato de los 80 PNG
@@ -77,6 +86,9 @@ jobs:
 
       - name: Build de producción
         run: npm run build
+
+      - name: Entrada internacionalizada en producción
+        run: npm run verify:i18n-entry
 
       - name: Presupuestos de rendimiento
         run: npm run verify:perf

@@ -5,9 +5,9 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { clearProjectLibraryOnBoot, disablePwaUpdateLifecycle } from './scripts/qa-welcome.mjs';
+import { clearProjectLibraryOnBoot, disablePwaUpdateLifecycle } from './qa-welcome.mjs';
 
-const root = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const artifactsDir = path.join(root, 'qa-artifacts');
 fs.mkdirSync(artifactsDir, { recursive: true });
 

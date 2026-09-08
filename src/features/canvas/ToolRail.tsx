@@ -26,7 +26,7 @@ import {
 import { useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '../../i18n/useI18n';
-import { useProject, type ResultTab } from '../../store/ProjectContext';
+import { useProjectModel, useWorkspaceUI, type ResultTab } from '../../store/ProjectContext';
 import type { Tool } from '../../types';
 import { ToolButton as EditorToolButton, type ToolTone } from '../../design-system/components/editor';
 import { STRUCTURAL_TOOL_IDS, StructuralToolIcon } from './StructuralToolIcon';
@@ -244,7 +244,8 @@ const setAppShellMobileInert = (inert: boolean) => {
  * por su cuenta.
  */
 export const ToolRail = () => {
-  const { activeTool, setActiveTool, project, selection, resultTab, setResultTab } = useProject();
+  const { project } = useProjectModel();
+  const { activeTool, setActiveTool, selection, resultTab, setResultTab } = useWorkspaceUI();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [mobileMenu, setMobileMenu] = useState<'loads' | 'more' | null>(null);
   const [desktopDockCollapsed, setDesktopDockCollapsed] = useState(false);

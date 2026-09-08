@@ -49,6 +49,8 @@ documento que los cita.
 | [Biblioteca personal · contrato seguro](product/personal-library.md) | Contrato implementado para favoritos locales y aplicación explícita; el código y sus pruebas siguen siendo la autoridad operativa. |
 | [Aula vNext · explicación anclada a resultados](product/aula-vnext.md) | Diseño de producto para implementación futura; no describe una capacidad ya implementada. |
 | [Adopción selectiva de Copia-web](product/copia-web-adoption-plan.md) | Fases, límites y gates para integrar capacidades sin trasladar su diseño ni arriesgar el núcleo. |
+| [Rediseño de Studio · plan](product/2026-09-05-studio-redesign-plan.md) | Plan de implementación y tareas del rediseño de Studio. |
+| [Rediseño de Studio · especificación](product/2026-09-05-studio-design-spec.md) | Especificación visual del sistema, Inicio y superficies de Studio. |
 | [Pre-RFC de IA y `CommandProposal`](architecture/structureco-fase-4-ai-command-proposal-pre-rfc.md) | Propuesta futura; no describe una capacidad implementada. |
 | [Brandbook heredado](../brand/README.md) | Procedencia de assets anteriores; no restringe el rediseño vigente. |
 | [Validación de Space 3D](../validation/space3d/README.md) | Procedimiento de oráculos que debe ejecutarse de nuevo al cambiar el área. |

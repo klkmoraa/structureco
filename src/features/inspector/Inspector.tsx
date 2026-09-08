@@ -194,7 +194,11 @@ const InspectorContent = ({
 
   const handleSheetPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
+    try {
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+    } catch {
+      // Ignored
+    }
     sheetDragOriginRef.current = {
       clientY: event.clientY,
       startTime: performance.now(),

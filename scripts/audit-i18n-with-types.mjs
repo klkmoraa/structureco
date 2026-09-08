@@ -258,7 +258,7 @@ export const classifyCandidates = (candidates, result) => {
 const audit = async () => {
   const original = await readFile(CATALOGS, 'utf8');
   const keys = declaredKeys(original);
-  const files = (await Promise.all(['src', 'scripts', 'qa.mjs', 'qa-webkit.mjs'].map(collect))).flat()
+  const files = (await Promise.all(['src', 'scripts'].map(collect))).flat()
     .filter((file) => file !== path.join('src', 'i18n', 'catalogs.ts') && file !== SELF_DETECTOR && !IS_TEST.test(file));
   const sources = await Promise.all(files.map((file) => readFile(path.join(ROOT, file), 'utf8')));
   const collected = sources.map(dynamicPrefixes);

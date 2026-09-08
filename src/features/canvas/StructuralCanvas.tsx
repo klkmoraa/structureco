@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type Ref } from 'react';
 import { X } from 'lucide-react';
-import { useProject } from '../../store/ProjectContext';
+import { useProjectModel, useProjectAnalysis, useWorkspaceUI } from '../../store/ProjectContext';
 import type { DiagramPoint, DiagramQuantity, MemberModel, NodeModel, Selection, Tool } from '../../types';
 import { evaluateDiagramAt } from '../../engine/diagram';
 import { buildLeftCutEquilibrium } from '../../engine/cut';
@@ -40,7 +40,8 @@ import {
   type ModelPoint,
   type ScreenPoint,
 } from './canvasInteraction';
-import { toolFromShortcut } from './toolRegistry';
+import { useCanvasShortcuts } from './useCanvasShortcuts';
+import { useCanvasCamera } from './useCanvasCamera';
 import { planCanvasGrid } from './canvasGrid';
 import { ANGLE_CONSTRAINT_STEP_DEG, constrainToAngleStep } from './angleConstraint';
 import { canvasFitReserve, insetsWithFitReserve } from './fitReserve';
@@ -49,7 +50,7 @@ import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { CanvasChrome } from './CanvasChrome';
 import { layoutSmartLabels, smartLabelDetailForScale, type SmartLabelCandidate } from './labelLayout';
 import { buildCanvasSelectionVisualState, selectionEnvelopeForPoints } from './selectionVisuals';
-import { emitWorkspaceCommand, onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
+import { onWorkspaceCommand, type FocusableSelection } from '../workspace/workspaceCommands';
 import { CanvasGeometryLayer, type StructuralTarget } from './CanvasGeometryLayer';
 import {
   flexibleRatioFromGross,
@@ -248,14 +249,6 @@ export const StructuralCanvas = ({
 }) => {
   const {
     project,
-    analysis,
-    activeTool,
-    selection,
-    resultTab,
-    setResultTab,
-    selectedCombinationId,
-    setSelection,
-    setActiveTool,
     executeProjectCommand,
     executePreparedStructuralEdit,
     updateProject,
@@ -264,11 +257,23 @@ export const StructuralCanvas = ({
     moveNodeTransient,
     commitProjectTransaction,
     cancelProjectTransaction,
+  } = useProjectModel();
+  const {
+    analysis,
+    selectedCombinationId,
     learningFocus,
-    resultCursor,
     influenceCanvasState,
+  } = useProjectAnalysis();
+  const {
+    activeTool,
+    selection,
+    resultTab,
+    setResultTab,
+    setSelection,
+    setActiveTool,
+    resultCursor,
     modeShapeState,
-  } = useProject();
+  } = useWorkspaceUI();
   const view = readCanvasViewSettings(project);
   const { language, t } = useI18n();
   const { t: phase2T } = usePhase2I18n(language);
@@ -282,7 +287,14 @@ export const StructuralCanvas = ({
   const coordinateReadoutRef = useRef<HTMLOutputElement>(null);
   const [size, setSize] = useState<Size>({ width: 1000, height: 640 });
   const [canvasMeasured, setCanvasMeasured] = useState(false);
-  const [camera, setCamera] = useState<Camera>({ scale: 85, x: 260, y: 500 });
+  const {
+    camera,
+    cameraRef,
+    updateCamera,
+    animateCameraTo,
+    toScreen,
+    toModel,
+  } = useCanvasCamera();
   const [memberStart, setMemberStart] = useState<string | null>(null);
   const [stackActive, setStackActive] = useState(false);
   const [stackLayout, setStackLayout] = useState<StackLayout>('rows');
@@ -330,13 +342,10 @@ export const StructuralCanvas = ({
   const [touchLoupe, setTouchLoupe] = useState<{ screenX: number; screenY: number; modelX: number; modelY: number } | null>(null);
   const spacePressedRef = useRef(false);
   const interactionRef = useRef<CanvasInteraction>(IDLE_INTERACTION);
-  const cameraRef = useRef(camera);
   const activePointersRef = useRef(new Map<number, ScreenPoint>());
   const longPressTimerRef = useRef<number | null>(null);
   const clipboardRef = useRef<ModelClipboard | null>(null);
   const pasteCountRef = useRef(1);
-  const cameraFrameRef = useRef<number | null>(null);
-  const cameraAnimationRef = useRef<number | null>(null);
   const interactionFrameRef = useRef<number | null>(null);
   const nodeMoveFrameRef = useRef<number | null>(null);
   const pendingNodeMoveRef = useRef<{ nodeId: string; point: { x: number; y: number } } | null>(null);
@@ -558,57 +567,6 @@ export const StructuralCanvas = ({
     setInteractionState(next);
   }, []);
 
-  const updateCamera = useCallback((next: Camera | ((current: Camera) => Camera)) => {
-    const resolved = typeof next === 'function' ? next(cameraRef.current) : next;
-    cameraRef.current = resolved;
-    if (cameraFrameRef.current !== null) return;
-    cameraFrameRef.current = window.requestAnimationFrame(() => {
-      cameraFrameRef.current = null;
-      setCamera(cameraRef.current);
-    });
-  }, []);
-
-  const stopCameraAnimation = useCallback(() => {
-    if (cameraAnimationRef.current !== null) {
-      window.cancelAnimationFrame(cameraAnimationRef.current);
-      cameraAnimationRef.current = null;
-    }
-  }, []);
-
-  const animateCameraTo = useCallback((target: Camera, durationMs = 280) => {
-    stopCameraAnimation();
-    const isTest = typeof process !== 'undefined' && process.env.NODE_ENV === 'test';
-    const prefersReduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-    if (isTest || prefersReduced || durationMs <= 0) {
-      updateCamera(target);
-      return;
-    }
-    const start = { ...cameraRef.current };
-    const startTime = performance.now();
-    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-
-    const step = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(1, elapsed / durationMs);
-      const eased = easeOutCubic(progress);
-
-      const next: Camera = {
-        x: start.x + (target.x - start.x) * eased,
-        y: start.y + (target.y - start.y) * eased,
-        scale: start.scale + (target.scale - start.scale) * eased,
-      };
-      updateCamera(next);
-
-      if (progress < 1) {
-        cameraAnimationRef.current = window.requestAnimationFrame(step);
-      } else {
-        cameraAnimationRef.current = null;
-      }
-    };
-
-    cameraAnimationRef.current = window.requestAnimationFrame(step);
-  }, [stopCameraAnimation, updateCamera]);
-
   const scheduleInteractionFrame = useCallback((next: CanvasInteraction) => {
     interactionRef.current = next;
     if (interactionFrameRef.current !== null) return;
@@ -687,20 +645,18 @@ export const StructuralCanvas = ({
   }, []);
 
   useEffect(() => () => {
-    if (cameraFrameRef.current !== null) window.cancelAnimationFrame(cameraFrameRef.current);
-    if (cameraAnimationRef.current !== null) window.cancelAnimationFrame(cameraAnimationRef.current);
     if (interactionFrameRef.current !== null) window.cancelAnimationFrame(interactionFrameRef.current);
     if (nodeMoveFrameRef.current !== null) window.cancelAnimationFrame(nodeMoveFrameRef.current);
     if (structuralEditFrameRef.current !== null) window.cancelAnimationFrame(structuralEditFrameRef.current);
     if (feedbackTimerRef.current !== null) window.clearTimeout(feedbackTimerRef.current);
-    cameraFrameRef.current = null;
-    cameraAnimationRef.current = null;
+    if (longPressTimerRef.current !== null) window.clearTimeout(longPressTimerRef.current);
     interactionFrameRef.current = null;
     nodeMoveFrameRef.current = null;
     structuralEditFrameRef.current = null;
     pendingStructuralEditDraftRef.current = null;
     structuralEditLiveDraftRef.current = null;
     feedbackTimerRef.current = null;
+    longPressTimerRef.current = null;
   }, []);
 
   const clearLongPressTimer = useCallback(() => {
@@ -711,8 +667,6 @@ export const StructuralCanvas = ({
     longPressMotionRef.current = null;
   }, []);
 
-  const toScreen = useCallback((x: number, y: number) => ({ x: camera.x + x * camera.scale, y: camera.y - y * camera.scale }), [camera]);
-  const toModel = useCallback((screenX: number, screenY: number) => ({ x: (screenX - camera.x) / camera.scale, y: (camera.y - screenY) / camera.scale }), [camera]);
   const localScreenPoint = useCallback((clientX: number, clientY: number): ScreenPoint => {
     const rect = svgRef.current?.getBoundingClientRect();
     return { x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) };
@@ -722,7 +676,7 @@ export const StructuralCanvas = ({
     if (!canvasPointerProfile(pointerType).showsCoordinates || !coordinateReadoutRef.current) return;
     const point = screenToModelPoint(localScreenPoint(clientX, clientY), cameraRef.current);
     coordinateReadoutRef.current.textContent = `X ${formatFixed(toDisplay(point.x, units, 'length'), 3)} · Y ${formatFixed(toDisplay(point.y, units, 'length'), 3)} ${lengthLabel}`;
-  }, [lengthLabel, localScreenPoint, units]);
+  }, [cameraRef, lengthLabel, localScreenPoint, units]);
 
   const fitModel = useCallback((bottomReserve = 0, animated = false) => {
     if (!project.nodes.length || !Number.isFinite(size.width) || !Number.isFinite(size.height) || size.width <= 0 || size.height <= 0) return;
@@ -844,7 +798,7 @@ export const StructuralCanvas = ({
       window.requestAnimationFrame(() => svgRef.current?.focus({ preventScroll: true }));
     };
     return onWorkspaceCommand('focus-object', focusObject);
-  }, [memberMap, nodeMap, project.memberLoads, project.nodalLoads, showCanvasFeedback, size.height, size.width, t, updateCamera]);
+  }, [cameraRef, memberMap, nodeMap, project.memberLoads, project.nodalLoads, showCanvasFeedback, size.height, size.width, t, updateCamera]);
 
   useEffect(() => {
     const baseName = project.name.replace(/\s+/g, '-').toLowerCase();
@@ -935,7 +889,7 @@ export const StructuralCanvas = ({
       return point;
     }
     return snapPoint(raw, excludedNodeIds);
-  }, [drawingOrigin, localScreenPoint, snapPoint, view.gridSize, view.snap, view.snapTargets.grid]);
+  }, [cameraRef, drawingOrigin, localScreenPoint, snapPoint, view.gridSize, view.snap, view.snapTargets.grid]);
 
   const nodeDragPointFromClient = useCallback((
     clientX: number,
@@ -946,7 +900,7 @@ export const StructuralCanvas = ({
     const local = localScreenPoint(clientX, clientY);
     const pointerPoint = screenToModelPoint(local, cameraRef.current);
     return snapPoint({ x: pointerPoint.x + grabOffset.x, y: pointerPoint.y + grabOffset.y }, excludedNodeId);
-  }, [localScreenPoint, snapPoint]);
+  }, [cameraRef, localScreenPoint, snapPoint]);
 
   const deleteSelection = useCallback((target: Selection = selection) => {
     if (!target) return;
@@ -1185,7 +1139,7 @@ export const StructuralCanvas = ({
     transitionInteraction({
       kind: 'pan', pointerId, pointerType, start, camera: startCamera, moved, clearSelectionOnTap,
     });
-  }, [capturePointer, clearLongPressTimer, transitionInteraction]);
+  }, [cameraRef, capturePointer, clearLongPressTimer, transitionInteraction]);
 
   const startStructuralEditPointer = useCallback((event: ReactPointerEvent) => {
     const draft = structuralEditDraft;
@@ -1216,7 +1170,7 @@ export const StructuralCanvas = ({
       }
     }
     return true;
-  }, [capturePointer, clearLongPressTimer, localScreenPoint, modelPointFromClient, project, scheduleStructuralEditDraft, structuralEditDraft, structuralEditPointerArmed, t, transitionInteraction]);
+  }, [cameraRef, capturePointer, clearLongPressTimer, localScreenPoint, modelPointFromClient, project, scheduleStructuralEditDraft, structuralEditDraft, structuralEditPointerArmed, t, transitionInteraction]);
 
   /**
    * Un solo clic entrega el origen de inserción y desarma el puntero.
@@ -1301,7 +1255,7 @@ export const StructuralCanvas = ({
         longPressTimerRef.current = null;
       }, LONG_PRESS_MS);
     }
-  }, [activeTool, capturePointer, clearLongPressTimer, localScreenPoint, onRequestInspector, openCandidatePicker, selectStructuralTarget, setActiveTool, transitionInteraction]);
+  }, [activeTool, cameraRef, capturePointer, clearLongPressTimer, localScreenPoint, onRequestInspector, openCandidatePicker, selectStructuralTarget, setActiveTool, transitionInteraction]);
 
   const completeLoadPlacement = (label: string) => {
     setActiveTool('select');
@@ -1993,115 +1947,36 @@ export const StructuralCanvas = ({
     cancelStructuralEdit();
   }, [cancelStructuralEdit, selection, structuralEditDraft]);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target instanceof HTMLElement ? event.target : null;
-      const modalOpen = document.querySelector<HTMLElement>('[aria-modal="true"]');
-      const interactive = target?.closest('input, select, textarea, button, [contenteditable="true"], [role="dialog"], [role="menu"], [role="listbox"], [role="tablist"]');
-      if (event.key === 'Escape' && supportPlacement) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        cancelSupportPlacement();
-        return;
-      }
-      if (event.key === 'Escape' && candidatePicker) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        closeCandidatePicker();
-        return;
-      }
-      if ((modalOpen && !target?.closest('[aria-modal="true"]')) || interactive) return;
-      if (event.code === 'Space') {
-        event.preventDefault();
-        if (!spacePressedRef.current) {
-          spacePressedRef.current = true;
-          setSpacePressed(true);
-        }
-        return;
-      }
-      const command = event.ctrlKey || event.metaKey;
-      const key = event.key.toLowerCase();
-      if (event.key === 'Escape' && structuralEditDraft) {
-        event.preventDefault();
-        cancelStructuralEdit();
-        return;
-      }
-      if (structuralEditDraft) return;
-      // Letter-only shortcuts (no modifier) are scoped to the canvas element
-      // itself (CRI-103): anywhere else — including plain document/body focus,
-      // which is where a screen reader's quick-nav browse mode intercepts
-      // single letters — they must not fire, or they hijack that navigation.
-      const canvasHasFocus = document.activeElement instanceof Node && Boolean(hostRef.current?.contains(document.activeElement));
-      // WCAG 2.2 2.5.7: moving geometry cannot depend on a drag. F2 is an
-      // intentional keyboard entry from a focused canvas object to the same
-      // numeric, reversible structural editor offered by the visual control.
-      if (event.key === 'F2' && canvasHasFocus && selection && editCapabilities.structural) {
-        event.preventDefault();
-        emitWorkspaceCommand('open-structural-edit');
-        return;
-      }
-      if (key === 'r' && !command && !event.altKey && canvasHasFocus && !compactCanvasChrome) {
-        if (!repeatCandidate) return;
-        event.preventDefault();
-        activateRepeat();
-        return;
-      }
-      if (command && key === 'c') {
-        event.preventDefault();
-        void copyStructuralSelection();
-        return;
-      }
-      if (command && key === 'v') {
-        event.preventDefault();
-        void pasteStructuralSelection();
-        return;
-      }
-      if (command && key === 'd') {
-        event.preventDefault();
-        startDuplicate();
-        return;
-      }
-      const shortcutTool = toolFromShortcut(key);
-      if (shortcutTool && !command && !event.altKey && canvasHasFocus) {
-        event.preventDefault();
-        setActiveTool(shortcutTool);
-      }
-      if (event.key === 'Escape') {
-        if (duplicateDraft) {
-          setDuplicateDraft(null);
-          return;
-        }
-        cancelActiveInteraction();
-        setMemberStart(null);
-        setQuickEntry({ first: '', second: '' });
-        setQuickEntryError('');
-        setRepeatRecipe(null);
-        setSelection(null);
-        setCut(null);
-        setActiveTool('select');
-      }
-      if (event.key === 'Delete' || event.key === 'Backspace') {
-        event.preventDefault();
-        deleteSelection();
-      }
-    };
-    const releaseSpace = (event?: KeyboardEvent) => {
-      if (event && event.code !== 'Space') return;
-      spacePressedRef.current = false;
-      setSpacePressed(false);
-    };
-    const onVisibility = () => { if (document.visibilityState === 'hidden') cancelActiveInteraction(); };
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', releaseSpace);
-    window.addEventListener('blur', cancelActiveInteraction);
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('keyup', releaseSpace);
-      window.removeEventListener('blur', cancelActiveInteraction);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, [activateRepeat, cancelActiveInteraction, cancelStructuralEdit, cancelSupportPlacement, candidatePicker, closeCandidatePicker, compactCanvasChrome, copyStructuralSelection, deleteSelection, duplicateDraft, editCapabilities.structural, pasteStructuralSelection, repeatCandidate, selection, setActiveTool, setSelection, startDuplicate, structuralEditDraft, supportPlacement]);
+  useCanvasShortcuts({
+    hostRef,
+    spacePressedRef,
+    setSpacePressed,
+    supportPlacement,
+    cancelSupportPlacement,
+    candidatePicker,
+    closeCandidatePicker,
+    structuralEditDraft,
+    cancelStructuralEdit,
+    selection,
+    editCapabilities,
+    repeatCandidate,
+    activateRepeat,
+    compactCanvasChrome,
+    copyStructuralSelection,
+    pasteStructuralSelection,
+    startDuplicate,
+    duplicateDraft,
+    setDuplicateDraft,
+    setActiveTool,
+    cancelActiveInteraction,
+    setMemberStart,
+    setQuickEntry,
+    setQuickEntryError,
+    setRepeatRecipe,
+    setSelection,
+    setCut,
+    deleteSelection,
+  });
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -2115,7 +1990,7 @@ export const StructuralCanvas = ({
     };
     svg.addEventListener('wheel', onWheel, { passive: false });
     return () => svg.removeEventListener('wheel', onWheel);
-  }, [localScreenPoint, size.height, updateCamera]);
+  }, [cameraRef, localScreenPoint, size.height, updateCamera]);
 
   const memberValueAt = (memberId: string, ratio: number): DiagramPoint | null => {
     const result = resultMap.get(memberId);

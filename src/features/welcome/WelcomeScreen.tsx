@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Box, Folder, GraduationCap, Home, Image as ImageIcon, LayoutTemplate, LibraryBig, Menu, Moon, Play, Plus, Search, Settings, Sun, Upload, X } from 'lucide-react';
 import { m, useReducedMotion } from 'motion/react';
 import { createBlankProject, exampleProjects } from '../../data/defaultProject';
-import { useProject, useWorkspaceUI } from '../../store/ProjectContext';
+import { useProjectModel, useWorkspaceUI } from '../../store/ProjectContext';
 import { exportProjectJson } from '../../utils/export';
 import { useI18n } from '../../i18n/useI18n';
 import type { TranslationKey } from '../../i18n/catalogs';
@@ -146,7 +146,7 @@ const WelcomePreferences = ({ language, theme, onLanguageChange, onThemeChange, 
 };
 
 export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspace, allowDirectResume = false, onDirectResume, initialView = 'home' }: WelcomeScreenProps) => {
-  const { project, replaceProject, updateProjectView } = useProject();
+  const { project, replaceProject, updateProjectView } = useProjectModel();
   const { language, t } = useI18n();
   const { theme, setTheme } = useWorkspaceUI();
   const reducedMotion = useReducedMotion();

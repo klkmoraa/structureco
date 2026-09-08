@@ -1,9 +1,10 @@
 import { findStandardMaterial, standardMaterials, type MaterialCategory } from '../../data/standardMaterials';
-import { findStandardSection, standardSections, type SectionShapeType } from '../../data/standardSections';
+import { findStandardSection, standardSections } from '../../data/standardSections';
 import { toDisplay, unitLabel } from '../../engine/units';
 import { es, translate, type Language, type TranslationKey } from '../../i18n/catalogs';
 import type { UnitSystemId } from '../../types';
 import { formatInspectorValue } from '../inspector/numericFormatting';
+import { SHAPE_ORDER as SECTION_SHAPE_ORDER, SHAPE_LABEL_KEYS as SECTION_SHAPE_KEYS } from '../inspector/sectionPresentation';
 import type { BulkEditCopyKey, BulkEditTranslate } from './bulkEditCopy';
 import { BULK_ENTITY_KINDS } from './bulkEditTypes';
 import type {
@@ -118,16 +119,6 @@ const MATERIAL_CATEGORY_KEYS: Record<MaterialCategory, TranslationKey> = {
   ALUMINUM: 'inspector.materialCategoryAluminum',
 };
 
-const SECTION_SHAPE_ORDER: readonly SectionShapeType[] = ['I', 'HSS_RECT', 'HSS_ROUND', 'C', 'L', 'RECT'];
-
-const SECTION_SHAPE_KEYS: Record<SectionShapeType, TranslationKey> = {
-  I: 'inspector.sectionShapeI',
-  HSS_RECT: 'inspector.sectionShapeHssRect',
-  HSS_ROUND: 'inspector.sectionShapeHssRound',
-  C: 'inspector.sectionShapeC',
-  L: 'inspector.sectionShapeL',
-  RECT: 'inspector.sectionShapeRect',
-};
 
 /**
  * Catálogo completo de materiales o de secciones, ya agrupado y traducido.

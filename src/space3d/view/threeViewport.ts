@@ -513,8 +513,14 @@ const disposeObject = (root: Object3D) => {
     };
     holder.geometry?.dispose();
     const material = holder.material;
-    if (Array.isArray(material)) material.forEach((item) => item.dispose());
-    else material?.dispose();
+    const disposeMat = (mat: Material) => {
+      if ('map' in mat && mat.map && typeof (mat.map as { dispose?: () => void }).dispose === 'function') {
+        (mat.map as { dispose: () => void }).dispose();
+      }
+      mat.dispose();
+    };
+    if (Array.isArray(material)) material.forEach(disposeMat);
+    else if (material) disposeMat(material);
   });
 };
 

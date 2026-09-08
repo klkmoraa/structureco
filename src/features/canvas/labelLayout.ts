@@ -1,4 +1,5 @@
 import type { CanvasSafeRect } from './canvasChromeGeometry';
+import { clamp } from '../../utils/math';
 
 export type SmartLabelPriority = 0 | 1 | 2 | 3;
 export type SmartLabelTone = 'neutral' | 'selection' | 'force' | 'shear' | 'moment' | 'dimension' | 'axial';
@@ -52,8 +53,6 @@ const DEDUPE_RADIUS = 30;
 export const smartLabelHeight = (candidate: Pick<SmartLabelCandidate, 'subtext'>): number =>
   (candidate.subtext ? LABEL_HEIGHT + LABEL_LINE_HEIGHT : LABEL_HEIGHT);
 
-const clamp = (value: number, min: number, max: number): number =>
-  Math.min(max, Math.max(min, value));
 
 export const smartLabelDetailForScale = (scale: number): SmartLabelDetail => {
   if (scale < 52) return 'essential';

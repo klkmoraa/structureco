@@ -21,8 +21,7 @@ export interface ModelBounds {
   maxY: number;
 }
 
-const clamp = (value: number, min: number, max: number): number =>
-  Math.min(max, Math.max(min, value));
+import { clamp } from '../../utils/math';
 
 const FALLBACK_MODEL_BOUNDS: ModelBounds = {
   // Keep the model origin visible when the source bounds are empty or corrupt.

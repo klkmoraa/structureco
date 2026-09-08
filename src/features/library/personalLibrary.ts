@@ -3,6 +3,7 @@ import { findStandardSection } from '../../data/standardSections';
 import type { ThemeMode, UnitSystemId } from '../../types';
 import { isUnitSystemId } from '../../engine/units';
 import type { CanvasViewSettings } from '../view/canvasViewSettings';
+import { normalizeSearch } from '../../utils/search';
 
 export const PERSONAL_LIBRARY_STORAGE_KEY = 'structureCo.personal-library.v1';
 export const PERSONAL_LIBRARY_SCHEMA_VERSION = 1 as const;
@@ -52,11 +53,6 @@ const hasOwn = (value: object, key: PropertyKey) => Object.prototype.hasOwnPrope
 const isFiniteNumber = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 const isIsoDate = (value: unknown): value is string => typeof value === 'string' && value.trim() !== '' && !Number.isNaN(Date.parse(value));
 
-const normalizeSearch = (value: string) => value
-  .normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '')
-  .trim()
-  .toLocaleLowerCase();
 
 const normalizeName = (name: string) => {
   const normalized = name.trim().replace(/\s+/g, ' ');

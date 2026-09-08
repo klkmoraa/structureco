@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { AlertCircle, ChevronUp, CircleDotDashed, GripHorizontal, X } from 'lucide-react';
-import { useProject, type ResultTab } from '../../store/ProjectContext';
+import { useProjectAnalysis, useProjectModel, useWorkspaceUI, type ResultTab } from '../../store/ProjectContext';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../../engine/diagram';
 import { resolveReliability } from '../../engine/reliability';
 import { buildDiagramEnvelope, evaluateEnvelopeAt } from '../../engine/envelope';
@@ -91,7 +91,9 @@ export interface ResultsPanelProps {
 }
 
 export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenChange, defaultDesktopExpanded = false }: ResultsPanelProps) => {
-  const { project, analysis, resultTab, setResultTab, analyze, selection, isAnalyzing, selectedCombinationId } = useProject();
+  const { project } = useProjectModel();
+  const { analysis, analyze, isAnalyzing, selectedCombinationId } = useProjectAnalysis();
+  const { resultTab, setResultTab, selection } = useWorkspaceUI();
   const { t } = useI18n();
   const isMobile = presentation === 'sheet';
   const [height, setHeight] = useState(() => isMobile ? Math.min(330, window.innerHeight * 0.4) : 285);
@@ -417,7 +419,8 @@ const ResultMetricRail = ({ isMobile, className, children }: { isMobile: boolean
 
 const EmptyResults = ({ onAnalyze }: { onAnalyze: () => void }) => {
   const { t } = useI18n();
-  const { project, setActiveTool } = useProject();
+  const { project } = useProjectModel();
+  const { setActiveTool } = useWorkspaceUI();
   const classroom = project.settings.calculationMode === 'classroom';
   const current = classroom ? deriveClassroomProgress(project).currentStep : null;
   const currentCopy = current ? classroomProgressCopy[current.id] : null;
@@ -429,7 +432,7 @@ const EmptyResults = ({ onAnalyze }: { onAnalyze: () => void }) => {
 };
 
 const FailedResults = ({ onOpenModelDoctor }: { onOpenModelDoctor: () => void }) => {
-  const { analysis } = useProject();
+  const { analysis } = useProjectAnalysis();
   const { t } = useI18n();
   return <div className="failed-results-layout">
     {analysis ? <NumericQualityCard analysis={analysis} /> : null}
@@ -438,7 +441,9 @@ const FailedResults = ({ onOpenModelDoctor }: { onOpenModelDoctor: () => void })
 };
 
 const DiagramView = ({ type, memberResult, memberId, isMobile }: { type: DiagramQuantity; memberResult: MemberResult | undefined; memberId: string; isMobile: boolean }) => {
-  const { project, analysis, setSelection, resultCursor, setResultCursor } = useProject();
+  const { project } = useProjectModel();
+  const { analysis } = useProjectAnalysis();
+  const { setSelection, resultCursor, setResultCursor } = useWorkspaceUI();
   const { t } = useI18n();
   const [hoverX, setHoverX] = useState<number | null>(null);
   const [envelopeMode, setEnvelopeMode] = useState(false);
@@ -614,7 +619,9 @@ const DiagramView = ({ type, memberResult, memberId, isMobile }: { type: Diagram
 };
 
 const DeformationView = ({ memberResult, memberId, isMobile }: { memberResult: MemberResult | undefined; memberId: string; isMobile: boolean }) => {
-  const { project, analysis, setSelection, resultCursor, setResultCursor } = useProject();
+  const { project } = useProjectModel();
+  const { analysis } = useProjectAnalysis();
+  const { setSelection, resultCursor, setResultCursor } = useWorkspaceUI();
   const reliability = analysis ? resolveReliability(analysis).level : 'failed';
   const { t } = useI18n();
   const [quantity, setQuantity] = useState<'u' | 'v' | 'theta'>('v');

@@ -1,4 +1,5 @@
 import type { Selection } from '../../types';
+import { clamp } from '../../utils/math';
 
 export interface CanvasSelectionVisualState {
   kind: 'none' | 'node' | 'member' | 'multi' | 'nodalLoad' | 'memberLoad';
@@ -23,8 +24,6 @@ export interface SelectionEnvelopeBounds {
   height: number;
 }
 
-const clamp = (value: number, min: number, max: number): number =>
-  Math.min(max, Math.max(min, value));
 
 export const buildCanvasSelectionVisualState = (selection: Selection): CanvasSelectionVisualState => {
   if (!selection) return { kind: 'none', nodeIds: [], memberIds: [], nodalLoadId: null, memberLoadId: null, count: 0 };

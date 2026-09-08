@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type Dispatch
 import { Command, Search, X } from 'lucide-react';
 import { useI18n } from '../../i18n/useI18n';
 import type { TranslationKey } from '../../i18n/catalogs';
-import { useProject } from '../../store/ProjectContext';
+import { useProjectModel, useProjectAnalysis, useWorkspaceUI } from '../../store/ProjectContext';
 import { buildCommands, type CommandCategory, type CommandContext, type CommandListItem } from './commandRegistry';
 import type { EditorLayerAction } from '../canvas/editorLayers';
 import type { SurfacePresentation } from './surfacePresentation';
@@ -43,10 +43,9 @@ const normalize = (value: string) => value
  * la paleta, porque es dato del proyecto, no un comando fijo.
  */
 export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = 'overlay' }: CommandPaletteProps) => {
-  const {
-    project, analysis, theme, canUndo, canRedo, isAnalyzing, selection,
-    setActiveTool, setSelection, setResultTab, setTheme, updateProjectView, analyze, undo, redo,
-  } = useProject();
+  const { project, canUndo, canRedo, updateProjectView, undo, redo } = useProjectModel();
+  const { analysis, isAnalyzing, analyze } = useProjectAnalysis();
+  const { theme, selection, setActiveTool, setSelection, setResultTab, setTheme } = useWorkspaceUI();
   const { t } = useI18n();
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);

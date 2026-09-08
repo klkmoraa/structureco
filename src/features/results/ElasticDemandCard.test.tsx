@@ -98,7 +98,12 @@ const context = {
   setSelection,
 };
 
-vi.mock('../../store/ProjectContext', () => ({ useProject: () => context }));
+vi.mock('../../store/ProjectContext', () => ({
+  useProject: () => context,
+  useProjectModel: () => context,
+  useProjectAnalysis: () => context,
+  useWorkspaceUI: () => context,
+}));
 
 const renderCard = async () => {
   const { ElasticDemandCard } = await import('./ElasticDemandCard');

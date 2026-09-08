@@ -3,6 +3,7 @@ import type { ProjectModel, MemberModel } from '../../types';
 import type { CanvasCamera as Camera, ScreenPoint } from './canvasInteraction';
 import type { CandidateTarget } from './candidatePicker';
 import type { StructuralTarget } from './CanvasGeometryLayer';
+import { formatFixed } from '../../utils/numberFormat';
 import {
   computeExtrudedStructure,
   type ExtrusionOptions,
@@ -86,7 +87,7 @@ const CanvasSolidExtrusionLayerImpl = ({
       {/* 2. Caras sólidas 2.5D ordenadas por profundidad (Algoritmo del Pintor) */}
       <g className="solid-faces-group">
         {faces.map((face) => {
-          const pointsStr = face.points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+          const pointsStr = face.points.map((p) => `${formatFixed(p.x, 1, 'canvas')},${formatFixed(p.y, 1, 'canvas')}`).join(' ');
           const targetMember = face.memberId ? memberMap.get(face.memberId) : undefined;
 
           const handlePointerDown = (event: PointerEvent<SVGPolygonElement>) => {

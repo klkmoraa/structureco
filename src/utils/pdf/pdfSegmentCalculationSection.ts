@@ -10,11 +10,11 @@ import { clearDisplay, display, formatPolynomial, quantityUnit, unitFor } from '
 import { drawFreeBodyScene, type FreeBodyScene } from './pdfFreeBody';
 import type { AnalysisResult } from '../../types';
 import type { ReportContext } from './reportContext';
+import { clamp } from '../math';
 
 type MemberResult = AnalysisResult['memberResults'][number];
 type Segment = MemberResult['diagramSegments'][number];
 
-const clamp = (value: number, lower: number, upper: number): number => Math.max(lower, Math.min(upper, value));
 
 const segmentScene = (
   context: ReportContext,
