@@ -650,6 +650,7 @@ button.analysis-status:hover { background:color-mix(in srgb,var(--analysis-statu
 .topbar--atelier .topbar-primary-actions .sc-icon-button:active:not(:disabled),
 .topbar--atelier .topbar-command-button:active { background:var(--sc-color-surface-inset); box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
 .topbar--atelier .topbar-command-button > span { display:none; }
+.topbar--atelier .mobile-more-copy { display:none; }
 
 .topbar--atelier .analyze-button {
   width:auto;
