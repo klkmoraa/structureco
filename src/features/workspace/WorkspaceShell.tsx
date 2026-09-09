@@ -21,6 +21,7 @@ import { preloadDenseResultsSurface, type DenseResultView } from '../results/den
 import type { SurfaceId } from './surfacePresentation';
 import '../../design-system/components/ui.css';
 import './phase1.css';
+import '../mobile/mobileIOS.css';
 import { emitWorkspaceCommand, onWorkspaceCommand } from './workspaceCommands';
 import { isOwnHistoryScope } from './commandRegistry';
 import type { AnalysisResult } from '../../types';

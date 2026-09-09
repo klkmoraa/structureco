@@ -27,6 +27,7 @@ import { HomeSearch, type HomeSearchOption } from './HomeSearch';
 import { normalizeSearch } from './homeSearchUtils';
 import { SectionCalculatorDialog } from '../calculator/SectionCalculatorDialog';
 import './totalHome.css';
+import '../mobile/mobileHomeIOS.css';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
 const Phase2ProjectHub = lazy(() => import('./Phase2ProjectHub').then((module) => ({ default: module.Phase2ProjectHub })));

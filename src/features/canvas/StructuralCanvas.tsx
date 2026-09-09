@@ -136,6 +136,7 @@ const LazyStructureGeneratorSurface = lazy(() =>
   import('../structure-generator/StructureGeneratorSurface')
     .then((module) => ({ default: module.StructureGeneratorSurface })));
 import './phase2.css';
+import '../mobile/mobileIOS.css';
 
 type Camera = CanvasCamera;
 

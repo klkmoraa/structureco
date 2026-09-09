@@ -40,6 +40,7 @@ import type { ProjectModel } from '../../types';
 import type { Space3DStorageLike } from '../../space3d/data/storage';
 import type { Space3DWorkerClient } from '../../space3d/runtime/workerClient';
 import './space3d.css';
+import '../mobile/mobileIOS.css';
 
 type Space3DThemeMode = 'light' | 'dark';
 

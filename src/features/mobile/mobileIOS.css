@@ -1,0 +1,1033 @@
+/*
+ * Mobile composition contract · iOS
+ * --------------------------------------------------------------------------
+ * This file is deliberately a layout layer, not a second visual language.
+ * Every fill, edge and shadow comes from the existing StructureCo tokens so
+ * the original palette and claymorphism survive the responsive rewrite.
+ *
+ * The contract is simple:
+ *   - one compact command row;
+ *   - one bottom dock with a stable touch target;
+ *   - one scroll owner per sheet;
+ *   - reserved canvas zones instead of stacked floating controls.
+ */
+
+@media (max-width: 1023px) {
+  :root {
+    --sc-mobile-topbar-height: calc(58px + var(--sc-safe-top, 0px));
+    --sc-mobile-dock-bar-height: 62px;
+    --sc-mobile-dock-height: calc(var(--sc-mobile-dock-bar-height) + var(--sc-safe-bottom, 0px));
+  }
+
+  html,
+  body,
+  #root {
+    min-inline-size: 0;
+  }
+
+  button,
+  [role='button'] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .sc-home,
+  .app-shell,
+  .space3d-screen,
+  .center-stage,
+  .canvas-host {
+    min-inline-size: 0;
+  }
+
+  .data-surface-navigation {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-surface-navigation::-webkit-scrollbar { display: none; }
+  .data-surface-navigation button { flex: 0 0 auto; min-block-size: var(--sc-size-target-touch); }
+}
+
+/* -------------------------------------------------------------------------
+ * Workspace shell: the dock is a real bottom region, never an overlay over
+ * the model. When a sheet owns the screen, the dock yields the whole stage.
+ * ------------------------------------------------------------------------- */
+
+@media (max-width: 1023px) {
+  .app-shell[data-shell-class='K0'] {
+    min-block-size: 100dvh;
+    block-size: 100dvh;
+    overflow: hidden;
+  }
+
+  .app-shell[data-shell-class='K0'] .workspace {
+    min-block-size: 0;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    overflow: hidden;
+  }
+
+  .app-shell[data-shell-class='K0'] .center-stage {
+    grid-column: 1;
+    grid-row: 1;
+    min-block-size: 0;
+    overflow: hidden;
+  }
+
+  .app-shell[data-shell-class='K0'] .workspace-surfaces {
+    min-inline-size: 0;
+    min-block-size: 0;
+  }
+
+  .app-shell[data-shell-class='K0'] .toolbar {
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: 0;
+    z-index: calc(var(--sc-z-sticky, 20) + 5);
+    inline-size: 100%;
+    block-size: auto;
+    min-block-size: 0;
+    padding: 0 max(8px, var(--sc-safe-right, 0px)) var(--sc-safe-bottom, 0px) max(8px, var(--sc-safe-left, 0px));
+    pointer-events: none;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-dock-wrapper {
+    inline-size: 100%;
+    max-inline-size: none;
+    min-inline-size: 0;
+    margin: 0 auto;
+    gap: 6px;
+    pointer-events: auto;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-dock-subshelf {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
+  }
+
+  .app-shell[data-shell-class='K0'] .dock-subshelf-inner {
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+    background: var(--sc-color-surface-1);
+    border: var(--sc-clay-edge);
+    box-shadow: var(--sc-shadow-clay-md);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .app-shell[data-shell-class='K0'] .dock-subshelf-inner::-webkit-scrollbar { display: none; }
+
+  .app-shell[data-shell-class='K0'] .mobile-subshelf-tool {
+    flex: 0 0 clamp(58px, 18vw, 76px);
+    inline-size: clamp(58px, 18vw, 76px);
+    min-inline-size: clamp(58px, 18vw, 76px) !important;
+  }
+
+  .app-shell[data-shell-class='K0'] .dock-subshelf-inner--results {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+    overflow: hidden;
+  }
+
+  .app-shell[data-shell-class='K0'] .dock-segmented-slider {
+    inline-size: 100%;
+    max-inline-size: none;
+    min-inline-size: 0;
+    background: var(--sc-color-surface-inset);
+    border: var(--sc-clay-edge);
+    box-shadow: var(--sc-shadow-clay-inset);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .app-shell[data-shell-class='K0'] .dock-subshelf-actions {
+    min-inline-size: 0;
+  }
+
+  .app-shell[data-shell-class='K0'] .dock-action-pill {
+    inline-size: var(--sc-size-target-touch);
+    min-inline-size: var(--sc-size-target-touch);
+    block-size: var(--sc-size-target-touch);
+    padding: 0;
+    background: var(--sc-color-surface-1);
+    border: var(--sc-clay-edge);
+    box-shadow: var(--sc-shadow-clay-xs);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .app-shell[data-shell-class='K0'] .dock-action-name { display: none; }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock.is-glass-dock-2 {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    inline-size: 100%;
+    min-inline-size: 0;
+    max-inline-size: none;
+    gap: 4px;
+    padding: 4px;
+    border: var(--sc-clay-edge);
+    border-radius: var(--sc-radius-panel);
+    background: var(--sc-color-surface-1);
+    box-shadow: var(--sc-shadow-clay-md);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-dock-tab {
+    inline-size: 100%;
+    min-inline-size: 0;
+    block-size: 54px;
+    min-block-size: 54px;
+    padding: 2px;
+    border-radius: var(--sc-radius-control);
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-dock-tab__label {
+    max-inline-size: 100%;
+    font-size: 10px;
+    line-height: 1.05;
+  }
+
+  /* The active tab is pressed into the same tray; it never grows or shifts
+     its neighbours when a translated label is longer. */
+  .app-shell[data-shell-class='K0'] .mobile-dock-tab.is-active {
+    background: var(--sc-color-surface-inset);
+    box-shadow: var(--sc-shadow-clay-pressed);
+    transform: none;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-sheet-backdrop {
+    inset: var(--sc-mobile-topbar-height) 0 var(--sc-mobile-dock-height);
+    z-index: var(--sc-z-sheet);
+    background: var(--sc-color-overlay-sheet);
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-palette {
+    inset-inline: max(8px, var(--sc-safe-left, 0px)) max(8px, var(--sc-safe-right, 0px));
+    inset-block-end: var(--sc-mobile-dock-height);
+    max-block-size: calc(100dvh - var(--sc-mobile-topbar-height) - var(--sc-mobile-dock-height) - 16px);
+    padding: 8px 12px max(12px, var(--sc-safe-bottom, 0px));
+    border: var(--sc-clay-edge);
+    border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0;
+    background: var(--sc-color-surface-1);
+    box-shadow: var(--sc-shadow-clay-lg);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-palette-list {
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-palette-tool {
+    min-block-size: 64px;
+    grid-template-columns: 44px minmax(0, 1fr) 22px;
+  }
+
+  /* iOS sheet rule: the canvas gives up its dock while a modal surface owns
+     the interaction plane, so the close and detent controls have clear air. */
+  .app-shell[data-shell-class='K0']:has(.inspector-panel.mobile-open) .toolbar,
+  .app-shell[data-shell-class='K0']:has(.results-panel:not(.mobile-collapsed)) .toolbar {
+    block-size: 0 !important;
+    min-block-size: 0 !important;
+    padding-block: 0 !important;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-panel[data-surface-presentation='sheet'] {
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: var(--sc-keyboard-inset, 0px);
+    z-index: var(--sc-z-modal);
+    inline-size: 100%;
+    block-size: min(78dvh, calc(100dvh - var(--sc-mobile-topbar-height) - var(--sc-keyboard-inset, 0px)));
+    max-block-size: calc(100dvh - var(--sc-mobile-topbar-height) - var(--sc-keyboard-inset, 0px));
+    min-block-size: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: var(--sc-clay-edge);
+    border-block-end: 0;
+    border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0;
+    background: var(--sc-color-surface-1);
+    box-shadow: var(--sc-shadow-clay-lg);
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-panel[data-surface-presentation='sheet'][data-mobile-detent='compact'] {
+    block-size: min(35dvh, calc(100dvh - var(--sc-mobile-topbar-height) - var(--sc-keyboard-inset, 0px)));
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-panel[data-surface-presentation='sheet'][data-mobile-detent='large'] {
+    block-size: min(86dvh, calc(100dvh - var(--sc-mobile-topbar-height) - var(--sc-keyboard-inset, 0px)));
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-sheet-controls {
+    flex: 0 0 auto;
+    min-block-size: 52px;
+    grid-template-columns: minmax(0, 1fr) var(--sc-size-target-touch);
+    align-items: center;
+    padding: 4px max(8px, var(--sc-safe-right, 0px)) 4px max(8px, var(--sc-safe-left, 0px));
+    border-block-end: 1px solid var(--sc-color-border-soft);
+    background: var(--sc-color-surface-toolbar);
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-sheet-handle {
+    inline-size: 100%;
+    min-block-size: var(--sc-size-target-touch);
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-sheet-controls .mobile-inspector-close {
+    inline-size: var(--sc-size-target-touch) !important;
+    min-inline-size: var(--sc-size-target-touch) !important;
+    block-size: var(--sc-size-target-touch) !important;
+    min-block-size: var(--sc-size-target-touch) !important;
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-tabs {
+    flex: 0 0 auto;
+    min-inline-size: 0;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-tabs::-webkit-scrollbar { display: none; }
+  .app-shell[data-shell-class='K0'] .inspector-tabs button { flex: 0 0 auto; min-block-size: var(--sc-size-target-touch); }
+
+  .app-shell[data-shell-class='K0'] .inspector-scroll {
+    flex: 1 1 auto;
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-block-end: max(24px, var(--sc-safe-bottom, 0px));
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel[data-surface-presentation='sheet'] {
+    position: absolute;
+    inset: auto 0 0;
+    z-index: var(--sc-z-modal);
+    inline-size: 100%;
+    block-size: min(70dvh, calc(100% - 8px));
+    max-block-size: calc(100% - 8px);
+    min-block-size: 0;
+    overflow: hidden;
+    border: var(--sc-clay-edge);
+    border-block-end: 0;
+    border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0;
+    background: var(--sc-color-surface-1);
+    box-shadow: var(--sc-shadow-clay-lg);
+  }
+
+  .app-shell[data-shell-class='K0'] .results-mobile-commandbar {
+    flex: 0 0 auto;
+    min-block-size: 52px;
+    grid-template-columns: minmax(0, 1fr) var(--sc-size-target-touch);
+    align-items: center;
+    padding: 4px max(8px, var(--sc-safe-right, 0px)) 4px max(8px, var(--sc-safe-left, 0px));
+    border-block-end: 1px solid var(--sc-color-border-soft);
+    background: var(--sc-color-surface-toolbar);
+  }
+
+  .app-shell[data-shell-class='K0'] .results-mobile-focus,
+  .app-shell[data-shell-class='K0'] .results-mobile-close {
+    min-block-size: var(--sc-size-target-touch);
+  }
+
+  .app-shell[data-shell-class='K0'] .results-mobile-close {
+    inline-size: var(--sc-size-target-touch);
+    min-inline-size: var(--sc-size-target-touch);
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel:not(.mobile-collapsed) .result-tabs {
+    flex: 0 0 auto;
+    min-inline-size: 0;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel:not(.mobile-collapsed) .result-tabs::-webkit-scrollbar { display: none; }
+  .app-shell[data-shell-class='K0'] .results-quantity-tabs { display: flex; flex: 0 0 auto; min-inline-size: max-content; }
+  .app-shell[data-shell-class='K0'] .results-quantity-tabs button { flex: 0 0 auto; min-inline-size: 72px; min-block-size: var(--sc-size-target-touch); }
+
+  .app-shell[data-shell-class='K0'] .results-body {
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-block-end: max(24px, var(--sc-safe-bottom, 0px));
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* -------------------------------------------------------------------------
+ * Phone canvas: fixed regions for chrome. The drawing keeps the middle; the
+ * zoom cluster owns the lower-right corner and the evidence rail yields it.
+ * ------------------------------------------------------------------------- */
+
+@media (max-width: 700px) {
+  .app-shell[data-shell-class='K0'] .topbar.topbar--atelier {
+    grid-template-columns: minmax(0, 1fr) max-content max-content;
+    grid-template-rows: 1fr;
+    min-block-size: var(--sc-mobile-topbar-height);
+    block-size: var(--sc-mobile-topbar-height);
+    padding: max(6px, var(--sc-safe-top, 0px)) max(8px, var(--sc-safe-right, 0px)) 4px max(8px, var(--sc-safe-left, 0px));
+    gap: 4px;
+    overflow: visible;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier > .topbar-zone,
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-zone,
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-actions-zone,
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions,
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-health-zone {
+    min-inline-size: 0;
+    min-block-size: 0;
+    flex-wrap: nowrap;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-zone {
+    overflow: hidden;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .brand-home-button {
+    flex: 0 0 var(--sc-size-target-touch);
+    inline-size: var(--sc-size-target-touch);
+    block-size: var(--sc-size-target-touch);
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-trigger {
+    display: grid !important;
+    flex: 1 1 auto;
+    inline-size: min(26vw, 104px) !important;
+    min-inline-size: 0;
+    max-inline-size: 104px;
+    min-block-size: var(--sc-size-target-touch);
+    overflow: hidden;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-trigger > strong {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-analysis-wrap,
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-health-zone .model-doctor-launcher,
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-health-zone .topbar-persistence,
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-health-zone .topbar-conflict-resolver {
+    display: none !important;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-actions-zone {
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions .focus-mode-toggle,
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions .topbar-history-cluster,
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions .datasheet-launcher,
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions .space3d-open-button,
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions .export-wrap {
+    display: none !important;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .results-launcher,
+  .app-shell[data-shell-class='K0'] .topbar--atelier .mobile-more-button,
+  .app-shell[data-shell-class='K0'] .topbar--atelier .analyze-button,
+  .app-shell[data-shell-class='K0'] .topbar--atelier .analysis-status {
+    inline-size: var(--sc-size-target-touch) !important;
+    min-inline-size: var(--sc-size-target-touch) !important;
+    block-size: var(--sc-size-target-touch) !important;
+    min-block-size: var(--sc-size-target-touch) !important;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .analyze-button {
+    padding-inline: 0;
+    font-size: 0;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .analyze-button svg { inline-size: 19px; block-size: 19px; }
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-health-zone { justify-self: end; gap: 0; }
+
+  .app-shell[data-shell-class='K0'] .canvas-host {
+    --canvas-safe-top: 58px;
+    --canvas-safe-right: 8px;
+    --canvas-safe-bottom: 60px;
+    --canvas-safe-left: 8px;
+    min-block-size: 0;
+    overflow: hidden;
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-mode-badge,
+  .app-shell[data-shell-class='K0'] .canvas-status,
+  .app-shell[data-shell-class='K0'] .canvas-result-legend,
+  .app-shell[data-shell-class='K0'] .canvas-demand-legend,
+  .app-shell[data-shell-class='K0'] .canvas-hint,
+  .app-shell[data-shell-class='K0'] .canvas-feedback,
+  .app-shell[data-shell-class='K0'] .canvas-layer-panel,
+  .app-shell[data-shell-class='K0'] .quick-entry-bar,
+  .app-shell[data-shell-class='K0'] .candidate-picker,
+  .app-shell[data-shell-class='K0'] .duplicate-preview-panel {
+    border: var(--sc-clay-edge);
+    background: var(--sc-color-surface-1);
+    box-shadow: var(--sc-shadow-clay-md);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-mode-badge {
+    inset-block-start: 8px;
+    inset-inline-start: 8px;
+    inline-size: min(210px, calc(100% - 68px));
+    max-inline-size: calc(100% - 68px);
+    min-block-size: 36px;
+    overflow: hidden;
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-mode-badge:not(.placing-load) {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-mode-badge.placing-load {
+    inline-size: calc(100% - 16px);
+    max-inline-size: calc(100% - 16px);
+    flex-wrap: wrap;
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-layer-trigger {
+    inset-block-start: 8px;
+    inset-inline-end: 8px;
+    inline-size: var(--sc-size-target-touch);
+    min-inline-size: var(--sc-size-target-touch);
+    block-size: var(--sc-size-target-touch);
+    min-block-size: var(--sc-size-target-touch);
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-orientation-compass {
+    inset-block-start: 60px;
+    inset-inline-end: 8px;
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-host:has(.canvas-layer-panel) .canvas-orientation-compass { display: none; }
+
+  .app-shell[data-shell-class='K0'] .canvas-layer-panel {
+    inset-block-start: 60px;
+    inset-inline: auto 8px;
+    inline-size: min(300px, calc(100% - 16px));
+    max-block-size: calc(100% - 128px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-layer-panel > header button,
+  .app-shell[data-shell-class='K0'] .canvas-layer-reset {
+    min-inline-size: var(--sc-size-target-touch);
+    min-block-size: var(--sc-size-target-touch);
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-layer-presets {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-layer-presets::-webkit-scrollbar { display: none; }
+  .app-shell[data-shell-class='K0'] .canvas-layer-preset { flex: 0 0 auto; min-block-size: var(--sc-size-target-touch); }
+  .app-shell[data-shell-class='K0'] .canvas-layer-row { min-block-size: var(--sc-size-target-touch); }
+
+  .app-shell[data-shell-class='K0'] .canvas-status {
+    inset-block-start: 8px;
+    inset-inline: 8px auto;
+    inline-size: min(132px, calc(100% - 112px));
+    max-inline-size: calc(100% - 112px);
+    min-block-size: 36px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-result-legend,
+  .app-shell[data-shell-class='K0'] .canvas-demand-legend {
+    inset-block-start: 58px;
+    inset-inline: 8px auto;
+    inline-size: min(214px, calc(100% - 16px));
+    max-inline-size: calc(100% - 16px);
+    max-block-size: 92px;
+    overflow: hidden;
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-host:has(.canvas-demand-legend) .canvas-result-legend { display: none; }
+
+  .app-shell[data-shell-class='K0'] .canvas-feedback,
+  .app-shell[data-shell-class='K0'] .canvas-hint {
+    inset-block-start: 58px;
+    inset-inline-start: 50%;
+    inline-size: max-content;
+    max-inline-size: calc(100% - 16px);
+    transform: translateX(-50%);
+    overflow: hidden;
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-hint {
+    min-block-size: 44px;
+    block-size: auto;
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-controls {
+    inset-inline: auto 8px;
+    inset-block-end: 8px;
+    display: flex;
+    flex-direction: row;
+    inline-size: calc(var(--sc-size-target-touch) * 3);
+    block-size: var(--sc-size-target-touch);
+    border: var(--sc-clay-edge);
+    background: var(--sc-color-surface-1);
+    box-shadow: var(--sc-shadow-clay-md);
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-controls button {
+    inline-size: var(--sc-size-target-touch);
+    min-inline-size: var(--sc-size-target-touch);
+    block-size: var(--sc-size-target-touch);
+    min-block-size: var(--sc-size-target-touch);
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-controls button + button {
+    border-block-start: 0;
+    border-inline-start: 1px solid var(--sc-color-border-soft);
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-evidence-rail {
+    inset-inline: 8px calc(8px + (var(--sc-size-target-touch) * 3) + 8px);
+    inset-block-end: 8px;
+    inline-size: auto;
+    max-inline-size: none;
+    transform: none;
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-host:has(.quick-entry-bar) .canvas-evidence-rail { display: none !important; }
+
+  .app-shell[data-shell-class='K0'] .quick-entry-bar {
+    inset-inline: 8px;
+    inset-block-end: 8px;
+    inline-size: auto;
+    max-inline-size: none;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 6px;
+    padding: 8px;
+    transform: none;
+  }
+
+  .app-shell[data-shell-class='K0'] .quick-entry-heading,
+  .app-shell[data-shell-class='K0'] .quick-entry-error {
+    grid-column: 1 / -1;
+    min-inline-size: 0;
+  }
+
+  .app-shell[data-shell-class='K0'] .quick-entry-heading {
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  .app-shell[data-shell-class='K0'] .quick-entry-bar > label {
+    inline-size: auto;
+    min-block-size: var(--sc-size-target-touch);
+  }
+
+  .app-shell[data-shell-class='K0'] .quick-entry-bar input {
+    min-block-size: var(--sc-size-target-touch);
+  }
+
+  .app-shell[data-shell-class='K0'] .quick-entry-bar > button[type='submit'],
+  .app-shell[data-shell-class='K0'] .quick-entry-bar .quick-entry-cancel {
+    min-block-size: var(--sc-size-target-touch);
+    min-inline-size: 0;
+  }
+
+  .app-shell[data-shell-class='K0'] .candidate-picker-sheet,
+  .app-shell[data-shell-class='K0'] .candidate-picker {
+    inset-inline: 8px !important;
+    inset-block-end: calc(var(--sc-mobile-dock-height) + 8px) !important;
+    inline-size: auto;
+    max-inline-size: none;
+    max-block-size: calc(100% - 16px);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 349px) {
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-trigger { display: none !important; }
+  .app-shell[data-shell-class='K0'] .mobile-dock-tab__label { font-size: 9px; }
+  .app-shell[data-shell-class='K0'] .dock-segment-name { display: none; }
+}
+
+/* -------------------------------------------------------------------------
+ * Home: preserve the roomy editorial rhythm while moving secondary tools to
+ * their own row. This is the small-screen equivalent of an iOS navigation bar.
+ * ------------------------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .sc-home {
+    min-block-size: 100dvh;
+    overflow-x: hidden;
+  }
+
+  .sc-home-mobile-header {
+    grid-template-columns: var(--sc-size-target-touch) minmax(0, 1fr) auto;
+    min-inline-size: 0;
+    padding-inline: max(8px, var(--sc-safe-left, 0px)) max(8px, var(--sc-safe-right, 0px));
+  }
+
+  .sc-home-mobile-header .sc-home-wordmark {
+    min-inline-size: 0;
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+
+  .sc-home-mobile-header .sc-home-wordmark strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sc-home-topline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding: 12px max(12px, var(--sc-safe-right, 0px)) 4px max(12px, var(--sc-safe-left, 0px));
+  }
+
+  .sc-home-topline__context,
+  .sc-home-topline__right {
+    min-inline-size: 0;
+  }
+
+  .sc-home-topline__context strong {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sc-home-topline__right {
+    inline-size: 100%;
+    display: grid;
+    grid-template-columns: var(--sc-size-target-touch) var(--sc-size-target-touch) minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .sc-home-topline__right .sc-home-appearance { display: none; }
+
+  .sc-home-open-project,
+  .sc-home-calculator-trigger {
+    inline-size: var(--sc-size-target-touch);
+    min-inline-size: var(--sc-size-target-touch);
+    block-size: var(--sc-size-target-touch);
+    min-block-size: var(--sc-size-target-touch);
+    justify-content: center;
+    padding: 0;
+  }
+
+  .sc-home-open-project span,
+  .sc-home-calculator-trigger span {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .sc-home-search-trigger {
+    inline-size: 100%;
+    min-inline-size: 0;
+    min-block-size: var(--sc-size-target-touch);
+    overflow: hidden;
+    justify-content: flex-start;
+    padding-inline: 12px;
+    white-space: nowrap;
+  }
+
+  .sc-home-search-trigger span {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sc-home-content {
+    min-inline-size: 0;
+    overflow-x: hidden;
+    padding-bottom: calc(34px + var(--sc-safe-bottom, 0px));
+  }
+
+  .sc-home-primary-buttons > button,
+  .sc-home-quick-row > button,
+  .sc-home-classroom-cases button,
+  .welcome-import-card {
+    min-inline-size: 0;
+  }
+
+  .sc-home-settings-panel {
+    max-block-size: calc(100dvh - var(--sc-safe-top, 0px) - 8px);
+    overflow: hidden;
+  }
+
+  .sc-home-settings-body {
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: max(24px, var(--sc-safe-bottom, 0px));
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* -------------------------------------------------------------------------
+ * Shared sheets and dialogs: a single scroll owner and full-width actions.
+ * ------------------------------------------------------------------------- */
+
+@media (max-width: 700px) {
+  .sc-overlay {
+    align-items: end;
+    padding: max(8px, var(--sc-safe-top, 0px)) max(8px, var(--sc-safe-right, 0px)) max(8px, var(--sc-safe-bottom, 0px)) max(8px, var(--sc-safe-left, 0px));
+  }
+
+  .sc-overlay--dialog { place-items: end center; }
+
+  .sc-modal-surface,
+  .sc-modal-surface--right,
+  .sc-modal-surface--left,
+  .sc-modal-surface--bottom {
+    inline-size: 100%;
+    max-inline-size: none;
+    max-block-size: calc(100dvh - var(--sc-safe-top, 0px) - 8px);
+    border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0;
+  }
+
+  .sc-modal-surface__header {
+    min-block-size: 62px;
+    padding: 16px max(16px, var(--sc-safe-right, 0px)) 12px max(16px, var(--sc-safe-left, 0px));
+  }
+
+  .sc-modal-surface__header h2,
+  .sc-modal-surface__header p {
+    overflow-wrap: anywhere;
+  }
+
+  .sc-modal-surface__close {
+    flex: 0 0 var(--sc-size-target-touch);
+    inline-size: var(--sc-size-target-touch);
+    min-inline-size: var(--sc-size-target-touch);
+    block-size: var(--sc-size-target-touch);
+  }
+
+  .sc-modal-surface__body {
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sc-modal-surface__footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding: 12px max(16px, var(--sc-safe-right, 0px)) max(16px, var(--sc-safe-bottom, 0px)) max(16px, var(--sc-safe-left, 0px));
+  }
+
+  .sc-modal-surface__footer > * {
+    inline-size: 100%;
+    min-block-size: var(--sc-size-target-touch);
+  }
+}
+
+/* -------------------------------------------------------------------------
+ * Space 3D: the same sheet/dock contract without stealing height from the
+ * viewport. The model rail scrolls inside the sheet, not the page.
+ * ------------------------------------------------------------------------- */
+
+@media (max-width: 599px) {
+  .space3d-screen {
+    --space3d-rail-h: calc(64px + var(--sc-safe-bottom, 0px));
+    min-block-size: 100dvh;
+    block-size: 100dvh;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    gap: 6px;
+    overflow: hidden;
+  }
+
+  .space3d-header {
+    min-inline-size: 0;
+    padding-block-start: max(8px, var(--sc-safe-top, 0px));
+    padding-inline: max(10px, var(--sc-safe-right, 0px)) max(10px, var(--sc-safe-left, 0px));
+  }
+
+  .space3d-identity,
+  .space3d-destinations,
+  .space3d-project-picker {
+    min-inline-size: 0;
+  }
+
+  .space3d-identity strong,
+  .space3d-project-picker-label,
+  .space3d-project-picker .space3d-target,
+  .space3d-project-picker .space3d-target select {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .space3d-destinations { gap: 4px; }
+  .space3d-destinations .space3d-button,
+  .space3d-theme-toggle { inline-size: var(--sc-size-target-touch); min-inline-size: var(--sc-size-target-touch); padding-inline: 0; }
+
+  .space3d-toolbar {
+    min-inline-size: 0;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    padding-inline: max(10px, var(--sc-safe-right, 0px)) max(10px, var(--sc-safe-left, 0px));
+  }
+
+  .space3d-toolbar[data-mobile-open] > .space3d-tray:not(.space3d-tray--run) {
+    min-inline-size: 0;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .space3d-toolbar[data-mobile-open] .space3d-tool { flex: 0 0 auto; }
+
+  .space3d-tray--run {
+    min-inline-size: 0;
+    overflow: hidden;
+  }
+
+  .space3d-tray--run .space3d-button--primary {
+    inline-size: 100%;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .space3d-layout {
+    min-block-size: 0;
+    overflow: hidden;
+    padding-inline: max(10px, var(--sc-safe-right, 0px)) max(10px, var(--sc-safe-left, 0px));
+    padding-block-end: calc(var(--space3d-rail-h) + 8px);
+  }
+
+  .space3d-stage {
+    min-block-size: 0;
+    overflow: hidden;
+  }
+
+  .space3d-canvas,
+  .space3d-canvas-stage {
+    min-block-size: 0;
+    block-size: 100%;
+  }
+
+  .space3d-rail-vertical {
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: 0;
+    z-index: var(--sc-z-topbar);
+    block-size: var(--space3d-rail-h);
+    min-block-size: var(--space3d-rail-h);
+    padding-block-end: max(6px, var(--sc-safe-bottom, 0px));
+    background: var(--sc-color-surface-1);
+    border: var(--sc-clay-edge);
+    border-inline: 0;
+    border-block-end: 0;
+    box-shadow: var(--sc-shadow-clay-md);
+  }
+
+  .space3d-rail-button { min-block-size: var(--sc-size-target-touch); }
+
+  .space3d-sheet {
+    inset-block-end: var(--space3d-rail-h);
+    max-block-size: calc(100dvh - var(--sc-safe-top, 0px) - var(--space3d-rail-h) - 8px);
+    border: var(--sc-clay-edge);
+    border-block-end: 0;
+    background: var(--sc-color-surface-1);
+    box-shadow: var(--sc-shadow-clay-lg);
+  }
+
+  .space3d-sheet[data-expanded] {
+    max-block-size: calc(100dvh - var(--sc-safe-top, 0px) - 8px);
+  }
+
+  .space3d-sheet .space3d-model-nav-panel,
+  .space3d-sheet .space3d-rail,
+  .space3d-sheet .space3d-rail-body {
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .space3d-sheet .space3d-tabs {
+    max-inline-size: 100%;
+    overflow-x: auto;
+  }
+
+  .space3d-sheet .space3d-tab {
+    min-inline-size: 96px;
+    min-block-size: var(--sc-size-target-touch);
+  }
+
+  .space3d-transfer,
+  .space3d-bridge {
+    margin-inline: max(10px, var(--sc-safe-right, 0px)) max(10px, var(--sc-safe-left, 0px));
+  }
+
+  .space3d-inline-actions {
+    flex-wrap: wrap;
+  }
+
+  .space3d-inline-actions > .space3d-button {
+    flex: 1 1 140px;
+    min-inline-size: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-tool-dock,
+  .mobile-dock-subshelf,
+  .mobile-tool-palette,
+  .inspector-panel,
+  .results-panel,
+  .sc-modal-surface,
+  .space3d-sheet {
+    transition: none !important;
+    animation: none !important;
+  }
+}

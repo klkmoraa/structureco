@@ -1,0 +1,101 @@
+/* Home-only mobile contract. The heavier editor and Space 3D rules stay lazy. */
+
+@media (max-width: 760px) {
+  .sc-home-mobile-header {
+    min-inline-size: 0;
+    padding-inline: max(8px, var(--sc-safe-left, 0px)) max(8px, var(--sc-safe-right, 0px));
+  }
+
+  .sc-home-mobile-header .sc-home-wordmark {
+    min-inline-size: 0;
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+
+  .sc-home-mobile-header .sc-home-wordmark strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sc-home-topline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding-inline: max(12px, var(--sc-safe-left, 0px)) max(12px, var(--sc-safe-right, 0px));
+  }
+
+  .sc-home-topline__context,
+  .sc-home-topline__right {
+    min-inline-size: 0;
+  }
+
+  .sc-home-topline__context strong {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sc-home-topline__right {
+    inline-size: 100%;
+    display: grid;
+    grid-template-columns: var(--sc-size-target-touch) var(--sc-size-target-touch) minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .sc-home-topline__right .sc-home-appearance { display: none; }
+
+  .sc-home-open-project,
+  .sc-home-calculator-trigger {
+    inline-size: var(--sc-size-target-touch);
+    min-inline-size: var(--sc-size-target-touch);
+    block-size: var(--sc-size-target-touch);
+    min-block-size: var(--sc-size-target-touch);
+    justify-content: center;
+    padding: 0;
+  }
+
+  .sc-home-open-project span,
+  .sc-home-calculator-trigger span {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .sc-home-search-trigger {
+    inline-size: 100%;
+    min-inline-size: 0;
+    min-block-size: var(--sc-size-target-touch);
+    overflow: hidden;
+    justify-content: flex-start;
+    padding-inline: 12px;
+    white-space: nowrap;
+  }
+
+  .sc-home-search-trigger span {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .sc-home-content {
+    min-inline-size: 0;
+    overflow-x: hidden;
+  }
+
+  .sc-home-settings-panel {
+    max-block-size: calc(100dvh - var(--sc-safe-top, 0px) - 8px);
+    overflow: hidden;
+  }
+
+  .sc-home-settings-body {
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: max(24px, var(--sc-safe-bottom, 0px));
+    -webkit-overflow-scrolling: touch;
+  }
+}

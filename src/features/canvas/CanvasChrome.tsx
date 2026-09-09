@@ -10,6 +10,7 @@ import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { onWorkspaceCommand } from '../workspace/workspaceCommands';
 import { planScaleBar, scaleBarLabel } from './scaleBar';
 import './mobileCanvasDensity.css';
+import '../mobile/mobileIOS.css';
 
 /** Ancho máximo de la regla: cabe en la píldora de estado sin empujar las coordenadas. */
 const SCALE_BAR_MAX_PX = 108;

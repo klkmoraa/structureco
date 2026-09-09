@@ -3,6 +3,7 @@ import { Button, Field, SegmentedControl } from '../../design-system/components/
 import { Dialog } from '../../design-system/components/overlays';
 import { fromDisplay, toDisplay, unitLabel } from '../../engine/units';
 import type { UnitSystemId } from '../../types';
+import { formatValue, serializeNumber } from '../../utils/numberFormat';
 import { calculateSectionProperties, type SectionDimensions, type SectionProperties, type SectionShape } from './sectionCalculator';
 import './sectionCalculator.css';
 
@@ -19,7 +20,7 @@ const copy = {
 } as const;
 
 const initialDraft = (units: UnitSystemId): Record<DimensionKey, string> => {
-  const dimension = (value: number) => String(Number(toDisplay(value, units, 'sectionDimension').toPrecision(6)));
+  const dimension = (value: number) => serializeNumber(toDisplay(value, units, 'sectionDimension'));
   return { width: dimension(0.3), height: dimension(0.5), diameter: dimension(0.2), thickness: dimension(0.01), flangeThickness: dimension(0.012), webThickness: dimension(0.008) };
 };
 
@@ -39,9 +40,7 @@ const propertyRows = (properties: SectionProperties, text: SectionCopy) => [
 
 const displayValue = (value: number, units: UnitSystemId, quantity: 'area' | 'inertia' | 'sectionModulus' | 'sectionDimension'): string => {
   const converted = toDisplay(value, units, quantity);
-  const absolute = Math.abs(converted);
-  const formatted = absolute > 0 && (absolute < 0.001 || absolute >= 1e7) ? converted.toExponential(3) : converted.toFixed(3);
-  return `${formatted} ${unitLabel(units, quantity)}`;
+  return formatValue(converted, unitLabel(units, quantity), 'table', { maximumFractionDigits: 3 });
 };
 
 interface SectionCalculatorDialogProps {
