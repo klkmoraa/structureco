@@ -1,4 +1,4 @@
-.sc-section-calculator-dialog { width: min(940px, calc(100vw - 32px)); }
+.sc-modal-surface.sc-section-calculator-dialog { width: min(900px, calc(100vw - 32px)); }
 .sc-section-calculator { display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); gap: 16px; }
 .sc-section-calculator__inputs,
 .sc-section-calculator__results { min-width: 0; padding: 20px; border: 1px solid var(--sc-color-border); border-radius: var(--sc-radius-card); background: var(--sc-color-surface-1); }
@@ -22,7 +22,7 @@
 .sc-section-calculator__empty { min-height: 180px; display: grid; place-items: center; margin: 20px 0 0; padding: 20px; border: 1px dashed var(--sc-color-border-strong); color: var(--sc-color-text-muted); font-size: 12px; line-height: 1.5; text-align: center; }
 
 @media (max-width: 700px) {
-  .sc-section-calculator-dialog { width: 100%; }
+  .sc-modal-surface.sc-section-calculator-dialog { width: 100%; }
   .sc-section-calculator { grid-template-columns: 1fr; }
   .sc-section-calculator__inputs,
   .sc-section-calculator__results { padding: 16px; }
