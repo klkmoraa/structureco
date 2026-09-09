@@ -13,14 +13,11 @@
 - Los botones de inicio que competían por ancho pasan a una fila propia: abrir proyecto y calculadora quedan como acciones táctiles, mientras la búsqueda ocupa el espacio flexible sin solaparse.
 - La calculadora usa la política numérica común también para sus valores iniciales editables, evitando formatos directos dispersos y conservando precisión de entrada.
 
-## Verificación focalizada
+## Verificación
 
-- `npm run typecheck`
-- `npm run lint`
-- `npm run test:ui` — 41 archivos, 292 tests.
-- Prueba focal de calculadora — 2 archivos, 6 tests.
-- `npm run verify:styles`
-- `npm run build`
-- Revisión visual del concepto aprobado y del icono PWA generado.
-
-La validación final del despliegue se hará sobre la URL pública de GitHub Pages después del push autorizado a `main`.
+- `npm run verify` — lint, contratos, 24 archivos/188 pruebas focalizadas, build, i18n-entry y presupuesto de entrada aprobados.
+- `npm run test:all` — 328 archivos, 2.820 pruebas pasadas y 5 omitidas.
+- Presupuesto de entrada: `1.385.130` bytes / `378.878` gzip, dentro de `1.400.000` / `380.000`.
+- Revisión del concepto móvil aceptado y comprobación pública del shell: sin overflow horizontal ni diálogos visibles huérfanos.
+- Interacción pública de calculadora: diámetro `100`, resultado `0.008 m²` y fórmula circular visible; cierre correcto.
+- `main` publicado en `a10281c`; GitHub Pages terminó en éxito en `https://klkmoraa.github.io/structureco/`.
