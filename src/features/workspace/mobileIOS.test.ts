@@ -45,4 +45,34 @@ describe('mobile iOS composition contract', () => {
     expect(mobileHomeContract).toContain('var(--sc-safe-left');
     expect(mobileHomeContract).not.toMatch(/#[0-9a-f]{3,8}\b/i);
   });
+
+  it('gives every workspace panel the same mobile sheet anatomy', () => {
+    expect(mobileContract).toContain('Unified mobile surface anatomy');
+    expect(mobileContract).toContain('.topbar-project-panel');
+    expect(mobileContract).toContain('.topbar-analysis-panel');
+    expect(mobileContract).toContain('.topbar-utilities-panel');
+    expect(mobileContract).toContain('.inspector-scroll');
+    expect(mobileContract).toContain('.results-body');
+    expect(mobileContract).toContain('.datasheet-context__body');
+    expect(mobileContract).toContain('.sc-modal-surface__body');
+    expect(mobileContract).toContain('overscroll-behavior: contain');
+  });
+
+  it('keeps result, inspector and datasheet cards readable at phone widths', () => {
+    expect(mobileContract).toContain('.result-summary-actions');
+    expect(mobileContract).toContain('.result-extreme-grid.is-mobile-rail');
+    expect(mobileContract).toContain('.numeric-quality-metrics');
+    expect(mobileContract).toContain('.inspector-property-group');
+    expect(mobileContract).toContain('.datasheet-field-grid');
+    expect(mobileContract).toContain('overflow-wrap: anywhere');
+  });
+
+  it('applies the shared card rhythm to home, settings and creation dialogs', () => {
+    expect(mobileHomeContract).toContain('.welcome-launcher-card');
+    expect(mobileHomeContract).toContain('.welcome-import-card');
+    expect(mobileHomeContract).toContain('.sc-home-template-grid > button');
+    expect(mobileHomeContract).toContain('.new-exercise-dialog');
+    expect(mobileHomeContract).toContain('.sc-home-settings-panel');
+    expect(mobileHomeContract).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+  });
 });

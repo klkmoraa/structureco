@@ -1252,6 +1252,375 @@
   }
 }
 
+/* -------------------------------------------------------------------------
+ * Unified mobile surface anatomy
+ *
+ * Every panel now follows the same iOS rhythm: one elevated container, one
+ * scroll owner, readable full-width cards and actions that never squeeze
+ * beside long translated labels. Colour and depth remain entirely token-led.
+ * ------------------------------------------------------------------------- */
+
+@media (max-width: 700px) {
+  .app-shell[data-shell-class='K0']:has(.topbar-project-panel) .toolbar,
+  .app-shell[data-shell-class='K0']:has(.topbar-analysis-panel) .toolbar,
+  .app-shell[data-shell-class='K0']:has(.topbar-utilities-panel) .toolbar {
+    block-size: 0 !important;
+    min-block-size: 0 !important;
+    padding-block: 0 !important;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier :is(
+    .topbar-project-panel,
+    .topbar-analysis-panel,
+    .topbar-utilities-panel
+  ) {
+    position: fixed;
+    inset: auto max(8px, var(--sc-safe-right, 0px)) max(8px, var(--sc-safe-bottom, 0px)) max(8px, var(--sc-safe-left, 0px));
+    inline-size: auto;
+    max-inline-size: none;
+    max-block-size: calc(100dvh - var(--sc-mobile-topbar-height) - max(16px, var(--sc-safe-bottom, 0px)));
+    padding: 12px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: var(--sc-clay-edge);
+    border-radius: var(--sc-radius-sheet);
+    background: var(--sc-color-surface-1);
+    box-shadow: var(--sc-shadow-clay-lg);
+    transform-origin: bottom center;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier :is(
+    .topbar-project-panel,
+    .topbar-analysis-panel,
+    .topbar-utilities-panel
+  ) :is(button, input, select, [role='button']) {
+    min-block-size: var(--sc-size-target-touch);
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-panel-field {
+    min-inline-size: 0;
+    margin: 0 0 10px;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-panel :is(
+    .topbar-panel-actions,
+    .topbar-project-examples,
+    .topbar-project-compact-utilities > div
+  ) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-utilities-panel .menu-section button {
+    inline-size: 100%;
+  }
+
+  .app-shell[data-shell-class='K0'] :is(
+    .inspector-scroll,
+    .results-body,
+    .datasheet-context__body,
+    .sc-modal-surface__body,
+    .command-palette
+  ) {
+    min-inline-size: 0;
+  }
+
+  .app-shell[data-shell-class='K0'] :is(
+    .inspector-section,
+    .inspector-property-group,
+    .inspector-selection-preview,
+    .inspector-narrative,
+    .model-overview,
+    .selection-card,
+    .effect-card,
+    .combination-card,
+    .classroom-mode-card,
+    .results-metric-cards > div,
+    .results-metric-cards > button,
+    .result-extreme-card,
+    .numeric-quality-card,
+    .numeric-certificate-card,
+    .stability-studies-card,
+    .elastic-demand-grid,
+    .issue-card,
+    .diagram-chart,
+    .diagram-cursor-readout,
+    .education-explorer,
+    .result-table-card,
+    .datasheet-card
+  ) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-scroll {
+    padding: 12px max(12px, var(--sc-safe-right, 0px)) max(24px, var(--sc-safe-bottom, 0px)) max(12px, var(--sc-safe-left, 0px));
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-section {
+    margin-block-end: 10px;
+    padding: 14px;
+    border-block-end: 1px solid var(--sc-color-border-soft);
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-scroll > .inspector-section:last-child {
+    margin-block-end: 0;
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-scroll :is(.field-row, .select-field) {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 6px;
+    padding-block: 5px;
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-scroll .toggle-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-scroll :is(
+    .number-control,
+    .select-field select,
+    .segmented-control,
+    .checkbox-grid,
+    .inspector-numeric-field__control
+  ) {
+    inline-size: 100%;
+    min-inline-size: 0;
+    min-block-size: var(--sc-size-target-touch);
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-scroll :is(
+    button,
+    [role='button'],
+    input,
+    select
+  ) {
+    min-block-size: var(--sc-size-target-touch);
+  }
+
+  .app-shell[data-shell-class='K0'] .inspector-scroll :is(
+    .section-heading,
+    .inspector-property-group__header,
+    .inspector-selection-header,
+    .inspector-summary__identity
+  ) {
+    min-inline-size: 0;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel:not(.mobile-collapsed):not(.results-mode-focused) {
+    block-size: min(54dvh, 520px) !important;
+    max-block-size: 54dvh;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-body {
+    padding: 10px max(12px, var(--sc-safe-right, 0px)) max(24px, var(--sc-safe-bottom, 0px)) max(12px, var(--sc-safe-left, 0px));
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel :is(
+    .result-summary-workspace,
+    .result-summary,
+    .numeric-quality-card,
+    .numeric-certificate-card,
+    .stability-studies-card
+  ) {
+    gap: 10px;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel :is(
+    .result-summary-header,
+    .numeric-quality-heading,
+    .numeric-certificate-heading,
+    .diagram-chart-heading,
+    .stability-studies-card > header,
+    .elastic-demand-header
+  ) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .result-summary-actions {
+    inline-size: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .result-summary-actions button {
+    inline-size: 100%;
+    min-inline-size: 0;
+    min-block-size: var(--sc-size-target-touch);
+    justify-content: center;
+    white-space: normal;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel :is(
+    .result-metric-rail.is-mobile,
+    .result-extreme-grid.is-mobile-rail,
+    .results-metric-cards,
+    .stability-study-grid,
+    .elastic-demand-grid,
+    .scenario-cards
+  ) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    overflow: visible;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel .result-extreme-grid.is-mobile-rail .result-extreme-card {
+    inline-size: 100%;
+    min-inline-size: 0;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel :is(
+    .numeric-quality-metrics,
+    .numeric-certificate-metrics,
+    .education-kpis,
+    .stability-study-details
+  ) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel :is(
+    .result-table-card,
+    .table-wrap,
+    .summary-table-wrap
+  ) {
+    max-inline-size: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-shell[data-shell-class='K0'] .results-panel :is(
+    button,
+    [role='button'],
+    select
+  ) {
+    min-block-size: var(--sc-size-target-touch);
+  }
+
+  .app-shell[data-shell-class='K0'] .datasheet-surface.sc-modal-surface--bottom {
+    block-size: calc(100dvh - max(8px, var(--sc-safe-top, 0px)));
+    max-block-size: calc(100dvh - max(8px, var(--sc-safe-top, 0px)));
+  }
+
+  .app-shell[data-shell-class='K0'] .datasheet-layout {
+    grid-template-rows: minmax(200px, .9fr) minmax(0, 1.1fr);
+    gap: 10px;
+  }
+
+  .app-shell[data-shell-class='K0'] .datasheet-toolbar {
+    gap: 8px;
+  }
+
+  .app-shell[data-shell-class='K0'] .datasheet-search {
+    flex: 1 1 100%;
+    inline-size: 100%;
+    min-inline-size: 100%;
+    order: -1;
+  }
+
+  .app-shell[data-shell-class='K0'] .datasheet-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .app-shell[data-shell-class='K0'] .datasheet-filters::-webkit-scrollbar { display: none; }
+
+  .app-shell[data-shell-class='K0'] .datasheet-context__body {
+    gap: 10px;
+    padding-inline-end: 2px;
+  }
+
+  .app-shell[data-shell-class='K0'] .datasheet-card {
+    padding: 14px;
+    border-radius: var(--sc-radius-card);
+  }
+
+  .app-shell[data-shell-class='K0'] .datasheet-field-grid,
+  .app-shell[data-shell-class='K0'] .datasheet-section-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell[data-shell-class='K0'] :is(.datasheet-draft-bar, .datasheet-review__actions) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .app-shell[data-shell-class='K0'] .datasheet-draft-bar p {
+    grid-column: 1 / -1;
+  }
+
+  .app-shell[data-shell-class='K0'] :is(.datasheet-draft-bar, .datasheet-review__actions) button {
+    inline-size: 100%;
+    min-inline-size: 0;
+    min-block-size: var(--sc-size-target-touch);
+  }
+
+  .app-shell[data-shell-class='K0'] :is(
+    .sc-modal-surface,
+    .command-palette,
+    .sc-shortcuts-dialog,
+    .import-center-dialog,
+    .personal-section-selector__dialog
+  ) {
+    min-inline-size: 0;
+    max-inline-size: calc(100vw - max(16px, var(--sc-safe-left, 0px) + var(--sc-safe-right, 0px)));
+    overflow: hidden;
+    border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0;
+  }
+
+  .app-shell[data-shell-class='K0'] .sc-modal-surface__body {
+    padding-inline: max(14px, var(--sc-safe-left, 0px)) max(14px, var(--sc-safe-right, 0px));
+  }
+
+  .app-shell[data-shell-class='K0'] .sc-popover__surface {
+    max-inline-size: calc(100vw - 16px);
+    max-block-size: calc(100dvh - var(--sc-mobile-topbar-height) - 16px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .app-shell[data-shell-class='K0'] .sc-toast-container {
+    inset-inline: max(8px, var(--sc-safe-left, 0px)) max(8px, var(--sc-safe-right, 0px));
+    inline-size: auto;
+    max-inline-size: none;
+    inset-block-end: calc(var(--sc-mobile-dock-height) + 8px);
+  }
+
+  .app-shell[data-shell-class='K0'] .sc-toast-card {
+    min-inline-size: 0;
+    padding: 10px 10px 10px 12px;
+    border-radius: var(--sc-radius-card);
+  }
+}
+
+@media (max-width: 359px) {
+  .app-shell[data-shell-class='K0'] .results-panel :is(
+    .result-summary-actions,
+    .numeric-quality-metrics,
+    .numeric-certificate-metrics,
+    .education-kpis,
+    .stability-study-details
+  ),
+  .app-shell[data-shell-class='K0'] :is(.datasheet-draft-bar, .datasheet-review__actions) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mobile-tool-dock,
   .mobile-dock-subshelf,

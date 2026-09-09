@@ -98,4 +98,106 @@
     padding-bottom: max(24px, var(--sc-safe-bottom, 0px));
     -webkit-overflow-scrolling: touch;
   }
+
+  /* The home hub uses the same card anatomy as the editor sheets. Media may
+     stay expressive; copy and actions always receive a predictable lane. */
+  .sc-home :is(
+    .welcome-launcher-card,
+    .welcome-import-card,
+    .sc-home-template-grid > button,
+    .sc-home-classroom-cases > button,
+    .sc-home-space,
+    .classroom-pedagogy-card,
+    .new-exercise-settings
+  ) {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+    border-radius: var(--sc-radius-card);
+  }
+
+  .sc-home .welcome-import-card {
+    min-block-size: 96px;
+    grid-template-columns: var(--sc-size-target-touch) minmax(0, 1fr) auto;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .sc-home :is(.welcome-import-text, .sc-home-space__copy, .new-exercise-template-copy) {
+    min-inline-size: 0;
+  }
+
+  .sc-home :is(.sc-home-space__actions, .project-hub__actions) {
+    inline-size: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .sc-home :is(.sc-home-space__actions, .project-hub__actions) button {
+    inline-size: 100%;
+    min-inline-size: 0;
+    min-block-size: var(--sc-size-target-touch);
+  }
+
+  .sc-home-settings-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 18px max(16px, var(--sc-safe-right, 0px)) max(18px, var(--sc-safe-bottom, 0px)) max(16px, var(--sc-safe-left, 0px));
+    border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0;
+  }
+
+  .sc-home-settings-header {
+    flex: 0 0 auto;
+    gap: 12px;
+    padding-block-end: 14px;
+  }
+
+  .sc-home-settings-header h2 {
+    font-size: clamp(23px, 8vw, 29px);
+  }
+
+  .sc-home-settings-body {
+    flex: 1 1 auto;
+    gap: 16px;
+    padding-block-start: 16px;
+  }
+
+  .sc-home :is(
+    .new-exercise-dialog,
+    .import-center-dialog,
+    .personal-section-selector__dialog
+  ) {
+    inline-size: 100%;
+    max-inline-size: 100%;
+    max-block-size: calc(100dvh - max(8px, var(--sc-safe-top, 0px)));
+    overflow: hidden;
+    border-radius: var(--sc-radius-sheet) var(--sc-radius-sheet) 0 0;
+  }
+
+  .sc-home .new-exercise-form {
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sc-home .new-exercise-settings {
+    padding: 14px;
+  }
+
+  .sc-home :is(button, [role='button'], input, select) {
+    min-block-size: var(--sc-size-target-touch);
+  }
+}
+
+@media (max-width: 390px) {
+  .sc-home .new-exercise-field,
+  .sc-home-settings-field > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sc-home .new-exercise-field-error {
+    grid-column: 1;
+  }
 }
