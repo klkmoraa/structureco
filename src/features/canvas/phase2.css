@@ -384,7 +384,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
     transition:transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
   }
   .dock-action-pill:active {
-    transform:scale(0.94);
+    transform:var(--sc-clay-press-transform-flat, var(--sc-clay-press-transform));
     box-shadow:var(--sc-shadow-clay-pressed);
   }
   .dock-action-pill--solid { color:var(--sc-color-text); }
@@ -2771,7 +2771,7 @@ body:has(.structural-edit-surface) .app-shell .tool-rail.is-floating-dock {
 }
 
 .orientation-compass-disc:active {
-  transform:scale(0.92);
+  transform:var(--sc-clay-press-transform-flat, var(--sc-clay-press-transform));
   box-shadow:
     0 2px 6px rgba(0, 0, 0, 0.2),
     inset 0 3px 5px rgba(0, 0, 0, 0.4);
@@ -2862,7 +2862,7 @@ body:has(.structural-edit-surface) .app-shell .tool-rail.is-floating-dock {
 }
 
 .orientation-compass-mode-pill:active {
-  transform:scale(0.95);
+  transform:var(--sc-clay-press-transform-flat, var(--sc-clay-press-transform));
 }
 
 .orientation-compass-mode-icon {
@@ -2944,7 +2944,6 @@ body:has(.structural-edit-surface) .app-shell .tool-rail.is-floating-dock {
     transform: scale(1);
   }
 }
-
 
 
 

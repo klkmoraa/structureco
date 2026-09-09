@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Box, Folder, GraduationCap, Home, Image as ImageIcon, LayoutTemplate, LibraryBig, Menu, Moon, Play, Plus, Search, Settings, Sun, Upload, X } from 'lucide-react';
+import { ArrowRight, Box, Calculator, Folder, FolderOpen, GraduationCap, Home, Image as ImageIcon, LayoutTemplate, LibraryBig, Menu, Moon, Play, Plus, Search, Settings, Sun, Upload, X } from 'lucide-react';
 import { m, useReducedMotion } from 'motion/react';
 import { createBlankProject, exampleProjects } from '../../data/defaultProject';
 import { useProjectModel, useWorkspaceUI } from '../../store/ProjectContext';
@@ -25,6 +25,7 @@ import { deliverFileSync } from '../../platform/fileDelivery';
 import { haptics } from '../../platform/haptics';
 import { HomeSearch, type HomeSearchOption } from './HomeSearch';
 import { normalizeSearch } from './homeSearchUtils';
+import { SectionCalculatorDialog } from '../calculator/SectionCalculatorDialog';
 import './totalHome.css';
 
 const PortableImportCenter = lazy(() => import('../import-export/PortableImportCenter').then((module) => ({ default: module.PortableImportCenter })));
@@ -55,7 +56,7 @@ const copy = {
     importTitle: 'Trae un modelo', importBody: 'Revisa el archivo antes de modificar el proyecto abierto.',
     spaceTitle: 'Construye en tres dimensiones', spaceBody: 'Trabaja con pórticos espaciales, niveles y cargas en un entorno separado de tu modelo 2D.', spaceAction: 'Abrir Space 3D', spaceExperimental: 'Experimental', spaceNotice: 'Este acceso abre un modelo espacial independiente. Antes de entrar verás qué se mantiene separado y cómo volver al editor 2D.', spaceContinue2D: 'Continuar en editor 2D',
     spacePreview: 'Pórtico espacial de varios vanos', spaceCoordinates: 'Ejes X, Y y Z', spaceModel: 'Geometría espacial', spaceLoads: 'Cargas y apoyos 3D',
-    secondary: 'Accesos rápidos', local: 'Guardado local en este dispositivo',
+    secondary: 'Accesos rápidos', local: 'Guardado local en este dispositivo', openProject: 'Abrir proyecto', calculator: 'Calculadora de sección', calculatorHint: 'A, I, W y radios de giro', modelSnapshot: 'Resumen del modelo actual', nodes: 'nudos', members: 'barras', loads: 'cargas', supports: 'apoyos',
   },
   en: {
     headline: 'Your next model starts here.', intro: 'Model, analyze and understand every structure.', search: 'Find tools', templateSearch: 'Search templates', all: 'All', beams: 'Beams', frames: 'Frames', trusses: 'Trusses', noTemplates: 'No templates match these filters.', clearFilters: 'Reset filters',
@@ -68,7 +69,7 @@ const copy = {
     importTitle: 'Bring in a model', importBody: 'Review the file before changing the open project.',
     spaceTitle: 'Build in three dimensions', spaceBody: 'Work with spatial frames, levels, and loads in an environment separate from your 2D model.', spaceAction: 'Open Space 3D', spaceExperimental: 'Experimental', spaceNotice: 'This entry opens an independent spatial model. Before entering, you will see what remains separate and how to return to the 2D editor.', spaceContinue2D: 'Continue in 2D editor',
     spacePreview: 'Multi-bay spatial frame', spaceCoordinates: 'X, Y, and Z axes', spaceModel: 'Spatial geometry', spaceLoads: '3D loads and supports',
-    secondary: 'Quick access', local: 'Saved locally on this device',
+    secondary: 'Quick access', local: 'Saved locally on this device', openProject: 'Open project', calculator: 'Section calculator', calculatorHint: 'A, I, W and radii of gyration', modelSnapshot: 'Current model summary', nodes: 'nodes', members: 'members', loads: 'loads', supports: 'supports',
   },
 } as const;
 
@@ -163,6 +164,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
   const [exerciseTemplateId, setExerciseTemplateId] = useState<ClassroomExerciseTemplateId>('blank');
   const [importCenterOpen, setImportCenterOpen] = useState(false);
   const [dxfImportOpen, setDxfImportOpen] = useState(false);
+  const [sectionCalculatorOpen, setSectionCalculatorOpen] = useState(false);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const searchTriggerRef = useRef<HTMLButtonElement>(null);
   const homeRef = useRef<HTMLElement>(null);
@@ -170,6 +172,12 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
   const studioLauncherRef = useRef<HTMLButtonElement | null>(null);
   const entry = useWelcomeEntry();
   const heroId = useMemo(() => resolveSessionHeroId(HOME_HERO_IDS, window.sessionStorage), []);
+  const modelSnapshot = useMemo(() => ({
+    nodes: project.nodes.length,
+    members: project.members.length,
+    loads: project.nodalLoads.length + project.memberLoads.length + (project.generatedLoadSources?.length ?? 0),
+    supports: project.nodes.filter((node) => node.support.type !== 'none').length,
+  }), [project.generatedLoadSources?.length, project.memberLoads.length, project.nodalLoads.length, project.nodes, project.members.length]);
 
   useEffect(() => {
     if (!allowDirectResume || !shouldResumeDirectly(entry)) return;
@@ -190,7 +198,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
   }, [mobileNavOpen]);
 
   useEffect(() => {
-    if ((!preferencesOpen && !studioOpen && !searchOpen) || !homeRef.current) return undefined;
+    if ((!preferencesOpen && !studioOpen && !searchOpen && !sectionCalculatorOpen) || !homeRef.current) return undefined;
     const home = homeRef.current;
     const previousInert = home.inert;
     const previousAriaHidden = home.getAttribute('aria-hidden');
@@ -201,19 +209,19 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
       if (previousAriaHidden === null) home.removeAttribute('aria-hidden');
       else home.setAttribute('aria-hidden', previousAriaHidden);
     };
-  }, [preferencesOpen, studioOpen, searchOpen]);
+  }, [preferencesOpen, sectionCalculatorOpen, studioOpen, searchOpen]);
 
   useEffect(() => {
     const onSearchKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'k') return;
-      if (preferencesOpen || studioOpen || exerciseDialogOpen || importCenterOpen || dxfImportOpen || document.querySelector('[role="dialog"], dialog[open]')) return;
+      if (preferencesOpen || sectionCalculatorOpen || studioOpen || exerciseDialogOpen || importCenterOpen || dxfImportOpen || document.querySelector('[role="dialog"], dialog[open]')) return;
       event.preventDefault();
       setMobileNavOpen(false);
       setSearchOpen(true);
     };
     window.addEventListener('keydown', onSearchKey);
     return () => window.removeEventListener('keydown', onSearchKey);
-  }, [preferencesOpen, studioOpen, exerciseDialogOpen, importCenterOpen, dxfImportOpen]);
+  }, [preferencesOpen, sectionCalculatorOpen, studioOpen, exerciseDialogOpen, importCenterOpen, dxfImportOpen]);
 
   const openBlankProject = () => {
     const next = createBlankProject();
@@ -285,6 +293,12 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
           <button type="button" className="sc-home-new" onClick={openBlankProject} aria-label={text.create}><Plus size={17} strokeWidth={2.6} aria-hidden="true" /><span><strong>{text.create}</strong><small aria-hidden="true">{text.createHint}</small></span></button>
         </div>
         <div className="sc-home-workbench__footer"><span>{text.local}</span><span>{text.modelPreview} <b>· 2D</b></span></div>
+        <div className="sc-home-model-snapshot" aria-label={text.modelSnapshot} data-testid="home-model-snapshot">
+          <span><strong>{modelSnapshot.nodes}</strong><small>{text.nodes}</small></span>
+          <span><strong>{modelSnapshot.members}</strong><small>{text.members}</small></span>
+          <span><strong>{modelSnapshot.loads}</strong><small>{text.loads}</small></span>
+          <span><strong>{modelSnapshot.supports}</strong><small>{text.supports}</small></span>
+        </div>
       </div>
       <m.div className="sc-home-hero-asset" initial={reducedMotion ? false : { opacity: 0, y: -14, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 220, damping: 24, mass: 0.8 }}>
         <div className="sc-home-hero-asset__frame"><ThreeStructuralImage assetId={heroId as PortalAssetId} theme={theme} eager /></div>
@@ -417,7 +431,7 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
         {renderNavigation(true)}
       </>
     ) : null}
-    <div className="sc-home-main"><header className="sc-home-topline"><div className="sc-home-topline__context"><span>{text.workspace}</span><b aria-hidden="true">/</b><strong>{text[view]}</strong></div><div className="sc-home-topline__right"><button ref={searchTriggerRef} type="button" className="sc-home-search-trigger" onClick={() => setSearchOpen(true)}><Search size={17} /><span>{text.search}</span><kbd>⌘ K</kbd></button>{compactHome ? null : appearanceControls}</div></header>{/*
+    <div className="sc-home-main"><header className="sc-home-topline"><div className="sc-home-topline__context"><span>{text.workspace}</span><b aria-hidden="true">/</b><strong>{text[view]}</strong></div><div className="sc-home-topline__right"><button type="button" className="sc-home-open-project" onClick={() => setImportCenterOpen(true)}><FolderOpen size={16} aria-hidden="true" /><span>{text.openProject}</span></button><button type="button" className="sc-home-calculator-trigger" title={text.calculatorHint} onClick={() => setSectionCalculatorOpen(true)}><Calculator size={16} aria-hidden="true" /><span>{text.calculator}</span></button><button ref={searchTriggerRef} type="button" className="sc-home-search-trigger" onClick={() => setSearchOpen(true)}><Search size={17} /><span>{text.search}</span><kbd>⌘ K</kbd></button>{compactHome ? null : appearanceControls}</div></header>{/*
       * `data-stagger` es la entrada escalonada declarativa de `platform/native.css`:
       * cada sección de la vista llega 40 ms después de la anterior, en pasos que
       * se congelan a partir de la sexta. La clave por vista es lo que hace que
@@ -426,5 +440,6 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
       <div className="sc-home-content" data-stagger key={view}>{content}</div></div>
     {importCenterOpen ? <Suspense fallback={null}><PortableImportCenter open currentProjectName={project.name} onClose={() => setImportCenterOpen(false)} onSaveCurrent={() => exportProjectJson(project)} onImported={(outcome) => { replaceProject({ ...outcome.project, settings: { ...outcome.project.settings, language } }, outcome.restoredAnalysis); setImportCenterOpen(false); onOpenWorkspace(); }} /></Suspense> : null}
     <NewExerciseDialog open={exerciseDialogOpen} initialTemplateId={exerciseTemplateId} onClose={() => setExerciseDialogOpen(false)} onCreate={(next) => { replaceProject({ ...next, settings: { ...next.settings, language } }); setExerciseDialogOpen(false); onOpenWorkspace(); }} />
+    <SectionCalculatorDialog open={sectionCalculatorOpen} units={project.settings.units} language={language} onClose={() => setSectionCalculatorOpen(false)} />
   </main>{searchOpen ? <HomeSearch language={language} options={searchOptions} onClose={() => setSearchOpen(false)} returnFocusTo={searchTriggerRef.current} /> : null}{preferencesOpen ? <><div className="sc-home-settings-scrim" aria-hidden="true" onClick={closePreferences} /><WelcomePreferences language={language} theme={theme} onLanguageChange={updateLanguage} onThemeChange={setTheme} onClose={closePreferences} /></> : null}{studioOpen ? <IllustrationStudio language={language} initialTheme={theme} onClose={closeStudio} /> : null}</>;
 };
