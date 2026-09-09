@@ -44,13 +44,12 @@ export const finiteModelBounds = (bounds: ModelBounds): ModelBounds => {
 };
 
 /**
- * K0 no tiene HUD persistente ni brújula: el host ya vive debajo del topbar y
- * sólo necesita reservar el dock inferior. Mantener el inset de escritorio en
- * ese caso encogía el rectángulo de ajuste con controles que ya no existían y
- * dejaba el modelo hundido en la parte baja del teléfono.
+ * K0 no tiene HUD persistente ni brújula: el host ya vive debajo del topbar.
+ * Reserva el dock y la guía contextual inferior para que el encuadre nunca
+ * esconda apoyos, reacciones o cotas detrás de controles táctiles.
  */
 export const canvasSafeInsetsFor = (viewport: ViewportSize, compactCanvas = false): CanvasSafeInsets => {
-  if (compactCanvas && viewport.width <= 700) return { top: 16, right: 16, bottom: 92, left: 16 };
+  if (compactCanvas && viewport.width <= 700) return { top: 16, right: 16, bottom: 150, left: 16 };
   if (viewport.width <= 480) return { top: 104, right: 58, bottom: 58, left: 58 };
   if (viewport.width <= 1023) return { top: 116, right: 64, bottom: 62, left: 64 };
   return { top: 116, right: 68, bottom: 62, left: 68 };

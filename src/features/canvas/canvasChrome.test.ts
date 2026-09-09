@@ -15,8 +15,8 @@ describe('canvas chrome safe zones', () => {
     const viewport = { width: 390, height: 844 };
     const insets = canvasSafeInsetsFor(viewport, true);
 
-    expect(insets).toEqual({ top: 16, right: 16, bottom: 92, left: 16 });
-    expect(canvasSafeRect(viewport, insets)).toEqual({ x: 16, y: 16, width: 358, height: 736 });
+    expect(insets).toEqual({ top: 16, right: 16, bottom: 150, left: 16 });
+    expect(canvasSafeRect(viewport, insets)).toEqual({ x: 16, y: 16, width: 358, height: 678 });
   });
 
   it('uses larger desktop zones for chrome while preserving a useful center', () => {

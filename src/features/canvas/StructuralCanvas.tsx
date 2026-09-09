@@ -127,6 +127,7 @@ import type { StructureGenerationGhost } from '../../data/generators/generatorGh
 import { GlobalAxes, SmartLabelLayer } from './CanvasVisualOverlays';
 import { useStableCanvasEvent } from './useStableCanvasEvent';
 import { SupportPlacementPopover, type SupportPlacementType } from './SupportPlacementPopover';
+import { MobileCanvasGuide } from './MobileCanvasGuide';
 
 /**
  * El generador y su núcleo determinista sólo pesan cuando se abre: nadie paga su
@@ -2829,6 +2830,10 @@ export const StructuralCanvas = ({
         onStackToggle={toggleStack}
         onStackQuantityToggle={toggleStackQuantityChoice}
       />
+      {compactCanvasChrome && project.members.length > 0 ? <MobileCanvasGuide
+        solved={analysis?.success === true}
+        onFit={() => fitModel(0, true)}
+      /> : null}
       <CanvasDirectorHud
         visible={!compactCanvasChrome && Boolean(analysis?.success || project.members.length > 0)}
         compact={compactCanvasChrome}

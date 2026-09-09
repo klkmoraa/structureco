@@ -12,6 +12,8 @@
  *   - reserved canvas zones instead of stacked floating controls.
  */
 
+.mobile-canvas-guide { display: none; }
+
 @media (max-width: 1023px) {
   :root {
     --sc-mobile-topbar-height: calc(58px + var(--sc-safe-top, 0px));
@@ -711,8 +713,76 @@
   .app-shell[data-shell-class='K0'] .canvas-host {
     --canvas-safe-top: 8px;
     --canvas-safe-right: 8px;
-    --canvas-safe-bottom: calc(var(--sc-mobile-dock-height) + 8px);
+    --canvas-safe-bottom: calc(var(--sc-mobile-dock-height) + 68px);
     --canvas-safe-left: 8px;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-canvas-guide {
+    position: absolute;
+    inset-inline: max(10px, var(--sc-safe-left, 0px)) max(10px, var(--sc-safe-right, 0px));
+    inset-block-end: calc(var(--sc-mobile-dock-height) + 8px);
+    z-index: calc(var(--sc-z-sticky, 20) + 3);
+    min-inline-size: 0;
+    min-block-size: 54px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 5px 5px 12px;
+    border: var(--sc-clay-edge);
+    border-radius: var(--sc-radius-panel);
+    background: var(--sc-color-surface-1);
+    box-shadow: var(--sc-shadow-clay-md);
+    color: var(--sc-color-text-primary);
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-canvas-guide__copy {
+    min-inline-size: 0;
+    display: grid;
+    gap: 2px;
+    line-height: 1.1;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-canvas-guide__copy strong,
+  .app-shell[data-shell-class='K0'] .mobile-canvas-guide__copy small {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-canvas-guide__copy strong {
+    font-size: 12px;
+    font-weight: 780;
+    letter-spacing: -0.01em;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-canvas-guide__copy small {
+    color: var(--sc-color-text-secondary);
+    font-size: 10px;
+    font-weight: 620;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-canvas-guide__fit {
+    min-inline-size: 82px;
+    min-block-size: var(--sc-size-target-touch);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding-inline: 10px;
+    border: var(--sc-clay-edge);
+    border-radius: var(--sc-radius-control);
+    background: var(--sc-color-surface-inset);
+    box-shadow: var(--sc-shadow-clay-pressed);
+    color: var(--sc-color-action-primary);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 780;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-canvas-guide__fit:active {
+    transform: scale(0.97);
   }
 
   .app-shell[data-shell-class='K0'] .mobile-dock-subshelf {
@@ -721,6 +791,21 @@
 
   .app-shell[data-shell-class='K0'] .mobile-tool-dock.is-glass-dock-2 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 5px;
+    gap: 5px;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-dock-tab__label {
+    font-size: 11px;
+    font-weight: 720;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-dock-tab.is-active {
+    color: var(--sc-color-action-primary);
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-dock-tab.is-active .mobile-dock-tab__icon {
+    transform: translateY(-1px);
   }
 
   /* Results live in the bottom dock now. The top bar keeps only the primary
@@ -794,6 +879,26 @@
 
   .app-shell[data-shell-class='K0'] .topbar--atelier .mobile-more-copy {
     display: none;
+  }
+}
+
+@media (max-width: 349px), (max-height: 520px) {
+  .app-shell[data-shell-class='K0'] .mobile-canvas-guide {
+    inset-inline: auto max(8px, var(--sc-safe-right, 0px));
+    min-block-size: var(--sc-size-target-touch);
+    padding: 0;
+    border-radius: var(--sc-radius-control);
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-canvas-guide__copy,
+  .app-shell[data-shell-class='K0'] .mobile-canvas-guide__fit span {
+    display: none;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-canvas-guide__fit {
+    inline-size: var(--sc-size-target-touch);
+    min-inline-size: var(--sc-size-target-touch);
+    padding: 0;
   }
 }
 

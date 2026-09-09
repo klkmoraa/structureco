@@ -26,6 +26,13 @@ describe('mobile iOS composition contract', () => {
     expect(mobileContract).toContain('grid-template-columns: repeat(4, minmax(0, 1fr));');
   });
 
+  it('keeps one named fit action above the dock without covering the model', () => {
+    expect(mobileContract).toContain('.mobile-canvas-guide');
+    expect(mobileContract).toContain('inset-block-end: calc(var(--sc-mobile-dock-height) + 8px);');
+    expect(mobileContract).toContain('--canvas-safe-bottom: calc(var(--sc-mobile-dock-height) + 68px);');
+    expect(mobileContract).toContain('.mobile-canvas-guide__fit');
+  });
+
   it('keeps the phone topbar inside one viewport and names the overflow action', () => {
     expect(mobileContract).toContain("grid-template-areas: 'project actions';");
     expect(mobileContract).toContain('.topbar-health-zone');
