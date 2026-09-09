@@ -26,6 +26,13 @@ describe('mobile iOS composition contract', () => {
     expect(mobileContract).toContain('grid-template-columns: repeat(4, minmax(0, 1fr));');
   });
 
+  it('keeps the phone topbar inside one viewport and names the overflow action', () => {
+    expect(mobileContract).toContain("grid-template-areas: 'project actions';");
+    expect(mobileContract).toContain('.topbar-health-zone');
+    expect(mobileContract).toContain('.mobile-more-copy');
+    expect(mobileContract).toContain('inline-size: 54px !important;');
+  });
+
   it('keeps the home command row readable without adding a second palette', () => {
     expect(mobileHomeContract).toContain('grid-template-columns: var(--sc-size-target-touch) var(--sc-size-target-touch) minmax(0, 1fr)');
     expect(mobileHomeContract).toContain('var(--sc-safe-left');

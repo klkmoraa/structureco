@@ -11,6 +11,14 @@ describe('canvas chrome safe zones', () => {
     expect(canvasSafeRect({ width: 390, height: 844 })).toEqual({ x: 58, y: 104, width: 274, height: 682 });
   });
 
+  it('uses the actual phone chrome when K0 hides the persistent canvas controls', () => {
+    const viewport = { width: 390, height: 844 };
+    const insets = canvasSafeInsetsFor(viewport, true);
+
+    expect(insets).toEqual({ top: 16, right: 16, bottom: 92, left: 16 });
+    expect(canvasSafeRect(viewport, insets)).toEqual({ x: 16, y: 16, width: 358, height: 736 });
+  });
+
   it('uses larger desktop zones for chrome while preserving a useful center', () => {
     const safe = canvasSafeRect({ width: 1000, height: 640 });
     expect(safe).toEqual({ x: 64, y: 116, width: 872, height: 462 });

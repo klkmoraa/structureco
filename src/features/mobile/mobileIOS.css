@@ -746,6 +746,76 @@
     clip-path: none !important;
     white-space: nowrap;
   }
+
+  /* El topbar móvil es una fila cerrada: el estado de salud ya no pinta una
+     tercera columna y no puede dejar un ancho fantasma que corte Analizar. */
+  .app-shell[data-shell-class='K0'] .topbar.topbar--atelier {
+    grid-template-columns: minmax(0, 1fr) max-content;
+    grid-template-areas: 'project actions';
+    inline-size: 100%;
+    max-inline-size: 100%;
+    overflow: hidden;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-zone {
+    grid-area: project;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-actions-zone {
+    grid-area: actions;
+    inline-size: max-content;
+    max-inline-size: 100%;
+    min-inline-size: 0;
+    overflow: visible;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-health-zone {
+    display: none !important;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-primary-actions {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    flex-wrap: nowrap;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .topbar-project-trigger {
+    flex: 1 1 auto;
+    inline-size: min(28vw, 112px) !important;
+    max-inline-size: 112px;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .mobile-more-button {
+    flex: 0 0 auto;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .mobile-more-copy {
+    display: none;
+  }
+}
+
+@media (min-width: 360px) and (max-width: 700px) {
+  /* Los tres puntos dejan de ser un acertijo sin convertir la navegación en
+     otra barra: el texto sólo aparece donde todavía cabe con Analizar. */
+  .app-shell[data-shell-class='K0'] .topbar--atelier .mobile-more-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    inline-size: 54px !important;
+    min-inline-size: 54px !important;
+    padding-inline: 5px;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .mobile-more-copy {
+    display: inline;
+    font-size: 10px;
+    font-weight: 750;
+    line-height: 1;
+  }
 }
 
 /* -------------------------------------------------------------------------

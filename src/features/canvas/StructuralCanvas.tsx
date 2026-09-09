@@ -689,7 +689,7 @@ export const StructuralCanvas = ({
       ? Math.max(0, bottomReserve)
       : 0;
     const viewport = { width: size.width, height: size.height };
-    const insets = canvasSafeInsetsFor(viewport);
+    const insets = canvasSafeInsetsFor(viewport, compactCanvasChrome);
     // Encajar la envolvente de los nudos y nada más recortaba todo lo que
     // cuelga de ellos —flechas, apoyos, la ordenada del diagrama—, que se
     // dibuja en píxeles y no encoge con el zoom. La reserva lo mide y lo suma.
@@ -716,6 +716,7 @@ export const StructuralCanvas = ({
   }, [
     analysis?.success,
     animateCameraTo,
+    compactCanvasChrome,
     layers.results,
     loadsLayerVisible,
     project,
@@ -2293,7 +2294,17 @@ export const StructuralCanvas = ({
         smartLabelCandidates.push({ id: `reaction:${node.id}:ry`, text: `Ry = ${formatFixed(toDisplay(result.ry, units, 'force'), 3)} ${forceLabel}`, anchor: { x: point.x + 18, y: point.y + bottomClearance + 24 }, priority: 1, tone: 'axial', preferredOffset: { x: 0, y: 0 } });
       }
       if (Math.abs(result.rm) > 1e-8) {
-        smartLabelCandidates.push({ id: `reaction:${node.id}:rm`, text: `Mᵣ = ${formatFixed(toDisplay(result.rm, units, 'moment'), 3)} ${momentLabel}`, anchor: { x: point.x, y: point.y - 38 }, priority: 1, tone: 'moment', preferredOffset: { x: 0, y: 0 } });
+        const rightSide = point.x > size.width / 2;
+        smartLabelCandidates.push({
+          id: `reaction:${node.id}:rm`,
+          text: `Mᵣ = ${formatFixed(toDisplay(result.rm, units, 'moment'), 3)} ${momentLabel}`,
+          anchor: compactCanvasChrome ? point : { x: point.x, y: point.y - 38 },
+          priority: 1,
+          tone: 'moment',
+          // En K0 el momento se separa diagonalmente del apoyo. El líder deja
+          // claro de qué nudo viene sin tapar la geometría ni el Ry vecino.
+          preferredOffset: compactCanvasChrome ? { x: rightSide ? -54 : 54, y: -56 } : { x: 0, y: 0 },
+        });
       }
     }
 
@@ -2381,11 +2392,12 @@ export const StructuralCanvas = ({
     }
   }
 
-    return layoutSmartLabels(smartLabelCandidates, canvasSafeRect(size), camera.scale);
+    return layoutSmartLabels(smartLabelCandidates, canvasSafeRect(size, canvasSafeInsetsFor(size, compactCanvasChrome)), camera.scale);
   }, [
     activeTool,
     analysis,
     camera.scale,
+    compactCanvasChrome,
     distributedLabel,
     forceLabel,
     globalDiagramMax,

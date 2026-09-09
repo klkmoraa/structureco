@@ -765,7 +765,7 @@ export const TopBar = ({ onOpenHome, onOpenSpace3D, layoutActions, resultsOpen =
             </AnimatePresence>
           </div>
           <div className="mobile-actions-wrap topbar-utilities-wrap" data-topbar-role="utilities">
-            <IconButton variant="secondary" ref={mobileMenuButtonRef} className="icon-button mobile-more-button utility-more-button" label={t('topbar.utilities')} aria-expanded={showMobileMenu} aria-haspopup="dialog" onClick={toggleMobileMenu}><MoreHorizontal size={20} /></IconButton>
+            <IconButton variant="secondary" ref={mobileMenuButtonRef} className="icon-button mobile-more-button utility-more-button" label={t('topbar.utilities')} aria-expanded={showMobileMenu} aria-haspopup="dialog" onClick={toggleMobileMenu}><MoreHorizontal size={20} /><span className="mobile-more-copy">{t('toolbar.moreShort')}</span></IconButton>
             <AnimatePresence>
               {showMobileMenu ? (
                 <m.div {...popoverMotionProps} className="popover mobile-actions-menu topbar-utilities-panel" role="dialog" aria-label={t('topbar.utilities')}>
