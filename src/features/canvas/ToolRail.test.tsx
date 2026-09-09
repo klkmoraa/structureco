@@ -94,14 +94,16 @@ describe('ToolRail mobile action sheets', () => {
     expect(screen.queryByRole('button', { name: /poner herramientas/i })).toBeNull();
   });
 
-  it('renders the Glassmorphic Dock 2.0 with switchable tabs and routes secondary tools through sheets', () => {
+  it('renders a four-action mobile dock with plain-language destinations', () => {
     const { container } = renderToolRail('K0');
     const dock = container.querySelector<HTMLElement>('.mobile-tool-dock');
 
     expect(dock).toBeTruthy();
-    expect(within(dock as HTMLElement).getAllByRole('button')).toHaveLength(5);
+    expect(within(dock as HTMLElement).getAllByRole('button')).toHaveLength(4);
+    expect(within(dock as HTMLElement).getByRole('button', { name: 'Modelo' })).toBeTruthy();
+    expect(within(dock as HTMLElement).getByRole('button', { name: 'Añadir al modelo' })).toBeTruthy();
     expect(within(dock as HTMLElement).getByRole('button', { name: /herramientas de carga/i })).toBeTruthy();
-    expect(within(dock as HTMLElement).getByRole('button', { name: /más herramientas/i })).toBeTruthy();
+    expect(within(dock as HTMLElement).getByRole('button', { name: /resultados y diagramas/i })).toBeTruthy();
   });
 
   it('renders the X2 rail as a four-group floating dock with each registered tool exactly once', () => {
@@ -203,7 +205,7 @@ describe('ToolRail mobile action sheets', () => {
     unsubscribe();
   });
 
-  it('reaches the structure generator from the compact Más sheet', async () => {
+  it('reaches the structure generator from the compact Añadir sheet', async () => {
     const user = userEvent.setup();
     const openGenerator = vi.fn();
     const unsubscribe = onWorkspaceCommand('open-structure-generator', openGenerator);
@@ -214,10 +216,10 @@ describe('ToolRail mobile action sheets', () => {
         </ProjectProvider>
       </ShellCompositionContext.Provider>,
     );
-    const moreButton = [...document.querySelectorAll<HTMLButtonElement>('.mobile-tool-group')].at(-1);
-    await user.click(moreButton!);
+    const addButton = screen.getByRole('button', { name: 'Añadir al modelo' });
+    await user.click(addButton);
 
-    const command = document.querySelector<HTMLButtonElement>('.mobile-tool-palette-more [data-structure-generator-command]');
+    const command = document.querySelector<HTMLButtonElement>('.mobile-tool-palette-build [data-structure-generator-command]');
     expect(command).toBeTruthy();
     await user.click(command!);
 
@@ -252,27 +254,41 @@ describe('ToolRail mobile action sheets', () => {
     await waitFor(() => expect(document.activeElement).toBe(loadButton));
   });
 
+  it('opens the full results surface from the mobile dock', async () => {
+    const user = userEvent.setup();
+    const openResults = vi.fn();
+    const unsubscribe = onWorkspaceCommand('open-results', openResults);
+    renderToolRail('K0');
+
+    const resultsButton = screen.getByRole('button', { name: /resultados y diagramas/i });
+    await user.click(resultsButton);
+
+    expect(openResults).toHaveBeenCalledWith(expect.objectContaining({ trigger: resultsButton }));
+    unsubscribe();
+  });
+
   it('returns focus when the touch sheet closes through its backdrop', async () => {
     const user = userEvent.setup();
     renderToolRail('K0');
-    const moreButton = [...document.querySelectorAll<HTMLButtonElement>('.mobile-tool-group')].at(-1) as HTMLButtonElement;
-    await user.click(moreButton);
-    expect(screen.getByRole('dialog', { name: /herramientas/i })).toBeTruthy();
+    const addButton = screen.getByRole('button', { name: 'Añadir al modelo' });
+    await user.click(addButton);
+    expect(screen.getByRole('dialog', { name: /añadir al modelo/i })).toBeTruthy();
 
     const backdrop = document.querySelector<HTMLElement>('.mobile-tool-sheet-backdrop');
     expect(backdrop).toBeTruthy();
     fireEvent.pointerDown(backdrop as HTMLElement);
 
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: /herramientas/i })).toBeNull());
-    expect(document.activeElement).toBe(moreButton);
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /añadir al modelo/i })).toBeNull());
+    expect(document.activeElement).toBe(addButton);
   });
 
-  it('shows every additional tool and returns focus to Más after Escape', async () => {
+  it('keeps advanced tools one deliberate step deeper and returns focus to Añadir', async () => {
     const user = userEvent.setup();
     renderToolRail('K0');
-    const moreButton = screen.getByRole('button', { name: /más herramientas/i });
+    const addButton = screen.getByRole('button', { name: 'Añadir al modelo' });
 
-    await user.click(moreButton);
+    await user.click(addButton);
+    await user.click(screen.getByRole('menuitem', { name: /más herramientas/i }));
 
     const moreMenu = screen.getByRole('menu', { name: /más herramientas/i });
     const menu = within(moreMenu);
@@ -298,16 +314,17 @@ describe('ToolRail mobile action sheets', () => {
     await user.keyboard('{Escape}');
 
     expect(screen.queryByRole('menu', { name: /más herramientas/i })).toBeNull();
-    await waitFor(() => expect(document.activeElement).toBe(moreButton));
+    await waitFor(() => expect(document.activeElement).toBe(addButton));
   });
 
-  it('opens Buscar comandos from Navegar on mobile without leaving the tool sheet behind', async () => {
+  it('opens Buscar comandos from advanced mobile tools without leaving a sheet behind', async () => {
     const user = userEvent.setup();
     const openPalette = vi.fn();
     const unsubscribe = onWorkspaceCommand('open-command-palette', openPalette);
     renderToolRail('K0');
-    const moreButton = screen.getByRole('button', { name: /más herramientas/i });
-    await user.click(moreButton);
+    const addButton = screen.getByRole('button', { name: 'Añadir al modelo' });
+    await user.click(addButton);
+    await user.click(screen.getByRole('menuitem', { name: /más herramientas/i }));
 
     const navigate = within(screen.getByRole('menu', { name: /más herramientas/i }))
       .getByRole('group', { name: /navegar/i });
@@ -315,11 +332,10 @@ describe('ToolRail mobile action sheets', () => {
 
     expect(openPalette).toHaveBeenCalledOnce();
     expect(screen.queryByRole('dialog', { name: /más herramientas/i })).toBeNull();
-    await waitFor(() => expect(document.activeElement).toBe(moreButton));
     unsubscribe();
   });
 
-  it('closes Más before opening Edit and restores the canvas app from inert state', async () => {
+  it('closes advanced tools before opening Edit and restores the canvas app from inert state', async () => {
     const user = userEvent.setup();
     const openEditor = vi.fn();
     const unsubscribe = onWorkspaceCommand('open-structural-edit', openEditor);
@@ -331,9 +347,9 @@ describe('ToolRail mobile action sheets', () => {
       </ShellCompositionContext.Provider>,
     );
     await user.click(screen.getByRole('button', { name: /seleccionar nodo/i }));
-    const moreButton = [...document.querySelectorAll<HTMLButtonElement>('.mobile-tool-group')].at(-1);
-    expect(moreButton).toBeTruthy();
-    await user.click(moreButton!);
+    const addButton = screen.getByRole('button', { name: 'Añadir al modelo' });
+    await user.click(addButton);
+    await user.click(screen.getByRole('menuitem', { name: /más herramientas/i }));
     expect(document.querySelector<HTMLElement>('.app-shell')?.inert).toBe(true);
 
     const moreSheet = document.querySelector<HTMLElement>('.mobile-tool-palette-more');

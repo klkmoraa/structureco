@@ -118,7 +118,7 @@ export const criticalStationLabel = (station: string, lengthUnit: string): strin
 const CanvasResultLayerImpl = ({
   slot, project, analysis, resultTab, resultsAllowed, resultCursor, influenceCanvasState, modeShapeState, camera, toScreen,
   nodeMap, memberMap, resultMap, nodeResultMap, mechanismMap, mechanismPixelScale, globalDiagramMax,
-  units, lengthLabel, forceLabel, momentLabel, showResults, showDiagnostics, harmonicFactor = 1, reactionMode = 'both', size, t,
+  units, lengthLabel, forceLabel, momentLabel, showResults, showDiagnostics, harmonicFactor = 1, reactionMode = 'cartesian', size, t,
 }: CanvasResultLayerProps) => {
   const view = readCanvasViewSettings(project);
   const scaleFor = (result: MemberResult) => diagramPixelScaleFor(project, resultTab, globalDiagramMax, result);

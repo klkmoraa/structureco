@@ -768,9 +768,11 @@ describe('structureCo app shell', () => {
     expect(container.querySelector('[data-repeat-affordance]')).toBeNull();
     expect(container.querySelector('.mobile-inspector-toggle')).toBeNull();
 
-    const more = within(container.querySelector('.mobile-tool-dock') as HTMLElement)
-      .getByRole('button', { name: /más herramientas/i });
-    await user.click(more);
+    const add = within(container.querySelector('.mobile-tool-dock') as HTMLElement)
+      .getByRole('button', { name: /añadir al modelo/i });
+    await user.click(add);
+    const addPalette = await screen.findByRole('dialog', { name: /añadir al modelo/i });
+    await user.click(within(addPalette).getByRole('menuitem', { name: /más herramientas/i }));
     const palette = await screen.findByRole('dialog', { name: /más herramientas/i });
     await user.click(within(palette).getByRole('menuitem', { name: /editar selección/i }));
 

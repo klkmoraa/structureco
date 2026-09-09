@@ -305,7 +305,9 @@ export const StructuralCanvas = ({
   const [vibrationAmplitude, setVibrationAmplitude] = useState(1.0);
   const [forceFlowActive, setForceFlowActive] = useState(false);
   const [dynamicHarmonicFactor, setDynamicHarmonicFactor] = useState(1.0);
-  const [reactionMode, setReactionMode] = useState<ReactionDisplayMode>('both');
+  // Start with the conventional component view. Polar dials are useful for an
+  // advanced check, but they obscure the first reading on a phone.
+  const [reactionMode, setReactionMode] = useState<ReactionDisplayMode>('cartesian');
   const [solidModeActive, setSolidModeActive] = useState(false);
   const [cut, setCut] = useState<CutInfo | null>(null);
   const [interaction, setInteractionState] = useState<CanvasInteraction>(IDLE_INTERACTION);
@@ -2816,7 +2818,7 @@ export const StructuralCanvas = ({
         onStackQuantityToggle={toggleStackQuantityChoice}
       />
       <CanvasDirectorHud
-        visible={Boolean(analysis?.success || project.members.length > 0)}
+        visible={!compactCanvasChrome && Boolean(analysis?.success || project.members.length > 0)}
         compact={compactCanvasChrome}
         vibrationActive={vibrationActive}
         onToggleVibration={() => setVibrationActive((curr) => !curr)}
@@ -2840,6 +2842,7 @@ export const StructuralCanvas = ({
         reactionMode={reactionMode}
         onCycleReactionMode={cycleReactionMode}
         compact={compactCanvasChrome}
+        visible={!compactCanvasChrome}
       />
       {project.members.length >= 12 || project.nodes.length >= 16 ? <CanvasMiniMap
         nodes={project.nodes}

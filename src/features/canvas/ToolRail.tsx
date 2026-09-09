@@ -247,7 +247,7 @@ export const ToolRail = () => {
   const { project } = useProjectModel();
   const { activeTool, setActiveTool, selection, resultTab, setResultTab } = useWorkspaceUI();
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [mobileMenu, setMobileMenu] = useState<'loads' | 'more' | null>(null);
+  const [mobileMenu, setMobileMenu] = useState<'build' | 'loads' | 'more' | null>(null);
   const [desktopDockCollapsed, setDesktopDockCollapsed] = useState(false);
   type MobileDockTab = 'navigate' | 'geometry' | 'loads' | 'results';
   const [activeMobileTab, setActiveMobileTab] = useState<MobileDockTab>(() => {
@@ -255,8 +255,8 @@ export const ToolRail = () => {
     if (activeTool === 'pointLoad' || activeTool === 'distributedLoad' || activeTool === 'moment') return 'loads';
     return 'navigate';
   });
+  const buildMenuButtonRef = useRef<HTMLButtonElement>(null);
   const loadMenuButtonRef = useRef<HTMLButtonElement>(null);
-  const moreMenuButtonRef = useRef<HTMLButtonElement>(null);
   const paletteRef = useRef<HTMLElement>(null);
   const { shellClass } = useShellComposition();
   const surfacePresentation = useContext(SurfacePresentationContext);
@@ -272,11 +272,11 @@ export const ToolRail = () => {
   const visibleTools = classroom && !revealAdvanced
     ? TOOL_REGISTRY.filter((tool) => !tool.classroomAdvanced)
     : TOOL_REGISTRY;
-  const mobilePaletteTools = mobileMenu === 'loads' || mobileMenu === 'more'
-    ? TOOL_REGISTRY.filter((tool) => tool.mobile === mobileMenu)
-    : [];
-  const moreToolActive = TOOL_REGISTRY.some((tool) => tool.mobile === 'more' && tool.id === activeTool);
-  const moreGroupHighlighted = mobileMenu ? mobileMenu !== 'loads' : moreToolActive;
+  const mobilePaletteTools = mobileMenu === 'build'
+    ? toolsInGroup('create', visibleTools)
+    : mobileMenu === 'loads' || mobileMenu === 'more'
+      ? TOOL_REGISTRY.filter((tool) => tool.mobile === mobileMenu)
+      : [];
   const canEditSelection = selection?.kind === 'node'
     || selection?.kind === 'member'
     || (selection?.kind === 'multi' && (selection.nodeIds.length > 0 || selection.memberIds.length > 0));
@@ -310,10 +310,6 @@ export const ToolRail = () => {
     setActiveMobileTab(tab);
     if (tab === 'navigate' && activeTool !== 'select' && activeTool !== 'pan') {
       selectTool('select');
-    } else if (tab === 'geometry' && activeTool !== 'node' && activeTool !== 'member' && activeTool !== 'support') {
-      selectTool('member');
-    } else if (tab === 'loads' && activeTool !== 'pointLoad' && activeTool !== 'distributedLoad' && activeTool !== 'moment') {
-      selectTool('pointLoad');
     }
   };
 
@@ -343,8 +339,7 @@ export const ToolRail = () => {
   };
 
   const openCommandPaletteFromMobile = () => {
-    moreMenuButtonRef.current?.focus({ preventScroll: true });
-    setMobileMenu(null);
+    closeMobileMenu(false);
     emitWorkspaceCommand('open-command-palette');
   };
 
@@ -366,7 +361,7 @@ export const ToolRail = () => {
     setAppShellMobileInert(false);
     if (!restoreFocus || !closingMenu) return;
     window.requestAnimationFrame(() => {
-      (closingMenu === 'loads' ? loadMenuButtonRef : moreMenuButtonRef).current?.focus();
+      (closingMenu === 'loads' ? loadMenuButtonRef : buildMenuButtonRef).current?.focus();
     });
   };
 
@@ -418,15 +413,23 @@ export const ToolRail = () => {
     if (shellClass !== 'K0') setMobileMenu(null);
   }, [shellClass]);
 
-  const paletteTitle = mobileMenu === 'loads' ? t('toolbar.addLoad') : t('toolbar.moreSheetTitle');
-  const paletteDescription = mobileMenu === 'loads' ? t('toolbar.loadSheetDescription') : t('toolbar.moreSheetDescription');
+  const paletteTitle = mobileMenu === 'loads'
+    ? t('toolbar.addLoad')
+    : mobileMenu === 'build'
+      ? t('toolbar.addModel')
+      : t('toolbar.moreSheetTitle');
+  const paletteDescription = mobileMenu === 'loads'
+    ? t('toolbar.loadSheetDescription')
+    : mobileMenu === 'build'
+      ? t('toolbar.buildSheetDescription')
+      : t('toolbar.moreSheetDescription');
   const paletteGroups = TOOL_GROUPS.filter((group) =>
     mobilePaletteTools.some((tool) => tool.group === group.id)
       || (group.id === 'edit' && canEditSelection)
       // Generar no es una herramienta del registro y no depende de la
       // selección, pero pertenece a «Crear»: sin esto su grupo no existiría en
       // la hoja y la única vía en compacto sería la paleta de comandos.
-      || (group.id === 'create' && mobileMenu === 'more'),
+      || (group.id === 'create' && (mobileMenu === 'build' || mobileMenu === 'more')),
   );
   const mobilePalette = mobileMenu && typeof document !== 'undefined' ? createPortal(<>
     <button type="button" className="mobile-tool-sheet-backdrop" aria-hidden="true" tabIndex={-1} onPointerDown={() => closeMobileMenu()} />
@@ -456,7 +459,7 @@ export const ToolRail = () => {
             onSelect={selectTool}
           />)}
           {group.id === 'navigate' ? <MobileCommandPaletteButton label={t('palette.openShort')} accessibleLabel={t('palette.open')} onOpen={openCommandPaletteFromMobile} /> : null}
-          {group.id === 'create' ? <button
+          {group.id === 'create' && (mobileMenu === 'build' || mobileMenu === 'more') ? <button
             className="mobile-palette-tool tool-structure-generator"
             type="button"
             role="menuitem"
@@ -466,6 +469,17 @@ export const ToolRail = () => {
           >
             <span className="mobile-palette-icon" aria-hidden="true"><Grid3x3 size={23} strokeWidth={1.8} /></span>
             <span className="mobile-palette-copy"><strong>{t('generator.launcher')}</strong></span>
+            <ChevronRight size={19} aria-hidden="true" />
+          </button> : null}
+          {group.id === 'create' && mobileMenu === 'build' ? <button
+            className="mobile-palette-tool mobile-palette-tool--advanced"
+            type="button"
+            role="menuitem"
+            aria-label={t('toolbar.more')}
+            onClick={() => setMobileMenu('more')}
+          >
+            <span className="mobile-palette-icon" aria-hidden="true"><MoreHorizontal size={23} strokeWidth={1.8} /></span>
+            <span className="mobile-palette-copy"><strong>{t('toolbar.more')}</strong><small>{t('toolbar.moreSheetDescription')}</small></span>
             <ChevronRight size={19} aria-hidden="true" />
           </button> : null}
           {group.id === 'edit' && canEditSelection ? <button
@@ -634,7 +648,7 @@ export const ToolRail = () => {
 
         {shellClass === 'K0' ? (
           <div className="mobile-dock-wrapper">
-            <div className={`mobile-dock-subshelf mobile-dock-subshelf--${activeMobileTab}`} role="toolbar" aria-label={`Herramientas de ${activeMobileTab}`}>
+            <div className={`mobile-dock-subshelf mobile-dock-subshelf--${activeMobileTab}`} role="toolbar" aria-label={`Herramientas de ${activeMobileTab}`} hidden>
               {activeMobileTab === 'navigate' && (
                 <div className="dock-subshelf-inner">
                   {toolsInGroup('navigate', visibleTools).map((definition) => (
@@ -785,21 +799,28 @@ export const ToolRail = () => {
                 type="button"
                 className={`mobile-dock-tab mobile-dock-tab--navigate${activeMobileTab === 'navigate' ? ' is-active' : ''}`}
                 onClick={() => handleMobileTabClick('navigate')}
-                aria-label={t('toolbar.groupNavigate') || 'Navegar'}
+                aria-label={t('toolbar.model')}
                 aria-pressed={activeMobileTab === 'navigate'}
               >
                 <span className="mobile-dock-tab__icon" aria-hidden="true"><MousePointer2 size={19} strokeWidth={2} /></span>
-                <span className="mobile-dock-tab__label">{t('toolbar.groupNavigate') || 'Navegar'}</span>
+                <span className="mobile-dock-tab__label">{t('toolbar.model')}</span>
               </button>
               <button
+                ref={buildMenuButtonRef}
                 type="button"
                 className={`mobile-dock-tab mobile-dock-tab--geometry${activeMobileTab === 'geometry' ? ' is-active' : ''}`}
-                onClick={() => handleMobileTabClick('geometry')}
-                aria-label={t('toolbar.groupCreate') || 'Geometría'}
+                onClick={() => {
+                  haptics.selection();
+                  setActiveMobileTab('geometry');
+                  setMobileMenu((current) => current === 'build' ? null : 'build');
+                }}
+                aria-label={t('toolbar.addModel')}
                 aria-pressed={activeMobileTab === 'geometry'}
+                aria-expanded={mobileMenu === 'build'}
+                aria-haspopup="dialog"
               >
                 <span className="mobile-dock-tab__icon" aria-hidden="true"><Layers size={19} strokeWidth={2} /></span>
-                <span className="mobile-dock-tab__label">{t('toolbar.groupCreate') || 'Geometría'}</span>
+                <span className="mobile-dock-tab__label">{t('toolbar.add')}</span>
               </button>
               <button
                 ref={loadMenuButtonRef}
@@ -820,24 +841,16 @@ export const ToolRail = () => {
               <button
                 type="button"
                 className={`mobile-dock-tab mobile-dock-tab--results${activeMobileTab === 'results' ? ' is-active' : ''}`}
-                onClick={() => handleMobileTabClick('results')}
+                onClick={(event) => {
+                  haptics.selection();
+                  setActiveMobileTab('results');
+                  emitWorkspaceCommand('open-results', { trigger: event.currentTarget });
+                }}
                 aria-label="Resultados y diagramas"
                 aria-pressed={activeMobileTab === 'results'}
               >
                 <span className="mobile-dock-tab__icon" aria-hidden="true"><BarChart2 size={19} strokeWidth={2} /></span>
                 <span className="mobile-dock-tab__label">{t('canvas.evidenceResults') || 'Resultados'}</span>
-              </button>
-              <button
-                ref={moreMenuButtonRef}
-                type="button"
-                className={`mobile-dock-tab mobile-dock-tab--more mobile-tool-group tool-button mobile-dock-tool${moreGroupHighlighted ? ' is-active' : ''}`}
-                onClick={() => setMobileMenu((current) => current === 'more' ? null : 'more')}
-                aria-label={t('toolbar.more')}
-                aria-expanded={mobileMenu === 'more'}
-                aria-haspopup="dialog"
-              >
-                <span className="mobile-dock-tab__icon" aria-hidden="true"><MoreHorizontal size={19} strokeWidth={2} /></span>
-                <span className="mobile-dock-tab__label">{t('toolbar.moreShort') || 'Más'}</span>
               </button>
             </nav>
           </div>

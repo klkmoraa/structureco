@@ -138,6 +138,19 @@ describe('CanvasResultLayer modal and buckling modes', () => {
 });
 
 describe('CanvasResultLayer polar reaction compass', () => {
+  it('keeps the default reading Cartesian so the model stays legible', () => {
+    const nodeResults = [{ nodeId: 'N1', rx: 30, ry: 40, rm: 12 }];
+    renderLayer('moment', {
+      slot: 'annotations',
+      analysis: { ...analysis, nodeResults },
+      nodeResultMap: new Map(nodeResults.map((r) => [r.nodeId, r])),
+    });
+
+    expect(document.querySelector('[data-reaction-compass="N1"]')).toBeNull();
+    expect(document.querySelector('[data-reaction-component="rx"]')).not.toBeNull();
+    expect(document.querySelector('[data-reaction-component="ry"]')).not.toBeNull();
+  });
+
   it('renders polar compass and resultant needle when reactionMode is polar', () => {
     const nodeResults = [
       { nodeId: 'N1', rx: 30, ry: 40, rm: 12 },
@@ -156,4 +169,3 @@ describe('CanvasResultLayer polar reaction compass', () => {
     expect(compass?.querySelector('.reaction-compass-badge-text')?.textContent).toContain('R 50.00 kN · 53°');
   });
 });
-

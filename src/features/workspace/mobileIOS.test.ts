@@ -20,9 +20,10 @@ describe('mobile iOS composition contract', () => {
     expect(mobileContract).not.toMatch(/#[0-9a-f]{3,8}\b/i);
   });
 
-  it('reserves the camera controls before sizing the evidence rail', () => {
-    expect(mobileContract).toContain('var(--sc-size-target-touch) * 3');
-    expect(mobileContract).toContain(".canvas-host:has(.quick-entry-bar) .canvas-evidence-rail");
+  it('keeps the phone canvas calm by removing persistent camera and evidence rails', () => {
+    expect(mobileContract).toContain('Calm phone canvas');
+    expect(mobileContract).toMatch(/\.canvas-controls,[\s\S]*\.canvas-evidence-rail,[\s\S]*display: none !important;/);
+    expect(mobileContract).toContain('grid-template-columns: repeat(4, minmax(0, 1fr));');
   });
 
   it('keeps the home command row readable without adding a second palette', () => {

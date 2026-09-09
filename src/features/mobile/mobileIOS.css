@@ -691,6 +691,64 @@
 }
 
 /* -------------------------------------------------------------------------
+ * Calm phone canvas: the model is the primary surface. View diagnostics and
+ * advanced display modes remain available from the workspace utilities, but
+ * they do not compete with the drawing or duplicate the bottom navigation.
+ * ------------------------------------------------------------------------- */
+
+@media (max-width: 700px) {
+  .app-shell[data-shell-class='K0'] .canvas-director-hud,
+  .app-shell[data-shell-class='K0'] .canvas-orientation-compass,
+  .app-shell[data-shell-class='K0'] .canvas-controls,
+  .app-shell[data-shell-class='K0'] .canvas-evidence-rail,
+  .app-shell[data-shell-class='K0'] .canvas-layer-trigger,
+  .app-shell[data-shell-class='K0'] .canvas-status,
+  .app-shell[data-shell-class='K0'] .canvas-result-legend,
+  .app-shell[data-shell-class='K0'] .canvas-demand-legend {
+    display: none !important;
+  }
+
+  .app-shell[data-shell-class='K0'] .canvas-host {
+    --canvas-safe-top: 8px;
+    --canvas-safe-right: 8px;
+    --canvas-safe-bottom: calc(var(--sc-mobile-dock-height) + 8px);
+    --canvas-safe-left: 8px;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-dock-subshelf {
+    display: none !important;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock.is-glass-dock-2 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  /* Results live in the bottom dock now. The top bar keeps only the primary
+     action, with its name visible instead of an unexplained play glyph. */
+  .app-shell[data-shell-class='K0'] .topbar--atelier .results-launcher,
+  .app-shell[data-shell-class='K0'] .topbar--atelier .analysis-status-shell {
+    display: none !important;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .analyze-button {
+    inline-size: auto !important;
+    min-inline-size: 94px !important;
+    padding-inline: 12px !important;
+    font-size: 12px !important;
+    gap: 6px;
+  }
+
+  .app-shell[data-shell-class='K0'] .topbar--atelier .analyze-button > .sc-button__label {
+    position: static !important;
+    inline-size: auto !important;
+    block-size: auto !important;
+    overflow: visible !important;
+    clip-path: none !important;
+    white-space: nowrap;
+  }
+}
+
+/* -------------------------------------------------------------------------
  * Home: preserve the roomy editorial rhythm while moving secondary tools to
  * their own row. This is the small-screen equivalent of an iOS navigation bar.
  * ------------------------------------------------------------------------- */
