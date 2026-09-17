@@ -2,8 +2,8 @@ import type { NumericCertificate } from '../../engine/certificate';
 import type { AnalysisScenario } from '../../engine/envelope';
 import { resolveReliability } from '../../engine/reliability';
 import type { AnalysisResult, ProjectModel } from '../../types';
-import type { TranslationKey } from '../../i18n/catalogs';
 import type { ModelHealthSnapshot } from '../model-health/modelHealth';
+import type { ResultsFeatureTranslationKey } from '../results/resultsFeatureI18n';
 
 export type ReviewReadinessStatus = 'ready' | 'attention' | 'blocked' | 'pending';
 export type ReviewReadinessRowId = 'model' | 'analysis' | 'coverage' | 'certificate';
@@ -12,8 +12,8 @@ export type ReviewReadinessAction = 'doctor' | 'compare' | null;
 export interface ReviewReadinessRow {
   id: ReviewReadinessRowId;
   status: ReviewReadinessStatus;
-  labelKey: TranslationKey;
-  detailKey: TranslationKey;
+  labelKey: ResultsFeatureTranslationKey;
+  detailKey: ResultsFeatureTranslationKey;
   action: ReviewReadinessAction;
 }
 
@@ -24,14 +24,14 @@ export interface ReviewReadinessSnapshot {
   rows: ReviewReadinessRow[];
 }
 
-const labelKeys: Record<ReviewReadinessRowId, TranslationKey> = {
+const labelKeys: Record<ReviewReadinessRowId, ResultsFeatureTranslationKey> = {
   model: 'results.reviewModel',
   analysis: 'results.reviewAnalysis',
   coverage: 'results.reviewCoverage',
   certificate: 'results.reviewCertificate',
 };
 
-const detailKeys: Record<ReviewReadinessRowId, Record<ReviewReadinessStatus, TranslationKey>> = {
+const detailKeys: Record<ReviewReadinessRowId, Record<ReviewReadinessStatus, ResultsFeatureTranslationKey>> = {
   model: {
     ready: 'results.reviewModelReady',
     attention: 'results.reviewModelAttention',

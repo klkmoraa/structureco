@@ -1,36 +1,35 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useProjectAnalysis, useProjectModel } from '../../store/ProjectContext';
 import { toDisplay, unitLabel, type UnitQuantity } from '../../engine/units';
-import { useI18n } from '../../i18n/useI18n';
-import type { TranslationKey } from '../../i18n/catalogs';
 import { formatFixed } from '../../utils/numberFormat';
 import { formatResultNumber } from '../results/resultFormatting';
+import { useResultsFeatureI18n, type ResultsFeatureTranslationKey } from '../results/resultsFeatureI18n';
 import { useSensitivityStudy } from './useSensitivityStudy';
 import type { SensitivityMetric, SensitivityParameter, SensitivityPoint } from './sensitivity';
 import './sensitivity.css';
 
 const parameters: readonly SensitivityParameter[] = ['E', 'A', 'I'];
-const parameterKeys: Record<SensitivityParameter, TranslationKey> = {
+const parameterKeys: Record<SensitivityParameter, ResultsFeatureTranslationKey> = {
   E: 'results.sensitivityParameterE',
   A: 'results.sensitivityParameterA',
   I: 'results.sensitivityParameterI',
 };
 const parameterQuantities: Record<SensitivityParameter, UnitQuantity> = { E: 'elasticModulus', A: 'area', I: 'inertia' };
-const metricKeys: Record<SensitivityMetric, TranslationKey> = {
+const metricKeys: Record<SensitivityMetric, ResultsFeatureTranslationKey> = {
   maxAxial: 'results.sensitivityMetricAxial',
   maxShear: 'results.sensitivityMetricShear',
   maxMoment: 'results.sensitivityMetricMoment',
   maxDeflection: 'results.sensitivityMetricDeflection',
 };
 
-const pointLabel = (point: SensitivityPoint, t: (key: TranslationKey) => string): string => (
+const pointLabel = (point: SensitivityPoint, t: (key: ResultsFeatureTranslationKey) => string): string => (
   point.label === 'baseline' ? t('results.sensitivityBaseline') : point.label === 'lower' ? '−10 %' : '+10 %'
 );
 
 export const SensitivityCard = () => {
   const { project } = useProjectModel();
   const { analysis, selectedCombinationId } = useProjectAnalysis();
-  const { language, t } = useI18n();
+  const { language, t } = useResultsFeatureI18n();
   const defaultMemberId = analysis?.memberResults[0]?.memberId ?? project.members[0]?.id ?? '';
   const [memberId, setMemberId] = useState(defaultMemberId);
   const [parameter, setParameter] = useState<SensitivityParameter>('I');

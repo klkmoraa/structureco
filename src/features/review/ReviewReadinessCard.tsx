@@ -1,10 +1,9 @@
 import { AlertTriangle, CheckCircle2, Clock3, ShieldAlert } from 'lucide-react';
-import type { TranslationKey } from '../../i18n/catalogs';
-import { useI18n } from '../../i18n/useI18n';
+import { useResultsFeatureI18n, type ResultsFeatureTranslationKey } from '../results/resultsFeatureI18n';
 import type { ReviewReadinessAction, ReviewReadinessSnapshot, ReviewReadinessStatus } from './reviewReadiness';
 import './reviewReadiness.css';
 
-const statusKey: Record<ReviewReadinessStatus, TranslationKey> = {
+const statusKey: Record<ReviewReadinessStatus, ResultsFeatureTranslationKey> = {
   ready: 'results.reviewStatusReady',
   attention: 'results.reviewStatusAttention',
   blocked: 'results.reviewStatusBlocked',
@@ -23,8 +22,8 @@ export const ReviewReadinessCard = ({ snapshot, onOpenDoctor, onCompare }: {
   onOpenDoctor: () => void;
   onCompare: () => void;
 }) => {
-  const { t } = useI18n();
-  const actionLabel: Record<Exclude<ReviewReadinessAction, null>, TranslationKey> = {
+  const { t } = useResultsFeatureI18n();
+  const actionLabel: Record<Exclude<ReviewReadinessAction, null>, ResultsFeatureTranslationKey> = {
     doctor: 'results.reviewOpenDoctor',
     compare: 'results.reviewCompare',
   };
