@@ -12,13 +12,13 @@ Se aplicaron cinco mejoras coordinadas sobre la experiencia de Studio. La capa v
 
 ## Verificación
 
-- Pruebas focalizadas: 14 archivos y 56 pruebas; además, `App`, reconciliación Clay y modos de foco: 3 archivos y 72 pruebas.
-- Suite completa: `341` archivos, `2,855` pruebas, `5` omitidas; todo pasa.
-- `typecheck`, `build`, `lint`, `verify:styles`, `verify:i18n`, `verify:docs`, `verify:protected` y `verify:i18n-entry`: todos pasan. El lint conserva únicamente advertencias preexistentes y las advertencias normales de workers/chunks.
+- Pruebas focalizadas finales: 14 archivos y 60 pruebas; además, `App`, reconciliación Clay y modos de foco: 3 archivos y 72 pruebas.
+- Suite completa final: `341` archivos, `2,859` pruebas, `5` omitidas; todo pasa.
+- `typecheck`, `build`, `lint`, `verify:styles`, `verify:i18n`, `verify:docs`, `verify:protected` y `verify:i18n-entry`: todos pasan. El catálogo de copy de estas tres superficies queda diferido junto con sus chunks; el presupuesto exacto del workflow queda aprobado en `1,389,583` bytes / `379,939` gzip (límite `1,400,000` / `380,000`). El lint conserva únicamente advertencias preexistentes y las advertencias normales de workers/chunks.
 - Revisión visual puntual con Chromium empaquetado: desktop `1440×900` y mobile `390×844`. En ambos casos se verificaron cero overflow horizontal, cuatro filas de escenarios, tres puntos de sensibilidad y activación de Revisión; se conservaron capturas fuera del repositorio.
 - La comprobación manual en la app confirmó la baliza de salud, la tira de foco, el mapa de demanda y el cambio automático a Momento en Revisión.
 - `qa:results-cards` no se usa como gate de esta entrega: sus comprobaciones visuales nuevas pasan, pero el script histórico aún falla en cuatro aserciones de retorno de foco y termina con el selector antiguo `.sc-home-topline select`. No se modificó ese flujo ajeno.
 
 ## Publicación
 
-Se integrará el cambio en `main` y se verificará por separado el SHA remoto de `main`, el estado de `gh-pages` y el workflow de GitHub Pages, sin force push. El SHA final y el estado de Pages se añadirán al cerrar la publicación.
+El código de mejoras quedó integrado y publicado en `main` como `f0c1166` (`origin/main` coincide), sin force push. El workflow oficial [#39](https://github.com/klkmoraa/structureco/actions/runs/35192636768) terminó con éxito en sus jobs `Construir sitio` y `Publicar sitio`. La publicación se verificó en [klkmoraa.github.io/structureco](https://klkmoraa.github.io/structureco/), con HTTP 200, copy diferido cargado, cuatro filas de escenarios y cero errores de página. `origin/gh-pages` conserva `503f9a2` porque este repositorio usa artifact deployment de GitHub Pages y no escribe directamente esa rama.
