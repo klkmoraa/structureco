@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { AlertCircle, ChevronUp, CircleDotDashed, GripHorizontal, X } from 'lucide-react';
 import { useProjectAnalysis, useProjectModel, useWorkspaceUI, type ResultTab } from '../../store/ProjectContext';
 import { evaluateDeformationAt, evaluateDiagramAt, segmentBezierControls } from '../../engine/diagram';
@@ -24,7 +24,7 @@ import { reliabilityLevelLabelKey } from './reliabilityCopy';
 import { formatResultNumber } from './resultFormatting';
 import { buildModelHealth } from '../model-health/modelHealth';
 import { buildReviewReadiness } from '../review/reviewReadiness';
-import { ReviewReadinessCard } from '../review/ReviewReadinessCard';
+const LazyReviewReadinessCard = lazy(() => import('../review/ReviewReadinessCard').then(({ ReviewReadinessCard }) => ({ default: ReviewReadinessCard })));
 import './results.css';
 
 /**
@@ -446,7 +446,7 @@ const FailedResults = ({ onOpenModelDoctor }: { onOpenModelDoctor: () => void })
   return <div className="failed-results-layout">
     {analysis ? <NumericQualityCard analysis={analysis} /> : null}
     <div className="failed-results"><AlertCircle size={28} /><div><strong>{t('results.failedTitle')}</strong><p>{t('results.failedBody')}</p></div><button onClick={onOpenModelDoctor}>{t('modelDoctor.open')}</button></div>
-    <ReviewReadinessCard snapshot={reviewReadiness} onOpenDoctor={onOpenModelDoctor} onCompare={compare} />
+    <Suspense fallback={null}><LazyReviewReadinessCard snapshot={reviewReadiness} onOpenDoctor={onOpenModelDoctor} onCompare={compare} /></Suspense>
     {comparisonError ? <p className="scenario-error" role="alert">{comparisonError}</p> : null}
   </div>;
 };

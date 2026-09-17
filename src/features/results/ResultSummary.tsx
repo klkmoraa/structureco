@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Download, GitCompareArrows, Printer, RefreshCw } from 'lucide-react';
 import { useScenarioAnalysis } from '../../engine/useScenarioAnalysis';
 import { buildDeformationEnvelope, buildReactionEnvelope, summarizeAnalysisResults } from '../../engine/resultSummary';
@@ -23,11 +23,12 @@ import type { ResultRef } from './provenance';
 import { useModelStudies } from '../../engine/useModelStudies';
 import { StabilityStudiesCard } from './StabilityStudiesCard';
 import { buildScenarioNavigatorRows } from './scenarioNavigatorRows';
-import { ScenarioNavigator } from './ScenarioNavigator';
-import { SensitivityCard } from '../sensitivity/SensitivityCard';
 import { buildModelHealth } from '../model-health/modelHealth';
 import { buildReviewReadiness } from '../review/reviewReadiness';
-import { ReviewReadinessCard } from '../review/ReviewReadinessCard';
+
+const LazyScenarioNavigator = lazy(() => import('./ScenarioNavigator').then(({ ScenarioNavigator }) => ({ default: ScenarioNavigator })));
+const LazySensitivityCard = lazy(() => import('../sensitivity/SensitivityCard').then(({ SensitivityCard }) => ({ default: SensitivityCard })));
+const LazyReviewReadinessCard = lazy(() => import('../review/ReviewReadinessCard').then(({ ReviewReadinessCard }) => ({ default: ReviewReadinessCard })));
 
 const diagramTab: Record<DiagramQuantity, ResultTab> = { axial: 'axial', shear: 'shear', moment: 'moment' };
 const diagramSymbol: Record<DiagramQuantity, string> = { axial: 'N', shear: 'V', moment: 'M' };
@@ -148,12 +149,12 @@ export const ResultSummary = () => {
       <ElasticDemandCard />
       <NumericQualityCard analysis={analysis} />
       <NumericCertificateCard {...certificate} />
-      <ReviewReadinessCard
+      <Suspense fallback={null}><LazyReviewReadinessCard
         snapshot={reviewReadiness}
         onOpenDoctor={() => emitWorkspaceCommand('open-model-doctor')}
         onCompare={compare}
-      />
-      <SensitivityCard />
+      /></Suspense>
+      <Suspense fallback={null}><LazySensitivityCard /></Suspense>
       <StabilityStudiesCard studies={studies} />
       <AiscSteelDesignCard />
       <NtcSteelDesignCard />
@@ -199,7 +200,7 @@ export const ResultSummary = () => {
       <div className="summary-table-wrap"><table className="results-table result-extrema-table"><caption>{t('results.memberExtremaCaption')}</caption><thead><tr><th>{t('results.member')}</th><th>N</th><th>V</th><th>M</th><th>v</th></tr></thead><tbody>{summary.members.map((member) => <tr key={member.memberId}><th scope="row">{member.memberId}</th>{(['axial', 'shear', 'moment'] as const).map((quantity) => { const item = member.diagrams[quantity].absolute; return <td key={quantity}><button onClick={() => locate(quantity, member.memberId, item.x)}>{displayDiagram(quantity, item.value)}<small>x {formatResultNumber(toDisplay(item.x, units, 'length'))}</small></button></td>; })}<td>{member.deformations.v?.absolute ? <button onClick={() => locate('v', member.memberId, member.deformations.v!.absolute.x)}>{formatResultValue(toDisplay(member.deformations.v.absolute.value, units, 'length'), unitLabel(units, 'length'))}<small>x {formatResultNumber(toDisplay(member.deformations.v.absolute.x, units, 'length'))}</small></button> : '—'}</td></tr>)}</tbody></table></div>
     </Surface>
     {scenarios ? <section className="scenario-comparison" aria-live="polite">
-      <ScenarioNavigator rows={scenarioRows} onUseCombination={useCombination} onCompare={compare} units={units} />
+      <Suspense fallback={null}><LazyScenarioNavigator rows={scenarioRows} onUseCombination={useCombination} onCompare={compare} units={units} /></Suspense>
       <div className="envelope-summary"><span><b>{t('results.reactionEnvelope')}</b>{t('results.nodesCompared', { count: reactionEnvelope?.nodes.length ?? 0 })}</span><span><b>{t('results.deformationEnvelope', { member: selectedMemberId })}</b>{deformationEnvelope ? `${formatScientific(toDisplay(deformationEnvelope.minimum.value, units, 'length'), 2)} → ${formatScientific(toDisplay(deformationEnvelope.maximum.value, units, 'length'), 2)} ${unitLabel(units, 'length')}` : t('results.unavailable')}</span></div>
     </section> : null}
     {comparisonError ? <p className="scenario-error" role="alert">{language === 'es' ? comparisonError : t('results.comparisonFailed')}</p> : null}
