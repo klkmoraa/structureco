@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ProjectProvider } from '../../store/ProjectContext';
@@ -75,6 +75,9 @@ describe('ReviewReadinessCard', () => {
     /></ProjectProvider>);
 
     expect(screen.getByRole('status').textContent).toContain('Actualizando revisión');
+    const steps = screen.getByRole('list', { name: 'Pasos del pase de revisión' });
+    expect(within(steps).getAllByRole('listitem')).toHaveLength(4);
+    expect(screen.getByRole('button', { name: 'Actualizando revisión…' }).hasAttribute('disabled')).toBe(true);
     expect(screen.getByText('Modelo', { selector: '[data-review-step]' }).getAttribute('data-state')).toBe('attention');
     expect(screen.getByText('Análisis', { selector: '[data-review-step]' }).getAttribute('data-state')).toBe('running');
     expect(screen.getByText('Cobertura', { selector: '[data-review-step]' }).getAttribute('data-state')).toBe('running');
@@ -90,5 +93,35 @@ describe('ReviewReadinessCard', () => {
     /></ProjectProvider>);
 
     expect(screen.getByRole('button', { name: 'Actualizar revisión' }).hasAttribute('disabled')).toBe(true);
+  });
+
+  it('does not start another pass while an evidence executor is already busy', async () => {
+    const user = userEvent.setup();
+    const onRunReview = vi.fn();
+    render(<ProjectProvider><ReviewReadinessCard
+      snapshot={snapshot}
+      onOpenDoctor={vi.fn()}
+      onCompare={vi.fn()}
+      onRunReview={onRunReview}
+      analysisBusy
+    /></ProjectProvider>);
+
+    const button = screen.getByRole('button', { name: 'Actualizar revisión' });
+    expect(button.hasAttribute('disabled')).toBe(true);
+    await user.click(button);
+    expect(onRunReview).not.toHaveBeenCalled();
+  });
+
+  it('announces a failed pass with semantic step-list roles', () => {
+    render(<ProjectProvider><ReviewReadinessCard
+      snapshot={snapshot}
+      onOpenDoctor={vi.fn()}
+      onCompare={vi.fn()}
+      onRunReview={vi.fn()}
+      reviewPassState="failed"
+    /></ProjectProvider>);
+
+    expect(screen.getByRole('status').textContent).toContain('requiere atención');
+    expect(screen.getByRole('list', { name: 'Pasos del pase de revisión' })).toBeTruthy();
   });
 });

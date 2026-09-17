@@ -1,6 +1,7 @@
 import { AlertTriangle, CheckCircle2, Clock3, LoaderCircle, RefreshCw, ShieldAlert } from 'lucide-react';
 import { useResultsFeatureI18n, type ResultsFeatureTranslationKey } from '../results/resultsFeatureI18n';
 import type { ReviewReadinessAction, ReviewReadinessRowId, ReviewReadinessSnapshot, ReviewReadinessStatus } from './reviewReadiness';
+import type { ReviewPassState } from './reviewRun';
 import './reviewReadiness.css';
 
 const statusKey: Record<ReviewReadinessStatus, ResultsFeatureTranslationKey> = {
@@ -24,12 +25,13 @@ const statusIcon = {
   pending: Clock3,
 } as const;
 
-export const ReviewReadinessCard = ({ snapshot, onOpenDoctor, onCompare, onRunReview, isReviewRunning = false, analysisBusy = false, comparisonBusy = false, certificateBusy = false }: {
+export const ReviewReadinessCard = ({ snapshot, onOpenDoctor, onCompare, onRunReview, isReviewRunning = false, reviewPassState, analysisBusy = false, comparisonBusy = false, certificateBusy = false }: {
   snapshot: ReviewReadinessSnapshot;
   onOpenDoctor: () => void;
   onCompare: () => void;
   onRunReview?: () => void;
   isReviewRunning?: boolean;
+  reviewPassState?: ReviewPassState;
   analysisBusy?: boolean;
   comparisonBusy?: boolean;
   certificateBusy?: boolean;
@@ -48,13 +50,22 @@ export const ReviewReadinessCard = ({ snapshot, onOpenDoctor, onCompare, onRunRe
     coverage: comparisonBusy,
     certificate: certificateBusy,
   };
+  const reviewState = reviewPassState ?? (isReviewRunning ? 'running' : 'idle');
+  const reviewRunning = reviewState === 'running';
+  const evidenceBusy = analysisBusy || comparisonBusy || certificateBusy;
   const modelBlocked = snapshot.rows.some((row) => row.id === 'model' && row.status === 'blocked');
+  const reviewStatusKey: Record<ReviewPassState, ResultsFeatureTranslationKey> = {
+    idle: 'results.reviewRunHint',
+    running: 'results.reviewRunning',
+    complete: 'results.reviewComplete',
+    failed: 'results.reviewFailed',
+  };
   return <section
     className="review-readiness-card"
     data-level="raised"
     data-testid="review-readiness-card"
     data-status={snapshot.status}
-    aria-busy={isReviewRunning}
+    aria-busy={reviewRunning}
     aria-label={t('results.reviewTitle')}
   >
     <header className="review-readiness-heading">
@@ -69,21 +80,21 @@ export const ReviewReadinessCard = ({ snapshot, onOpenDoctor, onCompare, onRunRe
     </header>
     {onRunReview ? <div className="review-readiness-runbar">
       <div className="review-readiness-run-copy">
-        <p role="status" aria-live="polite">{isReviewRunning ? t('results.reviewRunning') : t('results.reviewRunHint')}</p>
-        <div className="review-readiness-run-steps" aria-label={t('results.reviewRunSteps')}>
+        <p role="status" aria-live="polite">{t(reviewStatusKey[reviewState])}</p>
+        <ol className="review-readiness-run-steps" aria-label={t('results.reviewRunSteps')}>
           {snapshot.rows.map((reviewRow) => {
             const state: ReviewStepState = busyByStep[reviewRow.id] ? 'running' : reviewRow.status;
             const Icon = state === 'running' ? LoaderCircle : statusIcon[state];
-            return <span key={reviewRow.id} data-review-step={reviewRow.id} data-state={state} aria-label={`${t(reviewRow.labelKey)}: ${t(stepStatusKey[state])}`}>
+            return <li key={reviewRow.id} data-review-step={reviewRow.id} data-state={state} aria-current={state === 'running' ? 'step' : undefined} aria-label={`${t(reviewRow.labelKey)}: ${t(stepStatusKey[state])}`}>
               <Icon className={state === 'running' ? 'spin' : undefined} size={12} aria-hidden="true" />
               {t(reviewRow.labelKey)}
-            </span>;
+            </li>;
           })}
-        </div>
+        </ol>
       </div>
-      <button type="button" className={`review-readiness-run-button${modelBlocked ? ' is-blocked' : ''}`} onClick={onRunReview} disabled={isReviewRunning || modelBlocked}>
-        {isReviewRunning ? <LoaderCircle className="spin" size={14} aria-hidden="true" /> : <RefreshCw size={14} aria-hidden="true" />}
-        {isReviewRunning ? t('results.reviewRunning') : t('results.reviewRun')}
+      <button type="button" className={`review-readiness-run-button${modelBlocked ? ' is-blocked' : ''}`} onClick={onRunReview} disabled={reviewRunning || evidenceBusy || modelBlocked}>
+        {reviewRunning ? <LoaderCircle className="spin" size={14} aria-hidden="true" /> : <RefreshCw size={14} aria-hidden="true" />}
+        {reviewRunning ? t('results.reviewRunning') : t('results.reviewRun')}
       </button>
     </div> : null}
     <ul className="review-readiness-list">

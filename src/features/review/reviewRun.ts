@@ -4,7 +4,13 @@ export interface ReviewPassBusy {
   certificate: boolean;
 }
 
-export type ReviewPassState = 'idle' | 'running' | 'complete';
+export interface ReviewPassFailures {
+  analysis: boolean;
+  comparison: boolean;
+  certificate: boolean;
+}
+
+export type ReviewPassState = 'idle' | 'running' | 'complete' | 'failed';
 
 export interface ReviewPassExecutors {
   analyze: () => void;
@@ -12,13 +18,25 @@ export interface ReviewPassExecutors {
   certificate: () => void;
 }
 
-export const resolveReviewPassState = (requested: boolean, busy: ReviewPassBusy): ReviewPassState => {
+export const resolveReviewPassState = (requested: boolean, busy: ReviewPassBusy, failures: ReviewPassFailures): ReviewPassState => {
+  if (busy.analysis || busy.comparison || busy.certificate) return 'running';
   if (!requested) return 'idle';
-  return busy.analysis || busy.comparison || busy.certificate ? 'running' : 'complete';
+  return failures.analysis || failures.comparison || failures.certificate ? 'failed' : 'complete';
 };
 
-export const startReviewPass = ({ analyze, compare, certificate }: ReviewPassExecutors): void => {
-  analyze();
-  compare();
-  certificate();
+export const startReviewPass = ({ analyze, compare, certificate }: ReviewPassExecutors): ReviewPassFailures => {
+  const failures: ReviewPassFailures = { analysis: false, comparison: false, certificate: false };
+  const steps: Array<[keyof ReviewPassFailures, () => void]> = [
+    ['analysis', analyze],
+    ['comparison', compare],
+    ['certificate', certificate],
+  ];
+  steps.forEach(([step, executor]) => {
+    try {
+      executor();
+    } catch {
+      failures[step] = true;
+    }
+  });
+  return failures;
 };

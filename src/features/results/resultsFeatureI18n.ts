@@ -79,6 +79,8 @@ const resultsFeatureCopy = {
   'results.reviewCompare': { es: 'Comparar escenarios', en: 'Compare scenarios' },
   'results.reviewRun': { es: 'Actualizar revisión', en: 'Update review' },
   'results.reviewRunning': { es: 'Actualizando revisión…', en: 'Updating review…' },
+  'results.reviewComplete': { es: 'Revisión actualizada. Verifica los estados antes de compartir.', en: 'Review updated. Check the statuses before sharing.' },
+  'results.reviewFailed': { es: 'La revisión requiere atención; revisa los pasos marcados.', en: 'The review needs attention; check the marked steps.' },
   'results.reviewRunHint': { es: 'Un pase actualiza análisis, cobertura y certificado.', en: 'One pass updates analysis, coverage, and certificate.' },
   'results.reviewRunSteps': { es: 'Pasos del pase de revisión', en: 'Review pass steps' },
 } as const;

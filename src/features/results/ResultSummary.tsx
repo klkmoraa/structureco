@@ -25,7 +25,8 @@ import { StabilityStudiesCard } from './StabilityStudiesCard';
 import { buildScenarioNavigatorRows } from './scenarioNavigatorRows';
 import { buildModelHealth } from '../model-health/modelHealth';
 import { buildReviewReadiness } from '../review/reviewReadiness';
-import { resolveReviewPassState, startReviewPass } from '../review/reviewRun';
+import { analysisBinding, matchesAnalysisBinding, type AnalysisBinding } from '../../engine/projectSignature';
+import { resolveReviewPassState, startReviewPass, type ReviewPassFailures, type ReviewPassState } from '../review/reviewRun';
 
 const LazyScenarioNavigator = lazy(() => import('./ScenarioNavigator').then(({ ScenarioNavigator }) => ({ default: ScenarioNavigator })));
 const LazySensitivityCard = lazy(() => import('../sensitivity/SensitivityCard').then(({ SensitivityCard }) => ({ default: SensitivityCard })));
@@ -41,21 +42,52 @@ export const ResultSummary = () => {
   const { language, t } = useI18n();
   const { scenarios, busy: comparisonBusy, error: comparisonError, run: compare } = useScenarioAnalysis(project);
   const { certificate: numericCertificate, busy: certificateBusy, error: certificateError, run: runCertificate } = useNumericCertificate(project, selectedCombinationId);
-  const [reviewPassId, setReviewPassId] = useState(0);
+  const currentAnalysisBinding = useMemo(() => analysisBinding(project, selectedCombinationId), [project, selectedCombinationId]);
+  const [reviewPassActive, setReviewPassActive] = useState(false);
+  const [reviewPassOutcome, setReviewPassOutcome] = useState<ReviewPassState>('idle');
+  const [reviewPassStartFailures, setReviewPassStartFailures] = useState<ReviewPassFailures>({ analysis: false, comparison: false, certificate: false });
+  const reviewPassBindingRef = useRef<AnalysisBinding | null>(null);
   const studies = useModelStudies(project, selectedCombinationId);
   const modelHealth = useMemo(() => buildModelHealth(project, analysis), [analysis, project]);
   const reviewReadiness = useMemo(() => buildReviewReadiness(project, modelHealth, analysis, scenarios, numericCertificate), [analysis, modelHealth, numericCertificate, project, scenarios]);
-  const reviewPassState = resolveReviewPassState(reviewPassId > 0, {
+  const reviewPassBusy = {
     analysis: isAnalyzing,
     comparison: comparisonBusy,
     certificate: certificateBusy,
-  });
+  };
+  const evidenceBusy = isAnalyzing || comparisonBusy || certificateBusy;
+  const reviewPassFailures: ReviewPassFailures = {
+    analysis: reviewPassStartFailures.analysis || analysis?.success === false,
+    comparison: reviewPassStartFailures.comparison || comparisonError !== null,
+    certificate: reviewPassStartFailures.certificate || certificateError !== null,
+  };
+  const reviewPassBindingIsCurrent = reviewPassBindingRef.current === null || matchesAnalysisBinding(project, selectedCombinationId, reviewPassBindingRef.current);
+  const resolvedReviewPassState = reviewPassActive && reviewPassBindingIsCurrent
+    ? resolveReviewPassState(true, reviewPassBusy, reviewPassFailures)
+    : reviewPassOutcome;
+  useEffect(() => {
+    const binding = reviewPassBindingRef.current;
+    if (binding && !matchesAnalysisBinding(project, selectedCombinationId, binding)) {
+      reviewPassBindingRef.current = null;
+      setReviewPassActive(false);
+      setReviewPassOutcome('idle');
+      setReviewPassStartFailures({ analysis: false, comparison: false, certificate: false });
+      return;
+    }
+    if (!reviewPassActive || (resolvedReviewPassState !== 'complete' && resolvedReviewPassState !== 'failed')) return;
+    setReviewPassOutcome(resolvedReviewPassState);
+    setReviewPassActive(false);
+    reviewPassBindingRef.current = null;
+  }, [project, resolvedReviewPassState, reviewPassActive, selectedCombinationId]);
   const runReview = useCallback(() => {
-    if (reviewPassState === 'running') return;
-    setReviewPassId((current) => current + 1);
+    if (reviewPassActive || evidenceBusy) return;
+    reviewPassBindingRef.current = currentAnalysisBinding;
+    setReviewPassActive(true);
+    setReviewPassOutcome('running');
+    setReviewPassStartFailures({ analysis: false, comparison: false, certificate: false });
     emitWorkspaceCommand('analysis-requested');
-    startReviewPass({ analyze, compare, certificate: runCertificate });
-  }, [analyze, compare, reviewPassState, runCertificate]);
+    setReviewPassStartFailures(startReviewPass({ analyze, compare, certificate: runCertificate }));
+  }, [analyze, compare, currentAnalysisBinding, evidenceBusy, reviewPassActive, runCertificate]);
   const summary = useMemo(() => analysis?.success ? summarizeAnalysisResults(analysis) : null, [analysis]);
   const reactionEnvelope = useMemo(() => scenarios ? buildReactionEnvelope(scenarios) : null, [scenarios]);
   const selectedMemberId = summary?.diagrams.moment?.absolute.memberId ?? summary?.members[0]?.memberId ?? '';
@@ -167,7 +199,7 @@ export const ResultSummary = () => {
         onOpenDoctor={() => emitWorkspaceCommand('open-model-doctor')}
         onCompare={compare}
         onRunReview={runReview}
-        isReviewRunning={reviewPassState === 'running'}
+        reviewPassState={resolvedReviewPassState}
         analysisBusy={isAnalyzing}
         comparisonBusy={comparisonBusy}
         certificateBusy={certificateBusy}
