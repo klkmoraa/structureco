@@ -22,6 +22,9 @@ import { ResultExtremeCard } from './ResultExtremeCard';
 import { DENSE_RESULT_VIEWS, preloadDenseResultsSurface, preloadInfluenceLineView, type DenseResultView } from './denseResults';
 import { reliabilityLevelLabelKey } from './reliabilityCopy';
 import { formatResultNumber } from './resultFormatting';
+import { buildModelHealth } from '../model-health/modelHealth';
+import { buildReviewReadiness } from '../review/reviewReadiness';
+import { ReviewReadinessCard } from '../review/ReviewReadinessCard';
 import './results.css';
 
 /**
@@ -435,10 +438,16 @@ const EmptyResults = ({ onAnalyze }: { onAnalyze: () => void }) => {
 
 const FailedResults = ({ onOpenModelDoctor }: { onOpenModelDoctor: () => void }) => {
   const { analysis } = useProjectAnalysis();
+  const { project } = useProjectModel();
   const { t } = useI18n();
+  const { scenarios, error: comparisonError, run: compare } = useScenarioAnalysis(project);
+  const modelHealth = useMemo(() => buildModelHealth(project, analysis), [analysis, project]);
+  const reviewReadiness = useMemo(() => buildReviewReadiness(project, modelHealth, analysis, scenarios, null), [analysis, modelHealth, project, scenarios]);
   return <div className="failed-results-layout">
     {analysis ? <NumericQualityCard analysis={analysis} /> : null}
     <div className="failed-results"><AlertCircle size={28} /><div><strong>{t('results.failedTitle')}</strong><p>{t('results.failedBody')}</p></div><button onClick={onOpenModelDoctor}>{t('modelDoctor.open')}</button></div>
+    <ReviewReadinessCard snapshot={reviewReadiness} onOpenDoctor={onOpenModelDoctor} onCompare={compare} />
+    {comparisonError ? <p className="scenario-error" role="alert">{comparisonError}</p> : null}
   </div>;
 };
 

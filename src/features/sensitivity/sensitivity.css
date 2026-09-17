@@ -27,6 +27,9 @@
 .sensitivity-card-note,.sensitivity-card-limit,.sensitivity-card-error { margin:0; color:var(--muted); font-size:8.5px; line-height:1.4; }
 .sensitivity-card-note { color:var(--accent); }
 .sensitivity-card-error { color:var(--error); }
+.sensitivity-point-error { display:grid; gap:4px; align-content:start; min-height:58px; padding:7px; border-radius:7px; background:color-mix(in srgb,var(--error) 8%,var(--surface-2)); }
+.sensitivity-point-error strong { color:var(--error); font-size:8px; }
+.sensitivity-point-error p { margin:0; color:var(--muted); font-size:8px; line-height:1.4; }
 @media (max-width:700px) {
   .sensitivity-card-heading { flex-direction:column; }
   .sensitivity-card-heading button { align-self:flex-start; }

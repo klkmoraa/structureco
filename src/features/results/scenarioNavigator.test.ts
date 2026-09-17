@@ -37,4 +37,13 @@ describe('buildScenarioNavigatorRows', () => {
     expect(rows[1]).toMatchObject({ status: 'failed', usable: false, reason: 'No se pudo resolver', isCurrent: false });
     expect(rows[1].values).toEqual({ axial: null, shear: null, moment: null });
   });
+
+  it('marks only the selected combination as current, never a case with the same id', () => {
+    const rows = buildScenarioNavigatorRows([
+      scenario({ id: 'case:C1', kind: 'case', name: 'Caso C1' }),
+      scenario({ id: 'combination:C1' }),
+    ], 'C1');
+
+    expect(rows.map((row) => row.isCurrent)).toEqual([false, true]);
+  });
 });

@@ -20,4 +20,13 @@ describe('runSensitivityStudy', () => {
   it('rejects I for a truss with zero inertia', () => {
     expect(() => runSensitivityStudy(createHibbelerStyleTrussPractice(), null, 'AB', 'I')).toThrow(/inercia/i);
   });
+
+  it('follows the configured automatic solver route for a P-Delta project', () => {
+    const project = createHibbelerTributaryBeam();
+    project.settings.analysisMode = 'p-delta';
+
+    const study = runSensitivityStudy(project, null, 'AB', 'I');
+
+    expect(study.baseline.success).toBe(true);
+  }, 15_000);
 });

@@ -1,5 +1,5 @@
 import type { LoadCombination, ProjectModel } from '../../types';
-import { analyzeProject } from '../../engine/solver';
+import { analyzeProjectAuto } from '../../engine/pDelta';
 import { summarizeAnalysisResults } from '../../engine/resultSummary';
 
 export type SensitivityParameter = 'E' | 'A' | 'I';
@@ -39,7 +39,10 @@ const pointFor = (
   label: SensitivityPoint['label'],
   percent: number,
 ): SensitivityPoint => {
-  const result = analyzeProject(project, combination ?? null, { includeEducationTrace: false });
+  // Sensitivity must follow the same configured solver route as the primary
+  // run: otherwise a P-Delta or active-set project would compare first-order
+  // numbers against a second-order/conditional analysis shown elsewhere.
+  const result = analyzeProjectAuto(project, combination ?? null, { includeEducationTrace: false });
   if (!result.success) {
     return { label, percent, inputValue, success: false, maxAxial: null, maxShear: null, maxMoment: null, maxDeflection: null, relativeChange: emptyChanges(), error: result.issues[0]?.message ?? 'El análisis no produjo resultados.' };
   }

@@ -30,6 +30,7 @@ describe('ModelHealthBeacon', () => {
     expect(screen.getByTestId('model-health-beacon').getAttribute('data-health-status')).toBe('blocked');
     expect(screen.getByText('2 críticos')).toBeTruthy();
     expect(screen.getByText('1 aviso')).toBeTruthy();
+    expect(screen.getByTestId('model-health-beacon').getAttribute('aria-label')).toContain('2 críticos, 1 aviso');
 
     await user.click(screen.getByRole('button', { name: /salud del modelo/i }));
 

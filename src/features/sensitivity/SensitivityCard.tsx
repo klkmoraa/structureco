@@ -30,7 +30,7 @@ const pointLabel = (point: SensitivityPoint, t: (key: TranslationKey) => string)
 export const SensitivityCard = () => {
   const { project } = useProjectModel();
   const { analysis, selectedCombinationId } = useProjectAnalysis();
-  const { t } = useI18n();
+  const { language, t } = useI18n();
   const defaultMemberId = analysis?.memberResults[0]?.memberId ?? project.members[0]?.id ?? '';
   const [memberId, setMemberId] = useState(defaultMemberId);
   const [parameter, setParameter] = useState<SensitivityParameter>('I');
@@ -49,7 +49,11 @@ export const SensitivityCard = () => {
     setMemberId(nextMember?.id ?? '');
     setParameter(nextMember && nextMember.I > 0 ? 'I' : nextMember && nextMember.E > 0 ? 'E' : 'A');
   }, [availableParameters, member, parameter, project.members]);
-  const points = study.result ? [study.result.lower, study.result.baseline, study.result.upper] : [];
+  // A completed study belongs to both controls that produced it. Keep the
+  // result hidden as soon as either control changes, even before the reset
+  // effect or a new worker request gets a chance to run.
+  const matchingStudy = study.result?.memberId === memberId && study.result.parameter === parameter ? study.result : null;
+  const points = matchingStudy ? [matchingStudy.lower, matchingStudy.baseline, matchingStudy.upper] : [];
   const inputUnit = member && parameter ? parameterQuantities[parameter] : 'area';
   const formatInput = (point: SensitivityPoint) => `${formatResultNumber(toDisplay(point.inputValue, project.settings.units, inputUnit))} ${unitLabel(project.settings.units, inputUnit)}`;
   const formatMetric = (point: SensitivityPoint, metric: SensitivityMetric) => {
@@ -70,18 +74,18 @@ export const SensitivityCard = () => {
       </button>
     </header>
     <div className="sensitivity-card-controls">
-      <label>{t('results.sensitivityMember')}<select value={memberId} onChange={(event) => setMemberId(event.target.value)}>
+      <label>{t('results.sensitivityMember')}<select value={memberId} onChange={(event) => { study.reset(); setMemberId(event.target.value); }}>
         {project.members.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.id}</option>)}
       </select></label>
-      <label>{t('results.sensitivityParameter')}<select value={parameter} onChange={(event) => setParameter(event.target.value as SensitivityParameter)}>
+      <label>{t('results.sensitivityParameter')}<select value={parameter} onChange={(event) => { study.reset(); setParameter(event.target.value as SensitivityParameter); }}>
         {parameters.map((candidate) => <option key={candidate} value={candidate} disabled={!availableParameters.includes(candidate)}>{t(parameterKeys[candidate])}</option>)}
       </select></label>
     </div>
-    {study.error ? <p className="sensitivity-card-error" role="alert">{study.error}</p> : null}
+    {study.error ? <p className="sensitivity-card-error" role="alert">{language === 'es' ? study.error : t('results.sensitivityFailed')}</p> : null}
     {points.length ? <div className="sensitivity-points">
       {points.map((point) => <article key={point.label} className={`sensitivity-point is-${point.label}`} data-sensitivity-variant={point.label}>
         <header><strong>{pointLabel(point, t)}</strong><span>{formatInput(point)}</span></header>
-        {(['maxAxial', 'maxShear', 'maxMoment', 'maxDeflection'] as const).map((metric) => <div key={metric} className="sensitivity-metric"><span>{t(metricKeys[metric])}</span><strong>{formatMetric(point, metric)}</strong>{point.label !== 'baseline' ? <small>{formatChange(point, metric)}</small> : null}</div>)}
+        {point.success ? (['maxAxial', 'maxShear', 'maxMoment', 'maxDeflection'] as const).map((metric) => <div key={metric} className="sensitivity-metric"><span>{t(metricKeys[metric])}</span><strong>{formatMetric(point, metric)}</strong>{point.label !== 'baseline' ? <small>{formatChange(point, metric)}</small> : null}</div>) : <div className="sensitivity-point-error"><strong>{t('results.sensitivityUnavailable')}</strong><p>{language === 'es' ? point.error ?? t('results.sensitivityVariantFailed') : t('results.sensitivityVariantFailed')}</p></div>}
       </article>)}
     </div> : null}
     <p className="sensitivity-card-note">{t('results.sensitivityNoMutation')}</p>

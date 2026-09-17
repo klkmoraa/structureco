@@ -11,6 +11,7 @@ afterEach(cleanup);
 const rows: ScenarioNavigatorRow[] = [
   { id: 'combination:C1', name: 'Servicio', kind: 'combination', status: 'reliable', usable: true, isCurrent: true, values: { axial: 4, shear: -2, moment: 4 } },
   { id: 'case:LC2', name: 'Sin resolver', kind: 'case', status: 'failed', usable: false, isCurrent: false, reason: 'No se pudo resolver este escenario', values: { axial: null, shear: null, moment: null } },
+  { id: 'combination:C2', name: 'Inestable', kind: 'combination', status: 'unreliable', usable: true, isCurrent: false, reason: 'Residuo fuera de margen', values: { axial: 8, shear: 3, moment: 12 } },
 ];
 
 describe('ScenarioNavigator', () => {
@@ -35,5 +36,6 @@ describe('ScenarioNavigator', () => {
 
     expect(screen.queryByText('Servicio')).toBeNull();
     expect(screen.getByText('Sin resolver')).toBeTruthy();
+    expect(screen.getByText('Inestable')).toBeTruthy();
   });
 });

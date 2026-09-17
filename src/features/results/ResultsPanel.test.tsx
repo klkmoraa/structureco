@@ -602,6 +602,9 @@ describe('Results analytical center', () => {
     await user.click(screen.getByRole('button', { name: 'Modo aula test' }));
     expect(screen.getByText(/Estructura inestable o mecanismo/)).toBeTruthy();
     expect(screen.queryByText(/hipótesis antes del cálculo/i)).toBeNull();
+    expect(screen.getByTestId('review-readiness-card')).toBeTruthy();
+    expect(screen.getByTestId('review-readiness-card').textContent).toMatch(/Análisis/);
+    expect(screen.getByTestId('review-readiness-card').textContent).toMatch(/Bloqueado/);
   }, 10_000);
 
 });

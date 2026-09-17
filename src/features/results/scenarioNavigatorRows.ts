@@ -16,8 +16,11 @@ export interface ScenarioNavigatorRow {
 const quantities: readonly DiagramQuantity[] = ['axial', 'shear', 'moment'];
 
 const currentScenario = (scenario: AnalysisScenario, selectedCombinationId: string | null | undefined): boolean => {
-  if (!selectedCombinationId) return false;
-  return scenario.id === selectedCombinationId || scenario.id.endsWith(`:${selectedCombinationId}`);
+  if (!selectedCombinationId || scenario.kind !== 'combination') return false;
+  const combinationId = selectedCombinationId.startsWith('combination:')
+    ? selectedCombinationId.slice('combination:'.length)
+    : selectedCombinationId;
+  return scenario.id === `combination:${combinationId}`;
 };
 
 /** Projects every requested scenario into a compact, readable comparison row. */

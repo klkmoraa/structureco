@@ -846,7 +846,7 @@
 .numeric-quality-card[data-state='unreliable'],
 .numeric-quality-card[data-state='failed'] { --quality-color:var(--error); }
 .numeric-quality-card[data-state='unavailable'] { --quality-color:var(--muted); }
-.failed-results-layout { min-height:100%; padding:12px 14px; display:grid; grid-template-rows:auto 1fr; gap:10px; }
+.failed-results-layout { min-height:100%; padding:12px 14px; display:grid; grid-template-rows:auto auto auto auto; gap:10px; }
 .failed-results-layout .failed-results { min-height:0; padding:16px; }
 .numeric-quality-heading { display:flex; align-items:start; justify-content:space-between; gap:12px; }
 .numeric-quality-heading > div { display:grid; gap:2px; }

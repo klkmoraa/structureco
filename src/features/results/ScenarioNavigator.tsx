@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { UnitSystemId } from '../../types';
 import { toDisplay, unitLabel } from '../../engine/units';
+import { isTrustedForCombination } from '../../engine/reliability';
 import type { TranslationKey } from '../../i18n/catalogs';
 import { useI18n } from '../../i18n/useI18n';
 import { formatResultNumber } from './resultFormatting';
@@ -38,7 +39,10 @@ export const ScenarioNavigator = ({
 }) => {
   const { language, t } = useI18n();
   const [filter, setFilter] = useState<ScenarioFilter>('all');
-  const visibleRows = useMemo(() => rows.filter((row) => filter === 'all' ? true : filter === 'usable' ? row.usable : !row.usable), [filter, rows]);
+  const visibleRows = useMemo(() => rows.filter((row) => {
+    const canFeedEnvelope = row.usable && isTrustedForCombination(row.status);
+    return filter === 'all' ? true : filter === 'usable' ? canFeedEnvelope : !canFeedEnvelope;
+  }), [filter, rows]);
   const formatValue = (row: ScenarioNavigatorRow, quantity: typeof quantityLabels[number]['id']) => {
     const value = row.values[quantity];
     return value === null ? '—' : `${formatResultNumber(toDisplay(value, units, valueUnit(quantity)))} ${unitLabel(units, valueUnit(quantity))}`;
@@ -60,7 +64,7 @@ export const ScenarioNavigator = ({
     </div>
     <div className="scenario-navigator-list">
       {visibleRows.map((row) => {
-        const trusted = row.usable && (row.status === 'reliable' || row.status === 'limited');
+        const trusted = row.usable && isTrustedForCombination(row.status);
         const statusSymbol = trusted ? '✓' : row.usable ? '!' : '×';
         return <article key={row.id} className={`scenario-navigator-row is-${row.status}${row.isCurrent ? ' is-current' : ''}`} data-scenario-id={row.id} data-scenario-status={row.status}>
           <div className="scenario-navigator-row-main">

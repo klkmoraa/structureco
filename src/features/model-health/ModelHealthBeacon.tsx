@@ -19,13 +19,14 @@ export const ModelHealthBeacon = ({ health }: { health: ModelHealthSnapshot }) =
     ? t('canvas.healthWarningOne')
     : health.warnings > 1 ? t('canvas.healthWarningMany', { count: health.warnings }) : null;
   const suggestions = health.suggestions > 0 ? t('canvas.healthSuggestionMany', { count: health.suggestions }) : null;
+  const accessibleCounts = [critical, warnings, suggestions].filter((value): value is string => Boolean(value));
   return <button
     type="button"
     className={`model-health-beacon is-${health.status}`}
     data-testid="model-health-beacon"
     data-status={health.status}
     data-health-status={health.status}
-    aria-label={`${t('canvas.healthLabel')}: ${t(health.messageKey)}`}
+    aria-label={`${t('canvas.healthLabel')}: ${t(health.messageKey)}. ${accessibleCounts.join(', ') || t('canvas.healthNoFindings')}`}
     onClick={() => emitWorkspaceCommand('open-model-doctor')}
   >
     <Icon size={15} aria-hidden="true" />
@@ -33,7 +34,7 @@ export const ModelHealthBeacon = ({ health }: { health: ModelHealthSnapshot }) =
       <small>{t('canvas.healthLabel')}</small>
       <strong>{t(health.messageKey)}</strong>
     </span>
-    <span className="model-health-counts" aria-hidden="true">
+    <span className="model-health-counts">
       {critical ? <span>{critical}</span> : null}
       {warnings ? <span>{warnings}</span> : null}
       {suggestions ? <span>{suggestions}</span> : null}
