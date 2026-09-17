@@ -973,6 +973,7 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
   }
   .canvas-mode-badge { top:8px; left:8px; max-width:calc(100% - 66px); }
   .canvas-view-chips { display:none; }
+  .model-health-beacon { right:58px; max-width:calc(100% - 66px); }
   .canvas-controls { right:8px; bottom:8px; }
   /* La posición de la píldora en pantalla pequeña la fija `mobileCanvasDensity.css`
      (arriba a la izquierda, junto a la identidad del modelo). Aquí sólo queda
@@ -1003,7 +1004,8 @@ button, .icon-button, .tool-button, .compact-select, .number-control, .selection
 }
 
 /* Phase 3: session-only information layers ------------------------------- */
-.canvas-view-chips { right:62px; }
+.model-health-beacon { right:62px; }
+.canvas-view-chips { top:58px; right:62px; }
 .canvas-layer-trigger {
   position:absolute;
   z-index:26;
@@ -2370,6 +2372,78 @@ body:has(.structural-edit-surface) .app-shell .tool-rail.is-floating-dock {
   background:var(--sc-color-bg-canvas);
 }
 
+/* La salud es una decisión de trabajo, no una notificación escondida en un
+   panel: el lienzo la lleva junto al encuadre y la conecta al Doctor existente. */
+.model-health-beacon {
+  position:absolute;
+  z-index:8;
+  top:12px;
+  right:62px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:38px;
+  max-width:min(310px,calc(100% - 24px));
+  padding:5px 9px;
+  border:1px solid var(--sc-color-border-canvas-chrome);
+  border-radius:var(--sc-radius-control);
+  background:color-mix(in srgb,var(--sc-color-surface-elevated) 92%,transparent);
+  color:var(--muted);
+  box-shadow:var(--sc-shadow-drop);
+  text-align:left;
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  transition:transform 180ms var(--sc-ease-standard),box-shadow 180ms var(--sc-ease-standard),border-color 180ms var(--sc-ease-standard);
+}
+.model-health-beacon:hover { transform:translateY(-1px); box-shadow:var(--sc-shadow-drop); }
+.model-health-beacon:active { transform:none; box-shadow:var(--sc-shadow-drop); }
+.model-health-beacon.is-ready { color:var(--accent); }
+.model-health-beacon.is-attention { color:var(--warning); }
+.model-health-beacon.is-blocked { color:var(--error); }
+.model-health-copy { display:grid; min-width:0; gap:1px; }
+.model-health-copy small { color:var(--subtle); font-size:8px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.model-health-copy strong { overflow:hidden; color:var(--text); font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+.model-health-counts { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:4px; margin-left:auto; font-family:var(--sc-font-mono); font-size:8px; line-height:1.2; }
+.model-health-counts span + span::before { margin-right:4px; color:var(--subtle); content:'·'; }
+.model-health-beacon.is-blocked .model-health-counts span:first-child { color:var(--error); }
+.model-health-beacon.is-attention .model-health-counts span { color:var(--warning); }
+.model-health-beacon.is-ready .model-health-counts span { color:var(--accent); }
+.canvas-focus-modes {
+  position:absolute;
+  z-index:8;
+  top:58px;
+  left:12px;
+  display:flex;
+  align-items:center;
+  gap:3px;
+  padding:3px;
+  border:1px solid var(--sc-color-border-canvas-chrome);
+  border-radius:var(--sc-radius-control);
+  background:color-mix(in srgb,var(--sc-color-surface-elevated) 92%,transparent);
+  box-shadow:var(--sc-shadow-drop);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+.canvas-focus-modes button {
+  min-height:30px;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:0 9px;
+  border:0;
+  border-radius:calc(var(--sc-radius-control) - 2px);
+  background:transparent;
+  color:var(--muted);
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  transition:background 180ms var(--sc-ease-standard),color 180ms var(--sc-ease-standard),transform 180ms var(--sc-ease-standard);
+}
+.canvas-focus-modes button:hover:not(:disabled) { color:var(--text); background:var(--sc-color-surface-2); transform:translateY(-1px); }
+.canvas-focus-modes button.is-active { color:var(--accent); background:var(--accent-soft); box-shadow:none; }
+.canvas-focus-modes button:disabled { cursor:not-allowed; opacity:.42; }
+
 .canvas-controls,
 .canvas-mode-badge,
 .canvas-status,
@@ -2441,6 +2515,16 @@ body:has(.structural-edit-surface) .app-shell .tool-rail.is-floating-dock {
   .canvas-view-chips {
     border-color:var(--sc-color-border);
   }
+  .canvas-focus-modes {
+    left:8px;
+    right:58px;
+    max-width:none;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .canvas-focus-modes::-webkit-scrollbar { display:none; }
+  .canvas-focus-modes button { min-width:44px; min-height:36px; justify-content:center; }
+  .model-health-beacon { right:58px; max-width:calc(100% - 66px); }
 }
 
 /* --- Sellos de extremos M/V sobre el diagrama -------------------------- */
@@ -2944,6 +3028,3 @@ body:has(.structural-edit-surface) .app-shell .tool-rail.is-floating-dock {
     transform: scale(1);
   }
 }
-
-
-

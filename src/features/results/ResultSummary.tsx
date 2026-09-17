@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Download, GitCompareArrows, Printer, RefreshCw } from 'lucide-react';
 import { useScenarioAnalysis } from '../../engine/useScenarioAnalysis';
 import { buildDeformationEnvelope, buildReactionEnvelope, summarizeAnalysisResults } from '../../engine/resultSummary';
@@ -22,23 +22,46 @@ import { NumericCertificateCard } from './NumericCertificateCard';
 import type { ResultRef } from './provenance';
 import { useModelStudies } from '../../engine/useModelStudies';
 import { StabilityStudiesCard } from './StabilityStudiesCard';
+import { buildScenarioNavigatorRows } from './scenarioNavigatorRows';
+import { ScenarioNavigator } from './ScenarioNavigator';
+import { SensitivityCard } from '../sensitivity/SensitivityCard';
+import { buildModelHealth } from '../model-health/modelHealth';
+import { buildReviewReadiness } from '../review/reviewReadiness';
+import { ReviewReadinessCard } from '../review/ReviewReadinessCard';
 
 const diagramTab: Record<DiagramQuantity, ResultTab> = { axial: 'axial', shear: 'shear', moment: 'moment' };
 const diagramSymbol: Record<DiagramQuantity, string> = { axial: 'N', shear: 'V', moment: 'M' };
 
 export const ResultSummary = () => {
   const { project } = useProjectModel();
-  const { analysis, selectedCombinationId } = useProjectAnalysis();
+  const { analysis, analyze, selectedCombinationId, setSelectedCombinationId } = useProjectAnalysis();
   const { setSelection, setResultCursor, setResultTab } = useWorkspaceUI();
   const { language, t } = useI18n();
   const { scenarios, busy: comparisonBusy, error: comparisonError, run: compare } = useScenarioAnalysis(project);
   const certificate = useNumericCertificate(project, selectedCombinationId);
   const studies = useModelStudies(project, selectedCombinationId);
+  const modelHealth = useMemo(() => buildModelHealth(project, analysis), [analysis, project]);
+  const reviewReadiness = useMemo(() => buildReviewReadiness(project, modelHealth, analysis, scenarios, certificate.certificate), [analysis, certificate.certificate, modelHealth, project, scenarios]);
   const summary = useMemo(() => analysis?.success ? summarizeAnalysisResults(analysis) : null, [analysis]);
   const reactionEnvelope = useMemo(() => scenarios ? buildReactionEnvelope(scenarios) : null, [scenarios]);
   const selectedMemberId = summary?.diagrams.moment?.absolute.memberId ?? summary?.members[0]?.memberId ?? '';
   const deformationEnvelope = useMemo(() => scenarios && selectedMemberId ? buildDeformationEnvelope(scenarios, selectedMemberId, 'v') : null, [scenarios, selectedMemberId]);
   const units = project.settings.units;
+  const pendingCombinationRef = useRef<string | null>(null);
+  const scenarioRows = useMemo(() => scenarios ? buildScenarioNavigatorRows(scenarios, selectedCombinationId) : [], [scenarios, selectedCombinationId]);
+  const useCombination = useCallback((combinationId: string) => {
+    if (combinationId === selectedCombinationId) {
+      analyze();
+      return;
+    }
+    pendingCombinationRef.current = combinationId;
+    setSelectedCombinationId(combinationId);
+  }, [analyze, selectedCombinationId, setSelectedCombinationId]);
+  useEffect(() => {
+    if (!pendingCombinationRef.current || pendingCombinationRef.current !== selectedCombinationId) return;
+    pendingCombinationRef.current = null;
+    analyze();
+  }, [analyze, selectedCombinationId]);
   /* Estable a propósito: las tarjetas de extremos están memoizadas y no deben
      repintarse cuando el cursor de resultados cambia con el puntero. */
   const locate = useCallback((quantity: DiagramQuantity | ResponseQuantity, memberId: string, x: number) => {
@@ -125,6 +148,12 @@ export const ResultSummary = () => {
       <ElasticDemandCard />
       <NumericQualityCard analysis={analysis} />
       <NumericCertificateCard {...certificate} />
+      <ReviewReadinessCard
+        snapshot={reviewReadiness}
+        onOpenDoctor={() => emitWorkspaceCommand('open-model-doctor')}
+        onCompare={compare}
+      />
+      <SensitivityCard />
       <StabilityStudiesCard studies={studies} />
       <AiscSteelDesignCard />
       <NtcSteelDesignCard />
@@ -169,11 +198,10 @@ export const ResultSummary = () => {
     <Surface as="section" level="raised" className="result-table-card" aria-label={t('results.memberExtremaCaption')}>
       <div className="summary-table-wrap"><table className="results-table result-extrema-table"><caption>{t('results.memberExtremaCaption')}</caption><thead><tr><th>{t('results.member')}</th><th>N</th><th>V</th><th>M</th><th>v</th></tr></thead><tbody>{summary.members.map((member) => <tr key={member.memberId}><th scope="row">{member.memberId}</th>{(['axial', 'shear', 'moment'] as const).map((quantity) => { const item = member.diagrams[quantity].absolute; return <td key={quantity}><button onClick={() => locate(quantity, member.memberId, item.x)}>{displayDiagram(quantity, item.value)}<small>x {formatResultNumber(toDisplay(item.x, units, 'length'))}</small></button></td>; })}<td>{member.deformations.v?.absolute ? <button onClick={() => locate('v', member.memberId, member.deformations.v!.absolute.x)}>{formatResultValue(toDisplay(member.deformations.v.absolute.value, units, 'length'), unitLabel(units, 'length'))}<small>x {formatResultNumber(toDisplay(member.deformations.v.absolute.x, units, 'length'))}</small></button> : '—'}</td></tr>)}</tbody></table></div>
     </Surface>
-    {scenarios ? <section className="scenario-comparison" aria-live="polite"><div className="scenario-comparison-heading"><div><strong>{t('results.scenarioComparison')}</strong><span>{t('results.scenariosSolved', { count: reactionEnvelope?.includedScenarioIds.length ?? 0 })}</span></div><small>{t('results.smallMultiplesHint')}</small></div><div className="scenario-cards">{scenarios.map((scenario) => { const item = summarizeAnalysisResults(scenario.result); return <article key={scenario.id}><strong>{scenario.name}</strong>{(['axial', 'shear', 'moment'] as const).map((quantity) => <span key={quantity}><b>{diagramSymbol[quantity]}</b>{scenario.failureReason || !item.diagrams[quantity] ? '—' : displayDiagram(quantity, item.diagrams[quantity]!.absolute.value)}</span>)}{/* El motivo del fallo vivía sólo en `title`: invisible para teclado y
-             para lectores de pantalla, y perdido en táctil. Ahora es texto. El
-             motivo lo redacta el motor en español, así que fuera de ese idioma
-             se publica la lectura equivalente traducida. */}
-        {scenario.failureReason ? <small className="scenario-card-failure">{language === 'es' ? scenario.failureReason : t('results.scenarioUnsolved')}</small> : null}</article>; })}</div><div className="envelope-summary"><span><b>{t('results.reactionEnvelope')}</b>{t('results.nodesCompared', { count: reactionEnvelope?.nodes.length ?? 0 })}</span><span><b>{t('results.deformationEnvelope', { member: selectedMemberId })}</b>{deformationEnvelope ? `${formatScientific(toDisplay(deformationEnvelope.minimum.value, units, 'length'), 2)} → ${formatScientific(toDisplay(deformationEnvelope.maximum.value, units, 'length'), 2)} ${unitLabel(units, 'length')}` : t('results.unavailable')}</span></div></section> : null}
+    {scenarios ? <section className="scenario-comparison" aria-live="polite">
+      <ScenarioNavigator rows={scenarioRows} onUseCombination={useCombination} onCompare={compare} units={units} />
+      <div className="envelope-summary"><span><b>{t('results.reactionEnvelope')}</b>{t('results.nodesCompared', { count: reactionEnvelope?.nodes.length ?? 0 })}</span><span><b>{t('results.deformationEnvelope', { member: selectedMemberId })}</b>{deformationEnvelope ? `${formatScientific(toDisplay(deformationEnvelope.minimum.value, units, 'length'), 2)} → ${formatScientific(toDisplay(deformationEnvelope.maximum.value, units, 'length'), 2)} ${unitLabel(units, 'length')}` : t('results.unavailable')}</span></div>
+    </section> : null}
     {comparisonError ? <p className="scenario-error" role="alert">{language === 'es' ? comparisonError : t('results.comparisonFailed')}</p> : null}
   </section>;
 };

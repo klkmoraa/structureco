@@ -3,6 +3,7 @@ import {
   activeEditorLayerPreset,
   createEditorLayerState,
   editorLayerReducer,
+  EDITOR_LAYER_PRESETS,
   parseEditorLayerState,
 } from './editorLayers';
 
@@ -45,6 +46,13 @@ describe('editor layer state', () => {
 
     const clean = editorLayerReducer(results, { type: 'preset', preset: 'clean' });
     expect(clean).toMatchObject({ model: true, ids: false, labels: false, diagnostics: false, heatmap: false });
+  });
+
+  it('keeps a review preset that exposes results, diagnostics, and demand together', () => {
+    const review = editorLayerReducer(createEditorLayerState(), { type: 'preset', preset: 'review' });
+
+    expect(review).toEqual(EDITOR_LAYER_PRESETS.review);
+    expect(review).toMatchObject({ model: true, loads: true, ids: true, results: true, diagnostics: true, heatmap: true });
   });
 
   it('does not restore a demand map that predates explicit opt-in persistence', () => {

@@ -96,6 +96,7 @@ import { ELASTIC_SATURATION_RATIO, elasticDemandGate, elasticDemandView, elastic
 import { parseQuickEntryPair } from './quickEntry';
 import { resolveRepeatRecipe, type RepeatRecipe } from './repeatAction';
 import { RepeatActionOverlay } from './RepeatActionOverlay';
+import { buildModelHealth } from '../model-health/modelHealth';
 import { prepareDuplicatePreview } from './duplicatePreview';
 import {
   decodeStructuralClipboard,
@@ -279,6 +280,7 @@ export const StructuralCanvas = ({
   const view = readCanvasViewSettings(project);
   const { language, t } = useI18n();
   const { t: phase2T } = usePhase2I18n(language);
+  const modelHealth = useMemo(() => buildModelHealth(project, analysis), [analysis, project]);
   /** The broker owns contextual-layer exclusivity; candidate identity stays local below. */
   const surfaceBroker = useContext(SurfacePresentationContext);
   const candidatePickerSurface = surfaceBroker?.stateFor('candidatePicker');
@@ -2829,6 +2831,7 @@ export const StructuralCanvas = ({
         stackQuantities={stackQuantities}
         onStackToggle={toggleStack}
         onStackQuantityToggle={toggleStackQuantityChoice}
+        health={modelHealth}
       />
       {compactCanvasChrome && project.members.length > 0 ? <MobileCanvasGuide
         solved={analysis?.success === true}

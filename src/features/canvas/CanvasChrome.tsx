@@ -9,6 +9,10 @@ import type { StackQuantity } from './diagramStack';
 import type { EditorLayerAction, EditorLayerState } from './editorLayers';
 import { onWorkspaceCommand } from '../workspace/workspaceCommands';
 import { planScaleBar, scaleBarLabel } from './scaleBar';
+import { ModelHealthBeacon } from '../model-health/ModelHealthBeacon';
+import type { ModelHealthSnapshot } from '../model-health/modelHealth';
+import { CanvasFocusModes } from './CanvasFocusModes';
+import { activeEditorLayerPreset, type EditorLayerPresetId } from './editorLayers';
 import './mobileCanvasDensity.css';
 import '../mobile/mobileIOS.css';
 
@@ -40,6 +44,7 @@ export interface CanvasChromeProps {
   stackQuantities?: readonly StackQuantity[];
   onStackToggle?: () => void;
   onStackQuantityToggle?: (quantity: StackQuantity) => void;
+  health: ModelHealthSnapshot;
 }
 
 /** Presentation-only canvas controls. Camera and model mutations stay upstream. */
@@ -66,6 +71,7 @@ export const CanvasChrome = ({
   stackQuantities,
   onStackToggle,
   onStackQuantityToggle,
+  health,
 }: CanvasChromeProps) => {
   const { t } = useI18n();
   // Una barra de escala se mide con la regla del propio dibujo. El cociente
@@ -78,6 +84,20 @@ export const CanvasChrome = ({
   }, [onFit]);
 
   return <>
+    <ModelHealthBeacon health={health} />
+    <CanvasFocusModes
+      activePreset={activeEditorLayerPreset(layers)}
+      analysisAvailable={analysisAvailable}
+      onSelect={(preset: Extract<EditorLayerPresetId, 'model' | 'loads' | 'results' | 'review'>) => {
+        dispatchLayers({ type: 'preset', preset });
+        // The focus control should never leave an empty result overlay when
+        // the current dock view is summary, learn, issues, or reactions.
+        if ((preset === 'results' || preset === 'review') && analysisAvailable
+          && !['axial', 'shear', 'moment', 'influence', 'deformed'].includes(resultTab)) {
+          setResultTab('moment');
+        }
+      }}
+    />
     <div className={`canvas-mode-badge${placementInstruction ? ' placing-load' : ''}`} role="status" aria-live="polite" data-canvas-chrome="mode">
       <strong>{modeLabel}</strong>
       {placementInstruction ? <span className="canvas-action-instruction">{placementInstruction}</span> : showHelp ? <>

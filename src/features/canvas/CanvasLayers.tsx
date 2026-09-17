@@ -41,6 +41,7 @@ const presetDefinitions: ReadonlyArray<{ id: EditorLayerPresetId; labelKey: Tran
   { id: 'model', labelKey: 'canvas.layerPresetModel' },
   { id: 'loads', labelKey: 'canvas.layerPresetLoads' },
   { id: 'results', labelKey: 'canvas.layerPresetResults' },
+  { id: 'review', labelKey: 'canvas.focusReview' },
   { id: 'clean', labelKey: 'canvas.layerPresetClean' },
 ] as const;
 

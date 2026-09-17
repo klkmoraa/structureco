@@ -1,0 +1,29 @@
+.review-readiness-card { display:grid; gap:11px; padding:12px; border-radius:var(--sc-radius-sm); }
+.review-readiness-heading { display:flex; align-items:start; justify-content:space-between; gap:14px; }
+.review-readiness-heading > div { display:grid; gap:3px; min-width:0; }
+.review-readiness-heading span { color:var(--accent); font-size:8px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.review-readiness-heading h3 { margin:0; color:var(--text); font-size:14px; }
+.review-readiness-heading p { max-width:44ch; margin:0; color:var(--muted); font-size:8.5px; line-height:1.45; }
+.review-readiness-heading > strong { flex:0 0 auto; color:var(--text); font-family:var(--sc-font-mono); font-size:22px; font-weight:650; letter-spacing:-.04em; }
+.review-readiness-list { display:grid; gap:6px; margin:0; padding:0; list-style:none; }
+.review-readiness-list li { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:start; gap:8px; padding:8px; border:1px solid var(--border); border-radius:8px; background:var(--surface); }
+.review-readiness-list li > svg { margin-top:1px; color:var(--muted); }
+.review-readiness-list li[data-status='ready'] > svg { color:var(--accent); }
+.review-readiness-list li[data-status='attention'] > svg { color:var(--warning); }
+.review-readiness-list li[data-status='blocked'] > svg { color:var(--error); }
+.review-readiness-list li[data-status='pending'] > svg { color:var(--muted); }
+.review-readiness-row-copy { display:grid; gap:3px; min-width:0; }
+.review-readiness-row-title { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.review-readiness-row-title strong { color:var(--text); font-size:9px; }
+.review-readiness-row-title span { flex:0 0 auto; color:var(--muted); font-family:var(--sc-font-mono); font-size:7.5px; text-transform:uppercase; }
+.review-readiness-list li[data-status='attention'] .review-readiness-row-title span { color:var(--warning); }
+.review-readiness-list li[data-status='blocked'] .review-readiness-row-title span { color:var(--error); }
+.review-readiness-row-copy p { margin:0; color:var(--muted); font-size:8.5px; line-height:1.4; }
+.review-readiness-list button { align-self:center; min-height:30px; padding:5px 8px; }
+.review-readiness-disclaimer { margin:0; color:var(--muted); font-size:8px; line-height:1.45; }
+@media (max-width:700px) {
+  .review-readiness-heading { gap:9px; }
+  .review-readiness-heading > strong { font-size:19px; }
+  .review-readiness-list li { grid-template-columns:auto minmax(0,1fr); }
+  .review-readiness-list button { grid-column:2; justify-self:start; }
+}

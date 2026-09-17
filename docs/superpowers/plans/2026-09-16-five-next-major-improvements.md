@@ -1,5 +1,7 @@
 # Five Next Major Improvements Implementation Plan
 
+**Clasificación:** `REFERENCE`
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (\`- [ ]\`) syntax for tracking.
 
 **Goal:** Add a model-health beacon, canvas focus modes, scenario navigator, isolated sensitivity study, and review-readiness board without changing structural-domain contracts.
@@ -482,4 +484,3 @@ Use the repository’s existing CI and Pages workflows. Check the push-triggered
 - [ ] **Step 4: Run final local status checks and report**
 
 Confirm main matches origin/main, the working tree is clean, and the deployed Pages URL responds. Report exact commit SHA, Pages status/URL, tests run, and tests intentionally not run.
-

@@ -1,5 +1,7 @@
 # Five Next Major Improvements · Studio Control Loop
 
+**Clasificación:** `REFERENCE`
+
 **Fecha:** 2026-09-16  
 **Estado:** autorizado para implementación por el encargo de producto  
 **Alcance:** superficies de revisión, composición del lienzo y estudios analíticos bajo demanda

@@ -30,7 +30,7 @@ const EDITOR_LAYER_IDS: readonly EditorLayerId[] = [
  * haciendo ahora?" — modelar, cargar, leer resultados o capturar — y por eso
  * fija el estado completo en vez de conmutar una entrada.
  */
-export type EditorLayerPresetId = 'all' | 'model' | 'loads' | 'results' | 'clean';
+export type EditorLayerPresetId = 'all' | 'model' | 'loads' | 'results' | 'review' | 'clean';
 
 export type EditorLayerAction =
   | { type: 'toggle'; layer: EditorLayerId }
@@ -80,6 +80,10 @@ export const EDITOR_LAYER_PRESETS: Readonly<Record<EditorLayerPresetId, Readonly
     // Resultados y mapa son lecturas independientes: el mapa sólo se enciende
     // desde su control explícito en Capas.
     results: true, labels: true, help: false, diagnostics: true, heatmap: false,
+  }),
+  review: Object.freeze({
+    model: true, loads: true, dimensions: false, ids: true,
+    results: true, labels: true, help: false, diagnostics: true, heatmap: true,
   }),
   clean: Object.freeze({
     model: true, loads: false, dimensions: true, ids: false,

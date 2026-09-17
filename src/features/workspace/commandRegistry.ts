@@ -301,6 +301,7 @@ const LAYER_PRESETS: ReadonlyArray<{ id: EditorLayerPresetId; labelKey: Translat
   { id: 'model', labelKey: 'canvas.layerPresetModel' },
   { id: 'loads', labelKey: 'canvas.layerPresetLoads' },
   { id: 'results', labelKey: 'canvas.layerPresetResults' },
+  { id: 'review', labelKey: 'canvas.focusReview' },
   { id: 'clean', labelKey: 'canvas.layerPresetClean' },
 ];
 

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectProvider } from '../../store/ProjectContext';
 import { CanvasChrome } from './CanvasChrome';
 import { createEditorLayerState } from './editorLayers';
+import type { ModelHealthSnapshot } from '../model-health/modelHealth';
 
 beforeEach(() => localStorage.clear());
 afterEach(cleanup);
@@ -19,6 +20,9 @@ describe('CanvasChrome', () => {
     const onFit = vi.fn();
     const dispatchLayers = vi.fn();
     const coordinateReadoutRef = createRef<HTMLOutputElement>();
+    const health: ModelHealthSnapshot = {
+      status: 'ready', critical: 0, warnings: 0, suggestions: 0, total: 0, analysisLevel: null, messageKey: 'canvas.healthReady',
+    };
     const { container } = render(<ProjectProvider><CanvasChrome
       modeLabel="Carga puntual"
       placementInstruction="Elige un nodo"
@@ -37,6 +41,7 @@ describe('CanvasChrome', () => {
       onZoomIn={onZoomIn}
       onZoomOut={onZoomOut}
       onFit={onFit}
+      health={health}
     /></ProjectProvider>);
 
     expect(container.querySelectorAll('[data-canvas-chrome]')).toHaveLength(5);
@@ -46,6 +51,8 @@ describe('CanvasChrome', () => {
     expect(container.querySelector('.canvas-mode-badge')?.classList.contains('placing-load')).toBe(true);
     expect(screen.getByText('SNAP activo')).toBeTruthy();
     expect(screen.getByText('GRID inactivo')).toBeTruthy();
+    expect(screen.getByTestId('model-health-beacon').getAttribute('data-status')).toBe('ready');
+    expect(screen.getByTestId('model-health-beacon').getAttribute('data-health-status')).toBe('ready');
     expect(coordinateReadoutRef.current?.textContent).toContain('X — · Y — m');
     // La barra de escala rotula una longitud redonda del modelo, no un cociente
     // de zoom: a 102 px por metro la mayor que cabe en la píldora es 1 m.
