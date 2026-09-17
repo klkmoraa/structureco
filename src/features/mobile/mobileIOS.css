@@ -1664,6 +1664,10 @@
     max-inline-size: 100%;
   }
 
+  .app-shell[data-shell-class='K0'] .dock-segmented-slider .dock-segment-btn {
+    min-inline-size: 0;
+  }
+
   .app-shell[data-shell-class='K0'] :is(
     .topbar--atelier button,
     .mobile-tool-dock button,
@@ -1675,7 +1679,7 @@
     .sc-modal-surface button
   ) {
     box-sizing: border-box;
-    min-inline-size: 0;
+    min-inline-size: var(--sc-size-target-touch);
     max-inline-size: 100%;
   }
 

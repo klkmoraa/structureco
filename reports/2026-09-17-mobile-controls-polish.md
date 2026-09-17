@@ -9,10 +9,11 @@
 Se cerró la cascada móvil que permitía que los anchos intrínsecos de los
 botones escaparan de sus filas. Inicio conserva sus dos acciones principales
 en una columna de ancho conocido; el workspace deja encoger docks, hojas,
-paletas y acciones sin perder el target táctil; las etiquetas de navegación
-truncan con elipsis; y el topbar muestra «Analizar» sólo cuando existe espacio
-para su etiqueta. En teléfonos más estrechos vuelve a icono sin dejar texto
-flotando fuera del botón.
+paletas y acciones sin perder el target táctil; los botones conservan un piso
+horizontal de 44 px salvo el slider segmentado, que puede comprimirse para
+seguir cabiendo; las etiquetas de navegación truncan con elipsis; y el topbar
+muestra «Analizar» sólo cuando existe espacio para su etiqueta. En teléfonos
+más estrechos vuelve a icono sin dejar texto flotando fuera del botón.
 
 ## Archivos principales
 

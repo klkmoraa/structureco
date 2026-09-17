@@ -85,6 +85,8 @@ describe('mobile iOS composition contract', () => {
     expect(integrityCss).toMatch(/@media \(max-width: 700px\)/);
     expect(integrityCss).toMatch(/box-sizing:\s*border-box/);
     expect(integrityCss).toMatch(/max-inline-size:\s*100%/);
+    expect(integrityCss).toMatch(/\.topbar--atelier button[\s\S]*?min-inline-size:\s*var\(--sc-size-target-touch\)/);
+    expect(integrityCss).toMatch(/\.dock-segmented-slider \.dock-segment-btn[\s\S]*?min-inline-size:\s*0/);
     expect(integrityCss).toMatch(/\.mobile-dock-tab[\s\S]*?flex:\s*1 1 0/);
     expect(integrityCss).toMatch(/\.mobile-dock-tab__label[\s\S]*?text-overflow:\s*ellipsis/);
   });

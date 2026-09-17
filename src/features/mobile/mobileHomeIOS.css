@@ -245,7 +245,7 @@
   .sc-home :is(
     .sc-home-section-heading > button,
     .sc-home-settings-header > button,
-    .sc-home-nav--mobile .sc-home-nav button,
+    .sc-home-nav--mobile button,
     .sc-home-quick-row > button,
     .sc-home-classroom-cases button,
     .welcome-import-card
