@@ -202,72 +202,17 @@
   }
 }
 
-/* -------------------------------------------------------------------------
- * Home mobile control integrity
- * Keep primary actions on a known track after the legacy responsive layer
- * changes their flex basis, and let every compact control shrink safely.
- * ------------------------------------------------------------------------- */
+/* Home mobile control integrity: keep actions on a known track after the legacy flex layer. */
 @media (max-width: 760px) {
-  .sc-home :is(button, [role='button'], input, select) {
-    box-sizing: border-box;
-    max-inline-size: 100%;
-  }
-
   .sc-home .sc-home-primary-buttons {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    inline-size: 100%;
     min-inline-size: 0;
-    max-inline-size: 100%;
-    gap: 8px;
   }
 
   .sc-home .sc-home-primary-buttons > button {
-    box-sizing: border-box;
     inline-size: 100%;
     min-inline-size: 0;
-    max-inline-size: 100%;
     flex: none;
-  }
-
-  .sc-home :is(
-    .sc-home-topline,
-    .sc-home-topline__right,
-    .sc-home-content,
-    .sc-home-primary-actions,
-    .sc-home-section-heading,
-    .sc-home-settings-header,
-    .sc-home-settings-body
-  ) {
-    min-inline-size: 0;
-  }
-
-  .sc-home :is(
-    .sc-home-section-heading > button,
-    .sc-home-settings-header > button,
-    .sc-home-nav--mobile button,
-    .sc-home-quick-row > button,
-    .sc-home-classroom-cases button,
-    .welcome-import-card
-  ) {
-    min-inline-size: 0;
-    max-inline-size: 100%;
-  }
-
-  .sc-home :is(
-    .sc-home-launcher__icon,
-    .welcome-import-icon,
-    .sc-home-directory__icon
-  ) {
-    flex: 0 0 auto;
-  }
-
-  .sc-home :is(
-    .sc-home-launcher__copy,
-    .welcome-import-text,
-    .sc-home-directory__copy,
-    .project-hub__identity
-  ) {
-    min-inline-size: 0;
   }
 }

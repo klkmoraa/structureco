@@ -34,6 +34,7 @@ resultados. No se añadieron dependencias.
 - Suite UI enfocada: 10 archivos, 89 pruebas aprobadas.
 - Suite completa: 342 archivos, 2871 pruebas aprobadas y 5 omitidas.
 - TypeScript y build de producción: aprobados con React/Vite fijados.
+- Presupuesto de carga inicial: aprobado, 1 389 832 bytes / 379 999 gzip.
 - QA visual local a 390 px y 320 px: sin controles interactivos fuera del
   viewport; acciones de Inicio alineadas a 316 px y «Analizar» contenido en
   390 px.
