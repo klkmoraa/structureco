@@ -12,6 +12,7 @@ import { toDisplay, unitLabel } from '../../engine/units';
 import { useI18n } from '../../i18n/useI18n';
 import type { TranslationKey } from '../../i18n/catalogs';
 import { ResultSummary } from './ResultSummary';
+import { ResultDecisionStrip } from './ResultDecisionStrip';
 import { NumericQualityCard } from './NumericQualityCard';
 import { deriveClassroomProgress, type ClassroomProgressStepId } from '../../education/classroomProgress';
 import { formatFixed, formatScientific } from '../../utils/numberFormat';
@@ -395,6 +396,7 @@ export const ResultsPanel = ({ presentation = 'dock', status = 'active', onOpenC
         </div>
       </nav>
       <div id="results-content" className="results-body" role="tabpanel" aria-labelledby={`result-tab-${activeTab.id}`} aria-busy={isAnalyzing}>
+        {analysis?.success ? <ResultDecisionStrip /> : null}
         {!analysis ? <EmptyResults onAnalyze={() => {
           emitWorkspaceCommand('analysis-requested');
           analyze();

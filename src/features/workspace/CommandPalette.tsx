@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type Dispatch, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { Command, Search, X } from 'lucide-react';
+import { Command, History, Search, X } from 'lucide-react';
 import { useI18n } from '../../i18n/useI18n';
 import type { TranslationKey } from '../../i18n/catalogs';
 import { useProjectModel, useProjectAnalysis, useWorkspaceUI } from '../../store/ProjectContext';
@@ -7,6 +7,7 @@ import { buildCommands, type CommandCategory, type CommandContext, type CommandL
 import type { EditorLayerAction } from '../canvas/editorLayers';
 import type { SurfacePresentation } from './surfacePresentation';
 import { recordLocalMetric } from '../../analytics/localMetrics';
+import { readCommandHistory, rememberCommand } from './commandHistory';
 
 export interface CommandPaletteProps {
   open: boolean;
@@ -50,6 +51,7 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const [pendingCommand, setPendingCommand] = useState<CommandListItem | null>(null);
+  const [recentCommandIds, setRecentCommandIds] = useState<string[]>(() => typeof window === 'undefined' ? [] : readCommandHistory(window.localStorage));
   const inputRef = useRef<HTMLInputElement>(null);
   const reviewConfirmRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -87,6 +89,20 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
   ]);
 
   const commands = useMemo<CommandListItem[]>(() => buildCommands(context), [context]);
+  const recentCommands = useMemo(
+    () => recentCommandIds.map((id) => commands.find((command) => command.id === id)).filter((command): command is CommandListItem => Boolean(command)),
+    [commands, recentCommandIds],
+  );
+
+  const rememberExecutedCommand = useCallback((command: CommandListItem) => {
+    if (command.id.startsWith('node:') || command.id.startsWith('member:')) return;
+    setRecentCommandIds(rememberCommand(window.localStorage, command.id));
+  }, []);
+
+  const runCommand = useCallback((command: CommandListItem) => {
+    rememberExecutedCommand(command);
+    command.run();
+  }, [rememberExecutedCommand]);
 
   /** Ejecuta un comando de la paleta: la cierra y, si abre una superficie que
    *  monta al abrirse, difiere el efecto un frame para no competir con el
@@ -98,18 +114,18 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
     }
     if (command.deferredOpen) {
       close();
-      window.requestAnimationFrame(() => command.run());
+      window.requestAnimationFrame(() => runCommand(command));
       return;
     }
-    command.run();
+    runCommand(command);
     close();
-  }, [close]);
+  }, [close, runCommand]);
 
   const confirmPendingCommand = useCallback(() => {
     if (!pendingCommand) return;
-    pendingCommand.run();
+    runCommand(pendingCommand);
     close();
-  }, [close, pendingCommand]);
+  }, [close, pendingCommand, runCommand]);
 
   const matches = useMemo(() => {
     const needle = normalize(query.trim());
@@ -224,6 +240,15 @@ export const CommandPalette = ({ open, onClose, dispatchLayers, presentation = '
         />
         <kbd aria-hidden="true">Esc</kbd>
       </div>
+
+      {recentCommands.length > 0 && !query.trim() ? <section className="command-palette-recent" aria-labelledby={`${titleId}-recent`}>
+        <div className="command-palette-recent__heading"><h3 id={`${titleId}-recent`}>{t('palette.recent')}</h3><span>{t('palette.recentHint')}</span></div>
+        <div className="command-palette-recent__items">
+          {recentCommands.map((command) => <button key={command.id} type="button" aria-label={[command.label, command.route].filter(Boolean).join(' · ')} onClick={() => execute(command)}>
+            <History size={15} aria-hidden="true" /><span><strong>{command.label}</strong>{command.route ? <small>{command.route}</small> : null}</span>
+          </button>)}
+        </div>
+      </section> : null}
 
       <p className="sr-only" role="status" aria-live="polite">
         {matches.length === 0

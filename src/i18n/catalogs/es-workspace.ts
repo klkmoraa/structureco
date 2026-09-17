@@ -671,6 +671,8 @@ export const esWorkspace = {
   'palette.openShort': 'Buscar comandos',
   'palette.placeholder': 'Busca una herramienta, una vista, un nudo o una barra…',
   'palette.noResults': 'Ningún comando coincide con «{query}».',
+  'palette.recent': 'Usados recientemente',
+  'palette.recentHint': 'Retoma tu flujo habitual',
   'palette.hintNavigate': 'Flechas para moverte · Enter para ejecutar · Esc para cerrar',
   'palette.currentSelection': 'Selección actual: {id}',
   'palette.noSelection': 'Sin selección',

@@ -253,6 +253,25 @@
 .result-summary-actions button { min-height:34px; padding:0 10px; border:0; border-radius:8px; background:var(--surface); color:var(--text); display:flex; align-items:center; gap:6px; font-size:9px; font-weight:650; box-shadow:var(--sc-shadow-clay-xs); transition:transform var(--sc-motion-control) var(--sc-ease-standard), box-shadow var(--sc-motion-control) var(--sc-ease-standard); }
 .result-summary-actions button:hover:not(:disabled) { box-shadow:var(--sc-shadow-clay-sm); transform:translateY(-1px); }
 .result-summary-actions button:active:not(:disabled) { box-shadow:var(--sc-shadow-clay-pressed); transform:var(--sc-clay-press-transform); }
+.result-decision-strip { display:grid; grid-template-columns:minmax(220px,1.1fr) minmax(0,1.6fr) auto; align-items:center; gap:16px; padding:12px 14px; border:1px solid color-mix(in srgb,var(--accent) 32%,var(--border-soft)); border-radius:var(--sc-radius-card); background:color-mix(in srgb,var(--accent-soft) 48%,var(--surface)); }
+.result-decision-strip__lead { min-width:0; display:flex; align-items:flex-start; gap:9px; }
+.result-decision-strip__icon { width:30px; height:30px; flex:0 0 auto; display:grid; place-items:center; border-radius:9px; background:color-mix(in srgb,var(--accent) 14%,var(--surface)); color:var(--accent); }
+.result-decision-strip__lead > div { min-width:0; display:grid; gap:3px; }
+.result-decision-strip__lead > div > span { color:var(--accent); font:800 8px var(--sc-font-mono); letter-spacing:.09em; text-transform:uppercase; }
+.result-decision-strip__lead strong { font-size:12px; }
+.result-decision-strip__lead p { margin:0; color:var(--muted); font-size:9px; line-height:1.35; }
+.result-decision-strip__facts { min-width:0; display:flex; flex-wrap:wrap; gap:10px 20px; margin:0; }
+.result-decision-strip__facts > div { min-width:90px; display:grid; gap:3px; }
+.result-decision-strip__facts dt { color:var(--muted); font-size:8px; }
+.result-decision-strip__facts dd { min-width:0; margin:0; color:var(--text); font-size:10px; overflow-wrap:anywhere; }
+.result-decision-strip__facts dd[data-reliability='reliable'] { color:var(--shear); }
+.result-decision-strip__facts dd[data-reliability='limited'] { color:var(--warning); }
+.result-decision-strip__facts dd[data-reliability='unreliable'], .result-decision-strip__facts dd[data-reliability='failed'] { color:var(--danger); }
+.result-decision-strip__facts dd b { display:block; font-weight:650; }
+.result-decision-strip__facts dd span { display:block; color:var(--muted); font-family:var(--sc-font-mono); font-size:9px; }
+.result-decision-strip > button { min-height:32px; display:inline-flex; align-items:center; gap:5px; padding:0 9px; border:1px solid var(--border-soft); border-radius:var(--sc-radius-control); background:var(--surface); color:var(--text); font:inherit; font-size:9px; font-weight:650; cursor:pointer; box-shadow:var(--sc-shadow-clay-xs); }
+.result-decision-strip > button:hover { color:var(--accent); border-color:var(--accent); transform:translateY(-1px); }
+@media (max-width:700px) { .result-decision-strip { grid-template-columns:1fr; gap:11px; padding:11px; } .result-decision-strip__facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 12px; } .result-decision-strip__facts > div:last-child { grid-column:1/-1; } .result-decision-strip > button { justify-content:center; } }
 /* Tarjetas de extremo (CRI-101 · V-10).
    La materia la pone `material.css` por `data-level='raised'`: aquí no hay
    fondo, borde ni sombra, precisamente para que un resultado favorable y uno

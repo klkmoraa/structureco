@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Copy, Eye, FolderOpen, MoreHorizontal, Pencil, RotateCcw, ShieldAlert, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowDownAZ, Clock3, Copy, Eye, FolderOpen, MoreHorizontal, Pencil, RotateCcw, Search, ShieldAlert, Trash2 } from 'lucide-react';
 import { usePhase2I18n } from '../../i18n/usePhase2I18n';
 import { useI18n } from '../../i18n/useI18n';
 import { useWorkspaceUI } from '../../store/ProjectContext';
@@ -15,6 +15,7 @@ import { ThreeStructuralImage } from '../structural-assets';
 import type { ThreeStructuralAssetId } from '../structural-assets/threeStructuralRender';
 import { recordLocalMetric } from '../../analytics/localMetrics';
 import { ProjectVersions } from './ProjectVersions';
+import { filterAndSortProjects, type ProjectLibrarySort } from './projectLibraryView';
 import './projectHub.css';
 
 /**
@@ -160,6 +161,8 @@ export const ProjectHub = ({
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [inspectedRecoveryId, setInspectedRecoveryId] = useState<string | null>(null);
+  const [libraryQuery, setLibraryQuery] = useState('');
+  const [librarySort, setLibrarySort] = useState<ProjectLibrarySort>('updated');
   const observedRecoveries = useRef(new Set<string>());
 
   const refresh = useCallback(async () => {
@@ -300,12 +303,23 @@ export const ProjectHub = ({
     && recovery.projectId === record.id
     && projectEntityCount(recovery.project) > projectEntityCount(record.project),
   ));
-  const visibleProjects = limit === undefined ? projectsForDisplay : projectsForDisplay.slice(0, Math.max(0, limit));
+  const orderedProjects = useMemo(
+    () => filterAndSortProjects(projectsForDisplay, variant === 'full' ? libraryQuery : '', variant === 'full' ? librarySort : 'updated'),
+    [libraryQuery, librarySort, projectsForDisplay, variant],
+  );
+  const visibleProjects = limit === undefined ? orderedProjects : orderedProjects.slice(0, Math.max(0, limit));
+  const hasFilteredEmptyState = variant === 'full' && !loading && !error && projectsForDisplay.length > 0 && orderedProjects.length === 0;
 
   return <section className={`project-hub project-hub--${variant}${collapsed ? ' project-hub--collapsed' : ''}`} data-project-hub-layout="visual-library" aria-label={t('hub.title')}>
     {loading ? <p role="status">{t('hub.loading')}</p> : null}
     {error ? <p className="project-hub__error" role="alert">{error}</p> : null}
     {!loading && projects.length === 0 ? <p className="project-hub__empty">{t('hub.empty')}</p> : null}
+    {variant === 'full' && !loading && !error && projectsForDisplay.length > 0 ? <div className="project-hub__toolbar">
+      <label className="project-hub__search"><Search size={16} aria-hidden="true" /><span className="sr-only">{t('hub.search')}</span><input type="search" aria-label={t('hub.search')} placeholder={t('hub.searchPlaceholder')} value={libraryQuery} onChange={(event) => setLibraryQuery(event.target.value)} /></label>
+      <label className="project-hub__sort"><ArrowDownAZ size={15} aria-hidden="true" /><span className="sr-only">{t('hub.sort')}</span><select aria-label={t('hub.sort')} value={librarySort} onChange={(event) => setLibrarySort(event.target.value as ProjectLibrarySort)}><option value="updated">{t('hub.sortUpdated')}</option><option value="name">{t('hub.sortName')}</option><option value="size">{t('hub.sortSize')}</option></select></label>
+      <span className="project-hub__count"><Clock3 size={14} aria-hidden="true" />{t('hub.visibleCount', { shown: orderedProjects.length, total: projectsForDisplay.length })}</span>
+    </div> : null}
+    {hasFilteredEmptyState ? <div className="project-hub__no-matches" role="status"><p>{t('hub.noMatches')}</p><button type="button" onClick={() => setLibraryQuery('')}>{t('hub.clearSearch')}</button></div> : null}
     {visibleProjects.length ? <div className="project-hub__list">
       {visibleProjects.map((record) => <div className="project-hub__entry" key={record.id}><article className="project-hub__row">
         <div className="project-hub__preview" aria-hidden="true">

@@ -87,6 +87,23 @@ describe('WelcomeScreen · Space 3D', () => {
 });
 
 describe('WelcomeScreen · proyecto actual', () => {
+  it('ofrece tres puntos de partida directos desde Inicio', async () => {
+    const user = userEvent.setup();
+    const { onOpenWorkspace } = renderWelcome();
+    const rail = screen.getByTestId('home-start-rail');
+
+    expect(within(rail).getByRole('button', { name: 'Viga simplemente apoyada' })).toBeTruthy();
+    expect(within(rail).getByRole('button', { name: 'Pórtico de ejemplo' })).toBeTruthy();
+    expect(within(rail).getByRole('button', { name: 'Armadura triangular' })).toBeTruthy();
+    await user.click(within(rail).getByRole('button', { name: 'Viga simplemente apoyada' }));
+    expect(onOpenWorkspace).toHaveBeenCalledOnce();
+  });
+
+  it('expone el siguiente paso del modelo sin inventar estado de análisis', () => {
+    renderWelcome();
+    expect(screen.getByTestId('home-next-step').textContent).toContain('Abre una plantilla');
+  });
+
   it('usa el nombre real del proyecto y acciones primarias separadas', () => {
     const example = exampleProjects[0].build();
     renderWelcome('es', example);

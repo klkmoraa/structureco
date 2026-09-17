@@ -125,6 +125,17 @@ describe('Results analytical center', () => {
     expect(screen.getByTestId('results-collapsed-status').textContent).toMatch(/resuelto.*actualizado/i);
   }, 10_000);
 
+  it('surfaces a quick decision readout before the detailed result cards', async () => {
+    const user = userEvent.setup();
+    renderResults();
+    await user.click(screen.getByRole('button', { name: 'Analizar estructura' }));
+
+    const strip = await screen.findByTestId('results-decision-strip', {}, { timeout: 5000 });
+    expect(strip.textContent).toContain('Lectura rápida');
+    expect(strip.textContent).toContain('Extremo gobernante');
+    expect(strip.querySelector('button')).not.toBeNull();
+  }, 10_000);
+
   it('uses one quantity rail and keeps dense views beside the result quantities', async () => {
     const user = userEvent.setup();
     renderResults();

@@ -57,7 +57,7 @@ const copy = {
     importTitle: 'Trae un modelo', importBody: 'Revisa el archivo antes de modificar el proyecto abierto.',
     spaceTitle: 'Construye en tres dimensiones', spaceBody: 'Trabaja con pórticos espaciales, niveles y cargas en un entorno separado de tu modelo 2D.', spaceAction: 'Abrir Space 3D', spaceExperimental: 'Experimental', spaceNotice: 'Este acceso abre un modelo espacial independiente. Antes de entrar verás qué se mantiene separado y cómo volver al editor 2D.', spaceContinue2D: 'Continuar en editor 2D',
     spacePreview: 'Pórtico espacial de varios vanos', spaceCoordinates: 'Ejes X, Y y Z', spaceModel: 'Geometría espacial', spaceLoads: 'Cargas y apoyos 3D',
-    secondary: 'Accesos rápidos', local: 'Guardado local en este dispositivo', openProject: 'Abrir proyecto', calculator: 'Calculadora de sección', calculatorHint: 'A, I, W y radios de giro', modelSnapshot: 'Resumen del modelo actual', nodes: 'nudos', members: 'barras', loads: 'cargas', supports: 'apoyos',
+    secondary: 'Accesos rápidos', local: 'Guardado local en este dispositivo', openProject: 'Abrir proyecto', calculator: 'Calculadora de sección', calculatorHint: 'A, I, W y radios de giro', modelSnapshot: 'Resumen del modelo actual', nodes: 'nudos', members: 'barras', loads: 'cargas', supports: 'apoyos', starterTitle: 'Empieza con una estructura', starterBody: 'Tres modelos reales para pasar de la idea al editor.', starterBrowse: 'Ver todas las plantillas', nextKicker: 'Siguiente movimiento', nextStart: 'Abre una plantilla', nextStartBody: 'Parte de una geometría preparada y conserva el control del modelo.', nextSupports: 'Añade apoyos', nextSupportsBody: 'La geometría ya existe; ahora define cómo se sostiene.', nextLoads: 'Añade una carga', nextLoadsBody: 'El modelo está apoyado. Añade una acción antes de analizar.', nextAnalyze: 'Analiza el modelo', nextAnalyzeBody: 'Ya hay geometría, apoyos y cargas para revisar el comportamiento.', nextOpenTemplates: 'Ver plantillas', nextOpenEditor: 'Abrir editor', nextUnits: 'Unidades', nextCase: 'Caso activo', nextModelStatus: 'Lectura de modelo',
   },
   en: {
     headline: 'Your next model starts here.', intro: 'Model, analyze and understand every structure.', search: 'Find tools', templateSearch: 'Search templates', all: 'All', beams: 'Beams', frames: 'Frames', trusses: 'Trusses', noTemplates: 'No templates match these filters.', clearFilters: 'Reset filters',
@@ -70,7 +70,7 @@ const copy = {
     importTitle: 'Bring in a model', importBody: 'Review the file before changing the open project.',
     spaceTitle: 'Build in three dimensions', spaceBody: 'Work with spatial frames, levels, and loads in an environment separate from your 2D model.', spaceAction: 'Open Space 3D', spaceExperimental: 'Experimental', spaceNotice: 'This entry opens an independent spatial model. Before entering, you will see what remains separate and how to return to the 2D editor.', spaceContinue2D: 'Continue in 2D editor',
     spacePreview: 'Multi-bay spatial frame', spaceCoordinates: 'X, Y, and Z axes', spaceModel: 'Spatial geometry', spaceLoads: '3D loads and supports',
-    secondary: 'Quick access', local: 'Saved locally on this device', openProject: 'Open project', calculator: 'Section calculator', calculatorHint: 'A, I, W and radii of gyration', modelSnapshot: 'Current model summary', nodes: 'nodes', members: 'members', loads: 'loads', supports: 'supports',
+    secondary: 'Quick access', local: 'Saved locally on this device', openProject: 'Open project', calculator: 'Section calculator', calculatorHint: 'A, I, W and radii of gyration', modelSnapshot: 'Current model summary', nodes: 'nodes', members: 'members', loads: 'loads', supports: 'supports', starterTitle: 'Start with a structure', starterBody: 'Three real models to move from an idea to the editor.', starterBrowse: 'View all templates', nextKicker: 'Next move', nextStart: 'Open a template', nextStartBody: 'Start from prepared geometry while keeping control of the model.', nextSupports: 'Add supports', nextSupportsBody: 'The geometry exists; now define how it is restrained.', nextLoads: 'Add a load', nextLoadsBody: 'The model is supported. Add an action before analyzing.', nextAnalyze: 'Analyze the model', nextAnalyzeBody: 'Geometry, supports, and loads are ready for a review.', nextOpenTemplates: 'View templates', nextOpenEditor: 'Open editor', nextUnits: 'Units', nextCase: 'Active case', nextModelStatus: 'Model reading',
   },
 } as const;
 
@@ -261,6 +261,18 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
     setExerciseTemplateId(templateId);
     setExerciseDialogOpen(true);
   };
+  const preparedTemplates = exampleProjects.map((example) => ({
+    example, presented: presentExample(example.name, example.description, t),
+    family: templateFamilyByName[example.name] ?? 'frames',
+  }));
+  const quickStarts = preparedTemplates.filter(({ example }) => ['Viga simplemente apoyada', 'Pórtico de ejemplo', 'Armadura triangular'].includes(example.name));
+  const homeNextStep = project.members.length === 0
+    ? { title: text.nextStart, body: text.nextStartBody, action: text.nextOpenTemplates, onAction: () => navigate('templates') }
+    : modelSnapshot.supports === 0
+      ? { title: text.nextSupports, body: text.nextSupportsBody, action: text.nextOpenEditor, onAction: onOpenWorkspace }
+      : modelSnapshot.loads === 0
+        ? { title: text.nextLoads, body: text.nextLoadsBody, action: text.nextOpenEditor, onAction: onOpenWorkspace }
+        : { title: text.nextAnalyze, body: text.nextAnalyzeBody, action: text.nextOpenEditor, onAction: onOpenWorkspace };
   const renderNavigation = (mobile = false) => <nav className={mobile ? 'sc-home-nav sc-home-nav--mobile' : 'sc-home-nav'} aria-label={text.navigation}>
     {NAV_GROUPS.map((group) => <section className="sc-home-nav-group" key={group.id}>
       <h2>{text[group.id]}</h2>
@@ -306,6 +318,21 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
         <div className="sc-home-hero-asset__caption"><span>MODEL / 2D</span><span>{text.modelPreview}</span><ArrowRight size={15} aria-hidden="true" /></div>
       </m.div>
     </section>
+    <section className="sc-home-start-rail" aria-labelledby="home-start-title" data-testid="home-start-rail">
+      <header className="sc-home-section-heading"><div><h2 id="home-start-title">{text.starterTitle}</h2><p>{text.starterBody}</p></div><button type="button" onClick={() => navigate('templates')}>{text.starterBrowse}<ArrowRight size={15} aria-hidden="true" /></button></header>
+      <div className="sc-home-start-rail__items">
+        {quickStarts.map(({ example, presented, family }) => <button key={example.name} type="button" aria-label={presented.name} data-start-id={example.name} onClick={() => openExample(example.build)}>
+          <span className="sc-home-start-rail__media"><ThreeStructuralImage assetId={templateAssets[family]} theme={theme} /></span>
+          <span className="sc-home-start-rail__copy"><strong>{presented.name}</strong><small>{presented.description}</small></span>
+          <ArrowRight size={16} aria-hidden="true" />
+        </button>)}
+      </div>
+    </section>
+    <section className="sc-home-next-step" aria-labelledby="home-next-step-title" data-testid="home-next-step">
+      <div className="sc-home-next-step__copy"><p>{text.nextKicker}</p><h2 id="home-next-step-title">{homeNextStep.title}</h2><span>{homeNextStep.body}</span></div>
+      <div className="sc-home-next-step__facts" aria-label={text.nextModelStatus}><span><small>{text.nextUnits}</small><strong>{project.settings.units}</strong></span><span><small>{text.nextCase}</small><strong>{project.loadCases.filter((item) => item.active).length}</strong></span><span><small>{text.nextModelStatus}</small><strong>{modelSnapshot.nodes + modelSnapshot.members}</strong></span></div>
+      <button type="button" className="sc-home-next-step__action" onClick={homeNextStep.onAction}>{homeNextStep.action}<ArrowRight size={16} aria-hidden="true" /></button>
+    </section>
     <section className="sc-home-recents" aria-labelledby="home-recents-title">
       <div className="sc-home-section-heading"><div><h2 id="home-recents-title">{text.recent}</h2></div><button type="button" onClick={() => setView('projects')}>{text.viewAll}<ArrowRight size={15} /></button></div>
       <Suspense fallback={<p role="status">{t('hub.loading')}</p>}><Phase2ProjectHub onOpenWorkspace={onOpenWorkspace} variant="recent" limit={3} /></Suspense>
@@ -328,10 +355,6 @@ export const WelcomeScreen = ({ onOpenWorkspace, onOpenSpace3D, onPreloadWorkspa
     </section>
   </div>;
 
-  const preparedTemplates = exampleProjects.map((example) => ({
-    example, presented: presentExample(example.name, example.description, t),
-    family: templateFamilyByName[example.name] ?? 'frames',
-  }));
   const visibleTemplates = preparedTemplates.filter(({ presented, family }) => (templateFamily === 'all' || family === templateFamily) && normalizeSearch(`${presented.name} ${presented.description}`).includes(normalizeSearch(templateQuery)));
   const templates = <section className="sc-home-view" aria-labelledby="home-templates-title">
     <header><p>{text.templates}</p><h2 id="home-templates-title">{text.templatesTitle}</h2><span>{text.templatesBody}</span></header>

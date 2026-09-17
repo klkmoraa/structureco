@@ -671,6 +671,8 @@ export const enWorkspace = {
   'palette.openShort': 'Search commands',
   'palette.placeholder': 'Search a tool, a view, a node or a member…',
   'palette.noResults': 'No command matches «{query}».',
+  'palette.recent': 'Used recently',
+  'palette.recentHint': 'Resume your usual flow',
   'palette.hintNavigate': 'Arrows to move · Enter to run · Esc to close',
   'palette.currentSelection': 'Current selection: {id}',
   'palette.noSelection': 'No selection',

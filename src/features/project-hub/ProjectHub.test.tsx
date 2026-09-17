@@ -13,6 +13,24 @@ beforeEach(() => localStorage.clear());
 afterEach(() => cleanup());
 
 describe('ProjectHub', () => {
+  it('filters and sorts the full library without changing the project actions', async () => {
+    const repository = new InMemoryProjectRepository();
+    await repository.saveProject({ ...createDefaultProject(), id: 'project-zeta', name: 'Zeta' });
+    await repository.saveProject({ ...createDefaultProject(), id: 'project-alpha', name: 'Alpha' });
+    const user = userEvent.setup();
+    render(<ProjectProvider><ProjectHub repository={repository} onOpen={() => undefined} /></ProjectProvider>);
+
+    expect(await screen.findByRole('searchbox', { name: 'Buscar proyectos' })).toBeTruthy();
+    await user.type(screen.getByRole('searchbox', { name: 'Buscar proyectos' }), 'alpha');
+    expect(screen.getByText('Alpha')).toBeTruthy();
+    expect(screen.queryByText('Zeta')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Abrir Alpha' })).toBeTruthy();
+
+    await user.clear(screen.getByRole('searchbox', { name: 'Buscar proyectos' }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Ordenar proyectos' }), 'name');
+    expect([...document.querySelectorAll('.project-hub__identity > strong')].map((node) => node.textContent)).toEqual(['Alpha', 'Zeta']);
+  });
+
   it('shows exactly three compact recent projects without revision metadata', async () => {
     const repository = new InMemoryProjectRepository();
     for (const name of ['Uno', 'Dos', 'Tres', 'Cuatro']) {
