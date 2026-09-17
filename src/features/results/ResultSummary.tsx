@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Download, GitCompareArrows, Printer, RefreshCw } from 'lucide-react';
 import { useScenarioAnalysis } from '../../engine/useScenarioAnalysis';
 import { buildDeformationEnvelope, buildReactionEnvelope, summarizeAnalysisResults } from '../../engine/resultSummary';
@@ -25,6 +25,7 @@ import { StabilityStudiesCard } from './StabilityStudiesCard';
 import { buildScenarioNavigatorRows } from './scenarioNavigatorRows';
 import { buildModelHealth } from '../model-health/modelHealth';
 import { buildReviewReadiness } from '../review/reviewReadiness';
+import { resolveReviewPassState, startReviewPass } from '../review/reviewRun';
 
 const LazyScenarioNavigator = lazy(() => import('./ScenarioNavigator').then(({ ScenarioNavigator }) => ({ default: ScenarioNavigator })));
 const LazySensitivityCard = lazy(() => import('../sensitivity/SensitivityCard').then(({ SensitivityCard }) => ({ default: SensitivityCard })));
@@ -35,14 +36,26 @@ const diagramSymbol: Record<DiagramQuantity, string> = { axial: 'N', shear: 'V',
 
 export const ResultSummary = () => {
   const { project } = useProjectModel();
-  const { analysis, analyze, selectedCombinationId, setSelectedCombinationId } = useProjectAnalysis();
+  const { analysis, analyze, isAnalyzing, selectedCombinationId, setSelectedCombinationId } = useProjectAnalysis();
   const { setSelection, setResultCursor, setResultTab } = useWorkspaceUI();
   const { language, t } = useI18n();
   const { scenarios, busy: comparisonBusy, error: comparisonError, run: compare } = useScenarioAnalysis(project);
-  const certificate = useNumericCertificate(project, selectedCombinationId);
+  const { certificate: numericCertificate, busy: certificateBusy, error: certificateError, run: runCertificate } = useNumericCertificate(project, selectedCombinationId);
+  const [reviewPassId, setReviewPassId] = useState(0);
   const studies = useModelStudies(project, selectedCombinationId);
   const modelHealth = useMemo(() => buildModelHealth(project, analysis), [analysis, project]);
-  const reviewReadiness = useMemo(() => buildReviewReadiness(project, modelHealth, analysis, scenarios, certificate.certificate), [analysis, certificate.certificate, modelHealth, project, scenarios]);
+  const reviewReadiness = useMemo(() => buildReviewReadiness(project, modelHealth, analysis, scenarios, numericCertificate), [analysis, modelHealth, numericCertificate, project, scenarios]);
+  const reviewPassState = resolveReviewPassState(reviewPassId > 0, {
+    analysis: isAnalyzing,
+    comparison: comparisonBusy,
+    certificate: certificateBusy,
+  });
+  const runReview = useCallback(() => {
+    if (reviewPassState === 'running') return;
+    setReviewPassId((current) => current + 1);
+    emitWorkspaceCommand('analysis-requested');
+    startReviewPass({ analyze, compare, certificate: runCertificate });
+  }, [analyze, compare, reviewPassState, runCertificate]);
   const summary = useMemo(() => analysis?.success ? summarizeAnalysisResults(analysis) : null, [analysis]);
   const reactionEnvelope = useMemo(() => scenarios ? buildReactionEnvelope(scenarios) : null, [scenarios]);
   const selectedMemberId = summary?.diagrams.moment?.absolute.memberId ?? summary?.members[0]?.memberId ?? '';
@@ -148,11 +161,16 @@ export const ResultSummary = () => {
     <div className="result-summary-cards-carousel">
       <ElasticDemandCard />
       <NumericQualityCard analysis={analysis} />
-      <NumericCertificateCard {...certificate} />
+      <NumericCertificateCard certificate={numericCertificate} busy={certificateBusy} error={certificateError} run={runCertificate} />
       <Suspense fallback={null}><LazyReviewReadinessCard
         snapshot={reviewReadiness}
         onOpenDoctor={() => emitWorkspaceCommand('open-model-doctor')}
         onCompare={compare}
+        onRunReview={runReview}
+        isReviewRunning={reviewPassState === 'running'}
+        analysisBusy={isAnalyzing}
+        comparisonBusy={comparisonBusy}
+        certificateBusy={certificateBusy}
       /></Suspense>
       <Suspense fallback={null}><LazySensitivityCard /></Suspense>
       <StabilityStudiesCard studies={studies} />

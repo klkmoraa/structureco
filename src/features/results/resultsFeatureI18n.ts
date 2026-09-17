@@ -54,6 +54,7 @@ const resultsFeatureCopy = {
   'results.reviewStatusAttention': { es: 'Atención', en: 'Attention' },
   'results.reviewStatusBlocked': { es: 'Bloqueado', en: 'Blocked' },
   'results.reviewStatusPending': { es: 'Pendiente', en: 'Pending' },
+  'results.reviewStatusRunning': { es: 'En curso', en: 'Running' },
   'results.reviewModel': { es: 'Modelo', en: 'Model' },
   'results.reviewAnalysis': { es: 'Análisis', en: 'Analysis' },
   'results.reviewCoverage': { es: 'Cobertura', en: 'Coverage' },
@@ -76,6 +77,10 @@ const resultsFeatureCopy = {
   'results.reviewCertificatePending': { es: 'Ejecuta el certificado numérico para añadir esta evidencia.', en: 'Run the numeric certificate to add this evidence.' },
   'results.reviewOpenDoctor': { es: 'Abrir Model Doctor', en: 'Open Model Doctor' },
   'results.reviewCompare': { es: 'Comparar escenarios', en: 'Compare scenarios' },
+  'results.reviewRun': { es: 'Actualizar revisión', en: 'Update review' },
+  'results.reviewRunning': { es: 'Actualizando revisión…', en: 'Updating review…' },
+  'results.reviewRunHint': { es: 'Un pase actualiza análisis, cobertura y certificado.', en: 'One pass updates analysis, coverage, and certificate.' },
+  'results.reviewRunSteps': { es: 'Pasos del pase de revisión', en: 'Review pass steps' },
 } as const;
 
 export type ResultsFeatureTranslationKey = keyof typeof resultsFeatureCopy;
