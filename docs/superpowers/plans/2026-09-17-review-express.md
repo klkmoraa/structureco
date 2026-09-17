@@ -6,7 +6,7 @@
 
 **Goal:** Añadir un pase de revisión de un clic que actualice la evidencia existente y muestre su progreso en el tablero de revisión.
 
-**Architecture:** `ResultSummary` coordina los tres ejecutores ya existentes: análisis interactivo, comparación de escenarios y certificado numérico. `ReviewReadinessCard` recibe un callback y el estado de esas operaciones, y representa una banda de progreso de revisión sin interpretar resultados del solver.
+**Architecture:** `ResultSummary` coordina los tres ejecutores ya existentes: análisis interactivo, comparación de escenarios y certificado numérico. El pase se ata a `projectId`, firma de análisis y combinación seleccionada; los estados busy/error cancelan o invalidan el ciclo sin interpretar resultados del solver. `ReviewReadinessCard` recibe un callback y el estado de esas operaciones, y representa una banda de progreso de revisión.
 
 **Tech Stack:** React 19, TypeScript, Vitest, Testing Library, CSS existente del workspace.
 
@@ -62,7 +62,7 @@
 
 **Interfaces:**
 - Consume: `useProjectAnalysis().analyze`, `useScenarioAnalysis().run`, `useNumericCertificate().run` and their busy states.
-- Produces: `onRunReview` that starts all three current evidence refreshes, `reviewRunActive` that resets when all finish, and stable busy flags for the card.
+- Produces: `onRunReview` that starts all three current evidence refreshes, a terminal `complete/failed` outcome bound to the current project, and stable busy/error flags for the card.
 
 - [x] **Step 1: Write the failing test**
 
@@ -76,7 +76,7 @@
 
 - [x] **Step 3: Write minimal implementation**
 
-  In `ResultSummary`, keep a `reviewRunActive` boolean, start `analyze()`, `compare()` and `certificate.run()` from a memoized `runReview` callback, and clear the active state from an effect once `isAnalyzing`, `comparisonBusy` and `certificate.busy` are all false. Pass the busy flags and callback to the lazy card.
+  In `ResultSummary`, keep the active/outcome state and the current analysis binding, start `analyze()`, `compare()` and `certificate.run()` from a memoized `runReview` callback, block the callback while any evidence executor is busy, resolve terminal failure from executor errors, and invalidate the retained outcome when the project binding changes. Pass busy/error flags and the callback to the lazy card.
 
 - [x] **Step 4: Run test to verify it passes**
 

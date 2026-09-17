@@ -1,7 +1,7 @@
 import { AlertTriangle, CheckCircle2, Clock3, LoaderCircle, RefreshCw, ShieldAlert } from 'lucide-react';
 import { useResultsFeatureI18n, type ResultsFeatureTranslationKey } from '../results/resultsFeatureI18n';
 import type { ReviewReadinessAction, ReviewReadinessRowId, ReviewReadinessSnapshot, ReviewReadinessStatus } from './reviewReadiness';
-import type { ReviewPassState } from './reviewRun';
+import type { ReviewPassFailures, ReviewPassState } from './reviewRun';
 import './reviewReadiness.css';
 
 const statusKey: Record<ReviewReadinessStatus, ResultsFeatureTranslationKey> = {
@@ -11,11 +11,12 @@ const statusKey: Record<ReviewReadinessStatus, ResultsFeatureTranslationKey> = {
   pending: 'results.reviewStatusPending',
 };
 
-type ReviewStepState = ReviewReadinessStatus | 'running';
+type ReviewStepState = ReviewReadinessStatus | 'running' | 'failed';
 
 const stepStatusKey: Record<ReviewStepState, ResultsFeatureTranslationKey> = {
   ...statusKey,
   running: 'results.reviewStatusRunning',
+  failed: 'results.reviewStatusFailed',
 };
 
 const statusIcon = {
@@ -25,13 +26,19 @@ const statusIcon = {
   pending: Clock3,
 } as const;
 
-export const ReviewReadinessCard = ({ snapshot, onOpenDoctor, onCompare, onRunReview, isReviewRunning = false, reviewPassState, analysisBusy = false, comparisonBusy = false, certificateBusy = false }: {
+const stepIcon = {
+  ...statusIcon,
+  failed: AlertTriangle,
+} as const;
+
+export const ReviewReadinessCard = ({ snapshot, onOpenDoctor, onCompare, onRunReview, isReviewRunning = false, reviewPassState, reviewPassFailures, analysisBusy = false, comparisonBusy = false, certificateBusy = false }: {
   snapshot: ReviewReadinessSnapshot;
   onOpenDoctor: () => void;
   onCompare: () => void;
   onRunReview?: () => void;
   isReviewRunning?: boolean;
   reviewPassState?: ReviewPassState;
+  reviewPassFailures?: ReviewPassFailures;
   analysisBusy?: boolean;
   comparisonBusy?: boolean;
   certificateBusy?: boolean;
@@ -49,6 +56,11 @@ export const ReviewReadinessCard = ({ snapshot, onOpenDoctor, onCompare, onRunRe
     analysis: analysisBusy,
     coverage: comparisonBusy,
     certificate: certificateBusy,
+  };
+  const failedByStep: Partial<Record<ReviewReadinessRowId, boolean>> = {
+    analysis: reviewPassFailures?.analysis,
+    coverage: reviewPassFailures?.comparison,
+    certificate: reviewPassFailures?.certificate,
   };
   const reviewState = reviewPassState ?? (isReviewRunning ? 'running' : 'idle');
   const reviewRunning = reviewState === 'running';
@@ -83,8 +95,8 @@ export const ReviewReadinessCard = ({ snapshot, onOpenDoctor, onCompare, onRunRe
         <p role="status" aria-live="polite">{t(reviewStatusKey[reviewState])}</p>
         <ol className="review-readiness-run-steps" aria-label={t('results.reviewRunSteps')}>
           {snapshot.rows.map((reviewRow) => {
-            const state: ReviewStepState = busyByStep[reviewRow.id] ? 'running' : reviewRow.status;
-            const Icon = state === 'running' ? LoaderCircle : statusIcon[state];
+            const state: ReviewStepState = busyByStep[reviewRow.id] ? 'running' : failedByStep[reviewRow.id] ? 'failed' : reviewRow.status;
+            const Icon = state === 'running' ? LoaderCircle : stepIcon[state];
             return <li key={reviewRow.id} data-review-step={reviewRow.id} data-state={state} aria-current={state === 'running' ? 'step' : undefined} aria-label={`${t(reviewRow.labelKey)}: ${t(stepStatusKey[state])}`}>
               <Icon className={state === 'running' ? 'spin' : undefined} size={12} aria-hidden="true" />
               {t(reviewRow.labelKey)}

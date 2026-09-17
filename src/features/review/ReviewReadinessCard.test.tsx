@@ -119,9 +119,12 @@ describe('ReviewReadinessCard', () => {
       onCompare={vi.fn()}
       onRunReview={vi.fn()}
       reviewPassState="failed"
+      reviewPassFailures={{ analysis: false, comparison: true, certificate: false }}
     /></ProjectProvider>);
 
     expect(screen.getByRole('status').textContent).toContain('requiere atención');
-    expect(screen.getByRole('list', { name: 'Pasos del pase de revisión' })).toBeTruthy();
+    const steps = screen.getByRole('list', { name: 'Pasos del pase de revisión' });
+    expect(steps).toBeTruthy();
+    expect(screen.getByText('Cobertura', { selector: '[data-review-step]' }).getAttribute('data-state')).toBe('failed');
   });
 });

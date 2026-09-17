@@ -55,6 +55,7 @@ const resultsFeatureCopy = {
   'results.reviewStatusBlocked': { es: 'Bloqueado', en: 'Blocked' },
   'results.reviewStatusPending': { es: 'Pendiente', en: 'Pending' },
   'results.reviewStatusRunning': { es: 'En curso', en: 'Running' },
+  'results.reviewStatusFailed': { es: 'Fallido', en: 'Failed' },
   'results.reviewModel': { es: 'Modelo', en: 'Model' },
   'results.reviewAnalysis': { es: 'Análisis', en: 'Analysis' },
   'results.reviewCoverage': { es: 'Cobertura', en: 'Coverage' },

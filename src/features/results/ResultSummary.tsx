@@ -25,8 +25,8 @@ import { StabilityStudiesCard } from './StabilityStudiesCard';
 import { buildScenarioNavigatorRows } from './scenarioNavigatorRows';
 import { buildModelHealth } from '../model-health/modelHealth';
 import { buildReviewReadiness } from '../review/reviewReadiness';
-import { analysisBinding, matchesAnalysisBinding, type AnalysisBinding } from '../../engine/projectSignature';
-import { resolveReviewPassState, startReviewPass, type ReviewPassFailures, type ReviewPassState } from '../review/reviewRun';
+import { analysisBinding, type AnalysisBinding } from '../../engine/projectSignature';
+import { isReviewPassBindingCurrent, resolveReviewPassState, startReviewPass, type ReviewPassFailures, type ReviewPassState } from '../review/reviewRun';
 
 const LazyScenarioNavigator = lazy(() => import('./ScenarioNavigator').then(({ ScenarioNavigator }) => ({ default: ScenarioNavigator })));
 const LazySensitivityCard = lazy(() => import('../sensitivity/SensitivityCard').then(({ SensitivityCard }) => ({ default: SensitivityCard })));
@@ -61,13 +61,15 @@ export const ResultSummary = () => {
     comparison: reviewPassStartFailures.comparison || comparisonError !== null,
     certificate: reviewPassStartFailures.certificate || certificateError !== null,
   };
-  const reviewPassBindingIsCurrent = reviewPassBindingRef.current === null || matchesAnalysisBinding(project, selectedCombinationId, reviewPassBindingRef.current);
-  const resolvedReviewPassState = reviewPassActive && reviewPassBindingIsCurrent
-    ? resolveReviewPassState(true, reviewPassBusy, reviewPassFailures)
-    : reviewPassOutcome;
+  const reviewPassBindingIsCurrent = isReviewPassBindingCurrent(reviewPassBindingRef.current, currentAnalysisBinding);
+  const resolvedReviewPassState = !reviewPassBindingIsCurrent
+    ? 'idle'
+    : reviewPassActive
+      ? resolveReviewPassState(true, reviewPassBusy, reviewPassFailures)
+      : reviewPassOutcome;
   useEffect(() => {
     const binding = reviewPassBindingRef.current;
-    if (binding && !matchesAnalysisBinding(project, selectedCombinationId, binding)) {
+    if (binding && !isReviewPassBindingCurrent(binding, currentAnalysisBinding)) {
       reviewPassBindingRef.current = null;
       setReviewPassActive(false);
       setReviewPassOutcome('idle');
@@ -77,8 +79,7 @@ export const ResultSummary = () => {
     if (!reviewPassActive || (resolvedReviewPassState !== 'complete' && resolvedReviewPassState !== 'failed')) return;
     setReviewPassOutcome(resolvedReviewPassState);
     setReviewPassActive(false);
-    reviewPassBindingRef.current = null;
-  }, [project, resolvedReviewPassState, reviewPassActive, selectedCombinationId]);
+  }, [currentAnalysisBinding, resolvedReviewPassState, reviewPassActive]);
   const runReview = useCallback(() => {
     if (reviewPassActive || evidenceBusy) return;
     reviewPassBindingRef.current = currentAnalysisBinding;
@@ -200,6 +201,7 @@ export const ResultSummary = () => {
         onCompare={compare}
         onRunReview={runReview}
         reviewPassState={resolvedReviewPassState}
+        reviewPassFailures={reviewPassFailures}
         analysisBusy={isAnalyzing}
         comparisonBusy={comparisonBusy}
         certificateBusy={certificateBusy}

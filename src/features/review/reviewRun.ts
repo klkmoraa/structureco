@@ -10,6 +10,12 @@ export interface ReviewPassFailures {
   certificate: boolean;
 }
 
+export interface ReviewPassBinding {
+  projectId: string;
+  analysisSignature: string;
+  combinationId: string;
+}
+
 export type ReviewPassState = 'idle' | 'running' | 'complete' | 'failed';
 
 export interface ReviewPassExecutors {
@@ -17,6 +23,13 @@ export interface ReviewPassExecutors {
   compare: () => void;
   certificate: () => void;
 }
+
+export const isReviewPassBindingCurrent = (passBinding: ReviewPassBinding | null, currentBinding: ReviewPassBinding): boolean => (
+  passBinding === null
+  || passBinding.projectId === currentBinding.projectId
+  && passBinding.analysisSignature === currentBinding.analysisSignature
+  && passBinding.combinationId === currentBinding.combinationId
+);
 
 export const resolveReviewPassState = (requested: boolean, busy: ReviewPassBusy, failures: ReviewPassFailures): ReviewPassState => {
   if (busy.analysis || busy.comparison || busy.certificate) return 'running';

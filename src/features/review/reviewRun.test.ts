@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveReviewPassState, startReviewPass, type ReviewPassBusy, type ReviewPassFailures } from './reviewRun';
+import { isReviewPassBindingCurrent, resolveReviewPassState, startReviewPass, type ReviewPassBusy, type ReviewPassFailures, type ReviewPassBinding } from './reviewRun';
 
 const idle: ReviewPassBusy = { analysis: false, comparison: false, certificate: false };
 const noFailures: ReviewPassFailures = { analysis: false, comparison: false, certificate: false };
@@ -13,6 +13,18 @@ describe('resolveReviewPassState', () => {
     expect(resolveReviewPassState(true, { ...idle, certificate: true }, noFailures)).toBe('running');
     expect(resolveReviewPassState(true, idle, { ...noFailures, certificate: true })).toBe('failed');
     expect(resolveReviewPassState(true, idle, noFailures)).toBe('complete');
+  });
+});
+
+describe('isReviewPassBindingCurrent', () => {
+  const binding: ReviewPassBinding = { projectId: 'project-a', analysisSignature: 'model-a', combinationId: 'combo-a' };
+
+  it('invalidates a terminal outcome when the project or combination changes', () => {
+    expect(isReviewPassBindingCurrent(binding, binding)).toBe(true);
+    expect(isReviewPassBindingCurrent(binding, { ...binding, projectId: 'project-b' })).toBe(false);
+    expect(isReviewPassBindingCurrent(binding, { ...binding, analysisSignature: 'model-b' })).toBe(false);
+    expect(isReviewPassBindingCurrent(binding, { ...binding, combinationId: 'combo-b' })).toBe(false);
+    expect(isReviewPassBindingCurrent(null, binding)).toBe(true);
   });
 });
 
