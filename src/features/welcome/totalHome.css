@@ -649,12 +649,10 @@
   .sc-home-hero-asset { grid-row: 2; border-left: 0; border-bottom: 0; border-top: 1px solid var(--sc-color-border); min-height: 180px; padding: 8px 18px; }
   .sc-home-hero-asset__frame { min-height: 150px; }
   .sc-home-hero-asset__frame img, .sc-home-hero-asset .three-structural-image { height: 150px; max-height: 150px; }
-  .sc-home-start-rail { grid-row: 3; padding: 16px; }
-  .sc-home-next-step { grid-row: 4; padding: 16px; }
-  .sc-home-recents { grid-column: 1; grid-row: 5; }
-  .sc-home-quick { grid-column: 1; grid-row: 6; }
+  .sc-home-recents { grid-column: 1; grid-row: 3; }
+  .sc-home-quick { grid-column: 1; grid-row: 4; }
   .sc-home-recents, .sc-home-quick { padding: 16px; }
-  .sc-home-directory { grid-row: 7; }
+  .sc-home-directory { grid-row: 5; }
   .sc-home-directory__list { grid-template-columns: 1fr; padding: 4px 16px; }
   .sc-home-directory__list > button { min-height: 82px; padding: 12px 0; border-right: 0; border-bottom: 1px solid var(--sc-color-border-soft); }
   .sc-home-directory__list > button:last-child { border-bottom: 0; }
@@ -686,73 +684,6 @@
 .sc-home-model-snapshot strong { font: 650 17px/1 var(--sc-font-mono); letter-spacing: -.06em; }
 .sc-home-model-snapshot small { overflow: hidden; color: var(--sc-color-text-muted); font-size: 9px; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
 
-/* A compact starting deck turns the approved structural library into a first
-   action, without duplicating the full Templates route. */
-.sc-home-start-rail {
-  grid-column: 1 / -1;
-  grid-row: 3;
-  min-width: 0;
-  display: grid;
-  gap: 12px;
-  padding: 18px 20px 16px;
-  border: 1px solid var(--sc-color-border);
-  border-radius: var(--sc-radius-card);
-  background: var(--sc-color-surface-1);
-  box-shadow: var(--sc-shadow-clay-xs);
-}
-.sc-home-start-rail__items { min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.sc-home-start-rail__items > button {
-  min-width: 0;
-  min-height: 94px;
-  display: grid;
-  grid-template-columns: 76px minmax(0, 1fr) 16px;
-  align-items: center;
-  gap: 11px;
-  padding: 8px;
-  border: 1px solid var(--sc-color-border-soft);
-  border-radius: var(--sc-radius-control);
-  background: var(--sc-color-bg-app);
-  text-align: left;
-  cursor: pointer;
-  transition: transform 180ms var(--sc-ease-standard), border-color 180ms var(--sc-ease-standard), box-shadow 180ms var(--sc-ease-standard);
-}
-.sc-home-start-rail__items > button:hover { border-color: var(--sc-color-border-strong); box-shadow: var(--sc-shadow-clay-xs); transform: translateY(-1px); }
-.sc-home-start-rail__items > button:active { box-shadow: var(--sc-shadow-clay-pressed); transform: var(--sc-clay-press-transform); }
-.sc-home-start-rail__media { min-width: 0; height: 72px; display: grid; place-items: center; overflow: hidden; border-radius: 8px; background: var(--sc-color-surface-2); }
-.sc-home-start-rail__media .three-structural-image { width: 100%; height: 72px; object-fit: contain; }
-.sc-home-start-rail__copy { min-width: 0; display: grid; gap: 4px; }
-.sc-home-start-rail__copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 620; }
-.sc-home-start-rail__copy small { display: -webkit-box; overflow: hidden; color: var(--sc-color-text-secondary); font-size: 10px; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-
-.sc-home-next-step {
-  grid-column: 1 / -1;
-  grid-row: 4;
-  min-width: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 18px;
-  padding: 17px 20px;
-  border: 1px solid color-mix(in srgb, var(--sc-color-action-primary) 30%, var(--sc-color-border));
-  border-radius: var(--sc-radius-card);
-  background: color-mix(in srgb, var(--sc-color-action-subtle) 58%, var(--sc-color-surface-1));
-}
-.sc-home-next-step__copy { min-width: 0; display: grid; gap: 4px; }
-.sc-home-next-step__copy p { margin: 0; color: var(--sc-color-action-ink-on-soft); font: 9px var(--sc-font-mono); letter-spacing: .08em; text-transform: uppercase; }
-.sc-home-next-step__copy h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.025em; }
-.sc-home-next-step__copy span { color: var(--sc-color-text-secondary); font-size: 11px; line-height: 1.4; }
-.sc-home-next-step__facts { display: flex; align-items: stretch; gap: 16px; }
-.sc-home-next-step__facts > span { min-width: 62px; display: grid; gap: 4px; align-content: center; }
-.sc-home-next-step__facts small { color: var(--sc-color-text-muted); font-size: 9px; }
-.sc-home-next-step__facts strong { font: 650 12px var(--sc-font-mono); }
-.sc-home-next-step__action { min-height: 38px; display: inline-flex; align-items: center; gap: 7px; padding: 0 12px; border: 1px solid var(--sc-color-action-edge); border-radius: var(--sc-radius-control); background: var(--sc-gradient-clay-action); color: #fff; font-size: 11px; cursor: pointer; box-shadow: var(--sc-shadow-clay-action); }
-.sc-home-next-step__action:hover { background: var(--sc-color-action-hover); box-shadow: var(--sc-shadow-clay-action-hover); transform: translateY(-1px); }
-
-@media (min-width: 761px) {
-  .sc-home-recents, .sc-home-quick { grid-row: 5; }
-  .sc-home-directory { grid-row: 6; }
-}
-
 @media (max-width: 1100px) and (min-width: 761px) {
   .sc-home-topline__right { gap: 8px; }
   .sc-home-open-project,
@@ -767,14 +698,4 @@
   .sc-home-open-project span,
   .sc-home-calculator-trigger span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .sc-home-model-snapshot { width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; }
-}
-
-@media (max-width: 760px), (hover: none) and (pointer: coarse) and (max-width: 1023px) {
-  .sc-home-start-rail__items { grid-template-columns: 1fr; }
-  .sc-home-start-rail__items > button { grid-template-columns: 64px minmax(0, 1fr) 16px; min-height: 84px; }
-  .sc-home-start-rail__media { height: 64px; }
-  .sc-home-start-rail__media .three-structural-image { height: 64px; }
-  .sc-home-next-step { grid-template-columns: 1fr; gap: 13px; }
-  .sc-home-next-step__facts { justify-content: space-between; }
-  .sc-home-next-step__action { width: 100%; justify-content: center; }
 }

@@ -8,7 +8,7 @@ Se aplicaron cinco mejoras coordinadas en la capa visual y de flujo, manteniendo
 2. **Biblioteca de proyectos operable.** Proyectos incorpora búsqueda por nombre, orden por actualización/nombre/tamaño y contador de resultados; el filtrado es tolerante a mayúsculas y acentos.
 3. **Paleta de comandos con memoria.** Los cinco últimos comandos de la paleta se guardan como preferencia local de interfaz, se deduplican y se muestran como accesos rápidos al reabrirla. La selección de nudos y barras no se persiste como historial.
 4. **Lectura rápida de resultados.** El panel de resultados muestra escenario, fiabilidad y extremo gobernante antes del detalle, con acción para localizarlo en el modelo; reutiliza la respuesta analítica existente y funciona en escritorio y móvil.
-5. **Responsive y acabado visual.** Los nuevos rails, controles de biblioteca, historial y banda de resultados siguen la dirección Studio, con estados de foco, acciones táctiles y composición de una columna en móvil.
+5. **Responsive y acabado visual.** Los nuevos rails, controles de biblioteca, historial y banda de resultados siguen la dirección Studio, con estados de foco, acciones táctiles y composición de una columna en móvil. La zona de arranque se sirve como chunk diferido para no cargarla en el primer pintado.
 
 ## Verificación
 
@@ -21,7 +21,7 @@ Se aplicaron cinco mejoras coordinadas en la capa visual y de flujo, manteniendo
 - `pnpm run verify:protected` — frontera protegida intacta, 55 archivos.
 - Revisión visual puntual con Playwright en Inicio, Proyectos, paleta con historial, resultados y viewport móvil 390×844.
 
-No se ejecutó la suite completa ni el gate global; el cambio quedó validado con las pruebas y contratos directamente afectados, según el acuerdo de trabajo.
+La suite completa no se ejecutó localmente. El gate remoto de GitHub Actions se ejecuta al publicar; el primer intento detectó el presupuesto de entrada y se corrigió con el code-splitting de la zona de arranque antes del reintento.
 
 ## Publicación
 
