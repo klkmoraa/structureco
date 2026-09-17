@@ -1633,3 +1633,94 @@
     animation: none !important;
   }
 }
+
+/* -------------------------------------------------------------------------
+ * Mobile control integrity
+ * Compact tracks must be allowed to shrink even though the shared button
+ * component keeps a useful max-content floor on larger surfaces.
+ * ------------------------------------------------------------------------- */
+@media (max-width: 700px) {
+  .app-shell[data-shell-class='K0'] :is(
+    .topbar--atelier,
+    .topbar--atelier > .topbar-zone,
+    .topbar--atelier .topbar-project-zone,
+    .topbar--atelier .topbar-actions-zone,
+    .topbar--atelier .topbar-primary-actions,
+    .mobile-tool-dock,
+    .mobile-dock-subshelf,
+    .dock-subshelf-inner,
+    .dock-segmented-slider,
+    .mobile-tool-palette,
+    .mobile-tool-palette-list,
+    .quick-entry-bar,
+    .results-mobile-commandbar,
+    .inspector-sheet-controls,
+    .datasheet-toolbar,
+    .datasheet-draft-bar,
+    .datasheet-review__actions
+  ) {
+    box-sizing: border-box;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  .app-shell[data-shell-class='K0'] :is(
+    .topbar--atelier button,
+    .mobile-tool-dock button,
+    .mobile-tool-palette button,
+    .quick-entry-bar button,
+    .results-panel button,
+    .inspector-panel button,
+    .datasheet-surface button,
+    .sc-modal-surface button
+  ) {
+    box-sizing: border-box;
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-dock-tab {
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-inline-size: 0;
+    min-block-size: var(--sc-size-target-touch);
+    flex: 1 1 0;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-dock-tab__icon,
+  .app-shell[data-shell-class='K0'] .mobile-tool-dock .tool-button > :is(svg, .sc-tool-button__icon),
+  .app-shell[data-shell-class='K0'] .mobile-palette-icon {
+    flex: 0 0 auto;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-dock-tab__label,
+  .app-shell[data-shell-class='K0'] .mobile-palette-copy,
+  .app-shell[data-shell-class='K0'] .sc-tool-button__copy {
+    min-inline-size: 0;
+    max-inline-size: 100%;
+    overflow: hidden;
+  }
+
+  .app-shell[data-shell-class='K0'] .mobile-dock-tab__label,
+  .app-shell[data-shell-class='K0'] .mobile-palette-copy > strong,
+  .app-shell[data-shell-class='K0'] .sc-tool-button__copy > strong,
+  .app-shell[data-shell-class='K0'] .dock-segment-name,
+  .app-shell[data-shell-class='K0'] .dock-action-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-shell[data-shell-class='K0'] :is(
+    .mobile-tool-dock .tool-button,
+    .dock-segment-btn,
+    .dock-action-pill,
+    .mobile-palette-tool,
+    .quick-entry-bar > button,
+    .results-panel .result-summary-actions > button,
+    .datasheet-draft-bar > button,
+    .datasheet-review__actions > button
+  ) {
+    min-block-size: var(--sc-size-target-touch);
+  }
+}

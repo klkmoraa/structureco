@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 const mobileContract = readFileSync(new URL('../mobile/mobileIOS.css', import.meta.url), 'utf8');
 const mobileHomeContract = readFileSync(new URL('../mobile/mobileHomeIOS.css', import.meta.url), 'utf8');
+const topbarContract = readFileSync(new URL('../topbar/topbar.css', import.meta.url), 'utf8');
 
 describe('mobile iOS composition contract', () => {
   it('keeps safe areas, touch targets and an explicit dock height in the layout layer', () => {
@@ -74,5 +75,48 @@ describe('mobile iOS composition contract', () => {
     expect(mobileHomeContract).toContain('.new-exercise-dialog');
     expect(mobileHomeContract).toContain('.sc-home-settings-panel');
     expect(mobileHomeContract).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+  });
+
+  it('keeps compact workspace controls inside their available track', () => {
+    const integrityStart = mobileContract.indexOf('Mobile control integrity');
+    const integrityCss = mobileContract.slice(integrityStart);
+
+    expect(integrityStart).toBeGreaterThanOrEqual(0);
+    expect(integrityCss).toMatch(/@media \(max-width: 700px\)/);
+    expect(integrityCss).toMatch(/box-sizing:\s*border-box/);
+    expect(integrityCss).toMatch(/max-inline-size:\s*100%/);
+    expect(integrityCss).toMatch(/\.mobile-dock-tab[\s\S]*?flex:\s*1 1 0/);
+    expect(integrityCss).toMatch(/\.mobile-dock-tab__label[\s\S]*?text-overflow:\s*ellipsis/);
+  });
+
+  it('stacks Home primary actions without intrinsic-width drift', () => {
+    const integrityStart = mobileHomeContract.indexOf('Home mobile control integrity');
+    const integrityCss = mobileHomeContract.slice(integrityStart);
+
+    expect(integrityStart).toBeGreaterThanOrEqual(0);
+    expect(integrityCss).toMatch(/\.sc-home-primary-buttons\s*{[\s\S]*?display:\s*grid;/);
+    expect(integrityCss).toMatch(/grid-template-columns:\s*minmax\(0, 1fr\)/);
+    expect(integrityCss).toMatch(/\.sc-home-primary-buttons\s*>\s*button[\s\S]*?inline-size:\s*100%/);
+    expect(integrityCss).toMatch(/\.sc-home-primary-buttons\s*>\s*button[\s\S]*?min-inline-size:\s*0/);
+  });
+
+  it('keeps the named mobile analysis action inside the topbar track', () => {
+    const integrityStart = topbarContract.indexOf('Mobile topbar control integrity');
+    const integrityCss = topbarContract.slice(integrityStart);
+
+    expect(integrityStart).toBeGreaterThanOrEqual(0);
+    expect(integrityCss).toMatch(/@media \(min-width:\s*360px\) and \(max-width:\s*700px\)/);
+    expect(integrityCss).toMatch(/\.analyze-button[\s\S]*?width:\s*auto\s*!important/);
+    expect(integrityCss).toMatch(/\.analyze-button[\s\S]*?min-width:\s*94px\s*!important/);
+    expect(integrityCss).toMatch(/\.analyze-button\s*>\s*\.sc-button__label[\s\S]*?position:\s*static\s*!important/);
+  });
+
+  it('hides the analysis label when the compact topbar has no label lane', () => {
+    const integrityStart = topbarContract.indexOf('Mobile topbar control integrity');
+    const integrityCss = topbarContract.slice(integrityStart);
+
+    expect(integrityCss).toMatch(/@media \(max-width:\s*359px\)/);
+    expect(integrityCss).toMatch(/\.analyze-button\s*>\s*\.sc-button__label[\s\S]*?position:\s*absolute\s*!important/);
+    expect(integrityCss).toMatch(/\.analyze-button\s*>\s*\.sc-button__label[\s\S]*?clip-path:\s*inset\(50%\)\s*!important/);
   });
 });
